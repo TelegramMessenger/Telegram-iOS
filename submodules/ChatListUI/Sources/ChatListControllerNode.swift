@@ -847,6 +847,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             previousItemNode.listNode.contentOffsetChanged = nil
             previousItemNode.listNode.contentScrollingEnded = nil
             previousItemNode.listNode.endedInteractiveDragging = { _ in }
+            previousItemNode.listNode.shouldStopScrolling = nil
             previousItemNode.listNode.activateChatPreview = nil
             previousItemNode.listNode.openStories = nil
             previousItemNode.listNode.addedVisibleChatsWithPeerIds = nil
@@ -976,8 +977,13 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             guard let self else {
                 return
             }
-            let _ = self
-            //let _ = self.contentScrollingEnded?(self.currentItemNode)
+            self.endedInteractiveDragging?(self.currentItemNode)
+        }
+        itemNode.listNode.shouldStopScrolling = { [weak self] velocity in
+            guard let self else {
+                return false
+            }
+            return self.shouldStopScrolling?(self.currentItemNode, velocity) ?? false
         }
         itemNode.listNode.contentScrollingEnded = { [weak self] listView in
             guard let self else {
@@ -1066,6 +1072,8 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
     var contentOffset: ListViewVisibleContentOffset?
     public var contentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?
     public var contentScrollingEnded: ((ListView) -> Bool)?
+    var endedInteractiveDragging: ((ListView) -> Void)?
+    var shouldStopScrolling: ((ListView, CGFloat) -> Bool)?
     var activateChatPreview: ((ChatListItem, Int64?, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
     var openStories: ((EnginePeer.Id, ASDisplayNode?) -> Void)?
     var addedVisibleChatsWithPeerIds: (([EnginePeer.Id]) -> Void)?
@@ -1732,6 +1740,12 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         self.mainContainerNode.contentScrollingEnded = { [weak self] listView in
             return self?.contentScrollingEnded(listView: listView, isPrimary: true) ?? false
         }
+        self.mainContainerNode.endedInteractiveDragging = { [weak self] listView in
+            self?.endedInteractiveDragging(listView: listView, isPrimary: true)
+        }
+        self.mainContainerNode.shouldStopScrolling = { [weak self] listView, velocity in
+            return self?.shouldStopScrolling(listView: listView, velocity: velocity, isPrimary: true) ?? false
+        }
         
         self.addSubnode(self.debugListView)
         
@@ -2335,6 +2349,31 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }*/
     }
     
+    private func shouldStopScrolling(listView: ListView, velocity: CGFloat, isPrimary: Bool) -> Bool {
+        if !isPrimary || self.inlineStackContainerNode == nil {
+        } else {
+            return false
+        }
+        
+        guard let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View else {
+            return false
+        }
+        
+        if let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset {
+            let searchScrollOffset = clippedScrollOffset
+            if searchScrollOffset > 0.0 && searchScrollOffset < ChatListNavigationBar.searchScrollHeight {
+                return true
+            } else if clippedScrollOffset < 0.0 && clippedScrollOffset > -listView.tempTopInset {
+                return true
+            }
+        }
+        
+        return false
+    }
+    
+    private func endedInteractiveDragging(listView: ListView, isPrimary: Bool) {
+    }
+    
     private func contentScrollingEnded(listView: ListView, isPrimary: Bool) -> Bool {
         if !isPrimary || self.inlineStackContainerNode == nil {
         } else {
@@ -2402,6 +2441,12 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 
                 inlineStackContainerNode.contentOffsetChanged = { [weak self] offset in
                     self?.contentOffsetChanged(offset: offset, isPrimary: false)
+                }
+                inlineStackContainerNode.endedInteractiveDragging = { [weak self] listView in
+                    self?.endedInteractiveDragging(listView: listView, isPrimary: false)
+                }
+                inlineStackContainerNode.shouldStopScrolling = { [weak self] listView, velocity in
+                    return self?.shouldStopScrolling(listView: listView, velocity: velocity, isPrimary: false) ?? false
                 }
                 inlineStackContainerNode.contentScrollingEnded = { [weak self] listView in
                     return self?.contentScrollingEnded(listView: listView, isPrimary: false) ?? false

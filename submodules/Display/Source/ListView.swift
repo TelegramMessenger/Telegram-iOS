@@ -256,6 +256,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     public final var updateFloatingHeaderOffset: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     public final var didScrollWithOffset: ((CGFloat, ContainedViewLayoutTransition, ListViewItemNode?, Bool) -> Void)?
     public final var addContentOffset: ((CGFloat, ListViewItemNode?) -> Void)?
+    public final var shouldStopScrolling: ((CGFloat) -> Bool)?
 
     public final var updateScrollingIndicator: ((ScrollingIndicatorState?, ContainedViewLayoutTransition) -> Void)?
     
@@ -852,6 +853,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             if !itemNode.isLayerBacked {
                 cancelContextGestures(view: itemNode.view)
             }
+        }
+    }
+    
+    public func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
+        if let shouldStopScrolling = self.shouldStopScrolling, shouldStopScrolling(velocity.y) {
+            targetContentOffset.pointee.y = scrollView.contentOffset.y
         }
     }
     
