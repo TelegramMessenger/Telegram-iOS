@@ -2355,7 +2355,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     private func shouldStopScrolling(listView: ListView, velocity: CGFloat, isPrimary: Bool) -> Bool {
-        if abs(velocity) > 10.0 {
+        if abs(velocity) > 1.0 {
             return false
         }
         
