@@ -603,8 +603,7 @@ final class StoryItemSetViewListComponent: Component {
                     moreAction: { [weak self] sourceView, gesture in
                         guard let self, let component = self.component else {
                             return
-                        }
-                        
+                        } 
                         component.moreAction(sourceView, gesture)
                     }
                 )),

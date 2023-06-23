@@ -30,6 +30,8 @@ public final class MessageInputPanelComponent: Component {
         public fileprivate(set) var hasText: Bool = false
         public fileprivate(set) var isKeyboardHidden: Bool = false
         
+        public var initialText: NSAttributedString?
+        
         public fileprivate(set) var insertText: (NSAttributedString) -> Void = { _ in }
         public fileprivate(set) var deleteBackward: () -> Void = { }
         
@@ -366,6 +368,11 @@ public final class MessageInputPanelComponent: Component {
 
             self.component = component
             self.state = state
+            
+            if let initialText = component.externalState.initialText {
+                component.externalState.initialText = nil
+                self.textFieldExternalState.initialText = initialText
+            }
 
             let hasMediaRecording = component.audioRecorder != nil || component.videoRecordingStatus != nil
             let hasMediaEditing = component.recordedAudioPreview != nil

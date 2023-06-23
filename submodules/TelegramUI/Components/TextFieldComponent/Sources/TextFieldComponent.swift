@@ -20,6 +20,7 @@ public final class TextFieldComponent: Component {
     public final class ExternalState {
         public fileprivate(set) var isEditing: Bool = false
         public fileprivate(set) var hasText: Bool = false
+        public var initialText: NSAttributedString?
         
         public init() {
         }
@@ -92,6 +93,17 @@ public final class TextFieldComponent: Component {
     public struct InputState {
         public var inputText: NSAttributedString
         public var selectionRange: Range<Int>
+        
+        public init(inputText: NSAttributedString, selectionRange: Range<Int>) {
+            self.inputText = inputText
+            self.selectionRange = selectionRange
+        }
+        
+        public init(inputText: NSAttributedString) {
+            self.inputText = inputText
+            let length = inputText.length
+            self.selectionRange = length ..< length
+        }
     }
     
     public final class View: UIView, UITextViewDelegate, UIScrollViewDelegate {
@@ -103,8 +115,6 @@ public final class TextFieldComponent: Component {
         private var spoilerView: InvisibleInkDustView?
         private var customEmojiContainerView: CustomEmojiContainerView?
         private var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
-        
-        //private var inputState = InputState(inputText: NSAttributedString(), selectionRange: 0 ..< 0)
         
         private var inputState: InputState {
             let selectionRange: Range<Int> = self.textView.selectedRange.location ..< (self.textView.selectedRange.location + self.textView.selectedRange.length)
@@ -444,6 +454,13 @@ public final class TextFieldComponent: Component {
         func update(component: TextFieldComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.component = component
             self.state = state
+            
+            if let initialText = component.externalState.initialText {
+                component.externalState.initialText = nil
+                self.updateInputState { _ in
+                    return TextFieldComponent.InputState(inputText: initialText)
+                }
+            }
             
             if self.emojiViewProvider == nil {
                 self.emojiViewProvider = { [weak self] emoji in

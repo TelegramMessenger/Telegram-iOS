@@ -242,7 +242,7 @@ private func archivedStickerPacksControllerEntries(context: AccountContext, pres
     return entries
 }
 
-public func archivedStickerPacksController(context: AccountContext, mode: ArchivedStickerPacksControllerMode, archived: [ArchivedStickerPackItem]?, updatedPacks: @escaping ([ArchivedStickerPackItem]?) -> Void) -> ViewController {
+public func archivedStickerPacksController(context: AccountContext, mode: ArchivedStickerPacksControllerMode, archived: [ArchivedStickerPackItem]?, forceTheme: PresentationTheme? = nil, updatedPacks: @escaping ([ArchivedStickerPackItem]?) -> Void) -> ViewController {
     let statePromise = ValuePromise(ArchivedStickerPacksControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ArchivedStickerPacksControllerState())
     let updateState: ((ArchivedStickerPacksControllerState) -> ArchivedStickerPacksControllerState) -> Void = { f in
@@ -278,6 +278,11 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
     
     let installedStickerPacks = Promise<CombinedView>()
     installedStickerPacks.set(context.account.postbox.combinedView(keys: [.itemCollectionIds(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]))
+    
+    var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    if let forceTheme {
+        presentationData = presentationData.withUpdated(theme: forceTheme)
+    }
     
     var presentStickerPackController: ((StickerPackCollectionInfo) -> Void)?
     
@@ -325,8 +330,6 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
             return .complete()
         }
         |> deliverOnMainQueue).start(next: { info, items in
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            
             var animateInAsReplacement = false
             if let navigationController = navigationControllerImpl?() {
                 for controller in navigationController.overlayControllers {
@@ -419,6 +422,11 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, installedStickerPacks.get() |> deliverOnMainQueue, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]) |> deliverOnMainQueue)
     |> deliverOnMainQueue
     |> map { presentationData, state, packs, installedView, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        var presentationData = presentationData
+        if let forceTheme {
+            presentationData = presentationData.withUpdated(theme: forceTheme)
+        }
+        
         var stickerSettings = StickerSettings.defaultSettings
         if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings]?.get(StickerSettings.self) {
             stickerSettings = value

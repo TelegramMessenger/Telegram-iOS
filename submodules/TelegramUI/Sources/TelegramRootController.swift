@@ -330,6 +330,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                 let controller = MediaEditorScreen(
                     context: context,
                     subject: subject,
+                    isEditing: false,
                     transitionIn: transitionIn,
                     transitionOut: { finished, isNew in
                         if finished, let transitionOut = transitionOut(finished), let destinationView = transitionOut.destinationView {
@@ -347,8 +348,8 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         } else {
                             return nil
                         }
-                    }, completion: { [weak self] randomId, mediaResult, privacy, commit in
-                        guard let self else {
+                    }, completion: { [weak self] randomId, mediaResult, caption, privacy, commit in
+                        guard let self, let mediaResult else {
                             dismissCameraImpl?()
                             commit({})
                             return
@@ -357,16 +358,15 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         if let chatListController = self.chatListController as? ChatListControllerImpl {
                             chatListController.scrollToStories()
                             switch mediaResult {
-                            case let .image(image, dimensions, caption):
+                            case let .image(image, dimensions):
                                 if let imageData = compressImageToJPEG(image, quality: 0.7) {
-                                    let text = caption ?? NSAttributedString()
-                                    let entities = generateChatInputTextEntities(text)
-                                    self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: text.string, entities: entities, pin: privacy.archive, privacy: privacy.privacy, period: privacy.timeout, randomId: randomId)
+                                    let entities = generateChatInputTextEntities(caption)
+                                    self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: caption.string, entities: entities, pin: privacy.archive, privacy: privacy.privacy, period: privacy.timeout, randomId: randomId)
                                     Queue.mainQueue().justDispatch {
                                         commit({})
                                     }
                                 }
-                            case let .video(content, firstFrameImage, values, duration, dimensions, caption):
+                            case let .video(content, firstFrameImage, values, duration, dimensions):
                                 let adjustments: VideoMediaResourceAdjustments
                                 if let valuesData = try? JSONEncoder().encode(values) {
                                     let data = MemoryBuffer(data: valuesData)
@@ -383,9 +383,8 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                         resource = VideoLibraryMediaResource(localIdentifier: localIdentifier, conversion: .compress(adjustments))
                                     }
                                     let imageData = firstFrameImage.flatMap { compressImageToJPEG($0, quality: 0.6) }
-                                    let text = caption ?? NSAttributedString()
-                                    let entities = generateChatInputTextEntities(text)
-                                    self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameImageData: imageData), text: text.string, entities: entities, pin: privacy.archive, privacy: privacy.privacy, period: privacy.timeout, randomId: randomId)
+                                    let entities = generateChatInputTextEntities(caption)
+                                    self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameImageData: imageData), text: caption.string, entities: entities, pin: privacy.archive, privacy: privacy.privacy, period: privacy.timeout, randomId: randomId)
                                     Queue.mainQueue().justDispatch {
                                         commit({})
                                     }

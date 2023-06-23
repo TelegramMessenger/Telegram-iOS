@@ -116,6 +116,7 @@ final class VideoScrubberComponent: Component {
         private let leftHandleView = HandleView()
         private let rightHandleView = HandleView()
         private let borderView = UIImageView()
+        private let zoneView = HandleView()
         private let cursorView = HandleView()
         
         private let transparentFramesContainer = UIView()
@@ -202,11 +203,13 @@ final class VideoScrubberComponent: Component {
             
             self.addSubview(self.transparentFramesContainer)
             self.addSubview(self.opaqueFramesContainer)
+            self.addSubview(self.zoneView)
             self.addSubview(self.leftHandleView)
             self.addSubview(self.rightHandleView)
             self.addSubview(self.borderView)
             self.addSubview(self.cursorView)
             
+            self.zoneView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handleZoneHandlePan(_:))))
             self.leftHandleView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handleLeftHandlePan(_:))))
             self.rightHandleView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handleRightHandlePan(_:))))
             self.cursorView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handlePositionHandlePan(_:))))
@@ -223,6 +226,42 @@ final class VideoScrubberComponent: Component {
         
         deinit {
             self.displayLink?.invalidate()
+        }
+        
+        @objc private func handleZoneHandlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+            guard let component = self.component else {
+                return
+            }
+            let translation = gestureRecognizer.translation(in: self)
+            
+            let start = handleWidth / 2.0
+            let end = self.frame.width - handleWidth / 2.0
+            let length = end - start
+            
+            let delta = translation.x / length
+            
+            let duration = component.endPosition - component.startPosition
+            let startValue = max(0.0, min(component.duration - duration, component.startPosition + delta))
+            let endValue = startValue + duration
+            
+            var transition: Transition = .immediate
+            switch gestureRecognizer.state {
+            case .began, .changed:
+                self.isPanningTrimHandle = true
+                component.trimUpdated(startValue, endValue, false, false)
+                if case .began = gestureRecognizer.state {
+                    transition = .easeInOut(duration: 0.25)
+                }
+            case .ended, .cancelled:
+                self.isPanningTrimHandle = false
+                component.trimUpdated(startValue, endValue, false, true)
+                transition = .easeInOut(duration: 0.25)
+            default:
+                break
+            }
+            
+            gestureRecognizer.setTranslation(.zero, in: self)
+            self.state?.updated(transition: transition)
         }
         
         @objc private func handleLeftHandlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
@@ -413,6 +452,9 @@ final class VideoScrubberComponent: Component {
             
             let rightHandleFrame = CGRect(origin: CGPoint(x: max(leftHandleFrame.maxX, rightHandlePosition - handleWidth / 2.0), y: 0.0), size: CGSize(width: handleWidth, height: scrubberSize.height))
             transition.setFrame(view: self.rightHandleView, frame: rightHandleFrame)
+            
+            let zoneFrame = CGRect(x: leftHandleFrame.maxX, y: 0.0, width: rightHandleFrame.minX - leftHandleFrame.maxX, height: scrubberSize.height)
+            transition.setFrame(view: self.zoneView, frame: zoneFrame)
                         
             if self.isPanningPositionHandle || !component.isPlaying {
                 self.positionAnimation = nil

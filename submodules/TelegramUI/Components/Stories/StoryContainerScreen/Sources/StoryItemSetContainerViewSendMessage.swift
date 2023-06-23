@@ -169,6 +169,7 @@ final class StoryItemSetContainerSendMessage {
                 }
             }
         )
+        self.inputMediaInteraction?.forceTheme = defaultDarkColorPresentationTheme
     }
     
     func toggleInputMode() {

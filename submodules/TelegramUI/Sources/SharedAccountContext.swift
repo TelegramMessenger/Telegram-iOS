@@ -1846,8 +1846,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return proxySettingsController(accountManager: sharedContext.accountManager, postbox: account.postbox, network: account.network, mode: .modal, presentationData: sharedContext.currentPresentationData.with { $0 }, updatedPresentationData: sharedContext.presentationData)
     }
     
-    public func makeInstalledStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode) -> ViewController {
-        return installedStickerPacksController(context: context, mode: mode)
+    public func makeInstalledStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode, forceTheme: PresentationTheme?) -> ViewController {
+        return installedStickerPacksController(context: context, mode: mode, forceTheme: forceTheme)
     }
 }
 
