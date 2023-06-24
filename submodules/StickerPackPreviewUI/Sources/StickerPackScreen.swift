@@ -464,7 +464,13 @@ private final class StickerPackContainer: ASDisplayNode {
                             var menuItems: [ContextMenuItem] = []
                             if let (info, _, _) = strongSelf.currentStickerPack, info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
                                 if strongSelf.sendSticker != nil {
-                                    menuItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                    let actionTitle: String
+                                    if let title = strongSelf.controller?.actionTitle {
+                                        actionTitle = title
+                                    } else {
+                                        actionTitle = strongSelf.presentationData.strings.StickerPack_Send
+                                    }
+                                    menuItems.append(.action(ContextMenuActionItem(text: actionTitle, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                                         if let strongSelf = self, let peekController = strongSelf.peekController {
                                             if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
                                                 let _ = strongSelf.sendSticker?(.standalone(media: item.file), animationNode.view, animationNode.bounds)
@@ -1901,12 +1907,15 @@ public final class StickerPackScreenImpl: ViewController {
     let animationCache: AnimationCache
     let animationRenderer: MultiAnimationRenderer
     
+    let actionTitle: String?
+    
     public init(
         context: AccountContext,
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
         stickerPacks: [StickerPackReference],
         loadedStickerPacks: [LoadedStickerPack],
         selectedStickerPackIndex: Int = 0,
+        actionTitle: String? = nil,
         parentNavigationController: NavigationController? = nil,
         sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil,
         sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?,
@@ -1918,6 +1927,7 @@ public final class StickerPackScreenImpl: ViewController {
         self.stickerPacks = stickerPacks
         self.loadedStickerPacks = loadedStickerPacks
         self.initialSelectedStickerPackIndex = selectedStickerPackIndex
+        self.actionTitle = actionTitle
         self.parentNavigationController = parentNavigationController
         self.sendSticker = sendSticker
         self.sendEmoji = sendEmoji
@@ -2142,6 +2152,7 @@ public func StickerPackScreen(
     mainStickerPack: StickerPackReference,
     stickerPacks: [StickerPackReference],
     loadedStickerPacks: [LoadedStickerPack] = [],
+    actionTitle: String? = nil,
     parentNavigationController: NavigationController? = nil,
     sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil,
     sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)? = nil,
@@ -2151,9 +2162,11 @@ public func StickerPackScreen(
 ) -> ViewController {
     let controller = StickerPackScreenImpl(
         context: context,
+        updatedPresentationData: updatedPresentationData,
         stickerPacks: stickerPacks,
         loadedStickerPacks: loadedStickerPacks,
         selectedStickerPackIndex: stickerPacks.firstIndex(of: mainStickerPack) ?? 0,
+        actionTitle: actionTitle,
         parentNavigationController: parentNavigationController,
         sendSticker: sendSticker,
         sendEmoji: sendEmoji,
