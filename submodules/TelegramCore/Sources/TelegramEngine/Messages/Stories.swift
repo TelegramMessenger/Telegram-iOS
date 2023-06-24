@@ -1182,7 +1182,7 @@ extension Stories.StoredItem {
             if let parsedMedia = parsedMedia {
                 var parsedPrivacy: Stories.Item.Privacy?
                 if let privacy = privacy {
-                    var base: Stories.Item.Privacy.Base = .everyone
+                    var base: Stories.Item.Privacy.Base = .nobody
                     var additionalPeerIds: [PeerId] = []
                     for rule in privacy {
                         switch rule {

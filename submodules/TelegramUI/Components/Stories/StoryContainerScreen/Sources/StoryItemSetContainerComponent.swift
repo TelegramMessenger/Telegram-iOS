@@ -2404,7 +2404,11 @@ public final class StoryItemSetContainerComponent: Component {
                         |> delay(0.1, queue: Queue.mainQueue())
                     )
                 } else {
-                    return .single(.video(data.path, nil, nil, nil, PixelDimensions(width: 720, height: 1280), .bottomRight))
+                    let symlinkPath = data.path + ".mp4"
+                    if fileSize(symlinkPath) == nil {
+                        let _ = try? FileManager.default.linkItem(atPath: data.path, toPath: symlinkPath)
+                    }
+                    return .single(.video(symlinkPath, nil, nil, nil, PixelDimensions(width: 720, height: 1280), .bottomRight))
                 }
             }
                         
