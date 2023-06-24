@@ -181,7 +181,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private var rawStorySubscriptions: EngineStorySubscriptions?
     private var shouldFixStorySubscriptionOrder: Bool = false
     private var fixedStorySubscriptionOrder: [EnginePeer.Id] = []
-    var orderedStorySubscriptions: EngineStorySubscriptions?
+    private(set) var orderedStorySubscriptions: EngineStorySubscriptions?
+    private var displayedStoriesTooltip: Bool = false
     
     private var storyProgressDisposable: Disposable?
     private var storySubscriptionsDisposable: Disposable?
@@ -1853,11 +1854,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     return
                 }
                 
-                var wasEmpty = true
-                if let rawStorySubscriptions = self.rawStorySubscriptions, !rawStorySubscriptions.items.isEmpty {
-                    wasEmpty = false
-                }
-                
                 self.rawStorySubscriptions = rawStorySubscriptions
                 var items: [EngineStorySubscriptions.Item] = []
                 if self.shouldFixStorySubscriptionOrder {
@@ -1879,17 +1875,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 )
                 self.fixedStorySubscriptionOrder = items.map(\.peer.id)
                 
-                let isEmpty = rawStorySubscriptions.items.isEmpty
-                
                 let transition: ContainedViewLayoutTransition
                 if self.didAppear {
                     transition = .animated(duration: 0.4, curve: .spring)
                 } else {
                     transition = .immediate
                 }
-                
-                let _ = wasEmpty
-                let _ = isEmpty
                 
                 self.chatListDisplayNode.temporaryContentOffsetChangeTransition = transition
                 self.requestLayout(transition: transition)
@@ -1911,6 +1902,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
                 
                 self.storiesReady.set(.single(true))
+                
+                Queue.mainQueue().after(1.0, { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.maybeDisplayStoryTooltip()
+                })
             })
             self.storyProgressDisposable = (self.context.engine.messages.allStoriesUploadProgress()
             |> deliverOnMainQueue).start(next: { [weak self] progress in
@@ -1918,6 +1916,67 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     return
                 }
                 self.updateStoryUploadProgress(progress)
+            })
+        }
+    }
+    
+    fileprivate func maybeDisplayStoryTooltip() {
+        let content = self.updateHeaderContent()
+        if content.secondaryContent != nil {
+            return
+        }
+        guard let chatListTitle = content.primaryContent?.chatListTitle else {
+            return
+        }
+        if chatListTitle.activity {
+            return
+        }
+        if self.displayedStoriesTooltip {
+            return
+        }
+        
+        if let orderedStorySubscriptions = self.orderedStorySubscriptions, !orderedStorySubscriptions.items.isEmpty {
+            let _ = (ApplicationSpecificNotice.displayChatListStoriesTooltip(accountManager: self.context.sharedContext.accountManager)
+            |> deliverOnMainQueue).start(next: { [weak self] didDisplay in
+                guard let self else {
+                    return
+                }
+                if didDisplay {
+                    return
+                }
+                
+                if let navigationBarView = self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View, !navigationBarView.storiesUnlocked, !self.displayedStoriesTooltip {
+                    if let storyPeerListView = self.chatListHeaderView()?.storyPeerListView(), let (anchorView, anchorRect) = storyPeerListView.anchorForTooltip() {
+                        self.displayedStoriesTooltip = true
+                        
+                        let absoluteFrame = anchorView.convert(anchorRect, to: self.view)
+                        //TODO:localize
+                        
+                        let itemList = orderedStorySubscriptions.items.prefix(3).map(\.peer.compactDisplayTitle)
+                        var itemListString: String = itemList.joined(separator: ", ")
+                        if #available(iOS 13.0, *) {
+                            let listFormatter = ListFormatter()
+                            listFormatter.locale = localeWithStrings(self.presentationData.strings)
+                            if let value = listFormatter.string(from: itemList) {
+                                itemListString = value
+                            }
+                        }
+                        
+                        let text: String = "Tap above to view updates\nfrom \(itemListString)"
+                        
+                        let tooltipController = TooltipController(content: .text(text), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, timeout: 30.0, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true, padding: 6.0, innerPadding: UIEdgeInsets(top: 2.0, left: 3.0, bottom: 2.0, right: 3.0))
+                        self.present(tooltipController, in: .current, with: TooltipControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
+                            guard let self else {
+                                return nil
+                            }
+                            return (self.displayNode, absoluteFrame.insetBy(dx: 0.0, dy: 0.0).offsetBy(dx: 0.0, dy: 0.0))
+                        }))
+                        
+                        #if !DEBUG
+                        let _ = ApplicationSpecificNotice.setDisplayChatListStoriesTooltip(accountManager: self.context.sharedContext.accountManager).start()
+                        #endif
+                    }
+                }
             })
         }
     }
@@ -2351,7 +2410,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     
-    func updateHeaderContent(layout: ContainerViewLayout) -> (primaryContent: ChatListHeaderComponent.Content?, secondaryContent: ChatListHeaderComponent.Content?) {
+    func updateHeaderContent() -> (primaryContent: ChatListHeaderComponent.Content?, secondaryContent: ChatListHeaderComponent.Content?) {
         var primaryContent: ChatListHeaderComponent.Content?
         if let primaryContext = self.primaryContext {
             var backTitle: String?
@@ -5684,6 +5743,8 @@ private final class ChatListLocationContext {
         }
         
         self.parentController?.requestLayout(transition: .animated(duration: 0.45, curve: .spring))
+        
+        self.parentController?.maybeDisplayStoryTooltip()
     }
     
     private func updateForum(

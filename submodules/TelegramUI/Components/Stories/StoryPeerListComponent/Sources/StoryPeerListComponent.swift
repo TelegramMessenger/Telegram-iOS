@@ -323,6 +323,10 @@ public final class StoryPeerListComponent: Component {
             })
         }
         
+        public func anchorForTooltip() -> (UIView, CGRect)? {
+            return (self.collapsedButton, self.collapsedButton.bounds)
+        }
+        
         public func transitionViewForItem(peerId: EnginePeer.Id) -> (UIView, StoryContainerScreen.TransitionView)? {
             if self.collapsedButton.isUserInteractionEnabled {
                 return nil
