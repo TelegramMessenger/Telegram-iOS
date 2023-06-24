@@ -57,7 +57,7 @@ final class MediaEditorScreenComponent: Component {
     let hasAppeared: Bool
     let isDismissing: Bool
     let bottomSafeInset: CGFloat
-    let mediaEditor: MediaEditor?
+    let mediaEditor: Signal<MediaEditor?, NoError>
     let privacy: MediaEditorResultPrivacy
     let selectedEntity: DrawingEntity?
     let entityViewForEntity: (DrawingEntity) -> DrawingEntityView?
@@ -73,7 +73,7 @@ final class MediaEditorScreenComponent: Component {
         hasAppeared: Bool,
         isDismissing: Bool,
         bottomSafeInset: CGFloat,
-        mediaEditor: MediaEditor?,
+        mediaEditor: Signal<MediaEditor?, NoError>,
         privacy: MediaEditorResultPrivacy,
         selectedEntity: DrawingEntity?,
         entityViewForEntity: @escaping (DrawingEntity) -> DrawingEntityView?,
@@ -183,20 +183,25 @@ final class MediaEditorScreenComponent: Component {
         var playerStateDisposable: Disposable?
         var playerState: MediaEditorPlayerState?
         
-        init(context: AccountContext, mediaEditor: MediaEditor?) {
+        init(context: AccountContext, mediaEditor: Signal<MediaEditor?, NoError>) {
             self.context = context
             
             super.init()
             
-            if let mediaEditor {
-                self.playerStateDisposable = (mediaEditor.playerState(framesCount: 16)
-                |> deliverOnMainQueue).start(next: { [weak self] playerState in
-                    if let self {
-                        self.playerState = playerState
-                        self.updated()
-                    }
-                })
+            self.playerStateDisposable = (mediaEditor
+            |> mapToSignal { mediaEditor in
+                if let mediaEditor {
+                    return mediaEditor.playerState(framesCount: 16)
+                } else {
+                    return .complete()
+                }
             }
+            |> deliverOnMainQueue).start(next: { [weak self] playerState in
+                if let self {
+                    self.playerState = playerState
+                    self.updated()
+                }
+            })
         }
         
         deinit {
@@ -824,7 +829,10 @@ final class MediaEditorScreenComponent: Component {
                 transition.setAlpha(view: toolsButtonView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
             }
             
-            let mediaEditor = component.mediaEditor
+            var mediaEditor: MediaEditor?
+            if let controller = environment.controller() as? MediaEditorScreen {
+                mediaEditor = controller.node.mediaEditor
+            }
             
             var scrubberBottomInset: CGFloat = 0.0
             if let playerState = state.playerState {
@@ -1193,7 +1201,7 @@ final class MediaEditorScreenComponent: Component {
             }
              
             if let playerState = state.playerState, playerState.hasAudio {
-                let isVideoMuted = component.mediaEditor?.values.videoIsMuted ?? false
+                let isVideoMuted = mediaEditor?.values.videoIsMuted ?? false
                 
                 let muteContentComponent: AnyComponentWithIdentity<Empty>
                 if component.hasAppeared {
@@ -1227,8 +1235,8 @@ final class MediaEditorScreenComponent: Component {
                     transition: transition,
                     component: AnyComponent(CameraButton(
                         content: muteContentComponent,
-                        action: { [weak self, weak state] in
-                            if let self, let mediaEditor = self.component?.mediaEditor {
+                        action: { [weak state, weak mediaEditor] in
+                            if let mediaEditor {
                                 state?.muteDidChange = true
                                 let isMuted = !mediaEditor.values.videoIsMuted
                                 mediaEditor.setVideoIsMuted(isMuted)
@@ -1556,6 +1564,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         fileprivate let drawingView: DrawingView
         fileprivate let previewView: MediaEditorPreviewView
         fileprivate var mediaEditor: MediaEditor?
+        fileprivate var mediaEditorPromise = Promise<MediaEditor?>()
         
         private let stickerPickerInputData = Promise<StickerPickerInputData>()
         
@@ -1833,6 +1842,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
             })
             self.mediaEditor = mediaEditor
+            self.mediaEditorPromise.set(.single(mediaEditor))
             
             mediaEditor.onPlaybackAction = { [weak self] action in
                 if let self {
@@ -2578,7 +2588,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         hasAppeared: self.hasAppeared,
                         isDismissing: self.isDismissing && !self.isDismissBySwipeSuppressed,
                         bottomSafeInset: layout.intrinsicInsets.bottom,
-                        mediaEditor: self.mediaEditor,
+                        mediaEditor: self.mediaEditorPromise.get(),
                         privacy: controller.state.privacy,
                         selectedEntity: self.isDisplayingTool ? nil : self.entitiesView.selectedEntityView?.entity,
                         entityViewForEntity: { [weak self] entity in
@@ -2596,10 +2606,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 switch mode {
                                 case .sticker:
                                     let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get())
-                                    controller.completion = { [weak self] file in
+                                    controller.completion = { [weak self] content in
                                         if let self {
-                                            if let file {
-                                                let stickerEntity = DrawingStickerEntity(content: .file(file))
+                                            if let content {
+                                                let stickerEntity = DrawingStickerEntity(content: content)
                                                 self.interaction?.insertEntity(stickerEntity)
                                                 
                                                 self.hasAnyChanges = true

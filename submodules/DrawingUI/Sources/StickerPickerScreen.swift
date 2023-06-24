@@ -16,6 +16,7 @@ import TelegramNotices
 import ChatEntityKeyboardInputNode
 import ContextUI
 import ChatPresentationInterfaceState
+import MediaEditor
 
 public struct StickerPickerInputData: Equatable {
     var emoji: EmojiPagerContentComponent
@@ -474,10 +475,34 @@ public class StickerPickerScreen: ViewController {
             
             content.emoji.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
                 performItemAction: { [weak self] _, item, _, _, _, _ in
-                    guard let strongSelf = self, let file = item.itemFile else {
+                    guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.controller?.completion(file)
+                    if let file = item.itemFile {
+                        strongSelf.controller?.completion(.file(file))
+                    } else if case let .staticEmoji(emoji) = item.content {
+                        if let image = generateImage(CGSize(width: 256.0, height: 256.0), scale: 1.0, rotatedContext: { size, context in
+                            context.clear(CGRect(origin: .zero, size: size))
+
+                            let attributedString = NSAttributedString(string: emoji, attributes: [NSAttributedString.Key.font: Font.regular(200), NSAttributedString.Key.foregroundColor: UIColor.white])
+                            
+                            let line = CTLineCreateWithAttributedString(attributedString)
+                            let lineBounds = CTLineGetBoundsWithOptions(line, [.useOpticalBounds])
+                            
+                            let lineOffset = CGPoint(x: 1.0 - UIScreenPixel, y: 0.0)
+                            let lineOrigin = CGPoint(x: floorToScreenPixels(-lineBounds.origin.x + (size.width - lineBounds.size.width) / 2.0) + lineOffset.x, y: floorToScreenPixels(-lineBounds.origin.y + (size.height - lineBounds.size.height) / 2.0) + lineOffset.y)
+                            
+                            context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                            context.scaleBy(x: 1.0, y: -1.0)
+                            context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                            
+                            context.translateBy(x: lineOrigin.x, y: lineOrigin.y)
+                            CTLineDraw(line, context)
+                            context.translateBy(x: -lineOrigin.x, y: -lineOrigin.y)
+                        }) {
+                            strongSelf.controller?.completion(.image(image))
+                        }
+                    }
                     strongSelf.controller?.dismiss(animated: true)
                 },
                 deleteBackwards: nil,
@@ -810,7 +835,7 @@ public class StickerPickerScreen: ViewController {
                     guard let strongSelf = self, let file = item.itemFile else {
                         return
                     }
-                    strongSelf.controller?.completion(file)
+                    strongSelf.controller?.completion(.file(file))
                     strongSelf.controller?.dismiss(animated: true)
                 },
                 deleteBackwards: nil,
@@ -901,7 +926,7 @@ public class StickerPickerScreen: ViewController {
                     guard let strongSelf = self, let file = item.itemFile else {
                         return
                     }
-                    strongSelf.controller?.completion(file)
+                    strongSelf.controller?.completion(.file(file))
                     strongSelf.controller?.dismiss(animated: true)
                 },
                 deleteBackwards: nil,
@@ -1523,7 +1548,7 @@ public class StickerPickerScreen: ViewController {
     public var pushController: (ViewController) -> Void = { _ in }
     public var presentController: (ViewController) -> Void = { _ in }
     
-    public var completion: (TelegramMediaFile?) -> Void = { _ in }
+    public var completion: (DrawingStickerEntity.Content?) -> Void = { _ in }
     
     public init(context: AccountContext, inputData: Signal<StickerPickerInputData, NoError>) {
         self.context = context

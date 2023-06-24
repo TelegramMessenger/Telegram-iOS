@@ -265,7 +265,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 let context = strongSelf.context
                 var cancelImpl: (() -> Void)?
                 let progressSignal = Signal<Never, NoError> { subscriber in
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: theme)
                     let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                         cancelImpl?()
                     }))
@@ -305,7 +305,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                         }
                     }
                     
-                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: theme)
                     strongSelf.interaction.getNavigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: strongSelf.context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
                         return true
                     }))

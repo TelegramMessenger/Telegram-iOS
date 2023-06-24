@@ -1003,11 +1003,11 @@ private final class DrawingScreenComponent: CombinedComponent {
             
             self.updateEntitiesPlayback.invoke(false)
             let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get())
-            controller.completion = { [weak self] file in
+            controller.completion = { [weak self] content in
                 self?.updateEntitiesPlayback.invoke(true)
                 
-                if let file = file {
-                    let stickerEntity = DrawingStickerEntity(content: .file(file))
+                if let content {
+                    let stickerEntity = DrawingStickerEntity(content: content)
                     self?.insertEntity.invoke(stickerEntity)
                 } else {
                     self?.updateCurrentMode(.drawing)
