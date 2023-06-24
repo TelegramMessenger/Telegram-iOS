@@ -1166,6 +1166,24 @@ public func _internal_pollPeerStories(postbox: Postbox, network: Network, accoun
                 }
                 
                 transaction.setStoryItems(peerId: peerId, items: updatedPeerEntries)
+                
+                if !updatedPeerEntries.isEmpty {
+                    if let user = transaction.getPeer(peerId) as? TelegramUser, let storiesHidden = user.storiesHidden {
+                        if storiesHidden {
+                            if !transaction.storySubscriptionsContains(key: .hidden, peerId: peerId) {
+                                var (state, peerIds) = transaction.getAllStorySubscriptions(key: .hidden)
+                                peerIds.append(peerId)
+                                transaction.replaceAllStorySubscriptions(key: .hidden, state: state, peerIds: peerIds)
+                            }
+                        } else {
+                            if !transaction.storySubscriptionsContains(key: .filtered, peerId: peerId) {
+                                var (state, peerIds) = transaction.getAllStorySubscriptions(key: .filtered)
+                                peerIds.append(peerId)
+                                transaction.replaceAllStorySubscriptions(key: .filtered, state: state, peerIds: peerIds)
+                            }
+                        }
+                    }
+                }
             }
             |> ignoreValues
         }

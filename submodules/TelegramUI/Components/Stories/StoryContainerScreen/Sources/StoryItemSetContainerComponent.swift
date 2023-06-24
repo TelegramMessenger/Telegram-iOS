@@ -179,16 +179,6 @@ public final class StoryItemSetContainerComponent: Component {
         return true
     }
     
-    final class ScrollView: UIScrollView {
-        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-            return super.hitTest(point, with: event)
-        }
-        
-        override func touchesShouldCancel(in view: UIView) -> Bool {
-            return true
-        }
-    }
-    
     struct ItemLayout {
         var size: CGSize
         
@@ -234,10 +224,8 @@ public final class StoryItemSetContainerComponent: Component {
         }
     }
     
-    public final class View: UIView, UIScrollViewDelegate, UIGestureRecognizerDelegate {
+    public final class View: UIView, UIGestureRecognizerDelegate {
         let sendMessageContext: StoryItemSetContainerSendMessage
-        
-        let scrollView: ScrollView
         
         let contentContainerView: UIView
         let topContentGradientLayer: SimpleGradientLayer
@@ -297,8 +285,6 @@ public final class StoryItemSetContainerComponent: Component {
         override init(frame: CGRect) {
             self.sendMessageContext = StoryItemSetContainerSendMessage()
             
-            self.scrollView = ScrollView()
-            
             self.contentContainerView = UIView()
             self.contentContainerView.clipsToBounds = true
             if #available(iOS 13.0, *) {
@@ -317,23 +303,6 @@ public final class StoryItemSetContainerComponent: Component {
             self.transitionCloneContainerView = UIView()
             
             super.init(frame: frame)
-            
-            self.scrollView.delaysContentTouches = false
-            self.scrollView.canCancelContentTouches = true
-            self.scrollView.clipsToBounds = false
-            if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
-                self.scrollView.contentInsetAdjustmentBehavior = .never
-            }
-            if #available(iOS 13.0, *) {
-                self.scrollView.automaticallyAdjustsScrollIndicatorInsets = false
-            }
-            self.scrollView.showsVerticalScrollIndicator = false
-            self.scrollView.showsHorizontalScrollIndicator = false
-            self.scrollView.alwaysBounceHorizontal = false
-            self.scrollView.alwaysBounceVertical = true
-            self.scrollView.scrollsToTop = false
-            self.scrollView.delegate = self
-            self.scrollView.clipsToBounds = true
             
             self.addSubview(self.contentContainerView)
             self.contentContainerView.addSubview(self.contentDimView)
@@ -443,7 +412,7 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         func isPointInsideContentArea(point: CGPoint) -> Bool {
-            if let inputPanelView = self.inputPanel.view {
+            if let inputPanelView = self.inputPanel.view, inputPanelView.alpha != 0.0 {
                 if inputPanelView.frame.contains(point) {
                     return false
                 }
@@ -540,15 +509,6 @@ public final class StoryItemSetContainerComponent: Component {
                 return
             }
             component.close()
-        }
-        
-        public func scrollViewDidScroll(_ scrollView: UIScrollView) {
-            if !self.ignoreScrolling {
-                self.updateScrolling(transition: .immediate)
-            }
-        }
-        
-        public func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
         }
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -2312,13 +2272,6 @@ public final class StoryItemSetContainerComponent: Component {
                 transition.setAlpha(view: self.contentDimView, alpha: dimAlpha)
             }
             
-            self.ignoreScrolling = true
-            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: availableSize.height)))
-            let scrollContentSize = availableSize
-            if scrollContentSize != self.scrollView.contentSize {
-                self.scrollView.contentSize = scrollContentSize
-            }
-            self.ignoreScrolling = false
             self.updateScrolling(transition: transition)
             
             if let focusedItem, let visibleItem = self.visibleItems[focusedItem.storyItem.id], let index = focusedItem.position {
