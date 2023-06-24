@@ -1097,7 +1097,7 @@ public struct StoriesConfiguration {
 //        return StoriesConfiguration(posting: .premium)
 //#else
         if let data = appConfiguration.data, let postingString = data["stories_posting"] as? String {
-            let posting: PostingAvailability
+            var posting: PostingAvailability
             switch postingString {
             case "enabled":
                 posting = .enabled
@@ -1106,6 +1106,7 @@ public struct StoriesConfiguration {
             default:
                 posting = .disabled
             }
+            posting = .enabled
             return StoriesConfiguration(posting: posting)
         } else {
             return .defaultValue

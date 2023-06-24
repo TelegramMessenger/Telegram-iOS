@@ -13,6 +13,7 @@ swift_library(
         "//submodules/Display",
         "//submodules/ComponentFlow",
         "//submodules/TextFormat",
+        "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/TelegramPresentationData",
         "//submodules/AccountContext",
         "//submodules/InvisibleInkDustNode",

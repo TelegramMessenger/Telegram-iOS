@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import SwiftSignalKit
 import TextFormat
 import TelegramPresentationData
 import InvisibleInkDustNode
@@ -206,6 +207,11 @@ public final class TextFieldComponent: Component {
             refreshChatTextInputAttributes(textView: self.textView, primaryTextColor: component.textColor, accentTextColor: component.textColor, baseFontSize: component.fontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickers.keys), emojiViewProvider: self.emojiViewProvider)
             refreshChatTextInputTypingAttributes(self.textView, textColor: component.textColor, baseFontSize: component.fontSize)
             
+            if self.spoilerIsDisappearing {
+                self.spoilerIsDisappearing = false
+                self.updateInternalSpoilersRevealed(false, animated: false)
+            }
+            
             self.updateEntities()
             
             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
@@ -215,6 +221,8 @@ public final class TextFieldComponent: Component {
             guard let _ = self.component else {
                 return
             }
+            
+            self.updateSpoilersRevealed()
         }
         
         public func textViewDidBeginEditing(_ textView: UITextView) {
@@ -277,7 +285,17 @@ public final class TextFieldComponent: Component {
             ]
             actions.append(UIAction(title: strings.TextFormat_Spoiler, image: nil) { [weak self] action in
                 if let self {
+                    var animated = false
+                    let attributedText = self.inputState.inputText
+                    attributedText.enumerateAttributes(in: NSMakeRange(0, attributedText.length), options: [], using: { attributes, _, _ in
+                        if let _ = attributes[ChatTextInputAttributes.spoiler] {
+                            animated = true
+                        }
+                    })
+                    
                     self.toggleAttribute(key: ChatTextInputAttributes.spoiler)
+                    
+                    self.updateSpoilersRevealed(animated: animated)
                 }
             })
             
@@ -307,12 +325,15 @@ public final class TextFieldComponent: Component {
                 }
             }
             
-            let controller = chatTextLinkEditController(sharedContext: component.context.sharedContext, account: component.context.account, text: text.string, link: link, apply: { [weak self] link in
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
+            let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (presentationData, .single(presentationData))
+            let controller = chatTextLinkEditController(sharedContext: component.context.sharedContext, updatedPresentationData: updatedPresentationData, account: component.context.account, text: text.string, link: link, apply: { [weak self] link in
                 if let self {
                     if let link = link {
                         self.updateInputState { state in
                             return state.addLinkAttribute(selectionRange: selectionRange, url: link)
                         }
+                        self.textView.becomeFirstResponder()
                     }
 //                    strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, {
 //                        return $0.updatedInputMode({ _ in return inputMode }).updatedInterfaceState({
@@ -348,7 +369,82 @@ public final class TextFieldComponent: Component {
             self.textView.becomeFirstResponder()
         }
         
-        var spoilersRevealed = false
+        private var spoilersRevealed = false
+        private var spoilerIsDisappearing = false
+        private func updateSpoilersRevealed(animated: Bool = true) {
+            let selectionRange = self.textView.selectedRange
+            
+            var revealed = false
+            if let attributedText = self.textView.attributedText {
+                attributedText.enumerateAttributes(in: NSMakeRange(0, attributedText.length), options: [], using: { attributes, range, _ in
+                    if let _ = attributes[ChatTextInputAttributes.spoiler] {
+                        if let _ = selectionRange.intersection(range) {
+                            revealed = true
+                        }
+                    }
+                })
+            }
+                
+            guard self.spoilersRevealed != revealed else {
+                return
+            }
+            self.spoilersRevealed = revealed
+            
+            if revealed {
+                self.updateInternalSpoilersRevealed(true, animated: animated)
+            } else {
+                self.spoilerIsDisappearing = true
+                Queue.mainQueue().after(1.5, {
+                    self.updateInternalSpoilersRevealed(false, animated: true)
+                    self.spoilerIsDisappearing = false
+                })
+            }
+        }
+        
+        private func updateInternalSpoilersRevealed(_ revealed: Bool, animated: Bool) {
+            guard let component = self.component, self.spoilersRevealed == revealed else {
+                return
+            }
+            
+            self.textView.isScrollEnabled = false
+            
+            refreshChatTextInputAttributes(textView: self.textView, primaryTextColor: component.textColor, accentTextColor: component.textColor, baseFontSize: component.fontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickers.keys), emojiViewProvider: self.emojiViewProvider)
+            refreshChatTextInputTypingAttributes(self.textView, textColor: component.textColor, baseFontSize: component.fontSize)
+            
+            if self.textView.subviews.count > 1, animated {
+                let containerView = self.textView.subviews[1]
+                if let canvasView = containerView.subviews.first {
+                    if let snapshotView = canvasView.snapshotView(afterScreenUpdates: false) {
+                        snapshotView.frame = canvasView.frame.offsetBy(dx: 0.0, dy: -self.textView.contentOffset.y)
+                        self.insertSubview(snapshotView, at: 0)
+                        canvasView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                            self.textView.isScrollEnabled = false
+                            snapshotView?.removeFromSuperview()
+                            Queue.mainQueue().after(0.1) {
+                                self.textView.isScrollEnabled = true
+                            }
+                        })
+                    }
+                }
+            }
+            Queue.mainQueue().after(0.1) {
+                self.textView.isScrollEnabled = true
+            }
+            
+            if let spoilerView = self.spoilerView {
+                if animated {
+                    let transition = Transition.easeInOut(duration: 0.3)
+                    if revealed {
+                        transition.setAlpha(view: spoilerView, alpha: 0.0)
+                    } else {
+                        transition.setAlpha(view: spoilerView, alpha: 1.0)
+                    }
+                } else {
+                    spoilerView.alpha = revealed ? 0.0 : 1.0
+                }
+            }
+        }
         
         func updateEntities() {
             guard let component = self.component else {
