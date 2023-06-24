@@ -785,7 +785,7 @@ public final class StoryPeerListComponent: Component {
             transition.animation = .none
             
             if self.component != nil {
-                if component.collapseFraction != 0.0 && self.scrollView.bounds.minX != 0.0 {
+                if !component.unlocked && self.scrollView.bounds.minX != 0.0 {
                     self.ignoreScrolling = true
                     
                     let scrollingDistance = self.scrollView.bounds.minX
