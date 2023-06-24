@@ -28,6 +28,7 @@ import TextFieldComponent
 import TextFormat
 import LocalMediaResources
 import SaveToCameraRoll
+import BundleIconComponent
 
 public final class StoryItemSetContainerComponent: Component {
     public final class ExternalState {
@@ -250,6 +251,8 @@ public final class StoryItemSetContainerComponent: Component {
         
         var centerInfoItem: InfoItem?
         var rightInfoItem: InfoItem?
+        
+        var closeFriendIcon: ComponentView<Empty>?
         
         var captionItem: CaptionItem?
         
@@ -580,6 +583,9 @@ public final class StoryItemSetContainerComponent: Component {
             if self.sendMessageContext.shareController != nil {
                 return true
             }
+            if self.sendMessageContext.tooltipScreen != nil {
+                return true
+            }
             if let navigationController = component.controller()?.navigationController as? NavigationController {
                 let topViewController = navigationController.topViewController
                 if !(topViewController is StoryContainerScreen) && !(topViewController is MediaEditorScreen) {
@@ -615,6 +621,7 @@ public final class StoryItemSetContainerComponent: Component {
             let itemEnvironment = StoryContentItem.Environment(
                 externalState: visibleItem.externalState,
                 sharedState: component.storyItemSharedState,
+                theme: component.theme,
                 presentationProgressUpdated: { [weak self, weak visibleItem] progress, canSwitch in
                     guard let self = self, let component = self.component else {
                         return
@@ -650,7 +657,6 @@ public final class StoryItemSetContainerComponent: Component {
             )
             if let view = visibleItem.view.view {
                 if view.superview == nil {
-                    view.isUserInteractionEnabled = false
                     self.contentContainerView.insertSubview(view, at: 0)
                 }
                 itemTransition.setFrame(view: view, frame: CGRect(origin: CGPoint(), size: itemLayout.size))
@@ -1133,6 +1139,15 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                 }
             }
+            
+            var isUnsupported = false
+            var disabledPlaceholder: String?
+            if component.slice.peer.isService {
+                disabledPlaceholder = "You can't reply to this story"
+            } else if case .unsupported = component.slice.item.storyItem.media {
+                isUnsupported = true
+                disabledPlaceholder = "You can't reply to this story"
+            }
              
             let keyboardWasHidden = self.inputPanelExternalState.isKeyboardHidden
             let inputNodeVisible = self.sendMessageContext.currentInputMode == .media || hasFirstResponder(self)
@@ -1368,7 +1383,7 @@ public final class StoryItemSetContainerComponent: Component {
                     displayGradient: false, //(component.inputHeight != 0.0 || inputNodeVisible) && component.metrics.widthClass != .regular,
                     bottomInset: component.inputHeight != 0.0 || inputNodeVisible ? 0.0 : bottomContentInset,
                     hideKeyboard: self.sendMessageContext.currentInputMode == .media,
-                    disabledPlaceholder: component.slice.peer.isService ? "You can't reply to this story" : nil
+                    disabledPlaceholder: disabledPlaceholder
                 )),
                 environment: {},
                 containerSize: CGSize(width: inputPanelAvailableWidth, height: 200.0)
@@ -1619,10 +1634,22 @@ public final class StoryItemSetContainerComponent: Component {
                                     ), nil)
                                 }
                             })))
-                            items.append(.action(ContextMenuActionItem(text: "Save image", icon: { theme in
+                            
+                            let saveText: String
+                            if case .file = component.slice.item.storyItem.media {
+                                saveText = "Save Video"
+                            } else {
+                                saveText = "Save Image"
+                            }
+                            items.append(.action(ContextMenuActionItem(text: saveText, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.contextMenu.primaryColor)
-                            }, action: { _, a in
+                            }, action: { [weak self] _, a in
                                 a(.default)
+                                
+                                guard let self else {
+                                    return
+                                }
+                                self.requestSave()
                             })))
                             
                             if component.slice.item.storyItem.isPublic && (component.slice.peer.addressName != nil || !component.slice.peer._asPeer().usernames.isEmpty) {
@@ -1863,6 +1890,66 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
+            if component.slice.item.storyItem.isCloseFriends && component.slice.peer.id != component.context.account.peerId {
+                let closeFriendIcon: ComponentView<Empty>
+                var closeFriendIconTransition = transition
+                if let current = self.closeFriendIcon {
+                    closeFriendIcon = current
+                } else {
+                    closeFriendIconTransition = .immediate
+                    closeFriendIcon = ComponentView()
+                    self.closeFriendIcon = closeFriendIcon
+                }
+                let closeFriendIconSize = closeFriendIcon.update(
+                    transition: closeFriendIconTransition,
+                    component: AnyComponent(PlainButtonComponent(
+                        content: AnyComponent(BundleIconComponent(
+                            name: "Stories/CloseStoryIcon",
+                            tintColor: nil,
+                            maxSize: nil
+                        )),
+                        effectAlignment: .center,
+                        action: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            guard let closeFriendIconView = self.closeFriendIcon?.view else {
+                                return
+                            }
+                            let tooltipScreen = TooltipScreen(
+                                account: component.context.account,
+                                sharedContext: component.context.sharedContext,
+                                text: "You are seeing this story because you have\nbeen added to \(component.slice.peer.compactDisplayTitle)'s list of close friends.", style: .default, location: TooltipScreen.Location.point(closeFriendIconView.convert(closeFriendIconView.bounds, to: self).offsetBy(dx: 1.0, dy: 6.0), .top), displayDuration: .manual(true), shouldDismissOnTouch: { _ in
+                                    return .dismiss(consume: false)
+                                }
+                            )
+                            tooltipScreen.willBecomeDismissed = { [weak self] _ in
+                                guard let self else {
+                                    return
+                                }
+                                self.sendMessageContext.tooltipScreen = nil
+                                self.updateIsProgressPaused()
+                            }
+                            self.sendMessageContext.tooltipScreen = tooltipScreen
+                            self.updateIsProgressPaused()
+                            component.controller()?.present(tooltipScreen, in: .current)
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 44.0, height: 44.0)
+                )
+                let closeFriendIconFrame = CGRect(origin: CGPoint(x: contentFrame.width - 6.0 - 52.0 - closeFriendIconSize.width, y: 21.0), size: closeFriendIconSize)
+                if let closeFriendIconView = closeFriendIcon.view {
+                    if closeFriendIconView.superview == nil {
+                        self.contentContainerView.addSubview(closeFriendIconView)
+                        closeFriendIconTransition.setFrame(view: closeFriendIconView, frame: closeFriendIconFrame)
+                    }
+                }
+            } else if let closeFriendIcon = self.closeFriendIcon {
+                self.closeFriendIcon = nil
+                closeFriendIcon.view?.removeFromSuperview()
+            }
+            
             let gradientHeight: CGFloat = 74.0
             transition.setFrame(layer: self.topContentGradientLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: contentFrame.width, height: gradientHeight)))
             transition.setAlpha(layer: self.topContentGradientLayer, alpha: (component.hideUI || self.displayViewList || self.isEditingStory) ? 0.0 : 1.0)
@@ -1898,7 +1985,7 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
-            if !component.slice.item.storyItem.text.isEmpty {
+            if !isUnsupported, !component.slice.item.storyItem.text.isEmpty {
                 var captionItemTransition = transition
                 let captionItem: CaptionItem
                 if let current = self.captionItem {
@@ -2685,6 +2772,35 @@ public final class StoryItemSetContainerComponent: Component {
 //                    controller?.updateEditProgress(progress)
 //                }
 //            })
+        }
+        
+        private func requestSave() {
+            guard let component = self.component, let peerReference = PeerReference(component.slice.peer._asPeer()) else {
+                return
+            }
+            
+            let saveScreen = SaveProgressScreen(context: component.context, content: .progress("Saving", 0.0))
+            component.controller()?.present(saveScreen, in: .current)
+            
+            let disposable = (saveToCameraRoll(context: component.context, postbox: component.context.account.postbox, userLocation: .other, mediaReference: .story(peer: peerReference, id: component.slice.item.storyItem.id, media: component.slice.item.storyItem.media._asMedia()))
+            |> deliverOnMainQueue).start(next: { [weak saveScreen] progress in
+                guard let saveScreen else {
+                    return
+                }
+                saveScreen.content = .progress("Saving", progress)
+            }, completed: { [weak saveScreen] in
+                guard let saveScreen else {
+                    return
+                }
+                saveScreen.content = .completion("Saved")
+                Queue.mainQueue().after(3.0, { [weak saveScreen] in
+                    saveScreen?.dismiss()
+                })
+            })
+            
+            saveScreen.cancelled = {
+                disposable.dispose()
+            }
         }
     }
     

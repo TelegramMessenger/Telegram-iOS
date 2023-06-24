@@ -67,6 +67,7 @@ swift_library(
         "//submodules/TelegramUI/Components/PeerReportScreen",
         "//submodules/LocalMediaResources",
         "//submodules/SaveToCameraRoll",
+        "//submodules/Components/BundleIconComponent",
     ],
     visibility = [
         "//visibility:public",

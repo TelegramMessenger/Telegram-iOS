@@ -301,15 +301,43 @@ private func testAvatarImage(size: CGSize) -> UIImage? {
     return image
 }
 
-private func avatarRoundImage(size: CGSize, source: UIImage) -> UIImage? {
+private func avatarRoundImage(size: CGSize, source: UIImage, isStory: Bool) -> UIImage? {
     UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
     let context = UIGraphicsGetCurrentContext()
 
-    context?.beginPath()
-    context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
-    context?.clip()
-
-    source.draw(in: CGRect(origin: CGPoint(), size: size))
+    if isStory {
+        let lineWidth: CGFloat = 2.0
+        context?.beginPath()
+        context?.addEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)).insetBy(dx: lineWidth * 0.5, dy: lineWidth * 0.5))
+        context?.clip()
+        
+        let colors: [CGColor] = [
+            UIColor(rgb: 0x34C76F).cgColor,
+            UIColor(rgb: 0x3DA1FD).cgColor
+        ]
+        var locations: [CGFloat] = [0.0, 1.0]
+        
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+        
+        context?.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+        
+        context?.setBlendMode(.copy)
+        context?.fillEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: 2.0, dy: 2.0))
+        
+        context?.setBlendMode(.normal)
+        context?.beginPath()
+        context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height).insetBy(dx: 4.0, dy: 4.0))
+        context?.clip()
+        
+        source.draw(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: 4.0, dy: 4.0))
+    } else {
+        context?.beginPath()
+        context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+        context?.clip()
+        
+        source.draw(in: CGRect(origin: CGPoint(), size: size))
+    }
 
     let image = UIGraphicsGetImageFromCurrentImageContext()
     UIGraphicsEndImageContext()
@@ -332,12 +360,16 @@ private let gradientColors: [NSArray] = [
     [UIColor(rgb: 0xd669ed).cgColor, UIColor(rgb: 0xe0a2f3).cgColor],
 ]
 
-private func avatarViewLettersImage(size: CGSize, peerId: PeerId, letters: [String]) -> UIImage? {
+private func avatarViewLettersImage(size: CGSize, peerId: PeerId, letters: [String], isStory: Bool) -> UIImage? {
     UIGraphicsBeginImageContextWithOptions(size, false, 2.0)
     let context = UIGraphicsGetCurrentContext()
 
     context?.beginPath()
-    context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+    if isStory {
+        context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height).insetBy(dx: 4.0, dy: 4.0))
+    } else {
+        context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+    }
     context?.clip()
 
     let colorIndex: Int
@@ -373,17 +405,38 @@ private func avatarViewLettersImage(size: CGSize, peerId: PeerId, letters: [Stri
         CTLineDraw(line, context)
     }
     context?.translateBy(x: -lineOrigin.x, y: -lineOrigin.y)
+    
+    if isStory {
+        context?.resetClip()
+        
+        let lineWidth: CGFloat = 2.0
+        context?.setLineWidth(lineWidth)
+        context?.addEllipse(in: CGRect(origin: CGPoint(x: size.width * 0.5, y: size.height * 0.5), size: CGSize(width: size.width, height: size.height)).insetBy(dx: lineWidth * 0.5, dy: lineWidth * 0.5))
+        context?.replacePathWithStrokedPath()
+        context?.clip()
+        
+        let colors: [CGColor] = [
+            UIColor(rgb: 0x34C76F).cgColor,
+            UIColor(rgb: 0x3DA1FD).cgColor
+        ]
+        var locations: [CGFloat] = [0.0, 1.0]
+        
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+        
+        context?.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+    }
 
     let image = UIGraphicsGetImageFromCurrentImageContext()
     UIGraphicsEndImageContext()
     return image
 }
 
-private func avatarImage(path: String?, peerId: PeerId, letters: [String], size: CGSize) -> UIImage {
-    if let path = path, let image = UIImage(contentsOfFile: path), let roundImage = avatarRoundImage(size: size, source: image) {
+private func avatarImage(path: String?, peerId: PeerId, letters: [String], size: CGSize, isStory: Bool) -> UIImage {
+    if let path = path, let image = UIImage(contentsOfFile: path), let roundImage = avatarRoundImage(size: size, source: image, isStory: isStory) {
         return roundImage
     } else {
-        return avatarViewLettersImage(size: size, peerId: peerId, letters: letters)!
+        return avatarViewLettersImage(size: size, peerId: peerId, letters: letters, isStory: isStory)!
     }
 }
 
@@ -402,14 +455,15 @@ private func storeTemporaryImage(path: String) -> String {
 }
 
 @available(iOS 15.0, *)
-private func peerAvatar(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer) -> INImage? {
+private func peerAvatar(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer, isStory: Bool) -> INImage? {
     if let resource = smallestImageRepresentation(peer.profileImageRepresentations)?.resource, let path = mediaBox.completedResourcePath(resource) {
-        let cachedPath = mediaBox.cachedRepresentationPathForId(resource.id.stringRepresentation, representationId: "intents.png", keepDuration: .shortLived)
-        if let _ = fileSize(cachedPath) {
+        let cachedPath = mediaBox.cachedRepresentationPathForId(resource.id.stringRepresentation, representationId: "intents\(isStory ? "-story2" : "").png", keepDuration: .shortLived)
+        if let _ = fileSize(cachedPath), !"".isEmpty {
             return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
         } else {
-            let image = avatarImage(path: path, peerId: peer.id, letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
+            let image = avatarImage(path: path, peerId: peer.id, letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0), isStory: isStory)
             if let data = image.pngData() {
+                let _ = try? FileManager.default.removeItem(atPath: cachedPath)
                 let _ = try? data.write(to: URL(fileURLWithPath: cachedPath), options: .atomic)
             }
 
@@ -417,11 +471,11 @@ private func peerAvatar(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer) -
         }
     }
 
-    let cachedPath = mediaBox.cachedRepresentationPathForId("lettersAvatar2-\(peer.displayLetters.joined(separator: ","))", representationId: "intents.png", keepDuration: .shortLived)
+    let cachedPath = mediaBox.cachedRepresentationPathForId("lettersAvatar2-\(peer.displayLetters.joined(separator: ","))\(isStory ? "-story" : "")", representationId: "intents.png", keepDuration: .shortLived)
     if let _ = fileSize(cachedPath) {
         return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
     } else {
-        let image = avatarImage(path: nil, peerId: peer.id, letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
+        let image = avatarImage(path: nil, peerId: peer.id, letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0), isStory: isStory)
         if let data = image.pngData() {
             let _ = try? data.write(to: URL(fileURLWithPath: cachedPath), options: .atomic)
         }
@@ -468,9 +522,9 @@ private struct NotificationContent: CustomStringConvertible {
         return string
     }
 
-    mutating func addSenderInfo(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer, topicTitle: String?, contactIdentifier: String?) {
+    mutating func addSenderInfo(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer, topicTitle: String?, contactIdentifier: String?, isStory: Bool) {
         if #available(iOS 15.0, *) {
-            let image = peerAvatar(mediaBox: mediaBox, accountPeerId: accountPeerId, peer: peer)
+            let image = peerAvatar(mediaBox: mediaBox, accountPeerId: accountPeerId, peer: peer, isStory: isStory)
 
             self.senderImage = image
 
@@ -1527,7 +1581,7 @@ private final class NotificationServiceHandler {
                                                     return true
                                                 })
                                                 
-                                                content.addSenderInfo(mediaBox: stateManager.postbox.mediaBox, accountPeerId: stateManager.accountPeerId, peer: peer, topicTitle: topicTitle, contactIdentifier: foundLocalId)
+                                                content.addSenderInfo(mediaBox: stateManager.postbox.mediaBox, accountPeerId: stateManager.accountPeerId, peer: peer, topicTitle: topicTitle, contactIdentifier: foundLocalId, isStory: false)
                                             }
                                         }
                                         
@@ -1709,7 +1763,7 @@ private final class NotificationServiceHandler {
                                                     return true
                                                 })
                                                 
-                                                content.addSenderInfo(mediaBox: stateManager.postbox.mediaBox, accountPeerId: stateManager.accountPeerId, peer: peer, topicTitle: topicTitle, contactIdentifier: foundLocalId)
+                                                content.addSenderInfo(mediaBox: stateManager.postbox.mediaBox, accountPeerId: stateManager.accountPeerId, peer: peer, topicTitle: topicTitle, contactIdentifier: foundLocalId, isStory: false)
                                             }
                                         }
 

@@ -11,6 +11,16 @@ import SwiftSignalKit
 import TelegramPresentationData
 import StoryContainerScreen
 
+public func shouldDisplayStoriesInChatListHeader(storySubscriptions: EngineStorySubscriptions) -> Bool {
+    if !storySubscriptions.items.isEmpty {
+        return true
+    }
+    if let accountItem = storySubscriptions.accountItem, (accountItem.hasUnseen || accountItem.hasPending) {
+        return true
+    }
+    return false
+}
+
 private func solveParabolicMotion(from sourcePoint: CGPoint, to targetPosition: CGPoint, progress: CGFloat) -> CGPoint {
     if sourcePoint.y == targetPosition.y {
         return sourcePoint.interpolate(to: targetPosition, amount: progress)
@@ -310,7 +320,7 @@ public final class StoryPeerListComponent: Component {
         public func setPreviewedItem(signal: Signal<StoryId?, NoError>) {
             self.previewedItemDisposable?.dispose()
             self.previewedItemDisposable = (signal |> map(\.?.peerId) |> distinctUntilChanged |> deliverOnMainQueue).start(next: { [weak self] itemId in
-                guard let self else {
+                guard let self, let component = self.component else {
                     return
                 }
                 self.previewedItemId = itemId
@@ -318,6 +328,12 @@ public final class StoryPeerListComponent: Component {
                 for (peerId, visibleItem) in self.visibleItems {
                     if let itemView = visibleItem.view.view as? StoryPeerListItemComponent.View {
                         itemView.updateIsPreviewing(isPreviewing: peerId == itemId)
+                        
+                        if component.unlocked && peerId == itemId {
+                            if !self.scrollView.bounds.intersects(itemView.frame.insetBy(dx: 20.0, dy: 0.0)) {
+                                self.scrollView.scrollRectToVisible(itemView.frame.insetBy(dx: -40.0, dy: 0.0), animated: false)
+                            }
+                        }
                     }
                 }
             })
@@ -367,12 +383,23 @@ public final class StoryPeerListComponent: Component {
             }
             
             var hasStories: Bool = false
-            if let storySubscriptions = component.storySubscriptions, !storySubscriptions.items.isEmpty {
+            if let storySubscriptions = component.storySubscriptions, shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions) {
                 hasStories = true
             }
             let _ = hasStories
             
-            let collapseStartIndex = component.useHiddenList ? 0 : 1
+            let collapseStartIndex: Int
+            if component.useHiddenList {
+                collapseStartIndex = 0
+            } else if let storySubscriptions = component.storySubscriptions {
+                if let accountItem = storySubscriptions.accountItem, (accountItem.hasUnseen || accountItem.hasPending) {
+                    collapseStartIndex = 0
+                } else {
+                    collapseStartIndex = 1
+                }
+            } else {
+                collapseStartIndex = 1
+            }
             
             let collapsedItemWidth: CGFloat = 24.0
             let collapsedItemDistance: CGFloat = 14.0

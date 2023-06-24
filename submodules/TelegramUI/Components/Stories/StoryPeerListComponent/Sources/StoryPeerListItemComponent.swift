@@ -714,7 +714,7 @@ public final class StoryPeerListItemComponent: Component {
                     titleString = "My story"
                 }
             } else {
-                titleString = component.peer.compactDisplayTitle
+                titleString = component.peer.compactDisplayTitle.trimmingCharacters(in: .whitespacesAndNewlines)
             }
             
             var titleTransition = transition
@@ -751,7 +751,7 @@ public final class StoryPeerListItemComponent: Component {
                     maximumNumberOfLines: 1
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width + 4.0, height: 100.0)
+                containerSize: CGSize(width: availableSize.width + 12.0, height: 100.0)
             )
             let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5) + (effectiveWidth - availableSize.width) * 0.5, y: indicatorFrame.midY + (indicatorFrame.height * 0.5 + 2.0) * effectiveScale), size: titleSize)
             if let titleView = self.title.view {

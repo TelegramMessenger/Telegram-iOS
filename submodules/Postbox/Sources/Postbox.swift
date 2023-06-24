@@ -1318,6 +1318,10 @@ public final class Transaction {
     public func getStory(id: StoryId) -> CodableEntry? {
         return self.postbox!.getStory(id: id)
     }
+    
+    public func getExpiredStoryIds(belowTimestamp: Int32) -> [StoryId] {
+        return self.postbox!.storyItemsTable.getExpiredIds(belowTimestamp: belowTimestamp)
+    }
 }
 
 public enum PostboxResult {

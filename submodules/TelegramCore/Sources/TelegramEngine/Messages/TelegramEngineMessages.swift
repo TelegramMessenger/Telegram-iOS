@@ -645,6 +645,7 @@ public extension TelegramEngine {
                 
                 additionalDataKeys.append(PostboxViewKey.storyItems(peerId: self.account.peerId))
                 additionalDataKeys.append(PostboxViewKey.storiesState(key: .peer(self.account.peerId)))
+                additionalDataKeys.append(PostboxViewKey.storiesState(key: .local))
                 
                 var subscriptionPeerIds = storySubscriptionsView.peerIds.filter { $0 != self.account.peerId }
                 if !debugTimer {
@@ -680,6 +681,7 @@ public extension TelegramEngine {
                         peer: EnginePeer(accountPeer),
                         hasUnseen: false,
                         hasUnseenCloseFriends: false,
+                        hasPending: false,
                         storyCount: 0,
                         unseenCount: 0,
                         lastTimestamp: 0
@@ -696,14 +698,17 @@ public extension TelegramEngine {
                                 var hasUnseen = false
                                 var hasUnseenCloseFriends = false
                                 var unseenCount = 0
+                                var hasPending = false
                                 if let peerState = peerState {
                                     hasUnseen = peerState.maxReadId < lastEntry.id
                                     
                                     for item in itemsView.items {
                                         if item.id > peerState.maxReadId {
                                             unseenCount += 1
-                                            
-                                            if case let .item(item) = item.value.get(Stories.StoredItem.self) {
+                                        }
+                                        
+                                        if case let .item(item) = item.value.get(Stories.StoredItem.self) {
+                                            if item.id > peerState.maxReadId {
                                                 if item.isCloseFriends {
                                                     hasUnseenCloseFriends = true
                                                 }
@@ -712,10 +717,17 @@ public extension TelegramEngine {
                                     }
                                 }
                                 
+                                if let view = views.views[PostboxViewKey.storiesState(key: .local)] as? StoryStatesView, let localState = view.value?.get(Stories.LocalState.self) {
+                                    if !localState.items.isEmpty {
+                                        hasPending = true
+                                    }
+                                }
+                                
                                 let item = EngineStorySubscriptions.Item(
                                     peer: EnginePeer(accountPeer),
                                     hasUnseen: hasUnseen,
                                     hasUnseenCloseFriends: hasUnseenCloseFriends,
+                                    hasPending: hasPending,
                                     storyCount: itemsView.items.count,
                                     unseenCount: unseenCount,
                                     lastTimestamp: lastEntry.timestamp
@@ -766,6 +778,7 @@ public extension TelegramEngine {
                             peer: EnginePeer(peer),
                             hasUnseen: hasUnseen,
                             hasUnseenCloseFriends: hasUnseenCloseFriends,
+                            hasPending: false,
                             storyCount: itemsView.items.count,
                             unseenCount: unseenCount,
                             lastTimestamp: lastEntry.timestamp
@@ -956,7 +969,7 @@ public extension TelegramEngine {
                                     isCloseFriends: item.isCloseFriends
                                 ))
                                 if let entry = CodableEntry(updatedItem) {
-                                    currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id)
+                                    currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp)
                                 }
                             }
                         }

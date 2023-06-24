@@ -437,6 +437,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                         peer: peer,
                         hasUnseen: state.hasUnseen,
                         hasUnseenCloseFriends: state.hasUnseenCloseFriends,
+                        hasPending: false,
                         storyCount: state.items.count,
                         unseenCount: 0,
                         lastTimestamp: state.items.last?.timestamp ?? 0

@@ -348,6 +348,15 @@ public enum Stories {
             }
         }
         
+        public var expirationTimestamp: Int32 {
+            switch self {
+            case let .item(item):
+                return item.expirationTimestamp
+            case let .placeholder(placeholder):
+                return placeholder.expirationTimestamp
+            }
+        }
+        
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             
@@ -466,6 +475,7 @@ public final class EngineStorySubscriptions: Equatable {
         public let peer: EnginePeer
         public let hasUnseen: Bool
         public let hasUnseenCloseFriends: Bool
+        public let hasPending: Bool
         public let storyCount: Int
         public let unseenCount: Int
         public let lastTimestamp: Int32
@@ -474,6 +484,7 @@ public final class EngineStorySubscriptions: Equatable {
             peer: EnginePeer,
             hasUnseen: Bool,
             hasUnseenCloseFriends: Bool,
+            hasPending: Bool,
             storyCount: Int,
             unseenCount: Int,
             lastTimestamp: Int32
@@ -481,6 +492,7 @@ public final class EngineStorySubscriptions: Equatable {
             self.peer = peer
             self.hasUnseen = hasUnseen
             self.hasUnseenCloseFriends = hasUnseenCloseFriends
+            self.hasPending = hasPending
             self.storyCount = storyCount
             self.unseenCount = unseenCount
             self.lastTimestamp = lastTimestamp
@@ -826,7 +838,7 @@ func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId
                                                         isCloseFriends: item.isCloseFriends
                                                     )
                                                     if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
-                                                        items.append(StoryItemsTableEntry(value: entry, id: item.id))
+                                                        items.append(StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp))
                                                     }
                                                     updatedItems.append(updatedItem)
                                                 }
@@ -996,7 +1008,7 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
                 isCloseFriends: item.isCloseFriends
             )
             if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
-                items[index] = StoryItemsTableEntry(value: entry, id: item.id)
+                items[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp)
             }
             
             updatedItems.append(updatedItem)
@@ -1127,7 +1139,7 @@ func _internal_updateStoriesArePinned(account: Account, ids: [Int32: EngineStory
                     isCloseFriends: item.isCloseFriends
                 )
                 if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
-                    items[index] = StoryItemsTableEntry(value: entry, id: item.id)
+                    items[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp)
                 }
                 
                 updatedItems.append(updatedItem)
@@ -1737,7 +1749,7 @@ func _internal_refreshStories(account: Account, peerId: PeerId, ids: [Int32]) ->
                 if let updatedItem = result.first(where: { $0.id == currentItems[i].id }) {
                     if case .item = updatedItem {
                         if let entry = CodableEntry(updatedItem) {
-                            currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id)
+                            currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp)
                         }
                     }
                 }

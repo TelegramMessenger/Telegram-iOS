@@ -3882,7 +3882,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     self.headerNode.avatarListNode.avatarContainerNode.storyData = nil
                     self.headerNode.avatarListNode.listContainerNode.storyParams = nil
                 } else {
-                    self.headerNode.avatarListNode.avatarContainerNode.storyData = (state.hasUnseen, state.hasUnseenCloseFriends)
+                    self.headerNode.avatarListNode.avatarContainerNode.storyData = (state.hasUnseen, state.hasUnseenCloseFriends && peer.id != self.context.account.peerId)
                     self.headerNode.avatarListNode.listContainerNode.storyParams = (peer, state.items.prefix(3).compactMap { item -> EngineStoryItem? in
                         switch item {
                         case let .item(item):
@@ -4132,7 +4132,24 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         let transitionView = self.headerNode.avatarListNode.avatarContainerNode.avatarNode.view
                         return StoryContainerScreen.TransitionOut(
                             destinationView: transitionView,
-                            transitionView: nil,
+                            transitionView: StoryContainerScreen.TransitionView(
+                                makeView: { [weak transitionView] in
+                                    let parentView = UIView()
+                                    if let copyView = transitionView?.snapshotContentTree(unhide: true) {
+                                        parentView.addSubview(copyView)
+                                    }
+                                    return parentView
+                                },
+                                updateView: { copyView, state, transition in
+                                    guard let view = copyView.subviews.first else {
+                                        return
+                                    }
+                                    let size = state.sourceSize.interpolate(to: state.destinationSize, amount: state.progress)
+                                    transition.setPosition(view: view, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
+                                    transition.setScale(view: view, scale: size.width / state.destinationSize.width)
+                                },
+                                insertCloneTransitionView: nil
+                            ),
                             destinationRect: transitionView.bounds,
                             destinationCornerRadius: transitionView.bounds.height * 0.5,
                             destinationIsAvatar: true,

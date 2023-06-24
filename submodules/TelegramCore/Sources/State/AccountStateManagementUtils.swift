@@ -4513,12 +4513,12 @@ func replayFinalState(
                     if let currentIndex = updatedPeerEntries.firstIndex(where: { $0.id == storedItem.id }) {
                         if case .item = storedItem {
                             if let codedEntry = CodableEntry(storedItem) {
-                                updatedPeerEntries[currentIndex] = StoryItemsTableEntry(value: codedEntry, id: storedItem.id)
+                                updatedPeerEntries[currentIndex] = StoryItemsTableEntry(value: codedEntry, id: storedItem.id, expirationTimestamp: storedItem.expirationTimestamp)
                             }
                         }
                     } else {
                         if let codedEntry = CodableEntry(storedItem) {
-                            updatedPeerEntries.append(StoryItemsTableEntry(value: codedEntry, id: storedItem.id))
+                            updatedPeerEntries.append(StoryItemsTableEntry(value: codedEntry, id: storedItem.id, expirationTimestamp: storedItem.expirationTimestamp))
                         }
                     }
                 } else {
