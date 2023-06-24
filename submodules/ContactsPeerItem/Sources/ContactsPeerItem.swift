@@ -180,7 +180,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     let arrowAction: (() -> Void)?
     let animationCache: AnimationCache?
     let animationRenderer: MultiAnimationRenderer?
-    let hasUnseenStories: Bool?
+    let storyStats: (total: Int, unseen: Int)?
     let openStories: ((ContactsPeerItemPeer, ASDisplayNode) -> Void)?
     
     public let selectable: Bool
@@ -217,7 +217,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? = nil, arrowAction: (() -> Void)? = nil,
         animationCache: AnimationCache? = nil,
         animationRenderer: MultiAnimationRenderer? = nil,
-        hasUnseenStories: Bool? = nil,
+        storyStats: (total: Int, unseen: Int)? = nil,
         openStories: ((ContactsPeerItemPeer, ASDisplayNode) -> Void)? = nil
     ) {
         self.presentationData = presentationData
@@ -248,7 +248,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         self.arrowAction = arrowAction
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
-        self.hasUnseenStories = hasUnseenStories
+        self.storyStats = storyStats
         self.openStories = openStories
         
         if let index = index {
@@ -1088,7 +1088,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             
                             var avatarScale: CGFloat = 1.0
                             
-                            if item.hasUnseenStories != nil {
+                            if item.storyStats != nil {
                                 avatarScale *= (avatarFrame.width - 2.0 * 2.0) / avatarFrame.width
                             }
                             
@@ -1096,7 +1096,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             
                             let storyIndicatorScale: CGFloat = 1.0
                             
-                            if let displayStoryIndicator = item.hasUnseenStories {
+                            if let storyStats = item.storyStats {
                                 var indicatorTransition = Transition(transition)
                                 let avatarStoryIndicator: ComponentView<Empty>
                                 if let current = strongSelf.avatarStoryIndicator {
@@ -1113,10 +1113,11 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 let _ = avatarStoryIndicator.update(
                                     transition: indicatorTransition,
                                     component: AnyComponent(AvatarStoryIndicatorComponent(
-                                        hasUnseen: displayStoryIndicator,
+                                        hasUnseen: storyStats.unseen != 0,
                                         isDarkTheme: item.presentationData.theme.overallDarkAppearance,
                                         activeLineWidth: 1.0 + UIScreenPixel,
-                                        inactiveLineWidth: 1.0 + UIScreenPixel
+                                        inactiveLineWidth: 1.0 + UIScreenPixel,
+                                        counters: AvatarStoryIndicatorComponent.Counters(totalCount: storyStats.total, unseenCount: storyStats.unseen)
                                     )),
                                     environment: {},
                                     containerSize: indicatorFrame.size
