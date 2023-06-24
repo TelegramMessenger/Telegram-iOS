@@ -48,6 +48,7 @@ final class StoryItemSetContainerSendMessage {
     
     weak var attachmentController: AttachmentController?
     weak var shareController: ShareController?
+    weak var tooltipScreen: ViewController?
     
     var currentInputMode: InputMode = .text
     private var needsInputActivation = false

@@ -240,10 +240,10 @@ private final class BannerComponent: Component {
     }
 }
 
-final class SaveProgressScreenComponent: Component {
-    typealias EnvironmentType = ViewControllerComponentContainer.Environment
+public final class SaveProgressScreenComponent: Component {
+    public typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
-    enum Content: Equatable {
+    public enum Content: Equatable {
         enum ContentType: Equatable {
             case progress
             case completion
@@ -262,11 +262,11 @@ final class SaveProgressScreenComponent: Component {
         }
     }
     
-    let context: AccountContext
-    let content: Content
-    let cancel: () -> Void
+    public let context: AccountContext
+    public let content: Content
+    public let cancel: () -> Void
     
-    init(
+    public init(
         context: AccountContext,
         content: Content,
         cancel: @escaping () -> Void
@@ -276,7 +276,7 @@ final class SaveProgressScreenComponent: Component {
         self.cancel = cancel
     }
     
-    static func ==(lhs: SaveProgressScreenComponent, rhs: SaveProgressScreenComponent) -> Bool {
+    public static func ==(lhs: SaveProgressScreenComponent, rhs: SaveProgressScreenComponent) -> Bool {
         if lhs.context !== rhs.context {
             return false
         }
@@ -374,7 +374,7 @@ final class SaveProgressScreenComponent: Component {
         }
     }
     
-    func makeView() -> View {
+    public func makeView() -> View {
         return View()
     }
     
@@ -385,7 +385,7 @@ final class SaveProgressScreenComponent: Component {
 
 private let storyDimensions = CGSize(width: 1080.0, height: 1920.0)
 
-final class SaveProgressScreen: ViewController {
+public final class SaveProgressScreen: ViewController {
     fileprivate final class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
         private weak var controller: SaveProgressScreen?
         private let context: AccountContext
@@ -501,7 +501,7 @@ final class SaveProgressScreen: ViewController {
     }
     
     fileprivate let context: AccountContext
-    var content: SaveProgressScreenComponent.Content {
+    public var content: SaveProgressScreenComponent.Content {
         didSet {
             if let layout = self.validLayout {
                 self.containerLayoutUpdated(layout, transition: .animated(duration: 0.25, curve: .easeInOut))
@@ -514,7 +514,7 @@ final class SaveProgressScreen: ViewController {
             
     public var cancelled: () -> Void = {}
     
-    init(context: AccountContext, content: SaveProgressScreenComponent.Content) {
+    public init(context: AccountContext, content: SaveProgressScreenComponent.Content) {
         self.context = context
         self.content = content
         
@@ -527,11 +527,11 @@ final class SaveProgressScreen: ViewController {
         self.maybeSetupDismissTimer()
     }
     
-    required init(coder aDecoder: NSCoder) {
+    required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func loadDisplayNode() {
+    override public func loadDisplayNode() {
         self.displayNode = Node(controller: self)
 
         super.displayNodeDidLoad()
@@ -567,7 +567,7 @@ final class SaveProgressScreen: ViewController {
     }
                 
     private var validLayout: ContainerViewLayout?
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.validLayout = layout
         
         super.containerLayoutUpdated(layout, transition: transition)

@@ -583,7 +583,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                     if self.containerNode.frame.contains(point) {
                         self.requestDismiss()
                         return self.view
-                    } else {
+                    } else if case .manual(false) = self.displayDuration {
                         return nil
                     }
                 }
@@ -710,7 +710,7 @@ public final class TooltipScreen: ViewController {
         case `default`
         case custom(Double)
         case infinite
-        case manual
+        case manual(Bool)
     }
     
     public enum Style {

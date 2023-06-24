@@ -1458,7 +1458,7 @@ public class CameraScreen: ViewController {
             let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY + 3.0), size: CGSize())
             
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: "Enable Dual Camera Mode", location: .point(location, .top), displayDuration: .manual, inset: 16.0, shouldDismissOnTouch: { _ in
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: "Enable Dual Camera Mode", location: .point(location, .top), displayDuration: .manual(false), inset: 16.0, shouldDismissOnTouch: { _ in
                 return .ignore
             })
             self.controller?.present(tooltipController, in: .current)

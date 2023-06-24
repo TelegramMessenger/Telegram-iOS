@@ -28,6 +28,7 @@ import TextFieldComponent
 import TextFormat
 import LocalMediaResources
 import SaveToCameraRoll
+import BundleIconComponent
 
 public final class StoryItemSetContainerComponent: Component {
     public final class ExternalState {
@@ -250,6 +251,8 @@ public final class StoryItemSetContainerComponent: Component {
         
         var centerInfoItem: InfoItem?
         var rightInfoItem: InfoItem?
+        
+        var closeFriendIcon: ComponentView<Empty>?
         
         var captionItem: CaptionItem?
         
@@ -578,6 +581,9 @@ public final class StoryItemSetContainerComponent: Component {
                 return true
             }
             if self.sendMessageContext.shareController != nil {
+                return true
+            }
+            if self.sendMessageContext.tooltipScreen != nil {
                 return true
             }
             if let navigationController = component.controller()?.navigationController as? NavigationController {
@@ -1619,10 +1625,22 @@ public final class StoryItemSetContainerComponent: Component {
                                     ), nil)
                                 }
                             })))
-                            items.append(.action(ContextMenuActionItem(text: "Save image", icon: { theme in
+                            
+                            let saveText: String
+                            if case .file = component.slice.item.storyItem.media {
+                                saveText = "Save Video"
+                            } else {
+                                saveText = "Save Image"
+                            }
+                            items.append(.action(ContextMenuActionItem(text: saveText, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.contextMenu.primaryColor)
-                            }, action: { _, a in
+                            }, action: { [weak self] _, a in
                                 a(.default)
+                                
+                                guard let self else {
+                                    return
+                                }
+                                self.requestSave()
                             })))
                             
                             if component.slice.item.storyItem.isPublic && (component.slice.peer.addressName != nil || !component.slice.peer._asPeer().usernames.isEmpty) {
@@ -1861,6 +1879,66 @@ public final class StoryItemSetContainerComponent: Component {
                     
                     transition.setAlpha(view: view, alpha: (component.hideUI || self.displayViewList || self.isEditingStory) ? 0.0 : 1.0)
                 }
+            }
+            
+            if component.slice.item.storyItem.isCloseFriends {
+                let closeFriendIcon: ComponentView<Empty>
+                var closeFriendIconTransition = transition
+                if let current = self.closeFriendIcon {
+                    closeFriendIcon = current
+                } else {
+                    closeFriendIconTransition = .immediate
+                    closeFriendIcon = ComponentView()
+                    self.closeFriendIcon = closeFriendIcon
+                }
+                let closeFriendIconSize = closeFriendIcon.update(
+                    transition: closeFriendIconTransition,
+                    component: AnyComponent(PlainButtonComponent(
+                        content: AnyComponent(BundleIconComponent(
+                            name: "Stories/CloseStoryIcon",
+                            tintColor: nil,
+                            maxSize: nil
+                        )),
+                        effectAlignment: .center,
+                        action: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            guard let closeFriendIconView = self.closeFriendIcon?.view else {
+                                return
+                            }
+                            let tooltipScreen = TooltipScreen(
+                                account: component.context.account,
+                                sharedContext: component.context.sharedContext,
+                                text: "You are seeing this story because you have\nbeen added to \(component.slice.peer.compactDisplayTitle)'s list of close friends.", style: .default, location: TooltipScreen.Location.point(closeFriendIconView.convert(closeFriendIconView.bounds, to: self).offsetBy(dx: 1.0, dy: 6.0), .top), displayDuration: .manual(true), shouldDismissOnTouch: { _ in
+                                    return .dismiss(consume: false)
+                                }
+                            )
+                            tooltipScreen.willBecomeDismissed = { [weak self] _ in
+                                guard let self else {
+                                    return
+                                }
+                                self.sendMessageContext.tooltipScreen = nil
+                                self.updateIsProgressPaused()
+                            }
+                            self.sendMessageContext.tooltipScreen = tooltipScreen
+                            self.updateIsProgressPaused()
+                            component.controller()?.present(tooltipScreen, in: .current)
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 44.0, height: 44.0)
+                )
+                let closeFriendIconFrame = CGRect(origin: CGPoint(x: contentFrame.width - 6.0 - 52.0 - closeFriendIconSize.width, y: 21.0), size: closeFriendIconSize)
+                if let closeFriendIconView = closeFriendIcon.view {
+                    if closeFriendIconView.superview == nil {
+                        self.contentContainerView.addSubview(closeFriendIconView)
+                        closeFriendIconTransition.setFrame(view: closeFriendIconView, frame: closeFriendIconFrame)
+                    }
+                }
+            } else if let closeFriendIcon = self.closeFriendIcon {
+                self.closeFriendIcon = nil
+                closeFriendIcon.view?.removeFromSuperview()
             }
             
             let gradientHeight: CGFloat = 74.0
@@ -2681,6 +2759,35 @@ public final class StoryItemSetContainerComponent: Component {
 //                    controller?.updateEditProgress(progress)
 //                }
 //            })
+        }
+        
+        private func requestSave() {
+            guard let component = self.component, let peerReference = PeerReference(component.slice.peer._asPeer()) else {
+                return
+            }
+            
+            let saveScreen = SaveProgressScreen(context: component.context, content: .progress("Saving", 0.0))
+            component.controller()?.present(saveScreen, in: .current)
+            
+            let disposable = (saveToCameraRoll(context: component.context, postbox: component.context.account.postbox, userLocation: .other, mediaReference: .story(peer: peerReference, id: component.slice.item.storyItem.id, media: component.slice.item.storyItem.media._asMedia()))
+            |> deliverOnMainQueue).start(next: { [weak saveScreen] progress in
+                guard let saveScreen else {
+                    return
+                }
+                saveScreen.content = .progress("Saving", progress)
+            }, completed: { [weak saveScreen] in
+                guard let saveScreen else {
+                    return
+                }
+                saveScreen.content = .completion("Saved")
+                Queue.mainQueue().after(3.0, { [weak saveScreen] in
+                    saveScreen?.dismiss()
+                })
+            })
+            
+            saveScreen.cancelled = {
+                disposable.dispose()
+            }
         }
     }
     
