@@ -1881,7 +1881,7 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
-            if component.slice.item.storyItem.isCloseFriends {
+            if component.slice.item.storyItem.isCloseFriends && component.slice.peer.id != component.context.account.peerId {
                 let closeFriendIcon: ComponentView<Empty>
                 var closeFriendIconTransition = transition
                 if let current = self.closeFriendIcon {
