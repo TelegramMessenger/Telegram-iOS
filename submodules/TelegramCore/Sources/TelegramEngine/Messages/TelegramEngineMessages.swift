@@ -221,7 +221,7 @@ public extension TelegramEngine {
             replyTo replyToMessageId: EngineMessage.Id?,
             storyId: StoryId? = nil,
             content: EngineOutgoingMessageContent
-        ) {
+        ) -> Signal<[MessageId?], NoError> {
             var attributes: [MessageAttribute] = []
             var text: String = ""
             var mediaReference: AnyMediaReference?
@@ -246,11 +246,11 @@ public extension TelegramEngine {
                 correlationId: nil,
                 bubbleUpEmojiOrStickersets: []
             )
-            let _ = enqueueMessages(
+            return enqueueMessages(
                 account: self.account,
                 peerId: peerId,
                 messages: [message]
-            ).start()
+            )
         }
 
         public func enqueueOutgoingMessageWithChatContextResult(to peerId: PeerId, threadId: Int64?, botId: PeerId, result: ChatContextResult, replyToMessageId: MessageId? = nil, replyToStoryId: StoryId? = nil, hideVia: Bool = false, silentPosting: Bool = false, scheduleTime: Int32? = nil, correlationId: Int64? = nil) -> Bool {

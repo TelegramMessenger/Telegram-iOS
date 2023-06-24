@@ -839,6 +839,14 @@ public final class Camera {
             return disposable
         }
     }
+    
+    public static var isDualCamSupported: Bool {
+        if #available(iOS 13.0, *), AVCaptureMultiCamSession.isMultiCamSupported {
+            return true
+        } else {
+            return false
+        }
+    }
 }
 
 public final class CameraHolder {

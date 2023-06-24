@@ -613,6 +613,8 @@ public final class TextFieldComponent: Component {
                 }
             }
             
+            self.updateEntities()
+            
             return size
         }
     }

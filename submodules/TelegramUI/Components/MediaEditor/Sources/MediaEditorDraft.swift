@@ -41,9 +41,9 @@ public struct MediaEditorResultPrivacy: Codable, Equatable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
     
-        try container.encode(privacy, forKey: .privacy)
-        try container.encode(Int32(timeout), forKey: .timeout)
-        try container.encode(archive, forKey: .archive)
+        try container.encode(self.privacy, forKey: .privacy)
+        try container.encode(Int32(self.timeout), forKey: .timeout)
+        try container.encode(self.archive, forKey: .archive)
     }
 }
 
@@ -58,6 +58,7 @@ public final class MediaEditorDraft: Codable, Equatable {
         case thumbnail
         case dimensionsWidth
         case dimensionsHeight
+        case duration
         case values
         case caption
         case privacy
@@ -67,15 +68,17 @@ public final class MediaEditorDraft: Codable, Equatable {
     public let isVideo: Bool
     public let thumbnail: UIImage
     public let dimensions: PixelDimensions
+    public let duration: Double?
     public let values: MediaEditorValues
     public let caption: NSAttributedString
     public let privacy: MediaEditorResultPrivacy?
         
-    public init(path: String, isVideo: Bool, thumbnail: UIImage, dimensions: PixelDimensions, values: MediaEditorValues, caption: NSAttributedString, privacy: MediaEditorResultPrivacy?) {
+    public init(path: String, isVideo: Bool, thumbnail: UIImage, dimensions: PixelDimensions, duration: Double?, values: MediaEditorValues, caption: NSAttributedString, privacy: MediaEditorResultPrivacy?) {
         self.path = path
         self.isVideo = isVideo
         self.thumbnail = thumbnail
         self.dimensions = dimensions
+        self.duration = duration
         self.values = values
         self.caption = caption
         self.privacy = privacy
@@ -96,6 +99,7 @@ public final class MediaEditorDraft: Codable, Equatable {
             width: try container.decode(Int32.self, forKey: .dimensionsWidth),
             height: try container.decode(Int32.self, forKey: .dimensionsHeight)
         )
+        self.duration = try container.decodeIfPresent(Double.self, forKey: .duration)
         let valuesData = try container.decode(Data.self, forKey: .values)
         if let values = try? JSONDecoder().decode(MediaEditorValues.self, from: valuesData) {
             self.values = values
@@ -103,8 +107,12 @@ public final class MediaEditorDraft: Codable, Equatable {
             fatalError()
         }
         self.caption = ((try? container.decode(ChatTextInputStateText.self, forKey: .caption)) ?? ChatTextInputStateText()).attributedText()
-        self.privacy = nil
-        //self.privacy = try container.decode(MediaEditorResultPrivacy.self, forKey: .values)
+        
+        if let data = try container.decodeIfPresent(Data.self, forKey: .privacy), let privacy = try? JSONDecoder().decode(MediaEditorResultPrivacy.self, from: data) {
+            self.privacy = privacy
+        } else {
+            self.privacy = nil
+        }
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -112,20 +120,27 @@ public final class MediaEditorDraft: Codable, Equatable {
 
         try container.encode(self.path, forKey: .path)
         try container.encode(self.isVideo, forKey: .isVideo)
-        if let thumbnailData = self.thumbnail.jpegData(compressionQuality: 0.8) {
+        if let thumbnailData = self.thumbnail.jpegData(compressionQuality: 0.6) {
             try container.encode(thumbnailData, forKey: .thumbnail)
         }
         try container.encode(self.dimensions.width, forKey: .dimensionsWidth)
         try container.encode(self.dimensions.height, forKey: .dimensionsHeight)
+        try container.encodeIfPresent(self.duration, forKey: .duration)
         if let valuesData = try? JSONEncoder().encode(self.values) {
             try container.encode(valuesData, forKey: .values)
-        } else {
-            fatalError()
         }
-        
         let chatInputText = ChatTextInputStateText(attributedText: self.caption)
         try container.encode(chatInputText, forKey: .caption)
-        //try container.encode(self.privacy, forKey: .privacy)
+        
+        if let privacy = self .privacy {
+            if let data = try? JSONEncoder().encode(privacy) {
+                try container.encode(data, forKey: .privacy)
+            } else {
+                try container.encodeNil(forKey: .privacy)
+            }
+        } else {
+            try container.encodeNil(forKey: .privacy)
+        }
     }
 }
 

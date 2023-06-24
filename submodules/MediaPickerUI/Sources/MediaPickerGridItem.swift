@@ -256,24 +256,41 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.backgroundColor = theme.list.mediaPlaceholderColor
         
         if self.currentDraftState == nil || self.currentDraftState?.0.path != draft.path || self.currentDraftState!.1 != index || self.currentState != nil {
-            self.currentState = nil
-            
             let imageSignal: Signal<UIImage?, NoError> = .single(draft.thumbnail)
             self.imageNode.setSignal(imageSignal)
             
             self.currentDraftState = (draft, index)
+            if self.currentState != nil {
+                self.currentState = nil
+                self.typeIconNode.removeFromSupernode()
+            }
             
             if self.draftNode.supernode == nil {
                 self.draftNode.attributedText = NSAttributedString(string: "Draft", font: Font.semibold(12.0), textColor: .white)
                 self.addSubnode(self.draftNode)
             }
             
-            if self.typeIconNode.supernode != nil {
-                self.typeIconNode.removeFromSupernode()
-            }
-            
-            if self.durationNode.supernode != nil {
-                self.durationNode.removeFromSupernode()
+            if draft.isVideo {
+                self.typeIconNode.image = UIImage(bundleImageName: "Media Editor/MediaVideo")
+                
+                self.durationNode.attributedText = NSAttributedString(string: stringForDuration(Int32(draft.duration ?? 0.0)), font: Font.semibold(12.0), textColor: .white)
+                
+                if self.typeIconNode.supernode == nil {
+                    self.addSubnode(self.gradientNode)
+                    self.addSubnode(self.typeIconNode)
+                    self.addSubnode(self.durationNode)
+                    self.setNeedsLayout()
+                }
+            } else {
+                if self.typeIconNode.supernode != nil {
+                    self.typeIconNode.removeFromSupernode()
+                }
+                if self.durationNode.supernode != nil {
+                    self.durationNode.removeFromSupernode()
+                }
+                if self.gradientNode.supernode != nil {
+                    self.gradientNode.removeFromSupernode()
+                }
             }
             
             self.setNeedsLayout()
@@ -334,8 +351,6 @@ final class MediaPickerGridItemNode: GridItemNode {
         }
         
         if self.currentState == nil || self.currentState!.0 !== fetchResult || self.currentState!.1 != index || self.currentDraftState != nil {
-            self.currentDraftState = nil
-            
             self.backgroundNode.image = nil
             let editingContext = interaction.editingState
             let asset = fetchResult.object(at: index)
@@ -434,6 +449,10 @@ final class MediaPickerGridItemNode: GridItemNode {
                 strongSelf.updateHasSpoiler(hasSpoiler)
             }))
             
+            if self.currentDraftState != nil {
+                self.currentDraftState = nil
+            }
+            
             if asset.isFavorite {
                 self.typeIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Favorite"), color: .white)
                 if self.typeIconNode.supernode == nil {
@@ -450,9 +469,9 @@ final class MediaPickerGridItemNode: GridItemNode {
                     self.typeIconNode.image = UIImage(bundleImageName: "Media Editor/MediaVideo")
                 }
                 
+                self.durationNode.attributedText = NSAttributedString(string: stringForDuration(Int32(asset.duration)), font: Font.semibold(12.0), textColor: .white)
+                
                 if self.typeIconNode.supernode == nil {
-                    self.durationNode.attributedText = NSAttributedString(string: stringForDuration(Int32(asset.duration)), font: Font.semibold(12.0), textColor: .white)
-                    
                     self.addSubnode(self.gradientNode)
                     self.addSubnode(self.typeIconNode)
                     self.addSubnode(self.durationNode)

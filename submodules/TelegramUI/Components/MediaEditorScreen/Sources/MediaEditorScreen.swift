@@ -603,10 +603,13 @@ final class MediaEditorScreenComponent: Component {
             if let controller = environment.controller() as? MediaEditorScreen {
                 isEditingStory = controller.isEditingStory
                 if self.component == nil {
-                    self.inputPanelExternalState.initialText = controller.initialCaption
+                    if let initialCaption = controller.initialCaption {
+                        self.inputPanelExternalState.initialText = initialCaption
+                    } else if case let .draft(draft, _) = controller.node.subject {
+                        self.inputPanelExternalState.initialText = draft.caption
+                    }
                 }
             }
-        
             
             self.component = component
             self.state = state
@@ -1517,7 +1520,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     
     var state = State() {
         didSet {
-            self.node.requestUpdate()
+            if self.isNodeLoaded {
+                self.node.requestUpdate()
+            }
         }
     }
     
@@ -1712,6 +1717,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.subject = subject
             guard let controller = self.controller else {
                 return
+            }
+            
+            if case let .draft(draft, _) = subject, let privacy = draft.privacy {
+                controller.state.privacy = privacy
             }
             
             let isSavingAvailable: Bool
@@ -3110,7 +3119,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let codableEntities = DrawingEntitiesView.encodeEntities(entities, entitiesView: self.node.entitiesView)
         mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
         
-        if let subject = self.node.subject, case .asset = subject, self.node.mediaEditor?.values.hasChanges == false {
+        let caption = self.getCaption()
+        
+        if let subject = self.node.subject, case .asset = subject, self.node.mediaEditor?.values.hasChanges == false && caption.string.isEmpty {
             return false
         }
         return true
@@ -3189,16 +3200,18 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     }
     
     private func saveDraft(id: Int64?) {
-        guard let subject = self.node.subject, let values = self.node.mediaEditor?.values else {
+        guard let subject = self.node.subject, let mediaEditor = self.node.mediaEditor else {
             return
         }
         try? FileManager.default.createDirectory(atPath: draftPath(), withIntermediateDirectories: true)
         
+        let values = mediaEditor.values
         let privacy = self.state.privacy
         let caption = self.getCaption()
+        let duration = mediaEditor.duration ?? 0.0
         
-        if let resultImage = self.node.mediaEditor?.resultImage {
-            self.node.mediaEditor?.seek(0.0, andPlay: false)
+        if let resultImage = mediaEditor.resultImage {
+            mediaEditor.seek(0.0, andPlay: false)
             makeEditorImageComposition(account: self.context.account, inputImage: resultImage, dimensions: storyDimensions, values: values, time: .zero, completion: { resultImage in
                 guard let resultImage else {
                     return
@@ -3209,7 +3222,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
                         let path = "\(Int64.random(in: .min ... .max)).jpg"
                         if let data = image.jpegData(compressionQuality: 0.87) {
-                            let draft = MediaEditorDraft(path: path, isVideo: false, thumbnail: thumbnailImage, dimensions: dimensions, values: values, caption: caption, privacy: privacy)
+                            let draft = MediaEditorDraft(path: path, isVideo: false, thumbnail: thumbnailImage, dimensions: dimensions, duration: nil, values: values, caption: caption, privacy: privacy)
                             try? data.write(to: URL(fileURLWithPath: draft.fullPath()))
                             if let id {
                                 saveStorySource(engine: self.context.engine, item: draft, id: id)
@@ -3220,10 +3233,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 }
                 
-                let saveVideoDraft: (String, PixelDimensions) -> Void = { videoPath, dimensions in
+                let saveVideoDraft: (String, PixelDimensions, Double) -> Void = { videoPath, dimensions, duration in
                     if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
                         let path = "\(Int64.random(in: .min ... .max)).mp4"
-                        let draft = MediaEditorDraft(path: path, isVideo: true, thumbnail: thumbnailImage, dimensions: dimensions, values: values, caption: caption, privacy: privacy)
+                        let draft = MediaEditorDraft(path: path, isVideo: true, thumbnail: thumbnailImage, dimensions: dimensions, duration: duration, values: values, caption: caption, privacy: privacy)
                         try? FileManager.default.moveItem(atPath: videoPath, toPath: draft.fullPath())
                         if let id {
                             saveStorySource(engine: self.context.engine, item: draft, id: id)
@@ -3237,12 +3250,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 case let .image(image, dimensions, _, _):
                     saveImageDraft(image, dimensions)
                 case let .video(path, _, _, _, dimensions, _):
-                    saveVideoDraft(path, dimensions)
+                    saveVideoDraft(path, dimensions, duration)
                 case let .asset(asset):
                     if asset.mediaType == .video {
                         PHImageManager.default().requestAVAsset(forVideo: asset, options: nil) { avAsset, _, _ in
                             if let urlAsset = avAsset as? AVURLAsset {
-                                saveVideoDraft(urlAsset.url.absoluteString, PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight)))
+                                saveVideoDraft(urlAsset.url.relativePath, PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight)), duration)
                             }
                         }
                     } else {
@@ -3256,7 +3269,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 case let .draft(draft, _):
                     if draft.isVideo {
-                        saveVideoDraft(draft.fullPath(), draft.dimensions)
+                        saveVideoDraft(draft.fullPath(), draft.dimensions, draft.duration ?? 0.0)
                     } else if let image = UIImage(contentsOfFile: draft.fullPath()) {
                         saveImageDraft(image, draft.dimensions)
                     }

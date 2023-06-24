@@ -321,29 +321,37 @@ final class StoryItemSetContainerSendMessage {
             return
         }
         let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
+        let peer = component.slice.peer
         
-        component.context.engine.messages.enqueueOutgoingMessage(
+        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+        let controller = component.controller()
+        
+        let _ = (component.context.engine.messages.enqueueOutgoingMessage(
             to: peerId,
             replyTo: nil,
             storyId: focusedStoryId,
             content: .file(fileReference)
-        )
+        ) |> deliverOnMainQueue).start(next: { [weak controller, weak view] messageIds in
+            if let controller {
+                Queue.mainQueue().after(0.3) {
+                    controller.present(UndoOverlayController(
+                        presentationData: presentationData,
+                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat"),
+                        elevatedLayout: false,
+                        animateInAsReplacement: false,
+                        action: { [weak view] action in
+                            if case .undo = action, let messageId = messageIds.first {
+                                view?.navigateToPeer(peer: peer, messageId: messageId)
+                            }
+                            return false
+                        }
+                    ), in: .current)
+                }
+            }
+        })
         
         self.currentInputMode = .text
         view.endEditing(true)
-        
-        Queue.mainQueue().after(0.66) {
-            if let controller = component.controller() {
-                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                controller.present(UndoOverlayController(
-                    presentationData: presentationData,
-                    content: .succeed(text: "Message Sent"),
-                    elevatedLayout: false,
-                    animateInAsReplacement: false,
-                    action: { _ in return false }
-                ), in: .current)
-            }
-        }
     }
     
     func performSendGifAction(view: StoryItemSetContainerComponent.View, fileReference: FileMediaReference) {
@@ -355,29 +363,37 @@ final class StoryItemSetContainerSendMessage {
             return
         }
         let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
+        let peer = component.slice.peer
         
-        component.context.engine.messages.enqueueOutgoingMessage(
+        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+        let controller = component.controller()
+        
+        let _ = (component.context.engine.messages.enqueueOutgoingMessage(
             to: peerId,
             replyTo: nil,
             storyId: focusedStoryId,
             content: .file(fileReference)
-        )
+        ) |> deliverOnMainQueue).start(next: { [weak controller, weak view] messageIds in
+            if let controller {
+                Queue.mainQueue().after(0.3) {
+                    controller.present(UndoOverlayController(
+                        presentationData: presentationData,
+                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat"),
+                        elevatedLayout: false,
+                        animateInAsReplacement: false,
+                        action: { [weak view] action in
+                            if case .undo = action, let messageId = messageIds.first {
+                                view?.navigateToPeer(peer: peer, messageId: messageId)
+                            }
+                            return false
+                        }
+                    ), in: .current)
+                }
+            }
+        })
         
         self.currentInputMode = .text
         view.endEditing(true)
-        
-        Queue.mainQueue().after(0.66) {
-            if let controller = component.controller() {
-                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                controller.present(UndoOverlayController(
-                    presentationData: presentationData,
-                    content: .succeed(text: "Message Sent"),
-                    elevatedLayout: false,
-                    animateInAsReplacement: false,
-                    action: { _ in return false }
-                ), in: .current)
-            }
-        }
     }
     
     func performSendMessageAction(
@@ -394,6 +410,10 @@ final class StoryItemSetContainerSendMessage {
         guard let inputPanelView = view.inputPanel.view as? MessageInputPanelComponent.View else {
             return
         }
+        let peer = component.slice.peer
+        
+        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+        let controller = component.controller()
         
         if let recordedAudioPreview = self.recordedAudioPreview {
             self.recordedAudioPreview = nil
@@ -410,28 +430,32 @@ final class StoryItemSetContainerSendMessage {
             case let .text(text):
                 if !text.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     let entities = generateChatInputTextEntities(text)
-                    component.context.engine.messages.enqueueOutgoingMessage(
+                    let _ = (component.context.engine.messages.enqueueOutgoingMessage(
                         to: peerId,
                         replyTo: nil,
                         storyId: focusedStoryId,
                         content: .text(text.string, entities)
-                    )
+                    ) |> deliverOnMainQueue).start(next: { [weak controller, weak view] messageIds in
+                        if let controller {
+                            Queue.mainQueue().after(0.3) {
+                                controller.present(UndoOverlayController(
+                                    presentationData: presentationData,
+                                    content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat"),
+                                    elevatedLayout: false,
+                                    animateInAsReplacement: false,
+                                    action: { [weak view] action in
+                                        if case .undo = action, let messageId = messageIds.first {
+                                            view?.navigateToPeer(peer: peer, messageId: messageId)
+                                        }
+                                        return false
+                                    }
+                                ), in: .current)
+                            }
+                        }
+                    })
                     inputPanelView.clearSendMessageInput()
                     self.currentInputMode = .text
                     view.endEditing(true)
-                    
-                    Queue.mainQueue().after(0.66) {
-                        if let controller = component.controller() {
-                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                            controller.present(UndoOverlayController(
-                                presentationData: presentationData,
-                                content: .succeed(text: "Message Sent"),
-                                elevatedLayout: false,
-                                animateInAsReplacement: false,
-                                action: { _ in return false }
-                            ), in: .current)
-                        }
-                    }
                 }
             }
         }
