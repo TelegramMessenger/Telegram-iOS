@@ -2606,10 +2606,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 switch mode {
                                 case .sticker:
                                     let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get())
-                                    controller.completion = { [weak self] file in
+                                    controller.completion = { [weak self] content in
                                         if let self {
-                                            if let file {
-                                                let stickerEntity = DrawingStickerEntity(content: .file(file))
+                                            if let content {
+                                                let stickerEntity = DrawingStickerEntity(content: content)
                                                 self.interaction?.insertEntity(stickerEntity)
                                                 
                                                 self.hasAnyChanges = true
