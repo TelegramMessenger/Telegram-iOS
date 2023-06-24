@@ -17,6 +17,7 @@ import ChatEntityKeyboardInputNode
 import ContextUI
 import ChatPresentationInterfaceState
 import MediaEditor
+import StickerPackPreviewUI
 
 public struct StickerPickerInputData: Equatable {
     var emoji: EmojiPagerContentComponent
@@ -45,6 +46,7 @@ private final class StickerSelectionComponent: Component {
     let content: StickerPickerInputData
     let backgroundColor: UIColor
     let separatorColor: UIColor
+    let getController: () -> StickerPickerScreen?
     
     init(
         context: AccountContext,
@@ -54,7 +56,8 @@ private final class StickerSelectionComponent: Component {
         bottomInset: CGFloat,
         content: StickerPickerInputData,
         backgroundColor: UIColor,
-        separatorColor: UIColor
+        separatorColor: UIColor,
+        getController: @escaping () -> StickerPickerScreen?
     ) {
         self.context = context
         self.theme = theme
@@ -64,6 +67,7 @@ private final class StickerSelectionComponent: Component {
         self.content = content
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
+        self.getController = getController
     }
     
     public static func ==(lhs: StickerSelectionComponent, rhs: StickerSelectionComponent) -> Bool {
@@ -105,6 +109,7 @@ private final class StickerSelectionComponent: Component {
         private var inputNodeInteraction: ChatMediaInputNodeInteraction?
         private let trendingGifsPromise = Promise<ChatMediaInputGifPaneTrendingState?>(nil)
         
+        private var searchVisible = false
         private var forceUpdate = false
         
         override init(frame: CGRect) {
@@ -122,16 +127,22 @@ private final class StickerSelectionComponent: Component {
             self.addSubview(self.panelHostView)
             
             self.interaction = ChatEntityKeyboardInputNode.Interaction(
-                sendSticker: { file, silent, schedule, query, clearInput, sourceView, sourceRect, sourceLayer, _ in
-                    let _ = file
-                    let _ = silent
-                    let _ = schedule
-                    let _ = query
-                    let _ = clearInput
-                    let _ = sourceView
-                    let _ = sourceRect
-                    let _ = sourceLayer
-                    
+                sendSticker: { [weak self] file, silent, schedule, query, clearInput, sourceView, sourceRect, sourceLayer, _ in
+                    if let self, let controller = self.component?.getController() {
+                        controller.completion(.file(file.media))
+                        controller.forEachController { c in
+                            if let c = c as? StickerPackScreenImpl {
+                                c.dismiss(animated: true)
+                            }
+                            return true
+                        }
+                        controller.window?.forEachController({ c in
+                            if let c = c as? StickerPackScreenImpl {
+                                c.dismiss(animated: true)
+                            }
+                        })
+                        controller.dismiss(animated: true)
+                    }
                     return false
                 },
                 sendEmoji: { _, _, _ in
@@ -148,20 +159,23 @@ private final class StickerSelectionComponent: Component {
                 insertText: { _ in
                 },
                 backwardsDeleteText: {},
-                presentController: { c, a in
-                    let _ = c
-                    let _ = a
+                presentController: { [weak self] c, a in
+                    if let self, let controller = self.component?.getController() {
+                        controller.present(c, in: .window(.root), with: a)
+                    }
                 },
-                presentGlobalOverlayController: { c, a in
-                    let _ = c
-                    let _ = a
+                presentGlobalOverlayController: { [weak self] c, a in
+                    if let self, let controller = self.component?.getController() {
+                        controller.presentInGlobalOverlay(c, with: a)
+                    }
                 },
                 getNavigationController: {
                     return nil
                 },
                 requestLayout: { transition in
                     let _ = transition
-                })
+                }
+            )
             
             self.inputNodeInteraction = ChatMediaInputNodeInteraction(
                 navigateToCollectionId: { _ in
@@ -237,14 +251,17 @@ private final class StickerSelectionComponent: Component {
                     externalBottomPanelContainer: nil,
                     displayTopPanelBackground: .blur,
                     topPanelExtensionUpdated: { _, _ in },
-                    hideInputUpdated: { [weak self] _, _, transition in
+                    hideInputUpdated: { [weak self] _, searchVisible, transition in
                         guard let self else {
                             return
                         }
                         self.forceUpdate = true
+                        self.searchVisible = searchVisible
                         self.state?.updated(transition: transition)
                     },
-                    hideTopPanelUpdated: { _, _ in },
+                    hideTopPanelUpdated: { _, _ in
+                        print()
+                    },
                     switchToTextInput: {},
                     switchToGifSubject: { _ in },
                     reorderItems: { _, _ in },
@@ -269,17 +286,12 @@ private final class StickerSelectionComponent: Component {
                             interaction: interaction,
                             inputNodeInteraction: inputNodeInteraction,
                             mode: mappedMode,
+                            stickerActionTitle: presentationData.strings.StickerPack_Select,
                             trendingGifsPromise: trendingGifsPromise,
                             cancel: {
                             },
                             peekBehavior: stickerPeekBehavior
                         )
-//                        searchContainerNode.openGifContextMenu = { [weak self] item, sourceNode, sourceRect, gesture, isSaved in
-//                            guard let self else {
-//                                return
-//                            }
-//                            self.openGifContextMenu(file: item.file, contextResult: item.contextResult, sourceView: sourceNode.view, sourceRect: sourceRect, gesture: gesture, isSaved: isSaved)
-//                        }
                         
                         return searchContainerNode
                     },
@@ -315,8 +327,10 @@ private final class StickerSelectionComponent: Component {
                 transition.setFrame(view: self.panelBackgroundView, frame: CGRect(origin: CGPoint(), size: CGSize(width: keyboardSize.width, height: topPanelHeight)))
                 self.panelBackgroundView.update(size: self.panelBackgroundView.bounds.size, transition: transition.containedViewLayoutTransition)
                 
+                transition.setAlpha(view: self.panelBackgroundView, alpha: self.searchVisible ? 0.0 : 1.0)
+                transition.setAlpha(view: self.panelSeparatorView, alpha: self.searchVisible ? 0.0 : 1.0)
+                
                 transition.setFrame(view: self.panelSeparatorView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight), size: CGSize(width: keyboardSize.width, height: UIScreenPixel)))
-                transition.setAlpha(view: self.panelSeparatorView, alpha: 1.0)
             }
             
             return availableSize
@@ -1316,7 +1330,14 @@ public class StickerPickerScreen: ViewController {
                             bottomInset: bottomInset,
                             content: content,
                             backgroundColor: self.theme.list.itemBlocksBackgroundColor,
-                            separatorColor: self.theme.list.blocksBackgroundColor
+                            separatorColor: self.theme.list.blocksBackgroundColor,
+                            getController: { [weak self] in
+                                if let self {
+                                    return self.controller
+                                } else {
+                                    return nil
+                                }
+                            }
                         )
                     ),
                     environment: {},

@@ -97,8 +97,7 @@ final class EntitySearchContentComponent: Component {
             }
             
             if let containerNode = containerNode {
-            
-            let environmentValue = environment[EntitySearchContentEnvironment.self].value
+                let environmentValue = environment[EntitySearchContentEnvironment.self].value
                 transition.setFrame(view: containerNode.view, frame: CGRect(origin: CGPoint(), size: availableSize))
                 containerNode.updateLayout(
                     size: availableSize,
@@ -109,7 +108,6 @@ final class EntitySearchContentComponent: Component {
                     deviceMetrics: environmentValue.deviceMetrics,
                     transition: transition.containedViewLayoutTransition
                 )
-                
                 containerNode.onCancel = {
                     component.dismissSearch()
                 }

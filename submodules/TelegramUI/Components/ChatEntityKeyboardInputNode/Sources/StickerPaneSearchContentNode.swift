@@ -167,7 +167,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
     
     private let installDisposable = MetaDisposable()
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, interaction: ChatEntityKeyboardInputNode.Interaction, inputNodeInteraction: ChatMediaInputNodeInteraction) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, interaction: ChatEntityKeyboardInputNode.Interaction, inputNodeInteraction: ChatMediaInputNodeInteraction, stickerActionTitle: String?) {
         self.context = context
         self.interaction = interaction
         self.inputNodeInteraction = inputNodeInteraction
@@ -181,9 +181,10 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
             getNavigationController: interaction.getNavigationController
         )
         
-        self.trendingPane = ChatMediaInputTrendingPane(context: context, interaction: trendingPaneInteraction, getItemIsPreviewed: { [weak inputNodeInteraction] item in
+        self.trendingPane = ChatMediaInputTrendingPane(context: context, forceTheme: theme, interaction: trendingPaneInteraction, getItemIsPreviewed: { [weak inputNodeInteraction] item in
             return inputNodeInteraction?.previewedStickerPackItemFile?.id == item.file.id
         }, isPane: false)
+        self.trendingPane.stickerActionTitle = stickerActionTitle
         
         self.gridNode = GridNode()
         

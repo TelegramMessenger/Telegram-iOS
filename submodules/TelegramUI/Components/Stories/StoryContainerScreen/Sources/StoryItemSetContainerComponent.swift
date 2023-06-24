@@ -2527,6 +2527,8 @@ public final class StoryItemSetContainerComponent: Component {
                     if let mediaResult {
                         switch mediaResult {
                         case let .image(image, dimensions):
+                            updateProgressImpl?(0.0)
+                            
                             if let imageData = compressImageToJPEG(image, quality: 0.7) {
                                 let _ = (context.engine.messages.editStory(media: .image(dimensions: dimensions, data: imageData), id: id, text: updatedText, entities: updatedEntities, privacy: updatedPrivacy)
                                 |> deliverOnMainQueue).start(next: { [weak self] result in
@@ -2549,6 +2551,8 @@ public final class StoryItemSetContainerComponent: Component {
                                 })
                             }
                         case let .video(content, firstFrameImage, values, duration, dimensions):
+                            updateProgressImpl?(0.0)
+                            
                             if let valuesData = try? JSONEncoder().encode(values) {
                                 let data = MemoryBuffer(data: valuesData)
                                 let digest = MemoryBuffer(data: data.md5Digest())

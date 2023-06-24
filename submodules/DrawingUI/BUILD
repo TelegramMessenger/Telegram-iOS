@@ -95,6 +95,7 @@ swift_library(
         "//submodules/FastBlur:FastBlur",
         "//submodules/TelegramUI/Components/MediaEditor",
         "//submodules/ChatPresentationInterfaceState:ChatPresentationInterfaceState",
+        "//submodules/StickerPackPreviewUI:StickerPackPreviewUI",
     ],
     visibility = [
         "//visibility:public",

@@ -208,6 +208,7 @@ public final class ChatMediaInputTrendingPane: ChatMediaInputPane {
     }
     
     private let context: AccountContext
+    private let forceTheme: PresentationTheme?
     private let interaction: ChatMediaInputTrendingPane.Interaction
     private let getItemIsPreviewed: (StickerPackItem) -> Bool
     private let isPane: Bool
@@ -228,10 +229,13 @@ public final class ChatMediaInputTrendingPane: ChatMediaInputPane {
     
     public var scrollingInitiated: (() -> Void)?
     
+    public var stickerActionTitle: String?
+    
     private let installDisposable = MetaDisposable()
     
-    public init(context: AccountContext, interaction: ChatMediaInputTrendingPane.Interaction, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, isPane: Bool) {
+    public init(context: AccountContext, forceTheme: PresentationTheme?, interaction: ChatMediaInputTrendingPane.Interaction, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, isPane: Bool) {
         self.context = context
+        self.forceTheme = forceTheme
         self.interaction = interaction
         self.getItemIsPreviewed = getItemIsPreviewed
         self.isPane = isPane
@@ -290,7 +294,10 @@ public final class ChatMediaInputTrendingPane: ChatMediaInputPane {
 
                 var cancelImpl: (() -> Void)?
                 let progressSignal = Signal<Never, NoError> { subscriber in
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    if let forceTheme = self?.forceTheme {
+                        presentationData = presentationData.withUpdated(theme: forceTheme)
+                    }
                     let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                         cancelImpl?()
                     }))
@@ -330,7 +337,10 @@ public final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                         }
                     }
                     
-                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    var presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    if let forceTheme = strongSelf.forceTheme {
+                        presentationData = presentationData.withUpdated(theme: forceTheme)
+                    }
                     strongSelf.interaction.getNavigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: strongSelf.context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
                         return true
                     }))
@@ -340,7 +350,12 @@ public final class ChatMediaInputTrendingPane: ChatMediaInputPane {
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
                 strongSelf.view.window?.endEditing(true)
                 let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
-                let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.interaction.getNavigationController(), sendSticker: { fileReference, sourceNode, sourceRect in
+                var updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>)?
+                if let forceTheme = strongSelf.forceTheme {
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: forceTheme)
+                    updatedPresentationData = (presentationData, .single(presentationData))
+                }
+                let controller = StickerPackScreen(context: strongSelf.context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], actionTitle: strongSelf.stickerActionTitle, parentNavigationController: strongSelf.interaction.getNavigationController(), sendSticker: { fileReference, sourceNode, sourceRect in
                     if let strongSelf = self {
                         return strongSelf.interaction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil, [])
                     } else {
@@ -358,8 +373,13 @@ public final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         let isPane = self.isPane
         let previousEntries = Atomic<[TrendingPaneEntry]?>(value: nil)
         let context = self.context
+        let forceTheme = self.forceTheme
         self.disposable = (combineLatest(context.account.viewTracker.featuredStickerPacks(), context.account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]), context.sharedContext.presentationData)
         |> map { trendingEntries, view, presentationData -> TrendingPaneTransition in
+            var presentationData = presentationData
+            if let forceTheme {
+                presentationData = presentationData.withUpdated(theme: forceTheme)
+            }
             var installedPacks = Set<ItemCollectionId>()
             if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])] as? ItemCollectionInfosView {
                 if let packsEntries = stickerPacksView.entriesByNamespace[Namespaces.ItemCollection.CloudStickerPacks] {
