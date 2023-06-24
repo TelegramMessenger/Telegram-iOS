@@ -333,7 +333,7 @@ public final class StorySubscriptionsContext {
                                             updatedPeerEntries.append(previousEntry)
                                         } else {
                                             if let codedEntry = CodableEntry(storedItem) {
-                                                updatedPeerEntries.append(StoryItemsTableEntry(value: codedEntry, id: storedItem.id))
+                                                updatedPeerEntries.append(StoryItemsTableEntry(value: codedEntry, id: storedItem.id, expirationTimestamp: storedItem.expirationTimestamp))
                                             }
                                         }
                                     }
@@ -990,7 +990,7 @@ public final class PeerExpiringStoryListContext {
                                             updatedPeerEntries.append(previousEntry)
                                         } else {
                                             if let codedEntry = CodableEntry(storedItem) {
-                                                updatedPeerEntries.append(StoryItemsTableEntry(value: codedEntry, id: storedItem.id))
+                                                updatedPeerEntries.append(StoryItemsTableEntry(value: codedEntry, id: storedItem.id, expirationTimestamp: storedItem.expirationTimestamp))
                                             }
                                         }
                                     }
@@ -1148,7 +1148,7 @@ public func _internal_pollPeerStories(postbox: Postbox, network: Network, accoun
                                     updatedPeerEntries.append(previousEntry)
                                 } else {
                                     if let codedEntry = CodableEntry(storedItem) {
-                                        updatedPeerEntries.append(StoryItemsTableEntry(value: codedEntry, id: storedItem.id))
+                                        updatedPeerEntries.append(StoryItemsTableEntry(value: codedEntry, id: storedItem.id, expirationTimestamp: storedItem.expirationTimestamp))
                                     }
                                 }
                             }

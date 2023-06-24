@@ -2663,8 +2663,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 self.requestAvatarExpansion?(true, self.avatarListNode.listContainerNode.galleryEntries, entry, self.avatarTransitionArguments(entry: currentEntry))
             }
         } else if let entry = self.avatarListNode.listContainerNode.galleryEntries.first {
-            let _ = self.avatarListNode.avatarContainerNode.avatarNode
             self.requestAvatarExpansion?(false, self.avatarListNode.listContainerNode.galleryEntries, nil, self.avatarTransitionArguments(entry: entry))
+        } else if let storyParams = self.avatarListNode.listContainerNode.storyParams, storyParams.count != 0 {
+            self.requestAvatarExpansion?(false, self.avatarListNode.listContainerNode.galleryEntries, nil, nil)
         } else {
             self.cancelUpload?()
         }

@@ -310,7 +310,7 @@ public final class StoryPeerListComponent: Component {
         public func setPreviewedItem(signal: Signal<StoryId?, NoError>) {
             self.previewedItemDisposable?.dispose()
             self.previewedItemDisposable = (signal |> map(\.?.peerId) |> distinctUntilChanged |> deliverOnMainQueue).start(next: { [weak self] itemId in
-                guard let self else {
+                guard let self, let component = self.component else {
                     return
                 }
                 self.previewedItemId = itemId
@@ -318,6 +318,12 @@ public final class StoryPeerListComponent: Component {
                 for (peerId, visibleItem) in self.visibleItems {
                     if let itemView = visibleItem.view.view as? StoryPeerListItemComponent.View {
                         itemView.updateIsPreviewing(isPreviewing: peerId == itemId)
+                        
+                        if component.unlocked && peerId == itemId {
+                            if !self.scrollView.bounds.intersects(itemView.frame.insetBy(dx: 20.0, dy: 0.0)) {
+                                self.scrollView.scrollRectToVisible(itemView.frame.insetBy(dx: -40.0, dy: 0.0), animated: false)
+                            }
+                        }
                     }
                 }
             })

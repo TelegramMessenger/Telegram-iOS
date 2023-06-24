@@ -208,6 +208,14 @@ public final class ReadBuffer: MemoryBuffer {
         self.offset += length
     }
     
+    public func readData(length: Int) -> Data {
+        var result = Data(count: length)
+        result.withUnsafeMutableBytes { buffer in
+            self.read(buffer.baseAddress!, offset: 0, length: length)
+        }
+        return result
+    }
+    
     public func skip(_ length: Int) {
         self.offset += length
     }
