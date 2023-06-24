@@ -124,6 +124,7 @@ public enum Stories {
             case isPinned
             case isExpired
             case isPublic
+            case isCloseFriends
         }
         
         public let id: Int32
@@ -137,6 +138,7 @@ public enum Stories {
         public let isPinned: Bool
         public let isExpired: Bool
         public let isPublic: Bool
+        public let isCloseFriends: Bool
         
         public init(
             id: Int32,
@@ -149,7 +151,8 @@ public enum Stories {
             privacy: Privacy?,
             isPinned: Bool,
             isExpired: Bool,
-            isPublic: Bool
+            isPublic: Bool,
+            isCloseFriends: Bool
         ) {
             self.id = id
             self.timestamp = timestamp
@@ -162,6 +165,7 @@ public enum Stories {
             self.isPinned = isPinned
             self.isExpired = isExpired
             self.isPublic = isPublic
+            self.isCloseFriends = isCloseFriends
         }
         
         public init(from decoder: Decoder) throws {
@@ -184,6 +188,7 @@ public enum Stories {
             self.isPinned = try container.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false
             self.isExpired = try container.decodeIfPresent(Bool.self, forKey: .isExpired) ?? false
             self.isPublic = try container.decodeIfPresent(Bool.self, forKey: .isPublic) ?? false
+            self.isCloseFriends = try container.decodeIfPresent(Bool.self, forKey: .isCloseFriends) ?? false
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -207,6 +212,7 @@ public enum Stories {
             try container.encode(self.isPinned, forKey: .isPinned)
             try container.encode(self.isExpired, forKey: .isExpired)
             try container.encode(self.isPublic, forKey: .isPublic)
+            try container.encode(self.isCloseFriends, forKey: .isCloseFriends)
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -249,6 +255,9 @@ public enum Stories {
                 return false
             }
             if lhs.isPublic != rhs.isPublic {
+                return false
+            }
+            if lhs.isCloseFriends != rhs.isCloseFriends {
                 return false
             }
             
@@ -456,6 +465,7 @@ public final class EngineStorySubscriptions: Equatable {
     public final class Item: Equatable {
         public let peer: EnginePeer
         public let hasUnseen: Bool
+        public let hasUnseenCloseFriends: Bool
         public let storyCount: Int
         public let unseenCount: Int
         public let lastTimestamp: Int32
@@ -463,12 +473,14 @@ public final class EngineStorySubscriptions: Equatable {
         public init(
             peer: EnginePeer,
             hasUnseen: Bool,
+            hasUnseenCloseFriends: Bool,
             storyCount: Int,
             unseenCount: Int,
             lastTimestamp: Int32
         ) {
             self.peer = peer
             self.hasUnseen = hasUnseen
+            self.hasUnseenCloseFriends = hasUnseenCloseFriends
             self.storyCount = storyCount
             self.unseenCount = unseenCount
             self.lastTimestamp = lastTimestamp
@@ -482,6 +494,9 @@ public final class EngineStorySubscriptions: Equatable {
                 return false
             }
             if lhs.hasUnseen != rhs.hasUnseen {
+                return false
+            }
+            if lhs.hasUnseenCloseFriends != rhs.hasUnseenCloseFriends {
                 return false
             }
             if lhs.storyCount != rhs.storyCount {
@@ -807,7 +822,8 @@ func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId
                                                         privacy: Stories.Item.Privacy(base: privacy.base, additionallyIncludePeers: privacy.additionallyIncludePeers),
                                                         isPinned: item.isPinned,
                                                         isExpired: item.isExpired,
-                                                        isPublic: item.isPublic
+                                                        isPublic: item.isPublic,
+                                                        isCloseFriends: item.isCloseFriends
                                                     )
                                                     if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                                                         items.append(StoryItemsTableEntry(value: entry, id: item.id))
@@ -954,7 +970,8 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
                 privacy: Stories.Item.Privacy(base: privacy.base, additionallyIncludePeers: privacy.additionallyIncludePeers),
                 isPinned: item.isPinned,
                 isExpired: item.isExpired,
-                isPublic: item.isPublic
+                isPublic: item.isPublic,
+                isCloseFriends: item.isCloseFriends
             )
             if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                 transaction.setStory(id: storyId, value: entry)
@@ -975,7 +992,8 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
                 privacy: Stories.Item.Privacy(base: privacy.base, additionallyIncludePeers: privacy.additionallyIncludePeers),
                 isPinned: item.isPinned,
                 isExpired: item.isExpired,
-                isPublic: item.isPublic
+                isPublic: item.isPublic,
+                isCloseFriends: item.isCloseFriends
             )
             if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                 items[index] = StoryItemsTableEntry(value: entry, id: item.id)
@@ -1105,7 +1123,8 @@ func _internal_updateStoriesArePinned(account: Account, ids: [Int32: EngineStory
                     privacy: item.privacy,
                     isPinned: isPinned,
                     isExpired: item.isExpired,
-                    isPublic: item.isPublic
+                    isPublic: item.isPublic,
+                    isCloseFriends: item.isCloseFriends
                 )
                 if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                     items[index] = StoryItemsTableEntry(value: entry, id: item.id)
@@ -1125,7 +1144,8 @@ func _internal_updateStoriesArePinned(account: Account, ids: [Int32: EngineStory
                     privacy: item.privacy,
                     isPinned: isPinned,
                     isExpired: item.isExpired,
-                    isPublic: item.isPublic
+                    isPublic: item.isPublic,
+                    isCloseFriends: item.isCloseFriends
                 )
                 updatedItems.append(updatedItem)
             }
@@ -1220,6 +1240,7 @@ extension Stories.StoredItem {
                 let isPinned = (flags & (1 << 5)) != 0
                 let isExpired = (flags & (1 << 6)) != 0
                 let isPublic = (flags & (1 << 7)) != 0
+                let isCloseFriends = (flags & (1 << 8)) != 0
                 
                 let item = Stories.Item(
                     id: id,
@@ -1232,7 +1253,8 @@ extension Stories.StoredItem {
                     privacy: parsedPrivacy,
                     isPinned: isPinned,
                     isExpired: isExpired,
-                    isPublic: isPublic
+                    isPublic: isPublic,
+                    isCloseFriends: isCloseFriends
                 )
                 self = .item(item)
             } else {

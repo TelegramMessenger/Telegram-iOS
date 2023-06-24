@@ -679,6 +679,7 @@ public extension TelegramEngine {
                     var accountItem: EngineStorySubscriptions.Item = EngineStorySubscriptions.Item(
                         peer: EnginePeer(accountPeer),
                         hasUnseen: false,
+                        hasUnseenCloseFriends: false,
                         storyCount: 0,
                         unseenCount: 0,
                         lastTimestamp: 0
@@ -693,6 +694,7 @@ public extension TelegramEngine {
                             if let lastEntry = itemsView.items.last?.value.get(Stories.StoredItem.self) {
                                 let peerState: Stories.PeerState? = stateView.value?.get(Stories.PeerState.self)
                                 var hasUnseen = false
+                                var hasUnseenCloseFriends = false
                                 var unseenCount = 0
                                 if let peerState = peerState {
                                     hasUnseen = peerState.maxReadId < lastEntry.id
@@ -700,6 +702,12 @@ public extension TelegramEngine {
                                     for item in itemsView.items {
                                         if item.id > peerState.maxReadId {
                                             unseenCount += 1
+                                            
+                                            if case let .item(item) = item.value.get(Stories.StoredItem.self) {
+                                                if item.isCloseFriends {
+                                                    hasUnseenCloseFriends = true
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -707,6 +715,7 @@ public extension TelegramEngine {
                                 let item = EngineStorySubscriptions.Item(
                                     peer: EnginePeer(accountPeer),
                                     hasUnseen: hasUnseen,
+                                    hasUnseenCloseFriends: hasUnseenCloseFriends,
                                     storyCount: itemsView.items.count,
                                     unseenCount: unseenCount,
                                     lastTimestamp: lastEntry.timestamp
@@ -735,6 +744,7 @@ public extension TelegramEngine {
                         
                         let peerState: Stories.PeerState? = stateView.value?.get(Stories.PeerState.self)
                         var hasUnseen = false
+                        var hasUnseenCloseFriends = false
                         var unseenCount = 0
                         if let peerState = peerState {
                             hasUnseen = peerState.maxReadId < lastEntry.id
@@ -742,6 +752,12 @@ public extension TelegramEngine {
                             for item in itemsView.items {
                                 if item.id > peerState.maxReadId {
                                     unseenCount += 1
+                                    
+                                    if case let .item(item) = item.value.get(Stories.StoredItem.self) {
+                                        if item.isCloseFriends {
+                                            hasUnseenCloseFriends = true
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -749,6 +765,7 @@ public extension TelegramEngine {
                         let item = EngineStorySubscriptions.Item(
                             peer: EnginePeer(peer),
                             hasUnseen: hasUnseen,
+                            hasUnseenCloseFriends: hasUnseenCloseFriends,
                             storyCount: itemsView.items.count,
                             unseenCount: unseenCount,
                             lastTimestamp: lastEntry.timestamp
@@ -935,7 +952,8 @@ public extension TelegramEngine {
                                     privacy: item.privacy,
                                     isPinned: item.isPinned,
                                     isExpired: item.isExpired,
-                                    isPublic: item.isPublic
+                                    isPublic: item.isPublic,
+                                    isCloseFriends: item.isCloseFriends
                                 ))
                                 if let entry = CodableEntry(updatedItem) {
                                     currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id)

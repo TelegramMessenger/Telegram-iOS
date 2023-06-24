@@ -603,6 +603,8 @@ public final class StoryPeerListComponent: Component {
                 var hasUnseen = false
                 hasUnseen = itemSet.hasUnseen
                 
+                var hasUnseenCloseFriendsItems = itemSet.hasUnseenCloseFriends
+                
                 var hasItems = true
                 var itemRingAnimation: StoryPeerListItemComponent.RingAnimation?
                 if peer.id == component.context.account.peerId {
@@ -614,6 +616,8 @@ public final class StoryPeerListComponent: Component {
                     if let uploadProgress = component.uploadProgress {
                         itemRingAnimation = .progress(uploadProgress)
                     }
+                    
+                    hasUnseenCloseFriendsItems = false
                 }
                 
                 let measuredItem = calculateItem(i)
@@ -655,6 +659,7 @@ public final class StoryPeerListComponent: Component {
                         strings: component.strings,
                         peer: peer,
                         hasUnseen: hasUnseen,
+                        hasUnseenCloseFriendsItems: hasUnseenCloseFriendsItems,
                         hasItems: hasItems,
                         ringAnimation: itemRingAnimation,
                         collapseFraction: isReallyVisible ? (1.0 - collapsedState.maxFraction) : 0.0,

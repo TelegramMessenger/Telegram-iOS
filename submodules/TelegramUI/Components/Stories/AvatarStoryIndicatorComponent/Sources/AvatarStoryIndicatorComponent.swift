@@ -16,6 +16,7 @@ public final class AvatarStoryIndicatorComponent: Component {
     }
     
     public let hasUnseen: Bool
+    public let hasUnseenCloseFriendsItems: Bool
     public let isDarkTheme: Bool
     public let activeLineWidth: CGFloat
     public let inactiveLineWidth: CGFloat
@@ -23,12 +24,14 @@ public final class AvatarStoryIndicatorComponent: Component {
     
     public init(
         hasUnseen: Bool,
+        hasUnseenCloseFriendsItems: Bool,
         isDarkTheme: Bool,
         activeLineWidth: CGFloat,
         inactiveLineWidth: CGFloat,
         counters: Counters?
     ) {
         self.hasUnseen = hasUnseen
+        self.hasUnseenCloseFriendsItems = hasUnseenCloseFriendsItems
         self.isDarkTheme = isDarkTheme
         self.activeLineWidth = activeLineWidth
         self.inactiveLineWidth = inactiveLineWidth
@@ -37,6 +40,9 @@ public final class AvatarStoryIndicatorComponent: Component {
     
     public static func ==(lhs: AvatarStoryIndicatorComponent, rhs: AvatarStoryIndicatorComponent) -> Bool {
         if lhs.hasUnseen != rhs.hasUnseen {
+            return false
+        }
+        if lhs.hasUnseenCloseFriendsItems != rhs.hasUnseenCloseFriendsItems {
             return false
         }
         if lhs.isDarkTheme != rhs.isDarkTheme {
@@ -91,6 +97,29 @@ public final class AvatarStoryIndicatorComponent: Component {
             self.indicatorView.image = generateImage(CGSize(width: imageDiameter, height: imageDiameter), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 
+                let activeColors: [CGColor]
+                let inactiveColors: [CGColor]
+                
+                if component.hasUnseenCloseFriendsItems {
+                    activeColors = [
+                        UIColor(rgb: 0x7CD636).cgColor,
+                        UIColor(rgb: 0x26B470).cgColor
+                    ]
+                } else {
+                    activeColors = [
+                        UIColor(rgb: 0x34C76F).cgColor,
+                        UIColor(rgb: 0x3DA1FD).cgColor
+                    ]
+                }
+                
+                if component.isDarkTheme {
+                    inactiveColors = [UIColor(rgb: 0x48484A).cgColor, UIColor(rgb: 0x48484A).cgColor]
+                } else {
+                    inactiveColors = [UIColor(rgb: 0xD8D8E1).cgColor, UIColor(rgb: 0xD8D8E1).cgColor]
+                }
+                
+                var locations: [CGFloat] = [0.0, 1.0]
+                
                 context.setLineWidth(lineWidth)
                 
                 if let counters = component.counters, counters.totalCount > 1 {
@@ -124,16 +153,11 @@ public final class AvatarStoryIndicatorComponent: Component {
                             context.replacePathWithStrokedPath()
                             context.clip()
                             
-                            var locations: [CGFloat] = [1.0, 0.0]
                             let colors: [CGColor]
                             if pass == 1 {
-                                colors = [UIColor(rgb: 0x34C76F).cgColor, UIColor(rgb: 0x3DA1FD).cgColor]
+                                colors = activeColors
                             } else {
-                                if component.isDarkTheme {
-                                    colors = [UIColor(rgb: 0x48484A).cgColor, UIColor(rgb: 0x48484A).cgColor]
-                                } else {
-                                    colors = [UIColor(rgb: 0xD8D8E1).cgColor, UIColor(rgb: 0xD8D8E1).cgColor]
-                                }
+                                colors = inactiveColors
                             }
                             
                             let colorSpace = CGColorSpaceCreateDeviceRGB()
@@ -148,16 +172,11 @@ public final class AvatarStoryIndicatorComponent: Component {
                     context.replacePathWithStrokedPath()
                     context.clip()
                     
-                    var locations: [CGFloat] = [1.0, 0.0]
                     let colors: [CGColor]
                     if component.hasUnseen {
-                        colors = [UIColor(rgb: 0x34C76F).cgColor, UIColor(rgb: 0x3DA1FD).cgColor]
+                        colors = activeColors
                     } else {
-                        if component.isDarkTheme {
-                            colors = [UIColor(rgb: 0x48484A).cgColor, UIColor(rgb: 0x48484A).cgColor]
-                        } else {
-                            colors = [UIColor(rgb: 0xD8D8E1).cgColor, UIColor(rgb: 0xD8D8E1).cgColor]
-                        }
+                        colors = inactiveColors
                     }
                     
                     let colorSpace = CGColorSpaceCreateDeviceRGB()

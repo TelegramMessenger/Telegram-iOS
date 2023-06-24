@@ -1889,12 +1889,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 self.chatListDisplayNode.mainContainerNode.currentItemNode.updateState { chatListState in
                     var chatListState = chatListState
                     
-                    var peerStoryMapping: [EnginePeer.Id: Bool] = [:]
+                    var peerStoryMapping: [EnginePeer.Id: ChatListNodeState.StoryState] = [:]
                     for item in rawStorySubscriptions.items {
                         if item.peer.id == self.context.account.peerId {
                             continue
                         }
-                        peerStoryMapping[item.peer.id] = item.hasUnseen
+                        peerStoryMapping[item.peer.id] = ChatListNodeState.StoryState(
+                            hasUnseen: item.hasUnseen,
+                            hasUnseenCloseFriends: item.hasUnseenCloseFriends
+                        )
                     }
                     chatListState.peerStoryMapping = peerStoryMapping
                     

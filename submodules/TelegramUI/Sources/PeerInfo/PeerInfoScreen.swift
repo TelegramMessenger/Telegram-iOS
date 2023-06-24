@@ -3879,10 +3879,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 }
                 self.expiringStoryListState = state
                 if state.items.isEmpty {
-                    self.headerNode.avatarListNode.avatarContainerNode.hasUnseenStories = nil
+                    self.headerNode.avatarListNode.avatarContainerNode.storyData = nil
                     self.headerNode.avatarListNode.listContainerNode.storyParams = nil
                 } else {
-                    self.headerNode.avatarListNode.avatarContainerNode.hasUnseenStories = state.hasUnseen
+                    self.headerNode.avatarListNode.avatarContainerNode.storyData = (state.hasUnseen, state.hasUnseenCloseFriends)
                     self.headerNode.avatarListNode.listContainerNode.storyParams = (peer, state.items.prefix(3).compactMap { item -> EngineStoryItem? in
                         switch item {
                         case let .item(item):

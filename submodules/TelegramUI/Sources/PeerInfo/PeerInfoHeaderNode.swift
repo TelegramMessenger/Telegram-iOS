@@ -421,7 +421,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     
     private let playbackStartDisposable = MetaDisposable()
     
-    var hasUnseenStories: Bool?
+    var storyData: (hasUnseen: Bool, hasUnseenCloseFriends: Bool)?
     
     init(context: AccountContext) {
         self.context = context
@@ -455,7 +455,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     }
     
     func updateStoryView(transition: ContainedViewLayoutTransition, theme: PresentationTheme) {
-        if let hasUnseenStories = self.hasUnseenStories {
+        if let storyData = self.storyData {
             let avatarStoryView: ComponentView<Empty>
             if let current = self.avatarStoryView {
                 avatarStoryView = current
@@ -467,7 +467,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             let _ = avatarStoryView.update(
                 transition: Transition(transition),
                 component: AnyComponent(AvatarStoryIndicatorComponent(
-                    hasUnseen: hasUnseenStories,
+                    hasUnseen: storyData.hasUnseen,
+                    hasUnseenCloseFriendsItems: storyData.hasUnseenCloseFriends,
                     isDarkTheme: theme.overallDarkAppearance,
                     activeLineWidth: 3.0,
                     inactiveLineWidth: 2.0,
