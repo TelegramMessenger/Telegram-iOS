@@ -470,7 +470,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                     hasUnseen: hasUnseenStories,
                     isDarkTheme: theme.overallDarkAppearance,
                     activeLineWidth: 3.0,
-                    inactiveLineWidth: 2.0
+                    inactiveLineWidth: 2.0,
+                    counters: nil
                 )),
                 environment: {},
                 containerSize: self.avatarNode.bounds.size

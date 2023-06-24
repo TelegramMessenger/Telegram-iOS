@@ -2795,7 +2795,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 hasUnseen: displayStoryIndicator,
                                 isDarkTheme: item.presentationData.theme.overallDarkAppearance,
                                 activeLineWidth: 2.0,
-                                inactiveLineWidth: 1.0 + UIScreenPixel
+                                inactiveLineWidth: 1.0 + UIScreenPixel,
+                                counters: nil
                             )),
                             environment: {},
                             containerSize: indicatorFrame.size

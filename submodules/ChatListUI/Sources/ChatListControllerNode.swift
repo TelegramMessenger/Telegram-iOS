@@ -1918,7 +1918,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     private func updateNavigationBar(layout: ContainerViewLayout, deferScrollApplication: Bool, transition: Transition) -> (navigationHeight: CGFloat, storiesInset: CGFloat) {
-        let headerContent = self.controller?.updateHeaderContent(layout: layout)
+        let headerContent = self.controller?.updateHeaderContent()
         
         var tabsNode: ASDisplayNode?
         var tabsNodeIsSearch = false
@@ -2358,7 +2358,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     private func shouldStopScrolling(listView: ListView, velocity: CGFloat, isPrimary: Bool) -> Bool {
-        if abs(velocity) > 1.0 {
+        if abs(velocity) > 0.8 {
             return false
         }
         

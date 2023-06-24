@@ -201,8 +201,10 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     })]
                 }
                 
-                var hasUnseenStories: Bool?
+                var storyStats: (total: Int, unseen: Int)?
                 if let storyData = storyData {
+                    storyStats = (storyData.count, storyData.unseenCount)
+                    
                     let text: String
                     //TODO:localize
                     if storyData.unseenCount != 0 {
@@ -219,12 +221,11 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                         }
                     }
                     status = .custom(string: text, multiline: false, isActive: false, icon: nil)
-                    hasUnseenStories = storyData.unseenCount != 0
                 }
                 
                 return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: isSearch ? .generalSearch : .peer, peer: itemPeer, status: status, enabled: enabled, selection: selection, selectionPosition: .left, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), additionalActions: additionalActions, index: nil, header: header, action: { _ in
                     interaction.openPeer(peer, .generic)
-                }, itemHighlighting: interaction.itemHighlighting, contextAction: itemContextAction, hasUnseenStories: hasUnseenStories, openStories: { peer, sourceNode in
+                }, itemHighlighting: interaction.itemHighlighting, contextAction: itemContextAction, storyStats: storyStats, openStories: { peer, sourceNode in
                     if case let .peer(peerValue, _) = peer, let peerValue {
                         interaction.openStories(peerValue, sourceNode)
                     }

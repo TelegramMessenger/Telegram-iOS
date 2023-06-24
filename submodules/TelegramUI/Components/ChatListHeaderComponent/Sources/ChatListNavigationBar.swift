@@ -298,28 +298,6 @@ public final class ChatListNavigationBar: Component {
                 self.addSubview(searchContentNode.view)
             }
             
-            /*let clippedStoriesOverscrollOffset = -min(0.0, clippedScrollOffset)
-            let clippedStoriesOffset = max(0.0, min(clippedScrollOffset, defaultStoriesOffsetDistance))
-            var storiesOffsetFraction: CGFloat
-            var storiesUnlockedOffsetFraction: CGFloat
-            if !component.isSearchActive, component.secondaryTransition == 0.0, let storySubscriptions = component.storySubscriptions, !storySubscriptions.items.isEmpty, allowAvatarsExpansion {
-                if component.storiesUnlocked {
-                    storiesOffsetFraction = clippedStoriesOffset / defaultStoriesOffsetDistance
-                    storiesUnlockedOffsetFraction = 1.0
-                } else {
-                    storiesOffsetFraction = 1.0 - (clippedStoriesOverscrollOffset / defaultStoriesOffsetDistance)
-                    storiesUnlockedOffsetFraction = 1.0
-                }
-            } else {
-                storiesOffsetFraction = 1.0
-                storiesUnlockedOffsetFraction = 1.0
-            }
-            
-            if self.applyScrollFractionAnimator != nil {
-                storiesOffsetFraction = self.applyScrollFraction * storiesOffsetFraction + (1.0 - self.applyScrollFraction) * self.storiesOffsetStartFraction
-                storiesUnlockedOffsetFraction = self.applyScrollUnlockedFraction * storiesUnlockedOffsetFraction + (1.0 - self.applyScrollUnlockedFraction) * self.storiesUnlockedStartFraction
-            }*/
-            
             let searchSize = CGSize(width: currentLayout.size.width, height: navigationBarSearchContentHeight)
             var searchFrame = CGRect(origin: CGPoint(x: 0.0, y: visibleSize.height - searchSize.height), size: searchSize)
             if component.tabsNode != nil {
@@ -338,9 +316,6 @@ public final class ChatListNavigationBar: Component {
             searchContentNode.updateLayout(size: searchSize, leftInset: component.sideInset, rightInset: component.sideInset, transition: transition.containedViewLayoutTransition)
             
             let headerTransition = transition
-            /*if self.applyScrollFractionAnimator != nil {
-                headerTransition = .immediate
-            }*/
             
             let storiesOffsetFraction: CGFloat
             let storiesUnlocked: Bool
@@ -362,9 +337,9 @@ public final class ChatListNavigationBar: Component {
             if allowAvatarsExpansion && transition.animation.isImmediate {
                 if self.storiesUnlocked != storiesUnlocked {
                     if storiesUnlocked {
-                        HapticFeedback().impact()
+                        HapticFeedback().impact(.veryLight)
                     } else {
-                        HapticFeedback().tap()
+                        HapticFeedback().impact(.veryLight)
                     }
                 }
             }

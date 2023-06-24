@@ -5,21 +5,34 @@ import ComponentFlow
 import TelegramPresentationData
 
 public final class AvatarStoryIndicatorComponent: Component {
+    public struct Counters: Equatable {
+        public var totalCount: Int
+        public var unseenCount: Int
+        
+        public init(totalCount: Int, unseenCount: Int) {
+            self.totalCount = totalCount
+            self.unseenCount = unseenCount
+        }
+    }
+    
     public let hasUnseen: Bool
     public let isDarkTheme: Bool
     public let activeLineWidth: CGFloat
     public let inactiveLineWidth: CGFloat
+    public let counters: Counters?
     
     public init(
         hasUnseen: Bool,
         isDarkTheme: Bool,
         activeLineWidth: CGFloat,
-        inactiveLineWidth: CGFloat
+        inactiveLineWidth: CGFloat,
+        counters: Counters?
     ) {
         self.hasUnseen = hasUnseen
         self.isDarkTheme = isDarkTheme
         self.activeLineWidth = activeLineWidth
         self.inactiveLineWidth = inactiveLineWidth
+        self.counters = counters
     }
     
     public static func ==(lhs: AvatarStoryIndicatorComponent, rhs: AvatarStoryIndicatorComponent) -> Bool {
@@ -33,6 +46,9 @@ public final class AvatarStoryIndicatorComponent: Component {
             return false
         }
         if lhs.inactiveLineWidth != rhs.inactiveLineWidth {
+            return false
+        }
+        if lhs.counters != rhs.counters {
             return false
         }
         return true
@@ -76,26 +92,79 @@ public final class AvatarStoryIndicatorComponent: Component {
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 
                 context.setLineWidth(lineWidth)
-                context.addEllipse(in: CGRect(origin: CGPoint(x: size.width * 0.5 - diameter * 0.5, y: size.height * 0.5 - diameter * 0.5), size: size).insetBy(dx: lineWidth * 0.5, dy: lineWidth * 0.5))
-                context.replacePathWithStrokedPath()
-                context.clip()
                 
-                var locations: [CGFloat] = [1.0, 0.0]
-                let colors: [CGColor]
-                if component.hasUnseen {
-                    colors = [UIColor(rgb: 0x34C76F).cgColor, UIColor(rgb: 0x3DA1FD).cgColor]
-                } else {
-                    if component.isDarkTheme {
-                        colors = [UIColor(rgb: 0x48484A).cgColor, UIColor(rgb: 0x48484A).cgColor]
-                    } else {
-                        colors = [UIColor(rgb: 0xD8D8E1).cgColor, UIColor(rgb: 0xD8D8E1).cgColor]
+                if let counters = component.counters, counters.totalCount > 1 {
+                    let center = CGPoint(x: size.width * 0.5, y: size.height * 0.5)
+                    let radius = (diameter - lineWidth) * 0.5
+                    let spacing: CGFloat = 2.0
+                    let angularSpacing: CGFloat = spacing / radius
+                    let circleLength = CGFloat.pi * 2.0 * radius
+                    let segmentLength = (circleLength - spacing * CGFloat(counters.totalCount)) / CGFloat(counters.totalCount)
+                    let segmentAngle = segmentLength / radius
+                    
+                    for pass in 0 ..< 2 {
+                        context.resetClip()
+                        
+                        let startIndex: Int
+                        let endIndex: Int
+                        if pass == 0 {
+                            startIndex = 0
+                            endIndex = counters.totalCount - counters.unseenCount
+                        } else {
+                            startIndex = counters.totalCount - counters.unseenCount
+                            endIndex = counters.totalCount
+                        }
+                        if startIndex < endIndex {
+                            for i in startIndex ..< endIndex {
+                                let startAngle = CGFloat(i) * (angularSpacing + segmentAngle) - CGFloat.pi * 0.5 + angularSpacing * 0.5
+                                context.move(to: CGPoint(x: center.x + cos(startAngle) * radius, y: center.y + sin(startAngle) * radius))
+                                context.addArc(center: center, radius: radius, startAngle: startAngle, endAngle: startAngle + segmentAngle, clockwise: false)
+                            }
+                            
+                            context.replacePathWithStrokedPath()
+                            context.clip()
+                            
+                            var locations: [CGFloat] = [1.0, 0.0]
+                            let colors: [CGColor]
+                            if pass == 1 {
+                                colors = [UIColor(rgb: 0x34C76F).cgColor, UIColor(rgb: 0x3DA1FD).cgColor]
+                            } else {
+                                if component.isDarkTheme {
+                                    colors = [UIColor(rgb: 0x48484A).cgColor, UIColor(rgb: 0x48484A).cgColor]
+                                } else {
+                                    colors = [UIColor(rgb: 0xD8D8E1).cgColor, UIColor(rgb: 0xD8D8E1).cgColor]
+                                }
+                            }
+                            
+                            let colorSpace = CGColorSpaceCreateDeviceRGB()
+                            let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+                            
+                            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+                        }
                     }
+                } else {
+                    context.addEllipse(in: CGRect(origin: CGPoint(x: size.width * 0.5 - diameter * 0.5, y: size.height * 0.5 - diameter * 0.5), size: size).insetBy(dx: lineWidth * 0.5, dy: lineWidth * 0.5))
+                    
+                    context.replacePathWithStrokedPath()
+                    context.clip()
+                    
+                    var locations: [CGFloat] = [1.0, 0.0]
+                    let colors: [CGColor]
+                    if component.hasUnseen {
+                        colors = [UIColor(rgb: 0x34C76F).cgColor, UIColor(rgb: 0x3DA1FD).cgColor]
+                    } else {
+                        if component.isDarkTheme {
+                            colors = [UIColor(rgb: 0x48484A).cgColor, UIColor(rgb: 0x48484A).cgColor]
+                        } else {
+                            colors = [UIColor(rgb: 0xD8D8E1).cgColor, UIColor(rgb: 0xD8D8E1).cgColor]
+                        }
+                    }
+                    
+                    let colorSpace = CGColorSpaceCreateDeviceRGB()
+                    let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+                    
+                    context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
                 }
-                
-                let colorSpace = CGColorSpaceCreateDeviceRGB()
-                let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-                
-                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
             })
             transition.setFrame(view: self.indicatorView, frame: CGRect(origin: CGPoint(x: (availableSize.width - imageDiameter) * 0.5, y: (availableSize.height - imageDiameter) * 0.5), size: CGSize(width: imageDiameter, height: imageDiameter)))
             
