@@ -451,7 +451,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     .disappear(.default(scale: true))
                 )
                 
-                if #available(iOS 13.0, *), !isTablet {
+                if !isTablet && Camera.isDualCamSupported {
                     let dualButton = dualButton.update(
                         component: CameraButton(
                             content: AnyComponentWithIdentity(

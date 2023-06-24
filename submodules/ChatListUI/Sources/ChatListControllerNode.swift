@@ -1122,7 +1122,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
         self.applyItemNodeAsCurrent(id: .all, itemNode: itemNode)
         
         let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] _ in
-            guard let strongSelf = self, strongSelf.availableFilters.count > 1 else {
+            guard let strongSelf = self, strongSelf.availableFilters.count > 1 || strongSelf.controller?.isStoryPostingAvailable == true else {
                 return []
             }
             switch strongSelf.currentItemNode.visibleContentOffset() {
@@ -1136,8 +1136,11 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             if !strongSelf.currentItemNode.isNavigationInAFinalState {
                 return []
             }
-            let directions: InteractiveTransitionGestureRecognizerDirections = [.leftCenter, .rightCenter]
-            return directions
+            if strongSelf.availableFilters.count > 1 {
+                return [.leftCenter, .rightCenter]
+            } else {
+                return [.rightEdge]
+            }
         }, edgeWidth: .widthMultiplier(factor: 1.0 / 6.0, min: 22.0, max: 80.0))
         panRecognizer.delegate = self
         panRecognizer.delaysTouchesBegan = false

@@ -300,8 +300,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         super.didLoad()
         
         let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { _ in
-            let directions: InteractiveTransitionGestureRecognizerDirections = [.rightCenter, .rightEdge]
-            return directions
+            return [.rightCenter, .rightEdge]
         }, edgeWidth: .widthMultiplier(factor: 1.0 / 6.0, min: 22.0, max: 80.0))
         panRecognizer.delegate = self
         panRecognizer.delaysTouchesBegan = false

@@ -2350,7 +2350,7 @@ public final class StoryItemSetContainerComponent: Component {
             })
         }
         
-        private func navigateToPeer(peer: EnginePeer, messageId: EngineMessage.Id? = nil) {
+        func navigateToPeer(peer: EnginePeer, messageId: EngineMessage.Id? = nil) {
             guard let component = self.component else {
                 return
             }

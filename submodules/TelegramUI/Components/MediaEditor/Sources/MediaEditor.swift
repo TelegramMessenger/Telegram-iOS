@@ -116,6 +116,18 @@ public final class MediaEditor {
     }
     private let playerPlaybackStatePromise = Promise<(Double, Double, Bool, Bool)>((0.0, 0.0, false, false))
     
+    public var duration: Double? {
+        if let _ = self.player {
+            if let trimRange = self.values.videoTrimRange {
+                return trimRange.upperBound - trimRange.lowerBound
+            } else {
+                return min(60.0, self.playerPlaybackState.0)
+            }
+        } else {
+            return nil
+        }
+    }
+    
     public var onFirstDisplay: () -> Void = {}
     
     public func playerState(framesCount: Int) -> Signal<MediaEditorPlayerState?, NoError> {
@@ -293,16 +305,51 @@ public final class MediaEditor {
             let colors = mediaEditorGetGradientColors(from: image)
             textureSource = .single((ImageTextureSource(image: image, renderTarget: renderTarget), image, nil, colors.0, colors.1))
         case let .draft(draft):
-            guard let image = UIImage(contentsOfFile: draft.fullPath()) else {
-                return
-            }
-            let colors: (UIColor, UIColor)
-            if let gradientColors = draft.values.gradientColors {
-                colors = (gradientColors.first!, gradientColors.last!)
+            if draft.isVideo {
+                textureSource = Signal { subscriber in
+                    let url = URL(fileURLWithPath: draft.fullPath())
+                    let asset = AVURLAsset(url: url)
+                    
+                    let playerItem = AVPlayerItem(asset: asset)
+                    let player = AVPlayer(playerItem: playerItem)
+                    player.automaticallyWaitsToMinimizeStalling = false
+   
+                    if let gradientColors = draft.values.gradientColors {
+                        let colors = (gradientColors.first!, gradientColors.last!)
+                        subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, colors.0, colors.1))
+                        subscriber.putCompletion()
+                        
+                        return EmptyDisposable
+                    } else {
+                        let imageGenerator = AVAssetImageGenerator(asset: asset)
+                        imageGenerator.appliesPreferredTrackTransform = true
+                        imageGenerator.maximumSize = CGSize(width: 72, height: 128)
+                        imageGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: CMTime(seconds: 0, preferredTimescale: CMTimeScale(30.0)))]) { _, image, _, _, _ in
+                            if let image {
+                                let colors = mediaEditorGetGradientColors(from: UIImage(cgImage: image))
+                                subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, colors.0, colors.1))
+                            } else {
+                                subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, .black, .black))
+                            }
+                            subscriber.putCompletion()
+                        }
+                        return ActionDisposable {
+                            imageGenerator.cancelAllCGImageGeneration()
+                        }
+                    }
+                }
             } else {
-                colors = mediaEditorGetGradientColors(from: image)
+                guard let image = UIImage(contentsOfFile: draft.fullPath()) else {
+                    return
+                }
+                let colors: (UIColor, UIColor)
+                if let gradientColors = draft.values.gradientColors {
+                    colors = (gradientColors.first!, gradientColors.last!)
+                } else {
+                    colors = mediaEditorGetGradientColors(from: image)
+                }
+                textureSource = .single((ImageTextureSource(image: image, renderTarget: renderTarget), image, nil, colors.0, colors.1))
             }
-            textureSource = .single((ImageTextureSource(image: image, renderTarget: renderTarget), image, nil, colors.0, colors.1))
         case let .video(path, transitionImage, _):
             textureSource = Signal { subscriber in
                 let url = URL(fileURLWithPath: path)
