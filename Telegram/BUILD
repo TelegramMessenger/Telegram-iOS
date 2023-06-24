@@ -2013,9 +2013,9 @@ xcodeproj(
         "Debug": {
             "//command_line_option:compilation_mode": "dbg",
         },
-        #"Release": {
-        #    "//command_line_option:compilation_mode": "opt",
-        #},
+        "Release": {
+            "//command_line_option:compilation_mode": "opt",
+        },
     },
     default_xcode_configuration = "Debug"
 
