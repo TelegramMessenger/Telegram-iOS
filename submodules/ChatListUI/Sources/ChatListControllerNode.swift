@@ -19,6 +19,7 @@ import ComponentDisplayAdapters
 import ComponentFlow
 import ChatFolderLinkPreviewScreen
 import ChatListHeaderComponent
+import StoryPeerListComponent
 
 public enum ChatListContainerNodeFilter: Equatable {
     case all
@@ -927,7 +928,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             if itemNode.listNode.isTracking && !self.currentItemNode.startedScrollingAtUpperBound && self.tempTopInset == 0.0 {
                 if case let .known(value) = offset {
                     if value < -1.0 {
-                        if let storySubscriptions = self.controller?.orderedStorySubscriptions, !storySubscriptions.items.isEmpty {
+                        if let storySubscriptions = self.controller?.orderedStorySubscriptions, (shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions) || true) {
                             self.currentItemNode.startedScrollingAtUpperBound = true
                             self.tempTopInset = ChatListNavigationBar.storiesScrollHeight
                         }
@@ -958,7 +959,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             }
             let tempTopInset: CGFloat
             if self.currentItemNode.startedScrollingAtUpperBound {
-                if let storySubscriptions = self.controller?.orderedStorySubscriptions, !storySubscriptions.items.isEmpty {
+                if let storySubscriptions = self.controller?.orderedStorySubscriptions, (shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions) || true) {
                     tempTopInset = ChatListNavigationBar.storiesScrollHeight
                 } else {
                     tempTopInset = 0.0
@@ -1799,7 +1800,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 return false
             }
             
-            if let storySubscriptions = controller.orderedStorySubscriptions, !storySubscriptions.items.isEmpty {
+            if let storySubscriptions = controller.orderedStorySubscriptions, (shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions) || true) {
                 if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
                     if navigationBarComponentView.storiesUnlocked {
                         return true
@@ -2060,7 +2061,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             return
         }
         
-        if let storySubscriptions = self.controller?.orderedStorySubscriptions, !storySubscriptions.items.isEmpty {
+        if let storySubscriptions = self.controller?.orderedStorySubscriptions, (shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions) || true) {
             self.tempAllowAvatarExpansion = true
             self.tempDisableStoriesAnimations = !animated
             self.tempNavigationScrollingTransition = animated ? .animated(duration: 0.3, curve: .spring) : .immediate

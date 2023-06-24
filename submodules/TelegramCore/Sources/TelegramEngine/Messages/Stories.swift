@@ -475,6 +475,7 @@ public final class EngineStorySubscriptions: Equatable {
         public let peer: EnginePeer
         public let hasUnseen: Bool
         public let hasUnseenCloseFriends: Bool
+        public let hasPending: Bool
         public let storyCount: Int
         public let unseenCount: Int
         public let lastTimestamp: Int32
@@ -483,6 +484,7 @@ public final class EngineStorySubscriptions: Equatable {
             peer: EnginePeer,
             hasUnseen: Bool,
             hasUnseenCloseFriends: Bool,
+            hasPending: Bool,
             storyCount: Int,
             unseenCount: Int,
             lastTimestamp: Int32
@@ -490,6 +492,7 @@ public final class EngineStorySubscriptions: Equatable {
             self.peer = peer
             self.hasUnseen = hasUnseen
             self.hasUnseenCloseFriends = hasUnseenCloseFriends
+            self.hasPending = hasPending
             self.storyCount = storyCount
             self.unseenCount = unseenCount
             self.lastTimestamp = lastTimestamp

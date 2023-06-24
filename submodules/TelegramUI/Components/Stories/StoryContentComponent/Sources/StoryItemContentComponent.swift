@@ -12,6 +12,9 @@ import UniversalMediaPlayer
 import TelegramUniversalVideoContent
 import StoryContainerScreen
 import HierarchyTrackingLayer
+import ButtonComponent
+import MultilineTextComponent
+import TelegramPresentationData
 
 final class StoryItemContentComponent: Component {
     typealias EnvironmentType = StoryContentItem.Environment
@@ -38,56 +41,6 @@ final class StoryItemContentComponent: Component {
 		}
 		return true
 	}
-    
-    /*static func preload(context: AccountContext, message: EngineMessage) -> Signal<Never, NoError> {
-        var messageMedia: EngineMedia?
-        for media in message.media {
-            switch media {
-            case let image as TelegramMediaImage:
-                messageMedia = .image(image)
-            case let file as TelegramMediaFile:
-                messageMedia = .file(file)
-            default:
-                break
-            }
-        }
-        
-        guard let messageMedia else {
-            return .complete()
-        }
-        
-        var fetchSignal: Signal<Never, NoError>?
-        switch messageMedia {
-        case let .image(image):
-            if let representation = image.representations.last {
-                fetchSignal = fetchedMediaResource(
-                    mediaBox: context.account.postbox.mediaBox,
-                    userLocation: .peer(message.id.peerId),
-                    userContentType: .image,
-                    reference: ImageMediaReference.message(message: MessageReference(message._asMessage()), media: image).resourceReference(representation.resource)
-                )
-                |> ignoreValues
-                |> `catch` { _ -> Signal<Never, NoError> in
-                    return .complete()
-                }
-            }
-        case let .file(file):
-            fetchSignal = fetchedMediaResource(
-                mediaBox: context.account.postbox.mediaBox,
-                userLocation: .peer(message.id.peerId),
-                userContentType: .image,
-                reference: FileMediaReference.message(message: MessageReference(message._asMessage()), media: file).resourceReference(file.resource)
-            )
-            |> ignoreValues
-            |> `catch` { _ -> Signal<Never, NoError> in
-                return .complete()
-            }
-        default:
-            break
-        }
-        
-        return fetchSignal ?? .complete()
-    }*/
 
     final class View: StoryContentItem.View {
         private let imageNode: TransformImageNode
@@ -99,6 +52,9 @@ final class StoryItemContentComponent: Component {
         private var component: StoryItemContentComponent?
         private weak var state: EmptyComponentState?
         private var environment: StoryContentItem.Environment?
+        
+        private var unsupportedText: ComponentView<Empty>?
+        private var unsupportedButton: ComponentView<Empty>?
         
         private var isProgressPaused: Bool = false
         private var currentProgressTimer: SwiftSignalKit.Timer?
@@ -353,10 +309,20 @@ final class StoryItemContentComponent: Component {
             self.environment?.presentationProgressUpdated(clippedProgress, false)
         }
         
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            if let unsupportedButtonView = self.unsupportedButton?.view {
+                if let result = unsupportedButtonView.hitTest(self.convert(point, to: unsupportedButtonView), with: event) {
+                    return result
+                }
+            }
+            return nil
+        }
+        
         func update(component: StoryItemContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StoryContentItem.Environment>, transition: Transition) -> CGSize {
             self.component = component
             self.state = state
-            self.environment = environment[StoryContentItem.Environment.self].value
+            let environment = environment[StoryContentItem.Environment.self].value
+            self.environment = environment
             
             let peerReference = PeerReference(component.peer._asPeer())
             
@@ -366,6 +332,8 @@ final class StoryItemContentComponent: Component {
                 messageMedia = .image(image)
             case let .file(file):
                 messageMedia = .file(file)
+            case .unsupported:
+                self.contentLoaded = true
             default:
                 break
             }
@@ -502,6 +470,99 @@ final class StoryItemContentComponent: Component {
                         self.updateVideoPlaybackProgress()
                     })
                 }
+            }
+            
+            switch component.item.media {
+            case .image, .file:
+                if let unsupportedText = self.unsupportedText {
+                    self.unsupportedText = nil
+                    unsupportedText.view?.removeFromSuperview()
+                }
+                if let unsupportedButton = self.unsupportedButton {
+                    self.unsupportedButton = nil
+                    unsupportedButton.view?.removeFromSuperview()
+                }
+                
+                self.backgroundColor = .black
+            default:
+                var unsuportedTransition = transition
+                
+                let unsupportedText: ComponentView<Empty>
+                if let current = self.unsupportedText {
+                    unsupportedText = current
+                } else {
+                    unsuportedTransition = .immediate
+                    unsupportedText = ComponentView()
+                    self.unsupportedText = unsupportedText
+                }
+                
+                let unsupportedButton: ComponentView<Empty>
+                if let current = self.unsupportedButton {
+                    unsupportedButton = current
+                } else {
+                    unsuportedTransition = .immediate
+                    unsupportedButton = ComponentView()
+                    self.unsupportedButton = unsupportedButton
+                }
+                
+                //TODO:localize
+                let unsupportedTextSize = unsupportedText.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: "This story is not supported by\nyour version of Telegram.", font: Font.regular(17.0), textColor: .white)),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 0
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - 16.0 * 2.0, height: availableSize.height)
+                )
+                let unsupportedButtonSize = unsupportedButton.update(
+                    transition: unsuportedTransition,
+                    component: AnyComponent(ButtonComponent(
+                        background: ButtonComponent.Background(
+                            color: environment.theme.list.itemCheckColors.fillColor,
+                            foreground: environment.theme.list.itemCheckColors.foregroundColor,
+                            pressedColor: environment.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.7)
+                        ),
+                        content: AnyComponentWithIdentity(id: AnyHashable(""), component: AnyComponent(Text(text: "Update Telegram", font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor
+                        ))),
+                        isEnabled: true,
+                        displaysProgress: false,
+                        action: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.context.sharedContext.applicationBindings.openAppStorePage()
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 240.0, height: 50.0)
+                )
+                
+                let spacing: CGFloat = 24.0
+                let contentHeight = unsupportedTextSize.height + unsupportedButtonSize.height + spacing
+                var contentY = floor((availableSize.height - contentHeight) * 0.5)
+                
+                let unsupportedTextFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - unsupportedTextSize.width) * 0.5), y: contentY), size: unsupportedTextSize)
+                contentY += unsupportedTextSize.height + spacing
+                
+                let unsupportedButtonFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - unsupportedButtonSize.width) * 0.5), y: contentY), size: unsupportedButtonSize)
+                
+                if let unsupportedTextView = unsupportedText.view {
+                    if unsupportedTextView.superview == nil {
+                        self.addSubview(unsupportedTextView)
+                    }
+                    unsuportedTransition.setPosition(view: unsupportedTextView, position: unsupportedTextFrame.center)
+                    unsupportedTextView.bounds = CGRect(origin: CGPoint(), size: unsupportedTextFrame.size)
+                }
+                if let unsupportedButtonView = unsupportedButton.view {
+                    if unsupportedButtonView.superview == nil {
+                        self.addSubview(unsupportedButtonView)
+                    }
+                    unsuportedTransition.setFrame(view: unsupportedButtonView, frame: unsupportedButtonFrame)
+                }
+                
+                self.backgroundColor = UIColor(rgb: 0x181818)
             }
             
             self.updateIsProgressPaused()

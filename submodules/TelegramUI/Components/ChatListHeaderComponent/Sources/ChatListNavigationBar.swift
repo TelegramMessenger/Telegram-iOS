@@ -610,44 +610,6 @@ public final class ChatListNavigationBar: Component {
             
             return size
         }
-        
-        /*private func addStoriesUnlockedAnimation(duration: Double, animateScrollUnlocked: Bool) {
-            guard let component = self.component else {
-                return
-            }
-            self.applyScrollFractionAnimator?.invalidate()
-            self.applyScrollFractionAnimator = nil
-            
-            let storiesUnlocked = component.storiesUnlocked
-            
-            self.storiesOffsetStartFraction = self.storiesOffsetFraction
-            self.storiesUnlockedStartFraction = self.storiesUnlockedFraction
-            
-            self.applyScrollFraction = 0.0
-            self.applyScrollUnlockedFraction = 0.0
-            self.applyScrollFractionAnimator = DisplayLinkAnimator(duration: duration * UIView.animationDurationFactor(), from: 0.0, to: 1.0, update: { [weak self] value in
-                guard let self else {
-                    return
-                }
-                
-                let t = listViewAnimationCurveSystem(value)
-                self.applyScrollFraction = t
-                if animateScrollUnlocked {
-                    self.applyScrollUnlockedFraction = storiesUnlocked ? t : (1.0 - t)
-                }
-                
-                if let rawScrollOffset = self.rawScrollOffset {
-                    self.hasDeferredScrollOffset = true
-                    self.applyScroll(offset: rawScrollOffset, allowAvatarsExpansion: self.currentAllowAvatarsExpansion, transition: .immediate)
-                }
-            }, completion: { [weak self] in
-                guard let self else {
-                    return
-                }
-                self.applyScrollFractionAnimator?.invalidate()
-                self.applyScrollFractionAnimator = nil
-            })
-        }*/
     }
     
     public func makeView() -> View {

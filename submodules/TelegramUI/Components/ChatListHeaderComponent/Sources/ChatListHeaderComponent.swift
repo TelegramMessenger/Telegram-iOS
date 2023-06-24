@@ -847,14 +847,6 @@ public final class ChatListHeaderComponent: Component {
                 }
                 
                 let sideContentWidth: CGFloat = 0.0
-                /*if let storySubscriptions = component.storySubscriptions, !storySubscriptions.items.isEmpty {
-                    sideContentWidth = self.storyPeerListExternalState.collapsedWidth + 12.0
-                }
-                if let chatListTitle = primaryContent.chatListTitle {
-                    if chatListTitle.activity {
-                        sideContentWidth = 0.0
-                    }
-                }*/
                 
                 primaryContentView.update(context: component.context, theme: component.theme, strings: component.strings, content: primaryContent, backTitle: primaryContent.backTitle, sideInset: component.sideInset, sideContentWidth: sideContentWidth, sideContentFraction: (1.0 - component.storiesFraction), size: availableSize, transition: primaryContentTransition)
                 primaryContentTransition.setFrame(view: primaryContentView, frame: CGRect(origin: CGPoint(), size: availableSize))

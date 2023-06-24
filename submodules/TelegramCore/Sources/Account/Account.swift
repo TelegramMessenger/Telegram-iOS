@@ -1162,11 +1162,17 @@ public class Account {
         let extractedExpr: [Signal<AccountRunningImportantTasks, NoError>] = [
             managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network) |> map { $0 ? AccountRunningImportantTasks.other : [] },
             self.pendingMessageManager.hasPendingMessages |> map { !$0.isEmpty ? AccountRunningImportantTasks.pendingMessages : [] },
-            (self.pendingStoryManager?.hasPending ?? .single(false)) |> map { hasPending in hasPending ? AccountRunningImportantTasks.pendingMessages : [] },
-            self.pendingUpdateMessageManager.updatingMessageMedia |> map { !$0.isEmpty ? AccountRunningImportantTasks.pendingMessages : [] },
-            self.pendingPeerMediaUploadManager.uploadingPeerMedia |> map { !$0.isEmpty ? AccountRunningImportantTasks.pendingMessages : [] },
+            (self.pendingStoryManager?.hasPending ?? .single(false)) |> map {
+                hasPending in hasPending ? AccountRunningImportantTasks.pendingMessages : []
+            },
+            self.pendingUpdateMessageManager.updatingMessageMedia |> map {
+                !$0.isEmpty ? AccountRunningImportantTasks.pendingMessages : []
+            },
+            self.pendingPeerMediaUploadManager.uploadingPeerMedia |> map {
+                !$0.isEmpty ? AccountRunningImportantTasks.pendingMessages : []
+            },
             self.accountPresenceManager.isPerformingUpdate() |> map { $0 ? AccountRunningImportantTasks.other : [] },
-            self.notificationAutolockReportManager.isPerformingUpdate() |> map { $0 ? AccountRunningImportantTasks.other : [] }
+            //self.notificationAutolockReportManager.isPerformingUpdate() |> map { $0 ? AccountRunningImportantTasks.other : [] }
         ]
         let importantBackgroundOperations: [Signal<AccountRunningImportantTasks, NoError>] = extractedExpr
         let importantBackgroundOperationsRunning = combineLatest(queue: Queue(), importantBackgroundOperations)

@@ -23,6 +23,9 @@ swift_library(
         "//submodules/TelegramUniversalVideoContent",
         "//submodules/AvatarNode",
         "//submodules/Components/HierarchyTrackingLayer",
+        "//submodules/TelegramUI/Components/ButtonComponent",
+        "//submodules/Components/MultilineTextComponent",
+        "//submodules/TelegramPresentationData",
     ],
     visibility = [
         "//visibility:public",

@@ -621,6 +621,7 @@ public final class StoryItemSetContainerComponent: Component {
             let itemEnvironment = StoryContentItem.Environment(
                 externalState: visibleItem.externalState,
                 sharedState: component.storyItemSharedState,
+                theme: component.theme,
                 presentationProgressUpdated: { [weak self, weak visibleItem] progress, canSwitch in
                     guard let self = self, let component = self.component else {
                         return
@@ -656,7 +657,6 @@ public final class StoryItemSetContainerComponent: Component {
             )
             if let view = visibleItem.view.view {
                 if view.superview == nil {
-                    view.isUserInteractionEnabled = false
                     self.contentContainerView.insertSubview(view, at: 0)
                 }
                 itemTransition.setFrame(view: view, frame: CGRect(origin: CGPoint(), size: itemLayout.size))
@@ -1139,6 +1139,15 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                 }
             }
+            
+            var isUnsupported = false
+            var disabledPlaceholder: String?
+            if component.slice.peer.isService {
+                disabledPlaceholder = "You can't reply to this story"
+            } else if case .unsupported = component.slice.item.storyItem.media {
+                isUnsupported = true
+                disabledPlaceholder = "You can't reply to this story"
+            }
              
             let keyboardWasHidden = self.inputPanelExternalState.isKeyboardHidden
             let inputNodeVisible = self.sendMessageContext.currentInputMode == .media || hasFirstResponder(self)
@@ -1374,7 +1383,7 @@ public final class StoryItemSetContainerComponent: Component {
                     displayGradient: false, //(component.inputHeight != 0.0 || inputNodeVisible) && component.metrics.widthClass != .regular,
                     bottomInset: component.inputHeight != 0.0 || inputNodeVisible ? 0.0 : bottomContentInset,
                     hideKeyboard: self.sendMessageContext.currentInputMode == .media,
-                    disabledPlaceholder: component.slice.peer.isService ? "You can't reply to this story" : nil
+                    disabledPlaceholder: disabledPlaceholder
                 )),
                 environment: {},
                 containerSize: CGSize(width: inputPanelAvailableWidth, height: 200.0)
@@ -1976,7 +1985,7 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
-            if !component.slice.item.storyItem.text.isEmpty {
+            if !isUnsupported, !component.slice.item.storyItem.text.isEmpty {
                 var captionItemTransition = transition
                 let captionItem: CaptionItem
                 if let current = self.captionItem {
