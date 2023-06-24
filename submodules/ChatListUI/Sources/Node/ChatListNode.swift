@@ -218,6 +218,16 @@ private func areFoundPeerArraysEqual(_ lhs: [(EnginePeer, EnginePeer?)], _ rhs: 
 }
 
 public struct ChatListNodeState: Equatable {
+    public struct StoryState: Equatable {
+        public var hasUnseen: Bool
+        public var hasUnseenCloseFriends: Bool
+        
+        public init(hasUnseen: Bool, hasUnseenCloseFriends: Bool) {
+            self.hasUnseen = hasUnseen
+            self.hasUnseenCloseFriends = hasUnseenCloseFriends
+        }
+    }
+    
     public struct ItemId: Hashable {
         public var peerId: EnginePeer.Id
         public var threadId: Int64?
@@ -241,7 +251,7 @@ public struct ChatListNodeState: Equatable {
     public var foundPeers: [(EnginePeer, EnginePeer?)]
     public var selectedPeerMap: [EnginePeer.Id: EnginePeer]
     public var selectedThreadIds: Set<Int64>
-    public var peerStoryMapping: [EnginePeer.Id: Bool]
+    public var peerStoryMapping: [EnginePeer.Id: ChatListNodeState.StoryState]
     
     public init(
         presentationData: ChatListPresentationData,
@@ -257,7 +267,7 @@ public struct ChatListNodeState: Equatable {
         hiddenItemShouldBeTemporaryRevealed: Bool,
         hiddenPsaPeerId: EnginePeer.Id?,
         selectedThreadIds: Set<Int64>,
-        peerStoryMapping: [EnginePeer.Id: Bool]
+        peerStoryMapping: [EnginePeer.Id: ChatListNodeState.StoryState]
     ) {
         self.presentationData = presentationData
         self.editing = editing
@@ -396,7 +406,12 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                                 forumTopicData: forumTopicData,
                                 topForumTopicItems: topForumTopicItems,
                                 autoremoveTimeout: peerEntry.autoremoveTimeout,
-                                storyState: peerEntry.storyState
+                                storyState: peerEntry.storyState.flatMap { storyState in
+                                    return ChatListItemContent.StoryState(
+                                        hasUnseen: storyState.hasUnseen,
+                                        hasUnseenCloseFriends: storyState.hasUnseenCloseFriends
+                                    )
+                                }
                             )),
                             editing: editing,
                             hasActiveRevealControls: hasActiveRevealControls,
@@ -742,7 +757,12 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                                 forumTopicData: forumTopicData,
                                 topForumTopicItems: topForumTopicItems,
                                 autoremoveTimeout: peerEntry.autoremoveTimeout,
-                                storyState: peerEntry.storyState
+                                storyState: peerEntry.storyState.flatMap { storyState in
+                                    return ChatListItemContent.StoryState(
+                                        hasUnseen: storyState.hasUnseen,
+                                        hasUnseenCloseFriends: storyState.hasUnseenCloseFriends
+                                    )
+                                }
                             )),
                             editing: editing,
                             hasActiveRevealControls: hasActiveRevealControls,

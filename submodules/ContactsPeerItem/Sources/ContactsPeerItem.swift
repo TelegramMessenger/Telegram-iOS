@@ -180,7 +180,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     let arrowAction: (() -> Void)?
     let animationCache: AnimationCache?
     let animationRenderer: MultiAnimationRenderer?
-    let storyStats: (total: Int, unseen: Int)?
+    let storyStats: (total: Int, unseen: Int, hasUnseenCloseFriends: Bool)?
     let openStories: ((ContactsPeerItemPeer, ASDisplayNode) -> Void)?
     
     public let selectable: Bool
@@ -217,7 +217,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? = nil, arrowAction: (() -> Void)? = nil,
         animationCache: AnimationCache? = nil,
         animationRenderer: MultiAnimationRenderer? = nil,
-        storyStats: (total: Int, unseen: Int)? = nil,
+        storyStats: (total: Int, unseen: Int, hasUnseenCloseFriends: Bool)? = nil,
         openStories: ((ContactsPeerItemPeer, ASDisplayNode) -> Void)? = nil
     ) {
         self.presentationData = presentationData
@@ -1114,6 +1114,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     transition: indicatorTransition,
                                     component: AnyComponent(AvatarStoryIndicatorComponent(
                                         hasUnseen: storyStats.unseen != 0,
+                                        hasUnseenCloseFriendsItems: storyStats.hasUnseenCloseFriends,
                                         isDarkTheme: item.presentationData.theme.overallDarkAppearance,
                                         activeLineWidth: 1.0 + UIScreenPixel,
                                         inactiveLineWidth: 1.0 + UIScreenPixel,

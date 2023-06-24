@@ -138,7 +138,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                         isPinned: item.isPinned,
                         isExpired: item.isExpired,
                         isPublic: item.isPublic,
-                        isPending: false
+                        isPending: false,
+                        isCloseFriends: item.isCloseFriends
                     )
                 }
                 if peerId == context.account.peerId, let stateView = views.views[PostboxViewKey.storiesState(key: .local)] as? StoryStatesView, let localState = stateView.value?.get(Stories.LocalState.self) {
@@ -155,7 +156,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                             isPinned: item.pin,
                             isExpired: false,
                             isPublic: false,
-                            isPending: true
+                            isPending: true,
+                            isCloseFriends: false
                         ))
                     }
                 }
@@ -434,6 +436,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                     items: [EngineStorySubscriptions.Item(
                         peer: peer,
                         hasUnseen: state.hasUnseen,
+                        hasUnseenCloseFriends: state.hasUnseenCloseFriends,
                         storyCount: state.items.count,
                         unseenCount: 0,
                         lastTimestamp: state.items.last?.timestamp ?? 0
@@ -953,7 +956,8 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                     isPinned: itemValue.isPinned,
                     isExpired: itemValue.isExpired,
                     isPublic: itemValue.isPublic,
-                    isPending: false
+                    isPending: false,
+                    isCloseFriends: itemValue.isCloseFriends
                 )
                 
                 let stateValue = StoryContentContextState(

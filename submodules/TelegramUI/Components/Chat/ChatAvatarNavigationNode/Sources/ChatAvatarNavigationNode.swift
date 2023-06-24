@@ -30,7 +30,7 @@ public final class ChatAvatarNavigationNode: ASDisplayNode {
     private var avatarVideoNode: AvatarVideoNode?
     
     public private(set) var avatarStoryView: ComponentView<Empty>?
-    public var hasUnseenStories: Bool?
+    public var storyData: (hasUnseen: Bool, hasUnseenCloseFriends: Bool)?
     
     public let statusView: ComponentView<Empty>
     
@@ -78,7 +78,7 @@ public final class ChatAvatarNavigationNode: ASDisplayNode {
         self.avatarNode.frame = self.containerNode.bounds
         
         #if DEBUG
-        self.hasUnseenStories = true
+        //self.hasUnseenStories = true
         #endif
     }
     
@@ -200,7 +200,7 @@ public final class ChatAvatarNavigationNode: ASDisplayNode {
     }
     
     public func updateStoryView(transition: ContainedViewLayoutTransition, theme: PresentationTheme) {
-        if let hasUnseenStories = self.hasUnseenStories {
+        if let storyData = self.storyData {
             let avatarStoryView: ComponentView<Empty>
             if let current = self.avatarStoryView {
                 avatarStoryView = current
@@ -212,7 +212,8 @@ public final class ChatAvatarNavigationNode: ASDisplayNode {
             let _ = avatarStoryView.update(
                 transition: Transition(transition),
                 component: AnyComponent(AvatarStoryIndicatorComponent(
-                    hasUnseen: hasUnseenStories,
+                    hasUnseen: storyData.hasUnseen,
+                    hasUnseenCloseFriendsItems: storyData.hasUnseenCloseFriends,
                     isDarkTheme: theme.overallDarkAppearance,
                     activeLineWidth: 1.0,
                     inactiveLineWidth: 1.0,

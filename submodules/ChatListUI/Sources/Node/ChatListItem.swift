@@ -65,6 +65,19 @@ public enum ChatListItemContent {
         }
     }
     
+    public struct StoryState: Equatable {
+        public var hasUnseen: Bool
+        public var hasUnseenCloseFriends: Bool
+        
+        public init(
+            hasUnseen: Bool,
+            hasUnseenCloseFriends: Bool
+        ) {
+            self.hasUnseen = hasUnseen
+            self.hasUnseenCloseFriends = hasUnseenCloseFriends
+        }
+    }
+    
     public struct PeerData {
         public var messages: [EngineMessage]
         public var peer: EngineRenderedPeer
@@ -83,7 +96,7 @@ public enum ChatListItemContent {
         public var forumTopicData: EngineChatList.ForumTopicData?
         public var topForumTopicItems: [EngineChatList.ForumTopicData]
         public var autoremoveTimeout: Int32?
-        public var storyState: Bool?
+        public var storyState: StoryState?
         
         public init(
             messages: [EngineMessage],
@@ -103,7 +116,7 @@ public enum ChatListItemContent {
             forumTopicData: EngineChatList.ForumTopicData?,
             topForumTopicItems: [EngineChatList.ForumTopicData],
             autoremoveTimeout: Int32?,
-            storyState: Bool?
+            storyState: StoryState?
         ) {
             self.messages = messages
             self.peer = peer
@@ -2747,9 +2760,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     let contentRect = rawContentRect.offsetBy(dx: editingOffset + leftInset + revealOffset, dy: 0.0)
                     
-                    var displayStoryIndicator: Bool?
+                    var storyState: ChatListItemContent.StoryState?
                     if case let .peer(peerData) = item.content {
-                        displayStoryIndicator = peerData.storyState
+                        storyState = peerData.storyState
                     }
                     
                     let avatarFrame = CGRect(origin: CGPoint(x: leftInset - avatarLeftInset + editingOffset + 10.0 + revealOffset, y: floor((itemHeight - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter))
@@ -2764,7 +2777,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     let storyIndicatorScale = avatarScale
-                    if displayStoryIndicator != nil {
+                    if storyState != nil {
                         avatarScale *= (avatarFrame.width - 4.0 * 2.0) / avatarFrame.width
                     }
                     
@@ -2775,7 +2788,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.avatarNode.updateSize(size: avatarFrame.size)
                     strongSelf.updateVideoVisibility()
                     
-                    if let displayStoryIndicator {
+                    if let storyState {
                         var indicatorTransition = Transition(transition)
                         let avatarStoryIndicator: ComponentView<Empty>
                         if let current = strongSelf.avatarStoryIndicator {
@@ -2792,7 +2805,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         let _ = avatarStoryIndicator.update(
                             transition: indicatorTransition,
                             component: AnyComponent(AvatarStoryIndicatorComponent(
-                                hasUnseen: displayStoryIndicator,
+                                hasUnseen: storyState.hasUnseen,
+                                hasUnseenCloseFriendsItems: storyState.hasUnseenCloseFriends,
                                 isDarkTheme: item.presentationData.theme.overallDarkAppearance,
                                 activeLineWidth: 2.0,
                                 inactiveLineWidth: 1.0 + UIScreenPixel,

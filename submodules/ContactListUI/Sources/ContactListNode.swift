@@ -82,6 +82,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
     struct StoryData: Equatable {
         var count: Int
         var unseenCount: Int
+        var hasUnseenCloseFriends: Bool
     }
     
     case search(PresentationTheme, PresentationStrings)
@@ -201,9 +202,9 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     })]
                 }
                 
-                var storyStats: (total: Int, unseen: Int)?
+                var storyStats: (total: Int, unseen: Int, hasUnseenCloseFriends: Bool)?
                 if let storyData = storyData {
-                    storyStats = (storyData.count, storyData.unseenCount)
+                    storyStats = (storyData.count, storyData.unseenCount, storyData.hasUnseenCloseFriends)
                     
                     let text: String
                     //TODO:localize
@@ -534,7 +535,7 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
         let header: ListViewItemHeader? = ChatListSearchItemHeader(type: .text("HIDDEN STORIES", AnyHashable(0)), theme: theme, strings: strings)
         
         for item in storySubscriptions.items {
-            entries.append(.peer(index, .peer(peer: item.peer._asPeer(), isGlobal: false, participantCount: nil), nil, header, .none, theme, strings, dateTimeFormat, sortOrder, displayOrder, false, true, ContactListNodeEntry.StoryData(count: item.storyCount, unseenCount: item.unseenCount)))
+            entries.append(.peer(index, .peer(peer: item.peer._asPeer(), isGlobal: false, participantCount: nil), nil, header, .none, theme, strings, dateTimeFormat, sortOrder, displayOrder, false, true, ContactListNodeEntry.StoryData(count: item.storyCount, unseenCount: item.unseenCount, hasUnseenCloseFriends: item.hasUnseenCloseFriends)))
             index += 1
         }
     }

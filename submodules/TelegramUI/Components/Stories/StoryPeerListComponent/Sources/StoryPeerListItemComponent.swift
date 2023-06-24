@@ -266,6 +266,7 @@ public final class StoryPeerListItemComponent: Component {
     public let strings: PresentationStrings
     public let peer: EnginePeer
     public let hasUnseen: Bool
+    public let hasUnseenCloseFriendsItems: Bool
     public let hasItems: Bool
     public let ringAnimation: RingAnimation?
     public let collapseFraction: CGFloat
@@ -283,6 +284,7 @@ public final class StoryPeerListItemComponent: Component {
         strings: PresentationStrings,
         peer: EnginePeer,
         hasUnseen: Bool,
+        hasUnseenCloseFriendsItems: Bool,
         hasItems: Bool,
         ringAnimation: RingAnimation?,
         collapseFraction: CGFloat,
@@ -299,6 +301,7 @@ public final class StoryPeerListItemComponent: Component {
         self.strings = strings
         self.peer = peer
         self.hasUnseen = hasUnseen
+        self.hasUnseenCloseFriendsItems = hasUnseenCloseFriendsItems
         self.hasItems = hasItems
         self.ringAnimation = ringAnimation
         self.collapseFraction = collapseFraction
@@ -325,6 +328,9 @@ public final class StoryPeerListItemComponent: Component {
             return false
         }
         if lhs.hasUnseen != rhs.hasUnseen {
+            return false
+        }
+        if lhs.hasUnseenCloseFriendsItems != rhs.hasUnseenCloseFriendsItems {
             return false
         }
         if lhs.hasItems != rhs.hasItems {
@@ -646,7 +652,17 @@ public final class StoryPeerListItemComponent: Component {
                 let colors: [CGColor]
                 
                 if component.hasUnseen || component.ringAnimation != nil {
-                    colors = [UIColor(rgb: 0x34C76F).cgColor, UIColor(rgb: 0x3DA1FD).cgColor]
+                    if component.hasUnseenCloseFriendsItems {
+                        colors = [
+                            UIColor(rgb: 0x7CD636).cgColor,
+                            UIColor(rgb: 0x26B470).cgColor
+                        ]
+                    } else {
+                        colors = [
+                            UIColor(rgb: 0x34C76F).cgColor,
+                            UIColor(rgb: 0x3DA1FD).cgColor
+                        ]
+                    }
                 } else {
                     if component.theme.overallDarkAppearance {
                         colors = [UIColor(rgb: 0x48484A).cgColor, UIColor(rgb: 0x48484A).cgColor]

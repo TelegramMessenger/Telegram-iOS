@@ -111,7 +111,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
         var forumTopicData: EngineChatList.ForumTopicData?
         var topForumTopicItems: [EngineChatList.ForumTopicData]
         var revealed: Bool
-        var storyState: Bool?
+        var storyState: ChatListNodeState.StoryState?
         
         init(
             index: EngineChatList.Item.Index,
@@ -136,7 +136,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             forumTopicData: EngineChatList.ForumTopicData?,
             topForumTopicItems: [EngineChatList.ForumTopicData],
             revealed: Bool,
-            storyState: Bool?
+            storyState: ChatListNodeState.StoryState?
         ) {
             self.index = index
             self.presentationData = presentationData
