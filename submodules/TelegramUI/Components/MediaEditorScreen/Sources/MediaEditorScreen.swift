@@ -1730,6 +1730,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             if case let .draft(draft, _) = subject, let privacy = draft.privacy {
                 controller.state.privacy = privacy
+            } else if !controller.isEditingStory {
+                let _ = (mediaEditorStoredState(engine: controller.context.engine)
+                |> deliverOnMainQueue).start(next: { [weak controller] state in
+                    if let controller, let privacy = state?.privacy {
+                        controller.state.privacy = privacy
+                    }
+                })
             }
             
             let isSavingAvailable: Bool
@@ -2910,18 +2917,18 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         super.init(navigationBarPresentationData: nil)
-        
-        if let initialPrivacy {
-            self.state.privacy = MediaEditorResultPrivacy(privacy: initialPrivacy, timeout: 86400, archive: false)
-        }
-        
+                
         self.automaticallyControlPresentationContextLayout = false
         
         self.navigationPresentation = .flatModal
-                    
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
-        
         self.statusBar.statusBarStyle = .White
+        
+        if isEditing {
+            if let initialPrivacy {
+                self.state.privacy = MediaEditorResultPrivacy(privacy: initialPrivacy, timeout: 86400, archive: false)
+            }
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -3330,6 +3337,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             })
             
             return
+        }
+        
+        if !self.isEditingStory {
+            let _ = updateMediaEditorStoredStateInteractively(engine: self.context.engine, state: MediaEditorStoredState(privacy: self.state.privacy)).start()
         }
         
         if mediaEditor.resultIsVideo {

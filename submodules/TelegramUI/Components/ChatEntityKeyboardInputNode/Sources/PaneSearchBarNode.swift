@@ -446,7 +446,7 @@ class PaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.iconNode.layer.animateFrame(from: self.iconNode.frame, to: targetIconFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
         
         let cancelButtonFrame = self.cancelButton.frame
-        self.cancelButton.layer.animatePosition(from: self.cancelButton.layer.position, to: CGPoint(x: self.bounds.size.width + cancelButtonFrame.size.width / 2.0, y: targetTextBackgroundFrame.minY + 2.0 + cancelButtonFrame.size.height / 2.0), duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
+        self.cancelButton.layer.animatePosition(from: self.cancelButton.layer.position, to: CGPoint(x: self.bounds.size.width + cancelButtonFrame.size.width / 2.0, y: targetTextBackgroundFrame.minY + 4.0 + cancelButtonFrame.size.height / 2.0), duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
     }
     
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {

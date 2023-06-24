@@ -49,8 +49,6 @@ public final class PaneSearchContainerNode: ASDisplayNode, EntitySearchContainer
     
     public var openGifContextMenu: ((MultiplexedVideoNodeFile, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void)?
     
-    public var addOnSupernode: Bool = true
-    
     public var ready: Signal<Void, NoError> {
         return self.contentNode.ready
     }

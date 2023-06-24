@@ -418,6 +418,22 @@ final class LockContentComponent: Component {
     }
 }
 
+private func lastStateImage() -> UIImage {
+    let imagePath = NSTemporaryDirectory() + "galleryImage.jpg"
+    if let data = try? Data(contentsOf: URL(fileURLWithPath: imagePath)), let image = UIImage(data: data) {
+        return image
+    } else {
+        return UIImage(bundleImageName: "Camera/Placeholder")!
+    }
+}
+
+private func saveLastStateImage(_ image: UIImage) {
+    let imagePath = NSTemporaryDirectory() + "galleryImage.jpg"
+    if let data = image.jpegData(compressionQuality: 0.6) {
+        try? data.write(to: URL(fileURLWithPath: imagePath))
+    }
+}
+
 final class CaptureControlsComponent: Component {
     enum SwipeHint {
         case none
@@ -505,13 +521,24 @@ final class CaptureControlsComponent: Component {
                         self.assetDisposable.set((fetchPhotoLibraryImage(localIdentifier: lastGalleryAsset.localIdentifier, thumbnail: true)
                         |> deliverOnMainQueue).start(next: { [weak self] imageAndDegraded in
                             if let self, let (image, _) = imageAndDegraded {
+                                let updated = self.cachedAssetImage?.0 != lastGalleryAsset.localIdentifier
                                 self.cachedAssetImage = (lastGalleryAsset.localIdentifier, image)
                                 self.updated(transition: .easeInOut(duration: 0.2))
+                                
+                                if updated {
+                                    saveLastStateImage(image)
+                                }
                             }
                         }))
                     }
                 }
             }
+        }
+        
+        override init() {
+            self.cachedAssetImage = ("", lastStateImage())
+            
+            super.init()
         }
         
         deinit {

@@ -56,9 +56,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
     private var itemGroups: [EmojiPagerContentComponent.ItemGroup] = []
     
     public var onCancel: (() -> Void)?
-    
-    public var addOnSupernode: Bool = false
-    
+        
     private let emojiSearchDisposable = MetaDisposable()
     private let emojiSearchState = Promise<EmojiSearchState>(EmojiSearchState(result: nil, isSearching: false))
     private var emojiSearchStateValue = EmojiSearchState(result: nil, isSearching: false) {

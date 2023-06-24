@@ -335,6 +335,16 @@ private final class StickerSelectionComponent: Component {
             
             return availableSize
         }
+        
+        public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            let result = super.hitTest(point, with: event)
+            
+            if self.searchVisible, let keyboardView = self.keyboardView.view, let keyboardResult = keyboardView.hitTest(self.convert(point, to: keyboardView), with: event) {
+                return keyboardResult
+            }
+            
+            return result
+        }
     }
 
     public func makeView() -> View {
@@ -363,7 +373,7 @@ public class StickerPickerScreen: ViewController {
         
         private(set) var isExpanded = false
         private var panGestureRecognizer: UIPanGestureRecognizer?
-        private var panGestureArguments: (topInset: CGFloat, offset: CGFloat, scrollView: UIScrollView?)?
+        private var panGestureArguments: (topInset: CGFloat, offset: CGFloat, scrollView: UIScrollView?, listNode: ListView?)?
         
         private var currentIsVisible: Bool = false
         private var currentLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
@@ -844,85 +854,6 @@ public class StickerPickerScreen: ViewController {
                 stateContext: nil
             )
             
-            content.masks?.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
-                performItemAction: { [weak self] _, item, _, _, _, _ in
-                    guard let strongSelf = self, let file = item.itemFile else {
-                        return
-                    }
-                    strongSelf.controller?.completion(.file(file))
-                    strongSelf.controller?.dismiss(animated: true)
-                },
-                deleteBackwards: nil,
-                openStickerSettings: nil,
-                openFeatured: nil,
-                openSearch: {},
-                addGroupAction: { [weak self] groupId, isPremiumLocked, _ in
-                    guard let strongSelf = self, let controller = strongSelf.controller, let collectionId = groupId.base as? ItemCollectionId else {
-                        return
-                    }
-                    let context = controller.context
-                    let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
-                    let _ = (context.account.postbox.combinedView(keys: [viewKey])
-                    |> take(1)
-                    |> deliverOnMainQueue).start(next: { views in
-                        guard let view = views.views[viewKey] as? OrderedItemListView else {
-                            return
-                        }
-                        for featuredStickerPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
-                            if featuredStickerPack.info.id == collectionId {
-                                let _ = (context.engine.stickers.loadedStickerPack(reference: .id(id: featuredStickerPack.info.id.id, accessHash: featuredStickerPack.info.accessHash), forceActualized: false)
-                                |> mapToSignal { result -> Signal<Void, NoError> in
-                                    switch result {
-                                    case let .result(info, items, installed):
-                                        if installed {
-                                            return .complete()
-                                        } else {
-                                            return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
-                                        }
-                                    case .fetching:
-                                        break
-                                    case .none:
-                                        break
-                                    }
-                                    return .complete()
-                                }
-                                |> deliverOnMainQueue).start(completed: {
-                                })
-                                
-                                break
-                            }
-                        }
-                    })
-                },
-                clearGroup: { _ in
-                },
-                pushController: { c in
-                },
-                presentController: { c in
-                },
-                presentGlobalOverlayController: { c in
-                },
-                navigationController: { [weak self] in
-                    return self?.controller?.navigationController as? NavigationController
-                },
-                requestUpdate: { _ in
-                },
-                updateSearchQuery: { _ in
-                },
-                updateScrollingToItemGroup: { [weak self] in
-                    self?.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
-                },
-                onScroll: {},
-                chatPeerId: nil,
-                peekBehavior: nil,
-                customLayout: nil,
-                externalBackground: nil,
-                externalExpansionView: nil,
-                useOpaqueTheme: false,
-                hideBackground: true,
-                stateContext: nil
-            )
-            
             var stickerPeekBehavior: EmojiContentPeekBehaviorImpl?
             if let controller = self.controller {
                 stickerPeekBehavior = EmojiContentPeekBehaviorImpl(
@@ -951,6 +882,7 @@ public class StickerPickerScreen: ViewController {
                         if let pagerView = componentView.keyboardView.view as? EntityKeyboardComponent.View {
                             pagerView.openSearch()
                         }
+                        self.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
                     }
                 },
                 addGroupAction: { [weak self] groupId, isPremiumLocked, _ in
@@ -1036,7 +968,13 @@ public class StickerPickerScreen: ViewController {
                 navigationController: { [weak self] in
                     return self?.controller?.navigationController as? NavigationController
                 },
-                requestUpdate: { _ in
+                requestUpdate: { [weak self] transition in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if !transition.animation.isImmediate, let (layout, navigationHeight) = strongSelf.currentLayout {
+                        strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: transition)
+                    }
                 },
                 updateSearchQuery: { [weak self] query in
                     guard let strongSelf = self, let controller = strongSelf.controller else {
@@ -1239,7 +1177,7 @@ public class StickerPickerScreen: ViewController {
             let edgeTopInset = isLandscape ? 0.0 : self.defaultTopInset
             let topInset: CGFloat
             var bottomInset = layout.intrinsicInsets.bottom
-            if let (panInitialTopInset, panOffset, _) = self.panGestureArguments {
+            if let (panInitialTopInset, panOffset, _, _) = self.panGestureArguments {
                 if effectiveExpanded {
                     topInset = min(edgeTopInset, panInitialTopInset + max(0.0, panOffset))
                 } else {
@@ -1382,10 +1320,16 @@ public class StickerPickerScreen: ViewController {
             }
         }
         
-        private func findScrollView(view: UIView?) -> UIScrollView? {
+        private func findScrollView(view: UIView?) -> (UIScrollView, ListView?)? {
             if let view = view {
                 if let view = view as? PagerExpandableScrollView {
-                    return view
+                    return (view, nil)
+                }
+                if let view = view as? GridNodeScrollerView {
+                    return (view, nil)
+                }
+                if let node = view.asyncdisplaykit_node as? ListView {
+                    return (node.scroller, node)
                 }
                 return findScrollView(view: view.superview)
             } else {
@@ -1406,11 +1350,13 @@ public class StickerPickerScreen: ViewController {
                     let point = recognizer.location(in: self.view)
                     let currentHitView = self.hitTest(point, with: nil)
                     
-                    var scrollView = self.findScrollView(view: currentHitView)
-                    if scrollView?.frame.height == self.frame.width {
-                        scrollView = nil
+                    var scrollViewAndListNode = self.findScrollView(view: currentHitView)
+                    if scrollViewAndListNode?.0.frame.height == self.frame.width {
+                        scrollViewAndListNode = nil
                     }
-                                
+                    let scrollView = scrollViewAndListNode?.0
+                    let listNode = scrollViewAndListNode?.1
+                
                     let topInset: CGFloat
                     if self.isExpanded {
                         topInset = 0.0
@@ -1418,11 +1364,12 @@ public class StickerPickerScreen: ViewController {
                         topInset = edgeTopInset
                     }
                 
-                    self.panGestureArguments = (topInset, 0.0, scrollView)
+                    self.panGestureArguments = (topInset, 0.0, scrollView, listNode)
                 case .changed:
-                    guard let (topInset, panOffset, scrollView) = self.panGestureArguments else {
+                    guard let (topInset, panOffset, scrollView, listNode) = self.panGestureArguments else {
                         return
                     }
+                    let visibleContentOffset = listNode?.visibleContentOffset()
                     let contentOffset = scrollView?.contentOffset.y ?? 0.0
                 
                     var translation = recognizer.translation(in: self.view).y
@@ -1430,7 +1377,12 @@ public class StickerPickerScreen: ViewController {
                     var currentOffset = topInset + translation
                 
                     let epsilon = 1.0
-                    if let scrollView = scrollView, contentOffset <= -scrollView.contentInset.top + epsilon {
+                    if case let .known(value) = visibleContentOffset, value <= epsilon {
+                        if let scrollView = scrollView {
+                            scrollView.bounces = false
+                            scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: 0.0), animated: false)
+                        }
+                    } else if let scrollView = scrollView, contentOffset <= -scrollView.contentInset.top + epsilon {
                         scrollView.bounces = false
                         scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
                     } else if let scrollView = scrollView {
@@ -1443,7 +1395,7 @@ public class StickerPickerScreen: ViewController {
                         }
                     }
                     
-                    self.panGestureArguments = (topInset, translation, scrollView)
+                    self.panGestureArguments = (topInset, translation, scrollView, listNode)
                     
                     if !self.isExpanded {
                         if currentOffset > 0.0, let scrollView = scrollView {
@@ -1462,18 +1414,23 @@ public class StickerPickerScreen: ViewController {
                 
                     self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
                 case .ended:
-                    guard let (currentTopInset, panOffset, scrollView) = self.panGestureArguments else {
+                    guard let (currentTopInset, panOffset, scrollView, listNode) = self.panGestureArguments else {
                         return
                     }
                     self.panGestureArguments = nil
                 
+                    let visibleContentOffset = listNode?.visibleContentOffset()
                     let contentOffset = scrollView?.contentOffset.y ?? 0.0
                 
                     let translation = recognizer.translation(in: self.view).y
                     var velocity = recognizer.velocity(in: self.view)
                     
                     if self.isExpanded {
-                        if contentOffset > 0.1 {
+                        if case let .known(value) = visibleContentOffset, value > 0.1 {
+                            velocity = CGPoint()
+                        } else if case .unknown = visibleContentOffset {
+                            velocity = CGPoint()
+                        } else if contentOffset > 0.1 {
                             velocity = CGPoint()
                         }
                     }
@@ -1499,7 +1456,9 @@ public class StickerPickerScreen: ViewController {
                     } else if self.isExpanded {
                         if velocity.y > 300.0 || offset > topInset / 2.0 {
                             self.isExpanded = false
-                            if let scrollView = scrollView {
+                            if let listNode = listNode {
+                                listNode.scroller.setContentOffset(CGPoint(), animated: false)
+                            } else if let scrollView = scrollView {
                                 scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
                             }
                             
@@ -1520,7 +1479,9 @@ public class StickerPickerScreen: ViewController {
                        
                         self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(transition))
                     } else {
-                        if let scrollView = scrollView {
+                        if let listNode = listNode {
+                            listNode.scroller.setContentOffset(CGPoint(), animated: false)
+                        } else if let scrollView = scrollView {
                             scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
                         }
                         

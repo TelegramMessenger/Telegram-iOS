@@ -13,8 +13,6 @@ import AsyncDisplayKit
 import ComponentDisplayAdapters
 
 public protocol EntitySearchContainerNode: ASDisplayNode {
-    var addOnSupernode: Bool { get set }
-    
     var onCancel: (() -> Void)? { get set }
     
     func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, inputHeight: CGFloat, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition)
