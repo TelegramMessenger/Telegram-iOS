@@ -118,6 +118,8 @@ public final class AvatarStoryIndicatorComponent: Component {
                     inactiveColors = [UIColor(rgb: 0xD8D8E1).cgColor, UIColor(rgb: 0xD8D8E1).cgColor]
                 }
                 
+                var locations: [CGFloat] = [0.0, 1.0]
+                
                 context.setLineWidth(lineWidth)
                 
                 if let counters = component.counters, counters.totalCount > 1 {
@@ -151,7 +153,6 @@ public final class AvatarStoryIndicatorComponent: Component {
                             context.replacePathWithStrokedPath()
                             context.clip()
                             
-                            var locations: [CGFloat] = [1.0, 0.0]
                             let colors: [CGColor]
                             if pass == 1 {
                                 colors = activeColors
@@ -171,16 +172,11 @@ public final class AvatarStoryIndicatorComponent: Component {
                     context.replacePathWithStrokedPath()
                     context.clip()
                     
-                    var locations: [CGFloat] = [1.0, 0.0]
                     let colors: [CGColor]
                     if component.hasUnseen {
-                        colors = [UIColor(rgb: 0x34C76F).cgColor, UIColor(rgb: 0x3DA1FD).cgColor]
+                        colors = activeColors
                     } else {
-                        if component.isDarkTheme {
-                            colors = [UIColor(rgb: 0x48484A).cgColor, UIColor(rgb: 0x48484A).cgColor]
-                        } else {
-                            colors = [UIColor(rgb: 0xD8D8E1).cgColor, UIColor(rgb: 0xD8D8E1).cgColor]
-                        }
+                        colors = inactiveColors
                     }
                     
                     let colorSpace = CGColorSpaceCreateDeviceRGB()
