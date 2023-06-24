@@ -5744,7 +5744,12 @@ private final class ChatListLocationContext {
         
         self.parentController?.requestLayout(transition: .animated(duration: 0.45, curve: .spring))
         
-        self.parentController?.maybeDisplayStoryTooltip()
+        Queue.mainQueue().after(1.0, { [weak self] in
+            guard let self else {
+                return
+            }
+            self.parentController?.maybeDisplayStoryTooltip()
+        })
     }
     
     private func updateForum(
