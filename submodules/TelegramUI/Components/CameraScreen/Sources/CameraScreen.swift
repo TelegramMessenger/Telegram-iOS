@@ -1678,25 +1678,28 @@ public class CameraScreen: ViewController {
             let dualCamUpdated = self.appliedDualCam != self.isDualCamEnabled
             self.appliedDualCam = self.isDualCamEnabled
             
+            let circleSide = floorToScreenPixels(previewSize.width * 160.0 / 430.0)
+            let circleOffset = CGPoint(x: previewSize.width * 224.0 / 1080.0, y: previewSize.width * 477.0 / 1080.0)
+            
             var origin: CGPoint
             switch self.pipPosition {
             case .topLeft:
-                origin = CGPoint(x: 10.0, y: 110.0)
+                origin = CGPoint(x: circleOffset.x, y: circleOffset.y)
                 if !self.isDualCamEnabled {
                     origin = origin.offsetBy(dx: -180.0, dy: 0.0)
                 }
             case .topRight:
-                origin = CGPoint(x: previewFrame.width - 160.0 - 10.0, y: 110.0)
+                origin = CGPoint(x: previewFrame.width - circleOffset.x, y: circleOffset.y)
                 if !self.isDualCamEnabled {
                     origin = origin.offsetBy(dx: 180.0, dy: 0.0)
                 }
             case .bottomLeft:
-                origin = CGPoint(x: 10.0, y: previewFrame.height - 160.0 - 110.0)
+                origin = CGPoint(x: circleOffset.x, y: previewFrame.height - circleOffset.y)
                 if !self.isDualCamEnabled {
                     origin = origin.offsetBy(dx: -180.0, dy: 0.0)
                 }
             case .bottomRight:
-                origin = CGPoint(x: previewFrame.width - 160.0 - 10.0, y: previewFrame.height - 160.0 - 110.0)
+                origin = CGPoint(x: previewFrame.width - circleOffset.x, y: previewFrame.height - circleOffset.y)
                 if !self.isDualCamEnabled {
                     origin = origin.offsetBy(dx: 180.0, dy: 0.0)
                 }
@@ -1706,7 +1709,7 @@ public class CameraScreen: ViewController {
                 origin = origin.offsetBy(dx: pipTranslation.x, dy: pipTranslation.y)
             }
             
-            let additionalPreviewFrame = CGRect(origin: origin, size: CGSize(width: 160.0, height: 160.0))
+            let additionalPreviewFrame = CGRect(origin: CGPoint(x: origin.x - circleSide / 2.0, y: origin.y - circleSide / 2.0), size: CGSize(width: circleSide, height: circleSide))
             transition.setPosition(view: self.additionalPreviewContainerView, position: additionalPreviewFrame.center)
             transition.setBounds(view: self.additionalPreviewContainerView, bounds: CGRect(origin: .zero, size: additionalPreviewFrame.size))
             self.additionalPreviewContainerView.layer.cornerRadius = additionalPreviewFrame.width / 2.0

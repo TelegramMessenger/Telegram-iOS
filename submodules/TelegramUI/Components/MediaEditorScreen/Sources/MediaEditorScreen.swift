@@ -3918,7 +3918,6 @@ private final class ToolValueComponent: Component {
         }
         
         func update(component: ToolValueComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-            
             let previousValue = self.component?.value
             self.component = component
             self.state = state
