@@ -245,6 +245,7 @@ final class ContextResultPanelComponent: Component {
                             peer: peer,
                             subtitle: peer.addressName.flatMap { "@\($0)" },
                             subtitleAccessory: .none,
+                            presence: nil,
                             selectionState: .none,
                             hasNext: index != peers.count - 1,
                             action: { [weak self] peer in
@@ -313,6 +314,7 @@ final class ContextResultPanelComponent: Component {
                     peer: nil,
                     subtitle: "BBBBBBB",
                     subtitleAccessory: .none,
+                    presence: nil,
                     selectionState: .none,
                     hasNext: true,
                     action: { _ in

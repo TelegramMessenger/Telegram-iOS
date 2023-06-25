@@ -174,6 +174,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case chatWallpaperDarkPreviewTip = 40
     case displayChatListContacts = 41
     case displayChatListStoriesTooltip = 42
+    case storiesPrivacyTooltip = 43
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)

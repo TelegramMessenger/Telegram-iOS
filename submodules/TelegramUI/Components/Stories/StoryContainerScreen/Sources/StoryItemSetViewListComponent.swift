@@ -436,6 +436,7 @@ final class StoryItemSetViewListComponent: Component {
                             peer: item.peer,
                             subtitle: dateText,
                             subtitleAccessory: .checks,
+                            presence: nil,
                             selectionState: .none,
                             hasNext: index != viewListState.totalCount - 1,
                             action: { [weak self] peer in
@@ -635,6 +636,7 @@ final class StoryItemSetViewListComponent: Component {
                     peer: nil,
                     subtitle: "BBBBBBB",
                     subtitleAccessory: .checks,
+                    presence: nil,
                     selectionState: .none,
                     hasNext: true,
                     action: { _ in

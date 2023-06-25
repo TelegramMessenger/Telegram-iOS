@@ -6,6 +6,7 @@ import HierarchyTrackingLayer
 import RLottieBinding
 import SwiftSignalKit
 import AppBundle
+import GZip
 
 public final class LottieComponent: Component {
     public typealias EnvironmentType = Empty
@@ -50,6 +51,8 @@ public final class LottieComponent: Component {
         override public func load(_ f: @escaping (Data, String?) -> Void) -> Disposable {
             if let url = getAppBundle().url(forResource: self.name, withExtension: "json"), let data = try? Data(contentsOf: url) {
                 f(data, url.path)
+            } else if let url = getAppBundle().url(forResource: self.name, withExtension: "tgs"), let data = try? Data(contentsOf: URL(fileURLWithPath: url.path)), let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) {
+                f(unpackedData, url.path)
             }
             
             return EmptyDisposable
@@ -62,12 +65,12 @@ public final class LottieComponent: Component {
     }
 
     public let content: Content
-    public let color: UIColor
+    public let color: UIColor?
     public let startingPosition: StartingPosition
     
     public init(
         content: Content,
-        color: UIColor,
+        color: UIColor? = nil,
         startingPosition: StartingPosition = .end
     ) {
         self.content = content
@@ -274,7 +277,12 @@ public final class LottieComponent: Component {
             }
             
             animationInstance.renderFrame(with: Int32(self.currentFrame % Int(animationInstance.frameCount)), into: context.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(currentDisplaySize.width), height: Int32(currentDisplaySize.height), bytesPerRow: Int32(context.bytesPerRow))
-            self.currentTemplateFrameImage = context.generateImage()?.withRenderingMode(.alwaysTemplate)
+            
+            var image = context.generateImage()
+            if let _ = self.component?.color {
+                image = image?.withRenderingMode(.alwaysTemplate)
+            }
+            self.currentTemplateFrameImage = image
             self.image = self.currentTemplateFrameImage
             
             if let output = self.output, let currentTemplateFrameImage = self.currentTemplateFrameImage {
@@ -311,8 +319,8 @@ public final class LottieComponent: Component {
                 self.updateImage()
             }
             
-            if self.tintColor != component.color {
-                transition.setTintColor(view: self, color: component.color)
+            if let color = component.color, self.tintColor != color {
+                transition.setTintColor(view: self, color: color)
             }
             
             return availableSize

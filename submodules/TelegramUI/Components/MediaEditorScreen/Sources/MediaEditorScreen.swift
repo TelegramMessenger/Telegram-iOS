@@ -1731,9 +1731,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if case let .draft(draft, _) = subject, let privacy = draft.privacy {
                 controller.state.privacy = privacy
             } else if !controller.isEditingStory {
-                let _ = (mediaEditorStoredState(engine: controller.context.engine)
-                |> deliverOnMainQueue).start(next: { [weak controller] state in
-                    if let controller, let privacy = state?.privacy {
+                let _ = combineLatest(
+                    queue: Queue.mainQueue(),
+                    mediaEditorStoredState(engine: controller.context.engine),
+                    controller.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: controller.context.account.peerId))
+                ).start(next: { [weak controller] state, peer in
+                    if let controller, var privacy = state?.privacy {
+                        if case let .user(user) = peer, !user.isPremium && privacy.timeout != 86400 {
+                            privacy = MediaEditorResultPrivacy(privacy: privacy.privacy, timeout: 86400, archive: false)
+                        }
                         controller.state.privacy = privacy
                     }
                 })

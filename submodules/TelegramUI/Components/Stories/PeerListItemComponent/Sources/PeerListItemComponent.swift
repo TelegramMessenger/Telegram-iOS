@@ -12,6 +12,7 @@ import TelegramPresentationData
 import CheckNode
 import TelegramStringFormatting
 import AppBundle
+import PeerPresenceStatusManager
 
 private let avatarFont = avatarPlaceholderFont(size: 15.0)
 private let readIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuReadIcon"), color: .white)?.withRenderingMode(.alwaysTemplate)
@@ -49,6 +50,7 @@ public final class PeerListItemComponent: Component {
     let peer: EnginePeer?
     let subtitle: String?
     let subtitleAccessory: SubtitleAccessory
+    let presence: EnginePeer.Presence?
     let selectionState: SelectionState
     let hasNext: Bool
     let action: (EnginePeer) -> Void
@@ -63,6 +65,7 @@ public final class PeerListItemComponent: Component {
         peer: EnginePeer?,
         subtitle: String?,
         subtitleAccessory: SubtitleAccessory,
+        presence: EnginePeer.Presence?,
         selectionState: SelectionState,
         hasNext: Bool,
         action: @escaping (EnginePeer) -> Void
@@ -76,6 +79,7 @@ public final class PeerListItemComponent: Component {
         self.peer = peer
         self.subtitle = subtitle
         self.subtitleAccessory = subtitleAccessory
+        self.presence = presence
         self.selectionState = selectionState
         self.hasNext = hasNext
         self.action = action
@@ -109,6 +113,9 @@ public final class PeerListItemComponent: Component {
         if lhs.subtitleAccessory != rhs.subtitleAccessory {
             return false
         }
+        if lhs.presence != rhs.presence {
+            return false
+        }
         if lhs.selectionState != rhs.selectionState {
             return false
         }
@@ -131,6 +138,8 @@ public final class PeerListItemComponent: Component {
         
         private var component: PeerListItemComponent?
         private weak var state: EmptyComponentState?
+        
+        private var presenceManager: PeerPresenceStatusManager?
         
         public var avatarFrame: CGRect {
             return self.avatarNode.frame
@@ -200,6 +209,23 @@ public final class PeerListItemComponent: Component {
                     } else {
                         hasSelectionUpdated = true
                     }
+                }
+            }
+            
+            if let presence = component.presence {
+                let presenceManager: PeerPresenceStatusManager
+                if let current = self.presenceManager {
+                    presenceManager = current
+                } else {
+                    presenceManager = PeerPresenceStatusManager(update: { [weak self] in
+                        self?.state?.updated(transition: .immediate)
+                    })
+                    self.presenceManager = presenceManager
+                }
+                presenceManager.reset(presence: presence)
+            } else {
+                if self.presenceManager != nil {
+                    self.presenceManager = nil
                 }
             }
             
@@ -288,7 +314,10 @@ public final class PeerListItemComponent: Component {
             }
             
             let labelData: (String, Bool)
-            if let subtitle = component.subtitle {
+            if let presence = component.presence {
+                let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+                labelData = stringAndActivityForUserPresence(strings: component.strings, dateTimeFormat: PresentationDateTimeFormat(), presence: presence, relativeTo: Int32(timestamp))
+            } else if let subtitle = component.subtitle {
                 labelData = (subtitle, false)
             } else {
                 labelData = ("", false)

@@ -267,36 +267,57 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                 tintColor = .white
             }
             
-            let processFrame: (Double, Int, (Int) -> AnimatedStickerFrame?) -> Void = { [weak self] duration, frameCount, takeFrame in
+            let processFrame: (Double?, Int?, Int?, (Int) -> AnimatedStickerFrame?) -> Void = { [weak self] duration, frameCount, frameRate, takeFrame in
                 guard let strongSelf = self else {
                     return
                 }
-                let relativeTime = currentTime - floor(currentTime / duration) * duration
-                var t = relativeTime / duration
-                t = max(0.0, t)
-                t = min(1.0, t)
-                
-                let startFrame: Double = 0
-                let endFrame = Double(frameCount)
-                
-                let frameOffset = Int(Double(startFrame) * (1.0 - t) + Double(endFrame - 1) * t)
-                let lowerBound: Int = 0
-                let upperBound = frameCount - 1
-                let frameIndex = max(lowerBound, min(upperBound, frameOffset))
-                
-                let currentFrameIndex = strongSelf.currentFrameIndex
-                if currentFrameIndex != frameIndex {
-                    let previousFrameIndex = currentFrameIndex
-                    strongSelf.currentFrameIndex = frameIndex
+                var frameAdvancement: Int = 0
+                if let duration, let frameCount, frameCount > 0 {
+                    let relativeTime = currentTime - floor(currentTime / duration) * duration
+                    var t = relativeTime / duration
+                    t = max(0.0, t)
+                    t = min(1.0, t)
                     
-                    var delta = 1
-                    if let previousFrameIndex = previousFrameIndex {
-                        delta = max(1, frameIndex - previousFrameIndex)
+                    let startFrame: Double = 0
+                    let endFrame = Double(frameCount)
+                    
+                    let frameOffset = Int(Double(startFrame) * (1.0 - t) + Double(endFrame - 1) * t)
+                    let lowerBound: Int = 0
+                    let upperBound = frameCount - 1
+                    let frameIndex = max(lowerBound, min(upperBound, frameOffset))
+                    
+                    let currentFrameIndex = strongSelf.currentFrameIndex
+                    if currentFrameIndex != frameIndex {
+                        let previousFrameIndex = currentFrameIndex
+                        strongSelf.currentFrameIndex = frameIndex
+                        
+                        var delta = 1
+                        if let previousFrameIndex = previousFrameIndex {
+                            delta = max(1, frameIndex - previousFrameIndex)
+                        }
+                        frameAdvancement = delta
                     }
+                } else if let frameRate, frameRate > 0 {
+                    let frameTime = 1.0 / Double(frameRate)
+                    let frameIndex = Int(floor(currentTime / frameTime))
                     
-                    let frame = takeFrame(delta)
-                    
-                    if let frame {
+                    let currentFrameIndex = strongSelf.currentFrameIndex
+                    if currentFrameIndex != frameIndex {
+                        let previousFrameIndex = currentFrameIndex
+                        strongSelf.currentFrameIndex = frameIndex
+                        
+                        var delta = 1
+                        if let previousFrameIndex = previousFrameIndex {
+                            delta = max(1, frameIndex - previousFrameIndex)
+                        }
+                        frameAdvancement = delta
+                    }
+                }
+                
+                if frameAdvancement == 0 && strongSelf.image != nil {
+                    completion(strongSelf.image)
+                } else {
+                    if let frame = takeFrame(max(1, frameAdvancement)) {
                         var imagePixelBuffer: CVPixelBuffer?
                         if let pixelBuffer = strongSelf.imagePixelBuffer {
                             imagePixelBuffer = pixelBuffer
@@ -327,8 +348,6 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                     } else {
                         completion(nil)
                     }
-                } else {
-                    completion(strongSelf.image)
                 }
             }
             
@@ -341,12 +360,12 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                         return
                     }
                     
-                    guard let frameSource, let duration = strongSelf.totalDuration, let frameCount = strongSelf.frameCount else {
+                    guard let frameSource else {
                         completion(nil)
                         return
                     }
                     
-                    processFrame(duration, frameCount, { delta in
+                    processFrame(strongSelf.totalDuration, strongSelf.frameCount, strongSelf.frameRate, { delta in
                         var frame: AnimatedStickerFrame?
                         frameSource.syncWith { frameSource in
                             for i in 0 ..< delta {
@@ -365,12 +384,12 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                         return
                     }
                     
-                    guard let frameSource, let duration = strongSelf.totalDuration, let frameCount = strongSelf.frameCount else {
+                    guard let frameSource else {
                         completion(nil)
                         return
                     }
                     
-                    processFrame(duration, frameCount, { delta in
+                    processFrame(strongSelf.totalDuration, strongSelf.frameCount, strongSelf.frameRate, { delta in
                         var frame: AnimatedStickerFrame?
                         frameSource.syncWith { frameSource in
                             for i in 0 ..< delta {

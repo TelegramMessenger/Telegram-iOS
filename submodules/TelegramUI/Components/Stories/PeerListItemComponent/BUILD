@@ -22,6 +22,7 @@ swift_library(
         "//submodules/CheckNode",
         "//submodules/TelegramStringFormatting",
         "//submodules/AppBundle",
+        "//submodules/PeerPresenceStatusManager",
     ],
     visibility = [
         "//visibility:public",

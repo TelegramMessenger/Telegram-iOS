@@ -32,8 +32,9 @@ swift_library(
         "//submodules/Components/BundleIconComponent",
         "//submodules/AvatarNode",
         "//submodules/CheckNode",
-        "//submodules/PeerPresenceStatusManager",
-        "//submodules/LocalizedPeerData"
+        "//submodules/LocalizedPeerData",
+        "//submodules/TelegramUI/Components/Stories/PeerListItemComponent",
+        "//submodules/TelegramUI/Components/LottieComponent",
     ],
     visibility = [
         "//visibility:public",

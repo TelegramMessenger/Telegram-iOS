@@ -18,6 +18,8 @@ import AnimatedCounterComponent
 import TokenListTextField
 import AvatarNode
 import LocalizedPeerData
+import PeerListItemComponent
+import LottieComponent
 
 final class ShareWithPeersScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -223,6 +225,10 @@ final class ShareWithPeersScreenComponent: Component {
         private let navigationTextField = ComponentView<Empty>()
         private let textFieldSeparatorLayer: SimpleLayer
         
+        private let emptyResultsTitle = ComponentView<Empty>()
+        private let emptyResultsText = ComponentView<Empty>()
+        private let emptyResultsAnimation = ComponentView<Empty>()
+        
         private let scrollView: ScrollView
         private let scrollContentClippingView: SparseContainerView
         private let scrollContentView: UIView
@@ -261,8 +267,6 @@ final class ShareWithPeersScreenComponent: Component {
         private var effectiveStateValue: ShareWithPeersScreen.State? {
             return self.searchStateContext?.stateValue ?? self.defaultStateValue
         }
-        
-        private var isDisplayingSearch: Bool = false
         
         override init(frame: CGRect) {
             self.dimView = UIView()
@@ -605,10 +609,12 @@ final class ShareWithPeersScreenComponent: Component {
                                 context: component.context,
                                 theme: environment.theme,
                                 strings: environment.strings,
+                                style: .generic,
                                 sideInset: itemLayout.sideInset,
                                 title: peer.displayTitle(strings: environment.strings, displayOrder: .firstLast),
                                 peer: peer,
                                 subtitle: nil,
+                                subtitleAccessory: .none,
                                 presence: stateValue.presences[peer.id],
                                 selectionState: .editing(isSelected: self.selectedPeers.contains(peer.id), isTinted: false),
                                 hasNext: true,
@@ -671,6 +677,103 @@ final class ShareWithPeersScreenComponent: Component {
             }
             for id in removeSectionHeaderIds {
                 self.visibleSectionHeaders.removeValue(forKey: id)
+            }
+            
+            let fadeTransition = Transition.easeInOut(duration: 0.25)
+            if let searchStateContext = self.searchStateContext, case let .search(query) = searchStateContext.subject, let value = searchStateContext.stateValue, value.peers.isEmpty {
+                let sideInset: CGFloat = 44.0
+                let emptyAnimationHeight = 148.0
+                let topInset: CGFloat = topOffset + itemLayout.containerInset + 40.0
+                let bottomInset: CGFloat = max(environment.safeInsets.bottom, environment.inputHeight)
+                let visibleHeight = visibleFrame.height
+                let emptyAnimationSpacing: CGFloat = 8.0
+                let emptyTextSpacing: CGFloat = 8.0
+                
+                let emptyResultsTitleSize = self.emptyResultsTitle.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: environment.strings.Contacts_Search_NoResults, font: Font.semibold(17.0), textColor: environment.theme.list.itemSecondaryTextColor)),
+                            horizontalAlignment: .center
+                        )
+                    ),
+                    environment: {},
+                    containerSize: visibleFrame.size
+                )
+                let emptyResultsTextSize = self.emptyResultsText.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: environment.strings.Contacts_Search_NoResultsQueryDescription(query).string, font: Font.regular(15.0), textColor: environment.theme.list.itemSecondaryTextColor)),
+                            horizontalAlignment: .center,
+                            maximumNumberOfLines: 0
+                        )
+                    ),
+                    environment: {},
+                    containerSize: CGSize(width: visibleFrame.width - sideInset * 2.0, height: visibleFrame.height)
+                )
+                let emptyResultsAnimationSize = self.emptyResultsAnimation.update(
+                    transition: .immediate,
+                    component: AnyComponent(LottieComponent(
+                        content: LottieComponent.AppBundleContent(name: "ChatListNoResults")
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: emptyAnimationHeight, height: emptyAnimationHeight)
+                )
+      
+                let emptyTotalHeight = emptyAnimationHeight + emptyAnimationSpacing + emptyResultsTitleSize.height + emptyResultsTextSize.height + emptyTextSpacing
+                let emptyAnimationY = topInset + floorToScreenPixels((visibleHeight - topInset - bottomInset - emptyTotalHeight) / 2.0)
+                
+                let emptyResultsAnimationFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((visibleFrame.width - emptyResultsAnimationSize.width) / 2.0), y: emptyAnimationY), size: emptyResultsAnimationSize)
+                
+                let emptyResultsTitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((visibleFrame.width - emptyResultsTitleSize.width) / 2.0), y: emptyResultsAnimationFrame.maxY + emptyAnimationSpacing), size: emptyResultsTitleSize)
+                
+                let emptyResultsTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((visibleFrame.width - emptyResultsTextSize.width) / 2.0), y: emptyResultsTitleFrame.maxY + emptyTextSpacing), size: emptyResultsTextSize)
+                
+                if let view = self.emptyResultsAnimation.view as? LottieComponent.View {
+                    if view.superview == nil {
+                        view.alpha = 0.0
+                        fadeTransition.setAlpha(view: view, alpha: 1.0)
+                        self.scrollView.addSubview(view)
+                        view.playOnce()
+                    }
+                    view.bounds = CGRect(origin: .zero, size: emptyResultsAnimationFrame.size)
+                    transition.setPosition(view: view, position: emptyResultsAnimationFrame.center)
+                }
+                if let view = self.emptyResultsTitle.view {
+                    if view.superview == nil {
+                        view.alpha = 0.0
+                        fadeTransition.setAlpha(view: view, alpha: 1.0)
+                        self.scrollView.addSubview(view)
+                    }
+                    view.bounds = CGRect(origin: .zero, size: emptyResultsTitleFrame.size)
+                    transition.setPosition(view: view, position: emptyResultsTitleFrame.center)
+                }
+                if let view = self.emptyResultsText.view {
+                    if view.superview == nil {
+                        view.alpha = 0.0
+                        fadeTransition.setAlpha(view: view, alpha: 1.0)
+                        self.scrollView.addSubview(view)
+                    }
+                    view.bounds = CGRect(origin: .zero, size: emptyResultsTextFrame.size)
+                    transition.setPosition(view: view, position: emptyResultsTextFrame.center)
+                }
+            } else {
+                if let view = self.emptyResultsAnimation.view {
+                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        view.removeFromSuperview()
+                    })
+                }
+                if let view = self.emptyResultsTitle.view {
+                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        view.removeFromSuperview()
+                    })
+                }
+                if let view = self.emptyResultsText.view {
+                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        view.removeFromSuperview()
+                    })
+                }
             }
         }
         
@@ -896,10 +999,12 @@ final class ShareWithPeersScreenComponent: Component {
                     context: component.context,
                     theme: environment.theme,
                     strings: environment.strings,
+                    style: .generic,
                     sideInset: sideInset,
                     title: "Name",
                     peer: nil,
                     subtitle: nil,
+                    subtitleAccessory: .none,
                     presence: nil,
                     selectionState: .editing(isSelected: false, isTinted: false),
                     hasNext: true,
@@ -1130,7 +1235,7 @@ final class ShareWithPeersScreenComponent: Component {
             }
             self.ignoreScrolling = false
             self.updateScrolling(transition: contentTransition)
-            
+             
             return availableSize
         }
     }
@@ -1284,15 +1389,27 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     self.readySubject.set(true)
                 })
             case let .search(query):
-                self.stateDisposable = (context.engine.contacts.searchContacts(query: query)
-                |> deliverOnMainQueue).start(next: { [weak self] peers, presences in
+                self.stateDisposable = (context.engine.contacts.searchLocalPeers(query: query)
+                |> deliverOnMainQueue).start(next: { [weak self] peers in
                     guard let self else {
                         return
                     }
-                    
+                                        
                     let state = State(
-                        peers: peers.filter { $0.id != context.account.peerId },
-                        presences: presences
+                        peers: peers.compactMap { $0.peer }.filter { peer in
+                            if case let .user(user) = peer {
+                                if user.id == context.account.peerId {
+                                    return false
+                                } else if user.botInfo != nil {
+                                    return false
+                                } else {
+                                    return true
+                                }
+                            } else {
+                                return false
+                            }
+                        },
+                        presences: [:]
                     )
                     self.stateValue = state
                     self.stateSubject.set(.single(state))

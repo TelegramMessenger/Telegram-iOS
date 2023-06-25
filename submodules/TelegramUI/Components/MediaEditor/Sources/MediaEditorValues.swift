@@ -746,6 +746,9 @@ public extension MediaEditorValues {
         if self.drawing != nil {
             return true
         }
+        if !self.entities.isEmpty {
+            return true
+        }
         return false
     }
 }
