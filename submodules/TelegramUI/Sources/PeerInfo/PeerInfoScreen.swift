@@ -2107,6 +2107,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         avatarUploadProgress: nil,
         highlightedButton: nil
     )
+    private var forceIsContactPromise = ValuePromise<Bool>(false)
     private let nearbyPeerDistance: Int32?
     private let reactionSourceMessageId: MessageId?
     private var dataDisposable: Disposable?
@@ -3833,10 +3834,18 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             self?.updateNavigation(transition: .immediate, additive: true)
         }
         
-        self.dataDisposable = (screenData
-        |> deliverOnMainQueue).start(next: { [weak self] data in
+        self.dataDisposable = combineLatest(
+            queue: Queue.mainQueue(),
+            screenData,
+            self.forceIsContactPromise.get()
+        ).start(next: { [weak self] data, forceIsContact in
             guard let strongSelf = self else {
                 return
+            }
+            if data.isContact && forceIsContact {
+                strongSelf.forceIsContactPromise.set(false)
+            } else {
+                data.forceIsContact = forceIsContact
             }
             strongSelf.updateData(data)
             strongSelf.cachedDataPromise.set(.single(data.cachedData))
@@ -6351,6 +6360,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 self?.controller?.push(c)
             }, present: { c, a in
                 self?.controller?.present(c, in: .window(.root), with: a)
+            }, completion: { [weak self] in
+                if let self {
+                    self.forceIsContactPromise.set(true)
+                }
             })
         })
     }
