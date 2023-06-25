@@ -75,14 +75,14 @@ private final class StoryContainerScreenComponent: Component {
     let content: StoryContentContext
     let focusedItemPromise: Promise<StoryId?>
     let transitionIn: StoryContainerScreen.TransitionIn?
-    let transitionOut: (EnginePeer.Id, AnyHashable) -> StoryContainerScreen.TransitionOut?
+    let transitionOut: (EnginePeer.Id, Int32) -> StoryContainerScreen.TransitionOut?
     
     init(
         context: AccountContext,
         content: StoryContentContext,
         focusedItemPromise: Promise<StoryId?>,
         transitionIn: StoryContainerScreen.TransitionIn?,
-        transitionOut: @escaping (EnginePeer.Id, AnyHashable) -> StoryContainerScreen.TransitionOut?
+        transitionOut: @escaping (EnginePeer.Id, Int32) -> StoryContainerScreen.TransitionOut?
     ) {
         self.context = context
         self.content = content
@@ -322,7 +322,7 @@ private final class StoryContainerScreenComponent: Component {
         private func commitHorizontalPan(velocity: CGPoint) {
             if var itemSetPanState = self.itemSetPanState {
                 if let component = self.component, let stateValue = component.content.stateValue, let _ = stateValue.slice {
-                    var direction: StoryContentContextNavigation.Direction?
+                    var direction: StoryContentContextNavigation.PeerDirection?
                     if abs(velocity.x) > 10.0 {
                         if velocity.x < 0.0 {
                             if stateValue.nextSlice != nil {
@@ -397,16 +397,25 @@ private final class StoryContainerScreenComponent: Component {
                 let velocity = recognizer.velocity(in: self)
                 
                 self.verticalPanState = nil
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                var updateState = true
                 
                 if translation.y > 100.0 || velocity.y > 10.0 {
+                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
                     self.environment?.controller()?.dismiss()
                 } else if translation.y < -100.0 || velocity.y < -40.0 {
                     if let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id] {
                         if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
-                            itemSetComponentView.activateInput()
+                            if itemSetComponentView.activateInput() {
+                                updateState = false
+                            }
                         }
                     }
+                    
+                    if updateState || "".isEmpty {
+                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                    }
+                } else {
+                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
                 }
             default:
                 break
@@ -532,7 +541,7 @@ private final class StoryContainerScreenComponent: Component {
         func animateOut(completion: @escaping () -> Void) {
             self.isAnimatingOut = true
             
-            if !self.dismissWithoutTransitionOut, let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View, let transitionOut = component.transitionOut(slice.peer.id, slice.item.id) {
+            if !self.dismissWithoutTransitionOut, let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View, let transitionOut = component.transitionOut(slice.peer.id, slice.item.storyItem.id) {
                 self.state?.updated(transition: .immediate)
                 
                 let transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
@@ -552,7 +561,7 @@ private final class StoryContainerScreenComponent: Component {
                     focusedItemPromise.set(.single(nil))
                 })
             } else {
-                if let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let transitionOut = component.transitionOut(slice.peer.id, slice.item.id) {
+                if let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let transitionOut = component.transitionOut(slice.peer.id, slice.item.storyItem.id) {
                     transitionOut.completed()
                 }
                 
@@ -828,12 +837,14 @@ private final class StoryContainerScreenComponent: Component {
                                                 self.commitHorizontalPan(velocity: CGPoint(x: 100.0, y: 0.0))
                                             }
                                         } else {
-                                            let mappedDirection: StoryContentContextNavigation.Direction
+                                            let mappedDirection: StoryContentContextNavigation.ItemDirection
                                             switch direction {
                                             case .previous:
                                                 mappedDirection = .previous
                                             case .next:
                                                 mappedDirection = .next
+                                            case let .id(id):
+                                                mappedDirection = .id(id)
                                             }
                                             component.content.navigate(navigation: .item(mappedDirection))
                                         }

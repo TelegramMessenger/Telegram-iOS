@@ -302,6 +302,15 @@ public extension TelegramEngine {
             }
             |> ignoreValues
         }
+        
+        public func removeCustomStoryNotificationSettings(peerIds: [PeerId]) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                for peerId in peerIds {
+                    _internal_updatePeerStoriesMutedSetting(account: self.account, transaction: transaction, peerId: peerId, isMuted: nil)
+                }
+            }
+            |> ignoreValues
+        }
 
         public func channelAdminEventLog(peerId: PeerId) -> ChannelAdminEventLogContext {
             return ChannelAdminEventLogContext(postbox: self.account.postbox, network: self.account.network, peerId: peerId)

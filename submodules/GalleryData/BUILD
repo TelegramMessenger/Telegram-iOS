@@ -25,7 +25,6 @@ swift_library(
         "//submodules/MediaResources:MediaResources",
         "//submodules/WebsiteType:WebsiteType",
         "//submodules/TelegramUI/Components/Stories/StoryContainerScreen",
-        "//submodules/TelegramUI/Components/Stories/StoryContentComponent",
     ],
     visibility = [
         "//visibility:public",

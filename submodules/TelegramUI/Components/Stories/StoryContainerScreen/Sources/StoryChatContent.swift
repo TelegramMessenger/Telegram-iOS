@@ -6,7 +6,6 @@ import SwiftSignalKit
 import AccountContext
 import TelegramCore
 import Postbox
-import StoryContainerScreen
 
 private struct StoryKey: Hashable {
     var peerId: EnginePeer.Id
@@ -245,34 +244,27 @@ public final class StoryContentContextImpl: StoryContentContext {
                             }
                         }
                         
+                        let allItems = mappedItems.map { item in
+                            return StoryContentItem(
+                                position: nil,
+                                peerId: peer.id,
+                                storyItem: item
+                            )
+                        }
+                        
                         self.nextItems = nextItems
                         self.sliceValue = StoryContentContextState.FocusedSlice(
                             peer: peer,
                             additionalPeerData: additionalPeerData,
                             item: StoryContentItem(
-                                id: AnyHashable(mappedItem.id),
                                 position: focusedIndex,
-                                component: AnyComponent(StoryItemContentComponent(
-                                    context: context,
-                                    peer: peer,
-                                    item: mappedItem
-                                )),
-                                centerInfoComponent: AnyComponent(StoryAuthorInfoComponent(
-                                    context: context,
-                                    peer: peer,
-                                    timestamp: mappedItem.timestamp
-                                )),
-                                rightInfoComponent: AnyComponent(StoryAvatarInfoComponent(
-                                    context: context,
-                                    peer: peer
-                                )),
                                 peerId: peer.id,
-                                storyItem: mappedItem,
-                                isMy: peerId == context.account.peerId
+                                storyItem: mappedItem
                             ),
                             totalCount: mappedItems.count,
                             previousItemId: previousItemId,
-                            nextItemId: nextItemId
+                            nextItemId: nextItemId,
+                            allItems: allItems
                         )
                         self.isReady = true
                         self.updated.set(.single(Void()))
@@ -849,6 +841,10 @@ public final class StoryContentContextImpl: StoryContentContext {
                     if let nextItemId = slice.nextItemId {
                         currentState.centralPeerContext.currentFocusedId = nextItemId
                     }
+                case let .id(id):
+                    if slice.allItems.contains(where: { $0.storyItem.id == id }) {
+                        currentState.centralPeerContext.currentFocusedId = id
+                    }
                 }
             }
         }
@@ -961,34 +957,20 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                     isCloseFriends: itemValue.isCloseFriends
                 )
                 
+                let mainItem = StoryContentItem(
+                    position: 0,
+                    peerId: peer.id,
+                    storyItem: mappedItem
+                )
                 let stateValue = StoryContentContextState(
                     slice: StoryContentContextState.FocusedSlice(
                         peer: peer,
                         additionalPeerData: additionalPeerData,
-                        item: StoryContentItem(
-                            id: AnyHashable(item.id),
-                            position: 0,
-                            component: AnyComponent(StoryItemContentComponent(
-                                context: context,
-                                peer: peer,
-                                item: mappedItem
-                            )),
-                            centerInfoComponent: AnyComponent(StoryAuthorInfoComponent(
-                                context: context,
-                                peer: peer,
-                                timestamp: item.timestamp
-                            )),
-                            rightInfoComponent: AnyComponent(StoryAvatarInfoComponent(
-                                context: context,
-                                peer: peer
-                            )),
-                            peerId: peer.id,
-                            storyItem: mappedItem,
-                            isMy: peer.id == context.account.peerId
-                        ),
+                        item: mainItem,
                         totalCount: 1,
                         previousItemId: nil,
-                        nextItemId: nil
+                        nextItemId: nil,
+                        allItems: [mainItem]
                     ),
                     previousSlice: nil,
                     nextSlice: nil
@@ -1124,34 +1106,27 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                 let item = state.items[focusedIndex]
                 self.focusedId = item.id
                 
+                let allItems = state.items.map { stateItem -> StoryContentItem in
+                    return StoryContentItem(
+                        position: nil,
+                        peerId: peer.id,
+                        storyItem: stateItem
+                    )
+                }
+                
                 stateValue = StoryContentContextState(
                     slice: StoryContentContextState.FocusedSlice(
                         peer: peer,
                         additionalPeerData: additionalPeerData,
                         item: StoryContentItem(
-                            id: AnyHashable(item.id),
                             position: nil,
-                            component: AnyComponent(StoryItemContentComponent(
-                                context: context,
-                                peer: peer,
-                                item: item
-                            )),
-                            centerInfoComponent: AnyComponent(StoryPositionInfoComponent(
-                                context: context,
-                                position: focusedIndex,
-                                totalCount: state.totalCount
-                            )),
-                            rightInfoComponent: AnyComponent(StoryAvatarInfoComponent(
-                                context: context,
-                                peer: peer
-                            )),
                             peerId: peer.id,
-                            storyItem: item,
-                            isMy: peerId == self.context.account.peerId
+                            storyItem: item
                         ),
                         totalCount: state.totalCount,
                         previousItemId: focusedIndex == 0 ? nil : state.items[focusedIndex - 1].id,
-                        nextItemId: (focusedIndex == state.items.count - 1) ? nil : state.items[focusedIndex + 1].id
+                        nextItemId: (focusedIndex == state.items.count - 1) ? nil : state.items[focusedIndex + 1].id,
+                        allItems: allItems
                     ),
                     previousSlice: nil,
                     nextSlice: nil
@@ -1283,15 +1258,19 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
         case .peer:
             break
         case let .item(direction):
-            let indexDifference: Int
+            var indexDifference: Int?
             switch direction {
             case .next:
                 indexDifference = 1
             case .previous:
                 indexDifference = -1
+            case let .id(id):
+                if let listState = self.listState, let focusedId = self.focusedId, let index = listState.items.firstIndex(where: { $0.id == focusedId }), let nextIndex = listState.items.firstIndex(where: { $0.id == id }) {
+                    indexDifference = nextIndex - index
+                }
             }
             
-            if let listState = self.listState, let focusedId = self.focusedId {
+            if let indexDifference, let listState = self.listState, let focusedId = self.focusedId {
                 if let index = listState.items.firstIndex(where: { $0.id == focusedId }) {
                     var nextIndex = index + indexDifference
                     if nextIndex < 0 {

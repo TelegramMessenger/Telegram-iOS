@@ -26,7 +26,6 @@ import AppBundle
 import InvisibleInkDustNode
 import MediaPickerUI
 import StoryContainerScreen
-import StoryContentComponent
 
 private let mediaBadgeBackgroundColor = UIColor(white: 0.0, alpha: 0.6)
 private let mediaBadgeTextColor = UIColor.white
