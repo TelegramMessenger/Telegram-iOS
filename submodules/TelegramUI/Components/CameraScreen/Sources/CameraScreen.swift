@@ -1425,7 +1425,7 @@ public class CameraScreen: ViewController {
             let progress = 1.0 - value
             let maxScale = (layout.size.width - 16.0 * 2.0) / layout.size.width
             
-            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 12.0
+            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
             let targetTopInset = ceil((layout.statusBarHeight ?? 0.0) - (layout.size.height - layout.size.height * maxScale) / 2.0)
             let deltaOffset = (targetTopInset - topInset)
             
@@ -1510,7 +1510,7 @@ public class CameraScreen: ViewController {
             } else {
                 previewSize = CGSize(width: layout.size.width, height: floorToScreenPixels(layout.size.width * 1.77778))
             }
-            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 12.0
+            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
             let bottomInset = layout.size.height - previewSize.height - topInset
             
             let panelWidth: CGFloat

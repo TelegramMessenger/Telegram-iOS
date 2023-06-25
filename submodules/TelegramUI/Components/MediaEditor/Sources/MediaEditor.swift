@@ -458,6 +458,10 @@ public final class MediaEditor {
                 }
                 
                 if let player {
+                    if let initialSeekPosition = self.initialSeekPosition {
+                        self.initialSeekPosition = nil
+                        player.seek(to: CMTime(seconds: initialSeekPosition, preferredTimescale: CMTimeScale(1000)), toleranceBefore: .zero, toleranceAfter: .zero)
+                    }
                     self.timeObserver = player.addPeriodicTimeObserver(forInterval: CMTimeMake(value: 1, timescale: 10), queue: DispatchQueue.main) { [weak self] time in
                         guard let self, let duration = player.currentItem?.duration.seconds else {
                             return
@@ -552,11 +556,16 @@ public final class MediaEditor {
     
     public var onPlaybackAction: (PlaybackAction) -> Void = { _ in }
     
+    private var initialSeekPosition: Double?
     private var targetTimePosition: (CMTime, Bool)?
     private var updatingTimePosition = false
     public func seek(_ position: Double, andPlay play: Bool) {
+        guard let player = self.player else {
+            self.initialSeekPosition = position
+            return
+        }
         if !play {
-            self.player?.pause()
+            player.pause()
             self.onPlaybackAction(.pause)
         }
         let targetPosition = CMTime(seconds: position, preferredTimescale: CMTimeScale(60.0))
@@ -567,7 +576,7 @@ public final class MediaEditor {
             }
         }
         if play {
-            self.player?.play()
+            player.play()
             self.onPlaybackAction(.play)
         }
     }

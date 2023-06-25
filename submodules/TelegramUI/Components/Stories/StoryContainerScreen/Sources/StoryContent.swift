@@ -29,6 +29,10 @@ public final class StoryContentItem {
         
         open func leaveAmbientMode() {
         }
+        
+        open var videoPlaybackPosition: Double? {
+            return nil
+        }
     }
     
     public final class Environment: Equatable {

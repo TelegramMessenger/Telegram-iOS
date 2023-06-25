@@ -1141,7 +1141,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             }
                  
             let previewSize: CGSize
-            let previewTopInset: CGFloat = environment.statusBarHeight + 12.0
+            let previewTopInset: CGFloat = environment.statusBarHeight + 5.0
             if case .regular = environment.metrics.widthClass {
                 let previewHeight = context.availableSize.height - previewTopInset - 75.0
                 previewSize = CGSize(width: floorToScreenPixels(previewHeight / 1.77778), height: previewHeight)

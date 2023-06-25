@@ -65,6 +65,9 @@ final class StoryItemContentComponent: Component {
         private var contentLoaded: Bool = false
         
         private var videoPlaybackStatus: MediaPlayerStatus?
+        override var videoPlaybackPosition: Double? {
+            return self.videoPlaybackStatus?.timestamp
+        }
         
         private let hierarchyTrackingLayer: HierarchyTrackingLayer
         

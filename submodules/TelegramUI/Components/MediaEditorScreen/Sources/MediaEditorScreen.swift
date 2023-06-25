@@ -470,7 +470,7 @@ final class MediaEditorScreenComponent: Component {
             for button in buttons {
                 if let view = button.view {
                     view.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: 64.0), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
-                    view.layer.animateAlpha(from: view.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                    view.layer.animateAlpha(from: view.alpha, to: 0.0, duration: 0.15, removeOnCompletion: false)
                     view.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2)
                 }
             }
@@ -634,7 +634,7 @@ final class MediaEditorScreenComponent: Component {
             let buttonSideInset: CGFloat
             let buttonBottomInset: CGFloat = 8.0
             let previewSize: CGSize
-            let topInset: CGFloat = environment.statusBarHeight + 12.0
+            let topInset: CGFloat = environment.statusBarHeight + 5.0
             if isTablet {
                 let previewHeight = availableSize.height - topInset - 75.0
                 previewSize = CGSize(width: floorToScreenPixels(previewHeight / 1.77778), height: previewHeight)
@@ -1820,6 +1820,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 initialValues = nil
             }
             let mediaEditor = MediaEditor(subject: subject.editorSubject, values: initialValues, hasHistogram: true)
+            if let initialVideoPosition = self.controller?.initialVideoPosition {
+                mediaEditor.seek(initialVideoPosition, andPlay: true)
+            }
             mediaEditor.attachPreviewView(self.previewView)
             mediaEditor.valuesUpdated = { [weak self] values in
                 if let self, let controller = self.controller, values.gradientColors != nil, controller.previousSavedValues != values {
@@ -1841,21 +1844,34 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     Queue.mainQueue().async {
                         self.gradientView.image = gradientImage
                         
-                        self.previewContainerView.alpha = 1.0
-                        if CACurrentMediaTime() - self.initializationTimestamp > 0.2 {
-                            self.previewContainerView.layer.allowsGroupOpacity = true
-                            self.previewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
-                                self.previewContainerView.layer.allowsGroupOpacity = false
-                                self.backgroundDimView.isHidden = false
-                            })
+                        if self.controller?.isEditingStory == true && subject.isVideo {
+                            
                         } else {
-                            self.backgroundDimView.isHidden = false
+                            self.previewContainerView.alpha = 1.0
+                            if CACurrentMediaTime() - self.initializationTimestamp > 0.2 {
+                                self.previewContainerView.layer.allowsGroupOpacity = true
+                                self.previewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
+                                    self.previewContainerView.layer.allowsGroupOpacity = false
+                                    self.previewContainerView.alpha = 1.0
+                                })
+                            } else {
+                                self.backgroundDimView.isHidden = false
+                            }
                         }
                     }
                 }
             })
             self.mediaEditor = mediaEditor
             self.mediaEditorPromise.set(.single(mediaEditor))
+            
+            if self.controller?.isEditingStory == true && subject.isVideo {
+                mediaEditor.onFirstDisplay = { [weak self] in
+                    if let self {
+                        self.previewContainerView.alpha = 1.0
+                        self.backgroundDimView.isHidden = false
+                    }
+                }
+            }
             
             mediaEditor.onPlaybackAction = { [weak self] action in
                 if let self {
@@ -2312,6 +2328,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 })
             } else {
                 if controller.isEditingStory {
+                    if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
+                        view.animateOut(to: .gallery)
+                    }
+                    
+                    self.layer.allowsGroupOpacity = true
                     self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.4, removeOnCompletion: false, completion: { _ in
                         completion()
                     })
@@ -2507,7 +2528,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let progress = 1.0 - value
             let maxScale = (layout.size.width - 16.0 * 2.0) / layout.size.width
             
-            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 12.0
+            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
             let targetTopInset = ceil((layout.statusBarHeight ?? 0.0) - (layout.size.height - layout.size.height * maxScale) / 2.0)
             let deltaOffset = (targetTopInset - topInset)
             
@@ -2548,7 +2569,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 isTablet = false
             }
 
-            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 12.0
+            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
             let previewSize: CGSize
             if isTablet {
                 let previewHeight = layout.size.height - topInset - 75.0
@@ -2870,6 +2891,19 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 return .image(draft.thumbnail, draft.dimensions)
             }
         }
+        
+        var isVideo: Bool {
+            switch self {
+            case .image:
+                return false
+            case .video:
+                return true
+            case let .asset(asset):
+                return asset.mediaType == .video
+            case let .draft(draft, _):
+                return draft.isVideo
+            }
+        }
     }
     
     public enum Result {
@@ -2888,6 +2922,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     
     fileprivate let initialCaption: NSAttributedString?
     fileprivate let initialPrivacy: EngineStoryPrivacy?
+    fileprivate let initialVideoPosition: Double?
     
     fileprivate let transitionIn: TransitionIn?
     fileprivate let transitionOut: (Bool, Bool?) -> TransitionOut?
@@ -2905,6 +2940,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         isEditing: Bool,
         initialCaption: NSAttributedString? = nil,
         initialPrivacy: EngineStoryPrivacy? = nil,
+        initialVideoPosition: Double? = nil,
         transitionIn: TransitionIn?,
         transitionOut: @escaping (Bool, Bool?) -> TransitionOut?,
         completion: @escaping (Int64, MediaEditorScreen.Result?, NSAttributedString, MediaEditorResultPrivacy, @escaping (@escaping () -> Void) -> Void) -> Void
@@ -2914,6 +2950,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         self.isEditingStory = isEditing
         self.initialCaption = initialCaption
         self.initialPrivacy = initialPrivacy
+        self.initialVideoPosition = initialVideoPosition
         self.transitionIn = transitionIn
         self.transitionOut = transitionOut
         self.completion = completion

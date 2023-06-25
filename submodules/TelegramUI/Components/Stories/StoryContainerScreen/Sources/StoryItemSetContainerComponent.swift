@@ -1373,7 +1373,6 @@ public final class StoryItemSetContainerComponent: Component {
             
             self.sendMessageContext.updateInputMediaNode(inputPanel: self.inputPanel, availableSize: availableSize, bottomInset: component.safeInsets.bottom, inputHeight: component.inputHeight, effectiveInputHeight: inputHeight, metrics: component.metrics, deviceMetrics: component.deviceMetrics, transition: transition)
             
-            //let bottomContentInsetWithoutInput = bottomContentInset
             var viewListInset: CGFloat = 0.0
             
             var inputPanelBottomInset: CGFloat
@@ -1701,13 +1700,14 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
+            let itemSize = CGSize(width: availableSize.width, height: ceil(availableSize.width * 1.77778))
             let contentDefaultBottomInset: CGFloat = bottomContentInset
-            let contentSize = CGSize(width: availableSize.width, height: availableSize.height - component.containerInsets.top - contentDefaultBottomInset)
+            let contentSize = itemSize
             
             let contentVisualBottomInset: CGFloat = max(contentDefaultBottomInset, viewListInset)
             
-            let contentVisualHeight = availableSize.height - component.containerInsets.top - contentVisualBottomInset
-            let contentVisualScale = contentVisualHeight / contentSize.height
+            let contentVisualHeight = min(contentSize.height, availableSize.height - component.containerInsets.top - contentVisualBottomInset)
+            let contentVisualScale = min(1.0, contentVisualHeight / contentSize.height)
             
             let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: component.containerInsets.top - (contentSize.height - contentVisualHeight) * 0.5), size: contentSize)
             
@@ -1914,8 +1914,7 @@ public final class StoryItemSetContainerComponent: Component {
             transition.setFrame(layer: self.topContentGradientLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: contentFrame.width, height: gradientHeight)))
             transition.setAlpha(layer: self.topContentGradientLayer, alpha: (component.hideUI || self.displayViewList || self.isEditingStory) ? 0.0 : 1.0)
             
-            let itemSize = CGSize(width: contentFrame.width, height: floorToScreenPixels(contentFrame.width * 1.77778))
-            let itemLayout = ItemLayout(size: itemSize) //ItemLayout(size: CGSize(width: contentFrame.width, height: availableSize.height - component.containerInsets.top - 44.0 - bottomContentInsetWithoutInput))
+            let itemLayout = ItemLayout(size: itemSize)
             self.itemLayout = itemLayout
             
             let inputPanelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - inputPanelSize.width) / 2.0), y: availableSize.height - inputPanelBottomInset - inputPanelSize.height), size: inputPanelSize)
@@ -2418,21 +2417,27 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         private func openStoryEditing() {
-            guard let context = self.component?.context, let item = self.component?.slice.item.storyItem else {
+            guard let component = self.component, let peerReference = PeerReference(component.slice.peer._asPeer()) else {
                 return
             }
+            let context = component.context
+            let item = component.slice.item.storyItem
             let id = item.id
-            
+        
             self.isEditingStory = true
             self.updateIsProgressPaused()
             self.state?.updated(transition: .easeInOut(duration: 0.2))
-                        
+            
+            var videoPlaybackPosition: Double?
+            if let visibleItem = self.visibleItems[component.slice.item.id], let view = visibleItem.view.view as? StoryContentItem.View {
+                videoPlaybackPosition = view.videoPlaybackPosition
+            }
+            
             let subject: Signal<MediaEditorScreen.Subject?, NoError>
 //            if let source {
 //                subject = .single(.draft(source, Int64(id)))
 //            } else {
-            let media = item.media._asMedia()
-            subject = fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: .standalone(media: media))
+            subject = fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: .story(peer: peerReference, id: item.id, media: item.media._asMedia()))
             |> mapToSignal { (value, isImage) -> Signal<MediaEditorScreen.Subject?, NoError> in
                 guard case let .data(data) = value, data.complete else {
                     return .complete()
@@ -2448,7 +2453,11 @@ public final class StoryItemSetContainerComponent: Component {
                     if fileSize(symlinkPath) == nil {
                         let _ = try? FileManager.default.linkItem(atPath: data.path, toPath: symlinkPath)
                     }
-                    return .single(.video(symlinkPath, nil, nil, nil, PixelDimensions(width: 720, height: 1280), .bottomRight))
+                    return .single(nil)
+                    |> then(
+                        .single(.video(symlinkPath, nil, nil, nil, PixelDimensions(width: 720, height: 1280), .bottomRight))
+                        |> delay(0.1, queue: Queue.mainQueue())
+                    )
                 }
             }
                         
@@ -2459,6 +2468,7 @@ public final class StoryItemSetContainerComponent: Component {
                 isEditing: true,
                 initialCaption: chatInputStateStringWithAppliedEntities(item.text, entities: item.entities),
                 initialPrivacy: item.privacy,
+                initialVideoPosition: videoPlaybackPosition,
                 transitionIn: nil,
                 transitionOut: { _, _ in return nil },
                 completion: { [weak self] _, mediaResult, caption, privacy, commit in
@@ -2582,149 +2592,6 @@ public final class StoryItemSetContainerComponent: Component {
             updateProgressImpl = { [weak controller] progress in
                 controller?.updateEditProgress(progress)
             }
-            
-//            }
-            
-//            let _ = (getStorySource(engine: context.engine, id: Int64(id))
-//            |> deliverOnMainQueue).start(next: { [weak self] source in
-//                guard let self else {
-//                    return
-//                }
-//
-//                self.isEditingStory = true
-//                self.updateIsProgressPaused()
-//
-//                let subject: Signal<MediaEditorScreen.Subject?, NoError>
-//                if let source {
-//                    subject = .single(.draft(source, Int64(id)))
-//                } else {
-//                    let media = item.media._asMedia()
-//                    subject = fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: .standalone(media: media))
-//                    |> mapToSignal { (value, isImage) -> Signal<MediaEditorScreen.Subject?, NoError> in
-//                        guard case let .data(data) = value, data.complete else {
-//                            return .complete()
-//                        }
-//                        if let image = UIImage(contentsOfFile: data.path) {
-//                            return .single(.image(image, PixelDimensions(image.size), nil, .bottomRight))
-//                        } else {
-//                            return .single(.video(data.path, nil, nil, nil, PixelDimensions(width: 720, height: 1280), .bottomRight))
-//                        }
-//                    }
-//                }
-//
-//                var updateProgressImpl: ((Float) -> Void)?
-//                let controller = MediaEditorScreen(
-//                    context: context,
-//                    subject: subject,
-//                    isEditing: true,
-//                    transitionIn: nil,
-//                    transitionOut: { _, _ in return nil },
-//                    completion: { [weak self] randomId, mediaResult, caption, privacy, commit in
-//                        let entities = generateChatInputTextEntities(caption)
-//                        var updatedText: String?
-//                        var updatedEntities: [MessageTextEntity]?
-//                        var updatedPrivacy: EngineStoryPrivacy?
-//                        if caption.string != item.text || entities != item.entities {
-//                            updatedText = caption.string
-//                            updatedEntities = entities
-//                        }
-//                        if privacy.privacy != item.privacy {
-//                            updatedPrivacy = privacy.privacy
-//                        }
-//
-//                        if let mediaResult {
-//                            switch mediaResult {
-//                            case let .image(image, dimensions, caption):
-//                                if let imageData = compressImageToJPEG(image, quality: 0.7) {
-//                                    let _ = (context.engine.messages.editStory(media: .image(dimensions: dimensions, data: imageData), id: id, text: updatedText, entities: updatedEntities, privacy: updatedPrivacy)
-//                                    |> deliverOnMainQueue).start(next: { [weak self] result in
-//                                        switch result {
-//                                        case let .progress(progress):
-//                                            updateProgressImpl?(progress)
-//                                        case .completed:
-//                                            Queue.mainQueue().after(0.1) {
-//                                                if let self {
-//                                                    self.isEditingStory = false
-//                                                    self.rewindCurrentItem()
-//                                                    self.updateIsProgressPaused()
-//                                                }
-//                                                commit({})
-//                                            }
-//                                        }
-//                                    })
-//                                }
-//                            case let .video(content, firstFrameImage, values, duration, dimensions, caption):
-//                                let adjustments: VideoMediaResourceAdjustments
-//                                if let valuesData = try? JSONEncoder().encode(values) {
-//                                    let data = MemoryBuffer(data: valuesData)
-//                                    let digest = MemoryBuffer(data: data.md5Digest())
-//                                    adjustments = VideoMediaResourceAdjustments(data: data, digest: digest, isStory: true)
-//
-//                                    let resource: TelegramMediaResource
-//                                    switch content {
-//                                    case let .imageFile(path):
-//                                        resource = LocalFileVideoMediaResource(randomId: Int64.random(in: .min ... .max), path: path, adjustments: adjustments)
-//                                    case let .videoFile(path):
-//                                        resource = LocalFileVideoMediaResource(randomId: Int64.random(in: .min ... .max), path: path, adjustments: adjustments)
-//                                    case let .asset(localIdentifier):
-//                                        resource = VideoLibraryMediaResource(localIdentifier: localIdentifier, conversion: .compress(adjustments))
-//                                    }
-//                                    let imageData = firstFrameImage.flatMap { compressImageToJPEG($0, quality: 0.6) }
-//
-//                                    let _ = (context.engine.messages.editStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameImageData: imageData), id: id, text: updatedText, entities: updatedEntities, privacy: updatedPrivacy)
-//                                    |> deliverOnMainQueue).start(next: { [weak self] result in
-//                                        switch result {
-//                                        case let .progress(progress):
-//                                            updateProgressImpl?(progress)
-//                                        case .completed:
-//                                            Queue.mainQueue().after(0.1) {
-//                                                if let self {
-//                                                    self.isEditingStory = false
-//                                                    self.rewindCurrentItem()
-//                                                    self.updateIsProgressPaused()
-//                                                }
-//                                                commit({})
-//                                            }
-//                                        }
-//                                    })
-//                                }
-//                            }
-//                        } else if updatedText != nil || updatedPrivacy != nil {
-//                            let _ = (context.engine.messages.editStory(media: nil, id: id, text: updatedText, entities: updatedEntities, privacy: updatedPrivacy)
-//                            |> deliverOnMainQueue).start(next: { [weak self] result in
-//                                switch result {
-//                                case .completed:
-//                                    Queue.mainQueue().after(0.1) {
-//                                        if let self {
-//                                            self.isEditingStory = false
-//                                            self.rewindCurrentItem()
-//                                            self.updateIsProgressPaused()
-//                                        }
-//                                        commit({})
-//                                    }
-//                                default:
-//                                    break
-//                                }
-//                            })
-//                        } else {
-//                            if let self {
-//                                self.isEditingStory = false
-//                                self.rewindCurrentItem()
-//                                self.updateIsProgressPaused()
-//                            }
-//                            commit({})
-//                        }
-//                    }
-//                )
-//                controller.dismissed = { [weak self] in
-//                    self?.isEditingStory = false
-//                    self?.updateIsProgressPaused()
-//                }
-//                self.component?.controller()?.push(controller)
-//                updateProgressImpl = { [weak controller] progress in
-//                    controller?.updateEditProgress(progress)
-//                }
-//            })
         }
         
         private func requestSave() {

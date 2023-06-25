@@ -104,6 +104,7 @@ final class StoryItemSetContainerSendMessage {
                 context: context,
                 chatPeerId: nil,
                 areCustomEmojiEnabled: true,
+                hasTrending: false,
                 hasSearch: false,
                 hideBackground: true,
                 sendGif: nil

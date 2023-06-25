@@ -753,7 +753,7 @@ private final class StoryContainerScreenComponent: Component {
                         }
                         
                         var itemSetContainerSize = availableSize
-                        var itemSetContainerInsets = UIEdgeInsets(top: environment.statusBarHeight + 12.0, left: 0.0, bottom: 0.0, right: 0.0)
+                        var itemSetContainerInsets = UIEdgeInsets(top: environment.statusBarHeight + 5.0, left: 0.0, bottom: 0.0, right: 0.0)
                         var itemSetContainerSafeInsets = environment.safeInsets
                         if case .regular = environment.metrics.widthClass {
                             let availableHeight = min(1080.0, availableSize.height - max(45.0, environment.safeInsets.bottom) * 2.0)
