@@ -141,7 +141,7 @@ public final class CameraButton: Component {
                 }
             }
             let contentSize = self.contentView.update(
-                transition: transition,
+                transition: .immediate,
                 component: component.content.component,
                 environment: {},
                 containerSize: availableSize
@@ -158,7 +158,7 @@ public final class CameraButton: Component {
             self.updateScale(transition: transition)
             self.isEnabled = component.isEnabled
             
-            transition.setFrame(view: self.contentView, frame: CGRect(origin: CGPoint(x: floor((size.width - contentSize.width) / 2.0), y: floor((size.height - contentSize.height) / 2.0)), size: contentSize), completion: nil)
+            self.contentView.frame = CGRect(origin: CGPoint(x: floor((size.width - contentSize.width) / 2.0), y: floor((size.height - contentSize.height) / 2.0)), size: contentSize)
             
             return size
         }
