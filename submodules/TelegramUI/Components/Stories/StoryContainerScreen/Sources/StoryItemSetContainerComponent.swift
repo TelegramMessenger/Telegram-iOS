@@ -2787,7 +2787,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.state?.updated(transition: .easeInOut(duration: 0.2))
             
             var videoPlaybackPosition: Double?
-            if let visibleItem = self.visibleItems[component.slice.item.id], let view = visibleItem.view.view as? StoryContentItem.View {
+            if let visibleItem = self.visibleItems[component.slice.item.storyItem.id], let view = visibleItem.view.view as? StoryItemContentComponent.View {
                 videoPlaybackPosition = view.videoPlaybackPosition
             }
             
