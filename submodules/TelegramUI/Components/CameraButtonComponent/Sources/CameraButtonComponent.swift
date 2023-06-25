@@ -124,12 +124,21 @@ public final class CameraButton: Component {
         
         func update(component: CameraButton, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             if let currentId = self.component?.content.id, currentId != component.content.id {
-                self.contentView.removeFromSuperview()
+                let previousContentView = self.contentView
                 
                 self.contentView = ComponentHostView<Empty>()
                 self.contentView.isUserInteractionEnabled = false
                 self.contentView.layer.allowsGroupOpacity = true
                 self.addSubview(self.contentView)
+                
+                if transition.animation.isImmediate {
+                    previousContentView.removeFromSuperview()
+                } else {
+                    self.addSubview(previousContentView)
+                    previousContentView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousContentView] _ in
+                        previousContentView?.removeFromSuperview()
+                    })
+                }
             }
             let contentSize = self.contentView.update(
                 transition: transition,

@@ -1923,8 +1923,11 @@ public class CameraScreen: ViewController {
                     }
                 }
             }, dismissed: { [weak self] in
-                self?.node.hasGallery = false
                 resumeCameraCapture()
+                if let self {
+                    self.node.hasGallery = false
+                    self.node.requestUpdateLayout(hasAppeared: self.node.hasAppeared, transition: .immediate)
+                }
             })
             self.galleryController = controller
         }
