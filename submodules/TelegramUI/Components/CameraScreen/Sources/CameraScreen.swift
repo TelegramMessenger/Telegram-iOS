@@ -19,6 +19,7 @@ import TooltipUI
 import MediaEditor
 import BundleIconComponent
 import CameraButtonComponent
+import VolumeButtons
 
 let videoRedColor = UIColor(rgb: 0xff3b30)
 
@@ -87,6 +88,7 @@ private final class CameraScreenComponent: CombinedComponent {
     let camera: Camera
     let updateState: ActionSlot<CameraState>
     let hasAppeared: Bool
+    let isVisible: Bool
     let panelWidth: CGFloat
     let flipAnimationAction: ActionSlot<Void>
     let animateShutter: () -> Void
@@ -99,6 +101,7 @@ private final class CameraScreenComponent: CombinedComponent {
         camera: Camera,
         updateState: ActionSlot<CameraState>,
         hasAppeared: Bool,
+        isVisible: Bool,
         panelWidth: CGFloat,
         flipAnimationAction: ActionSlot<Void>,
         animateShutter: @escaping () -> Void,
@@ -110,6 +113,7 @@ private final class CameraScreenComponent: CombinedComponent {
         self.camera = camera
         self.updateState = updateState
         self.hasAppeared = hasAppeared
+        self.isVisible = isVisible
         self.panelWidth = panelWidth
         self.flipAnimationAction = flipAnimationAction
         self.animateShutter = animateShutter
@@ -123,6 +127,9 @@ private final class CameraScreenComponent: CombinedComponent {
             return false
         }
         if lhs.hasAppeared != rhs.hasAppeared {
+            return false
+        }
+        if lhs.isVisible != rhs.isVisible {
             return false
         }
         if lhs.panelWidth != rhs.panelWidth {
@@ -159,12 +166,17 @@ private final class CameraScreenComponent: CombinedComponent {
         private let completion: ActionSlot<Signal<CameraScreen.Result, NoError>>
         private let updateState: ActionSlot<CameraState>
         
+        private let animateShutter: () -> Void
+        
         private var cameraStateDisposable: Disposable?
         private var resultDisposable = MetaDisposable()
         
         private var mediaAssetsContext: MediaAssetsContext?
         fileprivate var lastGalleryAsset: PHAsset?
         private var lastGalleryAssetsDisposable: Disposable?
+        
+        private var volumeButtonsListener: VolumeButtonsListener?
+        private let volumeButtonsListenerShouldBeActive = ValuePromise<Bool>(false, ignoreRepeated: true)
         
         var cameraState = CameraState(mode: .photo, position: .unspecified, flashMode: .off, flashModeDidChange: false, recording: .none, duration: 0.0, isDualCamEnabled: false) {
             didSet {
@@ -176,12 +188,20 @@ private final class CameraScreenComponent: CombinedComponent {
         
         private let hapticFeedback = HapticFeedback()
         
-        init(context: AccountContext, camera: Camera, present: @escaping (ViewController) -> Void, completion: ActionSlot<Signal<CameraScreen.Result, NoError>>, updateState: ActionSlot<CameraState>) {
+        init(
+            context: AccountContext,
+            camera: Camera,
+            present: @escaping (ViewController) -> Void,
+            completion: ActionSlot<Signal<CameraScreen.Result, NoError>>,
+            updateState: ActionSlot<CameraState>,
+            animateShutter: @escaping () -> Void = {}
+        ) {
             self.context = context
             self.camera = camera
             self.present = present
             self.completion = completion
             self.updateState = updateState
+            self.animateShutter = animateShutter
             
             super.init()
             
@@ -202,6 +222,8 @@ private final class CameraScreenComponent: CombinedComponent {
             Queue.concurrentDefaultQueue().async {
                 self.setupRecentAssetSubscription()
             }
+            
+            self.setupVolumeButtonsHandler()
         }
         
         deinit {
@@ -224,6 +246,77 @@ private final class CameraScreenComponent: CombinedComponent {
                 self.lastGalleryAsset = asset
                 self.updated(transition: .easeInOut(duration: 0.2))
             })
+        }
+        
+        func setupVolumeButtonsHandler() {
+            guard self.volumeButtonsListener == nil else {
+                return
+            }
+            
+            self.volumeButtonsListener = VolumeButtonsListener(
+                shouldBeActive: self.volumeButtonsListenerShouldBeActive.get(),
+                upPressed: { [weak self] in
+                    if let self {
+                        self.handleVolumePressed()
+                    }
+                },
+                upReleased: { [weak self] in
+                    if let self {
+                        self.handleVolumeReleased()
+                    }
+                },
+                downPressed: { [weak self] in
+                    if let self {
+                        self.handleVolumePressed()
+                    }
+                },
+                downReleased: { [weak self] in
+                    if let self {
+                        self.handleVolumeReleased()
+                    }
+                }
+            )
+        }
+        
+        var volumeButtonsListenerActive = false {
+            didSet {
+                self.volumeButtonsListenerShouldBeActive.set(self.volumeButtonsListenerActive)
+            }
+        }
+        
+        private var buttonPressTimestamp: Double?
+        private var buttonPressTimer: SwiftSignalKit.Timer?
+        
+        private func handleVolumePressed() {
+            self.buttonPressTimestamp = CACurrentMediaTime()
+            
+            self.buttonPressTimer = SwiftSignalKit.Timer(timeout: 0.3, repeat: false, completion: { [weak self] in
+                if let self, let _ = self.buttonPressTimestamp {
+                    if case .none = self.cameraState.recording {
+                        self.startVideoRecording(pressing: true)
+                    }
+                    self.buttonPressTimestamp = nil
+                }
+            }, queue: Queue.mainQueue())
+            self.buttonPressTimer?.start()
+        }
+        
+        private func handleVolumeReleased() {
+            if case .none = self.cameraState.recording {
+                switch self.cameraState.mode {
+                case .photo:
+                    self.animateShutter()
+                    self.takePhoto()
+                case .video:
+                    self.startVideoRecording(pressing: false)
+                }
+            } else {
+                self.stopVideoRecording()
+            }
+            
+            self.buttonPressTimer?.invalidate()
+            self.buttonPressTimer = nil
+            self.buttonPressTimestamp = nil
         }
         
         func updateCameraMode(_ mode: CameraMode) {
@@ -305,8 +398,8 @@ private final class CameraScreenComponent: CombinedComponent {
             self.cameraState = self.cameraState.updatedRecording(.none).updatedDuration(0.0)
             self.resultDisposable.set((self.camera.stopRecording()
             |> deliverOnMainQueue).start(next: { [weak self] result in
-                if let self, case let .finished(mainResult, additionalResult, _) = result {
-                    self.completion.invoke(.single(.video(mainResult.0, mainResult.1, additionalResult?.0, additionalResult?.1, PixelDimensions(width: 1080, height: 1920), .bottomRight)))
+                if let self, case let .finished(mainResult, additionalResult, duration, positionChangeTimestamps, _) = result {
+                    self.completion.invoke(.single(.video(mainResult.0, mainResult.1, additionalResult?.0, additionalResult?.1, PixelDimensions(width: 1080, height: 1920), duration, positionChangeTimestamps, .bottomRight)))
                 }
             }))
             self.isTransitioning = true
@@ -329,7 +422,7 @@ private final class CameraScreenComponent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, camera: self.camera, present: self.present, completion: self.completion, updateState: self.updateState)
+        return State(context: self.context, camera: self.camera, present: self.present, completion: self.completion, updateState: self.updateState, animateShutter: self.animateShutter)
     }
     
     static var body: Body {
@@ -351,6 +444,8 @@ private final class CameraScreenComponent: CombinedComponent {
             let state = context.state
             let controller = environment.controller
             let availableSize = context.availableSize
+            
+            state.volumeButtonsListenerActive = component.hasAppeared && component.isVisible
 
             let isTablet: Bool
             if case .regular = environment.metrics.widthClass {
@@ -741,8 +836,6 @@ private final class CameraScreenComponent: CombinedComponent {
     }
 }
 
-private let useSimplePreviewView = true
-
 private class BlurView: UIVisualEffectView {
     private func setup() {
         for subview in self.subviews {
@@ -803,7 +896,7 @@ public class CameraScreen: ViewController {
     public enum Result {
         case pendingImage
         case image(UIImage, UIImage?, CameraScreen.PIPPosition)
-        case video(String, UIImage?, String?, UIImage?, PixelDimensions, CameraScreen.PIPPosition)
+        case video(String, UIImage?, String?, UIImage?, PixelDimensions, Double, [(Bool, Double)], CameraScreen.PIPPosition)
         case asset(PHAsset)
         case draft(MediaEditorDraft)
         
@@ -811,8 +904,8 @@ public class CameraScreen: ViewController {
             switch self {
             case let .image(mainImage, additionalImage, _):
                 return .image(mainImage, additionalImage, position)
-            case let .video(mainPath, mainImage, additionalPath, additionalImage, dimensions, _):
-                return .video(mainPath, mainImage, additionalPath, additionalImage, dimensions, position)
+            case let .video(mainPath, mainImage, additionalPath, additionalImage, dimensions, duration, positionChangeTimestamps, _):
+                return .video(mainPath, mainImage, additionalPath, additionalImage, dimensions, duration, positionChangeTimestamps, position)
             default:
                 return self
             }
@@ -860,73 +953,39 @@ public class CameraScreen: ViewController {
         fileprivate let containerView: UIView
         fileprivate let componentHost: ComponentView<ViewControllerComponentContainer.Environment>
         private let previewContainerView: UIView
-        fileprivate let previewView: CameraPreviewView?
-        fileprivate let simplePreviewView: CameraSimplePreviewView?
-        fileprivate var additionalPreviewView: CameraSimplePreviewView?
+        
+        private let mainPreviewContainerView: UIView
+        fileprivate var mainPreviewView: CameraSimplePreviewView
+        
+        private let additionalPreviewContainerView: UIView
+        fileprivate var additionalPreviewView: CameraSimplePreviewView
+        
         fileprivate let previewBlurView: BlurView
-        private var previewSnapshotView: UIView?
+        private var mainPreviewSnapshotView: UIView?
         private var additionalPreviewSnapshotView: UIView?
         fileprivate let previewFrameLeftDimView: UIView
         fileprivate let previewFrameRightDimView: UIView
         fileprivate let transitionDimView: UIView
         fileprivate let transitionCornersView: UIImageView
         fileprivate let camera: Camera
-
-        private var presentationData: PresentationData
-        private var validLayout: ContainerViewLayout?
         
         private var changingPositionDisposable: Disposable?
         private var isDualCamEnabled = false
         private var appliedDualCam = false
         private var cameraPosition: Camera.Position = .back
         
-        private let completion = ActionSlot<Signal<CameraScreen.Result, NoError>>()
-        
-        private var effectivePreviewView: UIView {
-            if let simplePreviewView = self.simplePreviewView {
-                return simplePreviewView
-            } else if let previewView = self.previewView {
-                return previewView
-            } else {
-                fatalError()
-            }
-        }
-        
-        private var currentPreviewView: UIView {
-            if let simplePreviewView = self.simplePreviewView {
-                if let additionalPreviewView = self.additionalPreviewView {
-                    if self.isDualCamEnabled && cameraPosition == .front {
-                        return additionalPreviewView
-                    } else {
-                        return simplePreviewView
-                    }
-                } else {
-                    return simplePreviewView
-                }
-            } else if let previewView = self.previewView {
-                return previewView
-            } else {
-                fatalError()
-            }
-        }
-        
-        private var currentAdditionalPreviewView: UIView? {
-            if let additionalPreviewView = self.additionalPreviewView {
-                if self.isDualCamEnabled && cameraPosition == .front {
-                    return self.simplePreviewView
-                } else {
-                    return additionalPreviewView
-                }
-            } else {
-                return nil
-            }
-        }
+        private var pipPosition: PIPPosition = .bottomRight
         
         fileprivate var previewBlurPromise = ValuePromise<Bool>(false)
-        
         private let flipAnimationAction = ActionSlot<Void>()
         
-        private var pipPosition: PIPPosition = .bottomRight
+        fileprivate var cameraIsActive = true
+        fileprivate var hasGallery = false
+        
+        private var presentationData: PresentationData
+        private var validLayout: ContainerViewLayout?
+        
+        private let completion = ActionSlot<Signal<CameraScreen.Result, NoError>>()
         
         init(controller: CameraScreen) {
             self.controller = controller
@@ -953,36 +1012,22 @@ public class CameraScreen: ViewController {
             self.previewBlurView = BlurView()
             self.previewBlurView.isUserInteractionEnabled = false
             
-            if let holder = controller.holder {
-                self.simplePreviewView = nil
-                self.previewView = holder.previewView
-                self.camera = holder.camera
-            } else {
-                if useSimplePreviewView {
-                    self.simplePreviewView = CameraSimplePreviewView(frame: .zero, additional: false)
-                    self.previewView = nil
-                    
-                    self.additionalPreviewView = CameraSimplePreviewView(frame: .zero, additional: true)
-                    self.additionalPreviewView?.clipsToBounds = true
-                } else {
-                    self.previewView = CameraPreviewView(test: false)!
-                    self.simplePreviewView = nil
-                }
-                
-                var cameraFrontPosition = false
-                if let useCameraFrontPosition = UserDefaults.standard.object(forKey: "TelegramStoryCameraUseFrontPosition") as? NSNumber, useCameraFrontPosition.boolValue {
-                    cameraFrontPosition = true
-                }
-                
-                self.cameraPosition = cameraFrontPosition ? .front : .back
-                self.camera = Camera(configuration: Camera.Configuration(preset: .hd1920x1080, position: self.cameraPosition, audio: true, photo: true, metadata: false, preferredFps: 60.0), previewView: self.simplePreviewView, secondaryPreviewView: self.additionalPreviewView)
-                if !useSimplePreviewView {
-#if targetEnvironment(simulator)
-#else
-                    self.camera.attachPreviewView(self.previewView!)
-#endif
-                }
+            self.mainPreviewContainerView = UIView()
+            self.mainPreviewContainerView.clipsToBounds = true
+            self.mainPreviewView = CameraSimplePreviewView(frame: .zero, main: true)
+            
+            self.additionalPreviewContainerView = UIView()
+            self.additionalPreviewContainerView.clipsToBounds = true
+            self.additionalPreviewView = CameraSimplePreviewView(frame: .zero, main: false)
+
+            var cameraFrontPosition = false
+            if let useCameraFrontPosition = UserDefaults.standard.object(forKey: "TelegramStoryCameraUseFrontPosition") as? NSNumber, useCameraFrontPosition.boolValue {
+                cameraFrontPosition = true
             }
+            self.mainPreviewView.resetPlaceholder(front: cameraFrontPosition)
+            
+            self.cameraPosition = cameraFrontPosition ? .front : .back
+            self.camera = Camera(configuration: Camera.Configuration(preset: .hd1920x1080, position: self.cameraPosition, audio: true, photo: true, metadata: false, preferredFps: 60.0), previewView: self.mainPreviewView, secondaryPreviewView: self.additionalPreviewView)
             
             self.previewFrameLeftDimView = UIView()
             self.previewFrameLeftDimView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.6)
@@ -1006,17 +1051,17 @@ public class CameraScreen: ViewController {
             self.view.addSubview(self.containerView)
             
             self.containerView.addSubview(self.previewContainerView)
-            self.previewContainerView.addSubview(self.effectivePreviewView)
+            self.previewContainerView.addSubview(self.mainPreviewContainerView)
+            self.previewContainerView.addSubview(self.additionalPreviewContainerView)
             self.previewContainerView.addSubview(self.previewBlurView)
             self.previewContainerView.addSubview(self.previewFrameLeftDimView)
             self.previewContainerView.addSubview(self.previewFrameRightDimView)
             self.containerView.addSubview(self.transitionDimView)
             self.view.addSubview(self.transitionCornersView)
             
-            if let additionalPreviewView = self.additionalPreviewView {
-                self.previewContainerView.insertSubview(additionalPreviewView, at: 1)
-            }
-            
+            self.mainPreviewContainerView.addSubview(self.mainPreviewView)
+            self.additionalPreviewContainerView.addSubview(self.additionalPreviewView)
+                        
             self.changingPositionDisposable = combineLatest(
                 queue: Queue.mainQueue(),
                 self.camera.modeChange,
@@ -1024,18 +1069,21 @@ public class CameraScreen: ViewController {
             ).start(next: { [weak self] modeChange, forceBlur in
                 if let self {
                     if modeChange != .none {
-                        if let snapshot = self.simplePreviewView?.snapshotView(afterScreenUpdates: false) {
-                            self.simplePreviewView?.addSubview(snapshot)
-                            self.previewSnapshotView = snapshot
+                        if case .dualCamera = modeChange, self.cameraPosition == .front {
+                            
+                        } else {
+                            if let snapshot = self.mainPreviewView.snapshotView(afterScreenUpdates: false) {
+                                self.mainPreviewView.addSubview(snapshot)
+                                self.mainPreviewSnapshotView = snapshot
+                            }
                         }
                         if case .position = modeChange {
                             UIView.transition(with: self.previewContainerView, duration: 0.4, options: [.transitionFlipFromLeft, .curveEaseOut], animations: {
                                 self.previewBlurView.effect = UIBlurEffect(style: .dark)
                             })
                         } else {
-                            if let additionalPreviewView = self.additionalPreviewView {
-                                self.previewContainerView.insertSubview(self.previewBlurView, belowSubview: additionalPreviewView)
-                            }
+                            self.previewContainerView.insertSubview(self.previewBlurView, belowSubview: self.additionalPreviewContainerView)
+                            
                             UIView.animate(withDuration: 0.4) {
                                 self.previewBlurView.effect = UIBlurEffect(style: .dark)
                             }
@@ -1045,16 +1093,16 @@ public class CameraScreen: ViewController {
                             self.previewBlurView.effect = UIBlurEffect(style: .dark)
                         }
                     } else {
-                        UIView.animate(withDuration: 0.4, animations: {
-                            self.previewBlurView.effect = nil
-                        }, completion: { _ in
-                            if let additionalPreviewView = self.additionalPreviewView {
-                                self.previewContainerView.insertSubview(self.previewBlurView, aboveSubview: additionalPreviewView)
-                            }
-                        })
+                        if self.previewBlurView.effect != nil {
+                            UIView.animate(withDuration: 0.4, animations: {
+                                self.previewBlurView.effect = nil
+                            }, completion: { _ in
+                                self.previewContainerView.insertSubview(self.previewBlurView, aboveSubview: self.additionalPreviewContainerView)
+                            })
+                        }
                         
-                        if let previewSnapshotView = self.previewSnapshotView {
-                            self.previewSnapshotView = nil
+                        if let previewSnapshotView = self.mainPreviewSnapshotView {
+                            self.mainPreviewSnapshotView = nil
                             UIView.animate(withDuration: 0.25, animations: {
                                 previewSnapshotView.alpha = 0.0
                             }, completion: { _ in
@@ -1072,7 +1120,8 @@ public class CameraScreen: ViewController {
                         }
                         
                         if self.isDualCamEnabled {
-                            self.additionalPreviewView?.removePlaceholder()
+                            self.mainPreviewView.removePlaceholder()
+                            self.additionalPreviewView.removePlaceholder()
                         }
                     }
                 }
@@ -1093,9 +1142,9 @@ public class CameraScreen: ViewController {
                             }
                             if case .pendingImage = value {
                                 Queue.mainQueue().async {
-                                    self.simplePreviewView?.isEnabled = false
+                                    self.mainPreviewView.isEnabled = false
                                     
-                                    self.additionalPreviewView?.isEnabled = false
+                                    self.additionalPreviewView.isEnabled = false
                                 }
                             } else {
                                 Queue.mainQueue().async {
@@ -1104,8 +1153,8 @@ public class CameraScreen: ViewController {
                                             self.previewBlurPromise.set(true)
                                         }
                                     }
-                                    self.simplePreviewView?.isEnabled = false
-                                    self.additionalPreviewView?.isEnabled = false
+                                    self.mainPreviewView.isEnabled = false
+                                    self.additionalPreviewView.isEnabled = false
                                     self.camera.stopCapture()
                                 }
                             }
@@ -1119,25 +1168,32 @@ public class CameraScreen: ViewController {
             self.updateState.connect { [weak self] state in
                 if let self {
                     let previousPosition = self.cameraPosition
-                    self.cameraPosition = state.position
+                    let newPosition = state.position != .unspecified ? state.position : previousPosition
+                    self.cameraPosition = newPosition
                     
                     let dualCamWasEnabled = self.isDualCamEnabled
                     self.isDualCamEnabled = state.isDualCamEnabled
 
-                    if self.isDualCamEnabled && previousPosition != state.position, let additionalPreviewView = self.additionalPreviewView {
-                        if state.position == .front {
-                            additionalPreviewView.superview?.sendSubviewToBack(additionalPreviewView)
+                    if self.isDualCamEnabled != dualCamWasEnabled && newPosition == .front {
+                        if self.isDualCamEnabled {
+                            if let cloneView = self.mainPreviewView.snapshotView(afterScreenUpdates: false) {
+                                self.mainPreviewSnapshotView = cloneView
+                                self.mainPreviewContainerView.addSubview(cloneView)
+                            }
                         } else {
-                            additionalPreviewView.superview?.insertSubview(additionalPreviewView, aboveSubview: self.simplePreviewView!)
+                            if let cloneView = self.additionalPreviewView.snapshotView(afterScreenUpdates: false) {
+                                self.mainPreviewSnapshotView = cloneView
+                                self.mainPreviewContainerView.addSubview(cloneView)
+                            }
                         }
+                    }
+                    
+                    if self.isDualCamEnabled && previousPosition != newPosition {
                         CATransaction.begin()
                         CATransaction.setDisableActions(true)
                         self.requestUpdateLayout(hasAppeared: false, transition: .immediate)
                         CATransaction.commit()
-                    } else {
-                        if !dualCamWasEnabled && self.isDualCamEnabled {
-                            
-                        }
+                    } else if dualCamWasEnabled != self.isDualCamEnabled {
                         self.requestUpdateLayout(hasAppeared: false, transition: .spring(duration: 0.4))
                     }
                 }
@@ -1155,17 +1211,17 @@ public class CameraScreen: ViewController {
             self.view.disablesInteractiveKeyboardGestureRecognizer = true
             
             let pinchGestureRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(self.handlePinch(_:)))
-            self.effectivePreviewView.addGestureRecognizer(pinchGestureRecognizer)
+            self.mainPreviewContainerView.addGestureRecognizer(pinchGestureRecognizer)
             
             let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
             panGestureRecognizer.maximumNumberOfTouches = 1
-            self.effectivePreviewView.addGestureRecognizer(panGestureRecognizer)
+            self.mainPreviewContainerView.addGestureRecognizer(panGestureRecognizer)
             
             let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
-            self.effectivePreviewView.addGestureRecognizer(tapGestureRecognizer)
+            self.mainPreviewContainerView.addGestureRecognizer(tapGestureRecognizer)
             
             let pipPanGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePipPan(_:)))
-            self.additionalPreviewView?.addGestureRecognizer(pipPanGestureRecognizer)
+            self.additionalPreviewContainerView.addGestureRecognizer(pipPanGestureRecognizer)
             
             self.camera.focus(at: CGPoint(x: 0.5, y: 0.5), autoFocus: true)
             self.camera.startCapture()
@@ -1217,11 +1273,8 @@ public class CameraScreen: ViewController {
         }
         
         @objc private func handleTap(_ gestureRecognizer: UITapGestureRecognizer) {
-            guard let previewView = self.simplePreviewView else {
-                return
-            }
-            let location = gestureRecognizer.location(in: previewView)
-            let point = previewView.cameraPoint(for: location)
+            let location = gestureRecognizer.location(in: mainPreviewView)
+            let point = mainPreviewView.cameraPoint(for: location)
             self.camera.focus(at: point, autoFocus: false)
         }
 
@@ -1284,7 +1337,7 @@ public class CameraScreen: ViewController {
 
         func animateOut(completion: @escaping () -> Void) {
             self.camera.stopCapture(invalidate: true)
-                        
+                                    
             UIView.animate(withDuration: 0.25, animations: {
                 self.backgroundView.alpha = 0.0
             })
@@ -1322,6 +1375,9 @@ public class CameraScreen: ViewController {
         }
         
         func animateOutToEditor() {
+            self.cameraIsActive = false
+            self.requestUpdateLayout(hasAppeared: self.hasAppeared, transition: .immediate)
+            
             let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
             if let view = self.componentHost.findTaggedView(tag: cancelButtonTag) {
                 view.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2)
@@ -1347,30 +1403,33 @@ public class CameraScreen: ViewController {
         }
         
         func pauseCameraCapture() {
-            self.simplePreviewView?.isEnabled = false
-            self.additionalPreviewView?.isEnabled = false
+            self.mainPreviewView.isEnabled = false
+            self.additionalPreviewView.isEnabled = false
             Queue.mainQueue().after(0.3) {
                 self.previewBlurPromise.set(true)
             }
             self.camera.stopCapture()
+            
+            self.cameraIsActive = false
+            self.requestUpdateLayout(hasAppeared: self.hasAppeared, transition: .immediate)
         }
         
         func resumeCameraCapture() {
-            if self.simplePreviewView?.isEnabled == false {
-                if let snapshot = self.simplePreviewView?.snapshotView(afterScreenUpdates: false) {
-                    self.simplePreviewView?.addSubview(snapshot)
-                    self.previewSnapshotView = snapshot
+            if !self.mainPreviewView.isEnabled {
+                if let snapshot = self.mainPreviewView.snapshotView(afterScreenUpdates: false) {
+                    self.mainPreviewView.addSubview(snapshot)
+                    self.mainPreviewSnapshotView = snapshot
                 }
-                if let snapshot = self.additionalPreviewView?.snapshotView(afterScreenUpdates: false) {
-                    self.additionalPreviewView?.addSubview(snapshot)
+                if let snapshot = self.additionalPreviewView.snapshotView(afterScreenUpdates: false) {
+                    self.additionalPreviewView.addSubview(snapshot)
                     self.additionalPreviewSnapshotView = snapshot
                 }
-                self.simplePreviewView?.isEnabled = true
-                self.additionalPreviewView?.isEnabled = true
+                self.mainPreviewView.isEnabled = true
+                self.additionalPreviewView.isEnabled = true
                 self.camera.startCapture()
                 
-                if #available(iOS 13.0, *), let isPreviewing = self.simplePreviewView?.isPreviewing {
-                    let _ = (isPreviewing
+                if #available(iOS 13.0, *) {
+                    let _ = (self.mainPreviewView.isPreviewing
                     |> filter {
                         $0
                     }
@@ -1384,12 +1443,18 @@ public class CameraScreen: ViewController {
                         self.previewBlurPromise.set(false)
                     }
                 }
+                
+                self.cameraIsActive = true
+                self.requestUpdateLayout(hasAppeared: self.hasAppeared, transition: .immediate)
             }
         }
         
         func animateInFromEditor(toGallery: Bool) {
             if !toGallery {
                 self.resumeCameraCapture()
+                
+                self.cameraIsActive = true
+                self.requestUpdateLayout(hasAppeared: self.hasAppeared, transition: .immediate)
                 
                 let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
                 if let view = self.componentHost.findTaggedView(tag: cancelButtonTag) {
@@ -1425,7 +1490,7 @@ public class CameraScreen: ViewController {
             let progress = 1.0 - value
             let maxScale = (layout.size.width - 16.0 * 2.0) / layout.size.width
             
-            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 12.0
+            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
             let targetTopInset = ceil((layout.statusBarHeight ?? 0.0) - (layout.size.height - layout.size.height * maxScale) / 2.0)
             let deltaOffset = (targetTopInset - topInset)
             
@@ -1467,10 +1532,10 @@ public class CameraScreen: ViewController {
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             let result = super.hitTest(point, with: event)
             if result == self.componentHost.view {
-                if let additionalPreviewView = self.additionalPreviewView, additionalPreviewView.bounds.contains(self.view.convert(point, to: additionalPreviewView)) {
-                    return additionalPreviewView
+                if self.additionalPreviewView.bounds.contains(self.view.convert(point, to: self.additionalPreviewView)) {
+                    return self.additionalPreviewView
                 } else {
-                    return self.effectivePreviewView
+                    return self.mainPreviewView
                 }
             }
             return result
@@ -1510,7 +1575,7 @@ public class CameraScreen: ViewController {
             } else {
                 previewSize = CGSize(width: layout.size.width, height: floorToScreenPixels(layout.size.width * 1.77778))
             }
-            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 12.0
+            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
             let bottomInset = layout.size.height - previewSize.height - topInset
             
             let panelWidth: CGFloat
@@ -1566,10 +1631,11 @@ public class CameraScreen: ViewController {
                         camera: self.camera,
                         updateState: self.updateState,
                         hasAppeared: self.hasAppeared,
+                        isVisible: self.cameraIsActive && !self.hasGallery,
                         panelWidth: panelWidth,
                         flipAnimationAction: self.flipAnimationAction,
                         animateShutter: { [weak self] in
-                            self?.effectivePreviewView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                            self?.mainPreviewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                         },
                         present: { [weak self] c in
                             self?.controller?.present(c, in: .window(.root))
@@ -1605,58 +1671,80 @@ public class CameraScreen: ViewController {
             transition.setFrame(view: self.transitionDimView, frame: CGRect(origin: .zero, size: layout.size))
             
             transition.setFrame(view: self.previewContainerView, frame: previewFrame)
-            self.currentPreviewView.layer.cornerRadius = 0.0
-            transition.setFrame(view: self.currentPreviewView, frame: CGRect(origin: .zero, size: previewFrame.size))
+            transition.setFrame(view: self.mainPreviewContainerView, frame: CGRect(origin: .zero, size: previewFrame.size))
+            
             transition.setFrame(view: self.previewBlurView, frame: CGRect(origin: .zero, size: previewFrame.size))
             
-            if let additionalPreviewView = self.currentAdditionalPreviewView as? CameraSimplePreviewView {
-                let dualCamUpdated = self.appliedDualCam != self.isDualCamEnabled
-                self.appliedDualCam = self.isDualCamEnabled
-                
-                additionalPreviewView.layer.cornerRadius = 80.0
-                
-                var origin: CGPoint
-                switch self.pipPosition {
-                case .topLeft:
-                    origin = CGPoint(x: 10.0, y: 110.0)
-                    if !self.isDualCamEnabled {
-                        origin = origin.offsetBy(dx: -180.0, dy: 0.0)
-                    }
-                case .topRight:
-                    origin = CGPoint(x: previewFrame.width - 160.0 - 10.0, y: 110.0)
-                    if !self.isDualCamEnabled {
-                        origin = origin.offsetBy(dx: 180.0, dy: 0.0)
-                    }
-                case .bottomLeft:
-                    origin = CGPoint(x: 10.0, y: previewFrame.height - 160.0 - 110.0)
-                    if !self.isDualCamEnabled {
-                        origin = origin.offsetBy(dx: -180.0, dy: 0.0)
-                    }
-                case .bottomRight:
-                    origin = CGPoint(x: previewFrame.width - 160.0 - 10.0, y: previewFrame.height - 160.0 - 110.0)
-                    if !self.isDualCamEnabled {
-                        origin = origin.offsetBy(dx: 180.0, dy: 0.0)
-                    }
+            let dualCamUpdated = self.appliedDualCam != self.isDualCamEnabled
+            self.appliedDualCam = self.isDualCamEnabled
+            
+            let circleSide = floorToScreenPixels(previewSize.width * 160.0 / 430.0)
+            let circleOffset = CGPoint(x: previewSize.width * 224.0 / 1080.0, y: previewSize.width * 477.0 / 1080.0)
+            
+            var origin: CGPoint
+            switch self.pipPosition {
+            case .topLeft:
+                origin = CGPoint(x: circleOffset.x, y: circleOffset.y)
+                if !self.isDualCamEnabled {
+                    origin = origin.offsetBy(dx: -180.0, dy: 0.0)
                 }
-                
-                if let pipTranslation = self.pipTranslation {
-                    origin = origin.offsetBy(dx: pipTranslation.x, dy: pipTranslation.y)
+            case .topRight:
+                origin = CGPoint(x: previewFrame.width - circleOffset.x, y: circleOffset.y)
+                if !self.isDualCamEnabled {
+                    origin = origin.offsetBy(dx: 180.0, dy: 0.0)
                 }
-                
-                let additionalPreviewFrame = CGRect(origin: origin, size: CGSize(width: 160.0, height: 160.0))
-                transition.setPosition(view: additionalPreviewView, position: additionalPreviewFrame.center)
-                transition.setBounds(view: additionalPreviewView, bounds: CGRect(origin: .zero, size: additionalPreviewFrame.size))
-                
-                transition.setScale(view: additionalPreviewView, scale: self.isDualCamEnabled ? 1.0 : 0.1)
-                transition.setAlpha(view: additionalPreviewView, alpha: self.isDualCamEnabled ? 1.0 : 0.0)
-                
-                if dualCamUpdated && !self.isDualCamEnabled {
-                    Queue.mainQueue().after(0.5) {
-                        additionalPreviewView.resetPlaceholder()
-                    }
+            case .bottomLeft:
+                origin = CGPoint(x: circleOffset.x, y: previewFrame.height - circleOffset.y)
+                if !self.isDualCamEnabled {
+                    origin = origin.offsetBy(dx: -180.0, dy: 0.0)
+                }
+            case .bottomRight:
+                origin = CGPoint(x: previewFrame.width - circleOffset.x, y: previewFrame.height - circleOffset.y)
+                if !self.isDualCamEnabled {
+                    origin = origin.offsetBy(dx: 180.0, dy: 0.0)
                 }
             }
-                        
+            
+            if let pipTranslation = self.pipTranslation {
+                origin = origin.offsetBy(dx: pipTranslation.x, dy: pipTranslation.y)
+            }
+            
+            let additionalPreviewFrame = CGRect(origin: CGPoint(x: origin.x - circleSide / 2.0, y: origin.y - circleSide / 2.0), size: CGSize(width: circleSide, height: circleSide))
+            transition.setPosition(view: self.additionalPreviewContainerView, position: additionalPreviewFrame.center)
+            transition.setBounds(view: self.additionalPreviewContainerView, bounds: CGRect(origin: .zero, size: additionalPreviewFrame.size))
+            self.additionalPreviewContainerView.layer.cornerRadius = additionalPreviewFrame.width / 2.0
+            
+            transition.setScale(view: self.additionalPreviewContainerView, scale: self.isDualCamEnabled ? 1.0 : 0.1)
+            transition.setAlpha(view: self.additionalPreviewContainerView, alpha: self.isDualCamEnabled ? 1.0 : 0.0)
+            
+            if dualCamUpdated && self.isDualCamEnabled {
+                if self.cameraPosition == .back {
+                    self.additionalPreviewView.resetPlaceholder(front: true)
+                } else {
+                    self.mainPreviewView.resetPlaceholder(front: false)
+                }
+            }
+            
+            let mainPreviewView: CameraSimplePreviewView
+            let additionalPreviewView: CameraSimplePreviewView
+            if self.cameraPosition == .front && self.isDualCamEnabled {
+                mainPreviewView = self.additionalPreviewView
+                additionalPreviewView = self.mainPreviewView
+            } else {
+                mainPreviewView = self.mainPreviewView
+                additionalPreviewView = self.additionalPreviewView
+            }
+            
+            if mainPreviewView.superview != self.mainPreviewContainerView {
+                self.mainPreviewContainerView.insertSubview(mainPreviewView, at: 0)
+            }
+            if additionalPreviewView.superview != self.additionalPreviewContainerView {
+                self.additionalPreviewContainerView.insertSubview(additionalPreviewView, at: 0)
+            }
+            
+            mainPreviewView.frame = CGRect(origin: .zero, size: previewFrame.size)
+            additionalPreviewView.frame = CGRect(origin: .zero, size: additionalPreviewFrame.size)
+                              
             self.previewFrameLeftDimView.isHidden = !isTablet
             transition.setFrame(view: self.previewFrameLeftDimView, frame: CGRect(origin: .zero, size: CGSize(width: viewfinderFrame.minX, height: viewfinderFrame.height)))
             
@@ -1780,6 +1868,7 @@ public class CameraScreen: ViewController {
         self.node.animateInFromEditor(toGallery: self.galleryController?.displayNode.supernode != nil)
     }
     
+    private var didStopCameraCapture = false
     func presentGallery(fromGesture: Bool = false) {
         if !fromGesture {
             self.hapticFeedback.impact(.light)
@@ -1787,20 +1876,22 @@ public class CameraScreen: ViewController {
         
         self.dismissAllTooltips()
         
-        var didStopCameraCapture = false
+        self.node.hasGallery = true
+        
+        self.didStopCameraCapture = false
         let stopCameraCapture = { [weak self] in
-            guard !didStopCameraCapture, let self else {
+            guard let self, !self.didStopCameraCapture else {
                 return
             }
-            didStopCameraCapture = true
+            self.didStopCameraCapture = true
             self.node.pauseCameraCapture()
         }
         
         let resumeCameraCapture = { [weak self] in
-            guard didStopCameraCapture, let self else {
+            guard let self, self.didStopCameraCapture else {
                 return
             }
-            didStopCameraCapture = false
+            self.didStopCameraCapture = false
             self.node.resumeCameraCapture()
         }
         
@@ -1834,8 +1925,12 @@ public class CameraScreen: ViewController {
                         self.completion(.single(.draft(draft)), resultTransition, dismissed)
                     }
                 }
-            }, dismissed: {
+            }, dismissed: { [weak self] in
                 resumeCameraCapture()
+                if let self {
+                    self.node.hasGallery = false
+                    self.node.requestUpdateLayout(hasAppeared: self.node.hasAppeared, transition: .immediate)
+                }
             })
             self.galleryController = controller
         }

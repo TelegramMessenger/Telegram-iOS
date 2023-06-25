@@ -7,7 +7,7 @@ import Vision
 import VideoToolbox
 
 public enum VideoCaptureResult: Equatable {
-    case finished((String, UIImage), (String, UIImage)?, Double)
+    case finished((String, UIImage), (String, UIImage)?, Double, [(Bool, Double)], Double)
     case failed
     
     public static func == (lhs: VideoCaptureResult, rhs: VideoCaptureResult) -> Bool {
@@ -18,8 +18,11 @@ public enum VideoCaptureResult: Equatable {
             } else {
                 return false
             }
-        case let .finished(_, _, lhsTime):
-            if case let .finished(_, _, rhsTime) = rhs, lhsTime == rhsTime {
+        case let .finished(_, _, lhsDuration, lhsChangeTimestamps, lhsTime):
+            if case let .finished(_, _, rhsDuration, rhsChangeTimestamps, rhsTime) = rhs, lhsDuration == rhsDuration, lhsTime == rhsTime {
+                if lhsChangeTimestamps.count != rhsChangeTimestamps.count {
+                    return false
+                }
                 return true
             } else {
                 return false
@@ -85,6 +88,7 @@ final class CameraOutput: NSObject {
     
     private var photoCaptureRequests: [Int64: PhotoCaptureContext] = [:]
     private var videoRecorder: VideoRecorder?
+    weak var overrideOutput: CameraOutput?
     
     var activeFilter: CameraFilter?
     var faceLandmarks: Bool = false
@@ -333,8 +337,8 @@ final class CameraOutput: NSObject {
         let outputFilePath = NSTemporaryDirectory() + outputFileName + ".mp4"
         let outputFileURL = URL(fileURLWithPath: outputFilePath)
         let videoRecorder = VideoRecorder(configuration: VideoRecorder.Configuration(videoSettings: videoSettings, audioSettings: audioSettings), videoTransform: CGAffineTransform(rotationAngle: .pi / 2.0), fileUrl: outputFileURL, completion: { [weak self] result in
-            if case let .success(transitionImage) = result {
-                self?.recordingCompletionPipe.putNext(.finished((outputFilePath, transitionImage!), nil, CACurrentMediaTime()))
+            if case let .success(transitionImage, duration, positionChangeTimestamps) = result {
+                self?.recordingCompletionPipe.putNext(.finished((outputFilePath, transitionImage!), nil, duration, positionChangeTimestamps.map { ($0 == .front, $1) }, CACurrentMediaTime()))
             } else {
                 self?.recordingCompletionPipe.putNext(.failed)
             }
@@ -362,6 +366,12 @@ final class CameraOutput: NSObject {
         |> take(1)
         |> afterDisposed {
             self.videoRecorder = nil
+        }
+    }
+    
+    func markPositionChange(position: Camera.Position) {
+        if let videoRecorder = self.videoRecorder {
+            videoRecorder.markPositionChange(position: position)
         }
     }
 }

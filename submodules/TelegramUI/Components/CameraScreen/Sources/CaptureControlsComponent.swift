@@ -516,7 +516,9 @@ final class CaptureControlsComponent: Component {
         var lastGalleryAsset: PHAsset? {
             didSet {
                 if self.cachedAssetImage?.0 != self.lastGalleryAsset?.localIdentifier {
-                    self.cachedAssetImage = nil
+                    if self.cachedAssetImage?.0 != "" {
+                        self.cachedAssetImage = nil
+                    }
                     if let lastGalleryAsset = self.lastGalleryAsset {
                         self.assetDisposable.set((fetchPhotoLibraryImage(localIdentifier: lastGalleryAsset.localIdentifier, thumbnail: true)
                         |> deliverOnMainQueue).start(next: { [weak self] imageAndDegraded in
@@ -890,12 +892,18 @@ final class CaptureControlsComponent: Component {
                 gallerySize = CGSize(width: 50.0, height: 50.0)
                 galleryCornerRadius = 10.0
             }
+            let galleryButtonId: String
+            if let (identifier, _) = state.cachedAssetImage, identifier == "" {
+                galleryButtonId = "placeholder"
+            } else {
+                galleryButtonId = "gallery"
+            }
             let galleryButtonSize = self.galleryButtonView.update(
-                transition: .immediate,
+                transition: transition,
                 component: AnyComponent(
                     CameraButton(
                         content: AnyComponentWithIdentity(
-                            id: "gallery",
+                            id: galleryButtonId,
                             component: AnyComponent(
                                 Image(
                                     image: state.cachedAssetImage?.1,

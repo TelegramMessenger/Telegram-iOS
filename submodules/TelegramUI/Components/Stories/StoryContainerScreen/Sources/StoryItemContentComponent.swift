@@ -72,6 +72,9 @@ final class StoryItemContentComponent: Component {
         private var contentLoaded: Bool = false
         
         private var videoPlaybackStatus: MediaPlayerStatus?
+        override var videoPlaybackPosition: Double? {
+            return self.videoPlaybackStatus?.timestamp
+        }
         
         private let hierarchyTrackingLayer: HierarchyTrackingLayer
         
@@ -380,6 +383,11 @@ final class StoryItemContentComponent: Component {
             if self.currentMessageMedia?.id != messageMedia?.id {
                 self.currentMessageMedia = messageMedia
                 reloadMedia = true
+                
+                if let videoNode = self.videoNode {
+                    self.videoNode = nil
+                    videoNode.view.removeFromSuperview()
+                }
             }
             
             if reloadMedia, let messageMedia, let peerReference {

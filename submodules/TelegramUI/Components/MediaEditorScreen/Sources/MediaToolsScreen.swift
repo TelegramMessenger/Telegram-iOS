@@ -337,7 +337,7 @@ private final class MediaToolsScreenComponent: Component {
             let buttonSideInset: CGFloat
             let buttonBottomInset: CGFloat = 8.0
             let previewSize: CGSize
-            let topInset: CGFloat = environment.statusBarHeight + 12.0
+            let topInset: CGFloat = environment.statusBarHeight + 5.0
             if isTablet {
                 let previewHeight = availableSize.height - topInset - 75.0
                 previewSize = CGSize(width: floorToScreenPixels(previewHeight / 1.77778), height: previewHeight)
@@ -995,7 +995,7 @@ public final class MediaToolsScreen: ViewController {
             }
 
             let previewSize: CGSize
-            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 12.0
+            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
             if isTablet {
                 let previewHeight = layout.size.height - topInset - 75.0
                 previewSize = CGSize(width: floorToScreenPixels(previewHeight / 1.77778), height: previewHeight)

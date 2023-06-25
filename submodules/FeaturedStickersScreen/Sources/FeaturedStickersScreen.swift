@@ -226,7 +226,11 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
     
     init(context: AccountContext, controller: FeaturedStickersScreen, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) {
         self.context = context
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        if let forceTheme = controller.forceTheme {
+            presentationData = presentationData.withUpdated(theme: forceTheme)
+        }
+        self.presentationData = presentationData
         self.controller = controller
         self.sendSticker = sendSticker
         

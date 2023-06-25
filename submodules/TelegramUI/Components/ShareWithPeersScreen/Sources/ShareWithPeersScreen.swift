@@ -382,10 +382,10 @@ final class ShareWithPeersScreenComponent: Component {
         
         @objc private func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
-                guard let environment = self.environment, let controller = environment.controller() else {
+                guard let environment = self.environment, let controller = environment.controller() as? ShareWithPeersScreen else {
                     return
                 }
-                controller.dismiss()
+                controller.requestDismiss()
             }
         }
         
@@ -1045,10 +1045,10 @@ final class ShareWithPeersScreenComponent: Component {
                 component: AnyComponent(Button(
                     content: AnyComponent(Text(text: "Cancel", font: Font.regular(17.0), color: environment.theme.rootController.navigationBar.accentTextColor)),
                     action: { [weak self] in
-                        guard let self, let environment = self.environment, let controller = environment.controller() else {
+                        guard let self, let environment = self.environment, let controller = environment.controller() as? ShareWithPeersScreen else {
                             return
                         }
-                        controller.dismiss()
+                        controller.requestDismiss()
                     }
                 ).minSize(CGSize(width: navigationHeight, height: navigationHeight))),
                 environment: {},
@@ -1428,6 +1428,8 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
     
     private var isDismissed: Bool = false
     
+    public var dismissed: () -> Void = {}
+    
     public init(context: AccountContext, initialPrivacy: EngineStoryPrivacy, timeout: Int, stateContext: StateContext, completion: @escaping (EngineStoryPrivacy) -> Void, editCategory: @escaping (EngineStoryPrivacy) -> Void, secondaryAction: @escaping () -> Void = {}) {
         self.context = context
         
@@ -1519,6 +1521,11 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         if let componentView = self.node.hostView.componentView as? ShareWithPeersScreenComponent.View {
             componentView.animateIn()
         }
+    }
+    
+    func requestDismiss() {
+        self.dismissed()
+        self.dismiss()
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {

@@ -25,13 +25,13 @@ public struct MediaEditorPlayerState {
 public final class MediaEditor {
     public enum Subject {
         case image(UIImage, PixelDimensions)
-        case video(String, UIImage?, PixelDimensions)
+        case video(String, UIImage?, PixelDimensions, Double)
         case asset(PHAsset)
         case draft(MediaEditorDraft)
         
         var dimensions: PixelDimensions {
             switch self {
-            case let .image(_, dimensions), let .video(_, _, dimensions):
+            case let .image(_, dimensions), let .video(_, _, dimensions, _):
                 return dimensions
             case let .asset(asset):
                 return PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight))
@@ -116,6 +116,12 @@ public final class MediaEditor {
     }
     private let playerPlaybackStatePromise = Promise<(Double, Double, Bool, Bool)>((0.0, 0.0, false, false))
     
+    public var position: Signal<Double, NoError> {
+        return self.playerPlaybackStatePromise.get()
+        |> map { _, position, _, _ -> Double in
+            return position
+        }
+    }
     public var duration: Double? {
         if let _ = self.player {
             if let trimRange = self.values.videoTrimRange {
@@ -275,6 +281,9 @@ public final class MediaEditor {
         if case let .asset(asset) = subject {
             self.playerPlaybackState = (asset.duration, 0.0, false, false)
             self.playerPlaybackStatePromise.set(.single(self.playerPlaybackState))
+        } else if case let .video(_, _, _, duration) = subject {
+            self.playerPlaybackState = (duration, 0.0, false, true)
+            self.playerPlaybackStatePromise.set(.single(self.playerPlaybackState))
         }
     }
     
@@ -350,7 +359,7 @@ public final class MediaEditor {
                 }
                 textureSource = .single((ImageTextureSource(image: image, renderTarget: renderTarget), image, nil, colors.0, colors.1))
             }
-        case let .video(path, transitionImage, _):
+        case let .video(path, transitionImage, _, _):
             textureSource = Signal { subscriber in
                 let url = URL(fileURLWithPath: path)
                 let asset = AVURLAsset(url: url)
@@ -458,6 +467,10 @@ public final class MediaEditor {
                 }
                 
                 if let player {
+                    if let initialSeekPosition = self.initialSeekPosition {
+                        self.initialSeekPosition = nil
+                        player.seek(to: CMTime(seconds: initialSeekPosition, preferredTimescale: CMTimeScale(1000)), toleranceBefore: .zero, toleranceAfter: .zero)
+                    }
                     self.timeObserver = player.addPeriodicTimeObserver(forInterval: CMTimeMake(value: 1, timescale: 10), queue: DispatchQueue.main) { [weak self] time in
                         guard let self, let duration = player.currentItem?.duration.seconds else {
                             return
@@ -552,11 +565,16 @@ public final class MediaEditor {
     
     public var onPlaybackAction: (PlaybackAction) -> Void = { _ in }
     
+    private var initialSeekPosition: Double?
     private var targetTimePosition: (CMTime, Bool)?
     private var updatingTimePosition = false
     public func seek(_ position: Double, andPlay play: Bool) {
+        guard let player = self.player else {
+            self.initialSeekPosition = position
+            return
+        }
         if !play {
-            self.player?.pause()
+            player.pause()
             self.onPlaybackAction(.pause)
         }
         let targetPosition = CMTime(seconds: position, preferredTimescale: CMTimeScale(60.0))
@@ -567,7 +585,7 @@ public final class MediaEditor {
             }
         }
         if play {
-            self.player?.play()
+            player.play()
             self.onPlaybackAction(.play)
         }
     }

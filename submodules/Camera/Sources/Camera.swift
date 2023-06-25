@@ -66,14 +66,6 @@ final class CameraDeviceContext {
         self.output.configureVideoStabilization()
     }
     
-    func switchOutputWith(_ otherContext: CameraDeviceContext) {
-//        guard let session = self.session else {
-//            return
-//        }
-//        self.output.reconfigure(for: session, device: self.device, input: self.input, otherPreviewView: otherContext.previewView, otherOutput: otherContext.output)
-//        otherContext.output.reconfigure(for: session, device: otherContext.device, input: otherContext.input, otherPreviewView: self.previewView, otherOutput: self.output)
-    }
-    
     func invalidate() {
         guard let session = self.session else {
             return
@@ -142,7 +134,7 @@ private final class CameraContext {
     
     private var lastSnapshotTimestamp: Double = CACurrentMediaTime()
     private var lastAdditionalSnapshotTimestamp: Double = CACurrentMediaTime()
-    private func savePreviewSnapshot(pixelBuffer: CVPixelBuffer, mirror: Bool, additional: Bool) {
+    private func savePreviewSnapshot(pixelBuffer: CVPixelBuffer, mirror: Bool) {
         Queue.concurrentDefaultQueue().async {
             var ciImage = CIImage(cvImageBuffer: pixelBuffer)
             let size = ciImage.extent.size
@@ -154,10 +146,10 @@ private final class CameraContext {
             ciImage = ciImage.clampedToExtent().applyingGaussianBlur(sigma: 40.0).cropped(to: CGRect(origin: .zero, size: size))
             if let cgImage = self.cameraImageContext.createCGImage(ciImage, from: ciImage.extent) {
                 let uiImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .right)
-                if additional {
-                    CameraSimplePreviewView.saveAdditionalLastStateImage(uiImage)
+                if mirror {
+                    CameraSimplePreviewView.saveLastFrontImage(uiImage)
                 } else {
-                    CameraSimplePreviewView.saveLastStateImage(uiImage)
+                    CameraSimplePreviewView.saveLastBackImage(uiImage)
                 }
             }
         }
@@ -170,6 +162,8 @@ private final class CameraContext {
         self.initialConfiguration = configuration
         self.simplePreviewView = previewView
         self.secondaryPreviewView = secondaryPreviewView
+        
+        self.dualPosition = configuration.position
         
         self.mainDeviceContext = CameraDeviceContext(session: session, exclusive: true, additional: false)
         self.configure {
@@ -188,7 +182,7 @@ private final class CameraContext {
                 if #available(iOS 13.0, *) {
                     mirror = connection.inputPorts.first?.sourceDevicePosition == .front
                 }
-                self.savePreviewSnapshot(pixelBuffer: pixelBuffer, mirror: mirror, additional: false)
+                self.savePreviewSnapshot(pixelBuffer: pixelBuffer, mirror: mirror)
                 self.lastSnapshotTimestamp = timestamp
             }
         }
@@ -256,17 +250,19 @@ private final class CameraContext {
         return self._positionPromise.get()
     }
     
-    private var tmpPosition: Camera.Position = .back
+    private var dualPosition: Camera.Position = .back
     func togglePosition() {
         if self.isDualCamEnabled {
-//            let targetPosition: Camera.Position
-//            if case .back = self.tmpPosition {
-//                targetPosition = .front
-//            } else {
-//                targetPosition = .back
-//            }
-//            self.tmpPosition = targetPosition
-//            self._positionPromise.set(targetPosition)
+            let targetPosition: Camera.Position
+            if case .back = self.dualPosition {
+                targetPosition = .front
+            } else {
+                targetPosition = .back
+            }
+            self.dualPosition = targetPosition
+            self._positionPromise.set(targetPosition)
+            
+            self.mainDeviceContext.output.markPositionChange(position: targetPosition)
         } else {
             self.configure {
                 self.mainDeviceContext.invalidate()
@@ -277,6 +273,7 @@ private final class CameraContext {
                 } else {
                     targetPosition = .back
                 }
+                self.dualPosition = targetPosition
                 self._positionPromise.set(targetPosition)
                 self.modeChange = .position
                 
@@ -294,6 +291,7 @@ private final class CameraContext {
             self.mainDeviceContext.invalidate()
             
             self._positionPromise.set(position)
+            self.dualPosition = position
             self.modeChange = .position
             
             self.mainDeviceContext.configure(position: position, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata)
@@ -333,7 +331,7 @@ private final class CameraContext {
                     if #available(iOS 13.0, *) {
                         mirror = connection.inputPorts.first?.sourceDevicePosition == .front
                     }
-                    self.savePreviewSnapshot(pixelBuffer: pixelBuffer, mirror: mirror, additional: false)
+                    self.savePreviewSnapshot(pixelBuffer: pixelBuffer, mirror: mirror)
                     self.lastSnapshotTimestamp = timestamp
                 }
             }
@@ -347,7 +345,7 @@ private final class CameraContext {
                     if #available(iOS 13.0, *) {
                         mirror = connection.inputPorts.first?.sourceDevicePosition == .front
                     }
-                    self.savePreviewSnapshot(pixelBuffer: pixelBuffer, mirror: mirror, additional: true)
+                    self.savePreviewSnapshot(pixelBuffer: pixelBuffer, mirror: mirror)
                     self.lastAdditionalSnapshotTimestamp = timestamp
                 }
             }
@@ -358,7 +356,7 @@ private final class CameraContext {
                 self.additionalDeviceContext = nil
                 
                 self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: true, additional: false)
-                self.mainDeviceContext.configure(position: .back, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata)
+                self.mainDeviceContext.configure(position: self.dualPosition, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata)
             }
             self.mainDeviceContext.output.processSampleBuffer = { [weak self] sampleBuffer, pixelBuffer, connection in
                 guard let self else {
@@ -372,7 +370,7 @@ private final class CameraContext {
                     if #available(iOS 13.0, *) {
                         mirror = connection.inputPorts.first?.sourceDevicePosition == .front
                     }
-                    self.savePreviewSnapshot(pixelBuffer: pixelBuffer, mirror: mirror, additional: false)
+                    self.savePreviewSnapshot(pixelBuffer: pixelBuffer, mirror: mirror)
                     self.lastSnapshotTimestamp = timestamp
                 }
             }
@@ -448,12 +446,17 @@ private final class CameraContext {
     func takePhoto() -> Signal<PhotoCaptureResult, NoError> {
         let orientation = self.videoOrientation ?? .portrait
         if let additionalDeviceContext = self.additionalDeviceContext {
+            let dualPosition = self.dualPosition
             return combineLatest(
                 self.mainDeviceContext.output.takePhoto(orientation: orientation, flashMode: self._flashMode),
                 additionalDeviceContext.output.takePhoto(orientation: orientation, flashMode: self._flashMode)
             ) |> map { main, additional in
                 if case let .finished(mainImage, _, _) = main, case let .finished(additionalImage, _, _) = additional {
-                    return .finished(mainImage, additionalImage, CACurrentMediaTime())
+                    if dualPosition == .front {
+                        return .finished(additionalImage, mainImage, CACurrentMediaTime())
+                    } else {
+                        return .finished(mainImage, additionalImage, CACurrentMediaTime())
+                    }
                 } else {
                     return .began
                 }
@@ -482,8 +485,8 @@ private final class CameraContext {
                 self.mainDeviceContext.output.stopRecording(),
                 additionalDeviceContext.output.stopRecording()
             ) |> mapToSignal { main, additional in
-                if case let .finished(mainResult, _, _) = main, case let .finished(additionalResult, _, _) = additional {
-                    return .single(.finished(mainResult, additionalResult, CACurrentMediaTime()))
+                if case let .finished(mainResult, _, duration, positionChangeTimestamps, _) = main, case let .finished(additionalResult, _, _, _, _) = additional {
+                    return .single(.finished(mainResult, additionalResult, duration, positionChangeTimestamps, CACurrentMediaTime()))
                 } else {
                     return .complete()
                 }
