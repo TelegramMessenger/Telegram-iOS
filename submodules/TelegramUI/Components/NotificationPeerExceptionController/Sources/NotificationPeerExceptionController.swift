@@ -249,12 +249,7 @@ public enum NotificationExceptionMode : Equatable {
             if let value = values[peerId] {
                 switch storyNotifications {
                 case .default:
-                    switch value.settings.storiesMuted {
-                    case .none:
-                        values.removeValue(forKey: peerId)
-                    default:
-                        values[peerId] = value.updateSettings({$0.withUpdatedStoriesMuted(storiesMuted)}).withUpdatedDate(Date().timeIntervalSince1970)
-                    }
+                    values.removeValue(forKey: peerId)
                 default:
                     values[peerId] = value.updateSettings({$0.withUpdatedStoriesMuted(storiesMuted)}).withUpdatedDate(Date().timeIntervalSince1970)
                 }

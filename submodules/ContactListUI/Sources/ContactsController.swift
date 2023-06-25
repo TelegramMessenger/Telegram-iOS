@@ -20,7 +20,6 @@ import StickerResources
 import ContextUI
 import QrCodeUI
 import StoryContainerScreen
-import StoryContentComponent
 import ChatListHeaderComponent
 
 private final class HeaderContextReferenceContentSource: ContextReferenceContentSource {

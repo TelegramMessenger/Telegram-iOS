@@ -95,7 +95,6 @@ import ICloudResources
 import LegacyCamera
 import LegacyInstantVideoController
 import StoryContainerScreen
-import StoryContentComponent
 import MoreHeaderButton
 import VolumeButtons
 import ChatAvatarNavigationNode

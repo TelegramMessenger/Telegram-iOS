@@ -7,7 +7,7 @@ import TelegramCore
 import Postbox
 import TelegramPresentationData
 
-public final class StoryContentItem {
+public final class StoryContentItem: Equatable {
     public final class ExternalState {
         public init() {
         }
@@ -70,61 +70,31 @@ public final class StoryContentItem {
         }
     }
     
-    public let id: AnyHashable
     public let position: Int?
-    public let component: AnyComponent<StoryContentItem.Environment>
-    public let centerInfoComponent: AnyComponent<Empty>?
-    public let rightInfoComponent: AnyComponent<Empty>?
     public let peerId: EnginePeer.Id?
     public let storyItem: EngineStoryItem
-    public let isMy: Bool
 
     public init(
-        id: AnyHashable,
         position: Int?,
-        component: AnyComponent<StoryContentItem.Environment>,
-        centerInfoComponent: AnyComponent<Empty>?,
-        rightInfoComponent: AnyComponent<Empty>?,
         peerId: EnginePeer.Id?,
-        storyItem: EngineStoryItem,
-        isMy: Bool
+        storyItem: EngineStoryItem
     ) {
-        self.id = id
         self.position = position
-        self.component = component
-        self.centerInfoComponent = centerInfoComponent
-        self.rightInfoComponent = rightInfoComponent
         self.peerId = peerId
         self.storyItem = storyItem
-        self.isMy = isMy
     }
-}
-
-public final class StoryContentItemSlice {
-    public let id: AnyHashable
-    public let focusedItemId: AnyHashable?
-    public let items: [StoryContentItem]
-    public let totalCount: Int
-    public let previousItemId: AnyHashable?
-    public let nextItemId: AnyHashable?
-    public let update: (StoryContentItemSlice, AnyHashable) -> Signal<StoryContentItemSlice, NoError>
-
-    public init(
-        id: AnyHashable,
-        focusedItemId: AnyHashable?,
-        items: [StoryContentItem],
-        totalCount: Int,
-        previousItemId: AnyHashable?,
-        nextItemId: AnyHashable?,
-        update: @escaping (StoryContentItemSlice, AnyHashable) -> Signal<StoryContentItemSlice, NoError>
-    ) {
-        self.id = id
-        self.focusedItemId = focusedItemId
-        self.items = items
-        self.totalCount = totalCount
-        self.previousItemId = previousItemId
-        self.nextItemId = nextItemId
-        self.update = update
+    
+    public static func ==(lhs: StoryContentItem, rhs: StoryContentItem) -> Bool {
+        if lhs.position != rhs.position {
+            return false
+        }
+        if lhs.peerId != rhs.peerId {
+            return false
+        }
+        if lhs.storyItem != rhs.storyItem {
+            return false
+        }
+        return true
     }
 }
 
@@ -153,6 +123,7 @@ public final class StoryContentContextState {
         public let totalCount: Int
         public let previousItemId: Int32?
         public let nextItemId: Int32?
+        public let allItems: [StoryContentItem]
         
         public init(
             peer: EnginePeer,
@@ -160,7 +131,8 @@ public final class StoryContentContextState {
             item: StoryContentItem,
             totalCount: Int,
             previousItemId: Int32?,
-            nextItemId: Int32?
+            nextItemId: Int32?,
+            allItems: [StoryContentItem]
         ) {
             self.peer = peer
             self.additionalPeerData = additionalPeerData
@@ -168,6 +140,7 @@ public final class StoryContentContextState {
             self.totalCount = totalCount
             self.previousItemId = previousItemId
             self.nextItemId = nextItemId
+            self.allItems = allItems
         }
         
         public static func ==(lhs: FocusedSlice, rhs: FocusedSlice) -> Bool {
@@ -177,7 +150,7 @@ public final class StoryContentContextState {
             if lhs.additionalPeerData != rhs.additionalPeerData {
                 return false
             }
-            if lhs.item.storyItem != rhs.item.storyItem {
+            if lhs.item != rhs.item {
                 return false
             }
             if lhs.totalCount != rhs.totalCount {
@@ -187,6 +160,9 @@ public final class StoryContentContextState {
                 return false
             }
             if lhs.nextItemId != rhs.nextItemId {
+                return false
+            }
+            if lhs.allItems != rhs.allItems {
                 return false
             }
             return true
@@ -209,13 +185,19 @@ public final class StoryContentContextState {
 }
 
 public enum StoryContentContextNavigation {
-    public enum Direction {
+    public enum ItemDirection {
+        case previous
+        case next
+        case id(Int32)
+    }
+    
+    public enum PeerDirection {
         case previous
         case next
     }
     
-    case item(Direction)
-    case peer(Direction)
+    case item(ItemDirection)
+    case peer(PeerDirection)
 }
 
 public protocol StoryContentContext: AnyObject {

@@ -23,7 +23,6 @@ import UndoUI
 import WebsiteType
 import GalleryData
 import StoryContainerScreen
-import StoryContentComponent
 
 func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
     var story: TelegramMediaStory?

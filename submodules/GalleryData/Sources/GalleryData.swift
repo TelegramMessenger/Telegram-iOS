@@ -15,7 +15,6 @@ import GalleryUI
 import MediaResources
 import WebsiteType
 import StoryContainerScreen
-import StoryContentComponent
 
 public enum ChatMessageGalleryControllerData {
     case url(String)

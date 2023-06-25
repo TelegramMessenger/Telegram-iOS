@@ -10,7 +10,6 @@ import PhotoResources
 import SwiftSignalKit
 import UniversalMediaPlayer
 import TelegramUniversalVideoContent
-import StoryContainerScreen
 import HierarchyTrackingLayer
 import ButtonComponent
 import MultilineTextComponent
@@ -18,6 +17,14 @@ import TelegramPresentationData
 
 final class StoryItemContentComponent: Component {
     typealias EnvironmentType = StoryContentItem.Environment
+    
+    final class Hint {
+        let synchronousLoad: Bool
+        
+        init(synchronousLoad: Bool) {
+            self.synchronousLoad = synchronousLoad
+        }
+    }
     
 	let context: AccountContext
     let peer: EnginePeer
@@ -56,7 +63,7 @@ final class StoryItemContentComponent: Component {
         private var unsupportedText: ComponentView<Empty>?
         private var unsupportedButton: ComponentView<Empty>?
         
-        private var isProgressPaused: Bool = false
+        private var isProgressPaused: Bool = true
         private var currentProgressTimer: SwiftSignalKit.Timer?
         private var currentProgressTimerValue: Double = 0.0
         private var videoProgressDisposable: Disposable?
@@ -85,7 +92,7 @@ final class StoryItemContentComponent: Component {
                 guard let self else {
                     return
                 }
-                self.updateIsProgressPaused()
+                self.updateIsProgressPaused(update: true)
             }
 		}
         
@@ -100,6 +107,17 @@ final class StoryItemContentComponent: Component {
         }
         
         private func performActionAfterImageContentLoaded(update: Bool) {
+            self.initializeVideoIfReady(update: update)
+        }
+        
+        private func initializeVideoIfReady(update: Bool) {
+            if self.videoNode != nil {
+                return
+            }
+            if self.isProgressPaused {
+                return
+            }
+            
             guard let component = self.component, let environment = self.environment, let currentMessageMedia = self.currentMessageMedia else {
                 return
             }
@@ -155,12 +173,26 @@ final class StoryItemContentComponent: Component {
                     }
                 }
             }
+            
+            if let videoNode = self.videoNode {
+                if self.videoProgressDisposable == nil {
+                    self.videoProgressDisposable = (videoNode.status
+                    |> deliverOnMainQueue).start(next: { [weak self] status in
+                        guard let self, let status else {
+                            return
+                        }
+                        
+                        self.videoPlaybackStatus = status
+                        self.updateVideoPlaybackProgress()
+                    })
+                }
+            }
         }
         
         override func setIsProgressPaused(_ isProgressPaused: Bool) {
             if self.isProgressPaused != isProgressPaused {
                 self.isProgressPaused = isProgressPaused
-                self.updateIsProgressPaused()
+                self.updateIsProgressPaused(update: true)
             }
         }
         
@@ -179,7 +211,7 @@ final class StoryItemContentComponent: Component {
             }
         }
         
-        private func updateIsProgressPaused() {
+        private func updateIsProgressPaused(update: Bool) {
             if let videoNode = self.videoNode {
                 var canPlay = !self.isProgressPaused && self.contentLoaded && self.hierarchyTrackingLayer.isInHierarchy
                 if let component = self.component {
@@ -195,6 +227,7 @@ final class StoryItemContentComponent: Component {
                 }
             }
             
+            self.initializeVideoIfReady(update: update)
             self.updateVideoPlaybackProgress()
             self.updateProgressTimer()
         }
@@ -327,6 +360,11 @@ final class StoryItemContentComponent: Component {
             let environment = environment[StoryContentItem.Environment.self].value
             self.environment = environment
             
+            var synchronousLoad = false
+            if let hint = transition.userData(Hint.self) {
+                synchronousLoad = hint.synchronousLoad
+            }
+            
             let peerReference = PeerReference(component.peer._asPeer())
             
             var messageMedia: EngineMedia?
@@ -361,7 +399,7 @@ final class StoryItemContentComponent: Component {
                         postbox: component.context.account.postbox,
                         userLocation: .other,
                         photoReference: .story(peer: peerReference, id: component.item.id, media: image),
-                        synchronousLoad: true,
+                        synchronousLoad: synchronousLoad,
                         highQuality: true
                     )
                     if let representation = image.representations.last {
@@ -385,7 +423,7 @@ final class StoryItemContentComponent: Component {
                         videoReference: .story(peer: peerReference, id: component.item.id, media: file),
                         onlyFullSize: false,
                         useLargeThumbnail: true,
-                        synchronousLoad: true,
+                        synchronousLoad: synchronousLoad,
                         autoFetchFullSizeThumbnail: true,
                         overlayColor: nil,
                         nilForEmptyResult: false,
@@ -464,20 +502,6 @@ final class StoryItemContentComponent: Component {
                     }
                 }
                 self.imageNode.frame = CGRect(origin: CGPoint(), size: availableSize)
-            }
-            
-            if let videoNode = self.videoNode {
-                if self.videoProgressDisposable == nil {
-                    self.videoProgressDisposable = (videoNode.status
-                    |> deliverOnMainQueue).start(next: { [weak self] status in
-                        guard let self, let status else {
-                            return
-                        }
-                        
-                        self.videoPlaybackStatus = status
-                        self.updateVideoPlaybackProgress()
-                    })
-                }
             }
             
             switch component.item.media {
@@ -573,7 +597,7 @@ final class StoryItemContentComponent: Component {
                 self.backgroundColor = UIColor(rgb: 0x181818)
             }
             
-            self.updateIsProgressPaused()
+            self.updateIsProgressPaused(update: false)
             
             return availableSize
         }

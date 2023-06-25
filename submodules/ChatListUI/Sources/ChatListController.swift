@@ -46,7 +46,6 @@ import ChatListTitleView
 import InviteLinksUI
 import ChatFolderLinkPreviewScreen
 import StoryContainerScreen
-import StoryContentComponent
 import FullScreenEffectView
 
 private final class ContextControllerContentSourceImpl: ContextControllerContentSource {

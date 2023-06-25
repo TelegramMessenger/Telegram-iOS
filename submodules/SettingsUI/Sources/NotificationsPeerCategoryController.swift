@@ -598,19 +598,35 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
                     updateNotificationsView({})
                 })
             }, removePeerFromExceptions: {
-                let _ = (
-                    context.engine.peers.removeCustomNotificationSettings(peerIds: [peerId])
-                    |> map { _ -> EnginePeer? in }
-                    |> then(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)))
-                ).start(next: { peer in
-                    guard let peer = peer else {
-                        return
-                    }
-                    updateState { value in
-                        return value.withUpdatedPeerDisplayPreviews(peer, .default).withUpdatedPeerSound(peer, .default).withUpdatedPeerMuteInterval(peer, nil)
-                    }
-                    updateNotificationsView({})
-                })
+                if case .stories = mode.mode {
+                    let _ = (
+                        context.engine.peers.removeCustomStoryNotificationSettings(peerIds: [peerId])
+                        |> map { _ -> EnginePeer? in }
+                        |> then(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)))
+                    ).start(next: { peer in
+                        guard let peer = peer else {
+                            return
+                        }
+                        updateState { value in
+                            return value.withUpdatedPeerStoryNotifications(peer, .default)
+                        }
+                        updateNotificationsView({})
+                    })
+                } else {
+                    let _ = (
+                        context.engine.peers.removeCustomNotificationSettings(peerIds: [peerId])
+                        |> map { _ -> EnginePeer? in }
+                        |> then(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)))
+                    ).start(next: { peer in
+                        guard let peer = peer else {
+                            return
+                        }
+                        updateState { value in
+                            return value.withUpdatedPeerDisplayPreviews(peer, .default).withUpdatedPeerSound(peer, .default).withUpdatedPeerMuteInterval(peer, nil)
+                        }
+                        updateNotificationsView({})
+                    })
+                }
             }, modifiedPeer: {
 
             }))
@@ -699,21 +715,39 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
                 
                 let values = stateValue.with { $0.mode.settings.values }
                 
-                let _ = (context.engine.peers.ensurePeersAreLocallyAvailable(peers: values.map { $0.peer })
-                |> deliverOnMainQueue).start(completed: {
-                    updateNotificationsDisposable.set(nil)
-                    updateState { state in
-                        var state = state
-                        for value in values {
-                            state = state.withUpdatedPeerMuteInterval(value.peer, nil).withUpdatedPeerSound(value.peer, .default).withUpdatedPeerDisplayPreviews(value.peer, .default)
-                        }
-                        return state
-                    }
-                    let _ = (context.engine.peers.removeCustomNotificationSettings(peerIds: values.map(\.peer.id))
+                if case .stories = mode.mode {
+                    let _ = (context.engine.peers.ensurePeersAreLocallyAvailable(peers: values.map { $0.peer })
                     |> deliverOnMainQueue).start(completed: {
-                        updateNotificationsView({})
+                        updateNotificationsDisposable.set(nil)
+                        updateState { state in
+                            var state = state
+                            for value in values {
+                                state = state.withUpdatedPeerStoryNotifications(value.peer, .default)
+                            }
+                            return state
+                        }
+                        let _ = (context.engine.peers.removeCustomStoryNotificationSettings(peerIds: values.map(\.peer.id))
+                        |> deliverOnMainQueue).start(completed: {
+                            updateNotificationsView({})
+                        })
                     })
-                })
+                } else {
+                    let _ = (context.engine.peers.ensurePeersAreLocallyAvailable(peers: values.map { $0.peer })
+                    |> deliverOnMainQueue).start(completed: {
+                        updateNotificationsDisposable.set(nil)
+                        updateState { state in
+                            var state = state
+                            for value in values {
+                                state = state.withUpdatedPeerMuteInterval(value.peer, nil).withUpdatedPeerSound(value.peer, .default).withUpdatedPeerDisplayPreviews(value.peer, .default)
+                            }
+                            return state
+                        }
+                        let _ = (context.engine.peers.removeCustomNotificationSettings(peerIds: values.map(\.peer.id))
+                        |> deliverOnMainQueue).start(completed: {
+                            updateNotificationsView({})
+                        })
+                    })
+                }
             })
         ]), ActionSheetItemGroup(items: [
             ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
@@ -726,17 +760,31 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
             return current.withUpdatedRevealedPeerId(peerId)
         }
     }, removePeer: { peer in
-        let _ = (context.engine.peers.ensurePeersAreLocallyAvailable(peers: [peer])
-        |> deliverOnMainQueue).start(completed: {
-            updateNotificationsDisposable.set(nil)
-            updateState { value in
-                return value.withUpdatedPeerMuteInterval(peer, nil).withUpdatedPeerSound(peer, .default).withUpdatedPeerDisplayPreviews(peer, .default)
-            }
-            let _ = (context.engine.peers.removeCustomNotificationSettings(peerIds: [peer.id])
+        if case .stories = mode.mode {
+            let _ = (context.engine.peers.ensurePeersAreLocallyAvailable(peers: [peer])
             |> deliverOnMainQueue).start(completed: {
-                updateNotificationsView({})
+                updateNotificationsDisposable.set(nil)
+                updateState { value in
+                    return value.withUpdatedPeerStoryNotifications(peer, .default)
+                }
+                let _ = (context.engine.peers.removeCustomStoryNotificationSettings(peerIds: [peer.id])
+                |> deliverOnMainQueue).start(completed: {
+                    updateNotificationsView({})
+                })
             })
-        })
+        } else {
+            let _ = (context.engine.peers.ensurePeersAreLocallyAvailable(peers: [peer])
+            |> deliverOnMainQueue).start(completed: {
+                updateNotificationsDisposable.set(nil)
+                updateState { value in
+                    return value.withUpdatedPeerMuteInterval(peer, nil).withUpdatedPeerSound(peer, .default).withUpdatedPeerDisplayPreviews(peer, .default)
+                }
+                let _ = (context.engine.peers.removeCustomNotificationSettings(peerIds: [peer.id])
+                |> deliverOnMainQueue).start(completed: {
+                    updateNotificationsView({})
+                })
+            })
+        }
     }, updatedExceptionMode: { mode in
         _ = (notificationExceptions.get() |> take(1) |> deliverOnMainQueue).start(next: { (users, groups, channels, stories) in
             switch mode {
