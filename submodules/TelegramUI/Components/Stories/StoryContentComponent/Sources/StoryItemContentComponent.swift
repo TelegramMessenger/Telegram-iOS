@@ -345,6 +345,11 @@ final class StoryItemContentComponent: Component {
             if self.currentMessageMedia?.id != messageMedia?.id {
                 self.currentMessageMedia = messageMedia
                 reloadMedia = true
+                
+                if let videoNode = self.videoNode {
+                    self.videoNode = nil
+                    videoNode.view.removeFromSuperview()
+                }
             }
             
             if reloadMedia, let messageMedia, let peerReference {

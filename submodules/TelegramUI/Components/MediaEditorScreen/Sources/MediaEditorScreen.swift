@@ -1278,6 +1278,11 @@ final class MediaEditorScreenComponent: Component {
                         muteButtonView.layer.shadowColor = UIColor.black.cgColor
                         muteButtonView.layer.shadowOpacity = 0.35
                         self.addSubview(muteButtonView)
+                        
+                        if self.animatingButtons {
+                            muteButtonView.layer.animateAlpha(from: 0.0, to: muteButtonView.alpha, duration: 0.1)
+                            muteButtonView.layer.animateScale(from: 0.4, to: 1.0, duration: 0.1)
+                        }
                     }
                     transition.setPosition(view: muteButtonView, position: muteButtonFrame.center)
                     transition.setBounds(view: muteButtonView, bounds: CGRect(origin: .zero, size: muteButtonFrame.size))
