@@ -548,7 +548,7 @@ public final class StoryItemSetContainerComponent: Component {
             }
             if let navigationController = component.controller()?.navigationController as? NavigationController {
                 let topViewController = navigationController.topViewController
-                if !(topViewController is StoryContainerScreen) && !(topViewController is MediaEditorScreen) {
+                if !(topViewController is StoryContainerScreen) && !(topViewController is MediaEditorScreen)  && !(topViewController is ShareWithPeersScreen) {
                     return true
                 }
             }
@@ -2336,6 +2336,7 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         let _ = component.context.engine.messages.editStoryPrivacy(id: component.slice.item.storyItem.id, privacy: privacy).start()
                         
+                        self.privacyController = nil
                         self.updateIsProgressPaused()
                     },
                     editCategory: { [weak self] privacy in
@@ -2350,6 +2351,12 @@ public final class StoryItemSetContainerComponent: Component {
                         })
                     }
                 )
+                controller.dismissed = { [weak self] in
+                    if let self {
+                        self.privacyController = nil
+                        self.updateIsProgressPaused()
+                    }
+                }
                 self.component?.controller()?.push(controller)
                 
                 self.privacyController = controller
@@ -2382,6 +2389,12 @@ public final class StoryItemSetContainerComponent: Component {
                     },
                     editCategory: { _ in }
                 )
+                controller.dismissed = { [weak self] in
+                    if let self {
+                        self.privacyController = nil
+                        self.updateIsProgressPaused()
+                    }
+                }
                 self.component?.controller()?.push(controller)
                 
                 self.privacyController = controller

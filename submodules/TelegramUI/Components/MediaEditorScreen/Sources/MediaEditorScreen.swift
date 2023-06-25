@@ -1566,6 +1566,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         fileprivate var mediaEditor: MediaEditor?
         fileprivate var mediaEditorPromise = Promise<MediaEditor?>()
         
+        fileprivate let ciContext = CIContext(options: [.workingColorSpace : NSNull()])
+        
         private let stickerPickerInputData = Promise<StickerPickerInputData>()
         
         private var dismissPanGestureRecognizer: UIPanGestureRecognizer?
@@ -1730,19 +1732,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             if case let .draft(draft, _) = subject, let privacy = draft.privacy {
                 controller.state.privacy = privacy
-            } else if !controller.isEditingStory {
-                let _ = combineLatest(
-                    queue: Queue.mainQueue(),
-                    mediaEditorStoredState(engine: controller.context.engine),
-                    controller.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: controller.context.account.peerId))
-                ).start(next: { [weak controller] state, peer in
-                    if let controller, var privacy = state?.privacy {
-                        if case let .user(user) = peer, !user.isPremium && privacy.timeout != 86400 {
-                            privacy = MediaEditorResultPrivacy(privacy: privacy.privacy, timeout: 86400, archive: false)
-                        }
-                        controller.state.privacy = privacy
-                    }
-                })
             }
             
             let isSavingAvailable: Bool
@@ -2971,6 +2960,19 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if let initialPrivacy {
                 self.state.privacy = MediaEditorResultPrivacy(privacy: initialPrivacy, timeout: 86400, archive: false)
             }
+        } else {
+            let _ = combineLatest(
+                queue: Queue.mainQueue(),
+                mediaEditorStoredState(engine: self.context.engine),
+                self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
+            ).start(next: { [weak self] state, peer in
+                if let self, var privacy = state?.privacy {
+                    if case let .user(user) = peer, !user.isPremium && privacy.timeout != 86400 {
+                        privacy = MediaEditorResultPrivacy(privacy: privacy.privacy, timeout: 86400, archive: false)
+                    }
+                    self.state.privacy = privacy
+                }
+            })
         }
     }
     
@@ -3272,7 +3274,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         if let resultImage = mediaEditor.resultImage {
             mediaEditor.seek(0.0, andPlay: false)
-            makeEditorImageComposition(account: self.context.account, inputImage: resultImage, dimensions: storyDimensions, values: values, time: .zero, completion: { resultImage in
+            makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: resultImage, dimensions: storyDimensions, values: values, time: .zero, completion: { resultImage in
                 guard let resultImage else {
                     return
                 }
@@ -3499,7 +3501,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let _ = (firstFrame
             |> deliverOnMainQueue).start(next: { [weak self] image in
                 if let self {
-                    makeEditorImageComposition(account: self.context.account, inputImage: image ?? UIImage(), dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] coverImage in
+                    makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image ?? UIImage(), dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] coverImage in
                         if let self {
                             self.completion(randomId, .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions), caption, self.state.privacy, { [weak self] finished in
                                 self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
@@ -3521,7 +3523,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if let image = mediaEditor.resultImage {
                 self.saveDraft(id: randomId)
                 
-                makeEditorImageComposition(account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] resultImage in
+                makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] resultImage in
                     if let self, let resultImage {
                         self.completion(randomId, .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), caption, self.state.privacy, { [weak self] finished in
                             self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
@@ -3668,7 +3670,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         } else {
             if let image = mediaEditor.resultImage {
                 Queue.concurrentDefaultQueue().async {
-                    makeEditorImageComposition(account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { resultImage in
+                    makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { resultImage in
                         if let data = resultImage?.jpegData(compressionQuality: 0.8) {
                             let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).jpg"
                             try? data.write(to: URL(fileURLWithPath: outputPath))

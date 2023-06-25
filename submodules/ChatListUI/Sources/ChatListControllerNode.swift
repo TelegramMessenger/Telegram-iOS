@@ -1126,6 +1126,9 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             guard let strongSelf = self, strongSelf.availableFilters.count > 1 || strongSelf.controller?.isStoryPostingAvailable == true else {
                 return []
             }
+            guard case .chatList(.root) = strongSelf.location else {
+                return []
+            }
             switch strongSelf.currentItemNode.visibleContentOffset() {
             case let .known(value):
                 if value < -strongSelf.currentItemNode.tempTopInset {

@@ -62,7 +62,7 @@ private class MediaEditorComposerStaticEntity: MediaEditorComposerEntity {
         self.mirrored = mirrored
     }
     
-    func image(for time: CMTime, frameRate: Float, completion: @escaping (CIImage?) -> Void) {
+    func image(for time: CMTime, frameRate: Float, context: CIContext, completion: @escaping (CIImage?) -> Void) {
         completion(self.image)
     }
 }
@@ -215,7 +215,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
     }
     
     private var circleMaskFilter: CIFilter?
-    func image(for time: CMTime, frameRate: Float, completion: @escaping (CIImage?) -> Void) {
+    func image(for time: CMTime, frameRate: Float, context: CIContext, completion: @escaping (CIImage?) -> Void) {
         if case .video = self.content {
             if let videoOutput = self.videoOutput {
                 if let sampleBuffer = videoOutput.copyNextSampleBuffer(), let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
@@ -264,7 +264,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
             
             var tintColor: UIColor?
             if let file = self.content.file, file.isCustomTemplateEmoji {
-                tintColor = .white
+                tintColor = UIColor(rgb: 0xffffff)
             }
             
             let processFrame: (Double?, Int?, Int?, (Int) -> AnimatedStickerFrame?) -> Void = { [weak self] duration, frameCount, frameRate, takeFrame in
@@ -341,7 +341,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                         }
                         
                         if let imagePixelBuffer {
-                            let image = render(width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, pixelBuffer: imagePixelBuffer, tintColor: tintColor)
+                            let image = render(context: context, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, pixelBuffer: imagePixelBuffer, tintColor: tintColor)
                             strongSelf.image = image
                         }
                         completion(strongSelf.image)
@@ -426,10 +426,27 @@ protocol MediaEditorComposerEntity {
     var baseSize: CGSize? { get }
     var mirrored: Bool { get }
     
-    func image(for time: CMTime, frameRate: Float, completion: @escaping (CIImage?) -> Void)
+    func image(for time: CMTime, frameRate: Float, context: CIContext, completion: @escaping (CIImage?) -> Void)
 }
 
-private func render(width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType, pixelBuffer: CVPixelBuffer, tintColor: UIColor?) -> CIImage? {
+extension CIImage {
+    func tinted(with color: UIColor) -> CIImage? {
+        guard let colorMatrix = CIFilter(name: "CIColorMatrix") else {
+            return self
+        }
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        color.getRed(&r, green: &g, blue: &b, alpha: &a)
+        colorMatrix.setDefaults()
+        colorMatrix.setValue(self, forKey: "inputImage")
+        colorMatrix.setValue(CIVector(x: r, y: 0, z: 0, w: 0), forKey: "inputRVector")
+        colorMatrix.setValue(CIVector(x: 0, y: g, z: 0, w: 0), forKey: "inputGVector")
+        colorMatrix.setValue(CIVector(x: 0, y: 0, z: b, w: 0), forKey: "inputBVector")
+        colorMatrix.setValue(CIVector(x: 0, y: 0, z: 0, w: a), forKey: "inputAVector")
+        return colorMatrix.outputImage
+    }
+}
+
+private func render(context: CIContext, width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType, pixelBuffer: CVPixelBuffer, tintColor: UIColor?) -> CIImage? {
     //let calculatedBytesPerRow = (4 * Int(width) + 31) & (~31)
     //assert(bytesPerRow == calculatedBytesPerRow)
     
@@ -458,7 +475,15 @@ private func render(width: Int, height: Int, bytesPerRow: Int, data: Data, type:
     
     CVPixelBufferUnlockBaseAddress(pixelBuffer, CVPixelBufferLockFlags(rawValue: 0))
     
-    return CIImage(cvPixelBuffer: pixelBuffer, options: [.colorSpace: deviceColorSpace])
+    let image = CIImage(cvPixelBuffer: pixelBuffer, options: [.colorSpace: deviceColorSpace])
+    if let tintColor {
+        if let cgImage = context.createCGImage(image, from: CGRect(origin: .zero, size: image.extent.size)) {
+            if let tintedImage = generateTintedImage(image: UIImage(cgImage: cgImage), color: tintColor) {
+                return CIImage(image: tintedImage)
+            }
+        }
+    }
+    return image
 }
 
 private extension UIImage.Orientation {
