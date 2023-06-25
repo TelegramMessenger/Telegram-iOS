@@ -10,21 +10,25 @@ public class VolumeButtonsListener: NSObject {
     
     private var disposable: Disposable?
     
-    public init(shouldBeActive: Signal<Bool, NoError>, valueChanged: @escaping () -> Void) {
-        var impl: (() -> Void)?
-        
+    public init(
+        shouldBeActive: Signal<Bool, NoError>,
+        upPressed: @escaping () -> Void,
+        upReleased: @escaping () -> Void = {},
+        downPressed: @escaping () -> Void,
+        downReleased: @escaping () -> Void = {}
+    ) {
         self.handler = PGCameraVolumeButtonHandler(upButtonPressedBlock: {
-            impl?()
-        }, upButtonReleasedBlock: {}, downButtonPressedBlock: {
-            impl?()
-        }, downButtonReleasedBlock: {})
+            upPressed()
+        }, upButtonReleasedBlock: {
+            upReleased()
+        }, downButtonPressedBlock: {
+            downPressed()
+        }, downButtonReleasedBlock: {
+            downReleased()
+        })
         
         super.init()
-        
-        impl = {
-            valueChanged()
-        }
-        
+                
         self.disposable = (shouldBeActive
         |> deliverOnMainQueue).start(next: { [weak self] value in
             guard let strongSelf = self else {

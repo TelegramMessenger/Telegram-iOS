@@ -10967,15 +10967,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
-        self.volumeButtonsListener = VolumeButtonsListener(shouldBeActive: shouldBeActive, valueChanged: { [weak self] in
-            guard let strongSelf = self, strongSelf.traceVisibility() && isTopmostChatController(strongSelf) else {
+        let buttonAction = { [weak self] in
+            guard let self, self.traceVisibility() && isTopmostChatController(self) else {
                 return
             }
-            strongSelf.videoUnmuteTooltipController?.dismiss()
+            self.videoUnmuteTooltipController?.dismiss()
             
             var actions: [(Bool, (Double?) -> Void)] = []
             var hasUnconsumed = false
-            strongSelf.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
+            self.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
                 if let itemNode = itemNode as? ChatMessageItemView, let (action, _, _, isUnconsumed, _) = itemNode.playMediaWithSound() {
                     if case let .visible(fraction, _) = itemNode.visibility, fraction > 0.7 {
                         actions.insert((isUnconsumed, action), at: 0)
@@ -10991,7 +10991,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     break
                 }
             }
-        })
+        }
+        self.volumeButtonsListener = VolumeButtonsListener(
+            shouldBeActive: shouldBeActive,
+            upPressed: buttonAction,
+            downPressed: buttonAction
+        )
 
         self.chatDisplayNode.historyNode.openNextChannelToRead = { [weak self] peer, location in
             guard let strongSelf = self else {

@@ -175,7 +175,7 @@ private final class StoryContainerScreenComponent: Component {
         private var transitionCloneMasterView: UIView
         
         private var volumeButtonsListener: VolumeButtonsListener?
-        private let volumeButtonsListenerShouldBeActvie = ValuePromise<Bool>(false, ignoreRepeated: true)
+        private let volumeButtonsListenerShouldBeActive = ValuePromise<Bool>(false, ignoreRepeated: true)
         
         private var isAnimatingOut: Bool = false
         private var didAnimateOut: Bool = false
@@ -580,19 +580,24 @@ private final class StoryContainerScreenComponent: Component {
         
         private func updateVolumeButtonMonitoring() {
             if self.volumeButtonsListener == nil {
-                self.volumeButtonsListener = VolumeButtonsListener(shouldBeActive: self.volumeButtonsListenerShouldBeActvie.get(), valueChanged: { [weak self] in
+                let buttonAction = { [weak self] in
                     guard let self, self.storyItemSharedState.useAmbientMode else {
                         return
                     }
                     self.storyItemSharedState.useAmbientMode = false
-                    self.volumeButtonsListenerShouldBeActvie.set(false)
+                    self.volumeButtonsListenerShouldBeActive.set(false)
                     
                     for (_, itemSetView) in self.visibleItemSetViews {
                         if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
                             componentView.leaveAmbientMode()
                         }
                     }
-                })
+                }
+                self.volumeButtonsListener = VolumeButtonsListener(
+                    shouldBeActive: self.volumeButtonsListenerShouldBeActive.get(),
+                    upPressed: buttonAction,
+                    downPressed: buttonAction
+                )
             }
         }
         
@@ -624,7 +629,7 @@ private final class StoryContainerScreenComponent: Component {
                         self.focusedItem.set(focusedItemId)
                         
                         if self.storyItemSharedState.useAmbientMode {
-                            self.volumeButtonsListenerShouldBeActvie.set(isVideo)
+                            self.volumeButtonsListenerShouldBeActive.set(isVideo)
                             if isVideo {
                                 self.updateVolumeButtonMonitoring()
                             }

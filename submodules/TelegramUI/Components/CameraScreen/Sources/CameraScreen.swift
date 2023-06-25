@@ -19,6 +19,7 @@ import TooltipUI
 import MediaEditor
 import BundleIconComponent
 import CameraButtonComponent
+import VolumeButtons
 
 let videoRedColor = UIColor(rgb: 0xff3b30)
 
@@ -87,6 +88,7 @@ private final class CameraScreenComponent: CombinedComponent {
     let camera: Camera
     let updateState: ActionSlot<CameraState>
     let hasAppeared: Bool
+    let isVisible: Bool
     let panelWidth: CGFloat
     let flipAnimationAction: ActionSlot<Void>
     let animateShutter: () -> Void
@@ -99,6 +101,7 @@ private final class CameraScreenComponent: CombinedComponent {
         camera: Camera,
         updateState: ActionSlot<CameraState>,
         hasAppeared: Bool,
+        isVisible: Bool,
         panelWidth: CGFloat,
         flipAnimationAction: ActionSlot<Void>,
         animateShutter: @escaping () -> Void,
@@ -110,6 +113,7 @@ private final class CameraScreenComponent: CombinedComponent {
         self.camera = camera
         self.updateState = updateState
         self.hasAppeared = hasAppeared
+        self.isVisible = isVisible
         self.panelWidth = panelWidth
         self.flipAnimationAction = flipAnimationAction
         self.animateShutter = animateShutter
@@ -123,6 +127,9 @@ private final class CameraScreenComponent: CombinedComponent {
             return false
         }
         if lhs.hasAppeared != rhs.hasAppeared {
+            return false
+        }
+        if lhs.isVisible != rhs.isVisible {
             return false
         }
         if lhs.panelWidth != rhs.panelWidth {
@@ -159,12 +166,17 @@ private final class CameraScreenComponent: CombinedComponent {
         private let completion: ActionSlot<Signal<CameraScreen.Result, NoError>>
         private let updateState: ActionSlot<CameraState>
         
+        private let animateShutter: () -> Void
+        
         private var cameraStateDisposable: Disposable?
         private var resultDisposable = MetaDisposable()
         
         private var mediaAssetsContext: MediaAssetsContext?
         fileprivate var lastGalleryAsset: PHAsset?
         private var lastGalleryAssetsDisposable: Disposable?
+        
+        private var volumeButtonsListener: VolumeButtonsListener?
+        private let volumeButtonsListenerShouldBeActive = ValuePromise<Bool>(false, ignoreRepeated: true)
         
         var cameraState = CameraState(mode: .photo, position: .unspecified, flashMode: .off, flashModeDidChange: false, recording: .none, duration: 0.0, isDualCamEnabled: false) {
             didSet {
@@ -176,12 +188,20 @@ private final class CameraScreenComponent: CombinedComponent {
         
         private let hapticFeedback = HapticFeedback()
         
-        init(context: AccountContext, camera: Camera, present: @escaping (ViewController) -> Void, completion: ActionSlot<Signal<CameraScreen.Result, NoError>>, updateState: ActionSlot<CameraState>) {
+        init(
+            context: AccountContext,
+            camera: Camera,
+            present: @escaping (ViewController) -> Void,
+            completion: ActionSlot<Signal<CameraScreen.Result, NoError>>,
+            updateState: ActionSlot<CameraState>,
+            animateShutter: @escaping () -> Void = {}
+        ) {
             self.context = context
             self.camera = camera
             self.present = present
             self.completion = completion
             self.updateState = updateState
+            self.animateShutter = animateShutter
             
             super.init()
             
@@ -202,6 +222,8 @@ private final class CameraScreenComponent: CombinedComponent {
             Queue.concurrentDefaultQueue().async {
                 self.setupRecentAssetSubscription()
             }
+            
+            self.setupVolumeButtonsHandler()
         }
         
         deinit {
@@ -224,6 +246,77 @@ private final class CameraScreenComponent: CombinedComponent {
                 self.lastGalleryAsset = asset
                 self.updated(transition: .easeInOut(duration: 0.2))
             })
+        }
+        
+        func setupVolumeButtonsHandler() {
+            guard self.volumeButtonsListener == nil else {
+                return
+            }
+            
+            self.volumeButtonsListener = VolumeButtonsListener(
+                shouldBeActive: self.volumeButtonsListenerShouldBeActive.get(),
+                upPressed: { [weak self] in
+                    if let self {
+                        self.handleVolumePressed()
+                    }
+                },
+                upReleased: { [weak self] in
+                    if let self {
+                        self.handleVolumeReleased()
+                    }
+                },
+                downPressed: { [weak self] in
+                    if let self {
+                        self.handleVolumePressed()
+                    }
+                },
+                downReleased: { [weak self] in
+                    if let self {
+                        self.handleVolumeReleased()
+                    }
+                }
+            )
+        }
+        
+        var volumeButtonsListenerActive = false {
+            didSet {
+                self.volumeButtonsListenerShouldBeActive.set(self.volumeButtonsListenerActive)
+            }
+        }
+        
+        private var buttonPressTimestamp: Double?
+        private var buttonPressTimer: SwiftSignalKit.Timer?
+        
+        private func handleVolumePressed() {
+            self.buttonPressTimestamp = CACurrentMediaTime()
+            
+            self.buttonPressTimer = SwiftSignalKit.Timer(timeout: 0.3, repeat: false, completion: { [weak self] in
+                if let self, let _ = self.buttonPressTimestamp {
+                    if case .none = self.cameraState.recording {
+                        self.startVideoRecording(pressing: true)
+                    }
+                    self.buttonPressTimestamp = nil
+                }
+            }, queue: Queue.mainQueue())
+            self.buttonPressTimer?.start()
+        }
+        
+        private func handleVolumeReleased() {
+            if case .none = self.cameraState.recording {
+                switch self.cameraState.mode {
+                case .photo:
+                    self.animateShutter()
+                    self.takePhoto()
+                case .video:
+                    self.startVideoRecording(pressing: false)
+                }
+            } else {
+                self.stopVideoRecording()
+            }
+            
+            self.buttonPressTimer?.invalidate()
+            self.buttonPressTimer = nil
+            self.buttonPressTimestamp = nil
         }
         
         func updateCameraMode(_ mode: CameraMode) {
@@ -329,7 +422,7 @@ private final class CameraScreenComponent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, camera: self.camera, present: self.present, completion: self.completion, updateState: self.updateState)
+        return State(context: self.context, camera: self.camera, present: self.present, completion: self.completion, updateState: self.updateState, animateShutter: self.animateShutter)
     }
     
     static var body: Body {
@@ -351,6 +444,8 @@ private final class CameraScreenComponent: CombinedComponent {
             let state = context.state
             let controller = environment.controller
             let availableSize = context.availableSize
+            
+            state.volumeButtonsListenerActive = component.hasAppeared && component.isVisible
 
             let isTablet: Bool
             if case .regular = environment.metrics.widthClass {
@@ -873,22 +968,24 @@ public class CameraScreen: ViewController {
         fileprivate let transitionDimView: UIView
         fileprivate let transitionCornersView: UIImageView
         fileprivate let camera: Camera
-
-        private var presentationData: PresentationData
-        private var validLayout: ContainerViewLayout?
         
         private var changingPositionDisposable: Disposable?
         private var isDualCamEnabled = false
         private var appliedDualCam = false
         private var cameraPosition: Camera.Position = .back
         
-        private let completion = ActionSlot<Signal<CameraScreen.Result, NoError>>()
-                
-        fileprivate var previewBlurPromise = ValuePromise<Bool>(false)
+        private var pipPosition: PIPPosition = .bottomRight
         
+        fileprivate var previewBlurPromise = ValuePromise<Bool>(false)
         private let flipAnimationAction = ActionSlot<Void>()
         
-        private var pipPosition: PIPPosition = .bottomRight
+        fileprivate var cameraIsActive = true
+        fileprivate var hasGallery = false
+        
+        private var presentationData: PresentationData
+        private var validLayout: ContainerViewLayout?
+        
+        private let completion = ActionSlot<Signal<CameraScreen.Result, NoError>>()
         
         init(controller: CameraScreen) {
             self.controller = controller
@@ -972,21 +1069,6 @@ public class CameraScreen: ViewController {
             ).start(next: { [weak self] modeChange, forceBlur in
                 if let self {
                     if modeChange != .none {
-//                        if case .dualCamera = modeChange, self.cameraPosition == .front {
-//                            if self.isDualCamEnabled {
-//                                if let snapshot = self.mainPreviewView.snapshotView(afterScreenUpdates: false) {
-//                                    snapshot.frame = CGRect(origin: .zero, size: self.mainPreviewContainerView.bounds.size)
-//                                    self.mainPreviewView.addSubview(snapshot)
-//                                    self.previewSnapshotView = snapshot
-//                                }
-//                            } else {
-//                                if let snapshot = self.mainPreviewView.snapshotView(afterScreenUpdates: false) {
-//                                    snapshot.frame = CGRect(origin: .zero, size: self.mainPreviewContainerView.bounds.size)
-//                                    self.additionalPreviewView.addSubview(snapshot)
-//                                    self.additionalPreviewSnapshotView = snapshot
-//                                }
-//                            }
-//                        } else {
                         if case .dualCamera = modeChange, self.cameraPosition == .front {
                             
                         } else {
@@ -1255,7 +1337,7 @@ public class CameraScreen: ViewController {
 
         func animateOut(completion: @escaping () -> Void) {
             self.camera.stopCapture(invalidate: true)
-                        
+                                    
             UIView.animate(withDuration: 0.25, animations: {
                 self.backgroundView.alpha = 0.0
             })
@@ -1293,6 +1375,9 @@ public class CameraScreen: ViewController {
         }
         
         func animateOutToEditor() {
+            self.cameraIsActive = false
+            self.requestUpdateLayout(hasAppeared: self.hasAppeared, transition: .immediate)
+            
             let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
             if let view = self.componentHost.findTaggedView(tag: cancelButtonTag) {
                 view.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2)
@@ -1324,6 +1409,9 @@ public class CameraScreen: ViewController {
                 self.previewBlurPromise.set(true)
             }
             self.camera.stopCapture()
+            
+            self.cameraIsActive = false
+            self.requestUpdateLayout(hasAppeared: self.hasAppeared, transition: .immediate)
         }
         
         func resumeCameraCapture() {
@@ -1355,12 +1443,18 @@ public class CameraScreen: ViewController {
                         self.previewBlurPromise.set(false)
                     }
                 }
+                
+                self.cameraIsActive = true
+                self.requestUpdateLayout(hasAppeared: self.hasAppeared, transition: .immediate)
             }
         }
         
         func animateInFromEditor(toGallery: Bool) {
             if !toGallery {
                 self.resumeCameraCapture()
+                
+                self.cameraIsActive = true
+                self.requestUpdateLayout(hasAppeared: self.hasAppeared, transition: .immediate)
                 
                 let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
                 if let view = self.componentHost.findTaggedView(tag: cancelButtonTag) {
@@ -1537,6 +1631,7 @@ public class CameraScreen: ViewController {
                         camera: self.camera,
                         updateState: self.updateState,
                         hasAppeared: self.hasAppeared,
+                        isVisible: self.cameraIsActive && !self.hasGallery,
                         panelWidth: panelWidth,
                         flipAnimationAction: self.flipAnimationAction,
                         animateShutter: { [weak self] in
@@ -1778,6 +1873,8 @@ public class CameraScreen: ViewController {
         
         self.dismissAllTooltips()
         
+        self.node.hasGallery = true
+        
         self.didStopCameraCapture = false
         let stopCameraCapture = { [weak self] in
             guard let self, !self.didStopCameraCapture else {
@@ -1825,7 +1922,8 @@ public class CameraScreen: ViewController {
                         self.completion(.single(.draft(draft)), resultTransition, dismissed)
                     }
                 }
-            }, dismissed: {
+            }, dismissed: { [weak self] in
+                self?.node.hasGallery = false
                 resumeCameraCapture()
             })
             self.galleryController = controller
