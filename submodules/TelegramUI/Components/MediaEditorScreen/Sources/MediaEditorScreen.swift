@@ -378,6 +378,7 @@ final class MediaEditorScreenComponent: Component {
             self.endEditing(true)
         }
         
+        private var animatingButtons = false
         enum TransitionAnimationSource {
             case camera
             case gallery
@@ -401,6 +402,7 @@ final class MediaEditorScreenComponent: Component {
             }
             
             if case .camera = source {
+                self.animatingButtons = true
                 var delay: Double = 0.0
                 for button in buttons {
                     if let view = button.view {
@@ -412,10 +414,12 @@ final class MediaEditorScreenComponent: Component {
                             view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, delay: 0.0)
                         })
                         delay += 0.03
-                        
-                        Queue.mainQueue().after(0.45, completion)
                     }
                 }
+                Queue.mainQueue().after(0.45, {
+                    self.animatingButtons = false
+                    completion()
+                })
                 
                 if let view = self.saveButton.view {
                     view.layer.animateAlpha(from: 0.0, to: view.alpha, duration: 0.2)
@@ -745,7 +749,9 @@ final class MediaEditorScreenComponent: Component {
                 }
                 transition.setPosition(view: drawButtonView, position: drawButtonFrame.center)
                 transition.setBounds(view: drawButtonView, bounds: CGRect(origin: .zero, size: drawButtonFrame.size))
-                transition.setAlpha(view: drawButtonView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
+                if !self.animatingButtons {
+                    transition.setAlpha(view: drawButtonView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
+                }
             }
             
             let textButtonSize = self.textButton.update(
@@ -772,7 +778,9 @@ final class MediaEditorScreenComponent: Component {
                 }
                 transition.setPosition(view: textButtonView, position: textButtonFrame.center)
                 transition.setBounds(view: textButtonView, bounds: CGRect(origin: .zero, size: textButtonFrame.size))
-                transition.setAlpha(view: textButtonView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
+                if !self.animatingButtons {
+                    transition.setAlpha(view: textButtonView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
+                }
             }
             
             let stickerButtonSize = self.stickerButton.update(
@@ -799,7 +807,9 @@ final class MediaEditorScreenComponent: Component {
                 }
                 transition.setPosition(view: stickerButtonView, position: stickerButtonFrame.center)
                 transition.setBounds(view: stickerButtonView, bounds: CGRect(origin: .zero, size: stickerButtonFrame.size))
-                transition.setAlpha(view: stickerButtonView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
+                if !self.animatingButtons {
+                    transition.setAlpha(view: stickerButtonView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
+                }
             }
             
             let toolsButtonSize = self.toolsButton.update(
@@ -826,7 +836,9 @@ final class MediaEditorScreenComponent: Component {
                 }
                 transition.setPosition(view: toolsButtonView, position: toolsButtonFrame.center)
                 transition.setBounds(view: toolsButtonView, bounds: CGRect(origin: .zero, size: toolsButtonFrame.size))
-                transition.setAlpha(view: toolsButtonView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
+                if !self.animatingButtons {
+                    transition.setAlpha(view: toolsButtonView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
+                }
             }
             
             var mediaEditor: MediaEditor?
@@ -876,7 +888,9 @@ final class MediaEditorScreenComponent: Component {
                         self.addSubview(scrubberView)
                     }
                     transition.setFrame(view: scrubberView, frame: scrubberFrame)
-                    transition.setAlpha(view: scrubberView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
+                    if !self.animatingButtons {
+                        transition.setAlpha(view: scrubberView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
+                    }
                 }
                 
                 scrubberBottomInset = scrubberSize.height + 10.0
@@ -1045,7 +1059,9 @@ final class MediaEditorScreenComponent: Component {
                 }
                 let isVisible = inputHeight > 44.0
                 transition.setFrame(view: inputPanelBackgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: isVisible ? availableSize.height - inputPanelBackgroundSize.height : availableSize.height), size: inputPanelBackgroundSize))
-                transition.setAlpha(view: inputPanelBackgroundView, alpha: isVisible ? 1.0 : 0.0, delay: isVisible ? 0.0 : 0.4)
+                if !self.animatingButtons {
+                    transition.setAlpha(view: inputPanelBackgroundView, alpha: isVisible ? 1.0 : 0.0, delay: isVisible ? 0.0 : 0.4)
+                }
             }
                   
             var isEditingTextEntity = false
@@ -1772,7 +1788,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 imageEntity.scale = 1.49
                 imageEntity.position = position.getPosition(storyDimensions)
                 self.entitiesView.add(imageEntity, announce: false)
-            } else if case let .video(_, _, additionalVideoPath, additionalVideoImage, _, position) = subject, let additionalVideoPath {
+            } else if case let .video(_, _, additionalVideoPath, additionalVideoImage, _, _, _, position) = subject, let additionalVideoPath {
                 let videoEntity = DrawingStickerEntity(content: .video(additionalVideoPath, additionalVideoImage))
                 videoEntity.referenceDrawingSize = storyDimensions
                 videoEntity.scale = 1.49
@@ -2133,7 +2149,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
                         view.animateIn(from: .camera, completion: completion)
                     }
-                    if let subject = self.subject, case let .video(_, transitionImage, _, _, _, _) = subject, let transitionImage {
+                    if let subject = self.subject, case let .video(_, transitionImage, _, _, _, _, _, _) = subject, let transitionImage {
                         self.setupTransitionImage(transitionImage)
                     }
                 case let .gallery(transitionIn):
@@ -2840,13 +2856,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     
     public enum Subject {
         case image(UIImage, PixelDimensions, UIImage?, PIPPosition)
-        case video(String, UIImage?, String?, UIImage?, PixelDimensions, PIPPosition)
+        case video(String, UIImage?, String?, UIImage?, PixelDimensions, Double, [(Bool, Double)], PIPPosition)
         case asset(PHAsset)
         case draft(MediaEditorDraft, Int64?)
         
         var dimensions: PixelDimensions {
             switch self {
-            case let .image(_, dimensions, _, _), let .video(_, _, _, _, dimensions, _):
+            case let .image(_, dimensions, _, _), let .video(_, _, _, _, dimensions, _, _, _):
                 return dimensions
             case let .asset(asset):
                 return PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight))
@@ -2859,8 +2875,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             switch self {
             case let .image(image, dimensions, _, _):
                 return .image(image, dimensions)
-            case let .video(videoPath, transitionImage, _, _, dimensions, _):
-                return .video(videoPath, transitionImage, dimensions)
+            case let .video(videoPath, transitionImage, _, _, dimensions, duration, _, _):
+                return .video(videoPath, transitionImage, dimensions, duration)
             case let .asset(asset):
                 return .asset(asset)
             case let .draft(draft, _):
@@ -2872,7 +2888,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             switch self {
             case let .image(image, dimensions, _, _):
                 return .image(image, dimensions)
-            case let .video(videoPath, _, _, _, dimensions, _):
+            case let .video(videoPath, _, _, _, dimensions, _, _, _):
                 return .video(videoPath, dimensions)
             case let .asset(asset):
                 return .asset(asset)
@@ -3311,7 +3327,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 switch subject {
                 case let .image(image, dimensions, _, _):
                     saveImageDraft(image, dimensions)
-                case let .video(path, _, _, _, dimensions, _):
+                case let .video(path, _, _, _, dimensions, _, _, _):
                     saveVideoDraft(path, dimensions, duration)
                 case let .asset(asset):
                     if asset.mediaType == .video {
@@ -3404,7 +3420,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 duration = 5.0
                 
                 firstFrame = .single(image)
-            case let .video(path, _, _, _, _, _):
+            case let .video(path, _, _, _, _, _, _, _):
                 videoResult = .videoFile(path: path)
                 if let videoTrimRange = mediaEditor.values.videoTrimRange {
                     duration = videoTrimRange.upperBound - videoTrimRange.lowerBound
@@ -3592,7 +3608,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             let exportSubject: Signal<MediaEditorVideoExport.Subject, NoError>
             switch subject {
-            case let .video(path, _, _, _, _, _):
+            case let .video(path, _, _, _, _, _, _, _):
                 let asset = AVURLAsset(url: NSURL(fileURLWithPath: path) as URL)
                 exportSubject = .single(.video(asset))
             case let .image(image, _, _, _):

@@ -2450,7 +2450,13 @@ public final class StoryItemSetContainerComponent: Component {
 //            if let source {
 //                subject = .single(.draft(source, Int64(id)))
 //            } else {
-            subject = fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: .story(peer: peerReference, id: item.id, media: item.media._asMedia()))
+            
+            var duration: Double?
+            let media = item.media._asMedia()
+            if let file = media as? TelegramMediaFile {
+                duration = file.duration
+            }
+            subject = fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: .story(peer: peerReference, id: item.id, media: media))
             |> mapToSignal { (value, isImage) -> Signal<MediaEditorScreen.Subject?, NoError> in
                 guard case let .data(data) = value, data.complete else {
                     return .complete()
@@ -2468,7 +2474,7 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                     return .single(nil)
                     |> then(
-                        .single(.video(symlinkPath, nil, nil, nil, PixelDimensions(width: 720, height: 1280), .bottomRight))
+                        .single(.video(symlinkPath, nil, nil, nil, PixelDimensions(width: 720, height: 1280), duration ?? 0.0, [], .bottomRight))
                         |> delay(0.1, queue: Queue.mainQueue())
                     )
                 }

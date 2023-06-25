@@ -305,8 +305,8 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         return nil
                     case let .image(image, additionalImage, pipPosition):
                         return .image(image, PixelDimensions(image.size), additionalImage, editorPIPPosition(pipPosition))
-                    case let .video(path, transitionImage, additionalPath, additionalTransitionImage, dimensions, pipPosition):
-                        return .video(path, transitionImage, additionalPath, additionalTransitionImage, dimensions, editorPIPPosition(pipPosition))
+                    case let .video(path, transitionImage, additionalPath, additionalTransitionImage, dimensions, duration, positionChangeTimestamps, pipPosition):
+                        return .video(path, transitionImage, additionalPath, additionalTransitionImage, dimensions, duration, positionChangeTimestamps, editorPIPPosition(pipPosition))
                     case let .asset(asset):
                         return .asset(asset)
                     case let .draft(draft):

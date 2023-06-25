@@ -10,8 +10,8 @@ import Vision
 import ImageBlur
 
 public class CameraSimplePreviewView: UIView {
-    static func lastStateImage() -> UIImage {
-        let imagePath = NSTemporaryDirectory() + "cameraImage.jpg"
+    static func lastBackImage() -> UIImage {
+        let imagePath = NSTemporaryDirectory() + "backCameraImage.jpg"
         if let data = try? Data(contentsOf: URL(fileURLWithPath: imagePath)), let image = UIImage(data: data) {
             return image
         } else {
@@ -19,15 +19,15 @@ public class CameraSimplePreviewView: UIView {
         }
     }
     
-    static func saveLastStateImage(_ image: UIImage) {
-        let imagePath = NSTemporaryDirectory() + "cameraImage.jpg"
+    static func saveLastBackImage(_ image: UIImage) {
+        let imagePath = NSTemporaryDirectory() + "backCameraImage.jpg"
         if let data = image.jpegData(compressionQuality: 0.6) {
             try? data.write(to: URL(fileURLWithPath: imagePath))
         }
     }
     
-    static func lastAdditionalStateImage() -> UIImage {
-        let imagePath = NSTemporaryDirectory() + "cameraImage2.jpg"
+    static func lastFrontImage() -> UIImage {
+        let imagePath = NSTemporaryDirectory() + "frontCameraImage.jpg"
         if let data = try? Data(contentsOf: URL(fileURLWithPath: imagePath)), let image = UIImage(data: data) {
             return image
         } else {
@@ -35,30 +35,25 @@ public class CameraSimplePreviewView: UIView {
         }
     }
     
-    static func saveAdditionalLastStateImage(_ image: UIImage) {
-        let imagePath = NSTemporaryDirectory() + "cameraImage2.jpg"
+    static func saveLastFrontImage(_ image: UIImage) {
+        let imagePath = NSTemporaryDirectory() + "frontCameraImage.jpg"
         if let data = image.jpegData(compressionQuality: 0.6) {
             try? data.write(to: URL(fileURLWithPath: imagePath))
         }
     }
-    
-    private let additional: Bool
-    
+        
     private var previewingDisposable: Disposable?
     private let placeholderView = UIImageView()
     
-    public init(frame: CGRect, additional: Bool) {
-        self.additional = additional
-        
+    public init(frame: CGRect, main: Bool) {
         super.init(frame: frame)
         
         self.videoPreviewLayer.videoGravity = .resizeAspectFill
         
         self.placeholderView.contentMode = .scaleAspectFill
-        self.placeholderView.image = additional ? CameraSimplePreviewView.lastAdditionalStateImage() : CameraSimplePreviewView.lastStateImage()
         self.addSubview(self.placeholderView)
         
-        if !additional {
+        if main {
             if #available(iOS 13.0, *) {
                 self.previewingDisposable = (self.isPreviewing
                 |> filter { $0 }
@@ -94,14 +89,11 @@ public class CameraSimplePreviewView: UIView {
         }
     }
     
-    public func resetPlaceholder() {
-        guard self.placeholderView.alpha == 0.0 else {
-            return
-        }
-        self.placeholderView.image = self.additional ? CameraSimplePreviewView.lastAdditionalStateImage() : CameraSimplePreviewView.lastStateImage()
+    public func resetPlaceholder(front: Bool) {
+        self.placeholderView.image = front ? CameraSimplePreviewView.lastFrontImage() : CameraSimplePreviewView.lastBackImage()
         self.placeholderView.alpha = 1.0
     }
-    
+        
     private var _videoPreviewLayer: AVCaptureVideoPreviewLayer?
     var videoPreviewLayer: AVCaptureVideoPreviewLayer {
         if let layer = self._videoPreviewLayer {

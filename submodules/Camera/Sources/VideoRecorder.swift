@@ -49,10 +49,12 @@ private final class VideoRecorderImpl {
     private var recordingStartSampleTime: CMTime = .invalid
     private var recordingStopSampleTime: CMTime = .invalid
     
+    private var positionChangeTimestamps: [(Camera.Position, CMTime)] = []
+    
     private let configuration: VideoRecorder.Configuration
     private let videoTransform: CGAffineTransform
     private let url: URL
-    fileprivate var completion: (Bool, UIImage?) -> Void = { _, _ in }
+    fileprivate var completion: (Bool, UIImage?, [(Camera.Position, CMTime)]?) -> Void = { _, _, _ in }
     
     private let error = Atomic<Error?>(value: nil)
     
@@ -81,6 +83,17 @@ private final class VideoRecorderImpl {
     public func start() {
         self.queue.async {
             self.recordingStartSampleTime = CMTime(seconds: CACurrentMediaTime(), preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+        }
+    }
+    
+    public func markPositionChange(position: Camera.Position) {
+        self.queue.async {
+            guard self.recordingStartSampleTime.isValid else {
+                return
+            }
+            let currentTime = CMTime(seconds: CACurrentMediaTime(), preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+            let delta = currentTime - self.recordingStartSampleTime
+            self.positionChangeTimestamps.append((position, delta))
         }
     }
         
@@ -291,21 +304,21 @@ private final class VideoRecorderImpl {
             let completion = self.completion
             if self.recordingStopSampleTime == .invalid {
                 DispatchQueue.main.async {
-                    completion(false, nil)
+                    completion(false, nil, nil)
                 }
                 return
             }
                         
             if let _ = self.error.with({ $0 }) {
                 DispatchQueue.main.async {
-                    completion(false, nil)
+                    completion(false, nil, nil)
                 }
                 return
             }
             
             if !self.tryAppendingPendingAudioBuffers() {
                 DispatchQueue.main.async {
-                    completion(false, nil)
+                    completion(false, nil, nil)
                 }
                 return
             }
@@ -314,21 +327,21 @@ private final class VideoRecorderImpl {
                 self.assetWriter.finishWriting {
                     if let _ = self.assetWriter.error {
                         DispatchQueue.main.async {
-                            completion(false, nil)
+                            completion(false, nil, nil)
                         }
                     } else {
                         DispatchQueue.main.async {
-                            completion(true, self.transitionImage)
+                            completion(true, self.transitionImage, self.positionChangeTimestamps)
                         }
                     }
                 }
             } else if let _ = self.assetWriter.error {
                 DispatchQueue.main.async {
-                    completion(false, nil)
+                    completion(false, nil, nil)
                 }
             } else {
                 DispatchQueue.main.async {
-                    completion(false, nil)
+                    completion(false, nil, nil)
                 }
             }
         }
@@ -407,7 +420,7 @@ public final class VideoRecorder {
             case generic
         }
         
-        case success(UIImage?)
+        case success(UIImage?, Double, [(Camera.Position, Double)])
         case initError(Error)
         case writeError(Error)
         case finishError(Error)
@@ -448,10 +461,17 @@ public final class VideoRecorder {
             return nil
         }
         self.impl = impl
-        impl.completion = { [weak self] result, transitionImage in
+        impl.completion = { [weak self] result, transitionImage, positionChangeTimestamps in
             if let self {
+                let duration = self.duration ?? 0.0
                 if result {
-                    self.completion(.success(transitionImage))
+                    var timestamps: [(Camera.Position, Double)] = []
+                    if let positionChangeTimestamps {
+                        for (position, time) in positionChangeTimestamps {
+                            timestamps.append((position, time.seconds))
+                        }
+                    }
+                    self.completion(.success(transitionImage, duration, timestamps))
                 } else {
                     self.completion(.finishError(.generic))
                 }
@@ -465,6 +485,10 @@ public final class VideoRecorder {
     
     func stop() {
         self.impl.stopRecording()
+    }
+    
+    func markPositionChange(position: Camera.Position) {
+        self.impl.markPositionChange(position: position)
     }
     
     func appendSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
