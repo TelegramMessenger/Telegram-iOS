@@ -26,6 +26,7 @@ import AppBundle
 import InvisibleInkDustNode
 import MediaPickerUI
 import StoryContainerScreen
+import EmptyStateIndicatorComponent
 
 private let mediaBadgeBackgroundColor = UIColor(white: 0.0, alpha: 0.6)
 private let mediaBadgeTextColor = UIColor.white
@@ -892,6 +893,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private weak var pendingOpenListContext: PeerStoryListContentContextImpl?
     
     private var preloadArchiveListContext: PeerStoryListContext?
+    
+    private var emptyStateView: ComponentView<Empty>?
         
     public init(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, contentType: ContentType, captureProtected: Bool, isSaved: Bool, isArchive: Bool, navigationController: @escaping () -> NavigationController?, listContext: PeerStoryListContext?) {
         self.context = context
@@ -1863,6 +1866,42 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         self.currentParams = (size, topInset, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
 
         transition.updateFrame(node: self.contextGestureContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
+        
+        if let items = self.items, items.items.isEmpty {
+            let emptyStateView: ComponentView<Empty>
+            var emptyStateTransition = Transition(transition)
+            if let current = self.emptyStateView {
+                emptyStateView = current
+            } else {
+                emptyStateTransition = .immediate
+                emptyStateView = ComponentView()
+                self.emptyStateView = emptyStateView
+            }
+            let emptyStateSize = emptyStateView.update(
+                transition: emptyStateTransition,
+                component: AnyComponent(EmptyStateIndicatorComponent(
+                    context: self.context,
+                    theme: presentationData.theme,
+                    animationName: "",
+                    title: "No saved stories",
+                    text: "Open the Archive to select stories you want to be displayed in your profile.",
+                    action: {
+                        
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: size.width, height: size.height - topInset - bottomInset)
+            )
+            if let emptyStateComponentView = emptyStateView.view {
+                if emptyStateComponentView.superview == nil {
+                    self.view.addSubview(emptyStateComponentView)
+                }
+                emptyStateTransition.setFrame(view: emptyStateComponentView, frame: CGRect(origin: CGPoint(x: floor((size.width - emptyStateSize.width) * 0.5), y: topInset), size: emptyStateSize))
+            }
+        } else if let emptyStateView = self.emptyStateView {
+            self.emptyStateView = nil
+            emptyStateView.view?.removeFromSuperview()
+        }
 
         transition.updateFrame(node: self.itemGrid, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
         if let items = self.items {
