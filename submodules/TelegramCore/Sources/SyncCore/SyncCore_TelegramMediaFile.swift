@@ -188,6 +188,7 @@ public struct TelegramMediaVideoFlags: OptionSet {
     
     public static let instantRoundVideo = TelegramMediaVideoFlags(rawValue: 1 << 0)
     public static let supportsStreaming = TelegramMediaVideoFlags(rawValue: 1 << 1)
+    public static let isSilent = TelegramMediaVideoFlags(rawValue: 1 << 3)
 }
 
 public struct StickerMaskCoords: PostboxCoding, Equatable {

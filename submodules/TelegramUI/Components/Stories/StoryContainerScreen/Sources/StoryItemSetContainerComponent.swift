@@ -969,6 +969,22 @@ public final class StoryItemSetContainerComponent: Component {
             return false
         }
         
+        func activateInputWhileDragging() -> (() -> Void)? {
+            guard let component = self.component else {
+                return nil
+            }
+            if component.slice.peer.id == component.context.account.peerId {
+            } else {
+                if let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View {
+                    return { [weak inputPanelView] in
+                        inputPanelView?.activateInput()
+                    }
+                }
+            }
+            
+            return nil
+        }
+        
         func animateIn(transitionIn: StoryContainerScreen.TransitionIn) {
             self.closeButton.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2, delay: 0.12, timingFunction: kCAMediaTimingFunctionSpring)
             

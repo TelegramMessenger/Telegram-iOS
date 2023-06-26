@@ -105,6 +105,9 @@ func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAtt
                 if (flags & (1 << 1)) != 0 {
                     videoFlags.insert(.supportsStreaming)
                 }
+                if (flags & (1 << 3)) != 0 {
+                    videoFlags.insert(.isSilent)
+                }
                 result.append(.Video(duration: Double(duration), size: PixelDimensions(width: w, height: h), flags: videoFlags, preloadSize: preloadSize))
             case let .documentAttributeAudio(flags, duration, title, performer, waveform):
                 let isVoice = (flags & (1 << 10)) != 0
