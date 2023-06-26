@@ -195,7 +195,18 @@ public final class StoryPeerListComponent: Component {
         }
         
         func frame(at index: Int) -> CGRect {
-            return CGRect(origin: CGPoint(x: self.containerInsets.left + (self.itemSize.width + self.itemSpacing) * CGFloat(index), y: self.containerInsets.top), size: self.itemSize)
+            if self.itemCount <= 1 {
+                return CGRect(origin: CGPoint(x: floor((self.containerSize.width - self.itemSize.width) * 0.5), y: self.containerInsets.top), size: self.itemSize)
+            } else if self.contentSize.width < self.containerSize.width {
+                let usableWidth = self.containerSize.width - self.containerInsets.left - self.containerInsets.right
+                let usableSpacingWidth = usableWidth - self.itemSize.width * CGFloat(self.itemCount)
+                
+                var spacing = floor(usableSpacingWidth / CGFloat(self.itemCount + 1))
+                spacing = min(120.0, spacing)
+                return CGRect(origin: CGPoint(x: self.containerInsets.left + spacing + (self.itemSize.width + spacing) * CGFloat(index), y: self.containerInsets.top), size: self.itemSize)
+            } else {
+                return CGRect(origin: CGPoint(x: self.containerInsets.left + (self.itemSize.width + self.itemSpacing) * CGFloat(index), y: self.containerInsets.top), size: self.itemSize)
+            }
         }
     }
     
@@ -432,11 +443,6 @@ public final class StoryPeerListComponent: Component {
                 var sideAlphaFraction: CGFloat
             }
             
-            /*let calculateCollapedFraction: (CGFloat) -> CGFloat = { t in
-                let offset = scrollingRubberBandingOffset(offset: (1.0 - t) * 94.0, bandingStart: 0.0, range: 400.0, coefficient: 0.4)
-                return 1.0 - max(0.0, min(1.0, offset / 94.0))
-            }*/
-            
             let targetExpandedFraction = component.collapseFraction
             
             let targetFraction: CGFloat = component.collapseFraction
@@ -504,7 +510,7 @@ public final class StoryPeerListComponent: Component {
                 var rawProgress = CGFloat((timestamp - animationState.startTime) / animationState.duration)
                 rawProgress = max(0.0, min(1.0, rawProgress))
                 
-                if !animationState.fromIsUnlocked && animationState.bounce {
+                if !animationState.fromIsUnlocked && animationState.bounce && itemLayout.itemCount > 3 {
                     expandBoundsFraction = animationState.interpolatedFraction(at: timestamp, effectiveFromFraction: 1.0, toFraction: 0.0)
                 } else {
                     expandBoundsFraction = 0.0
@@ -519,15 +525,6 @@ public final class StoryPeerListComponent: Component {
                 )
                 expandBoundsFraction = 0.0
             }
-            
-            let defaultCollapsedTitleOffset = floor((itemLayout.containerSize.width - component.titleContentWidth) * 0.5)
-            let targetCollapsedTitleOffset: CGFloat = collapsedContentOrigin + collapsedContentWidth + titleContentSpacing
-            let collapsedTitleOffset = targetCollapsedTitleOffset - defaultCollapsedTitleOffset
-            
-            let titleMinContentOffset: CGFloat = collapsedTitleOffset.interpolate(to: collapsedTitleOffset + 12.0, amount: collapsedState.minFraction)
-            let titleContentOffset: CGFloat = titleMinContentOffset.interpolate(to: 0.0 as CGFloat, amount: collapsedState.maxFraction)
-            
-            component.updateTitleContentOffset(titleContentOffset, transition)
             
             self.currentFraction = collapsedState.globalFraction
             
@@ -556,12 +553,14 @@ public final class StoryPeerListComponent: Component {
                 
                 var collapsedMaxItemFrame = collapsedItemFrame
                 
-                var collapseDistance: CGFloat = CGFloat(i - collapseStartIndex) / CGFloat(collapseEndIndex - collapseStartIndex)
-                collapseDistance = max(0.0, min(1.0, collapseDistance))
-                collapsedMaxItemFrame.origin.x -= collapsedState.minFraction * 4.0
-                collapsedMaxItemFrame.origin.x += collapseDistance * 20.0
-                collapsedMaxItemFrame.origin.y += collapseDistance * 20.0
-                collapsedMaxItemFrame.origin.y += collapsedState.minFraction * 10.0
+                if itemLayout.itemCount > 1 {
+                    var collapseDistance: CGFloat = CGFloat(i - collapseStartIndex) / CGFloat(collapseEndIndex - collapseStartIndex)
+                    collapseDistance = max(0.0, min(1.0, collapseDistance))
+                    collapsedMaxItemFrame.origin.x -= collapsedState.minFraction * 4.0
+                    collapsedMaxItemFrame.origin.x += collapseDistance * 20.0
+                    collapsedMaxItemFrame.origin.y += collapseDistance * 20.0
+                    collapsedMaxItemFrame.origin.y += collapsedState.minFraction * 10.0
+                }
                 
                 let minimizedItemScale: CGFloat = 24.0 / 52.0
                 let minimizedMaxItemScale: CGFloat = (24.0 + 4.0) / 52.0
@@ -654,6 +653,11 @@ public final class StoryPeerListComponent: Component {
                 
                 var itemAlpha: CGFloat = 1.0
                 var isCollapsable: Bool = false
+                var itemScale = measuredItem.itemScale
+                if itemLayout.itemCount == 1 {
+                    let singleScaleFactor = min(1.0, collapsedState.minFraction + collapsedState.maxFraction)
+                    itemScale = 0.001 * (1.0 - singleScaleFactor) + itemScale * singleScaleFactor
+                }
                 
                 if i >= collapseStartIndex && i <= collapseEndIndex {
                     isCollapsable = true
@@ -665,7 +669,11 @@ public final class StoryPeerListComponent: Component {
                         rightItemFrame = calculateItem(i + 1).itemFrame
                     }
                 } else {
-                    itemAlpha = collapsedState.sideAlphaFraction
+                    if itemLayout.itemCount == 1 {
+                        itemAlpha = min(1.0, (collapsedState.minFraction + collapsedState.maxFraction) * 4.0)
+                    } else {
+                        itemAlpha = collapsedState.sideAlphaFraction
+                    }
                 }
                 
                 var leftNeighborDistance: CGPoint?
@@ -690,7 +698,7 @@ public final class StoryPeerListComponent: Component {
                         hasItems: hasItems,
                         ringAnimation: itemRingAnimation,
                         collapseFraction: isReallyVisible ? (1.0 - collapsedState.maxFraction) : 0.0,
-                        scale: measuredItem.itemScale,
+                        scale: itemScale,
                         collapsedWidth: collapsedItemWidth,
                         expandedAlphaFraction: collapsedState.sideAlphaFraction,
                         leftNeighborDistance: leftNeighborDistance,
@@ -751,6 +759,21 @@ public final class StoryPeerListComponent: Component {
             }
             
             transition.setFrame(view: self.collapsedButton, frame: CGRect(origin: CGPoint(x: collapsedContentOrigin - 4.0, y: 6.0 - 59.0), size: CGSize(width: collapsedContentWidth + 4.0, height: 44.0)))
+            
+            let defaultCollapsedTitleOffset = floor((itemLayout.containerSize.width - component.titleContentWidth) * 0.5)
+            
+            var targetCollapsedTitleOffset: CGFloat = collapsedContentOrigin + collapsedContentWidth + titleContentSpacing
+            if itemLayout.itemCount == 1 && collapsedContentWidth <= 0.1 {
+                let singleScaleFactor = min(1.0, collapsedState.minFraction)
+                targetCollapsedTitleOffset += singleScaleFactor * calculateItem(0).itemScale * (itemLayout.itemSize.width + 4.0)
+            }
+            
+            let collapsedTitleOffset = targetCollapsedTitleOffset - defaultCollapsedTitleOffset
+            
+            let titleMinContentOffset: CGFloat = collapsedTitleOffset.interpolate(to: collapsedTitleOffset + 12.0, amount: collapsedState.minFraction)
+            let titleContentOffset: CGFloat = titleMinContentOffset.interpolate(to: 0.0 as CGFloat, amount: collapsedState.maxFraction)
+            
+            component.updateTitleContentOffset(titleContentOffset, transition)
         }
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

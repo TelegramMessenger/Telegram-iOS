@@ -665,7 +665,7 @@ public final class StoryPeerListItemComponent: Component {
                     }
                 } else {
                     if component.theme.overallDarkAppearance {
-                        colors = [UIColor(rgb: 0x48484A).cgColor, UIColor(rgb: 0x48484A).cgColor]
+                        colors = [component.theme.rootController.tabBar.textColor.cgColor, component.theme.rootController.tabBar.textColor.cgColor]
                     } else {
                         colors = [UIColor(rgb: 0xD8D8E1).cgColor, UIColor(rgb: 0xD8D8E1).cgColor]
                     }
