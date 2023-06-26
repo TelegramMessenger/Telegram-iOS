@@ -36,6 +36,7 @@ swift_library(
         "//submodules/InvisibleInkDustNode",
         "//submodules/MediaPickerUI",
         "//submodules/TelegramUI/Components/Stories/StoryContainerScreen",
+        "//submodules/TelegramUI/Components/EmptyStateIndicatorComponent",
     ],
     visibility = [
         "//visibility:public",
