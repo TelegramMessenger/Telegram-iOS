@@ -42,6 +42,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ChatListTitleView",
         "//submodules/TelegramUI/Components/ChatListHeaderComponent",
         "//submodules/ComponentFlow",
+        "//submodules/UndoUI",
     ],
     visibility = [
         "//visibility:public",
