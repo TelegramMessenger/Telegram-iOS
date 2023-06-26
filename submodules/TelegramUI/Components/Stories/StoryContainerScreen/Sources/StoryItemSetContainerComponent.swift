@@ -30,6 +30,7 @@ import LocalMediaResources
 import SaveToCameraRoll
 import BundleIconComponent
 import PeerListItemComponent
+import PremiumUI
 
 public final class StoryItemSetContainerComponent: Component {
     public final class ExternalState {
@@ -2550,6 +2551,32 @@ public final class StoryItemSetContainerComponent: Component {
                                 }
                             })
                         })
+                    }
+                    
+                    reactionContextNode.premiumReactionsSelected = { [weak self] file in
+                        guard let self, let file, let component = self.component else {
+                            return
+                        }
+                        
+                        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                        let undoController = UndoOverlayController(presentationData: presentationData, content: .sticker(context: component.context, file: file, loop: true, title: nil, text: presentationData.strings.Chat_PremiumReactionToastTitle, undoText: presentationData.strings.Chat_PremiumReactionToastAction, customAction: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            
+                            let context = component.context
+                            var replaceImpl: ((ViewController) -> Void)?
+                            let controller = PremiumDemoScreen(context: context, subject: .uniqueReactions, action: {
+                                let controller = PremiumIntroScreen(context: context, source: .reactions)
+                                replaceImpl?(controller)
+                            })
+                            replaceImpl = { [weak controller] c in
+                                controller?.replace(with: c)
+                            }
+                            component.controller()?.push(controller)
+                        }), elevatedLayout: false, animateInAsReplacement: false, action: { _ in true })
+                        //strongSelf.currentUndoController = undoController
+                        component.controller()?.present(undoController, in: .current)
                     }
                 }
                 
