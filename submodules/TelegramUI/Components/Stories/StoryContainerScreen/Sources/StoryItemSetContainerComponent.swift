@@ -2048,7 +2048,7 @@ public final class StoryItemSetContainerComponent: Component {
             let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: component.containerInsets.top - (contentSize.height - contentVisualHeight) * 0.5), size: contentSize)
             
             let itemLayout = ItemLayout(
-                size: availableSize,
+                size: contentFrame.size,
                 contentFrame: contentFrame,
                 contentVisualScale: contentVisualScale
             )

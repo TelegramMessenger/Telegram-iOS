@@ -84,7 +84,15 @@ private let dualButtonTag = GenericComponentViewTag()
 private final class CameraScreenComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
+    final class ExternalState {
+        fileprivate(set) var isRecording: Bool = false
+        
+        public init() {
+        }
+    }
+    
     let context: AccountContext
+    let externalState: ExternalState
     let camera: Camera
     let updateState: ActionSlot<CameraState>
     let hasAppeared: Bool
@@ -98,6 +106,7 @@ private final class CameraScreenComponent: CombinedComponent {
     
     init(
         context: AccountContext,
+        externalState: ExternalState,
         camera: Camera,
         updateState: ActionSlot<CameraState>,
         hasAppeared: Bool,
@@ -110,6 +119,7 @@ private final class CameraScreenComponent: CombinedComponent {
         completion: ActionSlot<Signal<CameraScreen.Result, NoError>>
     ) {
         self.context = context
+        self.externalState = externalState
         self.camera = camera
         self.updateState = updateState
         self.hasAppeared = hasAppeared
@@ -447,6 +457,8 @@ private final class CameraScreenComponent: CombinedComponent {
             
             state.volumeButtonsListenerActive = component.hasAppeared && component.isVisible
 
+            component.externalState.isRecording = state.cameraState.recording != .none
+            
             let isTablet: Bool
             if case .regular = environment.metrics.widthClass {
                 isTablet = true
@@ -951,6 +963,7 @@ public class CameraScreen: ViewController {
 
         fileprivate let backgroundView: UIView
         fileprivate let containerView: UIView
+        private let componentExternalState = CameraScreenComponent.ExternalState()
         fileprivate let componentHost: ComponentView<ViewControllerComponentContainer.Environment>
         private let previewContainerView: UIView
         
@@ -1248,7 +1261,7 @@ public class CameraScreen: ViewController {
             case .began:
                 break
             case .changed:
-                if !"".isEmpty {
+                if self.componentExternalState.isRecording {
                     
                 } else {
                     if translation.x < -10.0 || self.isDismissing {
@@ -1628,6 +1641,7 @@ public class CameraScreen: ViewController {
                 component: AnyComponent(
                     CameraScreenComponent(
                         context: self.context,
+                        externalState: self.componentExternalState,
                         camera: self.camera,
                         updateState: self.updateState,
                         hasAppeared: self.hasAppeared,

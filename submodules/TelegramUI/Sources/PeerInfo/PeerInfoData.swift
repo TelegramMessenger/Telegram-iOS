@@ -187,7 +187,6 @@ final class PeerInfoScreenData {
     let peerNotificationSettings: TelegramPeerNotificationSettings?
     let threadNotificationSettings: TelegramPeerNotificationSettings?
     let globalNotificationSettings: EngineGlobalNotificationSettings?
-    let isContact: Bool
     let availablePanes: [PeerInfoPaneKey]
     let groupsInCommon: GroupsInCommonContext?
     let linkedDiscussionPeer: Peer?
@@ -201,6 +200,17 @@ final class PeerInfoScreenData {
     let threadData: MessageHistoryThreadData?
     let appConfiguration: AppConfiguration?
     let isPowerSavingEnabled: Bool?
+    
+    let _isContact: Bool
+    var forceIsContact: Bool = false
+
+    var isContact: Bool {
+        if self.forceIsContact {
+            return true
+        } else {
+            return self._isContact
+        }
+    }
     
     init(
         peer: Peer?,
@@ -232,7 +242,7 @@ final class PeerInfoScreenData {
         self.peerNotificationSettings = peerNotificationSettings
         self.threadNotificationSettings = threadNotificationSettings
         self.globalNotificationSettings = globalNotificationSettings
-        self.isContact = isContact
+        self._isContact = isContact
         self.availablePanes = availablePanes
         self.groupsInCommon = groupsInCommon
         self.linkedDiscussionPeer = linkedDiscussionPeer
