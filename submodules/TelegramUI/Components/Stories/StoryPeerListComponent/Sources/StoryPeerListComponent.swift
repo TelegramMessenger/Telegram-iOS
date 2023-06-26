@@ -814,7 +814,7 @@ public final class StoryPeerListComponent: Component {
                     let scrollingDistance = self.scrollView.bounds.minX
                     self.scrollView.bounds = CGRect(origin: CGPoint(), size: self.scrollView.bounds.size)
                     let tempTransition = Transition(animation: .curve(duration: 0.3, curve: .spring))
-                    self.updateScrolling(transition: tempTransition, keepVisibleUntilCompletion: true)
+                    self.updateScrolling(transition: transition, keepVisibleUntilCompletion: true)
                     tempTransition.animateBoundsOrigin(view: self.scrollView, from: CGPoint(x: scrollingDistance, y: 0.0), to: CGPoint(), additive: true)
                     
                     self.ignoreScrolling = false
