@@ -182,16 +182,16 @@ public final class StoryItemSetContainerComponent: Component {
     }
     
     struct ItemLayout {
-        var size: CGSize
+        var containerSize: CGSize
         var contentFrame: CGRect
         var contentVisualScale: CGFloat
         
         init(
-            size: CGSize,
+            containerSize: CGSize,
             contentFrame: CGRect,
             contentVisualScale: CGFloat
         ) {
-            self.size = size
+            self.containerSize = containerSize
             self.contentFrame = contentFrame
             self.contentVisualScale = contentVisualScale
         }
@@ -567,7 +567,7 @@ public final class StoryItemSetContainerComponent: Component {
                     let point = recognizer.location(in: self)
                     
                     var direction: NavigationDirection?
-                    if point.x < itemLayout.size.width * 0.25 {
+                    if point.x < itemLayout.containerSize.width * 0.25 {
                         direction = .previous
                     } else {
                         direction = .next
@@ -670,7 +670,7 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 
                 self.scrollingCenterX = leftWidth
-                self.scroller.contentSize = CGSize(width: leftWidth + itemLayout.size.width + rightWidth, height: 1.0)
+                self.scroller.contentSize = CGSize(width: leftWidth + itemLayout.containerSize.width + rightWidth, height: 1.0)
                 
                 if !self.initializedOffset {
                     self.initializedOffset = true
@@ -862,7 +862,7 @@ public final class StoryItemSetContainerComponent: Component {
                         environment: {
                             itemEnvironment
                         },
-                        containerSize: itemLayout.size
+                        containerSize: itemLayout.contentFrame.size
                     )
                     if let view = visibleItem.view.view {
                         if visibleItem.contentContainerView.superview == nil {
@@ -2048,7 +2048,7 @@ public final class StoryItemSetContainerComponent: Component {
             let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: component.containerInsets.top - (contentSize.height - contentVisualHeight) * 0.5), size: contentSize)
             
             let itemLayout = ItemLayout(
-                size: contentFrame.size,
+                containerSize: availableSize,
                 contentFrame: contentFrame,
                 contentVisualScale: contentVisualScale
             )

@@ -487,9 +487,16 @@ final class StoryItemContentComponent: Component {
                 }
                 
                 if let dimensions {
+                    var imageSize = dimensions.aspectFilled(availableSize)
+                    if imageSize.width < availableSize.width && imageSize.width >= availableSize.width - 5.0 {
+                        imageSize.width = availableSize.width
+                    }
+                    if imageSize.height < availableSize.height && imageSize.height >= availableSize.height - 5.0 {
+                        imageSize.height = availableSize.height
+                    }
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(
                         corners: ImageCorners(),
-                        imageSize: dimensions.aspectFilled(availableSize),
+                        imageSize: imageSize,
                         boundingSize: availableSize,
                         intrinsicInsets: UIEdgeInsets()
                     ))
