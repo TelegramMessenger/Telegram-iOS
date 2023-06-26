@@ -3713,7 +3713,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 searchContentNode.placeholderNode.frame = previousFrame
             }
             
+            self.chatListDisplayNode.tempAllowAvatarExpansion = true
             self.requestLayout(transition: .animated(duration: 0.5, curve: .spring))
+            self.chatListDisplayNode.tempAllowAvatarExpansion = false
             
             //TODO:swap tabs
             

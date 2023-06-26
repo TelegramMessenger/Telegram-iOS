@@ -256,10 +256,6 @@ public final class StoryItemSetContainerComponent: Component {
         override func touchesShouldCancel(in view: UIView) -> Bool {
             return true
         }
-
-        /*@objc func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-            return false
-        }*/
     }
     
     public final class View: UIView, UIScrollViewDelegate, UIGestureRecognizerDelegate {

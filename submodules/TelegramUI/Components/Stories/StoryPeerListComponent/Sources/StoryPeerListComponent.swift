@@ -251,12 +251,15 @@ public final class StoryPeerListComponent: Component {
     public final class View: UIView, UIScrollViewDelegate {
         private let collapsedButton: HighlightableButton
         private let scrollView: ScrollView
+        private let scrollContainerView: UIView
         
         private var ignoreScrolling: Bool = false
         private var itemLayout: ItemLayout?
         
         private var sortedItems: [EngineStorySubscriptions.Item] = []
+        
         private var visibleItems: [EnginePeer.Id: VisibleItem] = [:]
+        private var visibleCollapsableItems: [EnginePeer.Id: VisibleItem] = [:]
         
         private var component: StoryPeerListComponent?
         private weak var state: EmptyComponentState?
@@ -286,10 +289,15 @@ public final class StoryPeerListComponent: Component {
             self.scrollView.alwaysBounceHorizontal = true
             self.scrollView.clipsToBounds = false
             
+            self.scrollContainerView = UIView()
+            
             super.init(frame: frame)
             
             self.scrollView.delegate = self
+            self.scrollView.alpha = 0.0
+            self.scrollContainerView.addGestureRecognizer(self.scrollView.panGestureRecognizer)
             self.addSubview(self.scrollView)
+            self.addSubview(self.scrollContainerView)
             self.addSubview(self.collapsedButton)
             
             self.collapsedButton.highligthedChanged = { [weak self] highlighted in
@@ -384,11 +392,11 @@ public final class StoryPeerListComponent: Component {
         
         public func scrollViewDidScroll(_ scrollView: UIScrollView) {
             if !self.ignoreScrolling {
-                self.updateScrolling(transition: .immediate, keepVisibleUntilCompletion: false)
+                self.updateScrolling(transition: .immediate)
             }
         }
                 
-        private func updateScrolling(transition: Transition, keepVisibleUntilCompletion: Bool) {
+        private func updateScrolling(transition: Transition) {
             guard let component = self.component, let itemLayout = self.itemLayout else {
                 return
             }
@@ -433,6 +441,11 @@ public final class StoryPeerListComponent: Component {
             let centralContentWidth: CGFloat = collapsedContentWidth + combinedTitleContentWidth
             collapsedContentOrigin = floor((itemLayout.containerSize.width - centralContentWidth) * 0.5)
             collapsedContentOrigin = min(collapsedContentOrigin, component.maxTitleX - centralContentWidth - 4.0)
+            var collapsedContentOriginOffset: CGFloat = 0.0
+            if itemLayout.itemCount == 1 && collapsedContentWidth <= 0.1 {
+                collapsedContentOriginOffset = 4.0
+            }
+            collapsedContentOrigin -= collapsedContentOriginOffset
             collapsedItemOffsetY = -59.0
             
             struct CollapseState {
@@ -533,28 +546,41 @@ public final class StoryPeerListComponent: Component {
             let effectiveVisibleBounds = self.scrollView.bounds
             let visibleBounds = effectiveVisibleBounds.insetBy(dx: -200.0, dy: 0.0)
             
+            var effectiveFirstVisibleIndex = 0
+            for i in 0 ..< self.sortedItems.count {
+                let regularItemFrame = itemLayout.frame(at: i)
+                let isReallyVisible = effectiveVisibleBounds.intersects(regularItemFrame)
+                if isReallyVisible {
+                    effectiveFirstVisibleIndex = i
+                    break
+                }
+            }
+            
             struct MeasuredItem {
                 var itemFrame: CGRect
                 var itemScale: CGFloat
             }
-            let calculateItem: (Int) -> MeasuredItem = { i in
-                let regularItemFrame = itemLayout.frame(at: i)
+            let calculateItem: (Int) -> MeasuredItem = { index in
+                let frameIndex = index
+                let regularItemFrame = itemLayout.frame(at: frameIndex)
                 let isReallyVisible = effectiveVisibleBounds.intersects(regularItemFrame)
                 
+                let collapseIndex = index - effectiveFirstVisibleIndex
+                
                 let collapsedItemX: CGFloat
-                if i < collapseStartIndex {
+                if collapseIndex < collapseStartIndex {
                     collapsedItemX = collapsedContentOrigin
-                } else if i > collapseEndIndex {
+                } else if collapseIndex > collapseEndIndex {
                     collapsedItemX = collapsedContentOrigin + CGFloat(collapseEndIndex) * collapsedItemDistance - collapsedItemWidth * 0.5
                 } else {
-                    collapsedItemX = collapsedContentOrigin + CGFloat(i - collapseStartIndex) * collapsedItemDistance
+                    collapsedItemX = collapsedContentOrigin + CGFloat(collapseIndex - collapseStartIndex) * collapsedItemDistance
                 }
                 let collapsedItemFrame = CGRect(origin: CGPoint(x: collapsedItemX, y: regularItemFrame.minY + collapsedItemOffsetY), size: CGSize(width: collapsedItemWidth, height: regularItemFrame.height))
                 
                 var collapsedMaxItemFrame = collapsedItemFrame
                 
                 if itemLayout.itemCount > 1 {
-                    var collapseDistance: CGFloat = CGFloat(i - collapseStartIndex) / CGFloat(collapseEndIndex - collapseStartIndex)
+                    var collapseDistance: CGFloat = CGFloat(collapseIndex - collapseStartIndex) / CGFloat(collapseEndIndex - collapseStartIndex)
                     collapseDistance = max(0.0, min(1.0, collapseDistance))
                     collapsedMaxItemFrame.origin.x -= collapsedState.minFraction * 4.0
                     collapsedMaxItemFrame.origin.x += collapseDistance * 20.0
@@ -573,11 +599,12 @@ public final class StoryPeerListComponent: Component {
                 let itemFrame: CGRect
                 if isReallyVisible {
                     var adjustedRegularFrame = regularItemFrame
-                    if i < collapseStartIndex {
-                        adjustedRegularFrame = adjustedRegularFrame.interpolate(to: itemLayout.frame(at: collapseStartIndex), amount: 0.0)
-                    } else if i > collapseEndIndex {
-                        adjustedRegularFrame = adjustedRegularFrame.interpolate(to: itemLayout.frame(at: collapseEndIndex), amount: 0.0)
+                    if index < collapseStartIndex {
+                        adjustedRegularFrame = adjustedRegularFrame.interpolate(to: itemLayout.frame(at: effectiveFirstVisibleIndex + collapseStartIndex), amount: 0.0)
+                    } else if index > collapseEndIndex {
+                        adjustedRegularFrame = adjustedRegularFrame.interpolate(to: itemLayout.frame(at: effectiveFirstVisibleIndex + collapseEndIndex), amount: 0.0)
                     }
+                    adjustedRegularFrame.origin.x -= effectiveVisibleBounds.minX
                     
                     let collapsedItemPosition: CGPoint = collapsedItemFrame.center.interpolate(to: collapsedMaxItemFrame.center, amount: collapsedState.minFraction)
                     
@@ -587,13 +614,11 @@ public final class StoryPeerListComponent: Component {
                     bounceOffsetFraction = max(-1.0, min(1.0, bounceOffsetFraction))
                     itemPosition.x += min(10.0, expandBoundsFraction * collapsedState.maxFraction * 1200.0) * bounceOffsetFraction
                     
-                    //let itemPosition = solveParabolicMotion(from: collapsedItemPosition, to: adjustedRegularFrame.center, progress: collapsedState.maxFraction)
-                    
                     let itemSize = CGSize(width: adjustedRegularFrame.width * itemScale, height: adjustedRegularFrame.height)
                     
                     itemFrame = itemSize.centered(around: itemPosition)
                 } else {
-                    itemFrame = regularItemFrame
+                    itemFrame = regularItemFrame.offsetBy(dx: -effectiveVisibleBounds.minX, dy: 0.0)
                 }
                 
                 return MeasuredItem(
@@ -603,12 +628,20 @@ public final class StoryPeerListComponent: Component {
             }
             
             var validIds: [EnginePeer.Id] = []
+            var validCollapsableIds: [EnginePeer.Id] = []
+            
             for i in 0 ..< self.sortedItems.count {
                 let itemSet = self.sortedItems[i]
                 let peer = itemSet.peer
                 
                 let regularItemFrame = itemLayout.frame(at: i)
+                
+                var isItemVisible = true
                 if !visibleBounds.intersects(regularItemFrame) {
+                    isItemVisible = false
+                }
+                
+                if !isItemVisible {
                     continue
                 }
                 
@@ -659,14 +692,21 @@ public final class StoryPeerListComponent: Component {
                     itemScale = 0.001 * (1.0 - singleScaleFactor) + itemScale * singleScaleFactor
                 }
                 
-                if i >= collapseStartIndex && i <= collapseEndIndex {
+                let collapseIndex = i - effectiveFirstVisibleIndex
+                if collapseIndex >= collapseStartIndex && collapseIndex <= collapseEndIndex {
                     isCollapsable = true
                     
-                    if i != collapseStartIndex {
+                    if collapseIndex != collapseStartIndex {
                         leftItemFrame = calculateItem(i - 1).itemFrame
                     }
-                    if i != collapseEndIndex {
+                    if collapseIndex != collapseEndIndex {
                         rightItemFrame = calculateItem(i + 1).itemFrame
+                    }
+                    
+                    if effectiveFirstVisibleIndex == 0 {
+                        itemAlpha = 1.0
+                    } else {
+                        itemAlpha = collapsedState.sideAlphaFraction
                     }
                 } else {
                     if itemLayout.itemCount == 1 {
@@ -712,8 +752,147 @@ public final class StoryPeerListComponent: Component {
                 
                 if let itemView = visibleItem.view.view as? StoryPeerListItemComponent.View {
                     if itemView.superview == nil {
-                        self.scrollView.addSubview(itemView)
-                        self.scrollView.addSubview(itemView.backgroundContainer)
+                        self.scrollContainerView.addSubview(itemView)
+                        self.scrollContainerView.addSubview(itemView.backgroundContainer)
+                    }
+                    
+                    if isCollapsable {
+                        itemView.layer.zPosition = 1000.0 - CGFloat(i) * 0.01
+                        itemView.backgroundContainer.layer.zPosition = 1.0
+                    } else {
+                        itemView.layer.zPosition = 0.5
+                        itemView.backgroundContainer.layer.zPosition = 0.0
+                    }
+                    
+                    itemTransition.setFrame(view: itemView, frame: measuredItem.itemFrame)
+                    itemTransition.setAlpha(view: itemView, alpha: itemAlpha)
+                    itemTransition.setScale(view: itemView, scale: 1.0)
+                    
+                    itemTransition.setFrame(view: itemView.backgroundContainer, frame: measuredItem.itemFrame)
+                    itemTransition.setAlpha(view: itemView.backgroundContainer, alpha: itemAlpha)
+                    itemTransition.setScale(view: itemView.backgroundContainer, scale: 1.0)
+                    
+                    itemView.updateIsPreviewing(isPreviewing: self.previewedItemId == itemSet.peer.id)
+                }
+            }
+            
+            for i in 0 ..< self.sortedItems.count {
+                let itemSet = self.sortedItems[i]
+                let peer = itemSet.peer
+                
+                if i >= collapseStartIndex && i <= collapseEndIndex {
+                } else {
+                    continue
+                }
+                
+                validCollapsableIds.append(itemSet.peer.id)
+                
+                let visibleItem: VisibleItem
+                var itemTransition = transition
+                if let current = self.visibleCollapsableItems[itemSet.peer.id] {
+                    visibleItem = current
+                } else {
+                    itemTransition = .immediate
+                    visibleItem = VisibleItem()
+                    self.visibleCollapsableItems[itemSet.peer.id] = visibleItem
+                }
+                
+                var hasUnseen = false
+                hasUnseen = itemSet.hasUnseen
+                
+                var hasUnseenCloseFriendsItems = itemSet.hasUnseenCloseFriends
+                
+                var hasItems = true
+                var itemRingAnimation: StoryPeerListItemComponent.RingAnimation?
+                if peer.id == component.context.account.peerId {
+                    if let storySubscriptions = component.storySubscriptions, let accountItem = storySubscriptions.accountItem {
+                        hasItems = accountItem.storyCount != 0
+                    } else {
+                        hasItems = false
+                    }
+                    if let uploadProgress = component.uploadProgress {
+                        itemRingAnimation = .progress(uploadProgress)
+                    }
+                    
+                    hasUnseenCloseFriendsItems = false
+                }
+                
+                let collapseIndex = i + effectiveFirstVisibleIndex
+                let measuredItem = calculateItem(collapseIndex)
+                
+                var leftItemFrame: CGRect?
+                var rightItemFrame: CGRect?
+                
+                var itemAlpha: CGFloat = 1.0
+                var isCollapsable: Bool = false
+                var itemScale = measuredItem.itemScale
+                if itemLayout.itemCount == 1 {
+                    let singleScaleFactor = min(1.0, collapsedState.minFraction + collapsedState.maxFraction)
+                    itemScale = 0.001 * (1.0 - singleScaleFactor) + itemScale * singleScaleFactor
+                }
+                
+                if i >= collapseStartIndex && i <= collapseEndIndex {
+                    isCollapsable = true
+                    
+                    if i != collapseStartIndex {
+                        leftItemFrame = calculateItem(collapseIndex - 1).itemFrame
+                    }
+                    if i != collapseEndIndex {
+                        rightItemFrame = calculateItem(collapseIndex + 1).itemFrame
+                    }
+                    
+                    if effectiveFirstVisibleIndex == 0 {
+                        itemAlpha = 0.0
+                    } else {
+                        itemAlpha = 1.0 - collapsedState.sideAlphaFraction
+                    }
+                } else {
+                    if itemLayout.itemCount == 1 {
+                        itemAlpha = min(1.0, (collapsedState.minFraction + collapsedState.maxFraction) * 4.0)
+                    } else {
+                        itemAlpha = collapsedState.sideAlphaFraction
+                    }
+                }
+                
+                var leftNeighborDistance: CGPoint?
+                var rightNeighborDistance: CGPoint?
+                
+                if let leftItemFrame {
+                    leftNeighborDistance = CGPoint(x: abs(leftItemFrame.midX - measuredItem.itemFrame.midX), y: leftItemFrame.minY - measuredItem.itemFrame.minY)
+                }
+                if let rightItemFrame {
+                    rightNeighborDistance = CGPoint(x: abs(rightItemFrame.midX - measuredItem.itemFrame.midX), y: rightItemFrame.minY - measuredItem.itemFrame.minY)
+                }
+                
+                let _ = visibleItem.view.update(
+                    transition: itemTransition,
+                    component: AnyComponent(StoryPeerListItemComponent(
+                        context: component.context,
+                        theme: component.theme,
+                        strings: component.strings,
+                        peer: peer,
+                        hasUnseen: hasUnseen,
+                        hasUnseenCloseFriendsItems: hasUnseenCloseFriendsItems,
+                        hasItems: hasItems,
+                        ringAnimation: itemRingAnimation,
+                        collapseFraction: 1.0 - collapsedState.maxFraction,
+                        scale: itemScale,
+                        collapsedWidth: collapsedItemWidth,
+                        expandedAlphaFraction: collapsedState.sideAlphaFraction,
+                        leftNeighborDistance: leftNeighborDistance,
+                        rightNeighborDistance: rightNeighborDistance,
+                        action: component.peerAction,
+                        contextGesture: component.contextPeerAction
+                    )),
+                    environment: {},
+                    containerSize: itemLayout.itemSize
+                )
+                
+                if let itemView = visibleItem.view.view as? StoryPeerListItemComponent.View {
+                    if itemView.superview == nil {
+                        itemView.isUserInteractionEnabled = false
+                        self.scrollContainerView.addSubview(itemView)
+                        self.scrollContainerView.addSubview(itemView.backgroundContainer)
                     }
                     
                     if isCollapsable {
@@ -741,16 +920,8 @@ public final class StoryPeerListComponent: Component {
                 if !validIds.contains(id) {
                     removedIds.append(id)
                     if let itemView = visibleItem.view.view as? StoryPeerListItemComponent.View {
-                        if keepVisibleUntilCompletion && !transition.animation.isImmediate {
-                            let backgroundContainer = itemView.backgroundContainer
-                            transition.attachAnimation(view: itemView, id: "keep", completion: { [weak itemView, weak backgroundContainer] _ in
-                                itemView?.removeFromSuperview()
-                                backgroundContainer?.removeFromSuperview()
-                            })
-                        } else {
-                            itemView.backgroundContainer.removeFromSuperview()
-                            itemView.removeFromSuperview()
-                        }
+                        itemView.backgroundContainer.removeFromSuperview()
+                        itemView.removeFromSuperview()
                     }
                 }
             }
@@ -758,14 +929,28 @@ public final class StoryPeerListComponent: Component {
                 self.visibleItems.removeValue(forKey: id)
             }
             
+            var removedCollapsableIds: [EnginePeer.Id] = []
+            for (id, visibleItem) in self.visibleCollapsableItems {
+                if !validCollapsableIds.contains(id) {
+                    removedCollapsableIds.append(id)
+                    if let itemView = visibleItem.view.view as? StoryPeerListItemComponent.View {
+                        itemView.backgroundContainer.removeFromSuperview()
+                        itemView.removeFromSuperview()
+                    }
+                }
+            }
+            for id in removedCollapsableIds {
+                self.visibleCollapsableItems.removeValue(forKey: id)
+            }
+            
             transition.setFrame(view: self.collapsedButton, frame: CGRect(origin: CGPoint(x: collapsedContentOrigin - 4.0, y: 6.0 - 59.0), size: CGSize(width: collapsedContentWidth + 4.0, height: 44.0)))
             
             let defaultCollapsedTitleOffset = floor((itemLayout.containerSize.width - component.titleContentWidth) * 0.5)
             
-            var targetCollapsedTitleOffset: CGFloat = collapsedContentOrigin + collapsedContentWidth + titleContentSpacing
+            var targetCollapsedTitleOffset: CGFloat = collapsedContentOrigin + collapsedContentOriginOffset + collapsedContentWidth + titleContentSpacing
             if itemLayout.itemCount == 1 && collapsedContentWidth <= 0.1 {
                 let singleScaleFactor = min(1.0, collapsedState.minFraction)
-                targetCollapsedTitleOffset += singleScaleFactor * calculateItem(0).itemScale * (itemLayout.itemSize.width + 4.0)
+                targetCollapsedTitleOffset += singleScaleFactor * 4.0
             }
             
             let collapsedTitleOffset = targetCollapsedTitleOffset - defaultCollapsedTitleOffset
@@ -796,7 +981,7 @@ public final class StoryPeerListComponent: Component {
                     return nil
                 }
             } else {
-                if !result.isDescendant(of: self.scrollView) {
+                if !result.isDescendant(of: self.scrollContainerView) {
                     return nil
                 }
             }
@@ -806,20 +991,6 @@ public final class StoryPeerListComponent: Component {
         func update(component: StoryPeerListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             var transition = transition
             transition.animation = .none
-            
-            if self.component != nil {
-                if !component.unlocked && self.scrollView.bounds.minX != 0.0 {
-                    self.ignoreScrolling = true
-                    
-                    let scrollingDistance = self.scrollView.bounds.minX
-                    self.scrollView.bounds = CGRect(origin: CGPoint(), size: self.scrollView.bounds.size)
-                    let tempTransition = Transition(animation: .curve(duration: 0.3, curve: .spring))
-                    self.updateScrolling(transition: transition, keepVisibleUntilCompletion: true)
-                    tempTransition.animateBoundsOrigin(view: self.scrollView, from: CGPoint(x: scrollingDistance, y: 0.0), to: CGPoint(), additive: true)
-                    
-                    self.ignoreScrolling = false
-                }
-            }
             
             let animationHint = transition.userData(AnimationHint.self)
             var useAnimation = false
@@ -915,12 +1086,13 @@ public final class StoryPeerListComponent: Component {
             self.ignoreScrolling = true
             
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: -4.0), size: CGSize(width: availableSize.width, height: availableSize.height + 4.0)))
+            transition.setFrame(view: self.scrollContainerView, frame: CGRect(origin: CGPoint(x: 0.0, y: -4.0), size: CGSize(width: availableSize.width, height: availableSize.height + 4.0)))
             if self.scrollView.contentSize != itemLayout.contentSize {
                 self.scrollView.contentSize = itemLayout.contentSize
             }
             
             self.ignoreScrolling = false
-            self.updateScrolling(transition: transition, keepVisibleUntilCompletion: false)
+            self.updateScrolling(transition: transition)
             
             return availableSize
         }

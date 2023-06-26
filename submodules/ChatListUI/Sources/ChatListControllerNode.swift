@@ -1690,7 +1690,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     var didBeginSelectingChatsWhileEditing: Bool = false
     var isEditing: Bool = false
     
-    private var tempAllowAvatarExpansion: Bool = false
+    var tempAllowAvatarExpansion: Bool = false
     private var tempDisableStoriesAnimations: Bool = false
     private var tempNavigationScrollingTransition: ContainedViewLayoutTransition?
     
