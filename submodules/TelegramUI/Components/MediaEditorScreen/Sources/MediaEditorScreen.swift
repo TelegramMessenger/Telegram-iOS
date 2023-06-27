@@ -637,8 +637,9 @@ final class MediaEditorScreenComponent: Component {
             
             let buttonSideInset: CGFloat
             let buttonBottomInset: CGFloat = 8.0
+            var controlsBottomInset: CGFloat = 0.0
             let previewSize: CGSize
-            let topInset: CGFloat = environment.statusBarHeight + 5.0
+            var topInset: CGFloat = environment.statusBarHeight + 5.0
             if isTablet {
                 let previewHeight = availableSize.height - topInset - 75.0
                 previewSize = CGSize(width: floorToScreenPixels(previewHeight / 1.77778), height: previewHeight)
@@ -646,6 +647,10 @@ final class MediaEditorScreenComponent: Component {
             } else {
                 previewSize = CGSize(width: availableSize.width, height: floorToScreenPixels(availableSize.width * 1.77778))
                 buttonSideInset = 10.0
+                if availableSize.height < previewSize.height + 30.0 {
+                    topInset = 0.0
+                    controlsBottomInset = -50.0
+                }
             }
             
             let cancelButtonSize = self.cancelButton.update(
@@ -673,7 +678,7 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: 44.0, height: 44.0)
             )
             let cancelButtonFrame = CGRect(
-                origin: CGPoint(x: buttonSideInset, y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset),
+                origin: CGPoint(x: buttonSideInset, y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset),
                 size: cancelButtonSize
             )
             if let cancelButtonView = self.cancelButton.view {
@@ -705,7 +710,7 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: 44.0, height: 44.0)
             )
             let doneButtonFrame = CGRect(
-                origin: CGPoint(x: availableSize.width - buttonSideInset - doneButtonSize.width, y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset),
+                origin: CGPoint(x: availableSize.width - buttonSideInset - doneButtonSize.width, y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset),
                 size: doneButtonSize
             )
             if let doneButtonView = self.doneButton.view {
@@ -742,7 +747,7 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
             let drawButtonFrame = CGRect(
-                origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 4.0 - 3.0 - drawButtonSize.width / 2.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + 1.0),
+                origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 4.0 - 3.0 - drawButtonSize.width / 2.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset + 1.0),
                 size: drawButtonSize
             )
             if let drawButtonView = self.drawButton.view {
@@ -771,7 +776,7 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
             let textButtonFrame = CGRect(
-                origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 2.5 + 5.0 - textButtonSize.width / 2.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + 1.0),
+                origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 2.5 + 5.0 - textButtonSize.width / 2.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset + 2.0),
                 size: textButtonSize
             )
             if let textButtonView = self.textButton.view {
@@ -800,7 +805,7 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
             let stickerButtonFrame = CGRect(
-                origin: CGPoint(x: floorToScreenPixels(availableSize.width - buttonsLeftOffset - buttonsAvailableWidth / 2.5 - 5.0 - stickerButtonSize.width / 2.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + 1.0),
+                origin: CGPoint(x: floorToScreenPixels(availableSize.width - buttonsLeftOffset - buttonsAvailableWidth / 2.5 - 5.0 - stickerButtonSize.width / 2.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset + 2.0),
                 size: stickerButtonSize
             )
             if let stickerButtonView = self.stickerButton.view {
@@ -829,7 +834,7 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
             let toolsButtonFrame = CGRect(
-                origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 4.0 * 3.0 + 3.0 - toolsButtonSize.width / 2.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + 1.0),
+                origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 4.0 * 3.0 + 3.0 - toolsButtonSize.width / 2.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset + 1.0),
                 size: toolsButtonSize
             )
             if let toolsButtonView = self.toolsButton.view {
@@ -884,7 +889,7 @@ final class MediaEditorScreenComponent: Component {
                     containerSize: CGSize(width: availableSize.width - scrubberInset * 2.0, height: availableSize.height)
                 )
                 
-                let scrubberFrame = CGRect(origin: CGPoint(x: scrubberInset, y: availableSize.height - environment.safeInsets.bottom - scrubberSize.height - 8.0), size: scrubberSize)
+                let scrubberFrame = CGRect(origin: CGPoint(x: scrubberInset, y: availableSize.height - environment.safeInsets.bottom - scrubberSize.height - 8.0 + controlsBottomInset), size: scrubberSize)
                 if let scrubberView = self.scrubber.view {
                     if scrubberView.superview == nil {
                         self.addSubview(scrubberView)
@@ -1075,7 +1080,7 @@ final class MediaEditorScreenComponent: Component {
                 sizeValue = textEntity.fontSize
             }
             
-            var inputPanelBottomInset: CGFloat = scrubberBottomInset
+            var inputPanelBottomInset: CGFloat = scrubberBottomInset - controlsBottomInset
             if inputHeight > 0.0 {
                 inputPanelBottomInset = inputHeight - environment.safeInsets.bottom
             }
@@ -1197,7 +1202,7 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: 44.0, height: 44.0)
             )
             let saveButtonFrame = CGRect(
-                origin: CGPoint(x: availableSize.width - 20.0 - saveButtonSize.width, y: environment.safeInsets.top + 20.0),
+                origin: CGPoint(x: availableSize.width - 20.0 - saveButtonSize.width, y: max(environment.statusBarHeight + 10.0, environment.safeInsets.top + 20.0)),
                 size: saveButtonSize
             )
             if let saveButtonView = self.saveButton.view {
@@ -1270,7 +1275,7 @@ final class MediaEditorScreenComponent: Component {
                     containerSize: CGSize(width: 44.0, height: 44.0)
                 )
                 let muteButtonFrame = CGRect(
-                    origin: CGPoint(x: availableSize.width - 20.0 - muteButtonSize.width - 50.0, y: environment.safeInsets.top + 20.0),
+                    origin: CGPoint(x: availableSize.width - 20.0 - muteButtonSize.width - 50.0, y: max(environment.statusBarHeight + 10.0, environment.safeInsets.top + 20.0)),
                     size: muteButtonSize
                 )
                 if let muteButtonView = self.muteButton.view {
@@ -1293,44 +1298,6 @@ final class MediaEditorScreenComponent: Component {
                 }
             }
             
-            if let _ = state.playerState {
-                let settingsButtonSize = self.settingsButton.update(
-                    transition: transition,
-                    component: AnyComponent(Button(
-                        content: AnyComponent(
-                            BundleIconComponent(
-                                name: "Chat/Input/Media/EntityInputSettingsIcon",
-                                tintColor: UIColor(rgb: 0xffffff)
-                            )
-                        ),
-                        action: {
-                            if let controller = environment.controller() as? MediaEditorScreen {
-                                controller.requestSettings()
-                            }
-                        }
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: 44.0, height: 44.0)
-                )
-                let settingsButtonFrame = CGRect(
-                    origin: CGPoint(x: floorToScreenPixels((availableSize.width - settingsButtonSize.width) / 2.0), y: environment.safeInsets.top + 20.0),
-                    size: settingsButtonSize
-                )
-                if let settingsButtonView = self.settingsButton.view {
-                    if settingsButtonView.superview == nil {
-                        settingsButtonView.layer.shadowOffset = CGSize(width: 0.0, height: 0.0)
-                        settingsButtonView.layer.shadowRadius = 2.0
-                        settingsButtonView.layer.shadowColor = UIColor.black.cgColor
-                        settingsButtonView.layer.shadowOpacity = 0.35
-                        //self.addSubview(settingsButtonView)
-                    }
-                    transition.setPosition(view: settingsButtonView, position: settingsButtonFrame.center)
-                    transition.setBounds(view: settingsButtonView, bounds: CGRect(origin: .zero, size: settingsButtonFrame.size))
-                    transition.setScale(view: settingsButtonView, scale: displayTopButtons ? 1.0 : 0.01)
-                    transition.setAlpha(view: settingsButtonView, alpha: displayTopButtons && !component.isDismissing && !component.isInteractingWithEntities ? 1.0 : 0.0)
-                }
-            }
-            
             let textCancelButtonSize = self.textCancelButton.update(
                 transition: transition,
                 component: AnyComponent(Button(
@@ -1347,7 +1314,7 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: 100.0, height: 30.0)
             )
             let textCancelButtonFrame = CGRect(
-                origin: CGPoint(x: 13.0, y: environment.statusBarHeight + 20.0),
+                origin: CGPoint(x: 13.0, y: max(environment.statusBarHeight + 10.0, environment.safeInsets.top + 20.0)),
                 size: textCancelButtonSize
             )
             if let textCancelButtonView = self.textCancelButton.view {
@@ -1376,7 +1343,7 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: 100.0, height: 30.0)
             )
             let textDoneButtonFrame = CGRect(
-                origin: CGPoint(x: availableSize.width - textDoneButtonSize.width - 13.0, y: environment.statusBarHeight + 20.0),
+                origin: CGPoint(x: availableSize.width - textDoneButtonSize.width - 13.0, y: max(environment.statusBarHeight + 10.0, environment.safeInsets.top + 20.0)),
                 size: textDoneButtonSize
             )
             if let textDoneButtonView = self.textDoneButton.view {
@@ -1405,9 +1372,10 @@ final class MediaEditorScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 30.0, height: 240.0)
             )
+            let textSizeTopInset = max(environment.safeInsets.top, environment.statusBarHeight)
             let bottomInset: CGFloat = inputHeight > 0.0 ? inputHeight : environment.safeInsets.bottom
             let textSizeFrame = CGRect(
-                origin: CGPoint(x: 0.0, y: environment.safeInsets.top + (availableSize.height - environment.safeInsets.top - bottomInset) / 2.0 - textSizeSize.height / 2.0),
+                origin: CGPoint(x: 0.0, y: textSizeTopInset + (availableSize.height - textSizeTopInset - bottomInset) / 2.0 - textSizeSize.height / 2.0),
                 size: textSizeSize
             )
             if let textSizeView = self.textSize.view {
@@ -2703,15 +2671,18 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 isTablet = false
             }
 
-            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
+            var topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
             let previewSize: CGSize
             if isTablet {
                 let previewHeight = layout.size.height - topInset - 75.0
                 previewSize = CGSize(width: floorToScreenPixels(previewHeight / 1.77778), height: previewHeight)
             } else {
                 previewSize = CGSize(width: layout.size.width, height: floorToScreenPixels(layout.size.width * 1.77778))
+                if layout.size.height < previewSize.height + 30.0 {
+                    topInset = 0.0
+                }
             }
-            let bottomInset = layout.size.height - previewSize.height - topInset
+            let bottomInset = max(0.0, layout.size.height - previewSize.height - topInset)
             
             var layoutInputHeight = layout.inputHeight ?? 0.0
             if self.stickerScreen != nil {

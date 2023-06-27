@@ -469,6 +469,14 @@ private final class CameraScreenComponent: CombinedComponent {
             let smallPanelWidth = min(component.panelWidth, 88.0)
             let panelWidth = min(component.panelWidth, 185.0)
             
+            var controlsBottomInset: CGFloat = 0.0
+            if !isTablet {
+                let previewHeight = floorToScreenPixels(availableSize.width * 1.77778)
+                if availableSize.height < previewHeight + 30.0 {
+                    controlsBottomInset = -48.0
+                }
+            }
+            
             let topControlInset: CGFloat = 20.0
             if case .none = state.cameraState.recording, !state.isTransitioning {
                 let cancelButton = cancelButton.update(
@@ -493,7 +501,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     transition: .immediate
                 )
                 context.add(cancelButton
-                    .position(CGPoint(x: isTablet ? smallPanelWidth / 2.0 : topControlInset + cancelButton.size.width / 2.0, y: environment.safeInsets.top + topControlInset + cancelButton.size.height / 2.0))
+                    .position(CGPoint(x: isTablet ? smallPanelWidth / 2.0 : topControlInset + cancelButton.size.width / 2.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + cancelButton.size.height / 2.0))
                     .appear(.default(scale: true))
                     .disappear(.default(scale: true))
                 )
@@ -553,7 +561,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     transition: .immediate
                 )
                 context.add(flashButton
-                    .position(CGPoint(x: isTablet ? availableSize.width - smallPanelWidth / 2.0 : availableSize.width - topControlInset - flashButton.size.width / 2.0 - 5.0, y: environment.safeInsets.top + topControlInset + flashButton.size.height / 2.0))
+                    .position(CGPoint(x: isTablet ? availableSize.width - smallPanelWidth / 2.0 : availableSize.width - topControlInset - flashButton.size.width / 2.0 - 5.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + flashButton.size.height / 2.0))
                     .appear(.default(scale: true))
                     .disappear(.default(scale: true))
                 )
@@ -578,7 +586,7 @@ private final class CameraScreenComponent: CombinedComponent {
                         transition: .immediate
                     )
                     context.add(dualButton
-                        .position(CGPoint(x: availableSize.width - topControlInset - flashButton.size.width / 2.0 - 52.0, y: environment.safeInsets.top + topControlInset + dualButton.size.height / 2.0 + 1.0))
+                        .position(CGPoint(x: availableSize.width - topControlInset - flashButton.size.width / 2.0 - 52.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + dualButton.size.height / 2.0 + 1.0))
                         .appear(.default(scale: true))
                         .disappear(.default(scale: true))
                     )
@@ -702,7 +710,7 @@ private final class CameraScreenComponent: CombinedComponent {
             if isTablet {
                 captureControlsPosition = CGPoint(x: availableSize.width - panelWidth / 2.0, y: availableSize.height / 2.0)
             } else {
-                captureControlsPosition = CGPoint(x: availableSize.width / 2.0, y: availableSize.height - captureControls.size.height / 2.0 - environment.safeInsets.bottom - 5.0)
+                captureControlsPosition = CGPoint(x: availableSize.width / 2.0, y: availableSize.height - captureControls.size.height / 2.0 - environment.safeInsets.bottom - 5.0 + floorToScreenPixels(controlsBottomInset * 0.66))
             }
             context.add(captureControls
                 .position(captureControlsPosition)
@@ -834,7 +842,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 if isTablet {
                     modeControlPosition = CGPoint(x: availableSize.width - panelWidth / 2.0, y: availableSize.height / 2.0 + modeControl.size.height + 26.0)
                 } else {
-                    modeControlPosition = CGPoint(x: availableSize.width / 2.0, y: availableSize.height - environment.safeInsets.bottom + modeControl.size.height / 2.0)
+                    modeControlPosition = CGPoint(x: availableSize.width / 2.0, y: availableSize.height - environment.safeInsets.bottom + modeControl.size.height / 2.0 + controlsBottomInset)
                 }
                 context.add(modeControl
                     .clipsToBounds(true)
@@ -1658,13 +1666,16 @@ public class CameraScreen: ViewController {
                 isTablet = false
             }
             
+            var topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
             let previewSize: CGSize
             if isTablet {
                 previewSize = CGSize(width: floorToScreenPixels(layout.size.height / 1.77778), height: layout.size.height)
             } else {
                 previewSize = CGSize(width: layout.size.width, height: floorToScreenPixels(layout.size.width * 1.77778))
+                if layout.size.height < previewSize.height + 30.0 {
+                    topInset = 0.0
+                }
             }
-            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
             let bottomInset = layout.size.height - previewSize.height - topInset
             
             let panelWidth: CGFloat
