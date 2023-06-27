@@ -30,6 +30,7 @@ import LocalMediaResources
 import SaveToCameraRoll
 import BundleIconComponent
 import PeerListItemComponent
+import PremiumUI
 
 public final class StoryItemSetContainerComponent: Component {
     public final class ExternalState {
@@ -182,16 +183,16 @@ public final class StoryItemSetContainerComponent: Component {
     }
     
     struct ItemLayout {
-        var size: CGSize
+        var containerSize: CGSize
         var contentFrame: CGRect
         var contentVisualScale: CGFloat
         
         init(
-            size: CGSize,
+            containerSize: CGSize,
             contentFrame: CGRect,
             contentVisualScale: CGFloat
         ) {
-            self.size = size
+            self.containerSize = containerSize
             self.contentFrame = contentFrame
             self.contentVisualScale = contentVisualScale
         }
@@ -256,10 +257,6 @@ public final class StoryItemSetContainerComponent: Component {
         override func touchesShouldCancel(in view: UIView) -> Bool {
             return true
         }
-
-        /*@objc func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-            return false
-        }*/
     }
     
     public final class View: UIView, UIScrollViewDelegate, UIGestureRecognizerDelegate {
@@ -567,7 +564,7 @@ public final class StoryItemSetContainerComponent: Component {
                     let point = recognizer.location(in: self)
                     
                     var direction: NavigationDirection?
-                    if point.x < itemLayout.size.width * 0.25 {
+                    if point.x < itemLayout.containerSize.width * 0.25 {
                         direction = .previous
                     } else {
                         direction = .next
@@ -670,7 +667,7 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 
                 self.scrollingCenterX = leftWidth
-                self.scroller.contentSize = CGSize(width: leftWidth + itemLayout.size.width + rightWidth, height: 1.0)
+                self.scroller.contentSize = CGSize(width: leftWidth + itemLayout.containerSize.width + rightWidth, height: 1.0)
                 
                 if !self.initializedOffset {
                     self.initializedOffset = true
@@ -862,7 +859,7 @@ public final class StoryItemSetContainerComponent: Component {
                         environment: {
                             itemEnvironment
                         },
-                        containerSize: itemLayout.size
+                        containerSize: itemLayout.contentFrame.size
                     )
                     if let view = visibleItem.view.view {
                         if visibleItem.contentContainerView.superview == nil {
@@ -967,6 +964,22 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             return false
+        }
+        
+        func activateInputWhileDragging() -> (() -> Void)? {
+            guard let component = self.component else {
+                return nil
+            }
+            if component.slice.peer.id == component.context.account.peerId {
+            } else {
+                if let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View {
+                    return { [weak inputPanelView] in
+                        inputPanelView?.activateInput()
+                    }
+                }
+            }
+            
+            return nil
         }
         
         func animateIn(transitionIn: StoryContainerScreen.TransitionIn) {
@@ -1510,7 +1523,7 @@ public final class StoryItemSetContainerComponent: Component {
                         self.state?.updated(transition: .immediate)
                     },
                     timeoutAction: nil,
-                    forwardAction: component.slice.item.storyItem.isPublic ? { [weak self] in
+                    forwardAction: component.slice.item.storyItem.isPublic && !component.slice.item.storyItem.isForwardingDisabled ? { [weak self] in
                         guard let self else {
                             return
                         }
@@ -2048,7 +2061,7 @@ public final class StoryItemSetContainerComponent: Component {
             let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: component.containerInsets.top - (contentSize.height - contentVisualHeight) * 0.5), size: contentSize)
             
             let itemLayout = ItemLayout(
-                size: contentFrame.size,
+                containerSize: availableSize,
                 contentFrame: contentFrame,
                 contentVisualScale: contentVisualScale
             )
@@ -2538,6 +2551,32 @@ public final class StoryItemSetContainerComponent: Component {
                                 }
                             })
                         })
+                    }
+                    
+                    reactionContextNode.premiumReactionsSelected = { [weak self] file in
+                        guard let self, let file, let component = self.component else {
+                            return
+                        }
+                        
+                        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                        let undoController = UndoOverlayController(presentationData: presentationData, content: .sticker(context: component.context, file: file, loop: true, title: nil, text: presentationData.strings.Chat_PremiumReactionToastTitle, undoText: presentationData.strings.Chat_PremiumReactionToastAction, customAction: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            
+                            let context = component.context
+                            var replaceImpl: ((ViewController) -> Void)?
+                            let controller = PremiumDemoScreen(context: context, subject: .uniqueReactions, action: {
+                                let controller = PremiumIntroScreen(context: context, source: .reactions)
+                                replaceImpl?(controller)
+                            })
+                            replaceImpl = { [weak controller] c in
+                                controller?.replace(with: c)
+                            }
+                            component.controller()?.push(controller)
+                        }), elevatedLayout: false, animateInAsReplacement: false, action: { _ in true })
+                        //strongSelf.currentUndoController = undoController
+                        component.controller()?.present(undoController, in: .current)
                     }
                 }
                 

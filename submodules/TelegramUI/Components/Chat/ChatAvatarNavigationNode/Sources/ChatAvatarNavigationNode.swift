@@ -214,7 +214,7 @@ public final class ChatAvatarNavigationNode: ASDisplayNode {
                 component: AnyComponent(AvatarStoryIndicatorComponent(
                     hasUnseen: storyData.hasUnseen,
                     hasUnseenCloseFriendsItems: storyData.hasUnseenCloseFriends,
-                    isDarkTheme: theme.overallDarkAppearance,
+                    theme: theme,
                     activeLineWidth: 1.0,
                     inactiveLineWidth: 1.0,
                     counters: nil

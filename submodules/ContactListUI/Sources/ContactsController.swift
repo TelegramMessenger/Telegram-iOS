@@ -559,67 +559,6 @@ public class ContactsController: ViewController {
                 self.push(storyContainerScreen)
             })
         }
-            
-                /*componentView.storyContextPeerAction = { [weak self] sourceNode, gesture, peer in
-                guard let self else {
-                    return
-                }
-                
-                var items: [ContextMenuItem] = []
-                                
-                //TODO:localize
-                if peer.id == self.context.account.peerId {
-                } else {
-                    items.append(.action(ContextMenuActionItem(text: "View Profile", icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] c, _ in
-                        c.dismiss(completion: {
-                            guard let self else {
-                                return
-                            }
-                            
-                            let _ = (self.context.engine.data.get(
-                                TelegramEngine.EngineData.Item.Peer.Peer(id: peer.id)
-                            )
-                            |> deliverOnMainQueue).start(next: { [weak self] peer in
-                                guard let self else {
-                                    return
-                                }
-                                guard let peer = peer, let controller = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) else {
-                                    return
-                                }
-                                (self.navigationController as? NavigationController)?.pushViewController(controller)
-                            })
-                        })
-                    })))
-                    /*items.append(.action(ContextMenuActionItem(text: "Mute", icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unmute"), color: theme.contextMenu.primaryColor)
-                    }, action: { _, f in
-                        f(.default)
-                    })))*/
-                    
-                    if case let .user(user) = peer, let storiesHidden = user.storiesHidden, storiesHidden {
-                        items.append(.action(ContextMenuActionItem(text: "Unarchive", icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unarchive"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] _, f in
-                            f(.default)
-                            
-                            guard let self else {
-                                return
-                            }
-                            self.context.engine.peers.updatePeerStoriesHidden(id: peer.id, isHidden: false)
-                        })))
-                    }
-                }
-                
-                if items.isEmpty {
-                    return
-                }
-                
-                let controller = ContextController(account: self.context.account, presentationData: self.presentationData, source: .extracted(ChatListHeaderBarContextExtractedContentSource(controller: self, sourceNode: sourceNode, keepInPlace: false)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
-                self.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
-            }
-        }*/
     }
     
     @objc private func sortPressed() {

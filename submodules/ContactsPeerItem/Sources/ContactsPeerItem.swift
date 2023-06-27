@@ -1115,7 +1115,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     component: AnyComponent(AvatarStoryIndicatorComponent(
                                         hasUnseen: storyStats.unseen != 0,
                                         hasUnseenCloseFriendsItems: storyStats.hasUnseenCloseFriends,
-                                        isDarkTheme: item.presentationData.theme.overallDarkAppearance,
+                                        theme: item.presentationData.theme,
                                         activeLineWidth: 1.0 + UIScreenPixel,
                                         inactiveLineWidth: 1.0 + UIScreenPixel,
                                         counters: AvatarStoryIndicatorComponent.Counters(totalCount: storyStats.total, unseenCount: storyStats.unseen)

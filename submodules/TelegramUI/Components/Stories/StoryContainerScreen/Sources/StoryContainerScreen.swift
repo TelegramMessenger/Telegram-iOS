@@ -392,30 +392,46 @@ private final class StoryContainerScreenComponent: Component {
                 let translation = recognizer.translation(in: self)
                 self.verticalPanState = ItemSetPanState(fraction: max(-1.0, min(1.0, translation.y / self.bounds.height)), didBegin: true)
                 self.state?.updated(transition: .immediate)
-            case .cancelled, .ended:
-                let translation = recognizer.translation(in: self)
-                let velocity = recognizer.velocity(in: self)
                 
-                self.verticalPanState = nil
-                var updateState = true
-                
-                if translation.y > 100.0 || velocity.y > 10.0 {
-                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
-                    self.environment?.controller()?.dismiss()
-                } else if translation.y < -100.0 || velocity.y < -40.0 {
+                if translation.y < -40.0 {
                     if let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id] {
                         if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
-                            if itemSetComponentView.activateInput() {
-                                updateState = false
+                            if let activateInputWhileDragging = itemSetComponentView.activateInputWhileDragging() {
+                                activateInputWhileDragging()
+                                
+                                self.verticalPanState = nil
+                                recognizer.state = .cancelled
+                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
                             }
                         }
                     }
+                }
+            case .cancelled, .ended:
+                if self.verticalPanState != nil {
+                    let translation = recognizer.translation(in: self)
+                    let velocity = recognizer.velocity(in: self)
                     
-                    if updateState || "".isEmpty {
+                    self.verticalPanState = nil
+                    var updateState = true
+                    
+                    if translation.y > 100.0 || velocity.y > 10.0 {
+                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                        self.environment?.controller()?.dismiss()
+                    } else if translation.y < -100.0 || velocity.y < -40.0 {
+                        if let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id] {
+                            if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                                if itemSetComponentView.activateInput() {
+                                    updateState = false
+                                }
+                            }
+                        }
+                        
+                        if updateState || "".isEmpty {
+                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                        }
+                    } else {
                         self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
                     }
-                } else {
-                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
                 }
             default:
                 break

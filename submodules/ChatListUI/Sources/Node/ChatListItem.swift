@@ -2807,7 +2807,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             component: AnyComponent(AvatarStoryIndicatorComponent(
                                 hasUnseen: storyState.hasUnseen,
                                 hasUnseenCloseFriendsItems: storyState.hasUnseenCloseFriends,
-                                isDarkTheme: item.presentationData.theme.overallDarkAppearance,
+                                theme: item.presentationData.theme,
                                 activeLineWidth: 2.0,
                                 inactiveLineWidth: 1.0 + UIScreenPixel,
                                 counters: nil

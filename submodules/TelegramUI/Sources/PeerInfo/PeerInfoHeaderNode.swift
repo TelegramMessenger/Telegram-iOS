@@ -469,7 +469,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 component: AnyComponent(AvatarStoryIndicatorComponent(
                     hasUnseen: storyData.hasUnseen,
                     hasUnseenCloseFriendsItems: storyData.hasUnseenCloseFriends,
-                    isDarkTheme: theme.overallDarkAppearance,
+                    theme: theme,
                     activeLineWidth: 3.0,
                     inactiveLineWidth: 2.0,
                     counters: nil

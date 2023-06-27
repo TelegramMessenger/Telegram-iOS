@@ -527,10 +527,18 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         guard let contactsController = self.controller else {
             return
         }
-        let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
-        chatController.canReadHistory.set(false)
-        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: contactContextMenuItems(context: self.context, peerId: peer.id, contactsController: contactsController, isStories: isStories) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
-        contactsController.presentInGlobalOverlay(contextController)
+        
+        let items = contactContextMenuItems(context: self.context, peerId: peer.id, contactsController: contactsController, isStories: isStories) |> map { ContextController.Items(content: .list($0)) }
+        
+        if isStories, let node = node?.subnodes?.first(where: { $0 is ContextExtractedContentContainingNode }) as? ContextExtractedContentContainingNode {
+            let controller = ContextController(account: self.context.account, presentationData: self.presentationData, source: .extracted(ContactContextExtractedContentSource(sourceNode: node, shouldBeDismissed: .single(false))), items: items, recognizer: nil, gesture: gesture)
+            contactsController.presentInGlobalOverlay(controller)
+        } else {
+            let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
+            chatController.canReadHistory.set(false)
+            let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: items, gesture: gesture)
+            contactsController.presentInGlobalOverlay(contextController)
+        }
     }
     
     func activateSearch(placeholderNode: SearchBarPlaceholderNode) {
@@ -614,5 +622,28 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         default:
             break
         }
+    }
+}
+
+private final class ContactContextExtractedContentSource: ContextExtractedContentSource {
+    let keepInPlace: Bool = false
+    let ignoreContentTouches: Bool = true
+    let blurBackground: Bool = true
+    
+    let shouldBeDismissed: Signal<Bool, NoError>
+    
+    private let sourceNode: ContextExtractedContentContainingNode
+    
+    init(sourceNode: ContextExtractedContentContainingNode, shouldBeDismissed: Signal<Bool, NoError>? = nil) {
+        self.sourceNode = sourceNode
+        self.shouldBeDismissed = shouldBeDismissed ?? .single(false)
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

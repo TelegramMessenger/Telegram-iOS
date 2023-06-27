@@ -131,31 +131,33 @@ final class PeerInfoStoryGridScreenComponent: Component {
                     
                     paneNode.clearSelection()
                 })))
-            } else {
-                var recurseGenerateAction: ((Bool) -> ContextMenuActionItem)?
-                let generateAction: (Bool) -> ContextMenuActionItem = { [weak pane] isZoomIn in
-                    let nextZoomLevel = isZoomIn ? pane?.availableZoomLevels().increment : pane?.availableZoomLevels().decrement
-                    let canZoom: Bool = nextZoomLevel != nil
+            } else if let paneNode = self.paneNode {
+                if !paneNode.isEmpty {
+                    var recurseGenerateAction: ((Bool) -> ContextMenuActionItem)?
+                    let generateAction: (Bool) -> ContextMenuActionItem = { [weak pane] isZoomIn in
+                        let nextZoomLevel = isZoomIn ? pane?.availableZoomLevels().increment : pane?.availableZoomLevels().decrement
+                        let canZoom: Bool = nextZoomLevel != nil
+                        
+                        return ContextMenuActionItem(id: isZoomIn ? 0 : 1, text: isZoomIn ? strings.SharedMedia_ZoomIn : strings.SharedMedia_ZoomOut, textColor: canZoom ? .primary : .disabled, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: isZoomIn ? "Chat/Context Menu/ZoomIn" : "Chat/Context Menu/ZoomOut"), color: canZoom ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withMultipliedAlpha(0.4))
+                        }, action: canZoom ? { action in
+                            guard let pane = pane, let zoomLevel = isZoomIn ? pane.availableZoomLevels().increment : pane.availableZoomLevels().decrement else {
+                                return
+                            }
+                            pane.updateZoomLevel(level: zoomLevel)
+                            if let recurseGenerateAction = recurseGenerateAction {
+                                action.updateAction(0, recurseGenerateAction(true))
+                                action.updateAction(1, recurseGenerateAction(false))
+                            }
+                        } : nil)
+                    }
+                    recurseGenerateAction = { isZoomIn in
+                        return generateAction(isZoomIn)
+                    }
                     
-                    return ContextMenuActionItem(id: isZoomIn ? 0 : 1, text: isZoomIn ? strings.SharedMedia_ZoomIn : strings.SharedMedia_ZoomOut, textColor: canZoom ? .primary : .disabled, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: isZoomIn ? "Chat/Context Menu/ZoomIn" : "Chat/Context Menu/ZoomOut"), color: canZoom ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withMultipliedAlpha(0.4))
-                    }, action: canZoom ? { action in
-                        guard let pane = pane, let zoomLevel = isZoomIn ? pane.availableZoomLevels().increment : pane.availableZoomLevels().decrement else {
-                            return
-                        }
-                        pane.updateZoomLevel(level: zoomLevel)
-                        if let recurseGenerateAction = recurseGenerateAction {
-                            action.updateAction(0, recurseGenerateAction(true))
-                            action.updateAction(1, recurseGenerateAction(false))
-                        }
-                    } : nil)
+                    items.append(.action(generateAction(true)))
+                    items.append(.action(generateAction(false)))
                 }
-                recurseGenerateAction = { isZoomIn in
-                    return generateAction(isZoomIn)
-                }
-                
-                items.append(.action(generateAction(true)))
-                items.append(.action(generateAction(false)))
                 
                 if component.peerId == component.context.account.peerId, case .saved = component.scope {
                     var ignoreNextActions = false
@@ -391,6 +393,13 @@ final class PeerInfoStoryGridScreenComponent: Component {
                 )
                 self.paneNode = paneNode
                 self.addSubview(paneNode.view)
+                
+                paneNode.emptyAction = { [weak self] in
+                    guard let self, let component = self.component else {
+                        return
+                    }
+                    self.environment?.controller()?.push(PeerInfoStoryGridScreen(context: component.context, peerId: component.peerId, scope: .archive))
+                }
                 
                 self.paneStatusDisposable = (paneNode.status
                 |> deliverOnMainQueue).start(next: { [weak self] status in

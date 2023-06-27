@@ -569,6 +569,9 @@ func inputDocumentAttributesFromFileAttributes(_ fileAttributes: [TelegramMediaF
                 if preloadSize != nil {
                     flags |= (1 << 2)
                 }
+                if videoFlags.contains(.isSilent) {
+                    flags |= (1 << 3)
+                }
                 
                 attributes.append(.documentAttributeVideo(flags: flags, duration: duration, w: Int32(size.width), h: Int32(size.height), preloadPrefixSize: preloadSize))
             case let .Audio(isVoice, duration, title, performer, waveform):

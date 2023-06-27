@@ -22,6 +22,8 @@ swift_library(
         "//submodules/ContextUI",
         "//submodules/TelegramUI/Components/Stories/StoryContainerScreen",
         "//submodules/Components/MultilineTextComponent",
+        "//submodules/ActivityIndicator",
+        "//submodules/TelegramUI/Components/EmojiStatusComponent",
     ],
     visibility = [
         "//visibility:public",

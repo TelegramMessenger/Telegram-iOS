@@ -966,7 +966,8 @@ public extension TelegramEngine {
                                     isPinned: item.isPinned,
                                     isExpired: item.isExpired,
                                     isPublic: item.isPublic,
-                                    isCloseFriends: item.isCloseFriends
+                                    isCloseFriends: item.isCloseFriends,
+                                    isForwardingDisabled: item.isForwardingDisabled
                                 ))
                                 if let entry = CodableEntry(updatedItem) {
                                     currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp)
@@ -980,8 +981,8 @@ public extension TelegramEngine {
             }
         }
         
-        public func uploadStory(media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, period: Int, randomId: Int64) {
-            _internal_uploadStory(account: self.account, media: media, text: text, entities: entities, pin: pin, privacy: privacy, period: period, randomId: randomId)
+        public func uploadStory(media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, isForwardingDisabled: Bool, period: Int, randomId: Int64) {
+            _internal_uploadStory(account: self.account, media: media, text: text, entities: entities, pin: pin, privacy: privacy, isForwardingDisabled: isForwardingDisabled, period: period, randomId: randomId)
         }
         
         public func lookUpPendingStoryIdMapping(stableId: Int32) -> Int32? {

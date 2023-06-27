@@ -17,7 +17,7 @@ public final class AvatarStoryIndicatorComponent: Component {
     
     public let hasUnseen: Bool
     public let hasUnseenCloseFriendsItems: Bool
-    public let isDarkTheme: Bool
+    public let theme: PresentationTheme
     public let activeLineWidth: CGFloat
     public let inactiveLineWidth: CGFloat
     public let counters: Counters?
@@ -25,14 +25,14 @@ public final class AvatarStoryIndicatorComponent: Component {
     public init(
         hasUnseen: Bool,
         hasUnseenCloseFriendsItems: Bool,
-        isDarkTheme: Bool,
+        theme: PresentationTheme,
         activeLineWidth: CGFloat,
         inactiveLineWidth: CGFloat,
         counters: Counters?
     ) {
         self.hasUnseen = hasUnseen
         self.hasUnseenCloseFriendsItems = hasUnseenCloseFriendsItems
-        self.isDarkTheme = isDarkTheme
+        self.theme = theme
         self.activeLineWidth = activeLineWidth
         self.inactiveLineWidth = inactiveLineWidth
         self.counters = counters
@@ -45,7 +45,7 @@ public final class AvatarStoryIndicatorComponent: Component {
         if lhs.hasUnseenCloseFriendsItems != rhs.hasUnseenCloseFriendsItems {
             return false
         }
-        if lhs.isDarkTheme != rhs.isDarkTheme {
+        if lhs.theme !== rhs.theme {
             return false
         }
         if lhs.activeLineWidth != rhs.activeLineWidth {
@@ -112,8 +112,8 @@ public final class AvatarStoryIndicatorComponent: Component {
                     ]
                 }
                 
-                if component.isDarkTheme {
-                    inactiveColors = [UIColor(rgb: 0x48484A).cgColor, UIColor(rgb: 0x48484A).cgColor]
+                if component.theme.overallDarkAppearance {
+                    inactiveColors = [component.theme.rootController.tabBar.textColor.cgColor, component.theme.rootController.tabBar.textColor.cgColor]
                 } else {
                     inactiveColors = [UIColor(rgb: 0xD8D8E1).cgColor, UIColor(rgb: 0xD8D8E1).cgColor]
                 }

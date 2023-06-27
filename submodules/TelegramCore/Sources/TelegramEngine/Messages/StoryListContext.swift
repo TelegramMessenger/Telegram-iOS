@@ -44,8 +44,9 @@ public final class EngineStoryItem: Equatable {
     public let isPublic: Bool
     public let isPending: Bool
     public let isCloseFriends: Bool
+    public let isForwardingDisabled: Bool
     
-    public init(id: Int32, timestamp: Int32, expirationTimestamp: Int32, media: EngineMedia, text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?, isPinned: Bool, isExpired: Bool, isPublic: Bool, isPending: Bool, isCloseFriends: Bool) {
+    public init(id: Int32, timestamp: Int32, expirationTimestamp: Int32, media: EngineMedia, text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?, isPinned: Bool, isExpired: Bool, isPublic: Bool, isPending: Bool, isCloseFriends: Bool, isForwardingDisabled: Bool) {
         self.id = id
         self.timestamp = timestamp
         self.expirationTimestamp = expirationTimestamp
@@ -59,6 +60,7 @@ public final class EngineStoryItem: Equatable {
         self.isPublic = isPublic
         self.isPending = isPending
         self.isCloseFriends = isCloseFriends
+        self.isForwardingDisabled = isForwardingDisabled
     }
     
     public static func ==(lhs: EngineStoryItem, rhs: EngineStoryItem) -> Bool {
@@ -101,6 +103,9 @@ public final class EngineStoryItem: Equatable {
         if lhs.isCloseFriends != rhs.isCloseFriends {
             return false
         }
+        if lhs.isForwardingDisabled != rhs.isForwardingDisabled {
+            return false
+        }
         return true
     }
 }
@@ -129,7 +134,8 @@ extension EngineStoryItem {
             isPinned: self.isPinned,
             isExpired: self.isExpired,
             isPublic: self.isPublic,
-            isCloseFriends: self.isCloseFriends
+            isCloseFriends: self.isCloseFriends,
+            isForwardingDisabled: self.isForwardingDisabled
         )
     }
 }
@@ -487,7 +493,8 @@ public final class PeerStoryListContext {
                             isExpired: item.isExpired,
                             isPublic: item.isPublic,
                             isPending: false,
-                            isCloseFriends: item.isCloseFriends
+                            isCloseFriends: item.isCloseFriends,
+                            isForwardingDisabled: item.isForwardingDisabled
                         )
                         items.append(mappedItem)
                     }
@@ -593,7 +600,8 @@ public final class PeerStoryListContext {
                                             isExpired: item.isExpired,
                                             isPublic: item.isPublic,
                                             isPending: false,
-                                            isCloseFriends: item.isCloseFriends
+                                            isCloseFriends: item.isCloseFriends,
+                                            isForwardingDisabled: item.isForwardingDisabled
                                         )
                                         storyItems.append(mappedItem)
                                     }
@@ -726,7 +734,8 @@ public final class PeerStoryListContext {
                                                                 isExpired: item.isExpired,
                                                                 isPublic: item.isPublic,
                                                                 isPending: false,
-                                                                isCloseFriends: item.isCloseFriends
+                                                                isCloseFriends: item.isCloseFriends,
+                                                                isForwardingDisabled: item.isForwardingDisabled
                                                             )
                                                             finalUpdatedState = updatedState
                                                         }
@@ -764,7 +773,8 @@ public final class PeerStoryListContext {
                                                                 isExpired: item.isExpired,
                                                                 isPublic: item.isPublic,
                                                                 isPending: false,
-                                                                isCloseFriends: item.isCloseFriends
+                                                                isCloseFriends: item.isCloseFriends,
+                                                                isForwardingDisabled: item.isForwardingDisabled
                                                             ))
                                                             updatedState.items.sort(by: { lhs, rhs in
                                                                 return lhs.timestamp > rhs.timestamp
@@ -911,7 +921,8 @@ public final class PeerExpiringStoryListContext {
                                         isExpired: item.isExpired,
                                         isPublic: item.isPublic,
                                         isPending: false,
-                                        isCloseFriends: item.isCloseFriends
+                                        isCloseFriends: item.isCloseFriends,
+                                        isForwardingDisabled: item.isForwardingDisabled
                                     )
                                     items.append(.item(mappedItem))
                                 }

@@ -13,6 +13,7 @@ public extension Stories {
             case entities
             case pin
             case privacy
+            case isForwardingDisabled
             case period
             case randomId
         }
@@ -24,6 +25,7 @@ public extension Stories {
         public let entities: [MessageTextEntity]
         public let pin: Bool
         public let privacy: EngineStoryPrivacy
+        public let isForwardingDisabled: Bool
         public let period: Int32
         public let randomId: Int64
         
@@ -35,6 +37,7 @@ public extension Stories {
             entities: [MessageTextEntity],
             pin: Bool,
             privacy: EngineStoryPrivacy,
+            isForwardingDisabled: Bool,
             period: Int32,
             randomId: Int64
         ) {
@@ -45,6 +48,7 @@ public extension Stories {
             self.entities = entities
             self.pin = pin
             self.privacy = privacy
+            self.isForwardingDisabled = isForwardingDisabled
             self.period = period
             self.randomId = randomId
         }
@@ -62,6 +66,7 @@ public extension Stories {
             self.entities = try container.decode([MessageTextEntity].self, forKey: .entities)
             self.pin = try container.decode(Bool.self, forKey: .pin)
             self.privacy = try container.decode(EngineStoryPrivacy.self, forKey: .privacy)
+            self.isForwardingDisabled = try container.decodeIfPresent(Bool.self, forKey: .isForwardingDisabled) ?? false
             self.period = try container.decode(Int32.self, forKey: .period)
             self.randomId = try container.decode(Int64.self, forKey: .randomId)
         }
@@ -80,6 +85,7 @@ public extension Stories {
             try container.encode(self.entities, forKey: .entities)
             try container.encode(self.pin, forKey: .pin)
             try container.encode(self.privacy, forKey: .privacy)
+            try container.encode(self.isForwardingDisabled, forKey: .isForwardingDisabled)
             try container.encode(self.period, forKey: .period)
             try container.encode(self.randomId, forKey: .randomId)
         }
@@ -104,6 +110,9 @@ public extension Stories {
                 return false
             }
             if lhs.privacy != rhs.privacy {
+                return false
+            }
+            if lhs.isForwardingDisabled != rhs.isForwardingDisabled {
                 return false
             }
             if lhs.period != rhs.period {
@@ -260,7 +269,7 @@ final class PendingStoryManager {
                 self.currentPendingItemContext = pendingItemContext
                 
                 let stableId = firstItem.stableId
-                pendingItemContext.disposable = (_internal_uploadStoryImpl(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.revalidationContext, auxiliaryMethods: self.auxiliaryMethods, stableId: stableId, media: firstItem.media, text: firstItem.text, entities: firstItem.entities, pin: firstItem.pin, privacy: firstItem.privacy, period: Int(firstItem.period), randomId: firstItem.randomId)
+                pendingItemContext.disposable = (_internal_uploadStoryImpl(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.revalidationContext, auxiliaryMethods: self.auxiliaryMethods, stableId: stableId, media: firstItem.media, text: firstItem.text, entities: firstItem.entities, pin: firstItem.pin, privacy: firstItem.privacy, isForwardingDisabled: firstItem.isForwardingDisabled, period: Int(firstItem.period), randomId: firstItem.randomId)
                 |> deliverOn(self.queue)).start(next: { [weak self] event in
                     guard let `self` = self else {
                         return
