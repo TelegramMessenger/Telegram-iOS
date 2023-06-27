@@ -361,7 +361,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                             case let .image(image, dimensions):
                                 if let imageData = compressImageToJPEG(image, quality: 0.7) {
                                     let entities = generateChatInputTextEntities(caption)
-                                    self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: caption.string, entities: entities, pin: privacy.archive, privacy: privacy.privacy, period: privacy.timeout, randomId: randomId)
+                                    self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: caption.string, entities: entities, pin: privacy.archive, privacy: privacy.privacy, isForwardingDisabled: false, period: privacy.timeout, randomId: randomId)
                                     Queue.mainQueue().justDispatch {
                                         commit({})
                                     }
@@ -384,7 +384,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                     }
                                     let imageData = firstFrameImage.flatMap { compressImageToJPEG($0, quality: 0.6) }
                                     let entities = generateChatInputTextEntities(caption)
-                                    self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameImageData: imageData), text: caption.string, entities: entities, pin: privacy.archive, privacy: privacy.privacy, period: privacy.timeout, randomId: randomId)
+                                    self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameImageData: imageData), text: caption.string, entities: entities, pin: privacy.archive, privacy: privacy.privacy, isForwardingDisabled: false, period: privacy.timeout, randomId: randomId)
                                     Queue.mainQueue().justDispatch {
                                         commit({})
                                     }

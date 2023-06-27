@@ -2604,6 +2604,18 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             })
                         })))
                     } else {
+                        items.append(.action(ContextMenuActionItem(text: "Send Message", icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MessageBubble"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] c, _ in
+                            c.dismiss(completion: {
+                                guard let self, let navigationController = self.navigationController as? NavigationController else {
+                                    return
+                                }
+                                
+                                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer)))
+                            })
+                        })))
+                        
                         items.append(.action(ContextMenuActionItem(text: "View Profile", icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] c, _ in

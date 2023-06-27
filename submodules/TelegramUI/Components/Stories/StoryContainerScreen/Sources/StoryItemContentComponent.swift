@@ -141,7 +141,7 @@ final class StoryItemContentComponent: Component {
                             useLargeThumbnail: true,
                             autoFetchFullSizeThumbnail: true,
                             tempFilePath: nil,
-                            captureProtected: false,
+                            captureProtected: component.item.isForwardingDisabled,
                             hintDimensions: file.dimensions?.cgSize,
                             storeAfterDownload: nil,
                             displayImage: false
@@ -494,6 +494,7 @@ final class StoryItemContentComponent: Component {
                     if imageSize.height < availableSize.height && imageSize.height >= availableSize.height - 5.0 {
                         imageSize.height = availableSize.height
                     }
+                    self.imageNode.captureProtected = component.item.isForwardingDisabled
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(
                         corners: ImageCorners(),
                         imageSize: imageSize,

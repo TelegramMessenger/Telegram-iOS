@@ -125,6 +125,7 @@ public enum Stories {
             case isExpired
             case isPublic
             case isCloseFriends
+            case isForwardingDisabled
         }
         
         public let id: Int32
@@ -139,6 +140,7 @@ public enum Stories {
         public let isExpired: Bool
         public let isPublic: Bool
         public let isCloseFriends: Bool
+        public let isForwardingDisabled: Bool
         
         public init(
             id: Int32,
@@ -152,7 +154,8 @@ public enum Stories {
             isPinned: Bool,
             isExpired: Bool,
             isPublic: Bool,
-            isCloseFriends: Bool
+            isCloseFriends: Bool,
+            isForwardingDisabled: Bool
         ) {
             self.id = id
             self.timestamp = timestamp
@@ -166,6 +169,7 @@ public enum Stories {
             self.isExpired = isExpired
             self.isPublic = isPublic
             self.isCloseFriends = isCloseFriends
+            self.isForwardingDisabled = isForwardingDisabled
         }
         
         public init(from decoder: Decoder) throws {
@@ -189,6 +193,7 @@ public enum Stories {
             self.isExpired = try container.decodeIfPresent(Bool.self, forKey: .isExpired) ?? false
             self.isPublic = try container.decodeIfPresent(Bool.self, forKey: .isPublic) ?? false
             self.isCloseFriends = try container.decodeIfPresent(Bool.self, forKey: .isCloseFriends) ?? false
+            self.isForwardingDisabled = try container.decodeIfPresent(Bool.self, forKey: .isForwardingDisabled) ?? false
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -213,6 +218,7 @@ public enum Stories {
             try container.encode(self.isExpired, forKey: .isExpired)
             try container.encode(self.isPublic, forKey: .isPublic)
             try container.encode(self.isCloseFriends, forKey: .isCloseFriends)
+            try container.encode(self.isForwardingDisabled, forKey: .isForwardingDisabled)
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -258,6 +264,9 @@ public enum Stories {
                 return false
             }
             if lhs.isCloseFriends != rhs.isCloseFriends {
+                return false
+            }
+            if lhs.isForwardingDisabled != rhs.isForwardingDisabled {
                 return false
             }
             
@@ -680,7 +689,7 @@ private func apiInputPrivacyRules(privacy: EngineStoryPrivacy, transaction: Tran
     return privacyRules
 }
 
-func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, period: Int, randomId: Int64) {
+func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, isForwardingDisabled: Bool, period: Int, randomId: Int64) {
     let inputMedia = prepareUploadStoryContent(account: account, media: media)
     
     let _ = (account.postbox.transaction { transaction in
@@ -702,6 +711,7 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
             entities: entities,
             pin: pin,
             privacy: privacy,
+            isForwardingDisabled: isForwardingDisabled,
             period: Int32(period),
             randomId: randomId
         ))
@@ -747,7 +757,7 @@ private func _internal_putPendingStoryIdMapping(accountPeerId: PeerId, stableId:
     }
 }
 
-func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId: PeerId, stateManager: AccountStateManager, messageMediaPreuploadManager: MessageMediaPreuploadManager, revalidationContext: MediaReferenceRevalidationContext, auxiliaryMethods: AccountAuxiliaryMethods, stableId: Int32, media: Media, text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, period: Int, randomId: Int64) -> Signal<StoryUploadResult, NoError> {
+func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId: PeerId, stateManager: AccountStateManager, messageMediaPreuploadManager: MessageMediaPreuploadManager, revalidationContext: MediaReferenceRevalidationContext, auxiliaryMethods: AccountAuxiliaryMethods, stableId: Int32, media: Media, text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, isForwardingDisabled: Bool, period: Int, randomId: Int64) -> Signal<StoryUploadResult, NoError> {
     let (contentSignal, originalMedia) = uploadedStoryContent(postbox: postbox, network: network, media: media, accountPeerId: accountPeerId, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: revalidationContext, auxiliaryMethods: auxiliaryMethods)
     return contentSignal
     |> mapToSignal { result -> Signal<StoryUploadResult, NoError> in
@@ -786,6 +796,10 @@ func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId
                     }
                     
                     flags |= 1 << 3
+                    
+                    if isForwardingDisabled {
+                        flags |= 1 << 4
+                    }
                     
                     return network.request(Api.functions.stories.sendStory(
                         flags: flags,
@@ -835,7 +849,8 @@ func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId
                                                         isPinned: item.isPinned,
                                                         isExpired: item.isExpired,
                                                         isPublic: item.isPublic,
-                                                        isCloseFriends: item.isCloseFriends
+                                                        isCloseFriends: item.isCloseFriends,
+                                                        isForwardingDisabled: item.isForwardingDisabled
                                                     )
                                                     if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                                                         items.append(StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp))
@@ -983,7 +998,8 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
                 isPinned: item.isPinned,
                 isExpired: item.isExpired,
                 isPublic: item.isPublic,
-                isCloseFriends: item.isCloseFriends
+                isCloseFriends: item.isCloseFriends,
+                isForwardingDisabled: item.isForwardingDisabled
             )
             if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                 transaction.setStory(id: storyId, value: entry)
@@ -1005,7 +1021,8 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
                 isPinned: item.isPinned,
                 isExpired: item.isExpired,
                 isPublic: item.isPublic,
-                isCloseFriends: item.isCloseFriends
+                isCloseFriends: item.isCloseFriends,
+                isForwardingDisabled: item.isForwardingDisabled
             )
             if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                 items[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp)
@@ -1136,7 +1153,8 @@ func _internal_updateStoriesArePinned(account: Account, ids: [Int32: EngineStory
                     isPinned: isPinned,
                     isExpired: item.isExpired,
                     isPublic: item.isPublic,
-                    isCloseFriends: item.isCloseFriends
+                    isCloseFriends: item.isCloseFriends,
+                    isForwardingDisabled: item.isForwardingDisabled
                 )
                 if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                     items[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp)
@@ -1157,7 +1175,8 @@ func _internal_updateStoriesArePinned(account: Account, ids: [Int32: EngineStory
                     isPinned: isPinned,
                     isExpired: item.isExpired,
                     isPublic: item.isPublic,
-                    isCloseFriends: item.isCloseFriends
+                    isCloseFriends: item.isCloseFriends,
+                    isForwardingDisabled: item.isForwardingDisabled
                 )
                 updatedItems.append(updatedItem)
             }
@@ -1253,6 +1272,7 @@ extension Stories.StoredItem {
                 let isExpired = (flags & (1 << 6)) != 0
                 let isPublic = (flags & (1 << 7)) != 0
                 let isCloseFriends = (flags & (1 << 8)) != 0
+                let isForwardingDisabled = (flags & (1 << 10)) != 0
                 
                 let item = Stories.Item(
                     id: id,
@@ -1266,7 +1286,8 @@ extension Stories.StoredItem {
                     isPinned: isPinned,
                     isExpired: isExpired,
                     isPublic: isPublic,
-                    isCloseFriends: isCloseFriends
+                    isCloseFriends: isCloseFriends,
+                    isForwardingDisabled: isForwardingDisabled
                 )
                 self = .item(item)
             } else {
