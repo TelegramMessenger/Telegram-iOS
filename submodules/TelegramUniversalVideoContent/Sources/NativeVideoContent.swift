@@ -401,9 +401,9 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     func setSoundEnabled(_ value: Bool) {
         assert(Queue.mainQueue().isCurrent())
         if value {
-            self.player.playOnceWithSound(playAndRecord: true)
+            self.player.playOnceWithSound(playAndRecord: true, seek: .none)
         } else {
-            self.player.continuePlayingWithoutSound()
+            self.player.continuePlayingWithoutSound(seek: .none)
         }
     }
     

@@ -321,6 +321,8 @@ private final class StoryContainerScreenComponent: Component {
         
         private func commitHorizontalPan(velocity: CGPoint) {
             if var itemSetPanState = self.itemSetPanState {
+                var shouldDismiss = false
+                
                 if let component = self.component, let stateValue = component.content.stateValue, let _ = stateValue.slice {
                     var direction: StoryContentContextNavigation.PeerDirection?
                     if abs(velocity.x) > 10.0 {
@@ -345,6 +347,8 @@ private final class StoryContainerScreenComponent: Component {
                         }
                         self.itemSetPanState = itemSetPanState
                         self.state?.updated(transition: .immediate)
+                    } else {
+                        shouldDismiss = true
                     }
                 }
                 
@@ -365,6 +369,10 @@ private final class StoryContainerScreenComponent: Component {
                         component.content.resetSideStates()
                     }*/
                 })
+                
+                if shouldDismiss {
+                    self.environment?.controller()?.dismiss()
+                }
             }
         }
         
@@ -895,6 +903,31 @@ private final class StoryContainerScreenComponent: Component {
                                 },
                                 controller: { [weak self] in
                                     return self?.environment?.controller()
+                                },
+                                toggleAmbientMode: { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    
+                                    if self.storyItemSharedState.useAmbientMode {
+                                        self.storyItemSharedState.useAmbientMode = false
+                                        self.volumeButtonsListenerShouldBeActive.set(false)
+                                        
+                                        for (_, itemSetView) in self.visibleItemSetViews {
+                                            if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                                                componentView.leaveAmbientMode()
+                                            }
+                                        }
+                                    } else {
+                                        self.storyItemSharedState.useAmbientMode = true
+                                        self.volumeButtonsListenerShouldBeActive.set(true)
+                                        
+                                        for (_, itemSetView) in self.visibleItemSetViews {
+                                            if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                                                componentView.enterAmbientMode()
+                                            }
+                                        }
+                                    }
                                 }
                             )),
                             environment: {},

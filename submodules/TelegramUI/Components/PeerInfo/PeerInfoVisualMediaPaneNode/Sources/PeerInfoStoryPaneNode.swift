@@ -1578,7 +1578,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             totalCount = state.totalCount
             totalCount = max(mappedItems.count, totalCount)
             
-            if totalCount == 0 && state.loadMoreToken != nil {
+            if totalCount == 0 && state.loadMoreToken != nil && !state.isCached {
                 totalCount = 100
             }
 

@@ -551,11 +551,7 @@ public final class MessageInputPanelComponent: Component {
             
             if component.attachmentAction != nil {
                 let attachmentButtonMode: MessageInputActionButtonComponent.Mode
-                if !self.textFieldExternalState.isEditing && component.moreAction != nil {
-                    attachmentButtonMode = .more
-                } else {
-                    attachmentButtonMode = .attach
-                }
+                attachmentButtonMode = .attach
                 
                 let attachmentButtonSize = self.attachmentButton.update(
                     transition: transition,

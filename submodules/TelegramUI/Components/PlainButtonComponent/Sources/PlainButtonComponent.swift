@@ -12,15 +12,18 @@ public final class PlainButtonComponent: Component {
     
     public let content: AnyComponent<Empty>
     public let effectAlignment: EffectAlignment
+    public let minSize: CGSize?
     public let action: () -> Void
     
     public init(
         content: AnyComponent<Empty>,
         effectAlignment: EffectAlignment,
+        minSize: CGSize? = nil,
         action: @escaping () -> Void
     ) {
         self.content = content
         self.effectAlignment = effectAlignment
+        self.minSize = minSize
         self.action = action
     }
 
@@ -29,6 +32,9 @@ public final class PlainButtonComponent: Component {
             return false
         }
         if lhs.effectAlignment != rhs.effectAlignment {
+            return false
+        }
+        if lhs.minSize != rhs.minSize {
             return false
         }
         return true
@@ -122,7 +128,11 @@ public final class PlainButtonComponent: Component {
                 containerSize: availableSize
             )
 
-            let size = contentSize
+            var size = contentSize
+            if let minSize = component.minSize {
+                size.width = max(size.width, minSize.width)
+                size.height = max(size.height, minSize.height)
+            }
 
             if let contentView = self.content.view {
                 var contentTransition = transition
