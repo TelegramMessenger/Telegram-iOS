@@ -1332,14 +1332,12 @@ public class CameraScreen: ViewController {
             let duration: Double = 0.5
             let timingFunction = kCAMediaTimingFunctionSpring
             
-            if let additionalSnapshot = self.additionalPreviewContainerView.snapshotView(afterScreenUpdates: false) {
-                additionalSnapshot.frame = self.additionalPreviewContainerView.frame
-                self.additionalPreviewContainerView.superview?.addSubview(additionalSnapshot)
+            var snapshotView: UIView?
+            if let mainSnapshot = self.mainPreviewContainerView.snapshotView(afterScreenUpdates: false) {
+                mainSnapshot.frame = self.mainPreviewContainerView.frame
+                self.mainPreviewContainerView.superview?.insertSubview(mainSnapshot, belowSubview: self.mainPreviewContainerView)
                 
-                additionalSnapshot.layer.animateScale(from: 1.0, to: 0.01, duration: 0.35, timingFunction: timingFunction, removeOnCompletion: false)
-                additionalSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak additionalSnapshot] _ in
-                    additionalSnapshot?.removeFromSuperview()
-                })
+                snapshotView = mainSnapshot
             }
             
             CATransaction.begin()
@@ -1347,36 +1345,39 @@ public class CameraScreen: ViewController {
             self.requestUpdateLayout(hasAppeared: false, transition: .immediate)
             CATransaction.commit()
             
-            self.additionalPreviewContainerView.layer.animate(
-                from: 12.0 as NSNumber,
-                to: self.additionalPreviewContainerView.layer.cornerRadius as NSNumber,
+            self.additionalPreviewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.additionalPreviewContainerView.layer.animateScale(from: 0.01, to: 1.0, duration: duration, timingFunction: timingFunction)
+                        
+            self.mainPreviewContainerView.layer.animate(
+                from: self.additionalPreviewContainerView.layer.cornerRadius as NSNumber,
+                to: 12.0 as NSNumber,
                 keyPath: "cornerRadius",
                 timingFunction: timingFunction,
                 duration: duration
             )
             
-            self.additionalPreviewContainerView.layer.animatePosition(
-                from: self.mainPreviewContainerView.center,
-                to: self.additionalPreviewContainerView.center,
+            self.mainPreviewContainerView.layer.animatePosition(
+                from: self.additionalPreviewContainerView.center,
+                to: self.mainPreviewContainerView.center,
                 duration: duration,
                 timingFunction: timingFunction
             )
             
-            let scale = self.mainPreviewContainerView.frame.width / self.additionalPreviewContainerView.frame.width
-            self.additionalPreviewContainerView.layer.animateScale(
+            let scale = self.additionalPreviewContainerView.frame.width / self.mainPreviewContainerView.frame.width
+            self.mainPreviewContainerView.layer.animateScale(
                 from: scale,
                 to: 1.0,
                 duration: duration,
                 timingFunction: timingFunction
             )
             
-            let aspectRatio = self.mainPreviewContainerView.frame.height / self.mainPreviewContainerView.frame.width
-            let height = self.additionalPreviewContainerView.bounds.width * aspectRatio
-            self.additionalPreviewContainerView.layer.animateBounds(
-                from: CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((self.additionalPreviewContainerView.bounds.height - height) / 2.0)), size: CGSize(width: self.additionalPreviewContainerView.bounds.width, height: height)),
-                to: self.additionalPreviewContainerView.bounds,
+            self.mainPreviewContainerView.layer.animateBounds(
+                from: CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((self.mainPreviewContainerView.bounds.height - self.mainPreviewContainerView.bounds.width) / 2.0)), size: CGSize(width: self.mainPreviewContainerView.bounds.width, height: self.mainPreviewContainerView.bounds.width)),
+                to: self.mainPreviewContainerView.bounds,
                 duration: duration,
-                timingFunction: timingFunction
+                timingFunction: timingFunction, completion: { [weak snapshotView] _ in
+                    snapshotView?.removeFromSuperview()
+                }
             )
         }
         
@@ -1608,6 +1609,21 @@ public class CameraScreen: ViewController {
             })
             self.controller?.present(tooltipController, in: .current)
         }
+        
+        func presentCameraTooltip() {
+            guard let sourceView = self.componentHost.findTaggedView(tag: captureControlsTag) else {
+                return
+            }
+            
+            let parentFrame = self.view.convert(self.bounds, to: nil)
+            let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
+            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 3.0), size: CGSize())
+            
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: "Take photos or videos to share with all your contacts or close friends at once.", location: .point(location, .bottom), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _ in
+                return .ignore
+            })
+            self.controller?.present(tooltipController, in: .current)
+        }
 
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             let result = super.hitTest(point, with: event)
@@ -1693,6 +1709,7 @@ public class CameraScreen: ViewController {
                 self.hasAppeared = hasAppeared
                 transition = transition.withUserData(CameraScreenTransition.finishedAnimateIn)
                 
+                self.presentCameraTooltip()
 //                self.presentDualCameraTooltip()
             }
 

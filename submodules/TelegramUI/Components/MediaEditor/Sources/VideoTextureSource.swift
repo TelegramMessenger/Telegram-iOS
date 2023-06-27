@@ -615,22 +615,26 @@ final class VideoInputScalePass: RenderPass {
             }
         }
         
-        let backgroundVideoState = VideoState(texture: backgroundTexture, textureRotation: backgroundTextureRotation, position: self.mainPosition, roundness: 0.0, alpha: 1.0)
+        var backgroundVideoState = VideoState(texture: backgroundTexture, textureRotation: backgroundTextureRotation, position: self.mainPosition, roundness: 0.0, alpha: 1.0)
         var foregroundVideoState: VideoState?
         var disappearingVideoState: VideoState?
         
         if let foregroundTexture {
             var foregroundPosition = self.additionalPosition
-            var roundness: Float = 1.0
+            var foregroundAlpha: Float = 1.0
             if transitionFraction < 1.0 {
                 let springFraction = lookupSpringValue(transitionFraction)
-                foregroundPosition = foregroundPosition.mixed(with: self.mainPosition, fraction: 1.0 - springFraction)
-                roundness = Float(springFraction)
                 
-                let disappearedPosition = VideoPosition(position: self.additionalPosition.position, size: self.additionalPosition.size, scale: 0.01, rotation: self.additionalPosition.scale)
-                disappearingVideoState = VideoState(texture: backgroundTexture, textureRotation: backgroundTextureRotation, position: self.additionalPosition.mixed(with: disappearedPosition, fraction: min(1.0, transitionFraction * 1.428)), roundness: 1.0, alpha: max(0.0, 1.0 - Float(transitionFraction) * 3.33))
+                let appearingPosition = VideoPosition(position: self.additionalPosition.position, size: self.additionalPosition.size, scale: 0.01, rotation: self.additionalPosition.rotation)
+                
+                foregroundPosition = appearingPosition.mixed(with: self.additionalPosition, fraction: springFraction)
+                
+                disappearingVideoState = VideoState(texture: foregroundTexture, textureRotation: foregroundTextureRotation, position: self.mainPosition, roundness: 0.0, alpha: 1.0)
+                backgroundVideoState = VideoState(texture: backgroundTexture, textureRotation: backgroundTextureRotation, position: self.additionalPosition.mixed(with: self.mainPosition, fraction: springFraction), roundness: Float(1.0 - springFraction), alpha: 1.0)
+                
+                foregroundAlpha = min(1.0, max(0.0, Float(transitionFraction) * 2.5))
             }
-            foregroundVideoState = VideoState(texture: foregroundTexture, textureRotation: foregroundTextureRotation, position: foregroundPosition, roundness: roundness, alpha: 1.0)
+            foregroundVideoState = VideoState(texture: foregroundTexture, textureRotation: foregroundTextureRotation, position: foregroundPosition, roundness: 1.0, alpha: foregroundAlpha)
         }
         
         return (backgroundVideoState, foregroundVideoState, disappearingVideoState)
@@ -689,6 +693,21 @@ final class VideoInputScalePass: RenderPass {
         
         let (mainVideoState, additionalVideoState, transitionVideoState) = self.transitionState(for: timestamp, mainInput: input, additionalInput: secondInput)
 
+        
+        if let transitionVideoState {
+            self.encodeVideo(
+                using: renderCommandEncoder,
+                containerSize: containerSize,
+                texture: transitionVideoState.texture,
+                textureRotation: transitionVideoState.textureRotation,
+                position: transitionVideoState.position,
+                roundness: transitionVideoState.roundness,
+                alpha: transitionVideoState.alpha,
+                zPosition: 0.75,
+                device: device
+            )
+        }
+        
         self.encodeVideo(
             using: renderCommandEncoder,
             containerSize: containerSize,
@@ -711,20 +730,6 @@ final class VideoInputScalePass: RenderPass {
                 roundness: additionalVideoState.roundness,
                 alpha: additionalVideoState.alpha,
                 zPosition: 0.5,
-                device: device
-            )
-        }
-        
-        if let transitionVideoState {
-            self.encodeVideo(
-                using: renderCommandEncoder,
-                containerSize: containerSize,
-                texture: transitionVideoState.texture,
-                textureRotation: transitionVideoState.textureRotation,
-                position: transitionVideoState.position,
-                roundness: transitionVideoState.roundness,
-                alpha: transitionVideoState.alpha,
-                zPosition: 0.75,
                 device: device
             )
         }
