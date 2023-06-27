@@ -9,6 +9,7 @@ import AlertUI
 import PresentationDataUtils
 import OverlayStatusController
 import LocalizedPeerData
+import TooltipUI
 
 func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, contactsController: ContactsController?, isStories: Bool) -> Signal<[ContextMenuItem], NoError> {
     let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
@@ -24,11 +25,25 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
         if isStories {
             //TODO:localize
             items.append(.action(ContextMenuActionItem(text: "Unhide", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unarchive"), color: theme.contextMenu.primaryColor)
-            }, action: { _, f in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MoveToChats"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak contactsController] _, f in
                 f(.default)
 
                 context.engine.peers.updatePeerStoriesHidden(id: peerId, isHidden: false)
+                
+                guard let parentController = contactsController?.parent as? TabBarController, let chatsController = (contactsController?.navigationController as? TelegramRootControllerInterface)?.getChatsController(), let sourceFrame = parentController.frameForControllerTab(controller: chatsController) else {
+                    return
+                }
+                
+                let location = CGRect(origin: CGPoint(x: sourceFrame.midX, y: sourceFrame.minY - 8.0), size: CGSize())
+                let tooltipController = TooltipScreen(
+                    account: context.account,
+                    sharedContext: context.sharedContext,
+                    text: "Stories from \(peer?.compactDisplayTitle ?? "") will now be shown in Chats, not Contacts.",
+                    location: .point(location, .bottom),
+                    shouldDismissOnTouch: { _ in return .dismiss(consume: false) }
+                )
+                contactsController?.present(tooltipController, in: .window(.root))
             })))
         }
         
