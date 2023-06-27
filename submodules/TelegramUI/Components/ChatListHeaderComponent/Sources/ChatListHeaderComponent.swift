@@ -312,6 +312,7 @@ public final class ChatListHeaderComponent: Component {
         
         var contentOffsetFraction: CGFloat = 0.0
         private(set) var centerContentWidth: CGFloat = 0.0
+        private(set) var centerContentLeftInset: CGFloat = 0.0
         private(set) var centerContentRightInset: CGFloat = 0.0
         
         private(set) var centerContentOffsetX: CGFloat = 0.0
@@ -639,8 +640,11 @@ public final class ChatListHeaderComponent: Component {
                 }
             }
             
+            var centerContentLeftInset: CGFloat = 0.0
+            centerContentLeftInset = leftOffset - 4.0
+            
             var centerContentRightInset: CGFloat = 0.0
-            centerContentRightInset = size.width - rightOffset + 16.0
+            centerContentRightInset = size.width - rightOffset - 8.0
             
             var centerContentWidth: CGFloat = 0.0
             var centerContentOffsetX: CGFloat = 0.0
@@ -705,6 +709,7 @@ public final class ChatListHeaderComponent: Component {
             self.centerContentOffsetX = centerContentOffsetX
             self.centerContentOrigin = centerContentOrigin
             self.centerContentRightInset = centerContentRightInset
+            self.centerContentLeftInset = centerContentLeftInset
         }
     }
     
@@ -815,7 +820,7 @@ public final class ChatListHeaderComponent: Component {
             let previousComponent = self.component
             self.component = component
             
-            if let primaryContent = component.primaryContent {
+            if var primaryContent = component.primaryContent {
                 var primaryContentTransition = transition
                 let primaryContentView: ContentView
                 if let current = self.primaryContentView {
@@ -848,6 +853,19 @@ public final class ChatListHeaderComponent: Component {
                 
                 let sideContentWidth: CGFloat = 0.0
                 
+                if component.storySubscriptions != nil {
+                    primaryContent = Content(
+                        title: "",
+                        navigationBackTitle: primaryContent.navigationBackTitle,
+                        titleComponent: nil,
+                        chatListTitle: nil,
+                        leftButton: primaryContent.leftButton,
+                        rightButtons: primaryContent.rightButtons,
+                        backTitle: primaryContent.backTitle,
+                        backPressed: primaryContent.backPressed
+                    )
+                }
+                
                 primaryContentView.update(context: component.context, theme: component.theme, strings: component.strings, content: primaryContent, backTitle: primaryContent.backTitle, sideInset: component.sideInset, sideContentWidth: sideContentWidth, sideContentFraction: (1.0 - component.storiesFraction), size: availableSize, transition: primaryContentTransition)
                 primaryContentTransition.setFrame(view: primaryContentView, frame: CGRect(origin: CGPoint(), size: availableSize))
                 
@@ -868,6 +886,28 @@ public final class ChatListHeaderComponent: Component {
                     self.storyPeerList = storyPeerList
                 }
                 
+                var primaryTitle = ""
+                var primaryTitleHasLock = false
+                var primaryTitleHasActivity = false
+                var primaryTitlePeerStatus: StoryPeerListComponent.PeerStatus?
+                if let primaryContent = component.primaryContent {
+                    if let chatListTitle = primaryContent.chatListTitle {
+                        primaryTitle = chatListTitle.text
+                        primaryTitleHasLock = chatListTitle.isPasscodeSet
+                        primaryTitleHasActivity = chatListTitle.activity
+                        if let peerStatus = chatListTitle.peerStatus {
+                            switch peerStatus {
+                            case .premium:
+                                primaryTitlePeerStatus = .premium
+                            case let .emoji(status):
+                                primaryTitlePeerStatus = .emoji(status)
+                            }
+                        }
+                    } else {
+                        primaryTitle = primaryContent.title
+                    }
+                }
+                
                 let _ = storyPeerList.update(
                     transition: storyListTransition,
                     component: AnyComponent(StoryPeerListComponent(
@@ -876,7 +916,11 @@ public final class ChatListHeaderComponent: Component {
                         theme: component.theme,
                         strings: component.strings,
                         sideInset: component.sideInset,
-                        titleContentWidth: self.primaryContentView?.centerContentWidth ?? 0.0,
+                        title: primaryTitle,
+                        titleHasLock: primaryTitleHasLock,
+                        titleHasActivity: primaryTitleHasActivity,
+                        titlePeerStatus: primaryTitlePeerStatus,
+                        minTitleX: self.primaryContentView?.centerContentLeftInset ?? 0.0,
                         maxTitleX: availableSize.width - (self.primaryContentView?.centerContentRightInset ?? 0.0),
                         useHiddenList: component.storiesIncludeHidden,
                         storySubscriptions: storySubscriptions,
@@ -895,14 +939,11 @@ public final class ChatListHeaderComponent: Component {
                             }
                             self.storyContextPeerAction?(sourceNode, gesture, peer)
                         },
-                        updateTitleContentOffset: { [weak self] offset, transition in
-                            guard let self, let primaryContentView = self.primaryContentView else {
+                        openStatusSetup: { [weak self] sourceView in
+                            guard let self else {
                                 return
                             }
-                            guard let chatListTitleView = primaryContentView.chatListTitleView else {
-                                return
-                            }
-                            transition.setSublayerTransform(view: chatListTitleView, transform: CATransform3DMakeTranslation(offset, 0.0, 0.0))
+                            self.component?.openStatusSetup(sourceView)
                         }
                     )),
                     environment: {},
@@ -1002,12 +1043,7 @@ public final class ChatListHeaderComponent: Component {
                 
                 storyListTransition.setFrame(view: storyPeerListComponentView, frame: CGRect(origin: CGPoint(x: -1.0 * availableSize.width * component.secondaryTransition + 0.0, y: storyPeerListMaxOffset), size: CGSize(width: availableSize.width, height: 79.0)))
                 
-                var storyListNormalAlpha: CGFloat = 1.0
-                if let chatListTitle = component.primaryContent?.chatListTitle {
-                    if chatListTitle.activity {
-                        storyListNormalAlpha = component.storiesFraction
-                    }
-                }
+                let storyListNormalAlpha: CGFloat = 1.0
                 
                 let storyListAlpha: CGFloat = (1.0 - component.secondaryTransition) * storyListNormalAlpha
                 storyListTransition.setAlpha(view: storyPeerListComponentView, alpha: storyListAlpha)

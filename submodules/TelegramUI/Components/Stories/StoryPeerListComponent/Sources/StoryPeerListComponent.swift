@@ -10,6 +10,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import StoryContainerScreen
+import EmojiStatusComponent
 
 public func shouldDisplayStoriesInChatListHeader(storySubscriptions: EngineStorySubscriptions) -> Bool {
     if !storySubscriptions.items.isEmpty {
@@ -48,6 +49,11 @@ private let modelSpringAnimation: CABasicAnimation = {
 }()
 
 public final class StoryPeerListComponent: Component {
+    public enum PeerStatus: Equatable {
+        case premium
+        case emoji(PeerEmojiStatus)
+    }
+    
     public final class ExternalState {
         public fileprivate(set) var collapsedWidth: CGFloat = 0.0
         
@@ -74,7 +80,11 @@ public final class StoryPeerListComponent: Component {
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let sideInset: CGFloat
-    public let titleContentWidth: CGFloat
+    public let title: String
+    public let titleHasLock: Bool
+    public let titleHasActivity: Bool
+    public let titlePeerStatus: PeerStatus?
+    public let minTitleX: CGFloat
     public let maxTitleX: CGFloat
     public let useHiddenList: Bool
     public let storySubscriptions: EngineStorySubscriptions?
@@ -83,7 +93,7 @@ public final class StoryPeerListComponent: Component {
     public let uploadProgress: Float?
     public let peerAction: (EnginePeer?) -> Void
     public let contextPeerAction: (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void
-    public let updateTitleContentOffset: (CGFloat, Transition) -> Void
+    public let openStatusSetup: (UIView) -> Void
     
     public init(
         externalState: ExternalState,
@@ -91,7 +101,11 @@ public final class StoryPeerListComponent: Component {
         theme: PresentationTheme,
         strings: PresentationStrings,
         sideInset: CGFloat,
-        titleContentWidth: CGFloat,
+        title: String,
+        titleHasLock: Bool,
+        titleHasActivity: Bool,
+        titlePeerStatus: PeerStatus?,
+        minTitleX: CGFloat,
         maxTitleX: CGFloat,
         useHiddenList: Bool,
         storySubscriptions: EngineStorySubscriptions?,
@@ -100,14 +114,18 @@ public final class StoryPeerListComponent: Component {
         uploadProgress: Float?,
         peerAction: @escaping (EnginePeer?) -> Void,
         contextPeerAction: @escaping (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void,
-        updateTitleContentOffset: @escaping (CGFloat, Transition) -> Void
+        openStatusSetup: @escaping (UIView) -> Void
     ) {
         self.externalState = externalState
         self.context = context
         self.theme = theme
         self.strings = strings
         self.sideInset = sideInset
-        self.titleContentWidth = titleContentWidth
+        self.title = title
+        self.titleHasLock = titleHasLock
+        self.titleHasActivity = titleHasActivity
+        self.titlePeerStatus = titlePeerStatus
+        self.minTitleX = minTitleX
         self.maxTitleX = maxTitleX
         self.useHiddenList = useHiddenList
         self.storySubscriptions = storySubscriptions
@@ -116,7 +134,7 @@ public final class StoryPeerListComponent: Component {
         self.uploadProgress = uploadProgress
         self.peerAction = peerAction
         self.contextPeerAction = contextPeerAction
-        self.updateTitleContentOffset = updateTitleContentOffset
+        self.openStatusSetup = openStatusSetup
     }
     
     public static func ==(lhs: StoryPeerListComponent, rhs: StoryPeerListComponent) -> Bool {
@@ -132,7 +150,19 @@ public final class StoryPeerListComponent: Component {
         if lhs.sideInset != rhs.sideInset {
             return false
         }
-        if lhs.titleContentWidth != rhs.titleContentWidth {
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.titleHasLock != rhs.titleHasLock {
+            return false
+        }
+        if lhs.titleHasActivity != rhs.titleHasActivity {
+            return false
+        }
+        if lhs.titlePeerStatus != rhs.titlePeerStatus {
+            return false
+        }
+        if lhs.minTitleX != rhs.minTitleX {
             return false
         }
         if lhs.maxTitleX != rhs.maxTitleX {
@@ -260,6 +290,10 @@ public final class StoryPeerListComponent: Component {
         
         private var visibleItems: [EnginePeer.Id: VisibleItem] = [:]
         private var visibleCollapsableItems: [EnginePeer.Id: VisibleItem] = [:]
+        
+        private var titleIndicatorView: ComponentView<Empty>?
+        private let titleView = ComponentView<Empty>()
+        private var titleIconView: ComponentView<Empty>?
         
         private var component: StoryPeerListComponent?
         private weak var state: EmptyComponentState?
@@ -401,11 +435,107 @@ public final class StoryPeerListComponent: Component {
                 return
             }
             
-            var hasStories: Bool = false
-            if let storySubscriptions = component.storySubscriptions, shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions) {
-                hasStories = true
+            let titleIconSpacing: CGFloat = 4.0
+            let titleIndicatorSpacing: CGFloat = 8.0
+            
+            var titleContentWidth: CGFloat = 0.0
+            
+            var titleIndicatorSize: CGSize?
+            if component.titleHasActivity {
+                let titleIndicatorView: ComponentView<Empty>
+                if let current = self.titleIndicatorView {
+                    titleIndicatorView = current
+                } else {
+                    titleIndicatorView = ComponentView()
+                    self.titleIndicatorView = titleIndicatorView
+                }
+                let titleIndicatorSizeValue = titleIndicatorView.update(
+                    transition: .immediate,
+                    component: AnyComponent(TitleActivityIndicatorComponent(
+                        color: component.theme.rootController.navigationBar.accentTextColor
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 22.0, height: 22.0)
+                )
+                titleIndicatorSize = titleIndicatorSizeValue
+                titleContentWidth += titleIndicatorSizeValue.width + titleIndicatorSpacing
+            } else {
+                if let titleIndicatorView = self.titleIndicatorView {
+                    self.titleIndicatorView = nil
+                    titleIndicatorView.view?.removeFromSuperview()
+                }
             }
-            let _ = hasStories
+            
+            let titleSize = self.titleView.update(
+                transition: .immediate,
+                component: AnyComponent(Text(text: component.title, font: Font.semibold(17.0), color: component.theme.rootController.navigationBar.primaryTextColor)),
+                environment: {},
+                containerSize: CGSize(width: 200.0, height: 100.0)
+            )
+            titleContentWidth += titleSize.width
+            
+            var titleIconSize: CGSize?
+            if let peerStatus = component.titlePeerStatus {
+                let statusContent: EmojiStatusComponent.Content
+                switch peerStatus {
+                case .premium:
+                    statusContent = .premium(color: component.theme.list.itemAccentColor)
+                case let .emoji(emoji):
+                    statusContent = .animation(content: .customEmoji(fileId: emoji.fileId), size: CGSize(width: 22.0, height: 22.0), placeholderColor: component.theme.list.mediaPlaceholderColor, themeColor: component.theme.list.itemAccentColor, loopMode: .count(2))
+                }
+                
+                var animateStatusTransition = false
+                
+                let titleIconView: ComponentView<Empty>
+                if let current = self.titleIconView {
+                    animateStatusTransition = true
+                    titleIconView = current
+                } else {
+                    titleIconView = ComponentView()
+                    self.titleIconView = titleIconView
+                }
+                
+                var titleIconTransition: Transition
+                if animateStatusTransition {
+                    titleIconTransition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                } else {
+                    titleIconTransition = .immediate
+                }
+                
+                let titleIconSizeValue = titleIconView.update(
+                    transition: titleIconTransition,
+                    component: AnyComponent(EmojiStatusComponent(
+                        context: component.context,
+                        animationCache: component.context.animationCache,
+                        animationRenderer: component.context.animationRenderer,
+                        content: statusContent,
+                        isVisibleForAnimations: true,
+                        action: { [weak self] in
+                            guard let self, let component = self.component, let titleIconView = self.titleIconView?.view else {
+                                return
+                            }
+                            component.openStatusSetup(titleIconView)
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 22.0, height: 22.0)
+                )
+                
+                titleIconSize = titleIconSizeValue
+                
+                if let titleIconComponentView = titleIconView.view {
+                    titleIconComponentView.isHidden = component.titleHasActivity
+                }
+                
+                if !component.titleHasActivity {
+                    titleContentWidth += titleIconSpacing + titleIconSizeValue.width
+                }
+            } else {
+                if let titleIconView = self.titleIconView {
+                    self.titleIconView = nil
+                    titleIconView.view?.removeFromSuperview()
+                }
+            }
             
             let collapseStartIndex: Int
             if component.useHiddenList {
@@ -434,16 +564,26 @@ public final class StoryPeerListComponent: Component {
             let collapsedItemOffsetY: CGFloat
             
             let titleContentSpacing: CGFloat = 8.0
-            var combinedTitleContentWidth = component.titleContentWidth
+            var combinedTitleContentWidth = titleContentWidth
             if !combinedTitleContentWidth.isZero {
                 combinedTitleContentWidth += titleContentSpacing
             }
-            let centralContentWidth: CGFloat = collapsedContentWidth + combinedTitleContentWidth
+            
+            let centralContentWidth: CGFloat
+            centralContentWidth = collapsedContentWidth + combinedTitleContentWidth
+            
             collapsedContentOrigin = floor((itemLayout.containerSize.width - centralContentWidth) * 0.5)
+            
+            if component.titleHasActivity {
+                collapsedContentOrigin -= (collapsedContentWidth + titleContentSpacing) * 0.5
+            }
+            
             collapsedContentOrigin = min(collapsedContentOrigin, component.maxTitleX - centralContentWidth - 4.0)
+            
             var collapsedContentOriginOffset: CGFloat = 0.0
+            
             if itemLayout.itemCount == 1 && collapsedContentWidth <= 0.1 {
-                collapsedContentOriginOffset = 4.0
+                collapsedContentOriginOffset += 4.0
             }
             collapsedContentOrigin -= collapsedContentOriginOffset
             collapsedItemOffsetY = -59.0
@@ -703,7 +843,7 @@ public final class StoryPeerListComponent: Component {
                         rightItemFrame = calculateItem(i + 1).itemFrame
                     }
                     
-                    if effectiveFirstVisibleIndex == 0 {
+                    if effectiveFirstVisibleIndex == 0 && !component.titleHasActivity {
                         itemAlpha = 1.0
                     } else {
                         itemAlpha = collapsedState.sideAlphaFraction
@@ -854,6 +994,10 @@ public final class StoryPeerListComponent: Component {
                     }
                 }
                 
+                if component.titleHasActivity {
+                    itemAlpha = 0.0
+                }
+                
                 var leftNeighborDistance: CGPoint?
                 var rightNeighborDistance: CGPoint?
                 
@@ -943,9 +1087,9 @@ public final class StoryPeerListComponent: Component {
                 self.visibleCollapsableItems.removeValue(forKey: id)
             }
             
-            transition.setFrame(view: self.collapsedButton, frame: CGRect(origin: CGPoint(x: collapsedContentOrigin - 4.0, y: 6.0 - 59.0), size: CGSize(width: collapsedContentWidth + 4.0, height: 44.0)))
+            transition.setFrame(view: self.collapsedButton, frame: CGRect(origin: CGPoint(x: component.minTitleX, y: 6.0 - 59.0), size: CGSize(width: max(0.0, component.maxTitleX - component.minTitleX), height: 44.0)))
             
-            let defaultCollapsedTitleOffset = floor((itemLayout.containerSize.width - component.titleContentWidth) * 0.5)
+            let defaultCollapsedTitleOffset: CGFloat = 0.0
             
             var targetCollapsedTitleOffset: CGFloat = collapsedContentOrigin + collapsedContentOriginOffset + collapsedContentWidth + titleContentSpacing
             if itemLayout.itemCount == 1 && collapsedContentWidth <= 0.1 {
@@ -956,15 +1100,50 @@ public final class StoryPeerListComponent: Component {
             let collapsedTitleOffset = targetCollapsedTitleOffset - defaultCollapsedTitleOffset
             
             let titleMinContentOffset: CGFloat = collapsedTitleOffset.interpolate(to: collapsedTitleOffset + 12.0, amount: collapsedState.minFraction)
-            let titleContentOffset: CGFloat = titleMinContentOffset.interpolate(to: 0.0 as CGFloat, amount: collapsedState.maxFraction)
+            var titleContentOffset: CGFloat = titleMinContentOffset.interpolate(to: floor((itemLayout.containerSize.width - titleContentWidth) * 0.5) as CGFloat, amount: collapsedState.maxFraction)
             
-            component.updateTitleContentOffset(titleContentOffset, transition)
+            if let titleIndicatorSize, let titleIndicatorView = self.titleIndicatorView?.view {
+                let titleIndicatorFrame = CGRect(origin: CGPoint(x: titleContentOffset, y: collapsedItemOffsetY + 1.0 + floor((56.0 - titleIndicatorSize.height) * 0.5)), size: titleIndicatorSize)
+                if titleIndicatorView.superview == nil {
+                    self.addSubview(titleIndicatorView)
+                }
+                titleIndicatorView.frame = titleIndicatorFrame
+                titleContentOffset += titleIndicatorSize.width + titleIndicatorSpacing
+            }
+            
+            let titleFrame = CGRect(origin: CGPoint(x: titleContentOffset, y: collapsedItemOffsetY + 1.0 + floor((56.0 - titleSize.height) * 0.5)), size: titleSize)
+            if let titleComponentView = self.titleView.view {
+                if titleComponentView.superview == nil {
+                    titleComponentView.isUserInteractionEnabled = false
+                    self.addSubview(titleComponentView)
+                }
+                titleComponentView.frame = titleFrame
+            }
+            titleContentOffset += titleSize.width
+            
+            if let titleIconSize, let titleIconView = self.titleIconView?.view {
+                titleContentOffset += titleIconSpacing
+                
+                let titleIconFrame = CGRect(origin: CGPoint(x: titleContentOffset, y: collapsedItemOffsetY + 1.0 + floor((56.0 - titleIconSize.height) * 0.5)), size: titleIconSize)
+                
+                if titleIconView.superview == nil {
+                    self.addSubview(titleIconView)
+                }
+                titleIconView.frame = titleIconFrame
+            }
         }
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             if self.alpha.isZero {
                 return nil
             }
+            
+            if let titleIconView = self.titleIconView?.view {
+                if let result = titleIconView.hitTest(self.convert(point, to: titleIconView), with: event) {
+                    return result
+                }
+            }
+            
             var result: UIView?
             for view in self.subviews.reversed() {
                 if let resultValue = view.hitTest(self.convert(point, to: view), with: event), resultValue.isUserInteractionEnabled {
