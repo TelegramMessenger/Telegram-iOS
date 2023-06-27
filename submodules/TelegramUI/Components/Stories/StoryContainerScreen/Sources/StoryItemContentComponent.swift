@@ -207,7 +207,14 @@ final class StoryItemContentComponent: Component {
         
         override func leaveAmbientMode() {
             if let videoNode = self.videoNode {
+                videoNode.setSoundEnabled(true)
                 videoNode.continueWithOverridingAmbientMode()
+            }
+        }
+        
+        override func enterAmbientMode() {
+            if let videoNode = self.videoNode {
+                videoNode.setSoundEnabled(false)
             }
         }
         

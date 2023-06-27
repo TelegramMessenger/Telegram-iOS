@@ -1354,10 +1354,8 @@ func debugRestoreState(basePath: String, name: String) {
     }
 }
 
-private let sharedQueue = Queue(name: "org.telegram.postbox.Postbox")
-
 public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, encryptionParameters: ValueBoxEncryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32, isTemporary: Bool, isReadOnly: Bool, useCopy: Bool, useCaches: Bool, removeDatabaseOnError: Bool) -> Signal<PostboxResult, NoError> {
-    let queue = sharedQueue
+    let queue = Postbox.sharedQueue
     return Signal { subscriber in
         queue.async {
             postboxLog("openPostbox, basePath: \(basePath), useCopy: \(useCopy)")
@@ -4102,6 +4100,8 @@ final class PostboxImpl {
 }
 
 public class Postbox {
+    public static let sharedQueue = Queue(name: "org.telegram.postbox.Postbox")
+    
     let queue: Queue
     private let impl: QueueLocalObject<PostboxImpl>
 

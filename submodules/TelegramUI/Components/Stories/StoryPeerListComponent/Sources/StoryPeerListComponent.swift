@@ -541,7 +541,9 @@ public final class StoryPeerListComponent: Component {
             if component.useHiddenList {
                 collapseStartIndex = 0
             } else if let storySubscriptions = component.storySubscriptions {
-                if let accountItem = storySubscriptions.accountItem, (accountItem.hasUnseen || accountItem.hasPending) {
+                if self.sortedItems.count < 3, let accountItem = storySubscriptions.accountItem, accountItem.storyCount != 0 {
+                    collapseStartIndex = 1
+                } else if let accountItem = storySubscriptions.accountItem, (accountItem.hasUnseen || accountItem.hasPending) {
                     collapseStartIndex = 0
                 } else {
                     collapseStartIndex = 1

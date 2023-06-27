@@ -53,7 +53,6 @@ public final class StoryFooterPanelComponent: Component {
         private let viewStatsText = ComponentView<Empty>()
         private let viewStatsExpandedText = ComponentView<Empty>()
         private let deleteButton = ComponentView<Empty>()
-        private var moreButton: MoreHeaderButton?
         
         private var statusButton: HighlightableButton?
         private var statusNode: SemanticStatusNode?
@@ -321,41 +320,6 @@ public final class StoryFooterPanelComponent: Component {
                 
                 transition.setAlpha(view: deleteButtonView, alpha: pow(1.0 - component.expandFraction, 1.0) * baseViewCountAlpha)
             }
-            
-            let moreButton: MoreHeaderButton
-            if let current = self.moreButton {
-                moreButton = current
-            } else {
-                if let moreButton = self.moreButton {
-                    moreButton.removeFromSupernode()
-                    self.moreButton = nil
-                }
-                
-                moreButton = MoreHeaderButton(color: .white)
-                moreButton.isUserInteractionEnabled = true
-                moreButton.setContent(.more(MoreHeaderButton.optionsCircleImage(color: .white)))
-                moreButton.onPressed = { [weak self] in
-                    guard let self, let component = self.component, let moreButton = self.moreButton else {
-                        return
-                    }
-                    moreButton.play()
-                    component.moreAction(moreButton.view, nil)
-                }
-                moreButton.contextAction = { [weak self] sourceNode, gesture in
-                    guard let self, let component = self.component, let moreButton = self.moreButton else {
-                        return
-                    }
-                    moreButton.play()
-                    component.moreAction(moreButton.view, gesture)
-                }
-                self.moreButton = moreButton
-                self.addSubnode(moreButton)
-            }
-            
-            let buttonSize = CGSize(width: 32.0, height: 44.0)
-            moreButton.setContent(.more(MoreHeaderButton.optionsCircleImage(color: .white)))
-            transition.setFrame(view: moreButton.view, frame: CGRect(origin: CGPoint(x: rightContentOffset - buttonSize.width, y: floor((size.height - buttonSize.height) / 2.0)), size: buttonSize))
-            transition.setAlpha(view: moreButton.view, alpha: pow(1.0 - component.expandFraction, 1.0) * baseViewCountAlpha)
             
             return size
         }

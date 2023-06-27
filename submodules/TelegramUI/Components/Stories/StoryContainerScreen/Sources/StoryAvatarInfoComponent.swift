@@ -48,7 +48,7 @@ final class StoryAvatarInfoComponent: Component {
             self.component = component
             self.state = state
             
-            let size = CGSize(width: 36.0, height: 36.0)
+            let size = CGSize(width: 32.0, height: 32.0)
 
             self.avatarNode.frame = CGRect(origin: CGPoint(), size: size)
             self.avatarNode.setPeer(

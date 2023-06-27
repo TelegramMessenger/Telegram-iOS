@@ -73,20 +73,20 @@ final class StoryAuthorInfoComponent: Component {
             
             let titleSize = self.title.update(
                 transition: .immediate,
-                component: AnyComponent(Text(text: title, font: Font.semibold(17.0), color: .white)),
+                component: AnyComponent(Text(text: title, font: Font.medium(14.0), color: .white)),
                 environment: {},
                 containerSize: availableSize
             )
             let subtitleSize = self.subtitle.update(
                 transition: .immediate,
-                component: AnyComponent(Text(text: subtitle, font: Font.regular(12.0), color: UIColor(white: 1.0, alpha: 0.8))),
+                component: AnyComponent(Text(text: subtitle, font: Font.regular(11.0), color: UIColor(white: 1.0, alpha: 0.8))),
                 environment: {},
                 containerSize: availableSize
             )
             
             let contentHeight: CGFloat = titleSize.height + spacing + subtitleSize.height
-            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: floor((availableSize.height - contentHeight) * 0.5)), size: titleSize)
-            let subtitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - subtitleSize.width) * 0.5), y: titleFrame.maxY + spacing), size: subtitleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: 54.0, y: 2.0 + floor((availableSize.height - contentHeight) * 0.5)), size: titleSize)
+            let subtitleFrame = CGRect(origin: CGPoint(x: 54.0, y: titleFrame.maxY + spacing + UIScreenPixel), size: subtitleSize)
             
             if let titleView = self.title.view {
                 if titleView.superview == nil {

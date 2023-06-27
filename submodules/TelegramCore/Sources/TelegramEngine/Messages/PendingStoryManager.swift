@@ -171,7 +171,8 @@ final class PendingStoryManager {
         
         var storyObserverContexts: [Int32: Bag<(Float) -> Void>] = [:]
         
-        private let allStoriesUploadProgressPromise = ValuePromise<Float?>(nil, ignoreRepeated: true)
+        private let allStoriesUploadProgressPromise = Promise<Float?>(nil)
+        private var allStoriesUploadProgressValue: Float? = nil
         var allStoriesUploadProgress: Signal<Float?, NoError> {
             return self.allStoriesUploadProgressPromise.get()
         }
@@ -291,7 +292,29 @@ final class PendingStoryManager {
         }
         
         private func processContextsUpdated() {
-            self.allStoriesUploadProgressPromise.set(self.currentPendingItemContext?.progress)
+            let currentProgress = self.currentPendingItemContext?.progress
+            if self.allStoriesUploadProgressValue != currentProgress {
+                let previousProgress = self.allStoriesUploadProgressValue
+                self.allStoriesUploadProgressValue = currentProgress
+                
+                if previousProgress != nil && currentProgress == nil {
+                    // Hack: the UI is updated after 2 Postbox queries
+                    let signal: Signal<Float?, NoError> = Signal { subscriber in
+                        Postbox.sharedQueue.justDispatch {
+                            Postbox.sharedQueue.justDispatch {
+                                subscriber.putNext(nil)
+                            }
+                        }
+                        return EmptyDisposable
+                    }
+                    |> deliverOnMainQueue
+                    
+                    self.allStoriesUploadProgressPromise.set(signal)
+                } else {
+                    self.allStoriesUploadProgressPromise.set(.single(currentProgress))
+                }
+            }
+            
             self.hasPendingPromise.set(self.currentPendingItemContext != nil)
         }
     }

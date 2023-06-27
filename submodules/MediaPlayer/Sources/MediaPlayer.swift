@@ -413,7 +413,7 @@ private final class MediaPlayerContext {
                         if let strongSelf = self {
                             if strongSelf.enableSound {
                                 if strongSelf.continuePlayingWithoutSoundOnLostAudioSession {
-                                    strongSelf.continuePlayingWithoutSound()
+                                    strongSelf.continuePlayingWithoutSound(seek: .start)
                                 } else {
                                     strongSelf.pause(lostAudioSession: true, faded: false)
                                 }
@@ -492,7 +492,7 @@ private final class MediaPlayerContext {
                             if let strongSelf = self {
                                 if strongSelf.enableSound {
                                     if strongSelf.continuePlayingWithoutSoundOnLostAudioSession {
-                                        strongSelf.continuePlayingWithoutSound()
+                                        strongSelf.continuePlayingWithoutSound(seek: .start)
                                     } else {
                                         strongSelf.pause(lostAudioSession: true, faded: false)
                                     }
@@ -578,7 +578,7 @@ private final class MediaPlayerContext {
             }
             else if let loadedState = loadedState, case .none = seek {
                 timestamp = CMTimeGetSeconds(CMTimebaseGetTime(loadedState.controlTimebase.timebase))
-                if let duration = self.currentDuration() {
+                if let duration = self.currentDuration(), duration != 0.0 {
                     if timestamp > duration - 2.0 {
                         timestamp = 0.0
                     }
@@ -622,7 +622,7 @@ private final class MediaPlayerContext {
         }
     }
     
-    fileprivate func continuePlayingWithoutSound() {
+    fileprivate func continuePlayingWithoutSound(seek: MediaPlayerSeek) {
         if self.enableSound {
             self.lastStatusUpdateTimestamp = nil
             
@@ -647,10 +647,20 @@ private final class MediaPlayerContext {
                 self.enableSound = false
                 self.playAndRecord = false
                 
-                var timestamp = CMTimeGetSeconds(CMTimebaseGetTime(loadedState.controlTimebase.timebase))
-                if let duration = self.currentDuration(), timestamp > duration - 2.0 {
+                var timestamp: Double
+                if case let .timecode(time) = seek {
+                    timestamp = time
+                } else if case .none = seek {
+                    timestamp = CMTimeGetSeconds(CMTimebaseGetTime(loadedState.controlTimebase.timebase))
+                    if let duration = self.currentDuration(), duration != 0.0 {
+                        if timestamp > duration - 2.0 {
+                            timestamp = 0.0
+                        }
+                    }
+                } else {
                     timestamp = 0.0
                 }
+                
                 self.seek(timestamp: timestamp, action: .play)
             }
         }
@@ -1165,10 +1175,10 @@ public final class MediaPlayer {
         }
     }
     
-    public func continuePlayingWithoutSound() {
+    public func continuePlayingWithoutSound(seek: MediaPlayerSeek = .start) {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
-                context.continuePlayingWithoutSound()
+                context.continuePlayingWithoutSound(seek: seek)
             }
         }
     }

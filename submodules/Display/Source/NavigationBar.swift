@@ -9,13 +9,14 @@ open class SparseNode: ASDisplayNode {
         if self.alpha.isZero {
             return nil
         }
-        if !self.bounds.inset(by: self.hitTestSlop).contains(point) {
-            return nil
-        }
         for view in self.view.subviews.reversed() {
             if let result = view.hitTest(self.view.convert(point, to: view), with: event), result.isUserInteractionEnabled {
                 return result
             }
+        }
+        
+        if !self.bounds.inset(by: self.hitTestSlop).contains(point) {
+            return nil
         }
         
         let result = super.hitTest(point, with: event)
