@@ -345,11 +345,17 @@ public final class MediaEditorVideoExport {
     
     private func setupWithAsset(_ asset: AVAsset, additionalAsset: AVAsset?) {
         self.reader = try? AVAssetReader(asset: asset)
-        self.textureRotation = textureRotatonForAVAsset(asset)
+        
+        var mirror = false
+        if additionalAsset == nil, self.configuration.values.videoIsMirrored {
+            mirror = true
+        }
+        
+        self.textureRotation = textureRotatonForAVAsset(asset, mirror: mirror)
         
         if let additionalAsset {
             self.additionalReader = try? AVAssetReader(asset: additionalAsset)
-            self.additionalTextureRotation = textureRotatonForAVAsset(additionalAsset)
+            self.additionalTextureRotation = textureRotatonForAVAsset(additionalAsset, mirror: true)
         }
         guard let reader = self.reader else {
             return

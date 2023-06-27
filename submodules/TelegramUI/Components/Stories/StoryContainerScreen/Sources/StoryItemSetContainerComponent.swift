@@ -712,6 +712,9 @@ public final class StoryItemSetContainerComponent: Component {
             if self.inputPanelExternalState.isEditing || component.isProgressPaused || self.actionSheet != nil || self.contextController != nil || self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil || self.displayViewList {
                 return true
             }
+            if let reactionContextNode = self.reactionContextNode, reactionContextNode.isReactionSearchActive {
+                return true
+            }
             if self.privacyController != nil {
                 return true
             }
@@ -2235,7 +2238,7 @@ public final class StoryItemSetContainerComponent: Component {
                             let tooltipScreen = TooltipScreen(
                                 account: component.context.account,
                                 sharedContext: component.context.sharedContext,
-                                text: "You are seeing this story because you have\nbeen added to \(component.slice.peer.compactDisplayTitle)'s list of close friends.", style: .default, location: TooltipScreen.Location.point(closeFriendIconView.convert(closeFriendIconView.bounds, to: self).offsetBy(dx: 1.0, dy: 6.0), .top), displayDuration: .manual(true), shouldDismissOnTouch: { _ in
+                                text: .markdown(text: "You are seeing this story because you have\nbeen added to **\(component.slice.peer.compactDisplayTitle)'s** list of close friends."), style: .default, location: TooltipScreen.Location.point(closeFriendIconView.convert(closeFriendIconView.bounds, to: self).offsetBy(dx: 1.0, dy: 6.0), .top), displayDuration: .manual(true), shouldDismissOnTouch: { _ in
                                     return .dismiss(consume: false)
                                 }
                             )

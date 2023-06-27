@@ -338,7 +338,7 @@ final class StoryItemSetContainerSendMessage {
                 Queue.mainQueue().after(0.3) {
                     controller.present(UndoOverlayController(
                         presentationData: presentationData,
-                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat"),
+                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat", destructive: false),
                         elevatedLayout: false,
                         animateInAsReplacement: false,
                         action: { [weak view] action in
@@ -380,7 +380,7 @@ final class StoryItemSetContainerSendMessage {
                 Queue.mainQueue().after(0.3) {
                     controller.present(UndoOverlayController(
                         presentationData: presentationData,
-                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat"),
+                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat", destructive: false),
                         elevatedLayout: false,
                         animateInAsReplacement: false,
                         action: { [weak view] action in
@@ -442,7 +442,7 @@ final class StoryItemSetContainerSendMessage {
                             Queue.mainQueue().after(0.3) {
                                 controller.present(UndoOverlayController(
                                     presentationData: presentationData,
-                                    content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat"),
+                                    content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat", destructive: false),
                                     elevatedLayout: false,
                                     animateInAsReplacement: false,
                                     action: { [weak view] action in
@@ -491,7 +491,7 @@ final class StoryItemSetContainerSendMessage {
                 if isVideo {
                     if self.videoRecorderValue == nil {
                         if let currentInputPanelFrame = view.inputPanel.view?.frame {
-                            self.videoRecorder.set(.single(legacyInstantVideoController(theme: component.theme, panelFrame: view.convert(currentInputPanelFrame, to: nil), context: component.context, peerId: peer.id, slowmodeState: nil, hasSchedule: peer.id.namespace != Namespaces.Peer.SecretChat, send: { [weak self, weak view] videoController, message in
+                            self.videoRecorder.set(.single(legacyInstantVideoController(theme: component.theme, panelFrame: view.convert(currentInputPanelFrame, to: nil), context: component.context, peerId: peer.id, slowmodeState: nil, hasSchedule: true, send: { [weak self, weak view] videoController, message in
                                 guard let self, let view, let component = view.component else {
                                     return
                                 }
@@ -2057,27 +2057,35 @@ final class StoryItemSetContainerSendMessage {
     }
     
     private func sendMessages(view: StoryItemSetContainerComponent.View, peer: EnginePeer, messages: [EnqueueMessage], media: Bool = false, commit: Bool = false) {
-        guard let component = view.component else {
+        guard let component = view.component, let controller = component.controller() else {
             return
         }
+        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+        
         let _ = (enqueueMessages(account: component.context.account, peerId: peer.id, messages: self.transformEnqueueMessages(view: view, messages: messages, silentPosting: false))
-        |> deliverOnMainQueue).start()
+        |> deliverOnMainQueue).start(next: { [weak controller] messageIds in
+            if let controller {
+                Queue.mainQueue().after(0.3) {
+                    controller.present(UndoOverlayController(
+                        presentationData: presentationData,
+                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat", destructive: false),
+                        elevatedLayout: false,
+                        animateInAsReplacement: false,
+                        action: { [weak view] action in
+                            if case .undo = action, let messageId = messageIds.first {
+                                view?.navigateToPeer(peer: peer, messageId: messageId)
+                            }
+                            return false
+                        }
+                    ), in: .current)
+                }
+            }
+        })
         
         donateSendMessageIntent(account: component.context.account, sharedContext: component.context.sharedContext, intentContext: .chat, peerIds: [peer.id])
         
         if let attachmentController = self.attachmentController {
             attachmentController.dismiss(animated: true)
-        }
-        
-        if let controller = component.controller() {
-            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-            controller.present(UndoOverlayController(
-                presentationData: presentationData,
-                content: .succeed(text: "Message Sent"),
-                elevatedLayout: false,
-                animateInAsReplacement: false,
-                action: { _ in return false }
-            ), in: .current)
         }
     }
     
@@ -2139,9 +2147,7 @@ final class StoryItemSetContainerSendMessage {
 
                 strongSelf.sendMessages(view: view, peer: peer, messages: messages.map { $0.withUpdatedReplyToMessageId(replyToMessageId).withUpdatedReplyToStoryId(replyToStoryId) }, media: true)
                 
-                if let _ = scheduleTime {
-                    completion()
-                }
+                completion()
             }
         }))
     }

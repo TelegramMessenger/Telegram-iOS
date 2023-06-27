@@ -96,15 +96,25 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
                     return
                 }
                 
-                let location = CGRect(origin: CGPoint(x: sourceFrame.midX, y: sourceFrame.minY - 8.0), size: CGSize())
-                let tooltipController = TooltipScreen(
-                    account: context.account,
-                    sharedContext: context.sharedContext,
-                    text: "Stories from \(peer?.compactDisplayTitle ?? "") will now be shown in Chats, not Contacts.",
-                    location: .point(location, .bottom),
-                    shouldDismissOnTouch: { _ in return .dismiss(consume: false) }
-                )
-                contactsController?.present(tooltipController, in: .window(.root))
+                if let peer {
+                    let location = CGRect(origin: CGPoint(x: sourceFrame.midX, y: sourceFrame.minY + 1.0), size: CGSize())
+                    let tooltipController = TooltipScreen(
+                        context: context,
+                        account: context.account,
+                        sharedContext: context.sharedContext,
+                        text: .markdown(text: "Stories from \(peer.compactDisplayTitle) will now be shown in Chats, not Contacts."),
+                        icon: .peer(peer: peer, isStory: true),
+                        action: TooltipScreen.Action(
+                            title: "Undo",
+                            action: {
+                                context.engine.peers.updatePeerStoriesHidden(id: peer.id, isHidden: true)
+                            }
+                        ),
+                        location: .point(location, .bottom),
+                        shouldDismissOnTouch: { _ in return .dismiss(consume: false) }
+                    )
+                    contactsController?.present(tooltipController, in: .window(.root))
+                }
             })))
             
             return items

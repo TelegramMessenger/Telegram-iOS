@@ -265,6 +265,7 @@ public final class MediaEditor {
                 videoTrimRange: nil,
                 videoIsMuted: false,
                 videoIsFullHd: false,
+                videoIsMirrored: false,
                 additionalVideoPath: nil,
                 additionalVideoPosition: nil,
                 additionalVideoScale: nil,
@@ -579,6 +580,12 @@ public final class MediaEditor {
         self.player?.isMuted = videoIsMuted
         self.updateValues(mode: .skipRendering) { values in
             return values.withUpdatedVideoIsMuted(videoIsMuted)
+        }
+    }
+    
+    public func setVideoIsMirrored(_ videoIsMirrored: Bool) {
+        self.updateValues(mode: .skipRendering) { values in
+            return values.withUpdatedVideoIsMirrored(videoIsMirrored)
         }
     }
     

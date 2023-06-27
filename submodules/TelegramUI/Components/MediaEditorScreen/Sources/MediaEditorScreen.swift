@@ -696,7 +696,9 @@ final class MediaEditorScreenComponent: Component {
                         guard let controller = environment.controller() as? MediaEditorScreen else {
                             return
                         }
-                        controller.requestCompletion(animated: true)
+                        controller.openPrivacySettings(completion: { [weak controller] in
+                            controller?.requestCompletion(animated: true)
+                        })
                     }
                 )),
                 environment: {},
@@ -1142,7 +1144,7 @@ final class MediaEditorScreenComponent: Component {
             }
             if let privacyButtonView = self.privacyButton.view {
                 if privacyButtonView.superview == nil {
-                    self.addSubview(privacyButtonView)
+                    //self.addSubview(privacyButtonView)
                 }
                 transition.setPosition(view: privacyButtonView, position: privacyButtonFrame.center)
                 transition.setBounds(view: privacyButtonView, bounds: CGRect(origin: .zero, size: privacyButtonFrame.size))
@@ -1841,19 +1843,22 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 imageEntity.scale = 1.49
                 imageEntity.position = position.getPosition(storyDimensions)
                 self.entitiesView.add(imageEntity, announce: false)
-            } else if case let .video(_, _, _, additionalVideoPath, _, _, _, changes, position) = subject, let additionalVideoPath {
-                let videoEntity = DrawingStickerEntity(content: .dualVideoReference)
-                videoEntity.referenceDrawingSize = storyDimensions
-                videoEntity.scale = 1.49
-                videoEntity.position = position.getPosition(storyDimensions)
-                self.entitiesView.add(videoEntity, announce: false)
-                
-                mediaEditor.setAdditionalVideo(additionalVideoPath, positionChanges: changes.map { VideoPositionChange(additional: $0.0, timestamp: $0.1) })
-                mediaEditor.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
-                if let entityView = self.entitiesView.getView(for: videoEntity.uuid) as? DrawingStickerEntityView {
-                    entityView.updated = { [weak videoEntity, weak self] in
-                        if let self, let videoEntity {
-                            self.mediaEditor?.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
+            } else if case let .video(_, _, mirror, additionalVideoPath, _, _, _, changes, position) = subject {
+                mediaEditor.setVideoIsMirrored(mirror)
+                if let additionalVideoPath {
+                    let videoEntity = DrawingStickerEntity(content: .dualVideoReference)
+                    videoEntity.referenceDrawingSize = storyDimensions
+                    videoEntity.scale = 1.49
+                    videoEntity.position = position.getPosition(storyDimensions)
+                    self.entitiesView.add(videoEntity, announce: false)
+                    
+                    mediaEditor.setAdditionalVideo(additionalVideoPath, positionChanges: changes.map { VideoPositionChange(additional: $0.0, timestamp: $0.1) })
+                    mediaEditor.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
+                    if let entityView = self.entitiesView.getView(for: videoEntity.uuid) as? DrawingStickerEntityView {
+                        entityView.updated = { [weak videoEntity, weak self] in
+                            if let self, let videoEntity {
+                                self.mediaEditor?.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
+                            }
                         }
                     }
                 }
@@ -2504,7 +2509,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY + 3.0), size: CGSize())
             
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: "You can set who can view this story.", location: .point(location, .top), displayDuration: .manual(false), inset: 16.0, shouldDismissOnTouch: { _ in
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "You can set who can view this story."), location: .point(location, .top), displayDuration: .manual(false), inset: 16.0, shouldDismissOnTouch: { _ in
                 return .ignore
             })
             self.controller?.present(tooltipController, in: .current)
@@ -2527,7 +2532,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY + 3.0), size: CGSize())
             
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: isMuted ? "The story will have no sound." : "The story will have sound." , location: .point(location, .top), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _ in
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: isMuted ? "The story will have no sound." : "The story will have sound."), location: .point(location, .top), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _ in
                 return .ignore
             })
             self.muteTooltip = tooltipController
@@ -2642,7 +2647,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 text = "Story will disappear in 24 hours."
             }
             
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: text, location: .point(location, .bottom), displayDuration: .default, inset: 7.0, cornerRadius: 9.0, shouldDismissOnTouch: { _ in
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: text), location: .point(location, .bottom), displayDuration: .default, inset: 7.0, cornerRadius: 9.0, shouldDismissOnTouch: { _ in
                 return .ignore
             })
             self.storyArchiveTooltip = tooltipController
@@ -3133,7 +3138,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         self.displayNode.view.addInteraction(dropInteraction)
     }
             
-    func openPrivacySettings(_ privacy: MediaEditorResultPrivacy? = nil) {
+    func openPrivacySettings(_ privacy: MediaEditorResultPrivacy? = nil, completion: @escaping () -> Void = {}) {
         self.hapticFeedback.impact(.light)
     
         let privacy = privacy ?? self.state.privacy
@@ -3157,6 +3162,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             return
                         }
                         self.state.privacy = MediaEditorResultPrivacy(privacy: privacy, timeout: timeout, archive: archive)
+                        completion()
                     },
                     editCategory: { [weak self] privacy in
                         guard let self else {
@@ -3166,7 +3172,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             guard let self else {
                                 return
                             }
-                            self.openPrivacySettings(MediaEditorResultPrivacy(privacy: privacy, timeout: timeout, archive: archive))
+                            self.openPrivacySettings(MediaEditorResultPrivacy(privacy: privacy, timeout: timeout, archive: archive), completion: completion)
                         })
                     }
                 )

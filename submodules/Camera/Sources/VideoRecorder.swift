@@ -165,11 +165,13 @@ private final class VideoRecorderImpl {
                     if !self.savedTransitionImage, let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
                         self.savedTransitionImage = true
                         
-                        let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
-                        if let cgImage = self.imageContext.createCGImage(ciImage, from: ciImage.extent) {
-                            self.transitionImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .right)
-                        } else {
-                            self.savedTransitionImage = false
+                        Queue.concurrentDefaultQueue().async {
+                            let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+                            if let cgImage = self.imageContext.createCGImage(ciImage, from: ciImage.extent) {
+                                self.transitionImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .right)
+                            } else {
+                                self.savedTransitionImage = false
+                            }
                         }
                     }
                     

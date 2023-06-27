@@ -1589,7 +1589,7 @@ public class CameraScreen: ViewController {
             let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 4.0), size: CGSize())
                         
-            let controller = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: "Draft Saved", location: .point(location, .bottom), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _ in
+            let controller = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Draft Saved"), location: .point(location, .bottom), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _ in
                 return .ignore
             })
             self.controller?.present(controller, in: .current)
@@ -1604,7 +1604,7 @@ public class CameraScreen: ViewController {
             let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY + 3.0), size: CGSize())
             
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: "Enable Dual Camera Mode", location: .point(location, .top), displayDuration: .manual(false), inset: 16.0, shouldDismissOnTouch: { _ in
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Enable Dual Camera Mode"), location: .point(location, .top), displayDuration: .manual(false), inset: 16.0, shouldDismissOnTouch: { _ in
                 return .ignore
             })
             self.controller?.present(tooltipController, in: .current)
@@ -1617,9 +1617,9 @@ public class CameraScreen: ViewController {
             
             let parentFrame = self.view.convert(self.bounds, to: nil)
             let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
-            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 3.0), size: CGSize())
+            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 1.0), size: CGSize())
             
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: "Take photos or videos to share with all your contacts or close friends at once.", location: .point(location, .bottom), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _ in
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Take photos or videos to share with all\nyour contacts or close friends at once."), textAlignment: .center, location: .point(location, .bottom), displayDuration: .custom(3.0), inset: 16.0, shouldDismissOnTouch: { _ in
                 return .ignore
             })
             self.controller?.present(tooltipController, in: .current)
@@ -2106,6 +2106,11 @@ public class CameraScreen: ViewController {
         if let layout = self.validLayout, case .regular = layout.metrics.widthClass {
             return
         }
+        
+        if self.node.hasAppeared {
+            self.dismissAllTooltips()
+        }
+        
         let transitionFraction = max(0.0, min(1.0, transitionFraction))
         let offsetX = floorToScreenPixels((1.0 - transitionFraction) * self.node.frame.width * -1.0)
         transition.updateTransform(layer: self.node.backgroundView.layer, transform: CGAffineTransform(translationX: offsetX, y: 0.0))

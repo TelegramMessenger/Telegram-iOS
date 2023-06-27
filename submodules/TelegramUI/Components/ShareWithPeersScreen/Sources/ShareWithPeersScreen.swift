@@ -458,8 +458,7 @@ final class ShareWithPeersScreenComponent: Component {
                         
                         let sectionTitle: String
                         if section.id == 0 {
-                            let hours = component.timeout / 3600
-                            sectionTitle = "WHO CAN VIEW FOR \(hours) HOURS"
+                            sectionTitle = "WHO CAN VIEW"
                         } else {
                             if case .chats = component.stateContext.subject {
                                 sectionTitle = "CHATS"
@@ -1063,10 +1062,12 @@ final class ShareWithPeersScreenComponent: Component {
             }
             navigationButtonsWidth += navigationLeftButtonSize.width + navigationSideInset
             
+            var actionButtonTitle = "Save Settings"
             let title: String
             switch component.stateContext.subject {
             case .stories:
                 title = "Share Story"
+                actionButtonTitle = "Post Story"
             case .chats:
                 title = "Send as a Message"
             case let .contacts(category):
@@ -1125,7 +1126,6 @@ final class ShareWithPeersScreenComponent: Component {
             
             transition.setFrame(layer: self.navigationSeparatorLayer, frame: CGRect(origin: CGPoint(x: containerSideInset, y: navigationHeight), size: CGSize(width: containerWidth, height: UIScreenPixel)))
             
-            let actionButtonTitle: String = "Save Settings"
             let actionButtonSize = self.actionButton.update(
                 transition: transition,
                 component: AnyComponent(ButtonComponent(
