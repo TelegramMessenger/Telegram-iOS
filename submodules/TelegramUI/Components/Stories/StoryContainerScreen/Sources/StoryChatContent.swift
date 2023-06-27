@@ -138,7 +138,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                         isExpired: item.isExpired,
                         isPublic: item.isPublic,
                         isPending: false,
-                        isCloseFriends: item.isCloseFriends
+                        isCloseFriends: item.isCloseFriends,
+                        isForwardingDisabled: item.isForwardingDisabled
                     )
                 }
                 if peerId == context.account.peerId, let stateView = views.views[PostboxViewKey.storiesState(key: .local)] as? StoryStatesView, let localState = stateView.value?.get(Stories.LocalState.self) {
@@ -156,7 +157,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                             isExpired: false,
                             isPublic: false,
                             isPending: true,
-                            isCloseFriends: false
+                            isCloseFriends: false,
+                            isForwardingDisabled: false
                         ))
                     }
                 }
@@ -954,7 +956,8 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                     isExpired: itemValue.isExpired,
                     isPublic: itemValue.isPublic,
                     isPending: false,
-                    isCloseFriends: itemValue.isCloseFriends
+                    isCloseFriends: itemValue.isCloseFriends,
+                    isForwardingDisabled: itemValue.isForwardingDisabled
                 )
                 
                 let mainItem = StoryContentItem(
