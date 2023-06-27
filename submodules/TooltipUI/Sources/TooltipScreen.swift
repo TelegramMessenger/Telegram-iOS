@@ -653,7 +653,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             transition.updateFrame(node: actionButtonNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.width - actionSize.width - 16.0, y: floor((backgroundHeight - actionSize.height) / 2.0)), size: actionSize))
         }
         
-        let animationFrame = CGRect(origin: CGPoint(x: contentInset - animationInset, y: contentVerticalInset - animationInset), size: CGSize(width: animationSize.width + animationInset * 2.0, height: animationSize.height + animationInset * 2.0))
+        let animationFrame = CGRect(origin: CGPoint(x: contentInset - animationInset, y: floorToScreenPixels((backgroundHeight - animationSize.height - animationInset * 2.0) / 2.0)), size: CGSize(width: animationSize.width + animationInset * 2.0, height: animationSize.height + animationInset * 2.0))
         transition.updateFrame(node: self.animatedStickerNode, frame: animationFrame)
         self.animatedStickerNode.updateLayout(size: CGSize(width: animationSize.width + animationInset * 2.0, height: animationSize.height + animationInset * 2.0))
         

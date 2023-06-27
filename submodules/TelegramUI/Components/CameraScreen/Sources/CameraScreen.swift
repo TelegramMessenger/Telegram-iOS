@@ -1709,7 +1709,7 @@ public class CameraScreen: ViewController {
                 self.hasAppeared = hasAppeared
                 transition = transition.withUserData(CameraScreenTransition.finishedAnimateIn)
                 
-                self.presentCameraTooltip()
+//                self.presentCameraTooltip()
 //                self.presentDualCameraTooltip()
             }
 
