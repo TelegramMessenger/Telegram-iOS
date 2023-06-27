@@ -1756,167 +1756,7 @@ public final class StoryItemSetContainerComponent: Component {
                             guard let self else {
                                 return
                             }
-                            
-                            component.controller()?.forEachController { c in
-                                if let c = c as? UndoOverlayController {
-                                    c.dismiss()
-                                }
-                                return true
-                            }
-                            
-                            var items: [ContextMenuItem] = []
-                            
-                            let additionalCount = component.slice.item.storyItem.privacy?.additionallyIncludePeers.count ?? 0
-                            
-                            let privacyText: String
-                            switch component.slice.item.storyItem.privacy?.base {
-                            case .closeFriends:
-                                privacyText = "Close Friends"
-                            case .contacts:
-                                if additionalCount != 0 {
-                                    privacyText = "Contacts (-\(additionalCount))"
-                                } else {
-                                    privacyText = "Contacts"
-                                }
-                            case .nobody:
-                                if additionalCount != 0 {
-                                    if additionalCount == 1 {
-                                        privacyText = "\(additionalCount) Person"
-                                    } else {
-                                        privacyText = "\(additionalCount) People"
-                                    }
-                                } else {
-                                    privacyText = "Only Me"
-                                }
-                            default:
-                                privacyText = "Everyone"
-                            }
-                            
-                            items.append(.action(ContextMenuActionItem(text: "Who can see", textLayout: .secondLineWithValue(privacyText), icon: { theme in
-                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Channels"), color: theme.contextMenu.primaryColor)
-                            }, action: { [weak self] _, a in
-                                a(.default)
-                                
-                                guard let self else {
-                                    return
-                                }
-                                self.openItemPrivacySettings()
-                            })))
-                            
-                            items.append(.action(ContextMenuActionItem(text: "Edit Story", icon: { theme in
-                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
-                            }, action: { [weak self] _, a in
-                                a(.default)
-                                
-                                guard let self else {
-                                    return
-                                }
-                                self.openStoryEditing()
-                            })))
-                            
-                            items.append(.separator)
-                                                        
-                            items.append(.action(ContextMenuActionItem(text: component.slice.item.storyItem.isPinned ? "Remove from profile" : "Save to profile", icon: { theme in
-                                return generateTintedImage(image: UIImage(bundleImageName: component.slice.item.storyItem.isPinned ? "Chat/Context Menu/Check" : "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
-                            }, action: { [weak self] _, a in
-                                a(.default)
-                                
-                                guard let self, let component = self.component else {
-                                    return
-                                }
-                                
-                                let _ = component.context.engine.messages.updateStoriesArePinned(ids: [component.slice.item.storyItem.id: component.slice.item.storyItem], isPinned: !component.slice.item.storyItem.isPinned).start()
-                                
-                                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-                                if component.slice.item.storyItem.isPinned {
-                                    self.component?.presentController(UndoOverlayController(
-                                        presentationData: presentationData,
-                                        content: .info(title: nil, text: "Story removed from your profile", timeout: nil),
-                                        elevatedLayout: false,
-                                        animateInAsReplacement: false,
-                                        action: { _ in return false }
-                                    ), nil)
-                                } else {
-                                    self.component?.presentController(UndoOverlayController(
-                                        presentationData: presentationData,
-                                        content: .info(title: "Story saved to your profile", text: "Saved stories can be viewed by others on your profile until you remove them.", timeout: nil),
-                                        elevatedLayout: false,
-                                        animateInAsReplacement: false,
-                                        action: { _ in return false }
-                                    ), nil)
-                                }
-                            })))
-                            
-                            let saveText: String
-                            if case .file = component.slice.item.storyItem.media {
-                                saveText = "Save Video"
-                            } else {
-                                saveText = "Save Image"
-                            }
-                            items.append(.action(ContextMenuActionItem(text: saveText, icon: { theme in
-                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.contextMenu.primaryColor)
-                            }, action: { [weak self] _, a in
-                                a(.default)
-                                
-                                guard let self else {
-                                    return
-                                }
-                                self.requestSave()
-                            })))
-                            
-                            if component.slice.item.storyItem.isPublic && (component.slice.peer.addressName != nil || !component.slice.peer._asPeer().usernames.isEmpty) {
-                                items.append(.action(ContextMenuActionItem(text: "Copy Link", icon: { theme in
-                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
-                                }, action: { [weak self] _, a in
-                                    a(.default)
-                                    
-                                    guard let self, let component = self.component else {
-                                        return
-                                    }
-                                    
-                                    let _ = (component.context.engine.messages.exportStoryLink(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id)
-                                    |> deliverOnMainQueue).start(next: { [weak self] link in
-                                        guard let self, let component = self.component else {
-                                            return
-                                        }
-                                        if let link {
-                                            UIPasteboard.general.string = link
-                                            
-                                            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-                                            component.presentController(UndoOverlayController(
-                                                presentationData: presentationData,
-                                                content: .linkCopied(text: "Link copied."),
-                                                elevatedLayout: false,
-                                                animateInAsReplacement: false,
-                                                action: { _ in return false }
-                                            ), nil)
-                                        }
-                                    })
-                                })))
-                                items.append(.action(ContextMenuActionItem(text: "Share", icon: { theme in
-                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
-                                }, action: {  [weak self] _, a in
-                                    a(.default)
-                                    
-                                    guard let self else {
-                                        return
-                                    }
-                                    self.sendMessageContext.performShareAction(view: self)
-                                })))
-                            }
-
-                            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-                            let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
-                            contextController.dismissed = { [weak self] in
-                                guard let self else {
-                                    return
-                                }
-                                self.contextController = nil
-                                self.updateIsProgressPaused()
-                            }
-                            self.contextController = contextController
-                            self.updateIsProgressPaused()
-                            controller.present(contextController, in: .window(.root))
+                            self.performMoreAction(sourceView: sourceView, gesture: gesture)
                         },
                         openPeer: { [weak self] peer in
                             guard let self else {
@@ -2108,7 +1948,7 @@ public final class StoryItemSetContainerComponent: Component {
                             let tooltipScreen = TooltipScreen(
                                 account: component.context.account,
                                 sharedContext: component.context.sharedContext,
-                                text: "This video has no sound", style: .default, location: TooltipScreen.Location.point(soundButtonView.convert(soundButtonView.bounds, to: self).offsetBy(dx: 1.0, dy: -10.0), .top), displayDuration: .manual(true), shouldDismissOnTouch: { _ in
+                                text: .plain(text: "This video has no sound"), style: .default, location: TooltipScreen.Location.point(soundButtonView.convert(soundButtonView.bounds, to: self).offsetBy(dx: 1.0, dy: -10.0), .top), displayDuration: .manual(true), shouldDismissOnTouch: { _ in
                                     return .dismiss(consume: true)
                                 }
                             )
@@ -2172,7 +2012,7 @@ public final class StoryItemSetContainerComponent: Component {
                             let tooltipScreen = TooltipScreen(
                                 account: component.context.account,
                                 sharedContext: component.context.sharedContext,
-                                text: "You are seeing this story because you have\nbeen added to \(component.slice.peer.compactDisplayTitle)'s list of close friends.", style: .default, location: TooltipScreen.Location.point(closeFriendIconView.convert(closeFriendIconView.bounds, to: self).offsetBy(dx: 1.0, dy: 6.0), .top), displayDuration: .manual(true), shouldDismissOnTouch: { _ in
+                                text: .plain(text: "You are seeing this story because you have\nbeen added to \(component.slice.peer.compactDisplayTitle)'s list of close friends."), style: .default, location: TooltipScreen.Location.point(closeFriendIconView.convert(closeFriendIconView.bounds, to: self).offsetBy(dx: 1.0, dy: 6.0), .top), displayDuration: .manual(true), shouldDismissOnTouch: { _ in
                                     return .dismiss(consume: true)
                                 }
                             )
@@ -3190,15 +3030,33 @@ public final class StoryItemSetContainerComponent: Component {
             })))
             
             if component.slice.item.storyItem.isPublic && (component.slice.peer.addressName != nil || !component.slice.peer._asPeer().usernames.isEmpty) {
-                items.append(.action(ContextMenuActionItem(text: "Copy link", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: "Copy Link", icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, a in
                     a(.default)
                     
-                    guard let self else {
+                    guard let self, let component = self.component else {
                         return
                     }
-                    self.sendMessageContext.performCopyLinkAction(view: self)
+                    
+                    let _ = (component.context.engine.messages.exportStoryLink(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id)
+                    |> deliverOnMainQueue).start(next: { [weak self] link in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        if let link {
+                            UIPasteboard.general.string = link
+                            
+                            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                            component.presentController(UndoOverlayController(
+                                presentationData: presentationData,
+                                content: .linkCopied(text: "Link copied."),
+                                elevatedLayout: false,
+                                animateInAsReplacement: false,
+                                action: { _ in return false }
+                            ), nil)
+                        }
+                    })
                 })))
                 items.append(.action(ContextMenuActionItem(text: "Share", icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
