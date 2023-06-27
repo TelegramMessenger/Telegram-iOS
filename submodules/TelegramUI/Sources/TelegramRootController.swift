@@ -125,6 +125,14 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         self.applicationInFocusDisposable?.dispose()
     }
     
+    public func getContactsController() -> ViewController? {
+        return self.contactsController
+    }
+    
+    public func getChatsController() -> ViewController? {
+        return self.chatListController
+    }
+    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         let needsRootWallpaperBackgroundNode: Bool
         if case .regular = layout.metrics.widthClass {
@@ -303,10 +311,10 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                     switch value {
                     case .pendingImage:
                         return nil
-                    case let .image(image, additionalImage, pipPosition):
-                        return .image(image, PixelDimensions(image.size), additionalImage, editorPIPPosition(pipPosition))
-                    case let .video(path, transitionImage, additionalPath, additionalTransitionImage, dimensions, duration, positionChangeTimestamps, pipPosition):
-                        return .video(path, transitionImage, additionalPath, additionalTransitionImage, dimensions, duration, positionChangeTimestamps, editorPIPPosition(pipPosition))
+                    case let .image(image):
+                        return .image(image.image, PixelDimensions(image.image.size), image.additionalImage, editorPIPPosition(image.additionalImagePosition))
+                    case let .video(video):
+                        return .video(video.videoPath, video.coverImage, video.mirror, video.additionalVideoPath, video.additionalCoverImage, video.dimensions, video.duration, video.positionChangeTimestamps, editorPIPPosition(video.additionalVideoPosition))
                     case let .asset(asset):
                         return .asset(asset)
                     case let .draft(draft):

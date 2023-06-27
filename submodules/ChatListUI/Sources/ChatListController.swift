@@ -2356,7 +2356,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             
                             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 8.0), size: CGSize())
                             
-                            parentController.present(TooltipScreen(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, text: text, icon: .chatListPress, location: .point(location, .bottom), shouldDismissOnTouch: { point in
+                            parentController.present(TooltipScreen(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, text: .plain(text: text), icon: .animation(name: "ChatListFoldersTooltip", delay: 0.6), location: .point(location, .bottom), shouldDismissOnTouch: { point in
                                 guard let strongSelf = self, let parentController = strongSelf.parent as? TabBarController else {
                                     return .dismiss(consume: false)
                                 }
@@ -2692,6 +2692,30 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 return
                             }
                             self.context.engine.peers.updatePeerStoriesHidden(id: peer.id, isHidden: true)
+                        
+                            guard let parentController = self.parent as? TabBarController, let contactsController = (self.navigationController as? TelegramRootControllerInterface)?.getContactsController(), let sourceFrame = parentController.frameForControllerTab(controller: contactsController) else {
+                                return
+                            }
+                            
+                            let location = CGRect(origin: CGPoint(x: sourceFrame.midX, y: sourceFrame.minY + 1.0), size: CGSize())
+                            let tooltipController = TooltipScreen(
+                                context: self.context,
+                                account: self.context.account,
+                                sharedContext: self.context.sharedContext,
+                                text: .markdown(text: "Stories from **\(peer.compactDisplayTitle)** will now be shown in Contacts, not Chats."),
+                                icon: .peer(peer: peer, isStory: true),
+                                action: TooltipScreen.Action(
+                                    title: "Undo",
+                                    action: { [weak self] in
+                                        if let self {
+                                            self.context.engine.peers.updatePeerStoriesHidden(id: peer.id, isHidden: false)
+                                        }
+                                    }
+                                ),
+                                location: .point(location, .bottom),
+                                shouldDismissOnTouch: { _ in return .dismiss(consume: false) }
+                            )
+                            self.present(tooltipController, in: .window(.root))
                         })))
                     }
                     

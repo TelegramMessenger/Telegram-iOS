@@ -10,6 +10,7 @@ import PresentationDataUtils
 import OverlayStatusController
 import LocalizedPeerData
 import UndoUI
+import TooltipUI
 
 func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, contactsController: ContactsController?, isStories: Bool) -> Signal<[ContextMenuItem], NoError> {
     let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
@@ -25,7 +26,6 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
         
         if isStories {
             //TODO:localize
-            
             items.append(.action(ContextMenuActionItem(text: "View Profile", icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.contextMenu.primaryColor)
             }, action: { c, _ in
@@ -91,6 +91,30 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
                 f(.default)
 
                 context.engine.peers.updatePeerStoriesHidden(id: peerId, isHidden: false)
+                
+                guard let parentController = contactsController?.parent as? TabBarController, let chatsController = (contactsController?.navigationController as? TelegramRootControllerInterface)?.getChatsController(), let sourceFrame = parentController.frameForControllerTab(controller: chatsController) else {
+                    return
+                }
+                
+                if let peer {
+                    let location = CGRect(origin: CGPoint(x: sourceFrame.midX, y: sourceFrame.minY + 1.0), size: CGSize())
+                    let tooltipController = TooltipScreen(
+                        context: context,
+                        account: context.account,
+                        sharedContext: context.sharedContext,
+                        text: .markdown(text: "Stories from \(peer.compactDisplayTitle) will now be shown in Chats, not Contacts."),
+                        icon: .peer(peer: peer, isStory: true),
+                        action: TooltipScreen.Action(
+                            title: "Undo",
+                            action: {
+                                context.engine.peers.updatePeerStoriesHidden(id: peer.id, isHidden: true)
+                            }
+                        ),
+                        location: .point(location, .bottom),
+                        shouldDismissOnTouch: { _ in return .dismiss(consume: false) }
+                    )
+                    contactsController?.present(tooltipController, in: .window(.root))
+                }
             })))
             
             return items

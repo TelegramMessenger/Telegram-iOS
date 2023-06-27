@@ -11,11 +11,11 @@ import TelegramCore
 import TextFormat
 import UrlEscaping
 import AccountContext
-
-public protocol TooltipCustomContentNode: ASDisplayNode {
-    func animateIn()
-    func updateLayout(size: CGSize) -> CGSize
-}
+import AvatarNode
+import ComponentFlow
+import AvatarStoryIndicatorComponent
+import AccountContext
+import Markdown
 
 public enum TooltipActiveTextItem {
     case url(String, Bool)
@@ -109,7 +109,7 @@ private class DownArrowsIconNode: ASDisplayNode {
 private final class TooltipScreenNode: ViewControllerTracingNode {
     private let tooltipStyle: TooltipScreen.Style
     private let icon: TooltipScreen.Icon?
-    private let customContentNode: TooltipCustomContentNode?
+    private let action: TooltipScreen.Action?
     var location: TooltipScreen.Location {
         didSet {
             if let layout = self.validLayout {
@@ -134,8 +134,11 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     private let arrowContainer: ASDisplayNode
     private let animatedStickerNode: AnimatedStickerNode
     private var downArrowsNode: DownArrowsIconNode?
+    private var avatarNode: AvatarNode?
+    private var avatarStoryIndicator: ComponentView<Empty>?
     private let textNode: ImmediateTextNode
-    private let closeButtonNode: HighlightableButtonNode
+    private var closeButtonNode: HighlightableButtonNode?
+    private var actionButtonNode: HighlightableButtonNode?
     
     private var isArrowInverted: Bool = false
     
@@ -143,10 +146,24 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     
     private var validLayout: ContainerViewLayout?
     
-    init(account: Account, sharedContext: SharedAccountContext, text: String, textEntities: [MessageTextEntity], style: TooltipScreen.Style, icon: TooltipScreen.Icon? = nil, customContentNode: TooltipCustomContentNode? = nil, location: TooltipScreen.Location, displayDuration: TooltipScreen.DisplayDuration, inset: CGFloat = 13.0, cornerRadius: CGFloat? = nil, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?) {
+    init(
+        context: AccountContext?,
+        account: Account,
+        sharedContext: SharedAccountContext,
+        text: TooltipScreen.Text,
+        textAlignment: TooltipScreen.Alignment,
+        style: TooltipScreen.Style,
+        icon: TooltipScreen.Icon? = nil,
+        action: TooltipScreen.Action? = nil,
+        location: TooltipScreen.Location,
+        displayDuration: TooltipScreen.DisplayDuration,
+        inset: CGFloat = 13.0,
+        cornerRadius: CGFloat? = nil,
+        shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?)
+    {
         self.tooltipStyle = style
         self.icon = icon
-        self.customContentNode = customContentNode
+        self.action = action
         self.location = location
         self.displayDuration = displayDuration
         self.inset = inset
@@ -163,6 +180,8 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         let fillColor = UIColor(white: 0.0, alpha: 0.8)
         
         self.scrollingContainer = ASDisplayNode()
+        
+        let theme = sharedContext.currentPresentationData.with { $0 }.theme
         
         func svgPath(_ path: StaticString, scale: CGPoint = CGPoint(x: 1.0, y: 1.0), offset: CGPoint = CGPoint()) throws -> UIBezierPath {
             var index: UnsafePointer<UInt8> = path.utf8Start
@@ -210,7 +229,6 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         self.arrowContainer = ASDisplayNode()
         
-        let theme = sharedContext.currentPresentationData.with { $0 }.theme
         let fontSize: CGFloat
         if case .top = location {
             let backgroundColor: UIColor
@@ -310,25 +328,56 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.maximumNumberOfLines = 0
+            
+        let baseFont = Font.regular(fontSize)
+        let boldFont = Font.semibold(14.0)
+        let italicFont = Font.italic(fontSize)
+        let boldItalicFont = Font.semiboldItalic(fontSize)
+        let fixedFont = Font.monospace(fontSize)
         
-        self.textNode.attributedText = stringWithAppliedEntities(text, entities: textEntities, baseColor: .white, linkColor: .white, baseFont: Font.regular(fontSize), linkFont: Font.regular(fontSize), boldFont: Font.semibold(14.0), italicFont: Font.italic(fontSize), boldItalicFont: Font.semiboldItalic(fontSize), fixedFont: Font.monospace(fontSize), blockQuoteFont: Font.regular(fontSize), underlineLinks: true, external: false, message: nil)
+        let textColor: UIColor = .white
+        
+        let attributedText: NSAttributedString
+            switch text {
+            case let .plain(text):
+                attributedText = NSAttributedString(string: text, font: baseFont, textColor: textColor)
+            case let .entities(text, entities):
+                attributedText = stringWithAppliedEntities(text, entities: entities, baseColor: textColor, linkColor: textColor, baseFont: baseFont, linkFont: baseFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: fixedFont, blockQuoteFont: baseFont, underlineLinks: true, external: false, message: nil)
+            case let .markdown(text):
+                let markdownAttributes = MarkdownAttributes(
+                    body: MarkdownAttributeSet(font: baseFont, textColor: textColor),
+                    bold: MarkdownAttributeSet(font: boldFont, textColor: textColor),
+                    link: MarkdownAttributeSet(font: baseFont, textColor: textColor),
+                    linkAttribute: { _ in
+                        return nil
+                    }
+                )
+                attributedText = parseMarkdownIntoAttributedString(text, attributes: markdownAttributes)
+            }
+            
+        self.textNode.attributedText = attributedText
+        self.textNode.textAlignment = textAlignment == .center ? .center : .natural
         
         self.animatedStickerNode = DefaultAnimatedStickerNodeImpl()
         switch icon {
         case .none:
             break
-        case .chatListPress:
-            self.animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ChatListFoldersTooltip"), width: Int(70 * UIScreenScale), height: Int(70 * UIScreenScale), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
-            self.animatedStickerNode.automaticallyLoadFirstFrame = true
-        case .info:
-            self.animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "anim_infotip"), width: Int(70 * UIScreenScale), height: Int(70 * UIScreenScale), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+        case let .animation(animationName, _):
+            self.animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: Int(70 * UIScreenScale), height: Int(70 * UIScreenScale), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
             self.animatedStickerNode.automaticallyLoadFirstFrame = true
         case .downArrows:
             self.downArrowsNode = DownArrowsIconNode()
+        case let .peer(peer, _):
+            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 15.0))
+            if let context {
+                self.avatarNode?.setPeer(context: context, theme: defaultDarkPresentationTheme, peer: peer)
+            }
         }
         
-        self.closeButtonNode = HighlightableButtonNode()
-        self.closeButtonNode.setImage(UIImage(bundleImageName: "Components/Close"), for: .normal)
+        if case .manual = displayDuration {
+            self.closeButtonNode = HighlightableButtonNode()
+            self.closeButtonNode?.setImage(UIImage(bundleImageName: "Components/Close"), for: .normal)
+        }
         
         super.init()
         
@@ -343,15 +392,27 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         self.containerNode.addSubnode(self.textNode)
         self.containerNode.addSubnode(self.animatedStickerNode)
         
-        if case .manual = displayDuration {
-            self.containerNode.addSubnode(self.closeButtonNode)
+        if let closeButtonNode = self.closeButtonNode {
+            self.containerNode.addSubnode(closeButtonNode)
         }
         
         if let downArrowsNode = self.downArrowsNode {
             self.containerNode.addSubnode(downArrowsNode)
         }
+        if let avatarNode = self.avatarNode {
+            self.containerNode.addSubnode(avatarNode)
+        }
         self.scrollingContainer.addSubnode(self.containerNode)
         self.addSubnode(self.scrollingContainer)
+        
+        if let action {
+            let actionColor = theme.list.itemAccentColor.withMultiplied(hue: 1.0, saturation: 0.64, brightness: 1.08)
+            let actionButtonNode = HighlightableButtonNode()
+            actionButtonNode.hitTestSlop = UIEdgeInsets(top: -16.0, left: -16.0, bottom: -16.0, right: -16.0)
+            actionButtonNode.setAttributedTitle(NSAttributedString(string: action.title, font: Font.regular(17.0), textColor: actionColor), for: .normal)
+            self.containerNode.addSubnode(actionButtonNode)
+            self.actionButtonNode = actionButtonNode
+        }
         
         self.textNode.linkHighlightColor = UIColor.white.withAlphaComponent(0.5)
         self.textNode.highlightAttributeAction = { attributes in
@@ -412,7 +473,15 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             }
         }
         
-        self.closeButtonNode.addTarget(self, action: #selector(self.closePressed), forControlEvents: .touchUpInside)
+        self.actionButtonNode?.addTarget(self, action: #selector(self.actionPressed), forControlEvents: .touchUpInside)
+        self.closeButtonNode?.addTarget(self, action: #selector(self.closePressed), forControlEvents: .touchUpInside)
+    }
+    
+    @objc private func actionPressed() {
+        if let action = self.action {
+            action.action()
+            self.requestDismiss()
+        }
     }
     
     @objc private func closePressed() {
@@ -441,11 +510,15 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             animationSize = CGSize(width: 24.0, height: 32.0)
             animationInset = (40.0 - animationSize.width) / 2.0
             animationSpacing = 8.0
-        case .chatListPress:
+        case let .animation(animationName, _):
             animationSize = CGSize(width: 32.0, height: 32.0)
-            animationInset = (70.0 - animationSize.width) / 2.0
+            if animationName == "ChatListFoldersTooltip" {
+                animationInset = (70.0 - animationSize.width) / 2.0
+            } else {
+                animationInset = 0.0
+            }
             animationSpacing = 8.0
-        case .info:
+        case .peer:
             animationSize = CGSize(width: 32.0, height: 32.0)
             animationInset = 0.0
             animationSpacing = 8.0
@@ -453,24 +526,41 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         let containerWidth = max(100.0, min(layout.size.width, 614.0) - (sideInset + layout.safeInsets.left) * 2.0)
         
-        let textSize = self.textNode.updateLayout(CGSize(width: containerWidth - contentInset * 2.0 - animationSize.width - animationSpacing, height: .greatestFiniteMagnitude))
+        var actionSize: CGSize = .zero
+        
+        var buttonInset: CGFloat = 0.0
+        if let actionButtonNode = self.actionButtonNode {
+            actionSize = actionButtonNode.measure(CGSize(width: containerWidth, height: .greatestFiniteMagnitude))
+            buttonInset += actionSize.width + 32.0
+        }
+        if self.closeButtonNode != nil {
+            buttonInset += 24.0
+        }
+        
+        let textSize = self.textNode.updateLayout(CGSize(width: containerWidth - contentInset * 2.0 - animationSize.width - animationSpacing - buttonInset, height: .greatestFiniteMagnitude))
         
         var backgroundFrame: CGRect
         
-        let backgroundHeight: CGFloat
+        var backgroundHeight: CGFloat
         switch self.tooltipStyle {
         case .default, .gradient, .customBlur:
-                backgroundHeight = max(animationSize.height, textSize.height) + contentVerticalInset * 2.0
-            case .light:
-                backgroundHeight = max(28.0, max(animationSize.height, textSize.height) + 4.0 * 2.0)
+            backgroundHeight = max(animationSize.height, textSize.height) + contentVerticalInset * 2.0
+            if self.actionButtonNode != nil {
+                backgroundHeight += 2.0
+            }
+        case .light:
+            backgroundHeight = max(28.0, max(animationSize.height, textSize.height) + 4.0 * 2.0)
         }
                     
         var invertArrow = false
         switch self.location {
         case let .point(rect, arrowPosition):
             var backgroundWidth = textSize.width + contentInset * 2.0 + animationSize.width + animationSpacing
-            if self.closeButtonNode.supernode != nil {
-                backgroundWidth += 24.0
+            if self.closeButtonNode != nil || self.actionButtonNode != nil {
+                backgroundWidth += buttonInset
+            }
+            if self.actionButtonNode != nil, case .compact = layout.metrics.widthClass {
+                backgroundWidth = containerWidth
             }
             switch arrowPosition {
                 case .bottom, .top:
@@ -554,10 +644,16 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         let textFrame = CGRect(origin: CGPoint(x: contentInset + animationSize.width + animationSpacing, y: floor((backgroundHeight - textSize.height) / 2.0)), size: textSize)
         transition.updateFrame(node: self.textNode, frame: textFrame)
         
-        let closeSize = CGSize(width: 44.0, height: 44.0)
-        transition.updateFrame(node: self.closeButtonNode, frame: CGRect(origin: CGPoint(x: textFrame.maxX - 6.0, y: floor((backgroundHeight - closeSize.height) / 2.0)), size: closeSize))
+        if let closeButtonNode = self.closeButtonNode {
+            let closeSize = CGSize(width: 44.0, height: 44.0)
+            transition.updateFrame(node: closeButtonNode, frame: CGRect(origin: CGPoint(x: textFrame.maxX - 6.0, y: floor((backgroundHeight - closeSize.height) / 2.0)), size: closeSize))
+        }
         
-        let animationFrame = CGRect(origin: CGPoint(x: contentInset - animationInset, y: contentVerticalInset - animationInset), size: CGSize(width: animationSize.width + animationInset * 2.0, height: animationSize.height + animationInset * 2.0))
+        if let actionButtonNode = self.actionButtonNode {
+            transition.updateFrame(node: actionButtonNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.width - actionSize.width - 16.0, y: floor((backgroundHeight - actionSize.height) / 2.0)), size: actionSize))
+        }
+        
+        let animationFrame = CGRect(origin: CGPoint(x: contentInset - animationInset, y: floorToScreenPixels((backgroundHeight - animationSize.height - animationInset * 2.0) / 2.0)), size: CGSize(width: animationSize.width + animationInset * 2.0, height: animationSize.height + animationInset * 2.0))
         transition.updateFrame(node: self.animatedStickerNode, frame: animationFrame)
         self.animatedStickerNode.updateLayout(size: CGSize(width: animationSize.width + animationInset * 2.0, height: animationSize.height + animationInset * 2.0))
         
@@ -565,6 +661,59 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             let arrowsSize = CGSize(width: 16.0, height: 16.0)
             transition.updateFrame(node: downArrowsNode, frame: CGRect(origin: CGPoint(x: animationFrame.midX - arrowsSize.width / 2.0, y: animationFrame.midY - arrowsSize.height / 2.0), size: arrowsSize))
             downArrowsNode.setupAnimations()
+        }
+        
+        if let avatarNode = self.avatarNode {
+            var avatarFrame = animationFrame
+            
+            if let icon, case let .peer(_, isStory) = icon, isStory {
+                let indicatorTransition: Transition = .immediate
+                let avatarStoryIndicator: ComponentView<Empty>
+                if let current = self.avatarStoryIndicator {
+                    avatarStoryIndicator = current
+                } else {
+                    avatarStoryIndicator = ComponentView()
+                    self.avatarStoryIndicator = avatarStoryIndicator
+                }
+                
+                let storyIndicatorScale: CGFloat = 1.0
+                var indicatorFrame = CGRect(origin: CGPoint(x: avatarFrame.minX + 4.0, y: avatarFrame.minY + 4.0), size: CGSize(width: avatarFrame.width - 4.0 - 4.0, height: avatarFrame.height - 4.0 - 4.0))
+                indicatorFrame.origin.x -= (avatarFrame.width - avatarFrame.width * storyIndicatorScale) * 0.5
+                
+                let _ = avatarStoryIndicator.update(
+                    transition: indicatorTransition,
+                    component: AnyComponent(AvatarStoryIndicatorComponent(
+                        hasUnseen: true,
+                        hasUnseenCloseFriendsItems: false,
+                        theme: defaultDarkPresentationTheme,
+                        activeLineWidth: 1.0 + UIScreenPixel,
+                        inactiveLineWidth: 1.0 + UIScreenPixel,
+                        counters: nil
+                    )),
+                    environment: {},
+                    containerSize: indicatorFrame.size
+                )
+                if let avatarStoryIndicatorView = avatarStoryIndicator.view {
+                    if avatarStoryIndicatorView.superview == nil {
+                        avatarStoryIndicatorView.isUserInteractionEnabled = false
+                        self.containerNode.view.addSubview(avatarStoryIndicatorView)
+                    }
+                    
+                    indicatorTransition.setPosition(view: avatarStoryIndicatorView, position: indicatorFrame.center)
+                    indicatorTransition.setBounds(view: avatarStoryIndicatorView, bounds: CGRect(origin: CGPoint(), size: indicatorFrame.size))
+                    indicatorTransition.setScale(view: avatarStoryIndicatorView, scale: storyIndicatorScale)
+                }
+                
+                avatarFrame = avatarFrame.insetBy(dx: 4.0, dy: 4.0)
+            } else {
+                if let avatarStoryIndicator = self.avatarStoryIndicator {
+                    self.avatarStoryIndicator = nil
+                    avatarStoryIndicator.view?.removeFromSuperview()
+                }
+            }
+            
+            transition.updateFrame(node: avatarNode, frame: avatarFrame)
+            avatarNode.updateSize(size: avatarFrame.size)
         }
     }
     
@@ -586,6 +735,9 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                     } else if case .manual(false) = self.displayDuration {
                         return nil
                     }
+                }
+                if let actionButtonNode = self.actionButtonNode, let result = actionButtonNode.hitTest(self.convert(point, to: actionButtonNode), with: event) {
+                    return result
                 }
                 switch self.shouldDismissOnTouch(point) {
                 case .ignore:
@@ -628,11 +780,11 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         let animationDelay: Double
         switch self.icon {
-        case .chatListPress:
-            animationDelay = 0.6
-        case .info:
-            animationDelay = 0.2
+        case let .animation(_, delay):
+            animationDelay = delay
         case .none, .downArrows:
+            animationDelay = 0.0
+        case .peer:
             animationDelay = 0.0
         }
         
@@ -684,9 +836,28 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
 }
 
 public final class TooltipScreen: ViewController {
+    public enum Text: Equatable {
+        case plain(text: String)
+        case entities(text: String, entities: [MessageTextEntity])
+        case markdown(text: String)
+    }
+    
+    public class Action {
+        public let title: String
+        public let action: () -> Void
+        
+        public init(
+            title: String,
+            action: @escaping () -> Void
+        ) {
+            self.title = title
+            self.action = action
+        }
+    }
+    
     public enum Icon {
-        case info
-        case chatListPress
+        case animation(name: String, delay: Double)
+        case peer(peer: EnginePeer, isStory: Bool)
         case downArrows
     }
     
@@ -720,13 +891,19 @@ public final class TooltipScreen: ViewController {
         case gradient(UIColor, UIColor)
     }
     
+    public enum Alignment {
+        case natural
+        case center
+    }
+    
+    private let context: AccountContext?
     private let account: Account
     private let sharedContext: SharedAccountContext
-    public let text: String
-    public let textEntities: [MessageTextEntity]
+    public let text: TooltipScreen.Text
+    public let textAlignment: TooltipScreen.Alignment
     private let style: TooltipScreen.Style
     private let icon: TooltipScreen.Icon?
-    private let customContentNode: TooltipCustomContentNode?
+    private let action: TooltipScreen.Action?
     public var location: TooltipScreen.Location {
         didSet {
             if self.isNodeLoaded {
@@ -755,13 +932,14 @@ public final class TooltipScreen: ViewController {
     public var alwaysVisible = false
     
     public init(
+        context: AccountContext? = nil,
         account: Account,
         sharedContext: SharedAccountContext,
-        text: String,
-        textEntities: [MessageTextEntity] = [],
+        text: TooltipScreen.Text,
+        textAlignment: TooltipScreen.Alignment = .natural,
         style: TooltipScreen.Style = .default,
         icon: TooltipScreen.Icon? = nil,
-        customContentNode: TooltipCustomContentNode? = nil,
+        action: TooltipScreen.Action? = nil,
         location: TooltipScreen.Location,
         displayDuration: DisplayDuration = .default,
         inset: CGFloat = 13.0,
@@ -769,13 +947,14 @@ public final class TooltipScreen: ViewController {
         shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch,
         openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)? = nil
     ) {
+        self.context = context
         self.account = account
         self.sharedContext = sharedContext
         self.text = text
-        self.textEntities = textEntities
+        self.textAlignment = textAlignment
         self.style = style
         self.icon = icon
-        self.customContentNode = customContentNode
+        self.action = action
         self.location = location
         self.displayDuration = displayDuration
         self.inset = inset
@@ -839,7 +1018,7 @@ public final class TooltipScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = TooltipScreenNode(account: self.account, sharedContext: self.sharedContext, text: self.text, textEntities: self.textEntities, style: self.style, icon: self.icon, customContentNode: self.customContentNode, location: self.location, displayDuration: self.displayDuration, inset: self.inset, cornerRadius: self.cornerRadius, shouldDismissOnTouch: self.shouldDismissOnTouch, requestDismiss: { [weak self] in
+        self.displayNode = TooltipScreenNode(context: self.context, account: self.account, sharedContext: self.sharedContext, text: self.text, textAlignment: self.textAlignment, style: self.style, icon: self.icon, action: self.action, location: self.location, displayDuration: self.displayDuration, inset: self.inset, cornerRadius: self.cornerRadius, shouldDismissOnTouch: self.shouldDismissOnTouch, requestDismiss: { [weak self] in
             guard let strongSelf = self else {
                 return
             }

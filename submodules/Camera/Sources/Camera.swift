@@ -163,7 +163,7 @@ private final class CameraContext {
         self.simplePreviewView = previewView
         self.secondaryPreviewView = secondaryPreviewView
         
-        self.dualPosition = configuration.position
+        self.positionValue = configuration.position
         
         self.mainDeviceContext = CameraDeviceContext(session: session, exclusive: true, additional: false)
         self.configure {
@@ -250,16 +250,16 @@ private final class CameraContext {
         return self._positionPromise.get()
     }
     
-    private var dualPosition: Camera.Position = .back
+    private var positionValue: Camera.Position = .back
     func togglePosition() {
         if self.isDualCamEnabled {
             let targetPosition: Camera.Position
-            if case .back = self.dualPosition {
+            if case .back = self.positionValue {
                 targetPosition = .front
             } else {
                 targetPosition = .back
             }
-            self.dualPosition = targetPosition
+            self.positionValue = targetPosition
             self._positionPromise.set(targetPosition)
             
             self.mainDeviceContext.output.markPositionChange(position: targetPosition)
@@ -273,7 +273,7 @@ private final class CameraContext {
                 } else {
                     targetPosition = .back
                 }
-                self.dualPosition = targetPosition
+                self.positionValue = targetPosition
                 self._positionPromise.set(targetPosition)
                 self.modeChange = .position
                 
@@ -291,7 +291,7 @@ private final class CameraContext {
             self.mainDeviceContext.invalidate()
             
             self._positionPromise.set(position)
-            self.dualPosition = position
+            self.positionValue = position
             self.modeChange = .position
             
             self.mainDeviceContext.configure(position: position, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata)
@@ -356,7 +356,7 @@ private final class CameraContext {
                 self.additionalDeviceContext = nil
                 
                 self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: true, additional: false)
-                self.mainDeviceContext.configure(position: self.dualPosition, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata)
+                self.mainDeviceContext.configure(position: self.positionValue, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata)
             }
             self.mainDeviceContext.output.processSampleBuffer = { [weak self] sampleBuffer, pixelBuffer, connection in
                 guard let self else {
@@ -446,7 +446,7 @@ private final class CameraContext {
     func takePhoto() -> Signal<PhotoCaptureResult, NoError> {
         let orientation = self.videoOrientation ?? .portrait
         if let additionalDeviceContext = self.additionalDeviceContext {
-            let dualPosition = self.dualPosition
+            let dualPosition = self.positionValue
             return combineLatest(
                 self.mainDeviceContext.output.takePhoto(orientation: orientation, flashMode: self._flashMode),
                 additionalDeviceContext.output.takePhoto(orientation: orientation, flashMode: self._flashMode)
@@ -469,13 +469,13 @@ private final class CameraContext {
     public func startRecording() -> Signal<Double, NoError> {
         if let additionalDeviceContext = self.additionalDeviceContext {
             return combineLatest(
-                self.mainDeviceContext.output.startRecording(),
-                additionalDeviceContext.output.startRecording()
+                self.mainDeviceContext.output.startRecording(isDualCamera: true, position: self.positionValue),
+                additionalDeviceContext.output.startRecording(isDualCamera: true)
             ) |> map { value, _ in
                 return value
             }
         } else {
-            return self.mainDeviceContext.output.startRecording()
+            return self.mainDeviceContext.output.startRecording(isDualCamera: false)
         }
     }
     
@@ -486,13 +486,29 @@ private final class CameraContext {
                 additionalDeviceContext.output.stopRecording()
             ) |> mapToSignal { main, additional in
                 if case let .finished(mainResult, _, duration, positionChangeTimestamps, _) = main, case let .finished(additionalResult, _, _, _, _) = additional {
-                    return .single(.finished(mainResult, additionalResult, duration, positionChangeTimestamps, CACurrentMediaTime()))
+                    var additionalTransitionImage = additionalResult.1
+                    if let cgImage = additionalResult.1.cgImage {
+                        additionalTransitionImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .leftMirrored)
+                    }
+                    return .single(.finished(mainResult, (additionalResult.0, additionalTransitionImage, true), duration, positionChangeTimestamps, CACurrentMediaTime()))
                 } else {
                     return .complete()
                 }
             }
         } else {
+            let mirror = self.positionValue == .front
             return self.mainDeviceContext.output.stopRecording()
+            |> map { result -> VideoCaptureResult in
+                if case let .finished(mainResult, _, duration, positionChangeTimestamps, time) = result {
+                    var transitionImage = mainResult.1
+                    if mirror, let cgImage = transitionImage.cgImage {
+                        transitionImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .leftMirrored)
+                    }
+                    return .finished((mainResult.0, transitionImage, mirror), nil, duration, positionChangeTimestamps, time)
+                } else {
+                    return result
+                }
+            }
         }
     }
     

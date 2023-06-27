@@ -5,4 +5,5 @@
 typedef struct {
     float4 pos [[position]];
     float2 texCoord;
+    float2 localPos;
 } RasterizerData;

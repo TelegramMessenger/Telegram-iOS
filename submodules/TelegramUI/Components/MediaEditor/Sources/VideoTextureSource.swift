@@ -3,7 +3,7 @@ import AVFoundation
 import Metal
 import MetalKit
 
-func textureRotatonForAVAsset(_ asset: AVAsset) -> TextureRotation {
+func textureRotatonForAVAsset(_ asset: AVAsset, mirror: Bool = false) -> TextureRotation {
     for track in asset.tracks {
         if track.mediaType == .video {            
             let t = track.preferredTransform
@@ -18,7 +18,7 @@ func textureRotatonForAVAsset(_ asset: AVAsset) -> TextureRotation {
             } else if t.a == 1.0 && t.d == -1.0  {
                 return .rotate180Degrees
             } else {
-                return .rotate90Degrees
+                return mirror ? .rotate90DegreesMirrored : .rotate90Degrees
             }
         }
     }
@@ -27,13 +27,20 @@ func textureRotatonForAVAsset(_ asset: AVAsset) -> TextureRotation {
 
 final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullDelegate {
     private weak var player: AVPlayer?
+    private weak var additionalPlayer: AVPlayer?
     private weak var playerItem: AVPlayerItem?
+    private weak var additionalPlayerItem: AVPlayerItem?
+    
+    private let mirror: Bool
+    
     private var playerItemOutput: AVPlayerItemVideoOutput?
+    private var additionalPlayerItemOutput: AVPlayerItemVideoOutput?
         
     private var displayLink: CADisplayLink?
     
     private let device: MTLDevice?
     private var textureRotation: TextureRotation = .rotate0Degrees
+    private var additionalTextureRotation: TextureRotation = .rotate0Degrees
         
     private var forceUpdate: Bool = false
     
@@ -41,8 +48,10 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
     var queue: DispatchQueue!
     var started: Bool = false
     
-    init(player: AVPlayer, renderTarget: RenderTarget) {
+    init(player: AVPlayer, additionalPlayer: AVPlayer?, mirror: Bool, renderTarget: RenderTarget) {
         self.player = player
+        self.additionalPlayer = additionalPlayer
+        self.mirror = mirror
         self.device = renderTarget.mtlDevice!
                 
         self.queue = DispatchQueue(
@@ -54,7 +63,9 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
         
         super.init()
         
-        self.updatePlayerItem(player.currentItem)
+        self.playerItem = player.currentItem
+        self.additionalPlayerItem = additionalPlayer?.currentItem
+        self.handleReadyToPlay()
     }
         
     func invalidate() {
@@ -63,21 +74,7 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
         self.displayLink?.invalidate()
         self.displayLink = nil
     }
-    
-    private func updatePlayerItem(_ playerItem: AVPlayerItem?) {
-        self.displayLink?.invalidate()
-        self.displayLink = nil
-        if let output = self.playerItemOutput, let item = self.playerItem {
-            if item.outputs.contains(output) {
-                item.remove(output)
-            }
-        }
-        self.playerItemOutput = nil
         
-        self.playerItem = playerItem
-        self.handleReadyToPlay()
-    }
-    
     private func handleReadyToPlay() {
         guard let playerItem = self.playerItem else {
             return
@@ -94,7 +91,7 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
                 break
             }
         }
-        self.textureRotation = textureRotatonForAVAsset(playerItem.asset)
+        self.textureRotation = textureRotatonForAVAsset(playerItem.asset, mirror: additionalPlayer == nil && mirror)
         if !hasVideoTrack {
             return
         }
@@ -116,6 +113,16 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
         output.setDelegate(self, queue: self.queue)
         playerItem.add(output)
         self.playerItemOutput = output
+        
+        if let additionalPlayerItem = self.additionalPlayerItem {
+            self.additionalTextureRotation = textureRotatonForAVAsset(additionalPlayerItem.asset, mirror: true)
+            
+            let output = AVPlayerItemVideoOutput(outputSettings: outputSettings)
+            output.suppressesPlayerRendering = true
+            output.setDelegate(self, queue: self.queue)
+            additionalPlayerItem.add(output)
+            self.additionalPlayerItemOutput = output
+        }
         
         self.setupDisplayLink(frameRate: min(60, frameRate))
     }
@@ -161,7 +168,8 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
             return
         }
         
-        let requestTime = output.itemTime(forHostTime: CACurrentMediaTime())
+        let time = CACurrentMediaTime()
+        let requestTime = output.itemTime(forHostTime: time)
         if requestTime < .zero {
             return
         }
@@ -173,8 +181,19 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
         }
         
         var presentationTime: CMTime = .zero
+        var mainPixelBuffer: VideoPixelBuffer?
         if let pixelBuffer = output.copyPixelBuffer(forItemTime: requestTime, itemTimeForDisplay: &presentationTime) {
-            self.output?.consumeVideoPixelBuffer(pixelBuffer, rotation: self.textureRotation, timestamp: presentationTime, render: true)
+            mainPixelBuffer = VideoPixelBuffer(pixelBuffer: pixelBuffer, rotation: self.textureRotation, timestamp: presentationTime)
+        }
+        
+        let additionalRequestTime = self.additionalPlayerItemOutput?.itemTime(forHostTime: time)
+        var additionalPixelBuffer: VideoPixelBuffer?
+        if let additionalRequestTime, let pixelBuffer = self.additionalPlayerItemOutput?.copyPixelBuffer(forItemTime: additionalRequestTime, itemTimeForDisplay: &presentationTime) {
+            additionalPixelBuffer = VideoPixelBuffer(pixelBuffer: pixelBuffer, rotation: self.additionalTextureRotation, timestamp: presentationTime)
+        }
+        
+        if let mainPixelBuffer {
+            self.output?.consumeVideoPixelBuffer(pixelBuffer: mainPixelBuffer, additionalPixelBuffer: additionalPixelBuffer, render: true)
         }
     }
         
@@ -201,7 +220,6 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
 
 final class VideoInputPass: DefaultRenderPass {
     private var cachedTexture: MTLTexture?
-    private let scalePass = VideoInputScalePass()
     
     override var fragmentShaderFunctionName: String {
         return "bt709ToRGBFragmentShader"
@@ -209,10 +227,9 @@ final class VideoInputPass: DefaultRenderPass {
     
     override func setup(device: MTLDevice, library: MTLLibrary) {
         super.setup(device: device, library: library)
-        self.scalePass.setup(device: device, library: library)
     }
     
-    func processPixelBuffer(_ pixelBuffer: CVPixelBuffer, rotation: TextureRotation, textureCache: CVMetalTextureCache, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+    func processPixelBuffer(_ pixelBuffer: VideoPixelBuffer, textureCache: CVMetalTextureCache, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
         func textureFromPixelBuffer(_ pixelBuffer: CVPixelBuffer, pixelFormat: MTLPixelFormat, width: Int, height: Int, plane: Int) -> MTLTexture? {
             var textureRef : CVMetalTexture?
             let status = CVMetalTextureCacheCreateTextureFromImage(nil, textureCache, pixelBuffer, nil, pixelFormat, width, height, plane, &textureRef)
@@ -222,13 +239,13 @@ final class VideoInputPass: DefaultRenderPass {
             return nil
         }
 
-        let width = CVPixelBufferGetWidth(pixelBuffer)
-        let height = CVPixelBufferGetHeight(pixelBuffer)
-        guard let inputYTexture = textureFromPixelBuffer(pixelBuffer, pixelFormat: .r8Unorm, width: width, height: height, plane: 0),
-              let inputCbCrTexture = textureFromPixelBuffer(pixelBuffer, pixelFormat: .rg8Unorm, width: width >> 1, height: height >> 1, plane: 1) else {
+        let width = CVPixelBufferGetWidth(pixelBuffer.pixelBuffer)
+        let height = CVPixelBufferGetHeight(pixelBuffer.pixelBuffer)
+        guard let inputYTexture = textureFromPixelBuffer(pixelBuffer.pixelBuffer, pixelFormat: .r8Unorm, width: width, height: height, plane: 0),
+              let inputCbCrTexture = textureFromPixelBuffer(pixelBuffer.pixelBuffer, pixelFormat: .rg8Unorm, width: width >> 1, height: height >> 1, plane: 1) else {
             return nil
         }
-        return self.process(yTexture: inputYTexture, cbcrTexture: inputCbCrTexture, width: width, height: height, rotation: rotation, device: device, commandBuffer: commandBuffer)
+        return self.process(yTexture: inputYTexture, cbcrTexture: inputCbCrTexture, width: width, height: height, rotation: pixelBuffer.rotation, device: device, commandBuffer: commandBuffer)
     }
     
     func process(yTexture: MTLTexture, cbcrTexture: MTLTexture, width: Int, height: Int, rotation: TextureRotation, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
@@ -279,26 +296,368 @@ final class VideoInputPass: DefaultRenderPass {
         
         renderCommandEncoder.endEncoding()
         
-        var outputTexture = self.cachedTexture
-        if let texture = outputTexture {
-            outputTexture = self.scalePass.process(input: texture, device: device, commandBuffer: commandBuffer)
-        }
-        return outputTexture
+        return self.cachedTexture
     }
 }
 
-final class VideoInputScalePass: DefaultRenderPass {
+private func verticesData(
+    textureRotation: TextureRotation,
+    containerSize: CGSize,
+    position: CGPoint,
+    size: CGSize,
+    rotation: CGFloat,
+    z: Float = 0.0
+) -> [VertexData] {
+    let topLeft: simd_float2
+    let topRight: simd_float2
+    let bottomLeft: simd_float2
+    let bottomRight: simd_float2
+    
+    switch textureRotation {
+    case .rotate0Degrees:
+        topLeft = simd_float2(0.0, 1.0)
+        topRight = simd_float2(1.0, 1.0)
+        bottomLeft = simd_float2(0.0, 0.0)
+        bottomRight = simd_float2(1.0, 0.0)
+    case .rotate180Degrees:
+        topLeft = simd_float2(1.0, 0.0)
+        topRight = simd_float2(0.0, 0.0)
+        bottomLeft = simd_float2(1.0, 1.0)
+        bottomRight = simd_float2(0.0, 1.0)
+    case .rotate90Degrees:
+        topLeft = simd_float2(1.0, 1.0)
+        topRight = simd_float2(1.0, 0.0)
+        bottomLeft = simd_float2(0.0, 1.0)
+        bottomRight = simd_float2(0.0, 0.0)
+    case .rotate90DegreesMirrored:
+        topLeft = simd_float2(1.0, 0.0)
+        topRight = simd_float2(1.0, 1.0)
+        bottomLeft = simd_float2(0.0, 0.0)
+        bottomRight = simd_float2(0.0, 1.0)
+    case .rotate270Degrees:
+        topLeft = simd_float2(0.0, 0.0)
+        topRight = simd_float2(0.0, 1.0)
+        bottomLeft = simd_float2(1.0, 0.0)
+        bottomRight = simd_float2(1.0, 1.0)
+    }
+    
+    let relativeSize = CGSize(
+        width: size.width / containerSize.width,
+        height: size.height / containerSize.height
+    )
+    let relativeOffset = CGPoint(
+        x: position.x / containerSize.width,
+        y: position.y / containerSize.height
+    )
+    
+    let rect = CGRect(
+        origin: CGPoint(
+            x: relativeOffset.x - relativeSize.width / 2.0,
+            y: relativeOffset.y - relativeSize.height / 2.0
+        ),
+        size: relativeSize
+    )
+    
+    return [
+        VertexData(
+            pos: simd_float4(x: Float(rect.minX) * 2.0, y: Float(rect.minY) * 2.0, z: z, w: 1),
+            texCoord: topLeft,
+            localPos: simd_float2(0.0, 0.0)
+        ),
+        VertexData(
+            pos: simd_float4(x: Float(rect.maxX) * 2.0, y: Float(rect.minY) * 2.0, z: z, w: 1),
+            texCoord: topRight,
+            localPos: simd_float2(1.0, 0.0)
+        ),
+        VertexData(
+            pos: simd_float4(x: Float(rect.minX) * 2.0, y: Float(rect.maxY) * 2.0, z: z, w: 1),
+            texCoord: bottomLeft,
+            localPos: simd_float2(0.0, 1.0)
+        ),
+        VertexData(
+            pos: simd_float4(x: Float(rect.maxX) * 2.0, y: Float(rect.maxY) * 2.0, z: z, w: 1),
+            texCoord: bottomRight,
+            localPos: simd_float2(1.0, 1.0)
+        ),
+    ]
+}
+
+private func lookupSpringValue(_ t: CGFloat) -> CGFloat {
+    let table: [(CGFloat, CGFloat)] = [
+        (0.0, 0.0),
+        (0.0625, 0.1123005598783493),
+        (0.125, 0.31598418951034546),
+        (0.1875, 0.5103585720062256),
+        (0.25, 0.6650152802467346),
+        (0.3125, 0.777747631072998),
+        (0.375, 0.8557760119438171),
+        (0.4375, 0.9079672694206238),
+        (0.5, 0.942038357257843),
+        (0.5625, 0.9638798832893372),
+        (0.625, 0.9776856303215027),
+        (0.6875, 0.9863143563270569),
+        (0.75, 0.991658091545105),
+        (0.8125, 0.9949421286582947),
+        (0.875, 0.9969474077224731),
+        (0.9375, 0.9981651306152344),
+        (1.0, 1.0)
+    ]
+    
+    for i in 0 ..< table.count - 2 {
+        let lhs = table[i]
+        let rhs = table[i + 1]
+        
+        if t >= lhs.0 && t <= rhs.0 {
+            let fraction = (t - lhs.0) / (rhs.0 - lhs.0)
+            let value = lhs.1 + fraction * (rhs.1 - lhs.1)
+            return value
+        }
+    }
+    return 1.0
+}
+
+final class VideoInputScalePass: RenderPass {
     private var cachedTexture: MTLTexture?
     
-    override func process(input: MTLTexture, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
-        guard max(input.width, input.height) > 1920 else {
+    var mainPipelineState: MTLRenderPipelineState?
+    var mainVerticesBuffer: MTLBuffer?
+    var mainTextureRotation: TextureRotation = .rotate0Degrees
+    
+    var additionalVerticesBuffer: MTLBuffer?
+    var additionalTextureRotation: TextureRotation = .rotate0Degrees
+    
+    var pixelFormat: MTLPixelFormat  {
+        return .bgra8Unorm
+    }
+    
+    func setup(device: MTLDevice, library: MTLLibrary) {
+        let descriptor = MTLRenderPipelineDescriptor()
+        descriptor.vertexFunction = library.makeFunction(name: "defaultVertexShader")
+        descriptor.fragmentFunction = library.makeFunction(name: "dualFragmentShader")
+        descriptor.colorAttachments[0].pixelFormat = self.pixelFormat
+        descriptor.colorAttachments[0].isBlendingEnabled = true
+        descriptor.colorAttachments[0].rgbBlendOperation = .add
+        descriptor.colorAttachments[0].alphaBlendOperation = .add
+        descriptor.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
+        descriptor.colorAttachments[0].sourceAlphaBlendFactor = .sourceAlpha
+        descriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
+        descriptor.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
+        
+        do {
+            self.mainPipelineState = try device.makeRenderPipelineState(descriptor: descriptor)
+        } catch {
+            print(error.localizedDescription)
+        }
+    }
+    
+    func setupMainVerticesBuffer(device: MTLDevice, rotation: TextureRotation = .rotate0Degrees) {
+        if self.mainVerticesBuffer == nil || rotation != self.mainTextureRotation {
+            self.mainTextureRotation = rotation
+            let vertices = verticesDataForRotation(rotation)
+            self.mainVerticesBuffer = device.makeBuffer(
+                bytes: vertices,
+                length: MemoryLayout<VertexData>.stride * vertices.count,
+                options: [])
+        }
+    }
+    
+    func encodeVideo(
+        using encoder: MTLRenderCommandEncoder,
+        containerSize: CGSize,
+        texture: MTLTexture,
+        textureRotation: TextureRotation,
+        position: VideoPosition,
+        roundness: Float,
+        alpha: Float,
+        zPosition: Float,
+        device: MTLDevice
+    ) {
+        encoder.setFragmentTexture(texture, index: 0)
+        
+        let center = CGPoint(
+            x: position.position.x - containerSize.width / 2.0,
+            y: containerSize.height - position.position.y - containerSize.height / 2.0
+        )
+        
+        let size = CGSize(
+            width: position.size.width * position.scale,
+            height: position.size.height * position.scale
+        )
+        
+        let vertices = verticesData(textureRotation: textureRotation, containerSize: containerSize, position: center, size: size, rotation: position.rotation, z: zPosition)
+        let buffer = device.makeBuffer(
+            bytes: vertices,
+            length: MemoryLayout<VertexData>.stride * vertices.count,
+            options: [])
+        encoder.setVertexBuffer(buffer, offset: 0, index: 0)
+        
+        var resolution = simd_uint2(UInt32(size.width), UInt32(size.height))
+        encoder.setFragmentBytes(&resolution, length: MemoryLayout<simd_uint2>.size * 2, index: 0)
+        
+        var roundness = roundness
+        encoder.setFragmentBytes(&roundness, length: MemoryLayout<simd_float1>.size, index: 1)
+        
+        var alpha = alpha
+        encoder.setFragmentBytes(&alpha, length: MemoryLayout<simd_float1>.size, index: 2)
+        
+        encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+    }
+    
+    func setupAdditionalVerticesBuffer(device: MTLDevice, rotation: TextureRotation = .rotate0Degrees) {
+        self.additionalTextureRotation = rotation
+        let vertices = verticesDataForRotation(rotation, rect: CGRect(x: -0.5, y: -0.5, width: 0.5, height: 0.5), z: 0.5)
+        self.additionalVerticesBuffer = device.makeBuffer(
+            bytes: vertices,
+            length: MemoryLayout<VertexData>.stride * vertices.count,
+            options: [])
+    }
+    
+    func update(values: MediaEditorValues) {
+        if let position = values.additionalVideoPosition, let scale = values.additionalVideoScale, let rotation = values.additionalVideoRotation {
+            self.additionalPosition = VideoInputScalePass.VideoPosition(position: position, size: CGSize(width: 1080.0 / 4.0, height: 1920.0 / 4.0), scale: scale, rotation: rotation)
+        }
+        if !values.additionalVideoPositionChanges.isEmpty {
+            self.videoPositionChanges = values.additionalVideoPositionChanges
+        }
+    }
+    
+    private var mainPosition = VideoPosition(
+        position: CGPoint(x: 1080 / 2.0, y: 1920.0 / 2.0),
+        size: CGSize(width: 1080.0, height: 1920.0),
+        scale: 1.0,
+        rotation: 0.0
+    )
+    
+    private var additionalPosition = VideoPosition(
+        position: CGPoint(x: 1080 / 2.0, y: 1920.0 / 2.0),
+        size: CGSize(width: 1080.0, height: 1920.0),
+        scale: 0.5,
+        rotation: 0.0
+    )
+    
+    private var transitionDuration = 0.5
+    private var videoPositionChanges: [VideoPositionChange] = []
+    
+    enum VideoType {
+        case main
+        case additional
+        case transition
+    }
+    
+    struct VideoPosition {
+        let position: CGPoint
+        let size: CGSize
+        let scale: CGFloat
+        let rotation: CGFloat
+        
+        
+        func mixed(with other: VideoPosition, fraction: CGFloat) -> VideoPosition {
+            let position = CGPoint(
+                x: self.position.x + (other.position.x - self.position.x) * fraction,
+                y: self.position.y + (other.position.y - self.position.y) * fraction
+            )
+            let size = CGSize(
+                width: self.size.width + (other.size.width - self.size.width) * fraction,
+                height: self.size.height + (other.size.height - self.size.height) * fraction
+            )
+            let scale = self.scale + (other.scale - self.scale) * fraction
+            let rotation = self.rotation + (other.rotation - self.rotation) * fraction
+            
+            return VideoPosition(
+                position: position,
+                size: size,
+                scale: scale,
+                rotation: rotation
+            )
+        }
+    }
+    
+    struct VideoState {
+        let texture: MTLTexture
+        let textureRotation: TextureRotation
+        let position: VideoPosition
+        let roundness: Float
+        let alpha: Float
+    }
+    
+    func transitionState(for time: CMTime, mainInput: MTLTexture, additionalInput: MTLTexture?) -> (VideoState, VideoState?, VideoState?) {
+        let timestamp = time.seconds
+        
+        var backgroundTexture = mainInput
+        var backgroundTextureRotation = self.mainTextureRotation
+        
+        var foregroundTexture = additionalInput
+        var foregroundTextureRotation = self.additionalTextureRotation
+        
+        var transitionFraction = 1.0
+        if let additionalInput {
+            var previousChange: VideoPositionChange?
+            for change in self.videoPositionChanges {
+                if timestamp >= change.timestamp {
+                    previousChange = change
+                }
+                if timestamp < change.timestamp {
+                    break
+                }
+            }
+            
+            if let previousChange {
+                if previousChange.additional {
+                    backgroundTexture = additionalInput
+                    backgroundTextureRotation = self.additionalTextureRotation
+                    
+                    foregroundTexture = mainInput
+                    foregroundTextureRotation = self.mainTextureRotation
+                }
+                if previousChange.timestamp > 0.0 && timestamp < previousChange.timestamp + transitionDuration {
+                    transitionFraction = (timestamp - previousChange.timestamp) / transitionDuration
+                }
+            }
+        }
+        
+        var backgroundVideoState = VideoState(texture: backgroundTexture, textureRotation: backgroundTextureRotation, position: self.mainPosition, roundness: 0.0, alpha: 1.0)
+        var foregroundVideoState: VideoState?
+        var disappearingVideoState: VideoState?
+        
+        if let foregroundTexture {
+            var foregroundPosition = self.additionalPosition
+            var foregroundAlpha: Float = 1.0
+            if transitionFraction < 1.0 {
+                let springFraction = lookupSpringValue(transitionFraction)
+                
+                let appearingPosition = VideoPosition(position: self.additionalPosition.position, size: self.additionalPosition.size, scale: 0.01, rotation: self.additionalPosition.rotation)
+                
+                foregroundPosition = appearingPosition.mixed(with: self.additionalPosition, fraction: springFraction)
+                
+                disappearingVideoState = VideoState(texture: foregroundTexture, textureRotation: foregroundTextureRotation, position: self.mainPosition, roundness: 0.0, alpha: 1.0)
+                backgroundVideoState = VideoState(texture: backgroundTexture, textureRotation: backgroundTextureRotation, position: self.additionalPosition.mixed(with: self.mainPosition, fraction: springFraction), roundness: Float(1.0 - springFraction), alpha: 1.0)
+                
+                foregroundAlpha = min(1.0, max(0.0, Float(transitionFraction) * 2.5))
+            }
+            foregroundVideoState = VideoState(texture: foregroundTexture, textureRotation: foregroundTextureRotation, position: foregroundPosition, roundness: 1.0, alpha: foregroundAlpha)
+        }
+        
+        return (backgroundVideoState, foregroundVideoState, disappearingVideoState)
+    }
+    
+    func process(input: MTLTexture, secondInput: MTLTexture?, timestamp: CMTime, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+        guard max(input.width, input.height) > 1920 || secondInput != nil else {
             return input
         }
-        self.setupVerticesBuffer(device: device)
-                
+        
         let scaledSize = CGSize(width: input.width, height: input.height).fitted(CGSize(width: 1920.0, height: 1920.0))
-        let width = Int(scaledSize.width)
-        let height = Int(scaledSize.height)
+        let width: Int
+        let height: Int
+        
+        if secondInput != nil {
+            width = 1080
+            height = 1920
+        } else {
+            width = Int(scaledSize.width)
+            height = Int(scaledSize.height)
+        }
+        
+        let containerSize = CGSize(width: width, height: height)
         
         if self.cachedTexture == nil || self.cachedTexture?.width != width || self.cachedTexture?.height != height {
             let textureDescriptor = MTLTextureDescriptor()
@@ -330,12 +689,57 @@ final class VideoInputScalePass: DefaultRenderPass {
             znear: -1.0, zfar: 1.0)
         )
         
-        renderCommandEncoder.setFragmentTexture(input, index: 0)
+        renderCommandEncoder.setRenderPipelineState(self.mainPipelineState!)
+        
+        let (mainVideoState, additionalVideoState, transitionVideoState) = self.transitionState(for: timestamp, mainInput: input, additionalInput: secondInput)
 
-        self.encodeDefaultCommands(using: renderCommandEncoder)
+        
+        if let transitionVideoState {
+            self.encodeVideo(
+                using: renderCommandEncoder,
+                containerSize: containerSize,
+                texture: transitionVideoState.texture,
+                textureRotation: transitionVideoState.textureRotation,
+                position: transitionVideoState.position,
+                roundness: transitionVideoState.roundness,
+                alpha: transitionVideoState.alpha,
+                zPosition: 0.75,
+                device: device
+            )
+        }
+        
+        self.encodeVideo(
+            using: renderCommandEncoder,
+            containerSize: containerSize,
+            texture: mainVideoState.texture,
+            textureRotation: mainVideoState.textureRotation,
+            position: mainVideoState.position,
+            roundness: mainVideoState.roundness,
+            alpha: mainVideoState.alpha,
+            zPosition: 0.0,
+            device: device
+        )
+        
+        if let additionalVideoState {
+            self.encodeVideo(
+                using: renderCommandEncoder,
+                containerSize: containerSize,
+                texture: additionalVideoState.texture,
+                textureRotation: additionalVideoState.textureRotation,
+                position: additionalVideoState.position,
+                roundness: additionalVideoState.roundness,
+                alpha: additionalVideoState.alpha,
+                zPosition: 0.5,
+                device: device
+            )
+        }
         
         renderCommandEncoder.endEncoding()
         
         return self.cachedTexture!
+    }
+    
+    func process(input: MTLTexture, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+        return nil
     }
 }

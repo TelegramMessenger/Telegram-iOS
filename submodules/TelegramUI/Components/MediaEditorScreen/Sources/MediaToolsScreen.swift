@@ -554,7 +554,7 @@ private final class MediaToolsScreenComponent: Component {
             switch component.section {
             case .adjustments:
                 self.curvesState = nil
-                let tools: [AdjustmentTool] = [
+                var tools: [AdjustmentTool] = [
                     AdjustmentTool(
                         key: .enhance,
                         title: "Enhance",
@@ -628,14 +628,6 @@ private final class MediaToolsScreenComponent: Component {
                         startValue: 0.0
                     ),
                     AdjustmentTool(
-                        key: .grain,
-                        title: "Grain",
-                        value: mediaEditor?.getToolValue(.grain) as? Float ?? 0.0,
-                        minValue: 0.0,
-                        maxValue: 1.0,
-                        startValue: 0.0
-                    ),
-                    AdjustmentTool(
                         key: .sharpen,
                         title: "Sharpen",
                         value: mediaEditor?.getToolValue(.sharpen) as? Float ?? 0.0,
@@ -644,6 +636,18 @@ private final class MediaToolsScreenComponent: Component {
                         startValue: 0.0
                     )
                 ]
+                
+                if !component.mediaEditor.sourceIsVideo {
+                    tools.insert(AdjustmentTool(
+                        key: .grain,
+                        title: "Grain",
+                        value: mediaEditor?.getToolValue(.grain) as? Float ?? 0.0,
+                        minValue: 0.0,
+                        maxValue: 1.0,
+                        startValue: 0.0
+                    ), at: tools.count - 1)
+                }
+                
                 optionsSize = self.toolOptions.update(
                     transition: optionsTransition,
                     component: AnyComponent(AdjustmentsComponent(
@@ -814,7 +818,7 @@ private final class MediaToolsScreenComponent: Component {
                         )
                     ),
                     environment: {},
-                    containerSize: CGSize(width: previewContainerFrame.width, height: previewContainerFrame.height - optionsSize.height)
+                    containerSize: CGSize(width: previewContainerFrame.width, height: previewContainerFrame.height)
                 )
             case .curves:
                 needsHistogram = true

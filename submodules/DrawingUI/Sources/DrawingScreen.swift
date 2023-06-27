@@ -3021,6 +3021,16 @@ public final class DrawingToolsInteraction {
                 }
                 return
             }
+            
+            var isVideo = false
+            if let entity = entityView.entity as? DrawingStickerEntity {
+                if case .video = entity.content {
+                    isVideo = true
+                } else if case .dualVideoReference = entity.content {
+                    isVideo = true
+                }
+            }
+            
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
             var actions: [ContextMenuAction] = []
             actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Delete, accessibilityLabel: presentationData.strings.Paint_Delete), action: { [weak self, weak entityView] in
@@ -3042,19 +3052,21 @@ public final class DrawingToolsInteraction {
                     }
                 }))
             }
-            if !isTopmost {
+            if !isTopmost && !isVideo {
                 actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_MoveForward, accessibilityLabel: presentationData.strings.Paint_MoveForward), action: { [weak self, weak entityView] in
                     if let self, let entityView {
                         self.entitiesView.bringToFront(uuid: entityView.entity.uuid)
                     }
                 }))
             }
-            actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Duplicate, accessibilityLabel: presentationData.strings.Paint_Duplicate), action: { [weak self, weak entityView] in
-                if let self, let entityView {
-                    let newEntity = self.entitiesView.duplicate(entityView.entity)
-                    self.entitiesView.selectEntity(newEntity)
-                }
-            }))
+            if !isVideo {
+                actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Duplicate, accessibilityLabel: presentationData.strings.Paint_Duplicate), action: { [weak self, weak entityView] in
+                    if let self, let entityView {
+                        let newEntity = self.entitiesView.duplicate(entityView.entity)
+                        self.entitiesView.selectEntity(newEntity)
+                    }
+                }))
+            }
             let entityFrame = entityView.convert(entityView.selectionBounds, to: node.view).offsetBy(dx: 0.0, dy: -6.0)
             let controller = ContextMenuController(actions: actions)
             let bounds = node.bounds.insetBy(dx: 0.0, dy: 160.0)

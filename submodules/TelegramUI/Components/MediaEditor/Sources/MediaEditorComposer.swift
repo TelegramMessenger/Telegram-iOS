@@ -92,16 +92,22 @@ final class MediaEditorComposer {
                 
         self.renderer.setupForComposer(composer: self)
         self.renderChain.update(values: self.values)
+        self.renderer.videoFinishPass.update(values: self.values)
     }
     
-    func processSampleBuffer(_ sampleBuffer: CMSampleBuffer, pool: CVPixelBufferPool?, textureRotation: TextureRotation, completion: @escaping (CVPixelBuffer?) -> Void) {
+    func processSampleBuffer(sampleBuffer: CMSampleBuffer, textureRotation: TextureRotation, additionalSampleBuffer: CMSampleBuffer?, additionalTextureRotation: TextureRotation, pool: CVPixelBufferPool?, completion: @escaping (CVPixelBuffer?) -> Void) {
         guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer), let pool = pool else {
             completion(nil)
             return
         }
         let time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
         
-        self.renderer.consumeVideoPixelBuffer(imageBuffer, rotation: textureRotation, timestamp: time, render: true)
+        let mainPixelBuffer = VideoPixelBuffer(pixelBuffer: imageBuffer, rotation: textureRotation, timestamp: time)
+        var additionalPixelBuffer: VideoPixelBuffer?
+        if let additionalSampleBuffer, let additionalImageBuffer = CMSampleBufferGetImageBuffer(additionalSampleBuffer) {
+            additionalPixelBuffer = VideoPixelBuffer(pixelBuffer: additionalImageBuffer, rotation: additionalTextureRotation, timestamp: time)
+        }
+        self.renderer.consumeVideoPixelBuffer(pixelBuffer: mainPixelBuffer, additionalPixelBuffer: additionalPixelBuffer, render: true)
         
         if let finalTexture = self.renderer.finalTexture, var ciImage = CIImage(mtlTexture: finalTexture, options: [.colorSpace: self.colorSpace]) {
             ciImage = ciImage.transformed(by: CGAffineTransformMakeScale(1.0, -1.0).translatedBy(x: 0.0, y: -ciImage.extent.height))

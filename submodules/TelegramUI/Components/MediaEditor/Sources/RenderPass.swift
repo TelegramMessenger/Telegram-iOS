@@ -3,9 +3,10 @@ import QuartzCore
 import Metal
 import simd
 
-fileprivate struct VertexData {
+struct VertexData {
     let pos: simd_float4
     let texCoord: simd_float2
+    let localPos: simd_float2
 }
 
 enum TextureRotation: Int {
@@ -13,9 +14,10 @@ enum TextureRotation: Int {
     case rotate90Degrees
     case rotate180Degrees
     case rotate270Degrees
+    case rotate90DegreesMirrored
 }
 
-private func verticesDataForRotation(_ rotation: TextureRotation) -> [VertexData] {
+func verticesDataForRotation(_ rotation: TextureRotation, rect: CGRect = CGRect(x: -0.5, y: -0.5, width: 1.0, height: 1.0), z: Float = 0.0) -> [VertexData] {
     let topLeft: simd_float2
     let topRight: simd_float2
     let bottomLeft: simd_float2
@@ -37,6 +39,11 @@ private func verticesDataForRotation(_ rotation: TextureRotation) -> [VertexData
         topRight = simd_float2(1.0, 0.0)
         bottomLeft = simd_float2(0.0, 1.0)
         bottomRight = simd_float2(0.0, 0.0)
+    case .rotate90DegreesMirrored:
+        topLeft = simd_float2(1.0, 0.0)
+        topRight = simd_float2(1.0, 1.0)
+        bottomLeft = simd_float2(0.0, 0.0)
+        bottomRight = simd_float2(0.0, 1.0)
     case .rotate270Degrees:
         topLeft = simd_float2(0.0, 0.0)
         topRight = simd_float2(0.0, 1.0)
@@ -46,20 +53,24 @@ private func verticesDataForRotation(_ rotation: TextureRotation) -> [VertexData
     
     return [
         VertexData(
-            pos: simd_float4(x: -1, y: -1, z: 0, w: 1),
-            texCoord: topLeft
+            pos: simd_float4(x: Float(rect.minX) * 2.0, y: Float(rect.minY) * 2.0, z: z, w: 1),
+            texCoord: topLeft,
+            localPos: simd_float2(0.0, 0.0)
         ),
         VertexData(
-            pos: simd_float4(x: 1, y: -1, z: 0, w: 1),
-            texCoord: topRight
+            pos: simd_float4(x: Float(rect.maxX) * 2.0, y: Float(rect.minY) * 2.0, z: z, w: 1),
+            texCoord: topRight,
+            localPos: simd_float2(1.0, 0.0)
         ),
         VertexData(
-            pos: simd_float4(x: -1, y: 1, z: 0, w: 1),
-            texCoord: bottomLeft
+            pos: simd_float4(x: Float(rect.minX) * 2.0, y: Float(rect.maxY) * 2.0, z: z, w: 1),
+            texCoord: bottomLeft,
+            localPos: simd_float2(0.0, 1.0)
         ),
         VertexData(
-            pos: simd_float4(x: 1, y: 1, z: 0, w: 1),
-            texCoord: bottomRight
+            pos: simd_float4(x: Float(rect.maxX) * 2.0, y: Float(rect.maxY) * 2.0, z: z, w: 1),
+            texCoord: bottomRight,
+            localPos: simd_float2(1.0, 1.0)
         ),
     ]
 }

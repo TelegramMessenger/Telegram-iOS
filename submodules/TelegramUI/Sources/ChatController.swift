@@ -14490,7 +14490,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         var found = false
         self.forEachController({ controller in
             if let controller = controller as? TooltipScreen {
-                if controller.text == solution.text && controller.textEntities == solution.entities {
+                if controller.text == .entities(text: solution.text, entities: solution.entities) {
                     found = true
                     controller.dismiss()
                     return false
@@ -14502,7 +14502,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         
-        let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: solution.text, textEntities: solution.entities, icon: .info, location: .top, shouldDismissOnTouch: { point in
+        let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .entities(text: solution.text, entities: solution.entities), icon: .animation(name: "anim_infotip", delay: 0.2), location: .top, shouldDismissOnTouch: { point in
             return .ignore
         }, openActiveTextItem: { [weak self] item, action in
             guard let strongSelf = self else {
@@ -14583,7 +14583,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         var found = false
         self.forEachController({ controller in
             if let controller = controller as? TooltipScreen {
-                if controller.text == psaText {
+                if controller.text == .plain(text: psaText) {
                     found = true
                     controller.dismiss()
                     return false
@@ -14595,7 +14595,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         
-        let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: psaText, textEntities: psaEntities, icon: .info, location: .top, displayDuration: .custom(10.0), shouldDismissOnTouch: { point in
+        let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .entities(text: psaText, entities: psaEntities), icon: .animation(name: "anim_infotip", delay: 0.2), location: .top, displayDuration: .custom(10.0), shouldDismissOnTouch: { point in
             return .ignore
         }, openActiveTextItem: { [weak self] item, action in
             guard let strongSelf = self else {
@@ -14683,7 +14683,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         var found = false
         self.forEachController({ controller in
             if let controller = controller as? TooltipScreen {
-                if controller.text == psaText {
+                if controller.text == .plain(text: psaText) {
                     found = true
                     controller.resetDismissTimeout()
                     
@@ -14709,7 +14709,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         
-        let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: psaText, textEntities: psaEntities, icon: .info, location: .top, displayDuration: .custom(10.0), shouldDismissOnTouch: { point in
+        let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .entities(text: psaText, entities: psaEntities), icon: .animation(name: "anim_infotip", delay: 0.2), location: .top, displayDuration: .custom(10.0), shouldDismissOnTouch: { point in
             return .ignore
         }, openActiveTextItem: { [weak self] item, action in
             guard let strongSelf = self else {

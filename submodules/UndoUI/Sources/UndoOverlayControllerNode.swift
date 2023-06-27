@@ -221,14 +221,16 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     isUserInteractionEnabled = true
                 }
             
-            case let .actionSucceeded(title, text, cancel):
+            case let .actionSucceeded(title, text, cancel, destructive):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_success", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
                 
-                undoTextColor = UIColor(rgb: 0xff7b74)
+                if destructive {
+                    undoTextColor = UIColor(rgb: 0xff7b74)
+                }
             
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)

@@ -8691,7 +8691,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             return
         }
         let buttonFrame = buttonNode.view.convert(buttonNode.bounds, to: self.view)
-        controller.present(TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: self.presentationData.strings.SharedMedia_CalendarTooltip, style: .default, icon: .none, location: .point(buttonFrame.insetBy(dx: 0.0, dy: 5.0), .top), shouldDismissOnTouch: { point in
+        controller.present(TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: self.presentationData.strings.SharedMedia_CalendarTooltip), style: .default, icon: .none, location: .point(buttonFrame.insetBy(dx: 0.0, dy: 5.0), .top), shouldDismissOnTouch: { point in
             return .dismiss(consume: false)
         }), in: .current)
     }

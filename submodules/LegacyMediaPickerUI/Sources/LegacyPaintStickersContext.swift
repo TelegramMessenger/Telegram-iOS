@@ -148,6 +148,8 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
             self.imagePromise.set(.single(image))
         case .video:
             self.file = nil
+        case .dualVideoReference:
+            self.file = nil
         }
     }
     

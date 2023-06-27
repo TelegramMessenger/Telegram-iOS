@@ -37,6 +37,21 @@ public enum EditorToolKey: Int32, CaseIterable {
     ]
 }
 
+public struct VideoPositionChange: Codable, Equatable {
+    private enum CodingKeys: String, CodingKey {
+        case additional
+        case timestamp
+    }
+    
+    public let additional: Bool
+    public let timestamp: Double
+    
+    public init(additional: Bool, timestamp: Double) {
+        self.additional = additional
+        self.timestamp = timestamp
+    }
+}
+
 public final class MediaEditorValues: Codable, Equatable {
     public static func == (lhs: MediaEditorValues, rhs: MediaEditorValues) -> Bool {
         if lhs.originalDimensions != rhs.originalDimensions {
@@ -69,13 +84,30 @@ public final class MediaEditorValues: Codable, Equatable {
         if lhs.videoIsFullHd != rhs.videoIsFullHd {
             return false
         }
+        if lhs.videoIsMirrored != rhs.videoIsMirrored {
+            return false
+        }
+        if lhs.additionalVideoPath != rhs.additionalVideoPath {
+            return false
+        }
+        if lhs.additionalVideoPosition != rhs.additionalVideoPosition {
+            return false
+        }
+        if lhs.additionalVideoScale != rhs.additionalVideoScale {
+            return false
+        }
+        if lhs.additionalVideoRotation != rhs.additionalVideoRotation {
+            return false
+        }
+        if lhs.additionalVideoPositionChanges != rhs.additionalVideoPositionChanges {
+            return false
+        }
         if lhs.drawing !== rhs.drawing {
             return false
         }
         if lhs.entities != rhs.entities {
             return false
         }
-
         
         for key in EditorToolKey.allCases {
             let lhsToolValue = lhs.toolValues[key]
@@ -114,6 +146,13 @@ public final class MediaEditorValues: Codable, Equatable {
         case videoTrimRange
         case videoIsMuted
         case videoIsFullHd
+        case videoIsMirrored
+        
+        case additionalVideoPath
+        case additionalVideoPosition
+        case additionalVideoScale
+        case additionalVideoRotation
+        case additionalVideoPositionChanges
         
         case drawing
         case entities
@@ -132,6 +171,13 @@ public final class MediaEditorValues: Codable, Equatable {
     public let videoTrimRange: Range<Double>?
     public let videoIsMuted: Bool
     public let videoIsFullHd: Bool
+    public let videoIsMirrored: Bool
+    
+    public let additionalVideoPath: String?
+    public let additionalVideoPosition: CGPoint?
+    public let additionalVideoScale: CGFloat?
+    public let additionalVideoRotation: CGFloat?
+    public let additionalVideoPositionChanges: [VideoPositionChange]
     
     public let drawing: UIImage?
     public let entities: [CodableDrawingEntity]
@@ -148,6 +194,12 @@ public final class MediaEditorValues: Codable, Equatable {
         videoTrimRange: Range<Double>?,
         videoIsMuted: Bool,
         videoIsFullHd: Bool,
+        videoIsMirrored: Bool,
+        additionalVideoPath: String?,
+        additionalVideoPosition: CGPoint?,
+        additionalVideoScale: CGFloat?,
+        additionalVideoRotation: CGFloat?,
+        additionalVideoPositionChanges: [VideoPositionChange],
         drawing: UIImage?,
         entities: [CodableDrawingEntity],
         toolValues: [EditorToolKey: Any]
@@ -162,6 +214,12 @@ public final class MediaEditorValues: Codable, Equatable {
         self.videoTrimRange = videoTrimRange
         self.videoIsMuted = videoIsMuted
         self.videoIsFullHd = videoIsFullHd
+        self.videoIsMirrored = videoIsMirrored
+        self.additionalVideoPath = additionalVideoPath
+        self.additionalVideoPosition = additionalVideoPosition
+        self.additionalVideoScale = additionalVideoScale
+        self.additionalVideoRotation = additionalVideoRotation
+        self.additionalVideoPositionChanges = additionalVideoPositionChanges
         self.drawing = drawing
         self.entities = entities
         self.toolValues = toolValues
@@ -189,6 +247,13 @@ public final class MediaEditorValues: Codable, Equatable {
         self.videoTrimRange = try container.decodeIfPresent(Range<Double>.self, forKey: .videoTrimRange)
         self.videoIsMuted = try container.decode(Bool.self, forKey: .videoIsMuted)
         self.videoIsFullHd = try container.decodeIfPresent(Bool.self, forKey: .videoIsFullHd) ?? false
+        self.videoIsMirrored = try container.decodeIfPresent(Bool.self, forKey: .videoIsMirrored) ?? false
+        
+        self.additionalVideoPath = try container.decodeIfPresent(String.self, forKey: .additionalVideoPath)
+        self.additionalVideoPosition = try container.decodeIfPresent(CGPoint.self, forKey: .additionalVideoPosition)
+        self.additionalVideoScale = try container.decodeIfPresent(CGFloat.self, forKey: .additionalVideoScale)
+        self.additionalVideoRotation = try container.decodeIfPresent(CGFloat.self, forKey: .additionalVideoRotation)
+        self.additionalVideoPositionChanges = try container.decodeIfPresent([VideoPositionChange].self, forKey: .additionalVideoPositionChanges) ?? []
         
         if let drawingData = try container.decodeIfPresent(Data.self, forKey: .drawing), let image = UIImage(data: drawingData) {
             self.drawing = image
@@ -226,6 +291,13 @@ public final class MediaEditorValues: Codable, Equatable {
         try container.encodeIfPresent(self.videoTrimRange, forKey: .videoTrimRange)
         try container.encode(self.videoIsMuted, forKey: .videoIsMuted)
         try container.encode(self.videoIsFullHd, forKey: .videoIsFullHd)
+        try container.encode(self.videoIsMirrored, forKey: .videoIsMirrored)
+        
+        try container.encodeIfPresent(self.additionalVideoPath, forKey: .additionalVideoPath)
+        try container.encodeIfPresent(self.additionalVideoPosition, forKey: .additionalVideoPosition)
+        try container.encodeIfPresent(self.additionalVideoScale, forKey: .additionalVideoScale)
+        try container.encodeIfPresent(self.additionalVideoRotation, forKey: .additionalVideoRotation)
+        try container.encodeIfPresent(self.additionalVideoPositionChanges, forKey: .additionalVideoPositionChanges)
         
         if let drawing = self.drawing, let pngDrawingData = drawing.pngData() {
             try container.encode(pngDrawingData, forKey: .drawing)
@@ -243,35 +315,48 @@ public final class MediaEditorValues: Codable, Equatable {
     }
     
     public func makeCopy() -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
     }
     
     func withUpdatedCrop(offset: CGPoint, scale: CGFloat, rotation: CGFloat, mirroring: Bool) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: offset, cropSize: self.cropSize, cropScale: scale, cropRotation: rotation, cropMirroring: mirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: offset, cropSize: self.cropSize, cropScale: scale, cropRotation: rotation, cropMirroring: mirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
     }
     
     func withUpdatedGradientColors(gradientColors: [UIColor]) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
     }
     
     func withUpdatedVideoIsMuted(_ videoIsMuted: Bool) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: videoIsMuted, videoIsFullHd: self.videoIsFullHd, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
     }
     
     func withUpdatedVideoIsFullHd(_ videoIsFullHd: Bool) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: videoIsFullHd, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
+    }
+    
+    
+    func withUpdatedVideoIsMirrored(_ videoIsMirrored: Bool) -> MediaEditorValues {
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
+    }
+    
+    func withUpdatedAdditionalVideo(path: String, positionChanges: [VideoPositionChange]) -> MediaEditorValues {
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: path, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: positionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
+    }
+    
+    func withUpdatedAdditionalVideo(position: CGPoint, scale: CGFloat, rotation: CGFloat) -> MediaEditorValues {
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: position, additionalVideoScale: scale, additionalVideoRotation: rotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
     }
     
     func withUpdatedVideoTrimRange(_ videoTrimRange: Range<Double>) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
     }
     
     func withUpdatedDrawingAndEntities(drawing: UIImage?, entities: [CodableDrawingEntity]) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, drawing: drawing, entities: entities, toolValues: self.toolValues)
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: drawing, entities: entities, toolValues: self.toolValues)
     }
     
     func withUpdatedToolValues(_ toolValues: [EditorToolKey: Any]) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, drawing: self.drawing, entities: self.entities, toolValues: toolValues)
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: toolValues)
     }
     
     public var resultDimensions: PixelDimensions {
@@ -558,7 +643,8 @@ public struct CurvesValue: Equatable, Codable {
                 },
                 size: CGSize(width: 1.0, height: 1.0),
                 type: .line,
-                granularity: 100
+                granularity: 100,
+                floor: false
             )
             return dataPoints
         }()
@@ -885,7 +971,7 @@ public enum MediaEditorCurveType {
     case line
 }
 
-public func curveThroughPoints(count: Int, valueAtIndex: (Int) -> Float, positionAtIndex: (Int, CGFloat) -> CGFloat, size: CGSize, type: MediaEditorCurveType, granularity: Int) -> (UIBezierPath, [Float]) {
+public func curveThroughPoints(count: Int, valueAtIndex: (Int) -> Float, positionAtIndex: (Int, CGFloat) -> CGFloat, size: CGSize, type: MediaEditorCurveType, granularity: Int, floor: Bool) -> (UIBezierPath, [Float]) {
     let path = UIBezierPath()
     var dataPoints: [Float] = []
     
@@ -900,7 +986,11 @@ public func curveThroughPoints(count: Int, valueAtIndex: (Int) -> Float, positio
     
     let step = size.width / CGFloat(count)
     func pointAtIndex(_ index: Int) -> CGPoint {
-        return CGPoint(x: floorToScreenPixels(positionAtIndex(index, step)), y: floorToScreenPixels(CGFloat(valueAtIndex(index)) * size.height))
+        if floor {
+            return CGPoint(x: floorToScreenPixels(positionAtIndex(index, step)), y: floorToScreenPixels(CGFloat(valueAtIndex(index)) * size.height))
+        } else {
+            return CGPoint(x: positionAtIndex(index, step), y: CGFloat(valueAtIndex(index)) * size.height)
+        }
     }
     
     for index in 1 ..< count - 2 {
@@ -923,7 +1013,7 @@ public func curveThroughPoints(count: Int, valueAtIndex: (Int) -> Float, positio
                 path.addLine(to: point)
             }
             
-            if ((index - 1) % 2 == 0) {
+            if ((j - 1) % 2 == 0) {
                 dataPoints.append(Float(point.y))
             }
         }

@@ -20,6 +20,8 @@ typedef struct {
     float       warmth;
     float       grain;
     float       vignette;
+    float       hasCurves;
+    float2       empty;
 } MediaEditorAdjustments;
 
 half3 fade(half3 color, float fadeAmount) {
@@ -97,7 +99,9 @@ fragment half4 adjustmentsFragmentShader(RasterizerData in [[stage_in]],
     half4 source = sourceImage.sample(samplr, float2(in.texCoord.x, in.texCoord.y));
     half4 result = source;
         
-    //result = half4(applyRGBCurve(hslToRgb(applyLuminanceCurve(rgbToHsl(result.rgb), allCurve)), redCurve, greenCurve, blueCurve), result.a);
+    if (adjustments.hasCurves > epsilon) {
+        result = half4(applyRGBCurve(hslToRgb(applyLuminanceCurve(rgbToHsl(result.rgb), allCurve)), redCurve, greenCurve, blueCurve), result.a);
+    }
     
     if (abs(adjustments.highlights) > epsilon || abs(adjustments.shadows) > epsilon) {
         const float3 hsLuminanceWeighting = float3(0.3, 0.3, 0.3);
@@ -179,6 +183,21 @@ fragment half4 adjustmentsFragmentShader(RasterizerData in [[stage_in]],
         float radDist = length(in.texCoord - 0.5) / sqrt(0.5);
         float mag = easeInOutSigmoid(radDist * midpoint, fuzziness) * adjustments.vignette * 0.645;
         result.rgb = half3(mix(pow(float3(result.rgb), float3(1.0 / (1.0 - mag))), float3(0.0), mag * mag));
+    }
+    
+    if (abs(adjustments.grain) > epsilon) {
+        const float grainSize = 2.3;
+        float3 rotOffset = float3(1.425, 3.892, 5.835);
+        float2 rotCoordsR = coordRot(in.texCoord, rotOffset.x);
+        half3 noise = half3(pnoise3D(float3(rotCoordsR * float2(adjustments.dimensions.x / grainSize, adjustments.dimensions.y / grainSize), 0.0)));
+        
+        half3 lumcoeff = half3(0.299, 0.587, 0.114);
+        float luminance = dot(result.rgb, lumcoeff);
+        float lum = smoothstep(0.2, 0.0, luminance);
+        lum += luminance;
+        
+        noise = mix(noise, half3(0.0), pow(lum, 4.0));
+        result.rgb = result.rgb + noise * adjustments.grain * 0.04;
     }
     
     return result;

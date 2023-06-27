@@ -86,14 +86,18 @@ private final class VideoRecorderImpl {
         }
     }
     
-    public func markPositionChange(position: Camera.Position) {
+    public func markPositionChange(position: Camera.Position, time: CMTime? = nil) {
         self.queue.async {
-            guard self.recordingStartSampleTime.isValid else {
+            guard self.recordingStartSampleTime.isValid || time != nil else {
                 return
             }
-            let currentTime = CMTime(seconds: CACurrentMediaTime(), preferredTimescale: CMTimeScale(NSEC_PER_SEC))
-            let delta = currentTime - self.recordingStartSampleTime
-            self.positionChangeTimestamps.append((position, delta))
+            if let time {
+                self.positionChangeTimestamps.append((position, time))
+            } else {
+                let currentTime = CMTime(seconds: CACurrentMediaTime(), preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+                let delta = currentTime - self.recordingStartSampleTime
+                self.positionChangeTimestamps.append((position, delta))
+            }
         }
     }
         
@@ -161,11 +165,13 @@ private final class VideoRecorderImpl {
                     if !self.savedTransitionImage, let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
                         self.savedTransitionImage = true
                         
-                        let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
-                        if let cgImage = self.imageContext.createCGImage(ciImage, from: ciImage.extent) {
-                            self.transitionImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .right)
-                        } else {
-                            self.savedTransitionImage = false
+                        Queue.concurrentDefaultQueue().async {
+                            let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+                            if let cgImage = self.imageContext.createCGImage(ciImage, from: ciImage.extent) {
+                                self.transitionImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .right)
+                            } else {
+                                self.savedTransitionImage = false
+                            }
                         }
                     }
                     
@@ -486,9 +492,9 @@ public final class VideoRecorder {
     func stop() {
         self.impl.stopRecording()
     }
-    
-    func markPositionChange(position: Camera.Position) {
-        self.impl.markPositionChange(position: position)
+        
+    func markPositionChange(position: Camera.Position, time: CMTime? = nil) {
+        self.impl.markPositionChange(position: position, time: time)
     }
     
     func appendSampleBuffer(_ sampleBuffer: CMSampleBuffer) {

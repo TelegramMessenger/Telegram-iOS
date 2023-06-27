@@ -419,7 +419,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
                 if enabledEntities.isEmpty {
                     return NSAttributedString(string: text, font: Font.regular(17.0), textColor: textColorValue)
                 } else {
-                    let fontSize: CGFloat = 17.0
+                    let fontSize: CGFloat = 15.0
                     
                     let baseFont = Font.regular(fontSize)
                     let linkFont = baseFont

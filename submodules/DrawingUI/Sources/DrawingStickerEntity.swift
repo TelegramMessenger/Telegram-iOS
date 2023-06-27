@@ -10,21 +10,62 @@ import StickerResources
 import AccountContext
 import MediaEditor
 
-final class DrawingStickerEntityView: DrawingEntityView {
+public final class DrawingStickerEntityView: DrawingEntityView {
+    public class VideoView: UIView {
+        init(player: AVPlayer) {
+            super.init(frame: .zero)
+            
+            self.videoLayer.player = player
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        var videoLayer: AVPlayerLayer {
+            guard let layer = self.layer as? AVPlayerLayer else {
+                fatalError()
+            }
+            return layer
+        }
+        
+        public override class var layerClass: AnyClass {
+            return AVPlayerLayer.self
+        }
+    }
+    
     private var stickerEntity: DrawingStickerEntity {
         return self.entity as! DrawingStickerEntity
     }
     
     var started: ((Double) -> Void)?
     
+    public var updated: () -> Void = {}
+    
     private var currentSize: CGSize?
     
     private let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
     
+    private var videoContainerView: UIView?
     private var videoPlayer: AVPlayer?
-    private var videoLayer: AVPlayerLayer?
+    public var videoView: VideoView?
     private var videoImageView: UIImageView?
+    
+    public var mainView: MediaEditorPreviewView? {
+        didSet {
+            if let mainView = self.mainView {
+                self.videoContainerView?.addSubview(mainView)
+            } else {
+                if let previous = oldValue, previous.superview === self {
+                    previous.removeFromSuperview()
+                }
+                if let videoView = self.videoView {
+                    self.videoContainerView?.addSubview(videoView)
+                }
+            }
+        }
+    }
     
     private var didSetUpAnimationNode = false
     private let stickerFetchedDisposable = MetaDisposable()
@@ -69,7 +110,7 @@ final class DrawingStickerEntityView: DrawingEntityView {
     }
     
     private var video: String? {
-        if case let .video(path, _) = self.stickerEntity.content {
+        if case let .video(path, _, _) = self.stickerEntity.content {
             return path
         } else {
             return nil
@@ -82,13 +123,15 @@ final class DrawingStickerEntityView: DrawingEntityView {
             return file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
         case let .image(image):
             return image.size
-        case let .video(_, image):
+        case let .video(_, image, _):
             if let image {
                 let minSide = min(image.size.width, image.size.height)
                 return CGSize(width: minSide, height: minSide)
             } else {
                 return CGSize(width: 512.0, height: 512.0)
             }
+        case .dualVideoReference:
+            return CGSize(width: 512.0, height: 512.0)
         }
     }
     
@@ -112,6 +155,10 @@ final class DrawingStickerEntityView: DrawingEntityView {
                             }
                         }
                         self.addSubnode(animationNode)
+                        
+                        if file.isCustomTemplateEmoji {
+                            animationNode.dynamicColor = UIColor(rgb: 0xffffff)
+                        }
                     }
                     self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: self.context.account.postbox, userLocation: .other, file: file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 256.0, height: 256.0))))
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: stickerPackFileReference(file), resource: file.resource).start())
@@ -139,30 +186,34 @@ final class DrawingStickerEntityView: DrawingEntityView {
                 return context
             }))
             self.setNeedsLayout()
-        } else if case let .video(videoPath, image) = self.stickerEntity.content {
+        } else if case let .video(videoPath, image, _) = self.stickerEntity.content {
             let url = URL(fileURLWithPath: videoPath)
             let asset = AVURLAsset(url: url)
             let playerItem = AVPlayerItem(asset: asset)
             let player = AVPlayer(playerItem: playerItem)
             player.automaticallyWaitsToMinimizeStalling = false
-            let layer = AVPlayerLayer(player: player)
-            layer.masksToBounds = true
-            layer.videoGravity = .resizeAspectFill
+           
+            let videoContainerView = UIView()
+            videoContainerView.clipsToBounds = true
             
-            self.layer.addSublayer(layer)
+            let videoView = VideoView(player: player)
+            videoContainerView.addSubview(videoView)
+            
+            self.addSubview(videoContainerView)
             
             self.videoPlayer = player
-            self.videoLayer = layer
+            self.videoContainerView = videoContainerView
+            self.videoView = videoView
             
             let imageView = UIImageView(image: image)
             imageView.clipsToBounds = true
             imageView.contentMode = .scaleAspectFill
-            self.addSubview(imageView)
+            videoContainerView.addSubview(imageView)
             self.videoImageView = imageView
         }
     }
     
-    override func play() {
+    public override func play() {
         self.isVisible = true
         self.applyVisibility()
         
@@ -180,7 +231,7 @@ final class DrawingStickerEntityView: DrawingEntityView {
         }
     }
     
-    override func pause() {
+    public override func pause() {
         self.isVisible = false
         self.applyVisibility()
         
@@ -189,7 +240,7 @@ final class DrawingStickerEntityView: DrawingEntityView {
         }
     }
     
-    override func seek(to timestamp: Double) {
+    public override func seek(to timestamp: Double) {
         self.isVisible = false
         self.isPlaying = false
         self.animationNode?.seekTo(.timestamp(timestamp))
@@ -233,7 +284,7 @@ final class DrawingStickerEntityView: DrawingEntityView {
     }
     
     private var didApplyVisibility = false
-    override func layoutSubviews() {
+    public override func layoutSubviews() {
         super.layoutSubviews()
         
         let size = self.bounds.size
@@ -258,20 +309,23 @@ final class DrawingStickerEntityView: DrawingEntityView {
                 }
             }
             
-            if let videoLayer = self.videoLayer {
-                videoLayer.cornerRadius = imageFrame.width / 2.0
-                videoLayer.frame = imageFrame
+            if let videoView = self.videoView {
+                let videoSize = CGSize(width: imageFrame.width, height: imageFrame.width / 9.0 * 16.0)
+                videoView.frame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((imageFrame.height - videoSize.height) / 2.0)), size: videoSize)
+            }
+            if let videoContainerView = self.videoContainerView {
+                videoContainerView.layer.cornerRadius = imageFrame.width / 2.0
+                videoContainerView.frame = imageFrame
             }
             if let videoImageView = self.videoImageView {
-                videoImageView.layer.cornerRadius = imageFrame.width / 2.0
-                videoImageView.frame = imageFrame
+                videoImageView.frame = CGRect(origin: .zero, size: imageFrame.size)
             }
             
             self.update(animated: false)
         }
     }
         
-    override func update(animated: Bool) {
+    public override func update(animated: Bool) {
         self.center = self.stickerEntity.position
         
         let size = self.stickerEntity.baseSize
@@ -298,20 +352,22 @@ final class DrawingStickerEntityView: DrawingEntityView {
             UIView.animate(withDuration: 0.25, animations: {
                 self.imageNode.transform = animationTargetTransform
                 self.animationNode?.transform = animationTargetTransform
-                self.videoLayer?.transform = animationTargetTransform
+                self.videoContainerView?.layer.transform = animationTargetTransform
             }, completion: { finished in
                 self.imageNode.transform = staticTransform
                 self.animationNode?.transform = staticTransform
-                self.videoLayer?.transform = staticTransform
+                self.videoContainerView?.layer.transform = staticTransform
             })
         } else {
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             self.imageNode.transform = staticTransform
             self.animationNode?.transform = staticTransform
-            self.videoLayer?.transform = staticTransform
+            self.videoContainerView?.layer.transform = staticTransform
             CATransaction.commit()
         }
+        
+        self.updated()
     
         super.update(animated: animated)
     }

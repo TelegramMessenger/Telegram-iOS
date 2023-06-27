@@ -219,6 +219,8 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
             
             let alreadyReceivedAsset = Atomic<Bool>(value: false)
             if asset.mediaType == .image {
+                Logger.shared.log("FetchVideoResource", "Getting asset image \(asset.localIdentifier)")
+                
                 let options = PHImageRequestOptions()
                 options.isNetworkAccessAllowed = true
                 options.deliveryMode = .highQualityFormat
@@ -229,6 +231,8 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                     guard let image else {
                         return
                     }
+                    
+                    Logger.shared.log("FetchVideoResource", "Got asset image \(asset.localIdentifier)")
                     
                     var mediaEditorValues: MediaEditorValues?
                     if case let .compress(adjustmentsValue) = resource.conversion, let adjustmentsValue, adjustmentsValue.isStory {
@@ -241,10 +245,12 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                     let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
                     let updatedSize = Atomic<Int64>(value: 0)
                     if let mediaEditorValues {
+                        Logger.shared.log("FetchVideoResource", "Requesting video export")
+                        
                         let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, frameRate: 30.0)
                         let videoExport = MediaEditorVideoExport(account: account, subject: .image(image), configuration: configuration, outputPath: tempFile.path)
                         videoExport.start()
-                        
+                                                
                         let statusDisposable = videoExport.status.start(next: { status in
                             switch status {
                             case .completed:

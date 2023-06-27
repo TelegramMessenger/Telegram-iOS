@@ -25,13 +25,13 @@ public struct MediaEditorPlayerState {
 public final class MediaEditor {
     public enum Subject {
         case image(UIImage, PixelDimensions)
-        case video(String, UIImage?, PixelDimensions, Double)
+        case video(String, UIImage?, Bool, String?, PixelDimensions, Double)
         case asset(PHAsset)
         case draft(MediaEditorDraft)
         
         var dimensions: PixelDimensions {
             switch self {
-            case let .image(_, dimensions), let .video(_, _, dimensions, _):
+            case let .image(_, dimensions), let .video(_, _, _, _, dimensions, _):
                 return dimensions
             case let .asset(asset):
                 return PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight))
@@ -43,6 +43,7 @@ public final class MediaEditor {
 
     private let subject: Subject
     private var player: AVPlayer?
+    private var additionalPlayer: AVPlayer?
     private var timeObserver: Any?
     private var didPlayToEndTimeObserver: NSObjectProtocol?
     
@@ -98,6 +99,10 @@ public final class MediaEditor {
     
     public var hasPortraitMask: Bool {
         return self.renderChain.blurPass.maskTexture != nil
+    }
+    
+    public var sourceIsVideo: Bool {
+        self.player != nil
     }
     
     public var resultIsVideo: Bool {
@@ -260,6 +265,12 @@ public final class MediaEditor {
                 videoTrimRange: nil,
                 videoIsMuted: false,
                 videoIsFullHd: false,
+                videoIsMirrored: false,
+                additionalVideoPath: nil,
+                additionalVideoPosition: nil,
+                additionalVideoScale: nil,
+                additionalVideoRotation: nil,
+                additionalVideoPositionChanges: [],
                 drawing: nil,
                 entities: [],
                 toolValues: [:]
@@ -281,7 +292,7 @@ public final class MediaEditor {
         if case let .asset(asset) = subject {
             self.playerPlaybackState = (asset.duration, 0.0, false, false)
             self.playerPlaybackStatePromise.set(.single(self.playerPlaybackState))
-        } else if case let .video(_, _, _, duration) = subject {
+        } else if case let .video(_, _, _, _, _, duration) = subject {
             self.playerPlaybackState = (duration, 0.0, false, true)
             self.playerPlaybackStatePromise.set(.single(self.playerPlaybackState))
         }
@@ -308,11 +319,11 @@ public final class MediaEditor {
             print("error")
         }
                 
-        let textureSource: Signal<(TextureSource, UIImage?, AVPlayer?, UIColor, UIColor), NoError>
+        let textureSource: Signal<(TextureSource, UIImage?, AVPlayer?, AVPlayer?, UIColor, UIColor), NoError>
         switch subject {
         case let .image(image, _):
             let colors = mediaEditorGetGradientColors(from: image)
-            textureSource = .single((ImageTextureSource(image: image, renderTarget: renderTarget), image, nil, colors.0, colors.1))
+            textureSource = .single((ImageTextureSource(image: image, renderTarget: renderTarget), image, nil, nil, colors.0, colors.1))
         case let .draft(draft):
             if draft.isVideo {
                 textureSource = Signal { subscriber in
@@ -325,7 +336,7 @@ public final class MediaEditor {
    
                     if let gradientColors = draft.values.gradientColors {
                         let colors = (gradientColors.first!, gradientColors.last!)
-                        subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, colors.0, colors.1))
+                        subscriber.putNext((VideoTextureSource(player: player, additionalPlayer: nil, mirror: false, renderTarget: renderTarget), nil, player, nil, colors.0, colors.1))
                         subscriber.putCompletion()
                         
                         return EmptyDisposable
@@ -336,9 +347,9 @@ public final class MediaEditor {
                         imageGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: CMTime(seconds: 0, preferredTimescale: CMTimeScale(30.0)))]) { _, image, _, _, _ in
                             if let image {
                                 let colors = mediaEditorGetGradientColors(from: UIImage(cgImage: image))
-                                subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, colors.0, colors.1))
+                                subscriber.putNext((VideoTextureSource(player: player, additionalPlayer: nil, mirror: false, renderTarget: renderTarget), nil, player, nil, colors.0, colors.1))
                             } else {
-                                subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, .black, .black))
+                                subscriber.putNext((VideoTextureSource(player: player, additionalPlayer: nil, mirror: false, renderTarget: renderTarget), nil, player, nil, .black, .black))
                             }
                             subscriber.putCompletion()
                         }
@@ -357,19 +368,24 @@ public final class MediaEditor {
                 } else {
                     colors = mediaEditorGetGradientColors(from: image)
                 }
-                textureSource = .single((ImageTextureSource(image: image, renderTarget: renderTarget), image, nil, colors.0, colors.1))
+                textureSource = .single((ImageTextureSource(image: image, renderTarget: renderTarget), image, nil, nil, colors.0, colors.1))
             }
-        case let .video(path, transitionImage, _, _):
+        case let .video(path, transitionImage, mirror, additionalPath, _, _):
             textureSource = Signal { subscriber in
-                let url = URL(fileURLWithPath: path)
-                let asset = AVURLAsset(url: url)
-                
-                let playerItem = AVPlayerItem(asset: asset)
-                let player = AVPlayer(playerItem: playerItem)
+                let asset = AVURLAsset(url: URL(fileURLWithPath: path))
+                let player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
                 player.automaticallyWaitsToMinimizeStalling = false
+                
+                var additionalPlayer: AVPlayer?
+                if let additionalPath {
+                    let additionalAsset = AVURLAsset(url: URL(fileURLWithPath: additionalPath))
+                    additionalPlayer = AVPlayer(playerItem: AVPlayerItem(asset: additionalAsset))
+                    additionalPlayer?.automaticallyWaitsToMinimizeStalling = false
+                }
+                
                 if let transitionImage {
                     let colors = mediaEditorGetGradientColors(from: transitionImage)
-                    subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, colors.0, colors.1))
+                    subscriber.putNext((VideoTextureSource(player: player, additionalPlayer: additionalPlayer, mirror: mirror, renderTarget: renderTarget), nil, player, additionalPlayer, colors.0, colors.1))
                     subscriber.putCompletion()
                     
                     return EmptyDisposable
@@ -380,9 +396,9 @@ public final class MediaEditor {
                     imageGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: CMTime(seconds: 0, preferredTimescale: CMTimeScale(30.0)))]) { _, image, _, _, _ in
                         if let image {
                             let colors = mediaEditorGetGradientColors(from: UIImage(cgImage: image))
-                            subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, colors.0, colors.1))
+                            subscriber.putNext((VideoTextureSource(player: player, additionalPlayer: additionalPlayer, mirror: mirror, renderTarget: renderTarget), nil, player, additionalPlayer, colors.0, colors.1))
                         } else {
-                            subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, .black, .black))
+                            subscriber.putNext((VideoTextureSource(player: player, additionalPlayer: additionalPlayer, mirror: mirror, renderTarget: renderTarget), nil, player, additionalPlayer, .black, .black))
                         }
                         subscriber.putCompletion()
                     }
@@ -410,7 +426,7 @@ public final class MediaEditor {
                                     let playerItem = AVPlayerItem(asset: asset)
                                     let player = AVPlayer(playerItem: playerItem)
                                     player.automaticallyWaitsToMinimizeStalling = false
-                                    subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, colors.0, colors.1))
+                                    subscriber.putNext((VideoTextureSource(player: player, additionalPlayer: nil, mirror: false, renderTarget: renderTarget), nil, player, nil, colors.0, colors.1))
                                     subscriber.putCompletion()
                                 }
                             })
@@ -436,7 +452,7 @@ public final class MediaEditor {
                             }
                             if !degraded {
                                 let colors = mediaEditorGetGradientColors(from: image)
-                                subscriber.putNext((ImageTextureSource(image: image, renderTarget: renderTarget), image, nil, colors.0, colors.1))
+                                subscriber.putNext((ImageTextureSource(image: image, renderTarget: renderTarget), image, nil, nil, colors.0, colors.1))
                                 subscriber.putCompletion()
                             }
                         }
@@ -451,12 +467,14 @@ public final class MediaEditor {
         self.textureSourceDisposable = (textureSource
         |> deliverOnMainQueue).start(next: { [weak self] sourceAndColors in
             if let self {
-                let (source, image, player, topColor, bottomColor) = sourceAndColors
+                let (source, image, player, additionalPlayer, topColor, bottomColor) = sourceAndColors
                 self.renderer.onNextRender = { [weak self] in
                     self?.onFirstDisplay()
                 }
                 self.renderer.textureSource = source
                 self.player = player
+                self.additionalPlayer = additionalPlayer
+                                
                 self.playerPromise.set(.single(player))
                 self.gradientColorsValue = (topColor, bottomColor)
                 self.setGradientColors([topColor, bottomColor])
@@ -485,13 +503,16 @@ public final class MediaEditor {
                         if let self {
                             let start = self.values.videoTrimRange?.lowerBound ?? 0.0
                             self.player?.seek(to: CMTime(seconds: start, preferredTimescale: CMTimeScale(1000)))
+                            self.additionalPlayer?.seek(to: CMTime(seconds: start, preferredTimescale: CMTimeScale(1000)))
                             self.onPlaybackAction(.seek(start))
                             self.player?.play()
+                            self.additionalPlayer?.play()
                             self.onPlaybackAction(.play)
                         }
                     })
                     Queue.mainQueue().justDispatch {
                         player.playImmediately(atRate: 1.0)
+                        additionalPlayer?.playImmediately(atRate: 1.0)
                         self.onPlaybackAction(.play)
                         self.volumeFade = self.player?.fadeVolume(from: 0.0, to: 1.0, duration: 0.4)
                     }
@@ -510,18 +531,29 @@ public final class MediaEditor {
     }
     
     private var skipRendering = false
-    private func updateValues(skipRendering: Bool = false, _ f: (MediaEditorValues) -> MediaEditorValues) {
-        if skipRendering {
+    private var forceRendering = false
+    
+    private enum UpdateMode {
+        case generic
+        case skipRendering
+        case forceRendering
+    }
+    private func updateValues(mode: UpdateMode = .generic, _ f: (MediaEditorValues) -> MediaEditorValues) {
+        if case .skipRendering = mode {
             self.skipRendering = true
+        } else if case .forceRendering = mode {
+            self.forceRendering = true
         }
         self.values = f(self.values)
-        if skipRendering {
+        if case .skipRendering = mode {
             self.skipRendering = false
+        } else if case .forceRendering = mode {
+            self.forceRendering = false
         }
     }
     
     public func setCrop(offset: CGPoint, scale: CGFloat, rotation: CGFloat, mirroring: Bool) {
-        self.updateValues(skipRendering: true) { values in
+        self.updateValues(mode: .skipRendering) { values in
             return values.withUpdatedCrop(offset: offset, scale: scale, rotation: rotation, mirroring: mirroring)
         }
     }
@@ -546,13 +578,19 @@ public final class MediaEditor {
     
     public func setVideoIsMuted(_ videoIsMuted: Bool) {
         self.player?.isMuted = videoIsMuted
-        self.updateValues(skipRendering: true) { values in
+        self.updateValues(mode: .skipRendering) { values in
             return values.withUpdatedVideoIsMuted(videoIsMuted)
         }
     }
     
+    public func setVideoIsMirrored(_ videoIsMirrored: Bool) {
+        self.updateValues(mode: .skipRendering) { values in
+            return values.withUpdatedVideoIsMirrored(videoIsMirrored)
+        }
+    }
+    
     public func setVideoIsFullHd(_ videoIsFullHd: Bool) {
-        self.updateValues(skipRendering: true) { values in
+        self.updateValues(mode: .skipRendering) { values in
             return values.withUpdatedVideoIsFullHd(videoIsFullHd)
         }
     }
@@ -575,6 +613,7 @@ public final class MediaEditor {
         }
         if !play {
             player.pause()
+            self.additionalPlayer?.pause()
             self.onPlaybackAction(.pause)
         }
         let targetPosition = CMTime(seconds: position, preferredTimescale: CMTimeScale(60.0))
@@ -586,6 +625,7 @@ public final class MediaEditor {
         }
         if play {
             player.play()
+            self.additionalPlayer?.play()
             self.onPlaybackAction(.play)
         }
     }
@@ -596,16 +636,19 @@ public final class MediaEditor {
     
     public func play() {
         self.player?.play()
+        self.additionalPlayer?.play()
         self.onPlaybackAction(.play)
     }
     
     public func stop() {
         self.player?.pause()
+        self.additionalPlayer?.pause()
         self.onPlaybackAction(.pause)
     }
     
     public func invalidate() {
         self.player?.pause()
+        self.additionalPlayer?.pause()
         self.onPlaybackAction(.pause)
         self.renderer.textureSource?.invalidate()
     }
@@ -625,27 +668,41 @@ public final class MediaEditor {
                 }
             }
         })
+        self.additionalPlayer?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero)
         self.onPlaybackAction(.seek(targetPosition.seconds))
     }
     
     public func setVideoTrimRange(_ trimRange: Range<Double>, apply: Bool) {
-        self.updateValues(skipRendering: true) { values in
+        self.updateValues(mode: .skipRendering) { values in
             return values.withUpdatedVideoTrimRange(trimRange)
         }
         
         if apply {
             self.player?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
+            self.additionalPlayer?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
+        }
+    }
+    
+    public func setAdditionalVideo(_ path: String, positionChanges: [VideoPositionChange]) {
+        self.updateValues(mode: .skipRendering) { values in
+            return values.withUpdatedAdditionalVideo(path: path, positionChanges: positionChanges)
+        }
+    }
+    
+    public func setAdditionalVideoPosition(_ position: CGPoint, scale: CGFloat, rotation: CGFloat) {
+        self.updateValues(mode: .forceRendering) { values in
+            return values.withUpdatedAdditionalVideo(position: position, scale: scale, rotation: rotation)
         }
     }
     
     public func setDrawingAndEntities(data: Data?, image: UIImage?, entities: [CodableDrawingEntity]) {
-        self.updateValues(skipRendering: true) { values in
+        self.updateValues(mode: .skipRendering) { values in
             return values.withUpdatedDrawingAndEntities(drawing: image, entities: entities)
         }
     }
     
     public func setGradientColors(_ gradientColors: [UIColor]) {
-        self.updateValues(skipRendering: true) { values in
+        self.updateValues(mode: .skipRendering) { values in
             return values.withUpdatedGradientColors(gradientColors: gradientColors)
         }
     }
@@ -655,12 +712,14 @@ public final class MediaEditor {
     private func updateRenderChain() {
         self.renderer.renderPassedEnabled = !self.previewUnedited
         self.renderChain.update(values: self.values)
-        if let player = self.player, player.rate > 0.0 {
+        self.renderer.videoFinishPass.update(values: self.values)
+        
+        if let player = self.player, player.rate > 0.0 && !self.forceRendering {
         } else {
             let currentTime = CACurrentMediaTime()
             if !self.scheduledUpdate {
-                let delay = 0.03333
-                if let previousUpdateTime = self.previousUpdateTime, currentTime - previousUpdateTime < delay {
+                let delay = self.forceRendering ? 0.0 : 0.03333
+                if let previousUpdateTime = self.previousUpdateTime, delay > 0.0, currentTime - previousUpdateTime < delay {
                     self.scheduledUpdate = true
                     Queue.mainQueue().after(delay - (currentTime - previousUpdateTime)) {
                         self.scheduledUpdate = false
@@ -788,7 +847,11 @@ final class MediaEditorRenderChain {
                     self.adjustmentsPass.adjustments.vignette = 0.0
                 }
             case .grain:
-                break
+                if let value = value as? Float {
+                    self.adjustmentsPass.adjustments.grain = value
+                } else {
+                    self.adjustmentsPass.adjustments.grain = 0.0
+                }
             case .sharpen:
                 if let value = value as? Float {
                     self.sharpenPass.value = value
@@ -834,16 +897,20 @@ final class MediaEditorRenderChain {
                     self.blurPass.value.rotation = Float(value.rotation)
                 }
             case .curves:
-                var value = (value as? CurvesValue) ?? CurvesValue.initial
-                let allDataPoints = value.all.dataPoints
-                let redDataPoints = value.red.dataPoints
-                let greenDataPoints = value.green.dataPoints
-                let blueDataPoints = value.blue.dataPoints
-                
-                self.adjustmentsPass.allCurve = allDataPoints
-                self.adjustmentsPass.redCurve = redDataPoints
-                self.adjustmentsPass.greenCurve = greenDataPoints
-                self.adjustmentsPass.blueCurve = blueDataPoints
+                if var value = value as? CurvesValue {
+                    let allDataPoints = value.all.dataPoints
+                    let redDataPoints = value.red.dataPoints
+                    let greenDataPoints = value.green.dataPoints
+                    let blueDataPoints = value.blue.dataPoints
+                    
+                    self.adjustmentsPass.adjustments.hasCurves = 1.0
+                    self.adjustmentsPass.allCurve = allDataPoints
+                    self.adjustmentsPass.redCurve = redDataPoints
+                    self.adjustmentsPass.greenCurve = greenDataPoints
+                    self.adjustmentsPass.blueCurve = blueDataPoints
+                } else {
+                    self.adjustmentsPass.adjustments.hasCurves = 0.0
+                }
             }
         }
     }

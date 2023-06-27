@@ -21,3 +21,6 @@ half3 yuvToRgb(half3 inP);
 half easeInOutSigmoid(half value, half strength);
 
 half powerCurve(half inVal, half mag);
+
+float pnoise3D(float3 p);
+float2 coordRot(float2 tc, float angle);

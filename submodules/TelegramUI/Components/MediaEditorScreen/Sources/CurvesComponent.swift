@@ -53,7 +53,8 @@ private class HistogramView: UIView {
             },
             size: size,
             type: .filled,
-            granularity: 200
+            granularity: 200,
+            floor: true
         )
         
         transition.setShapeLayerPath(layer: self.shapeLayer, path: path.cgPath)
@@ -709,7 +710,8 @@ final class CurvesScreenComponent: Component {
                 },
                 size: availableSize,
                 type: .line,
-                granularity: 100
+                granularity: 100,
+                floor: true
             )
             self.curveLayer.path = curvePath.cgPath
             
