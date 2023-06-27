@@ -6,6 +6,7 @@ using namespace metal;
 typedef struct {
     float4 pos;
     float2 texCoord;
+    float2 localPos;
 } VertexData;
 
 vertex RasterizerData defaultVertexShader(uint vertexID [[vertex_id]],
@@ -14,6 +15,7 @@ vertex RasterizerData defaultVertexShader(uint vertexID [[vertex_id]],
     
     out.pos = vector_float4(0.0, 0.0, 0.0, 1.0);
     out.pos.xy = vertices[vertexID].pos.xy;
+    out.localPos = vertices[vertexID].localPos.xy;
     
     out.texCoord = vertices[vertexID].texCoord;
     

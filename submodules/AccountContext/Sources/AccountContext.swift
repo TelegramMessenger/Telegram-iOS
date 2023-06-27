@@ -796,6 +796,9 @@ public struct StoryCameraTransitionInCoordinator {
 public protocol TelegramRootControllerInterface: NavigationController {
     @discardableResult
     func openStoryCamera(transitionIn: StoryCameraTransitionIn?, transitionedIn: @escaping () -> Void, transitionOut: @escaping (Bool) -> StoryCameraTransitionOut?) -> StoryCameraTransitionInCoordinator?
+    
+    func getContactsController() -> ViewController?
+    func getChatsController() -> ViewController?    
 }
 
 public protocol SharedAccountContext: AnyObject {

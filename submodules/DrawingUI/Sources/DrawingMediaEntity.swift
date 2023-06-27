@@ -21,9 +21,26 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
             if let previewView = self.previewView {
                 previewView.isUserInteractionEnabled = false
                 previewView.layer.allowsEdgeAntialiasing = true
-                self.addSubview(previewView)
+                if self.additionalView == nil {
+                    self.addSubview(previewView)
+                }
             } else {
                 oldValue?.removeFromSuperview()
+            }
+        }
+    }
+    
+    public var additionalView: DrawingStickerEntityView.VideoView? {
+        didSet {
+            if let additionalView = self.additionalView {
+                self.addSubview(additionalView)
+            } else {
+                if let previous = oldValue, previous.superview === self {
+                    previous.removeFromSuperview()
+                }
+                if let previewView = self.previewView {
+                    self.addSubview(previewView)
+                }
             }
         }
     }
@@ -87,9 +104,16 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
                 
         if size.width > 0 && self.currentSize != size {
             self.currentSize = size
-            self.previewView?.frame = CGRect(origin: .zero, size: size)
-
+            if self.previewView?.superview === self {
+                self.previewView?.frame = CGRect(origin: .zero, size: size)
+            }
+            if let additionalView = self.additionalView, additionalView.superview === self {
+                additionalView.frame = CGRect(origin: .zero, size: size)
+            }
             self.update(animated: false)
+        }
+        if let additionalView = self.additionalView, additionalView.superview === self {
+            self.additionalView?.frame = self.bounds
         }
     }
             
@@ -103,8 +127,10 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
         self.bounds = CGRect(origin: .zero, size: size)
         self.transform = CGAffineTransformScale(CGAffineTransformMakeRotation(self.mediaEntity.rotation), scale, scale)
     
-        self.previewView?.layer.transform = CATransform3DMakeScale(self.mediaEntity.mirrored ? -1.0 : 1.0, 1.0, 1.0)
-        self.previewView?.frame = self.bounds
+        if self.previewView?.superview === self {
+            self.previewView?.layer.transform = CATransform3DMakeScale(self.mediaEntity.mirrored ? -1.0 : 1.0, 1.0, 1.0)
+            self.previewView?.frame = self.bounds
+        }
     
         super.update(animated: animated)
         

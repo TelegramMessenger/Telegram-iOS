@@ -25,7 +25,7 @@ fragment half4 blurRadialFragmentShader(RasterizerData in [[stage_in]],
     half4 sourceColor = sourceTexture.sample(sourceSampler, in.texCoord);
     half4 blurredColor = blurTexture.sample(blurSampler, in.texCoord);
     
-    float2 texCoord = float2(in.texCoord.x, (in.texCoord.y * values.aspectRatio));
+    float2 texCoord = float2(in.texCoord.x, (in.texCoord.y * values.aspectRatio + 0.5 - 0.5 * values.aspectRatio));
     half distanceFromCenter = distance(values.position, texCoord);
     
     half3 result = mix(blurredColor.rgb, sourceColor.rgb, smoothstep(1.0, values.falloff, clamp(distanceFromCenter / values.size, 0.0, 1.0)));
@@ -45,7 +45,7 @@ fragment half4 blurLinearFragmentShader(RasterizerData in [[stage_in]],
     half4 sourceColor = sourceTexture.sample(sourceSampler, in.texCoord);
     half4 blurredColor = blurTexture.sample(blurSampler, in.texCoord);
     
-    float2 texCoord = float2(in.texCoord.x, (in.texCoord.y * values.aspectRatio));
+    float2 texCoord = float2(in.texCoord.x, (in.texCoord.y * values.aspectRatio + 0.5 - 0.5 * values.aspectRatio));
     half distanceFromCenter = abs((texCoord.x - values.position.x) * sin(-values.rotation) + (texCoord.y - values.position.y) * cos(-values.rotation));
     
     half3 result = mix(blurredColor.rgb, sourceColor.rgb, smoothstep(1.0, values.falloff, clamp(distanceFromCenter / values.size, 0.0, 1.0)));

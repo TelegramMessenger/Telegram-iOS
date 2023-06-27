@@ -251,7 +251,7 @@ final class StoryPreviewComponent: Component {
                     style: .story,
                     placeholder: "Reply Privately...",
                     alwaysDarkWhenHasText: false,
-                    nextInputMode: { _ in return nil },
+                    nextInputMode: { _ in return .stickers },
                     areVoiceMessagesAvailable: false,
                     presentController: { _ in
                     },

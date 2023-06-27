@@ -16,7 +16,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     public enum Content: Equatable {
         case file(TelegramMediaFile)
         case image(UIImage)
-        case video(String, UIImage?)
+        case video(String, UIImage?, Bool)
+        case dualVideoReference
         
         public static func == (lhs: Content, rhs: Content) -> Bool {
             switch lhs {
@@ -32,9 +33,15 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
                 } else {
                     return false
                 }
-            case let .video(lhsPath, _):
-                if case let .video(rhsPath, _) = rhs {
-                    return lhsPath == rhsPath
+            case let .video(lhsPath, _, lhsInternalMirrored):
+                if case let .video(rhsPath, _, rhsInternalMirrored) = rhs {
+                    return lhsPath == rhsPath && lhsInternalMirrored == rhsInternalMirrored
+                } else {
+                    return false
+                }
+            case .dualVideoReference:
+                if case .dualVideoReference = rhs {
+                    return true
                 } else {
                     return false
                 }
@@ -47,6 +54,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case imagePath
         case videoPath
         case videoImagePath
+        case videoMirrored
+        case dualVideo
         case referenceDrawingSize
         case position
         case scale
@@ -83,6 +92,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             return false
         case .video:
             return true
+        case .dualVideoReference:
+            return true
         }
     }
     
@@ -107,7 +118,9 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.uuid = try container.decode(UUID.self, forKey: .uuid)
-        if let file = try container.decodeIfPresent(TelegramMediaFile.self, forKey: .file) {
+        if let _ = try container.decodeIfPresent(Bool.self, forKey: .dualVideo) {
+            self.content = .dualVideoReference
+        } else if let file = try container.decodeIfPresent(TelegramMediaFile.self, forKey: .file) {
             self.content = .file(file)
         } else if let imagePath = try container.decodeIfPresent(String.self, forKey: .imagePath), let image = UIImage(contentsOfFile: fullEntityMediaPath(imagePath)) {
             self.content = .image(image)
@@ -116,7 +129,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             if let imagePath = try container.decodeIfPresent(String.self, forKey: .videoImagePath), let image = UIImage(contentsOfFile: fullEntityMediaPath(imagePath)) {
                 imageValue = image
             }
-            self.content = .video(videoPath, imageValue)
+            let videoMirrored = try container.decodeIfPresent(Bool.self, forKey: .videoMirrored) ?? false
+            self.content = .video(videoPath, imageValue, videoMirrored)
         } else {
             fatalError()
         }
@@ -141,7 +155,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
                 try? imageData.write(to: URL(fileURLWithPath: fullImagePath))
                 try container.encodeIfPresent(imagePath, forKey: .imagePath)
             }
-        case let .video(path, image):
+        case let .video(path, image, videoMirrored):
             try container.encode(path, forKey: .videoPath)
             let imagePath = "\(self.uuid).jpg"
             let fullImagePath = fullEntityMediaPath(imagePath)
@@ -150,6 +164,9 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
                 try? imageData.write(to: URL(fileURLWithPath: fullImagePath))
                 try container.encodeIfPresent(imagePath, forKey: .videoImagePath)
             }
+            try container.encode(videoMirrored, forKey: .videoMirrored)
+        case .dualVideoReference:
+            try container.encode(true, forKey: .dualVideo)
         }
         try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)
         try container.encode(self.position, forKey: .position)

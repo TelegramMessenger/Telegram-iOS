@@ -232,6 +232,16 @@ public final class PeerListItemComponent: Component {
             self.component = component
             self.state = state
             
+            let labelData: (String, Bool)
+            if let presence = component.presence {
+                let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+                labelData = stringAndActivityForUserPresence(strings: component.strings, dateTimeFormat: PresentationDateTimeFormat(), presence: presence, relativeTo: Int32(timestamp))
+            } else if let subtitle = component.subtitle {
+                labelData = (subtitle, false)
+            } else {
+                labelData = ("", false)
+            }
+            
             let contextInset: CGFloat = 0.0
             
             let height: CGFloat
@@ -241,13 +251,16 @@ public final class PeerListItemComponent: Component {
             case .generic:
                 titleFont = Font.semibold(17.0)
                 subtitleFont = Font.regular(15.0)
-                height = 60.0
+                if labelData.0.isEmpty {
+                    height = 50.0
+                } else {
+                    height = 60.0
+                }
             case .compact:
                 titleFont = Font.semibold(14.0)
                 subtitleFont = Font.regular(14.0)
                 height = 42.0
             }
-            
             
             let verticalInset: CGFloat = 1.0
             var leftInset: CGFloat = 53.0 + component.sideInset
@@ -311,16 +324,6 @@ public final class PeerListItemComponent: Component {
                     clipStyle = .round
                 }
                 self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, clipStyle: clipStyle, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
-            }
-            
-            let labelData: (String, Bool)
-            if let presence = component.presence {
-                let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                labelData = stringAndActivityForUserPresence(strings: component.strings, dateTimeFormat: PresentationDateTimeFormat(), presence: presence, relativeTo: Int32(timestamp))
-            } else if let subtitle = component.subtitle {
-                labelData = (subtitle, false)
-            } else {
-                labelData = ("", false)
             }
             
             let labelSize = self.label.update(

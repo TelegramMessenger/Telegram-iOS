@@ -20,8 +20,10 @@ func composerEntitiesForDrawingEntity(account: Account, entity: DrawingEntity, c
             content = .file(file)
         case let .image(image):
             content = .image(image)
-        case let .video(path, _):
+        case let .video(path, _, _):
             content = .video(path)
+        case .dualVideoReference:
+            return []
         }
         return [MediaEditorComposerStickerEntity(account: account, content: content, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: entity.mirrored, colorSpace: colorSpace)]
     } else if let renderImage = entity.renderImage, let image = CIImage(image: renderImage, options: [.colorSpace: colorSpace]) {
@@ -269,6 +271,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
             
             let processFrame: (Double?, Int?, Int?, (Int) -> AnimatedStickerFrame?) -> Void = { [weak self] duration, frameCount, frameRate, takeFrame in
                 guard let strongSelf = self else {
+                    completion(nil)
                     return
                 }
                 var frameAdvancement: Int = 0

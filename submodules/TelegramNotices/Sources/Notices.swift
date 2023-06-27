@@ -174,7 +174,8 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case chatWallpaperDarkPreviewTip = 40
     case displayChatListContacts = 41
     case displayChatListStoriesTooltip = 42
-    case storiesPrivacyTooltip = 43
+    case storiesCameraTooltip = 43
+    case storiesDualCameraTooltip = 44
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -399,6 +400,14 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func displayChatListStoriesTooltip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.displayChatListStoriesTooltip.key)
+    }
+    
+    static func storiesCameraTooltip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.storiesCameraTooltip.key)
+    }
+    
+    static func storiesDualCameraTooltip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.storiesDualCameraTooltip.key)
     }
 }
 

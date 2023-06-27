@@ -2680,8 +2680,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 return
                             }
                             self.context.engine.peers.updatePeerStoriesHidden(id: peer.id, isHidden: true)
+                        
+                            guard let parentController = self.parent as? TabBarController, let contactsController = (self.navigationController as? TelegramRootControllerInterface)?.getContactsController(), let sourceFrame = parentController.frameForControllerTab(controller: contactsController) else {
+                                return
+                            }
                             
-                            
+                            let location = CGRect(origin: CGPoint(x: sourceFrame.midX, y: sourceFrame.minY - 8.0), size: CGSize())
+                            let tooltipController = TooltipScreen(
+                                account: self.context.account,
+                                sharedContext: self.context.sharedContext,
+                                text: "Stories from \(peer.compactDisplayTitle) will now be shown in Contacts, not Chats.",
+                                location: .point(location, .bottom),
+                                shouldDismissOnTouch: { _ in return .dismiss(consume: false) }
+                            )
+                            self.present(tooltipController, in: .window(.root))
                         })))
                     }
                     

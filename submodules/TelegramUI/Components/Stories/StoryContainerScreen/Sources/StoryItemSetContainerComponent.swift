@@ -1948,7 +1948,7 @@ public final class StoryItemSetContainerComponent: Component {
                             })))
                             
                             if component.slice.item.storyItem.isPublic && (component.slice.peer.addressName != nil || !component.slice.peer._asPeer().usernames.isEmpty) {
-                                items.append(.action(ContextMenuActionItem(text: "Copy link", icon: { theme in
+                                items.append(.action(ContextMenuActionItem(text: "Copy Link", icon: { theme in
                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
                                 }, action: { [weak self] _, a in
                                     a(.default)
@@ -2819,7 +2819,7 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                     return .single(nil)
                     |> then(
-                        .single(.video(symlinkPath, nil, nil, nil, PixelDimensions(width: 720, height: 1280), duration ?? 0.0, [], .bottomRight))
+                        .single(.video(symlinkPath, nil, false, nil, nil, PixelDimensions(width: 720, height: 1280), duration ?? 0.0, [], .bottomRight))
                         |> delay(0.1, queue: Queue.mainQueue())
                     )
                 }

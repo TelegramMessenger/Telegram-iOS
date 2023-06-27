@@ -256,7 +256,7 @@ final class MediaEditorScreenComponent: Component {
         private var inputMediaNodeStateContext = ChatEntityKeyboardInputNode.StateContext()
         private var inputMediaInteraction: ChatEntityKeyboardInputNode.Interaction?
         private var inputMediaNode: ChatEntityKeyboardInputNode?
-        
+                
         private var component: MediaEditorScreenComponent?
         private weak var state: State?
         private var environment: ViewControllerComponentContainer.Environment?
@@ -1605,6 +1605,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         fileprivate var hasAnyChanges = false
         
+        private var playbackPositionDisposable: Disposable?
+        
         private var presentationData: PresentationData
         private var validLayout: ContainerViewLayout?
         
@@ -1743,6 +1745,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.subjectDisposable?.dispose()
             self.gradientColorsDisposable?.dispose()
             self.appInForegroundDisposable?.dispose()
+            self.playbackPositionDisposable?.dispose()
         }
         
         private func setup(with subject: MediaEditorScreen.Subject) {
@@ -1776,32 +1779,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 mediaEntity.scale = storyDimensions.width / fittedSize.width
             }
             self.entitiesView.add(mediaEntity, announce: false)
-                        
-            if case let .image(_, _, additionalImage, position) = subject, let additionalImage {
-                let image = generateImage(CGSize(width: additionalImage.size.width, height: additionalImage.size.width), contextGenerator: { size, context in
-                    let bounds = CGRect(origin: .zero, size: size)
-                    context.clear(bounds)
-                    context.addEllipse(in: bounds)
-                    context.clip()
-                    
-                    if let cgImage = additionalImage.cgImage {
-                        context.draw(cgImage, in: CGRect(origin: CGPoint(x: (size.width - additionalImage.size.width) / 2.0, y: (size.height - additionalImage.size.height) / 2.0), size: additionalImage.size))
-                    }
-                })
-                let imageEntity = DrawingStickerEntity(content: .image(image ?? additionalImage))
-                imageEntity.referenceDrawingSize = storyDimensions
-                imageEntity.scale = 1.49
-                imageEntity.position = position.getPosition(storyDimensions)
-                self.entitiesView.add(imageEntity, announce: false)
-            } else if case let .video(_, _, additionalVideoPath, additionalVideoImage, _, _, _, position) = subject, let additionalVideoPath {
-                let videoEntity = DrawingStickerEntity(content: .video(additionalVideoPath, additionalVideoImage))
-                videoEntity.referenceDrawingSize = storyDimensions
-                videoEntity.scale = 1.49
-                videoEntity.mirrored = true
-                videoEntity.position = position.getPosition(storyDimensions)
-                self.entitiesView.add(videoEntity, announce: false)
-            }
-            
+                                    
             let initialPosition = mediaEntity.position
             let initialScale = mediaEntity.scale
             let initialRotation = mediaEntity.rotation
@@ -1845,6 +1823,58 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         controller.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
                     }
                 }
+            }
+            
+            if case let .image(_, _, additionalImage, position) = subject, let additionalImage {
+                let image = generateImage(CGSize(width: additionalImage.size.width, height: additionalImage.size.width), contextGenerator: { size, context in
+                    let bounds = CGRect(origin: .zero, size: size)
+                    context.clear(bounds)
+                    context.addEllipse(in: bounds)
+                    context.clip()
+                    
+                    if let cgImage = additionalImage.cgImage {
+                        context.draw(cgImage, in: CGRect(origin: CGPoint(x: (size.width - additionalImage.size.width) / 2.0, y: (size.height - additionalImage.size.height) / 2.0), size: additionalImage.size))
+                    }
+                })
+                let imageEntity = DrawingStickerEntity(content: .image(image ?? additionalImage))
+                imageEntity.referenceDrawingSize = storyDimensions
+                imageEntity.scale = 1.49
+                imageEntity.position = position.getPosition(storyDimensions)
+                self.entitiesView.add(imageEntity, announce: false)
+            } else if case let .video(_, _, _, additionalVideoPath, _, _, _, changes, position) = subject, let additionalVideoPath {
+                let videoEntity = DrawingStickerEntity(content: .dualVideoReference)
+                videoEntity.referenceDrawingSize = storyDimensions
+                videoEntity.scale = 1.49
+                videoEntity.position = position.getPosition(storyDimensions)
+                self.entitiesView.add(videoEntity, announce: false)
+                
+                mediaEditor.setAdditionalVideo(additionalVideoPath, positionChanges: changes.map { VideoPositionChange(additional: $0.0, timestamp: $0.1) })
+                mediaEditor.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
+                if let entityView = self.entitiesView.getView(for: videoEntity.uuid) as? DrawingStickerEntityView {
+                    entityView.updated = { [weak videoEntity, weak self] in
+                        if let self, let videoEntity {
+                            self.mediaEditor?.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
+                        }
+                    }
+                }
+            } else if case let .asset(asset) = subject, asset.mediaType == .video {
+//#if DEBUG
+//                let videoEntity = DrawingStickerEntity(content: .dualVideoReference)
+//                videoEntity.referenceDrawingSize = storyDimensions
+//                videoEntity.scale = 1.49
+//                videoEntity.position = PIPPosition.bottomRight.getPosition(storyDimensions)
+//                self.entitiesView.add(videoEntity, announce: false)
+//
+//                mediaEditor.setAdditionalVideo("", positionChanges: [VideoPositionChange(additional: false, timestamp: 0.0), VideoPositionChange(additional: true, timestamp: 3.0)])
+//                mediaEditor.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
+//                if let entityView = self.entitiesView.getView(for: videoEntity.uuid) as? DrawingStickerEntityView {
+//                    entityView.updated = { [weak videoEntity, weak self] in
+//                        if let self, let videoEntity {
+//                            self.mediaEditor?.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
+//                        }
+//                    }
+//                }
+//#endif
             }
             
             self.gradientColorsDisposable = mediaEditor.gradientColors.start(next: { [weak self] colors in
@@ -1907,6 +1937,61 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 }
             }
+            
+            if case .video = subject {
+                self.playbackPositionDisposable = (mediaEditor.position
+                |> deliverOnMainQueue).start(next: { [weak self] position in
+                    if let self {
+                        self.updateVideoPlaybackPosition(position: position)
+                    }
+                })
+            }
+        }
+        
+        private var additionalIsMainstage = false
+        private func updateVideoPlaybackPosition(position: CGFloat) {
+            guard let subject = self.subject, case let .video(_, _, _, _, _, _, _, timestamps, _) = subject, !timestamps.isEmpty else {
+                return
+            }
+            var currentIsFront = false
+            for (isFront, timestamp) in timestamps {
+                if position < timestamp {
+                    break
+                }
+                currentIsFront = isFront
+            }
+            
+            self.additionalIsMainstage = currentIsFront
+            self.updateMainStageVideo()
+        }
+        
+        private func updateMainStageVideo() {
+            guard let mainEntityView = self.entitiesView.getView(where: { $0 is DrawingMediaEntityView }) as? DrawingMediaEntityView, let mainEntity = mainEntityView.entity as? DrawingMediaEntity else {
+                return
+            }
+            
+            let additionalEntityView = self.entitiesView.getView(where: { view in
+                if let stickerEntity =  view.entity as? DrawingStickerEntity, case .video = stickerEntity.content {
+                    return true
+                } else {
+                    return false
+                }
+            }) as? DrawingStickerEntityView
+            
+            var animated = true
+            if mainEntity.scale != 1.0 || mainEntity.rotation != 0.0 || mainEntity.position != CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0) {
+                animated = false
+            }
+            
+            let _ = animated
+            
+            if self.additionalIsMainstage {
+                mainEntityView.additionalView = additionalEntityView?.videoView
+                additionalEntityView?.mainView = mainEntityView.previewView
+            } else {
+                mainEntityView.additionalView = nil
+                additionalEntityView?.mainView = nil
+            }
         }
         
         override func didLoad() {
@@ -1967,6 +2052,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 },
                 onInteractionUpdated: { [weak self] isInteracting in
                     if let self {
+                        if let selectedEntityView = self.entitiesView.selectedEntityView as? DrawingStickerEntityView, let entity = selectedEntityView.entity as? DrawingStickerEntity, case .dualVideoReference = entity.content {
+                            if isInteracting {
+                                self.mediaEditor?.stop()
+                            } else {
+                                self.mediaEditor?.play()
+                            }
+                        }
                         self.isInteractingWithEntities = isInteracting
                         self.requestUpdate(transition: .easeInOut(duration: 0.2))
                     }
@@ -2154,7 +2246,34 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
                         view.animateIn(from: .camera, completion: completion)
                     }
-                    if let subject = self.subject, case let .video(_, transitionImage, _, _, _, _, _, _) = subject, let transitionImage {
+                    if let subject = self.subject, case let .video(_, mainTransitionImage, _, _, additionalTransitionImage, _, _, positionChangeTimestamps, pipPosition) = subject, let mainTransitionImage {
+                        var transitionImage = mainTransitionImage
+                        if let additionalTransitionImage {
+                            var backgroundImage = mainTransitionImage
+                            var foregroundImage = additionalTransitionImage
+                            if let change = positionChangeTimestamps.first, change.0 {
+                                backgroundImage = additionalTransitionImage
+                                foregroundImage = mainTransitionImage
+                            }
+                            if let combinedTransitionImage = generateImage(backgroundImage.size, scale: 1.0, rotatedContext: { size, context in
+                                UIGraphicsPushContext(context)
+                                backgroundImage.draw(in: CGRect(origin: .zero, size: size))
+                                
+                                let ellipsePosition =  pipPosition.getPosition(storyDimensions)
+                                let ellipseSize = CGSize(width: 401.0, height: 401.0)
+                                let ellipseRect = CGRect(origin: CGPoint(x: ellipsePosition.x - ellipseSize.width / 2.0, y: ellipsePosition.y - ellipseSize.height / 2.0), size: ellipseSize)
+                                let foregroundSize = foregroundImage.size.aspectFilled(ellipseSize)
+                                let foregroundRect = CGRect(origin: CGPoint(x: ellipseRect.center.x - foregroundSize.width / 2.0, y: ellipseRect.center.y - foregroundSize.height / 2.0), size: foregroundSize)
+                                context.addEllipse(in: ellipseRect)
+                                context.clip()
+                                
+                                foregroundImage.draw(in: foregroundRect)
+                                
+                                UIGraphicsPopContext()
+                            }) {
+                                transitionImage = combinedTransitionImage
+                            }
+                        }
                         self.setupTransitionImage(transitionImage)
                     }
                 case let .gallery(transitionIn):
@@ -2861,13 +2980,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     
     public enum Subject {
         case image(UIImage, PixelDimensions, UIImage?, PIPPosition)
-        case video(String, UIImage?, String?, UIImage?, PixelDimensions, Double, [(Bool, Double)], PIPPosition)
+        case video(String, UIImage?, Bool, String?, UIImage?, PixelDimensions, Double, [(Bool, Double)], PIPPosition)
         case asset(PHAsset)
         case draft(MediaEditorDraft, Int64?)
         
         var dimensions: PixelDimensions {
             switch self {
-            case let .image(_, dimensions, _, _), let .video(_, _, _, _, dimensions, _, _, _):
+            case let .image(_, dimensions, _, _), let .video(_, _, _, _, _, dimensions, _, _, _):
                 return dimensions
             case let .asset(asset):
                 return PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight))
@@ -2880,8 +2999,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             switch self {
             case let .image(image, dimensions, _, _):
                 return .image(image, dimensions)
-            case let .video(videoPath, transitionImage, _, _, dimensions, duration, _, _):
-                return .video(videoPath, transitionImage, dimensions, duration)
+            case let .video(videoPath, transitionImage, mirror, additionalVideoPath, _, dimensions, duration, _, _):
+                return .video(videoPath, transitionImage, mirror, additionalVideoPath, dimensions, duration)
             case let .asset(asset):
                 return .asset(asset)
             case let .draft(draft, _):
@@ -2893,7 +3012,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             switch self {
             case let .image(image, dimensions, _, _):
                 return .image(image, dimensions)
-            case let .video(videoPath, _, _, _, dimensions, _, _, _):
+            case let .video(videoPath, _, _, _, _, dimensions, _, _, _):
                 return .video(videoPath, dimensions)
             case let .asset(asset):
                 return .asset(asset)
@@ -3156,18 +3275,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 self?.presentTimeoutPremiumSuggestion(86400 * 2)
             }
         })))
-        items.append(.action(ContextMenuActionItem(text: "Keep Always", icon: { theme in
-            return currentArchived ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
-        }, action: { _, a in
-            a(.default)
-            
-            updateTimeout(86400, true)
-        })))
-        items.append(.separator)
-        items.append(.action(ContextMenuActionItem(text: "Select 'Keep Always' to show the story on your page.", textLayout: .multiline, textFont: .small, icon: { theme in
-            return nil
-        }, action: { _, _ in
-        })))
         
         let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme)
         let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
@@ -3332,7 +3439,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 switch subject {
                 case let .image(image, dimensions, _, _):
                     saveImageDraft(image, dimensions)
-                case let .video(path, _, _, _, dimensions, _, _, _):
+                case let .video(path, _, _, _, _, dimensions, _, _, _):
                     saveVideoDraft(path, dimensions, duration)
                 case let .asset(asset):
                     if asset.mediaType == .video {
@@ -3425,7 +3532,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 duration = 5.0
                 
                 firstFrame = .single(image)
-            case let .video(path, _, _, _, _, _, _, _):
+            case let .video(path, _, _, _, _, _, _, _, _):
                 videoResult = .videoFile(path: path)
                 if let videoTrimRange = mediaEditor.values.videoTrimRange {
                     duration = videoTrimRange.upperBound - videoTrimRange.lowerBound
@@ -3613,7 +3720,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             let exportSubject: Signal<MediaEditorVideoExport.Subject, NoError>
             switch subject {
-            case let .video(path, _, _, _, _, _, _, _):
+            case let .video(path, _, _, _, _, _, _, _, _):
                 let asset = AVURLAsset(url: NSURL(fileURLWithPath: path) as URL)
                 exportSubject = .single(.video(asset))
             case let .image(image, _, _, _):

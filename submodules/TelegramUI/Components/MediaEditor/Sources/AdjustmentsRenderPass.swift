@@ -18,6 +18,8 @@ struct MediaEditorAdjustments {
     var warmth: simd_float1
     var grain: simd_float1
     var vignette: simd_float1
+    var hasCurves: simd_float1
+    var empty: simd_float2
     
     var hasValues: Bool {
         let epsilon: simd_float1 = 0.005
@@ -55,6 +57,9 @@ struct MediaEditorAdjustments {
         if abs(self.vignette) > epsilon {
             return true
         }
+        if abs(self.hasCurves) > epsilon {
+            return true
+        }
         return false
     }
 }
@@ -77,7 +82,9 @@ final class AdjustmentsRenderPass: DefaultRenderPass {
         exposure: 0.0,
         warmth: 0.0,
         grain: 0.0,
-        vignette: 0.0
+        vignette: 0.0,
+        hasCurves: 0.0,
+        empty: simd_float2(0.0, 0.0)
     )
     
     var allCurve: [Float] = Array(repeating: 0, count: 200)

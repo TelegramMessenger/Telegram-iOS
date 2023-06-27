@@ -7,7 +7,7 @@ import Vision
 import VideoToolbox
 
 public enum VideoCaptureResult: Equatable {
-    case finished((String, UIImage), (String, UIImage)?, Double, [(Bool, Double)], Double)
+    case finished((String, UIImage, Bool), (String, UIImage, Bool)?, Double, [(Bool, Double)], Double)
     case failed
     
     public static func == (lhs: VideoCaptureResult, rhs: VideoCaptureResult) -> Bool {
@@ -88,7 +88,6 @@ final class CameraOutput: NSObject {
     
     private var photoCaptureRequests: [Int64: PhotoCaptureContext] = [:]
     private var videoRecorder: VideoRecorder?
-    weak var overrideOutput: CameraOutput?
     
     var activeFilter: CameraFilter?
     var faceLandmarks: Bool = false
@@ -316,7 +315,7 @@ final class CameraOutput: NSObject {
     }
     
     private var recordingCompletionPipe = ValuePipe<VideoCaptureResult>()
-    func startRecording() -> Signal<Double, NoError> {
+    func startRecording(isDualCamera: Bool, position: Camera.Position? = nil) -> Signal<Double, NoError> {
         guard self.videoRecorder == nil else {
             return .complete()
         }
@@ -338,7 +337,7 @@ final class CameraOutput: NSObject {
         let outputFileURL = URL(fileURLWithPath: outputFilePath)
         let videoRecorder = VideoRecorder(configuration: VideoRecorder.Configuration(videoSettings: videoSettings, audioSettings: audioSettings), videoTransform: CGAffineTransform(rotationAngle: .pi / 2.0), fileUrl: outputFileURL, completion: { [weak self] result in
             if case let .success(transitionImage, duration, positionChangeTimestamps) = result {
-                self?.recordingCompletionPipe.putNext(.finished((outputFilePath, transitionImage!), nil, duration, positionChangeTimestamps.map { ($0 == .front, $1) }, CACurrentMediaTime()))
+                self?.recordingCompletionPipe.putNext(.finished((outputFilePath, transitionImage!, false), nil, duration, positionChangeTimestamps.map { ($0 == .front, $1) }, CACurrentMediaTime()))
             } else {
                 self?.recordingCompletionPipe.putNext(.failed)
             }
@@ -346,6 +345,10 @@ final class CameraOutput: NSObject {
         
         videoRecorder?.start()
         self.videoRecorder = videoRecorder
+        
+        if isDualCamera, let position {
+            videoRecorder?.markPositionChange(position: position, time: .zero)
+        }
         
         return Signal { subscriber in
             let timer = SwiftSignalKit.Timer(timeout: 0.1, repeat: true, completion: { [weak videoRecorder] in

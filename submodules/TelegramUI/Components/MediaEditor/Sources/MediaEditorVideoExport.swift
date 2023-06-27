@@ -47,18 +47,24 @@ public final class MediaEditorVideoAVAssetWriter: MediaEditorVideoExportWriter {
     private var adaptor: AVAssetWriterInputPixelBufferAdaptor!
     
     func setup(configuration: MediaEditorVideoExport.Configuration, outputPath: String) {
+        Logger.shared.log("VideoExport", "Will setup asset writer")
+        
         let url = URL(fileURLWithPath: outputPath)
         self.writer = try? AVAssetWriter(url: url, fileType: .mp4)
         guard let writer = self.writer else {
             return
         }
         writer.shouldOptimizeForNetworkUse = configuration.shouldOptimizeForNetworkUse
+        
+        Logger.shared.log("VideoExport", "Did setup asset writer")
     }
     
     func setupVideoInput(configuration: MediaEditorVideoExport.Configuration, sourceFrameRate: Float) {
         guard let writer = self.writer else {
             return
         }
+        
+        Logger.shared.log("VideoExport", "Will setup video input")
         
         var videoSettings = configuration.videoSettings
         if var compressionSettings = videoSettings[AVVideoCompressionPropertiesKey] as? [String: Any] {
@@ -78,6 +84,8 @@ public final class MediaEditorVideoAVAssetWriter: MediaEditorVideoExportWriter {
         
         if writer.canAdd(videoInput) {
             writer.add(videoInput)
+        } else {
+            Logger.shared.log("VideoExport", "Failed to add video input")
         }
         self.videoInput = videoInput
     }
@@ -250,15 +258,21 @@ public final class MediaEditorVideoExport {
     private let outputPath: String
         
     private var reader: AVAssetReader?
+    private var additionalReader: AVAssetReader?
     
     private var videoOutput: AVAssetReaderOutput?
     private var audioOutput: AVAssetReaderAudioMixOutput?
+    private var textureRotation: TextureRotation = .rotate0Degrees
+    
+    private var additionalVideoOutput: AVAssetReaderOutput?
+    private var additionalTextureRotation: TextureRotation = .rotate0Degrees
+    
     private let queue = Queue()
     
     private var writer: MediaEditorVideoExportWriter?
     private var composer: MediaEditorComposer?
     
-    private var textureRotation: TextureRotation = .rotate0Degrees
+    
     private let duration = ValuePromise<CMTime>()
     private var durationValue: CMTime? {
         didSet {
@@ -312,7 +326,11 @@ public final class MediaEditorVideoExport {
                 
         switch self.subject {
         case let .video(asset):
-            self.setupWithAsset(asset)
+            var additionalAsset: AVAsset?
+            if let additionalPath = self.configuration.values.additionalVideoPath {
+                additionalAsset = AVURLAsset(url: URL(fileURLWithPath: additionalPath))
+            }
+            self.setupWithAsset(asset, additionalAsset: additionalAsset)
         case let .image(image):
             self.setupWithImage(image)
         }
@@ -325,26 +343,31 @@ public final class MediaEditorVideoExport {
         self.composer = MediaEditorComposer(account: self.account, values: self.configuration.values, dimensions: self.configuration.composerDimensions, outputDimensions: self.configuration.dimensions)
     }
     
-    private func setupWithAsset(_ asset: AVAsset) {
+    private func setupWithAsset(_ asset: AVAsset, additionalAsset: AVAsset?) {
         self.reader = try? AVAssetReader(asset: asset)
+        self.textureRotation = textureRotatonForAVAsset(asset)
+        
+        if let additionalAsset {
+            self.additionalReader = try? AVAssetReader(asset: additionalAsset)
+            self.additionalTextureRotation = textureRotatonForAVAsset(additionalAsset)
+        }
         guard let reader = self.reader else {
             return
         }
         if let timeRange = self.configuration.timeRange {
             reader.timeRange = timeRange
+            self.additionalReader?.timeRange = timeRange
         }
         
         self.writer = MediaEditorVideoAVAssetWriter()
         guard let writer = self.writer else {
             return
         }
-        
-        self.textureRotation = textureRotatonForAVAsset(asset)
-        
         writer.setup(configuration: self.configuration, outputPath: self.outputPath)
                 
         let videoTracks = asset.tracks(withMediaType: .video)
-        if (videoTracks.count > 0) {
+        let additionalVideoTracks = additionalAsset?.tracks(withMediaType: .video)
+        if videoTracks.count > 0 {
             var sourceFrameRate: Float = 0.0
             let colorProperties: [String: Any] = [
                 AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
@@ -357,7 +380,7 @@ public final class MediaEditorVideoExport {
                 kCVPixelBufferMetalCompatibilityKey as String: true,
                 AVVideoColorPropertiesKey: colorProperties
             ]
-            if let videoTrack = videoTracks.first, videoTrack.preferredTransform.isIdentity && !self.configuration.values.requiresComposing {
+            if let videoTrack = videoTracks.first, videoTrack.preferredTransform.isIdentity && !self.configuration.values.requiresComposing && additionalAsset == nil {
             } else {
                 self.setupComposer()
             }
@@ -370,6 +393,15 @@ public final class MediaEditorVideoExport {
                 self.statusValue = .failed(.addVideoOutput)
             }
             self.videoOutput = videoOutput
+            
+            if let additionalReader = self.additionalReader, let additionalVideoTrack = additionalVideoTracks?.first {
+                let additionalVideoOutput = AVAssetReaderTrackOutput(track: additionalVideoTrack, outputSettings: outputSettings)
+                additionalVideoOutput.alwaysCopiesSampleData = true
+                if additionalReader.canAdd(additionalVideoOutput) {
+                    additionalReader.add(additionalVideoOutput)
+                }
+                self.additionalVideoOutput = additionalVideoOutput
+            }
             
             if let videoTrack = videoTracks.first {
                 if videoTrack.nominalFrameRate > 0.0 {
@@ -411,6 +443,8 @@ public final class MediaEditorVideoExport {
     }
     
     private func setupWithImage(_ image: UIImage) {
+        Logger.shared.log("VideoExport", "Setup with image")
+        
         self.setupComposer()
         
         self.writer = MediaEditorVideoAVAssetWriter()
@@ -491,7 +525,7 @@ public final class MediaEditorVideoExport {
         guard let writer = self.writer, let composer = self.composer, case let .image(image) = self.subject else {
             return false
         }
-        
+    
         let duration: Double = 5.0
         let frameRate: Double = Double(self.configuration.frameRate)
         var position: CMTime = CMTime(value: 0, timescale: Int32(self.configuration.frameRate))
@@ -545,22 +579,25 @@ public final class MediaEditorVideoExport {
                 return false
             }
             self.pauseDispatchGroup.wait()
-            if let buffer = output.copyNextSampleBuffer() {
-                let timestamp = CMSampleBufferGetPresentationTimeStamp(buffer)
+            if let sampleBuffer = output.copyNextSampleBuffer() {
+                let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
                 if let duration = self.durationValue {
                     let startTimestamp = self.reader?.timeRange.start ?? .zero
                     let progress = (timestamp - startTimestamp).seconds / duration.seconds
                     self.statusValue = .progress(Float(progress))
                 }
+                
+                let additionalSampleBuffer = self.additionalVideoOutput?.copyNextSampleBuffer()
+                
                 if let composer = self.composer {
-                    composer.processSampleBuffer(buffer, pool: writer.pixelBufferPool, textureRotation: self.textureRotation, completion: { pixelBuffer in
+                    composer.processSampleBuffer(sampleBuffer: sampleBuffer, textureRotation: self.textureRotation, additionalSampleBuffer: additionalSampleBuffer, additionalTextureRotation: self.additionalTextureRotation, pool: writer.pixelBufferPool, completion: { pixelBuffer in
                         if let pixelBuffer {
                             if !writer.appendPixelBuffer(pixelBuffer, at: timestamp) {
                                 writer.markVideoAsFinished()
                                 appendFailed = true
                             }
                         } else {
-                            if !writer.appendVideoBuffer(buffer) {
+                            if !writer.appendVideoBuffer(sampleBuffer) {
                                 writer.markVideoAsFinished()
                                 appendFailed = true
                             }
@@ -569,7 +606,7 @@ public final class MediaEditorVideoExport {
                     })
                     self.semaphore.wait()
                 } else {
-                    if !writer.appendVideoBuffer(buffer) {
+                    if !writer.appendVideoBuffer(sampleBuffer) {
                         writer.markVideoAsFinished()
                         return false
                     }
@@ -646,12 +683,16 @@ public final class MediaEditorVideoExport {
     }
     
     private func startImageVideoExport() {
+        Logger.shared.log("VideoExport", "Starting image video export")
+        
         guard self.internalStatus == .idle, let writer = self.writer else {
+            Logger.shared.log("VideoExport", "Failed on writer state")
             self.statusValue = .failed(.invalid)
             return
         }
         
         guard writer.startWriting() else {
+            Logger.shared.log("VideoExport", "Failed on start writing")
             self.statusValue = .failed(.writing(nil))
             return
         }
@@ -681,6 +722,11 @@ public final class MediaEditorVideoExport {
             return
         }
         guard reader.startReading() else {
+            self.statusValue = .failed(.reading(nil))
+            return
+        }
+        
+        if let additionalReader = self.additionalReader, !additionalReader.startReading() {
             self.statusValue = .failed(.reading(nil))
             return
         }

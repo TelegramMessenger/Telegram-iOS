@@ -348,7 +348,7 @@ private final class CameraScreenComponent: CombinedComponent {
         private var lastFlipTimestamp: Double?
         func togglePosition(_ action: ActionSlot<Void>) {
             let currentTimestamp = CACurrentMediaTime()
-            if let lastFlipTimestamp = self.lastFlipTimestamp, currentTimestamp - lastFlipTimestamp < 1.3 {
+            if let lastFlipTimestamp = self.lastFlipTimestamp, currentTimestamp - lastFlipTimestamp < 1.0 {
                 return
             }
             self.lastFlipTimestamp = currentTimestamp
@@ -380,8 +380,8 @@ private final class CameraScreenComponent: CombinedComponent {
                 switch value {
                 case .began:
                     return .single(.pendingImage)
-                case let .finished(mainImage, additionalImage, _):
-                    return .single(.image(mainImage, additionalImage, .bottomRight))
+                case let .finished(image, additionalImage, _):
+                    return .single(.image(CameraScreen.Result.Image(image: image, additionalImage: additionalImage, additionalImagePosition: .bottomRight)))
                 case .failed:
                     return .complete()
                 }
@@ -409,7 +409,7 @@ private final class CameraScreenComponent: CombinedComponent {
             self.resultDisposable.set((self.camera.stopRecording()
             |> deliverOnMainQueue).start(next: { [weak self] result in
                 if let self, case let .finished(mainResult, additionalResult, duration, positionChangeTimestamps, _) = result {
-                    self.completion.invoke(.single(.video(mainResult.0, mainResult.1, additionalResult?.0, additionalResult?.1, PixelDimensions(width: 1080, height: 1920), duration, positionChangeTimestamps, .bottomRight)))
+                    self.completion.invoke(.single(.video(CameraScreen.Result.Video(videoPath: mainResult.0, coverImage: mainResult.1, mirror: mainResult.2, additionalVideoPath: additionalResult?.0, additionalCoverImage: additionalResult?.1, dimensions: PixelDimensions(width: 1080, height: 1920), duration: duration, positionChangeTimestamps: positionChangeTimestamps, additionalVideoPosition: .bottomRight))))
                 }
             }))
             self.isTransitioning = true
@@ -553,7 +553,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     transition: .immediate
                 )
                 context.add(flashButton
-                    .position(CGPoint(x: isTablet ? availableSize.width - smallPanelWidth / 2.0 : availableSize.width - topControlInset - flashButton.size.width / 2.0, y: environment.safeInsets.top + topControlInset + flashButton.size.height / 2.0))
+                    .position(CGPoint(x: isTablet ? availableSize.width - smallPanelWidth / 2.0 : availableSize.width - topControlInset - flashButton.size.width / 2.0 - 5.0, y: environment.safeInsets.top + topControlInset + flashButton.size.height / 2.0))
                     .appear(.default(scale: true))
                     .disappear(.default(scale: true))
                 )
@@ -578,7 +578,7 @@ private final class CameraScreenComponent: CombinedComponent {
                         transition: .immediate
                     )
                     context.add(dualButton
-                        .position(CGPoint(x: availableSize.width / 2.0, y: environment.safeInsets.top + topControlInset + dualButton.size.height / 2.0))
+                        .position(CGPoint(x: availableSize.width - topControlInset - flashButton.size.width / 2.0 - 52.0, y: environment.safeInsets.top + topControlInset + dualButton.size.height / 2.0 + 1.0))
                         .appear(.default(scale: true))
                         .disappear(.default(scale: true))
                     )
@@ -734,7 +734,7 @@ private final class CameraScreenComponent: CombinedComponent {
             }
             
             var isVideoRecording = false
-            if case .video = state.cameraState.mode, isTablet {
+            if case .video = state.cameraState.mode {
                 isVideoRecording = true
             } else if state.cameraState.recording != .none {
                 isVideoRecording = true
@@ -906,18 +906,36 @@ public class CameraScreen: ViewController {
     }
     
     public enum Result {
+        public struct Image {
+            public let image: UIImage
+            public let additionalImage: UIImage?
+            public let additionalImagePosition: CameraScreen.PIPPosition
+        }
+        
+        public struct Video {
+            public let videoPath: String
+            public let coverImage: UIImage?
+            public let mirror: Bool
+            public let additionalVideoPath: String?
+            public let additionalCoverImage: UIImage?
+            public let dimensions: PixelDimensions
+            public let duration: Double
+            public let positionChangeTimestamps: [(Bool, Double)]
+            public let additionalVideoPosition: CameraScreen.PIPPosition
+        }
+        
         case pendingImage
-        case image(UIImage, UIImage?, CameraScreen.PIPPosition)
-        case video(String, UIImage?, String?, UIImage?, PixelDimensions, Double, [(Bool, Double)], CameraScreen.PIPPosition)
+        case image(Image)
+        case video(Video)
         case asset(PHAsset)
         case draft(MediaEditorDraft)
         
         func withPIPPosition(_ position: CameraScreen.PIPPosition) -> Result {
             switch self {
-            case let .image(mainImage, additionalImage, _):
-                return .image(mainImage, additionalImage, position)
-            case let .video(mainPath, mainImage, additionalPath, additionalImage, dimensions, duration, positionChangeTimestamps, _):
-                return .video(mainPath, mainImage, additionalPath, additionalImage, dimensions, duration, positionChangeTimestamps, position)
+            case let .image(result):
+                return .image(Image(image: result.image, additionalImage: result.additionalImage, additionalImagePosition: position))
+            case let .video(result):
+                return .video(Video(videoPath: result.videoPath, coverImage: result.coverImage, mirror: result.mirror, additionalVideoPath: result.additionalVideoPath, additionalCoverImage: result.additionalCoverImage, dimensions: result.dimensions, duration: result.duration, positionChangeTimestamps: result.positionChangeTimestamps, additionalVideoPosition: position))
             default:
                 return self
             }
@@ -1202,10 +1220,7 @@ public class CameraScreen: ViewController {
                     }
                     
                     if self.isDualCamEnabled && previousPosition != newPosition {
-                        CATransaction.begin()
-                        CATransaction.setDisableActions(true)
-                        self.requestUpdateLayout(hasAppeared: false, transition: .immediate)
-                        CATransaction.commit()
+                        self.animateDualCameraPositionSwitch()
                     } else if dualCamWasEnabled != self.isDualCamEnabled {
                         self.requestUpdateLayout(hasAppeared: false, transition: .spring(duration: 0.4))
                     }
@@ -1311,6 +1326,58 @@ public class CameraScreen: ViewController {
             default:
                 break
             }
+        }
+        
+        func animateDualCameraPositionSwitch() {
+            let duration: Double = 0.5
+            let timingFunction = kCAMediaTimingFunctionSpring
+            
+            if let additionalSnapshot = self.additionalPreviewContainerView.snapshotView(afterScreenUpdates: false) {
+                additionalSnapshot.frame = self.additionalPreviewContainerView.frame
+                self.additionalPreviewContainerView.superview?.addSubview(additionalSnapshot)
+                
+                additionalSnapshot.layer.animateScale(from: 1.0, to: 0.01, duration: 0.35, timingFunction: timingFunction, removeOnCompletion: false)
+                additionalSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak additionalSnapshot] _ in
+                    additionalSnapshot?.removeFromSuperview()
+                })
+            }
+            
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            self.requestUpdateLayout(hasAppeared: false, transition: .immediate)
+            CATransaction.commit()
+            
+            self.additionalPreviewContainerView.layer.animate(
+                from: 12.0 as NSNumber,
+                to: self.additionalPreviewContainerView.layer.cornerRadius as NSNumber,
+                keyPath: "cornerRadius",
+                timingFunction: timingFunction,
+                duration: duration
+            )
+            
+            self.additionalPreviewContainerView.layer.animatePosition(
+                from: self.mainPreviewContainerView.center,
+                to: self.additionalPreviewContainerView.center,
+                duration: duration,
+                timingFunction: timingFunction
+            )
+            
+            let scale = self.mainPreviewContainerView.frame.width / self.additionalPreviewContainerView.frame.width
+            self.additionalPreviewContainerView.layer.animateScale(
+                from: scale,
+                to: 1.0,
+                duration: duration,
+                timingFunction: timingFunction
+            )
+            
+            let aspectRatio = self.mainPreviewContainerView.frame.height / self.mainPreviewContainerView.frame.width
+            let height = self.additionalPreviewContainerView.bounds.width * aspectRatio
+            self.additionalPreviewContainerView.layer.animateBounds(
+                from: CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((self.additionalPreviewContainerView.bounds.height - height) / 2.0)), size: CGSize(width: self.additionalPreviewContainerView.bounds.width, height: height)),
+                to: self.additionalPreviewContainerView.bounds,
+                duration: duration,
+                timingFunction: timingFunction
+            )
         }
         
         func animateIn() {
@@ -1545,8 +1612,8 @@ public class CameraScreen: ViewController {
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             let result = super.hitTest(point, with: event)
             if result == self.componentHost.view {
-                if self.additionalPreviewView.bounds.contains(self.view.convert(point, to: self.additionalPreviewView)) {
-                    return self.additionalPreviewView
+                if self.additionalPreviewContainerView.bounds.contains(self.view.convert(point, to: self.additionalPreviewContainerView)) {
+                    return self.additionalPreviewContainerView
                 } else {
                     return self.mainPreviewView
                 }
@@ -1557,13 +1624,6 @@ public class CameraScreen: ViewController {
         func requestUpdateLayout(hasAppeared: Bool, transition: Transition) {
             if let layout = self.validLayout {
                 self.containerLayoutUpdated(layout: layout, forceUpdate: true, hasAppeared: hasAppeared, transition: transition)
-                
-                if let view = self.componentHost.findTaggedView(tag: flashButtonTag) {
-                    view.layer.shadowOffset = CGSize(width: 0.0, height: 0.0)
-                    view.layer.shadowRadius = 3.0
-                    view.layer.shadowColor = UIColor.black.cgColor
-                    view.layer.shadowOpacity = 0.35
-                }
             }
         }
 
@@ -1676,6 +1736,13 @@ public class CameraScreen: ViewController {
                 transition.setFrame(view: componentView, frame: componentFrame)
             }
             
+            if let view = self.componentHost.findTaggedView(tag: flashButtonTag), view.layer.shadowOpacity.isZero {
+                view.layer.shadowOffset = CGSize(width: 0.0, height: 0.0)
+                view.layer.shadowRadius = 3.0
+                view.layer.shadowColor = UIColor.black.cgColor
+                view.layer.shadowOpacity = 0.25
+            }
+            
             transition.setPosition(view: self.backgroundView, position: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0))
             transition.setBounds(view: self.backgroundView, bounds: CGRect(origin: .zero, size: layout.size))
             
@@ -1723,7 +1790,11 @@ public class CameraScreen: ViewController {
                 origin = origin.offsetBy(dx: pipTranslation.x, dy: pipTranslation.y)
             }
             
+            let additionalPreviewInnerSize = previewFrame.size.aspectFilled(CGSize(width: circleSide, height: circleSide))
+            let additionalPreviewInnerFrame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((circleSide - additionalPreviewInnerSize.height) / 2.0)), size: additionalPreviewInnerSize)
+            
             let additionalPreviewFrame = CGRect(origin: CGPoint(x: origin.x - circleSide / 2.0, y: origin.y - circleSide / 2.0), size: CGSize(width: circleSide, height: circleSide))
+            
             transition.setPosition(view: self.additionalPreviewContainerView, position: additionalPreviewFrame.center)
             transition.setBounds(view: self.additionalPreviewContainerView, bounds: CGRect(origin: .zero, size: additionalPreviewFrame.size))
             self.additionalPreviewContainerView.layer.cornerRadius = additionalPreviewFrame.width / 2.0
@@ -1757,7 +1828,7 @@ public class CameraScreen: ViewController {
             }
             
             mainPreviewView.frame = CGRect(origin: .zero, size: previewFrame.size)
-            additionalPreviewView.frame = CGRect(origin: .zero, size: additionalPreviewFrame.size)
+            additionalPreviewView.frame = additionalPreviewInnerFrame
                               
             self.previewFrameLeftDimView.isHidden = !isTablet
             transition.setFrame(view: self.previewFrameLeftDimView, frame: CGRect(origin: .zero, size: CGSize(width: viewfinderFrame.minX, height: viewfinderFrame.height)))
@@ -2018,6 +2089,7 @@ public class CameraScreen: ViewController {
         if let layout = self.validLayout, case .regular = layout.metrics.widthClass {
             return
         }
+        let transitionFraction = max(0.0, min(1.0, transitionFraction))
         let offsetX = floorToScreenPixels((1.0 - transitionFraction) * self.node.frame.width * -1.0)
         transition.updateTransform(layer: self.node.backgroundView.layer, transform: CGAffineTransform(translationX: offsetX, y: 0.0))
         transition.updateTransform(layer: self.node.containerView.layer, transform: CGAffineTransform(translationX: offsetX, y: 0.0))
@@ -2114,22 +2186,22 @@ private final class DualIconComponent: Component {
         override init(frame: CGRect) {
             super.init(frame: frame)
          
-            let image = generateImage(CGSize(width: 36.0, height: 36.0), rotatedContext: { size, context in
+            let image = generateImage(CGSize(width: 36.0, height: 36.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: .zero, size: size))
                 
                 if let image = UIImage(bundleImageName: "Camera/DualIcon"), let cgImage = image.cgImage {
-                    context.draw(cgImage, in: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - image.size.width) / 2.0), y: floorToScreenPixels((size.height - image.size.height) / 2.0)), size: image.size))
+                    context.draw(cgImage, in: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - image.size.width) / 2.0), y: floorToScreenPixels((size.height - image.size.height) / 2.0) - 1.0), size: image.size))
                 }
             })
             
-            let selectedImage = generateImage(CGSize(width: 36.0, height: 36.0), rotatedContext: { size, context in
+            let selectedImage = generateImage(CGSize(width: 36.0, height: 36.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: .zero, size: size))
                 context.setFillColor(UIColor.white.cgColor)
                 context.fillEllipse(in: CGRect(origin: .zero, size: size))
                 
                 if let image = UIImage(bundleImageName: "Camera/DualIcon"), let cgImage = image.cgImage {
                     context.setBlendMode(.clear)
-                    context.clip(to: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - image.size.width) / 2.0), y: floorToScreenPixels((size.height - image.size.height) / 2.0)), size: image.size), mask: cgImage)
+                    context.clip(to: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - image.size.width) / 2.0), y: floorToScreenPixels((size.height - image.size.height) / 2.0) - 1.0), size: image.size), mask: cgImage)
                     context.fill(CGRect(origin: .zero, size: size))
                 }
             })
@@ -2138,9 +2210,9 @@ private final class DualIconComponent: Component {
             self.iconView.highlightedImage = selectedImage
             
             self.iconView.layer.shadowOffset = CGSize(width: 0.0, height: 0.0)
-            self.iconView.layer.shadowRadius = 4.0
+            self.iconView.layer.shadowRadius = 3.0
             self.iconView.layer.shadowColor = UIColor.black.cgColor
-            self.iconView.layer.shadowOpacity = 0.2
+            self.iconView.layer.shadowOpacity = 0.25
             
             self.addSubview(self.iconView)
         }

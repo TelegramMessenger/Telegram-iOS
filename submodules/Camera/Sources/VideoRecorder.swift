@@ -86,14 +86,18 @@ private final class VideoRecorderImpl {
         }
     }
     
-    public func markPositionChange(position: Camera.Position) {
+    public func markPositionChange(position: Camera.Position, time: CMTime? = nil) {
         self.queue.async {
-            guard self.recordingStartSampleTime.isValid else {
+            guard self.recordingStartSampleTime.isValid || time != nil else {
                 return
             }
-            let currentTime = CMTime(seconds: CACurrentMediaTime(), preferredTimescale: CMTimeScale(NSEC_PER_SEC))
-            let delta = currentTime - self.recordingStartSampleTime
-            self.positionChangeTimestamps.append((position, delta))
+            if let time {
+                self.positionChangeTimestamps.append((position, time))
+            } else {
+                let currentTime = CMTime(seconds: CACurrentMediaTime(), preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+                let delta = currentTime - self.recordingStartSampleTime
+                self.positionChangeTimestamps.append((position, delta))
+            }
         }
     }
         
@@ -486,9 +490,9 @@ public final class VideoRecorder {
     func stop() {
         self.impl.stopRecording()
     }
-    
-    func markPositionChange(position: Camera.Position) {
-        self.impl.markPositionChange(position: position)
+        
+    func markPositionChange(position: Camera.Position, time: CMTime? = nil) {
+        self.impl.markPositionChange(position: position, time: time)
     }
     
     func appendSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
