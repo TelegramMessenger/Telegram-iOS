@@ -892,7 +892,11 @@ final class MediaEditorScreenComponent: Component {
                 let scrubberFrame = CGRect(origin: CGPoint(x: scrubberInset, y: availableSize.height - environment.safeInsets.bottom - scrubberSize.height - 8.0 + controlsBottomInset), size: scrubberSize)
                 if let scrubberView = self.scrubber.view {
                     if scrubberView.superview == nil {
-                        self.addSubview(scrubberView)
+                        if let inputPanelBackgroundView = self.inputPanelBackground.view, inputPanelBackgroundView.superview != nil {
+                            self.insertSubview(scrubberView, belowSubview: inputPanelBackgroundView)
+                        } else {
+                            self.addSubview(scrubberView)
+                        }
                     }
                     transition.setFrame(view: scrubberView, frame: scrubberFrame)
                     if !self.animatingButtons {

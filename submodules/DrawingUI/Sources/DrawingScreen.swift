@@ -3031,6 +3031,10 @@ public final class DrawingToolsInteraction {
                 }
             }
             
+            guard !isVideo else {
+                return
+            }
+            
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
             var actions: [ContextMenuAction] = []
             actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Delete, accessibilityLabel: presentationData.strings.Paint_Delete), action: { [weak self, weak entityView] in

@@ -2679,17 +2679,32 @@ public final class StoryItemSetContainerComponent: Component {
             guard let navigationController = controller.navigationController as? NavigationController else {
                 return
             }
-            guard let chatController = component.context.sharedContext.makePeerInfoController(context: component.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) else {
-                return
-            }
-            
-            var viewControllers = navigationController.viewControllers
-            if let index = viewControllers.firstIndex(where: { $0 === controller }) {
-                viewControllers.insert(chatController, at: index)
+            if let messageId {
+                component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: false, timecode: nil), keepStack: .always, animated: true, pushController: { [weak controller, weak navigationController] chatController, animated, completion in
+                    guard let controller, let navigationController else {
+                        return
+                    }
+                    var viewControllers = navigationController.viewControllers
+                    if let index = viewControllers.firstIndex(where: { $0 === controller }) {
+                        viewControllers.insert(chatController, at: index)
+                    } else {
+                        viewControllers.append(chatController)
+                    }
+                    navigationController.setViewControllers(viewControllers, animated: animated)
+                }))
             } else {
-                viewControllers.append(chatController)
+                guard let chatController = component.context.sharedContext.makePeerInfoController(context: component.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) else {
+                    return
+                }
+                
+                var viewControllers = navigationController.viewControllers
+                if let index = viewControllers.firstIndex(where: { $0 === controller }) {
+                    viewControllers.insert(chatController, at: index)
+                } else {
+                    viewControllers.append(chatController)
+                }
+                navigationController.setViewControllers(viewControllers, animated: true)
             }
-            navigationController.setViewControllers(viewControllers, animated: true)
             
             controller.dismissWithoutTransitionOut()
         }
