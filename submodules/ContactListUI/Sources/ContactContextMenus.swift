@@ -102,7 +102,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
                         context: context,
                         account: context.account,
                         sharedContext: context.sharedContext,
-                        text: .markdown(text: "Stories from \(peer.compactDisplayTitle) will now be shown in Chats, not Contacts."),
+                        text: .markdown(text: "Stories from **\(peer.compactDisplayTitle)** will now be shown in Chats, not Contacts."),
                         icon: .peer(peer: peer, isStory: true),
                         action: TooltipScreen.Action(
                             title: "Undo",

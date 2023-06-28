@@ -31,6 +31,7 @@ import SaveToCameraRoll
 import BundleIconComponent
 import PeerListItemComponent
 import PremiumUI
+import AttachmentUI
 
 public final class StoryItemSetContainerComponent: Component {
     public final class ExternalState {
@@ -755,7 +756,7 @@ public final class StoryItemSetContainerComponent: Component {
             }
             if let navigationController = component.controller()?.navigationController as? NavigationController {
                 let topViewController = navigationController.topViewController
-                if !(topViewController is StoryContainerScreen) && !(topViewController is MediaEditorScreen)  && !(topViewController is ShareWithPeersScreen) {
+                if !(topViewController is StoryContainerScreen) && !(topViewController is MediaEditorScreen) && !(topViewController is ShareWithPeersScreen) && !(topViewController is AttachmentController) {
                     return true
                 }
             }
@@ -3164,6 +3165,34 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                     
                     let _ = component.context.engine.peers.updatePeerStoriesHidden(id: component.slice.peer.id, isHidden: !isHidden)
+                    
+                    let text = isHidden ? "Stories from **\(component.slice.peer.compactDisplayTitle)** will now be shown in Chats, not Contacts." : "Stories from **\(component.slice.peer.compactDisplayTitle)** will now be shown in Contacts, not Chats."
+                    let tooltipScreen = TooltipScreen(
+                        context: component.context,
+                        account: component.context.account,
+                        sharedContext: component.context.sharedContext,
+                        text: .markdown(text: text),
+                        style: .customBlur(UIColor(rgb: 0x1c1c1c)),
+                        icon: .peer(peer: component.slice.peer, isStory: true),
+                        action: TooltipScreen.Action(
+                            title: "Undo",
+                            action: {
+                                component.context.engine.peers.updatePeerStoriesHidden(id: component.slice.peer.id, isHidden: isHidden)
+                            }
+                        ),
+                        location: .bottom,
+                        shouldDismissOnTouch: { _ in return .dismiss(consume: false) }
+                    )
+                    tooltipScreen.willBecomeDismissed = { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.sendMessageContext.tooltipScreen = nil
+                        self.updateIsProgressPaused()
+                    }
+                    self.sendMessageContext.tooltipScreen = tooltipScreen
+                    self.updateIsProgressPaused()
+                    component.controller()?.present(tooltipScreen, in: .current)
                 })))
                 
                 items.append(.action(ContextMenuActionItem(text: "Report", icon: { theme in

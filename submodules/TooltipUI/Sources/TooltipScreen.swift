@@ -157,7 +157,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         action: TooltipScreen.Action? = nil,
         location: TooltipScreen.Location,
         displayDuration: TooltipScreen.DisplayDuration,
-        inset: CGFloat = 13.0,
+        inset: CGFloat = 12.0,
         cornerRadius: CGFloat? = nil,
         shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?)
     {
@@ -229,18 +229,31 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         self.arrowContainer = ASDisplayNode()
         
-        let fontSize: CGFloat
+        var hasArrow = true
         if case .top = location {
+            hasArrow = false
+        } else if case .bottom = location {
+            hasArrow = false
+        }
+        
+        let fontSize: CGFloat
+        if !hasArrow {
             let backgroundColor: UIColor
-            if theme.overallDarkAppearance {
-                backgroundColor = theme.rootController.navigationBar.blurredBackgroundColor
+            var enableSaturation = true
+            if case let .customBlur(color) = style {
+                backgroundColor = color
+                enableSaturation = false
             } else {
-                backgroundColor = UIColor(rgb: 0x000000, alpha: 0.6)
+                if theme.overallDarkAppearance {
+                    backgroundColor = theme.rootController.navigationBar.blurredBackgroundColor
+                } else {
+                    backgroundColor = UIColor(rgb: 0x000000, alpha: 0.6)
+                }
             }
-            self.effectNode = NavigationBackgroundNode(color: backgroundColor)
+            self.effectNode = NavigationBackgroundNode(color: backgroundColor, enableSaturation: enableSaturation)
             self.backgroundMaskNode.addSubnode(self.backgroundClipNode)
             self.backgroundClipNode.clipsToBounds = true
-            if case let .point(_, arrowPosition) = location, case .right = arrowPosition {
+            if case .bottom = location {
                 self.backgroundClipNode.cornerRadius = 8.5
             } else {
                 self.backgroundClipNode.cornerRadius = 14.0
@@ -248,7 +261,6 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             if #available(iOS 13.0, *) {
                 self.backgroundClipNode.layer.cornerCurve = .continuous
             }
-            
             fontSize = 14.0
         } else if case let .gradient(leftColor, rightColor) = style {
             self.gradientNode = ASDisplayNode()
@@ -545,11 +557,11 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         switch self.tooltipStyle {
         case .default, .gradient, .customBlur:
             backgroundHeight = max(animationSize.height, textSize.height) + contentVerticalInset * 2.0
-            if self.actionButtonNode != nil {
-                backgroundHeight += 2.0
-            }
         case .light:
             backgroundHeight = max(28.0, max(animationSize.height, textSize.height) + 4.0 * 2.0)
+        }
+        if self.actionButtonNode != nil {
+            backgroundHeight += 4.0
         }
                     
         var invertArrow = false
@@ -587,6 +599,9 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         case .top:
             let backgroundWidth = containerWidth
             backgroundFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - backgroundWidth) / 2.0), y: layout.insets(options: [.statusBar]).top + 13.0), size: CGSize(width: backgroundWidth, height: backgroundHeight))
+        case .bottom:
+            let backgroundWidth = containerWidth
+            backgroundFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - backgroundWidth) / 2.0), y: layout.size.height - layout.insets(options: []).bottom - 12.0 - backgroundHeight), size: CGSize(width: backgroundWidth, height: backgroundHeight))
         }
         
         transition.updateFrame(node: self.containerNode, frame: backgroundFrame)
@@ -756,11 +771,18 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     
     func animateIn() {
         switch self.location {
-        case .top:
-            self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        case .top, .bottom:
+            self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             self.containerNode.layer.animateScale(from: 0.96, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-            if let _ = self.validLayout {
-                self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -13.0 - self.backgroundContainerNode.frame.height), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            
+            if let _ = self.validLayout, case .top = self.location {
+                let offset: CGFloat
+                if case .top = self.location {
+                    offset = -13.0 - self.backgroundContainerNode.frame.height
+                } else {
+                    offset = 13.0 + self.backgroundContainerNode.frame.height
+                }
+                self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             }
         case let .point(_, arrowPosition):
             self.containerNode.layer.animateSpring(from: NSNumber(value: Float(0.01)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.4, damping: 105.0)
@@ -795,13 +817,19 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     
     func animateOut(completion: @escaping () -> Void) {
         switch self.location {
-        case .top:
-            self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
+        case .top, .bottom:
+            self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { _ in
                 completion()
             })
             self.containerNode.layer.animateScale(from: 1.0, to: 0.96, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-            if let _ = self.validLayout {
-                self.containerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -13.0 - self.backgroundContainerNode.frame.height), duration: 0.3, removeOnCompletion: false, additive: true)
+            if let _ = self.validLayout, case .top = self.location {
+                let offset: CGFloat
+                if case .top = self.location {
+                    offset = -13.0 - self.backgroundContainerNode.frame.height
+                } else {
+                    offset = 13.0 + self.backgroundContainerNode.frame.height
+                }
+                self.containerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: offset), duration: 0.3, removeOnCompletion: false, additive: true)
             }
         case let .point(_, arrowPosition):
             self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
@@ -875,6 +903,7 @@ public final class TooltipScreen: ViewController {
     public enum Location {
         case point(CGRect, ArrowPosition)
         case top
+        case bottom
     }
     
     public enum DisplayDuration {
@@ -942,7 +971,7 @@ public final class TooltipScreen: ViewController {
         action: TooltipScreen.Action? = nil,
         location: TooltipScreen.Location,
         displayDuration: DisplayDuration = .default,
-        inset: CGFloat = 13.0,
+        inset: CGFloat = 12.0,
         cornerRadius: CGFloat? = nil,
         shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch,
         openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)? = nil
