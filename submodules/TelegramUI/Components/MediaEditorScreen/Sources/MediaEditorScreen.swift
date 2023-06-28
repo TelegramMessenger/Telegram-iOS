@@ -1910,63 +1910,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 }
             }
-            
-            if case .video = subject {
-                self.playbackPositionDisposable = (mediaEditor.position
-                |> deliverOnMainQueue).start(next: { [weak self] position in
-                    if let self {
-                        self.updateVideoPlaybackPosition(position: position)
-                    }
-                })
-            }
         }
-        
-        private var additionalIsMainstage = false
-        private func updateVideoPlaybackPosition(position: CGFloat) {
-            guard let subject = self.subject, case let .video(_, _, _, _, _, _, _, timestamps, _) = subject, !timestamps.isEmpty else {
-                return
-            }
-            var currentIsFront = false
-            for (isFront, timestamp) in timestamps {
-                if position < timestamp {
-                    break
-                }
-                currentIsFront = isFront
-            }
-            
-            self.additionalIsMainstage = currentIsFront
-            self.updateMainStageVideo()
-        }
-        
-        private func updateMainStageVideo() {
-            guard let mainEntityView = self.entitiesView.getView(where: { $0 is DrawingMediaEntityView }) as? DrawingMediaEntityView, let mainEntity = mainEntityView.entity as? DrawingMediaEntity else {
-                return
-            }
-            
-            let additionalEntityView = self.entitiesView.getView(where: { view in
-                if let stickerEntity =  view.entity as? DrawingStickerEntity, case .video = stickerEntity.content {
-                    return true
-                } else {
-                    return false
-                }
-            }) as? DrawingStickerEntityView
-            
-            var animated = true
-            if mainEntity.scale != 1.0 || mainEntity.rotation != 0.0 || mainEntity.position != CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0) {
-                animated = false
-            }
-            
-            let _ = animated
-            
-            if self.additionalIsMainstage {
-                mainEntityView.additionalView = additionalEntityView?.videoView
-                additionalEntityView?.mainView = mainEntityView.previewView
-            } else {
-                mainEntityView.additionalView = nil
-                additionalEntityView?.mainView = nil
-            }
-        }
-        
+       
         override func didLoad() {
             super.didLoad()
             

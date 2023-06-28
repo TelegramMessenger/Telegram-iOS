@@ -304,7 +304,10 @@ final class MediaEditorRenderer: TextureConsumer {
         self.willRenderFrame()
         
         self.currentPixelBuffer = pixelBuffer
-        self.currentAdditionalPixelBuffer = additionalPixelBuffer
+        if additionalPixelBuffer == nil && self.currentAdditionalPixelBuffer != nil {
+        } else {
+            self.currentAdditionalPixelBuffer = additionalPixelBuffer
+        }
         if render {
             if self.previousPresentationTimestamp == pixelBuffer.timestamp {
                 self.didRenderFrame()
