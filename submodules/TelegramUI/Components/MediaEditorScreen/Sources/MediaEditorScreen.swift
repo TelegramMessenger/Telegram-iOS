@@ -1227,79 +1227,91 @@ final class MediaEditorScreenComponent: Component {
                 transition.setAlpha(view: saveButtonView, alpha: displayTopButtons && !component.isDismissing && !component.isInteractingWithEntities ? saveButtonAlpha : 0.0)
             }
              
-            if let playerState = state.playerState, playerState.hasAudio {
-                let isVideoMuted = mediaEditor?.values.videoIsMuted ?? false
-                
-                let muteContentComponent: AnyComponentWithIdentity<Empty>
-                if component.hasAppeared {
-                    muteContentComponent = AnyComponentWithIdentity(
-                        id: "animatedIcon",
-                        component: AnyComponent(
-                            LottieAnimationComponent(
-                                animation: LottieAnimationComponent.AnimationItem(
-                                    name: "anim_storymute",
-                                    mode: state.muteDidChange ? .animating(loop: false) : .still(position: .begin),
-                                    range: isVideoMuted ? (0.0, 0.5) : (0.5, 1.0)
-                                ),
-                                colors: ["__allcolors__": .white],
-                                size: CGSize(width: 30.0, height: 30.0)
-                            ).tagged(muteButtonTag)
-                        )
-                    )
-                } else {
-                    muteContentComponent = AnyComponentWithIdentity(
-                        id: "staticIcon",
-                        component: AnyComponent(
-                            BundleIconComponent(
-                                name: "Media Editor/MuteIcon",
-                                tintColor: nil
+            if let playerState = state.playerState {
+                if playerState.hasAudio {
+                    let isVideoMuted = mediaEditor?.values.videoIsMuted ?? false
+                    
+                    let muteContentComponent: AnyComponentWithIdentity<Empty>
+                    if component.hasAppeared {
+                        muteContentComponent = AnyComponentWithIdentity(
+                            id: "animatedIcon",
+                            component: AnyComponent(
+                                LottieAnimationComponent(
+                                    animation: LottieAnimationComponent.AnimationItem(
+                                        name: "anim_storymute",
+                                        mode: state.muteDidChange ? .animating(loop: false) : .still(position: .begin),
+                                        range: isVideoMuted ? (0.0, 0.5) : (0.5, 1.0)
+                                    ),
+                                    colors: ["__allcolors__": .white],
+                                    size: CGSize(width: 30.0, height: 30.0)
+                                ).tagged(muteButtonTag)
                             )
                         )
-                    )
-                }
-                
-                let muteButtonSize = self.muteButton.update(
-                    transition: transition,
-                    component: AnyComponent(CameraButton(
-                        content: muteContentComponent,
-                        action: { [weak state, weak mediaEditor] in
-                            if let mediaEditor {
-                                state?.muteDidChange = true
-                                let isMuted = !mediaEditor.values.videoIsMuted
-                                mediaEditor.setVideoIsMuted(isMuted)
-                                state?.updated()
-                                
-                                if let controller = environment.controller() as? MediaEditorScreen {
-                                    controller.node.presentMutedTooltip()
+                    } else {
+                        muteContentComponent = AnyComponentWithIdentity(
+                            id: "staticIcon",
+                            component: AnyComponent(
+                                BundleIconComponent(
+                                    name: "Media Editor/MuteIcon",
+                                    tintColor: nil
+                                )
+                            )
+                        )
+                    }
+                    
+                    let muteButtonSize = self.muteButton.update(
+                        transition: transition,
+                        component: AnyComponent(CameraButton(
+                            content: muteContentComponent,
+                            action: { [weak state, weak mediaEditor] in
+                                if let mediaEditor {
+                                    state?.muteDidChange = true
+                                    let isMuted = !mediaEditor.values.videoIsMuted
+                                    mediaEditor.setVideoIsMuted(isMuted)
+                                    state?.updated()
+                                    
+                                    if let controller = environment.controller() as? MediaEditorScreen {
+                                        controller.node.presentMutedTooltip()
+                                    }
                                 }
                             }
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: 44.0, height: 44.0)
+                    )
+                    let muteButtonFrame = CGRect(
+                        origin: CGPoint(x: availableSize.width - 20.0 - muteButtonSize.width - 50.0, y: max(environment.statusBarHeight + 10.0, environment.safeInsets.top + 20.0)),
+                        size: muteButtonSize
+                    )
+                    if let muteButtonView = self.muteButton.view {
+                        if muteButtonView.superview == nil {
+                            muteButtonView.layer.shadowOffset = CGSize(width: 0.0, height: 0.0)
+                            muteButtonView.layer.shadowRadius = 2.0
+                            muteButtonView.layer.shadowColor = UIColor.black.cgColor
+                            muteButtonView.layer.shadowOpacity = 0.35
+                            self.addSubview(muteButtonView)
+                            
+                            if self.animatingButtons {
+                                muteButtonView.layer.animateAlpha(from: 0.0, to: muteButtonView.alpha, duration: 0.1)
+                                muteButtonView.layer.animateScale(from: 0.4, to: 1.0, duration: 0.1)
+                            }
                         }
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: 44.0, height: 44.0)
-                )
-                let muteButtonFrame = CGRect(
-                    origin: CGPoint(x: availableSize.width - 20.0 - muteButtonSize.width - 50.0, y: max(environment.statusBarHeight + 10.0, environment.safeInsets.top + 20.0)),
-                    size: muteButtonSize
-                )
-                if let muteButtonView = self.muteButton.view {
-                    if muteButtonView.superview == nil {
-                        muteButtonView.layer.shadowOffset = CGSize(width: 0.0, height: 0.0)
-                        muteButtonView.layer.shadowRadius = 2.0
-                        muteButtonView.layer.shadowColor = UIColor.black.cgColor
-                        muteButtonView.layer.shadowOpacity = 0.35
-                        self.addSubview(muteButtonView)
-                        
-                        if self.animatingButtons {
-                            muteButtonView.layer.animateAlpha(from: 0.0, to: muteButtonView.alpha, duration: 0.1)
-                            muteButtonView.layer.animateScale(from: 0.4, to: 1.0, duration: 0.1)
-                        }
+                        transition.setPosition(view: muteButtonView, position: muteButtonFrame.center)
+                        transition.setBounds(view: muteButtonView, bounds: CGRect(origin: .zero, size: muteButtonFrame.size))
+                        transition.setScale(view: muteButtonView, scale: displayTopButtons ? 1.0 : 0.01)
+                        transition.setAlpha(view: muteButtonView, alpha: displayTopButtons && !component.isDismissing && !component.isInteractingWithEntities ? 1.0 : 0.0)
                     }
-                    transition.setPosition(view: muteButtonView, position: muteButtonFrame.center)
-                    transition.setBounds(view: muteButtonView, bounds: CGRect(origin: .zero, size: muteButtonFrame.size))
-                    transition.setScale(view: muteButtonView, scale: displayTopButtons ? 1.0 : 0.01)
-                    transition.setAlpha(view: muteButtonView, alpha: displayTopButtons && !component.isDismissing && !component.isInteractingWithEntities ? 1.0 : 0.0)
+                } else if let muteButtonView = self.muteButton.view, muteButtonView.superview != nil {
+                    muteButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak muteButtonView] _ in
+                        muteButtonView?.removeFromSuperview()
+                    })
+                    muteButtonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
                 }
+            } else if let muteButtonView = self.muteButton.view, muteButtonView.superview != nil {
+                muteButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak muteButtonView] _ in
+                    muteButtonView?.removeFromSuperview()
+                })
+                muteButtonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
             }
             
             let textCancelButtonSize = self.textCancelButton.update(
@@ -1870,6 +1882,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 self.previewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
                                     self.previewContainerView.layer.allowsGroupOpacity = false
                                     self.previewContainerView.alpha = 1.0
+                                    self.backgroundDimView.isHidden = false
                                 })
                             } else {
                                 self.backgroundDimView.isHidden = false
@@ -2944,6 +2957,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             case let .draft(draft, _):
                 return .image(draft.thumbnail, draft.dimensions)
             }
+        }
+        
+        var isPhoto: Bool {
+            return !self.isVideo
         }
         
         var isVideo: Bool {

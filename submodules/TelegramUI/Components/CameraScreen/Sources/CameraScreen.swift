@@ -374,7 +374,12 @@ private final class CameraScreenComponent: CombinedComponent {
             self.updated(transition: .easeInOut(duration: 0.2))
         }
         
+        private var isTakingPhoto = false
         func takePhoto() {
+            guard !self.isTakingPhoto else {
+                return
+            }
+            self.isTakingPhoto = true
             let takePhoto = self.camera.takePhoto()
             |> mapToSignal { value -> Signal<CameraScreen.Result, NoError> in
                 switch value {
@@ -387,9 +392,15 @@ private final class CameraScreenComponent: CombinedComponent {
                 }
             }
             self.completion.invoke(takePhoto)
+            Queue.mainQueue().after(1.0) {
+                self.isTakingPhoto = false
+            }
         }
         
         func startVideoRecording(pressing: Bool) {
+            guard case .none = self.cameraState.recording else {
+                return
+            }
             self.cameraState = self.cameraState.updatedDuration(0.0).updatedRecording(pressing ? .holding : .handsFree)
             self.resultDisposable.set((self.camera.startRecording()
             |> deliverOnMainQueue).start(next: { [weak self] duration in
@@ -413,7 +424,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 }
             }))
             self.isTransitioning = true
-            Queue.mainQueue().after(0.8, {
+            Queue.mainQueue().after(1.25, {
                 self.isTransitioning = false
                 self.updated(transition: .immediate)
             })

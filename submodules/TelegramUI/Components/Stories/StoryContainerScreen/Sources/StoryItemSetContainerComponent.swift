@@ -2997,7 +2997,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             items.append(.separator)
                                         
-            items.append(.action(ContextMenuActionItem(text: component.slice.item.storyItem.isPinned ? "Remove from profile" : "Save to profile", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: component.slice.item.storyItem.isPinned ? "Remove from Profile" : "Save to Profile", icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: component.slice.item.storyItem.isPinned ? "Chat/Context Menu/Check" : "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, a in
                 a(.default)
@@ -3121,7 +3121,7 @@ public final class StoryItemSetContainerComponent: Component {
                 var items: [ContextMenuItem] = []
                 
                 let isMuted = settings.storiesMuted == true
-                items.append(.action(ContextMenuActionItem(text: isMuted ? "Notify" : "Not Notify", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: isMuted ? "Notify" : "Don't Notify", icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: component.slice.additionalPeerData.isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, a in
                     a(.default)
