@@ -359,7 +359,14 @@ private final class CameraScreenComponent: CombinedComponent {
             action.invoke(Void())
         }
         
+        private var lastDualCameraTimestamp: Double?
         func toggleDualCamera() {
+            let currentTimestamp = CACurrentMediaTime()
+            if let lastDualCameraTimestamp = self.lastDualCameraTimestamp, currentTimestamp - lastDualCameraTimestamp < 1.5 {
+                return
+            }
+            self.lastDualCameraTimestamp = currentTimestamp
+            
             let isEnabled = !self.cameraState.isDualCamEnabled
             self.camera.setDualCamEnabled(isEnabled)
             self.cameraState = self.cameraState.updatedIsDualCamEnabled(isEnabled)

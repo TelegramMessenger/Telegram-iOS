@@ -694,13 +694,18 @@ final class MediaEditorScreenComponent: Component {
                 transition.setAlpha(view: cancelButtonView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
             }
             
+            var doneButtonTitle = "NEXT"
+            if let controller = environment.controller() as? MediaEditorScreen, controller.isEditingStory {
+                doneButtonTitle = "DONE"
+            }
+            
             let doneButtonSize = self.doneButton.update(
                 transition: transition,
                 component: AnyComponent(Button(
                     content: AnyComponent(DoneButtonComponent(
                         backgroundColor: UIColor(rgb: 0x007aff),
                         icon: UIImage(bundleImageName: "Media Editor/Next")!,
-                        title: "NEXT")),
+                        title: doneButtonTitle)),
                     action: {
                         guard let controller = environment.controller() as? MediaEditorScreen else {
                             return

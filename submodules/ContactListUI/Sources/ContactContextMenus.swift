@@ -88,7 +88,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
             items.append(.action(ContextMenuActionItem(text: "Move to Chats", icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MoveToChats"), color: theme.contextMenu.primaryColor)
             }, action: { _, f in
-                f(.default)
+                f(.dismissWithoutContent)
 
                 context.engine.peers.updatePeerStoriesHidden(id: peerId, isHidden: false)
                 
