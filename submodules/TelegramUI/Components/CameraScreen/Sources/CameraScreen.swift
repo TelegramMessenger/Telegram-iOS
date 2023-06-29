@@ -1958,10 +1958,6 @@ public class CameraScreen: ViewController {
         self.navigationPresentation = .flatModal
         
         self.requestAudioSession()
-        
-        if #available(iOS 13.0, *) {
-            try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)
-        }
     }
 
     required public init(coder: NSCoder) {
@@ -1982,7 +1978,11 @@ public class CameraScreen: ViewController {
     }
     
     private func requestAudioSession() {
-        self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .recordWithOthers, activate: { _ in }, deactivate: { _ in
+        self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .recordWithOthers, activate: { _ in
+            if #available(iOS 13.0, *) {
+                try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)
+            }
+        }, deactivate: { _ in
             return .single(Void())
         })
     }

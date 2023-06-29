@@ -206,7 +206,7 @@ private enum SaveIncomingMediaEntry: ItemListNodeEntry {
             return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
         case let .addException(title):
             let icon: UIImage? = PresentationResourcesItemList.createGroupIcon(presentationData.theme)
-            return ItemListPeerActionItem(presentationData: presentationData, icon: icon, title: title, alwaysPlain: false, sectionId: self.section, editing: false, action: {
+            return ItemListPeerActionItem(presentationData: presentationData, icon: icon, title: title, alwaysPlain: false, sectionId: self.section, height: .generic, editing: false, action: {
                 arguments.openAddException()
             })
         case let .exceptionItem(_, peer, label):

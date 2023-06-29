@@ -2587,7 +2587,7 @@ public final class StoryItemSetContainerComponent: Component {
                 return
             }
             
-            let stateContext = ShareWithPeersScreen.StateContext(context: context, subject: .stories, initialPeerIds: Set(privacy.additionallyIncludePeers))
+            let stateContext = ShareWithPeersScreen.StateContext(context: context, subject: .stories(editing: true), initialPeerIds: Set(privacy.additionallyIncludePeers))
             let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
                 guard let self else {
                     return
@@ -2595,9 +2595,8 @@ public final class StoryItemSetContainerComponent: Component {
                 let controller = ShareWithPeersScreen(
                     context: context,
                     initialPrivacy: privacy,
-                    timeout: 86400,
                     stateContext: stateContext,
-                    completion: { [weak self] privacy in
+                    completion: { [weak self] privacy, _, _ in
                         guard let self, let component = self.component else {
                             return
                         }
@@ -2606,7 +2605,7 @@ public final class StoryItemSetContainerComponent: Component {
                         self.privacyController = nil
                         self.updateIsProgressPaused()
                     },
-                    editCategory: { [weak self] privacy in
+                    editCategory: { [weak self] privacy, _, _ in
                         guard let self else {
                             return
                         }
@@ -2644,9 +2643,8 @@ public final class StoryItemSetContainerComponent: Component {
                 let controller = ShareWithPeersScreen(
                     context: context,
                     initialPrivacy: privacy,
-                    timeout: 86400,
                     stateContext: stateContext,
-                    completion: { result in
+                    completion: { result, _, _ in
                         if case .closeFriends = privacy.base {
                             let _ = context.engine.privacy.updateCloseFriends(peerIds: result.additionallyIncludePeers).start()
                             completion(EngineStoryPrivacy(base: .closeFriends, additionallyIncludePeers: []))
@@ -2654,7 +2652,7 @@ public final class StoryItemSetContainerComponent: Component {
                             completion(result)
                         }
                     },
-                    editCategory: { _ in }
+                    editCategory: { _, _, _ in }
                 )
                 controller.dismissed = { [weak self] in
                     if let self {

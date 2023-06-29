@@ -342,8 +342,8 @@ private func verticesData(
     }
     
     let relativeSize = CGSize(
-        width: size.width / containerSize.width,
-        height: size.height / containerSize.height
+        width: size.width / containerSize.width * 2.0,
+        height: size.height / containerSize.height * 2.0
     )
     let relativeOffset = CGPoint(
         x: position.x / containerSize.width,
@@ -358,24 +358,45 @@ private func verticesData(
         size: relativeSize
     )
     
+    let cosAngle = Float(cos(rotation))
+    let sinAngle = Float(sin(rotation))
+
+    let centerX = Float(rect.midX)
+    let centerY = Float(rect.midY)
+
+    let halfWidth = Float(rect.width) / 2.0
+    let halfHeight = Float(rect.height) / 2.0
+
+    let x1 = centerX + (halfWidth * cosAngle) - (halfHeight * sinAngle)
+    let y1 = centerY + (halfWidth * sinAngle) + (halfHeight * cosAngle)
+
+    let x2 = centerX - (halfWidth * cosAngle) - (halfHeight * sinAngle)
+    let y2 = centerY - (halfWidth * sinAngle) + (halfHeight * cosAngle)
+
+    let x3 = centerX + (halfWidth * cosAngle) + (halfHeight * sinAngle)
+    let y3 = centerY + (halfWidth * sinAngle) - (halfHeight * cosAngle)
+
+    let x4 = centerX - (halfWidth * cosAngle) + (halfHeight * sinAngle)
+    let y4 = centerY - (halfWidth * sinAngle) - (halfHeight * cosAngle)
+    
     return [
         VertexData(
-            pos: simd_float4(x: Float(rect.minX) * 2.0, y: Float(rect.minY) * 2.0, z: z, w: 1),
+            pos: simd_float4(x: x1, y: y1, z: z, w: 1),
             texCoord: topLeft,
             localPos: simd_float2(0.0, 0.0)
         ),
         VertexData(
-            pos: simd_float4(x: Float(rect.maxX) * 2.0, y: Float(rect.minY) * 2.0, z: z, w: 1),
+            pos: simd_float4(x: x2, y: y2, z: z, w: 1),
             texCoord: topRight,
             localPos: simd_float2(1.0, 0.0)
         ),
         VertexData(
-            pos: simd_float4(x: Float(rect.minX) * 2.0, y: Float(rect.maxY) * 2.0, z: z, w: 1),
+            pos: simd_float4(x: x3, y: y3, z: z, w: 1),
             texCoord: bottomLeft,
             localPos: simd_float2(0.0, 1.0)
         ),
         VertexData(
-            pos: simd_float4(x: Float(rect.maxX) * 2.0, y: Float(rect.maxY) * 2.0, z: z, w: 1),
+            pos: simd_float4(x: x4, y: y4, z: z, w: 1),
             texCoord: bottomRight,
             localPos: simd_float2(1.0, 1.0)
         ),

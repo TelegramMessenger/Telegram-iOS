@@ -35,6 +35,8 @@ swift_library(
         "//submodules/LocalizedPeerData",
         "//submodules/TelegramUI/Components/Stories/PeerListItemComponent",
         "//submodules/TelegramUI/Components/LottieComponent",
+        "//submodules/TelegramUI/Components/SwitchComponent",
+        "//submodules/TooltipUI",
     ],
     visibility = [
         "//visibility:public",

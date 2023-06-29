@@ -7,16 +7,16 @@ import MultilineTextComponent
 
 final class SectionHeaderComponent: Component {
     let theme: PresentationTheme
-    let sideInset: CGFloat
+    let style: ShareWithPeersScreenComponent.Style
     let title: String
     
     init(
         theme: PresentationTheme,
-        sideInset: CGFloat,
+        style: ShareWithPeersScreenComponent.Style,
         title: String
     ) {
         self.theme = theme
-        self.sideInset = sideInset
+        self.style = style
         self.title = title
     }
     
@@ -24,7 +24,7 @@ final class SectionHeaderComponent: Component {
         if lhs.theme !== rhs.theme {
             return false
         }
-        if lhs.sideInset != rhs.sideInset {
+        if lhs.style != rhs.style {
             return false
         }
         if lhs.title != rhs.title {
@@ -59,13 +59,19 @@ final class SectionHeaderComponent: Component {
             self.state = state
             
             let height: CGFloat = 28.0
-            let leftInset: CGFloat = component.sideInset
-            let rightInset: CGFloat = component.sideInset
+            let leftInset: CGFloat = 16.0
+            let rightInset: CGFloat = 0.0
             
             let previousTitleFrame = self.title.view?.frame
             
             if themeUpdated {
-                self.backgroundView.updateColor(color: component.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
+                switch component.style {
+                case .plain:
+                    self.backgroundView.isHidden = false
+                    self.backgroundView.updateColor(color: component.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
+                case .blocks:
+                    self.backgroundView.isHidden = true
+                }
             }
             
             let titleSize = self.title.update(

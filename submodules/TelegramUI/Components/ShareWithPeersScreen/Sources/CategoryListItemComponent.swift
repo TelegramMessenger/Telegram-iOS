@@ -20,7 +20,6 @@ final class CategoryListItemComponent: Component {
     
     let context: AccountContext
     let theme: PresentationTheme
-    let sideInset: CGFloat
     let title: String
     let color: ShareWithPeersScreenComponent.CategoryColor
     let iconName: String?
@@ -33,7 +32,6 @@ final class CategoryListItemComponent: Component {
     init(
         context: AccountContext,
         theme: PresentationTheme,
-        sideInset: CGFloat,
         title: String,
         color: ShareWithPeersScreenComponent.CategoryColor,
         iconName: String?,
@@ -45,7 +43,6 @@ final class CategoryListItemComponent: Component {
     ) {
         self.context = context
         self.theme = theme
-        self.sideInset = sideInset
         self.title = title
         self.color = color
         self.iconName = iconName
@@ -61,9 +58,6 @@ final class CategoryListItemComponent: Component {
             return false
         }
         if lhs.theme !== rhs.theme {
-            return false
-        }
-        if lhs.sideInset != rhs.sideInset {
             return false
         }
         if lhs.title != rhs.title {
@@ -179,11 +173,11 @@ final class CategoryListItemComponent: Component {
             
             let contextInset: CGFloat = 0.0
             
-            let height: CGFloat = 60.0
-            let verticalInset: CGFloat = 1.0
-            var leftInset: CGFloat = 62.0 + component.sideInset
-            let rightInset: CGFloat = contextInset * 2.0 + 8.0 + component.sideInset
-            var avatarLeftInset: CGFloat = component.sideInset + 10.0
+            let height: CGFloat = 56.0
+            let verticalInset: CGFloat = 0.0
+            var leftInset: CGFloat = 62.0
+            let rightInset: CGFloat = contextInset * 2.0 + 8.0
+            var avatarLeftInset: CGFloat = 10.0
             
             if case let .editing(isSelected, isTinted) = component.selectionState {
                 leftInset += 44.0
@@ -310,7 +304,7 @@ final class CategoryListItemComponent: Component {
                     labelArrowView.isUserInteractionEnabled = false
                     self.containerButton.addSubview(labelArrowView)
                 }
-                transition.setFrame(view: labelArrowView, frame: CGRect(origin: CGPoint(x: titleFrame.minX + labelSize.width + 5.0, y: titleFrame.maxY + titleSpacing + floorToScreenPixels(labelSize.height / 2.0 - labelArrowSize.height / 2.0)), size: labelArrowSize))
+                transition.setFrame(view: labelArrowView, frame: CGRect(origin: CGPoint(x: titleFrame.minX + labelSize.width + 5.0, y: titleFrame.maxY + titleSpacing + floorToScreenPixels(labelSize.height / 2.0 - labelArrowSize.height / 2.0) + 1.0 ), size: labelArrowSize))
             }
             
             if themeUpdated {
