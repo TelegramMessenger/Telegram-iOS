@@ -38,10 +38,5 @@ fragment half4 dualFragmentShader(RasterizerData in [[stage_in]],
     float side = 1.0 * aspectRatio;
     float distance = smoothstep(t, -t, sdfRoundedRectangle(uv, float2(0.0, 0.0), float2(side, mix(1.0, side, roundness)), side * roundness));
     
-    if (roundness > 0.0) {
-        return half4(in.localPos.x, 0.0, 0.0, 1.0);
-    } else {
-        
-        return mix(half4(color, 0.0), half4(color, 1.0 * alpha), distance);
-    }
+    return mix(half4(color, 0.0), half4(color, 1.0 * alpha), distance);
 }
