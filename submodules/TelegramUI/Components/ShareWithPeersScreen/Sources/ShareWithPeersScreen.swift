@@ -479,7 +479,7 @@ final class ShareWithPeersScreenComponent: Component {
                     self.dismissPanState = nil
                 
                     if translation.y > 100.0 || velocity.y > 10.0 {
-                        controller.dismiss()
+                        controller.requestDismiss()
                     } else {
                         self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
                     }

@@ -295,6 +295,10 @@ public final class MediaEditorVideoExport {
         self.configuration = configuration
         self.outputPath = outputPath
         
+        if FileManager.default.fileExists(atPath: outputPath) {
+            try? FileManager.default.removeItem(atPath: outputPath)
+        }
+        
         self.setup()
         
         let _ = NotificationCenter.default.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: nil, using: { [weak self] _ in
