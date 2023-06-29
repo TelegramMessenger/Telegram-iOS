@@ -15,7 +15,7 @@ private struct StoryKey: Hashable {
 public final class StoryContentContextImpl: StoryContentContext {
     private final class PeerContext {
         private let context: AccountContext
-        private let peerId: EnginePeer.Id
+        let peerId: EnginePeer.Id
         
         private(set) var sliceValue: StoryContentContextState.FocusedSlice?
         fileprivate var nextItems: [EngineStoryItem] = []
@@ -513,29 +513,26 @@ public final class StoryContentContextImpl: StoryContentContext {
                 } else {
                     var startedWithUnseenValue = false
                     
-                    if let (focusedPeerId, _) = self.focusedItem, focusedPeerId == self.context.account.peerId {
-                    } else {
-                        var centralIndex: Int?
-                        if let (focusedPeerId, _) = self.focusedItem {
-                            if let index = storySubscriptions.items.firstIndex(where: { $0.peer.id == focusedPeerId }) {
-                                centralIndex = index
-                            }
+                    var centralIndex: Int?
+                    if let (focusedPeerId, _) = self.focusedItem {
+                        if let index = storySubscriptions.items.firstIndex(where: { $0.peer.id == focusedPeerId }) {
+                            centralIndex = index
                         }
-                        if centralIndex == nil {
-                            if let index = storySubscriptions.items.firstIndex(where: { $0.hasUnseen }) {
-                                centralIndex = index
-                            }
+                    }
+                    if centralIndex == nil {
+                        if let index = storySubscriptions.items.firstIndex(where: { $0.hasUnseen }) {
+                            centralIndex = index
                         }
-                        if centralIndex == nil {
-                            if !storySubscriptions.items.isEmpty {
-                                centralIndex = 0
-                            }
+                    }
+                    if centralIndex == nil {
+                        if !storySubscriptions.items.isEmpty {
+                            centralIndex = 0
                         }
-                        
-                        if let centralIndex {
-                            if storySubscriptions.items[centralIndex].hasUnseen {
-                                startedWithUnseenValue = true
-                            }
+                    }
+                    
+                    if let centralIndex {
+                        if storySubscriptions.items[centralIndex].hasUnseen {
+                            startedWithUnseenValue = true
                         }
                     }
                     
@@ -585,9 +582,11 @@ public final class StoryContentContextImpl: StoryContentContext {
     }
     
     private func updatePeerContexts() {
-        if let currentState = self.currentState {
-            let _ = currentState
-        } else {
+        if let currentState = self.currentState, let storySubscriptions = self.storySubscriptions, !storySubscriptions.items.contains(where: { $0.peer.id == currentState.centralPeerContext.peerId }) {
+            self.currentState = nil
+        }
+        
+        if self.currentState == nil {
             self.switchToFocusedPeerId()
         }
     }

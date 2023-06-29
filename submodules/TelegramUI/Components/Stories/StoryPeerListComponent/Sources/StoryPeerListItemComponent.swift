@@ -269,9 +269,8 @@ public final class StoryPeerListItemComponent: Component {
     public let hasUnseenCloseFriendsItems: Bool
     public let hasItems: Bool
     public let ringAnimation: RingAnimation?
-    public let collapseFraction: CGFloat
     public let scale: CGFloat
-    public let collapsedWidth: CGFloat
+    public let fullWidth: CGFloat
     public let expandedAlphaFraction: CGFloat
     public let leftNeighborDistance: CGPoint?
     public let rightNeighborDistance: CGPoint?
@@ -287,9 +286,8 @@ public final class StoryPeerListItemComponent: Component {
         hasUnseenCloseFriendsItems: Bool,
         hasItems: Bool,
         ringAnimation: RingAnimation?,
-        collapseFraction: CGFloat,
         scale: CGFloat,
-        collapsedWidth: CGFloat,
+        fullWidth: CGFloat,
         expandedAlphaFraction: CGFloat,
         leftNeighborDistance: CGPoint?,
         rightNeighborDistance: CGPoint?,
@@ -304,9 +302,8 @@ public final class StoryPeerListItemComponent: Component {
         self.hasUnseenCloseFriendsItems = hasUnseenCloseFriendsItems
         self.hasItems = hasItems
         self.ringAnimation = ringAnimation
-        self.collapseFraction = collapseFraction
         self.scale = scale
-        self.collapsedWidth = collapsedWidth
+        self.fullWidth = fullWidth
         self.expandedAlphaFraction = expandedAlphaFraction
         self.leftNeighborDistance = leftNeighborDistance
         self.rightNeighborDistance = rightNeighborDistance
@@ -339,13 +336,10 @@ public final class StoryPeerListItemComponent: Component {
         if lhs.ringAnimation != rhs.ringAnimation {
             return false
         }
-        if lhs.collapseFraction != rhs.collapseFraction {
-            return false
-        }
         if lhs.scale != rhs.scale {
             return false
         }
-        if lhs.collapsedWidth != rhs.collapsedWidth {
+        if lhs.fullWidth != rhs.fullWidth {
             return false
         }
         if lhs.expandedAlphaFraction != rhs.expandedAlphaFraction {
@@ -526,7 +520,7 @@ public final class StoryPeerListItemComponent: Component {
             self.component = component
             self.componentState = state
             
-            let effectiveWidth: CGFloat = (1.0 - component.collapseFraction) * availableSize.width + component.collapseFraction * component.collapsedWidth
+            let effectiveWidth: CGFloat = component.scale * component.fullWidth
             
             let effectiveScale: CGFloat = component.scale
             
@@ -571,7 +565,7 @@ public final class StoryPeerListItemComponent: Component {
             } else {
                 baseLineWidth = 1.0 + UIScreenPixel
             }
-            let indicatorLineWidth: CGFloat = baseLineWidth * (1.0 - component.collapseFraction) + minimizedLineWidth * component.collapseFraction
+            let indicatorLineWidth: CGFloat = baseLineWidth * component.scale + minimizedLineWidth * (1.0 - component.scale)
             
             avatarNode.setPeer(
                 context: component.context,
@@ -643,7 +637,7 @@ public final class StoryPeerListItemComponent: Component {
             
             let baseRadius: CGFloat = 30.0
             let collapsedRadius: CGFloat = 32.0
-            let indicatorRadius: CGFloat = baseRadius * (1.0 - component.collapseFraction) + collapsedRadius * component.collapseFraction
+            let indicatorRadius: CGFloat = baseRadius * component.scale + collapsedRadius * (1.0 - component.scale)
             
             self.indicatorShapeLayer.lineWidth = indicatorLineWidth
             

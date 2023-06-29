@@ -2560,7 +2560,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     if let rawStorySubscriptions = self.rawStorySubscriptions {
                         var openCamera = false
                         if let accountItem = rawStorySubscriptions.accountItem {
-                            openCamera = accountItem.storyCount == 0
+                            openCamera = accountItem.storyCount == 0 && !accountItem.hasPending
                         } else {
                             openCamera = true
                         }
@@ -5338,11 +5338,20 @@ private final class ChatListLocationContext {
             peerStatus = .single(nil)
         }
         
+        let networkState: Signal<AccountNetworkState, NoError>
+        #if DEBUG && false
+        networkState = .single(AccountNetworkState.connecting(proxy: nil)) |> then(.single(AccountNetworkState.updating(proxy: nil)) |> delay(2.0, queue: .mainQueue())) |> then(.single(AccountNetworkState.online(proxy: nil)) |> delay(2.0, queue: .mainQueue())) |> then(.complete() |> delay(2.0, queue: .mainQueue())) |> restart
+        #elseif DEBUG && false
+        networkState = .single(AccountNetworkState.connecting(proxy: nil))
+        #else
+        networkState = context.account.networkState
+        #endif
+        
         switch location {
         case .chatList:
             if !hideNetworkActivityStatus {
                 self.titleDisposable = combineLatest(queue: .mainQueue(),
-                    context.account.networkState,
+                    networkState,
                     hasProxy,
                     passcode,
                     containerNode.currentItemState,
@@ -5354,6 +5363,7 @@ private final class ChatListLocationContext {
                     guard let self else {
                         return
                     }
+                    
                     self.updateChatList(
                         networkState: networkState,
                         proxy: proxy,

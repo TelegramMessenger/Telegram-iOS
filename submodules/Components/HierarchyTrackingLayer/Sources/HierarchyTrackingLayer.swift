@@ -22,11 +22,11 @@ open class HierarchyTrackingLayer: CALayer {
     
     override open func action(forKey event: String) -> CAAction? {
         if event == kCAOnOrderIn {
-            self.didEnterHierarchy?()
             self.isInHierarchy = true
+            self.didEnterHierarchy?()
         } else if event == kCAOnOrderOut {
-            self.didExitHierarchy?()
             self.isInHierarchy = false
+            self.didExitHierarchy?()
         }
         return nullAction
     }

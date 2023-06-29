@@ -981,9 +981,18 @@ public final class StoryItemSetContainerComponent: Component {
                     return true
                 }
             } else {
-                if let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View {
-                    inputPanelView.activateInput()
-                    return false
+                var canReply = true
+                if component.slice.peer.isService {
+                    canReply = false
+                } else if case .unsupported = component.slice.item.storyItem.media {
+                    canReply = false
+                }
+                
+                if canReply {
+                    if let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View {
+                        inputPanelView.activateInput()
+                        return false
+                    }
                 }
             }
             return false

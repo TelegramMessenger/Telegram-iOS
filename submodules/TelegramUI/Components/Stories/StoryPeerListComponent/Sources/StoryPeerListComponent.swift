@@ -240,10 +240,50 @@ public final class StoryPeerListComponent: Component {
         }
     }
     
+    private final class TitleAnimationState {
+        let duration: Double
+        let startTime: Double
+        let fromFraction: CGFloat
+        let toFraction: CGFloat
+        let imageView: UIImageView
+        
+        init(
+            duration: Double,
+            startTime: Double,
+            fromFraction: CGFloat,
+            toFraction: CGFloat,
+            imageView: UIImageView
+        ) {
+            self.duration = duration
+            self.startTime = startTime
+            self.fromFraction = fromFraction
+            self.toFraction = toFraction
+            self.imageView = imageView
+        }
+        
+        func interpolatedFraction(at timestamp: Double, effectiveFromFraction: CGFloat, toFraction: CGFloat) -> CGFloat {
+            var rawProgress = CGFloat((timestamp - self.startTime) / self.duration)
+            rawProgress = max(0.0, min(1.0, rawProgress))
+            let progress = listViewAnimationCurveSystem(rawProgress)
+            
+            return effectiveFromFraction * (1.0 - progress) + toFraction * progress
+        }
+        
+        func isFinished(at timestamp: Double) -> Bool {
+            if timestamp > self.startTime + self.duration {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
     private final class AnimationState {
         let duration: Double
         let fromIsUnlocked: Bool
         let fromFraction: CGFloat
+        let fromTitleWidth: CGFloat
+        let fromActivityFraction: CGFloat
         let startTime: Double
         let bounce: Bool
         
@@ -251,12 +291,16 @@ public final class StoryPeerListComponent: Component {
             duration: Double,
             fromIsUnlocked: Bool,
             fromFraction: CGFloat,
+            fromTitleWidth: CGFloat,
+            fromActivityFraction: CGFloat,
             startTime: Double,
             bounce: Bool
         ) {
             self.duration = duration
             self.fromIsUnlocked = fromIsUnlocked
             self.fromFraction = fromFraction
+            self.fromTitleWidth = fromTitleWidth
+            self.fromActivityFraction = fromActivityFraction
             self.startTime = startTime
             self.bounce = bounce
         }
@@ -278,6 +322,14 @@ public final class StoryPeerListComponent: Component {
         }
     }
     
+    private struct TitleState: Equatable {
+        var text: String
+        
+        init(text: String) {
+            self.text = text
+        }
+    }
+    
     public final class View: UIView, UIScrollViewDelegate {
         private let collapsedButton: HighlightableButton
         private let scrollView: ScrollView
@@ -292,7 +344,13 @@ public final class StoryPeerListComponent: Component {
         private var visibleCollapsableItems: [EnginePeer.Id: VisibleItem] = [:]
         
         private var titleIndicatorView: ComponentView<Empty>?
-        private let titleView = ComponentView<Empty>()
+        
+        private let titleView: UIImageView
+        private var titleState: TitleState?
+        private var titleViewAnimation: TitleAnimationState?
+        
+        private var disappearingTitleViews: [TitleAnimationState] = []
+        
         private var titleIconView: ComponentView<Empty>?
         
         private var component: StoryPeerListComponent?
@@ -308,6 +366,8 @@ public final class StoryPeerListComponent: Component {
         private var animator: ConstantDisplayLinkAnimator?
         
         private var currentFraction: CGFloat = 0.0
+        private var currentTitleWidth: CGFloat = 0.0
+        private var currentActivityFraction: CGFloat = 0.0
         
         public override init(frame: CGRect) {
             self.collapsedButton = HighlightableButton()
@@ -325,6 +385,9 @@ public final class StoryPeerListComponent: Component {
             
             self.scrollContainerView = UIView()
             
+            self.titleView = UIImageView()
+            self.titleView.layer.anchorPoint = CGPoint(x: 0.0, y: 0.5)
+            
             super.init(frame: frame)
             
             self.scrollView.delegate = self
@@ -333,6 +396,7 @@ public final class StoryPeerListComponent: Component {
             self.addSubview(self.scrollView)
             self.addSubview(self.scrollContainerView)
             self.addSubview(self.collapsedButton)
+            self.addSubview(self.titleView)
             
             self.collapsedButton.highligthedChanged = { [weak self] highlighted in
                 guard let self else {
@@ -438,41 +502,10 @@ public final class StoryPeerListComponent: Component {
             let titleIconSpacing: CGFloat = 4.0
             let titleIndicatorSpacing: CGFloat = 8.0
             
-            var titleContentWidth: CGFloat = 0.0
+            var realTitleContentWidth: CGFloat = 0.0
             
-            var titleIndicatorSize: CGSize?
-            if component.titleHasActivity {
-                let titleIndicatorView: ComponentView<Empty>
-                if let current = self.titleIndicatorView {
-                    titleIndicatorView = current
-                } else {
-                    titleIndicatorView = ComponentView()
-                    self.titleIndicatorView = titleIndicatorView
-                }
-                let titleIndicatorSizeValue = titleIndicatorView.update(
-                    transition: .immediate,
-                    component: AnyComponent(TitleActivityIndicatorComponent(
-                        color: component.theme.rootController.navigationBar.accentTextColor
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: 22.0, height: 22.0)
-                )
-                titleIndicatorSize = titleIndicatorSizeValue
-                titleContentWidth += titleIndicatorSizeValue.width + titleIndicatorSpacing
-            } else {
-                if let titleIndicatorView = self.titleIndicatorView {
-                    self.titleIndicatorView = nil
-                    titleIndicatorView.view?.removeFromSuperview()
-                }
-            }
-            
-            let titleSize = self.titleView.update(
-                transition: .immediate,
-                component: AnyComponent(Text(text: component.title, font: Font.semibold(17.0), color: component.theme.rootController.navigationBar.primaryTextColor)),
-                environment: {},
-                containerSize: CGSize(width: 200.0, height: 100.0)
-            )
-            titleContentWidth += titleSize.width
+            let titleSize = self.titleView.image?.size ?? CGSize()
+            realTitleContentWidth += titleSize.width
             
             var titleIconSize: CGSize?
             if let peerStatus = component.titlePeerStatus {
@@ -523,12 +556,8 @@ public final class StoryPeerListComponent: Component {
                 
                 titleIconSize = titleIconSizeValue
                 
-                if let titleIconComponentView = titleIconView.view {
-                    titleIconComponentView.isHidden = component.titleHasActivity
-                }
-                
                 if !component.titleHasActivity {
-                    titleContentWidth += titleIconSpacing + titleIconSizeValue.width
+                    realTitleContentWidth += titleIconSpacing + titleIconSizeValue.width
                 }
             } else {
                 if let titleIconView = self.titleIconView {
@@ -552,50 +581,14 @@ public final class StoryPeerListComponent: Component {
                 collapseStartIndex = 1
             }
             
-            let collapsedItemWidth: CGFloat = 24.0
-            let collapsedItemDistance: CGFloat = 14.0
-            let collapsedItemCount: CGFloat = CGFloat(min(self.sortedItems.count - collapseStartIndex, 3))
-            var collapsedContentWidth: CGFloat = 0.0
-            if collapsedItemCount > 0 {
-                collapsedContentWidth = 1.0 * collapsedItemWidth + (collapsedItemDistance) * max(0.0, collapsedItemCount - 1.0)
-            }
-            
-            let collapseEndIndex = collapseStartIndex + max(0, Int(collapsedItemCount) - 1)
-            
-            var collapsedContentOrigin: CGFloat
-            let collapsedItemOffsetY: CGFloat
-            
-            let titleContentSpacing: CGFloat = 8.0
-            var combinedTitleContentWidth = titleContentWidth
-            if !combinedTitleContentWidth.isZero {
-                combinedTitleContentWidth += titleContentSpacing
-            }
-            
-            let centralContentWidth: CGFloat
-            centralContentWidth = collapsedContentWidth + combinedTitleContentWidth
-            
-            collapsedContentOrigin = floor((itemLayout.containerSize.width - centralContentWidth) * 0.5)
-            
-            if component.titleHasActivity {
-                collapsedContentOrigin -= (collapsedContentWidth + titleContentSpacing) * 0.5
-            }
-            
-            collapsedContentOrigin = min(collapsedContentOrigin, component.maxTitleX - centralContentWidth - 4.0)
-            
-            var collapsedContentOriginOffset: CGFloat = 0.0
-            
-            if itemLayout.itemCount == 1 && collapsedContentWidth <= 0.1 {
-                collapsedContentOriginOffset += 4.0
-            }
-            collapsedContentOrigin -= collapsedContentOriginOffset
-            collapsedItemOffsetY = -59.0
-            
             struct CollapseState {
                 var globalFraction: CGFloat
                 var scaleFraction: CGFloat
                 var minFraction: CGFloat
                 var maxFraction: CGFloat
                 var sideAlphaFraction: CGFloat
+                var titleWidth: CGFloat
+                var activityFraction: CGFloat
             }
             
             let targetExpandedFraction = component.collapseFraction
@@ -618,6 +611,17 @@ public final class StoryPeerListComponent: Component {
                 targetMaxFraction = 0.0
                 targetSideAlphaFraction = 0.0
             }
+            
+            let collapsedItemWidth: CGFloat = 24.0
+            let collapsedItemDistance: CGFloat = 14.0
+            let collapsedItemOffsetY: CGFloat = -60.0
+            let titleContentSpacing: CGFloat = 8.0
+            
+            let collapsedItemCount: CGFloat = CGFloat(min(self.sortedItems.count - collapseStartIndex, 3))
+            
+            let targetActivityFraction: CGFloat = component.titleHasActivity ? 1.0 : 0.0
+            
+            let timestamp = CACurrentMediaTime()
             
             let collapsedState: CollapseState
             let expandBoundsFraction: CGFloat
@@ -646,20 +650,22 @@ public final class StoryPeerListComponent: Component {
                     effectiveFromSideAlphaFraction = 0.0
                 }
                 
-                let timestamp = CACurrentMediaTime()
-                
                 let animatedGlobalFraction = animationState.interpolatedFraction(at: timestamp, effectiveFromFraction: animationState.fromFraction, toFraction: targetFraction)
                 let animatedScaleFraction = animationState.interpolatedFraction(at: timestamp, effectiveFromFraction: effectiveFromScaleFraction, toFraction: targetScaleFraction)
                 let animatedMinFraction = animationState.interpolatedFraction(at: timestamp, effectiveFromFraction: effectiveFromMinFraction, toFraction: targetMinFraction)
                 let animatedMaxFraction = animationState.interpolatedFraction(at: timestamp, effectiveFromFraction: effectiveFromMaxFraction, toFraction: targetMaxFraction)
                 let animatedSideAlphaFraction = animationState.interpolatedFraction(at: timestamp, effectiveFromFraction: effectiveFromSideAlphaFraction, toFraction: targetSideAlphaFraction)
+                let animatedTitleWidth = animationState.interpolatedFraction(at: timestamp, effectiveFromFraction: animationState.fromTitleWidth, toFraction: realTitleContentWidth)
+                let animatedActivityFraction = animationState.interpolatedFraction(at: timestamp, effectiveFromFraction: animationState.fromActivityFraction, toFraction: targetActivityFraction)
                 
                 collapsedState = CollapseState(
                     globalFraction: animatedGlobalFraction,
                     scaleFraction: animatedScaleFraction,
                     minFraction: animatedMinFraction,
                     maxFraction: animatedMaxFraction,
-                    sideAlphaFraction: animatedSideAlphaFraction
+                    sideAlphaFraction: animatedSideAlphaFraction,
+                    titleWidth: animatedTitleWidth,
+                    activityFraction: animatedActivityFraction
                 )
                 
                 var rawProgress = CGFloat((timestamp - animationState.startTime) / animationState.duration)
@@ -676,14 +682,36 @@ public final class StoryPeerListComponent: Component {
                     scaleFraction: targetScaleFraction,
                     minFraction: targetMinFraction,
                     maxFraction: targetMaxFraction,
-                    sideAlphaFraction: targetSideAlphaFraction
+                    sideAlphaFraction: targetSideAlphaFraction,
+                    titleWidth: realTitleContentWidth,
+                    activityFraction: targetActivityFraction
                 )
                 expandBoundsFraction = 0.0
             }
             
-            self.currentFraction = collapsedState.globalFraction
+            var targetCollapsedContentWidth: CGFloat = 0.0
+            if collapsedItemCount > 0 {
+                targetCollapsedContentWidth = 1.0 * collapsedItemWidth + (collapsedItemDistance) * max(0.0, collapsedItemCount - 1.0)
+            }
+            let activityCollapsedContentWidth: CGFloat = 16.0 + titleIndicatorSpacing
+            let collapsedContentWidth = activityCollapsedContentWidth * collapsedState.activityFraction + targetCollapsedContentWidth * (1.0 - collapsedState.activityFraction)
             
-            component.externalState.collapsedWidth = collapsedContentWidth
+            let collapseEndIndex = collapseStartIndex + max(0, Int(collapsedItemCount) - 1)
+            
+            var collapsedContentOrigin: CGFloat
+            
+            let centralContentWidth: CGFloat = collapsedContentWidth + titleContentSpacing + collapsedState.titleWidth
+            
+            collapsedContentOrigin = floor((itemLayout.containerSize.width - centralContentWidth) * 0.5)
+            
+            collapsedContentOrigin = min(collapsedContentOrigin, component.maxTitleX - centralContentWidth - 4.0)
+            
+            let collapsedContentOriginOffset: CGFloat = 0.0
+            collapsedContentOrigin -= collapsedContentOriginOffset
+            
+            self.currentFraction = collapsedState.globalFraction
+            self.currentTitleWidth = collapsedState.titleWidth
+            self.currentActivityFraction = collapsedState.activityFraction
             
             let effectiveVisibleBounds = self.scrollView.bounds
             let visibleBounds = effectiveVisibleBounds.insetBy(dx: -200.0, dy: 0.0)
@@ -697,6 +725,8 @@ public final class StoryPeerListComponent: Component {
                     break
                 }
             }
+            
+            let expandedItemWidth: CGFloat = 60.0
             
             struct MeasuredItem {
                 var itemFrame: CGRect
@@ -712,10 +742,8 @@ public final class StoryPeerListComponent: Component {
                 let collapsedItemX: CGFloat
                 if collapseIndex < collapseStartIndex {
                     collapsedItemX = collapsedContentOrigin
-                } else if collapseIndex > collapseEndIndex {
-                    collapsedItemX = collapsedContentOrigin + CGFloat(collapseEndIndex) * collapsedItemDistance - collapsedItemWidth * 0.5
                 } else {
-                    collapsedItemX = collapsedContentOrigin + CGFloat(collapseIndex - collapseStartIndex) * collapsedItemDistance
+                    collapsedItemX = collapsedContentOrigin + CGFloat(min(collapseIndex - collapseStartIndex, collapseEndIndex - collapseStartIndex)) * collapsedItemDistance * (1.0 - collapsedState.activityFraction) * (1.0 - collapsedState.maxFraction)
                 }
                 let collapsedItemFrame = CGRect(origin: CGPoint(x: collapsedItemX, y: regularItemFrame.minY + collapsedItemOffsetY), size: CGSize(width: collapsedItemWidth, height: regularItemFrame.height))
                 
@@ -730,12 +758,15 @@ public final class StoryPeerListComponent: Component {
                     collapsedMaxItemFrame.origin.y += collapsedState.minFraction * 10.0
                 }
                 
-                let minimizedItemScale: CGFloat = 24.0 / 52.0
+                let minimizedDefaultItemScale: CGFloat = 24.0 / 52.0
+                let minimizedItemScale = minimizedDefaultItemScale
+                
                 let minimizedMaxItemScale: CGFloat = (24.0 + 4.0) / 52.0
                 
                 let maximizedItemScale: CGFloat = 1.0
                 
-                let minItemScale = minimizedItemScale.interpolate(to: minimizedMaxItemScale, amount: collapsedState.minFraction)
+                let minItemScale: CGFloat = minimizedItemScale.interpolate(to: minimizedMaxItemScale, amount: collapsedState.minFraction) * (1.0 - collapsedState.activityFraction) + 0.1 * collapsedState.activityFraction
+                
                 let itemScale: CGFloat = minItemScale.interpolate(to: maximizedItemScale, amount: collapsedState.maxFraction)
                 
                 let itemFrame: CGRect
@@ -787,7 +818,8 @@ public final class StoryPeerListComponent: Component {
                     continue
                 }
                 
-                let isReallyVisible = effectiveVisibleBounds.intersects(regularItemFrame)
+                //let isReallyVisible = effectiveVisibleBounds.intersects(regularItemFrame)
+                //let _ = isReallyVisible
                 
                 validIds.append(itemSet.peer.id)
                 
@@ -845,11 +877,7 @@ public final class StoryPeerListComponent: Component {
                         rightItemFrame = calculateItem(i + 1).itemFrame
                     }
                     
-                    if effectiveFirstVisibleIndex == 0 && !component.titleHasActivity {
-                        itemAlpha = 1.0
-                    } else {
-                        itemAlpha = collapsedState.sideAlphaFraction
-                    }
+                    itemAlpha = collapsedState.sideAlphaFraction * 1.0 + (1.0 - collapsedState.sideAlphaFraction) * (1.0 - collapsedState.activityFraction)
                 } else {
                     if itemLayout.itemCount == 1 {
                         itemAlpha = min(1.0, (collapsedState.minFraction + collapsedState.maxFraction) * 4.0)
@@ -879,9 +907,8 @@ public final class StoryPeerListComponent: Component {
                         hasUnseenCloseFriendsItems: hasUnseenCloseFriendsItems,
                         hasItems: hasItems,
                         ringAnimation: itemRingAnimation,
-                        collapseFraction: isReallyVisible ? (1.0 - collapsedState.maxFraction) : 0.0,
                         scale: itemScale,
-                        collapsedWidth: collapsedItemWidth,
+                        fullWidth: expandedItemWidth,
                         expandedAlphaFraction: collapsedState.sideAlphaFraction,
                         leftNeighborDistance: leftNeighborDistance,
                         rightNeighborDistance: rightNeighborDistance,
@@ -967,11 +994,7 @@ public final class StoryPeerListComponent: Component {
                 
                 var itemAlpha: CGFloat = 1.0
                 var isCollapsable: Bool = false
-                var itemScale = measuredItem.itemScale
-                if itemLayout.itemCount == 1 {
-                    let singleScaleFactor = min(1.0, collapsedState.minFraction + collapsedState.maxFraction)
-                    itemScale = 0.001 * (1.0 - singleScaleFactor) + itemScale * singleScaleFactor
-                }
+                let itemScale = measuredItem.itemScale
                 
                 if i >= collapseStartIndex && i <= collapseEndIndex {
                     isCollapsable = true
@@ -983,21 +1006,9 @@ public final class StoryPeerListComponent: Component {
                         rightItemFrame = calculateItem(collapseIndex + 1).itemFrame
                     }
                     
-                    if effectiveFirstVisibleIndex == 0 {
-                        itemAlpha = 0.0
-                    } else {
-                        itemAlpha = 1.0 - collapsedState.sideAlphaFraction
-                    }
+                    itemAlpha = (1.0 - collapsedState.sideAlphaFraction) * (1.0 - collapsedState.activityFraction)
                 } else {
-                    if itemLayout.itemCount == 1 {
-                        itemAlpha = min(1.0, (collapsedState.minFraction + collapsedState.maxFraction) * 4.0)
-                    } else {
-                        itemAlpha = collapsedState.sideAlphaFraction
-                    }
-                }
-                
-                if component.titleHasActivity {
-                    itemAlpha = 0.0
+                    itemAlpha = collapsedState.sideAlphaFraction
                 }
                 
                 var leftNeighborDistance: CGPoint?
@@ -1021,9 +1032,8 @@ public final class StoryPeerListComponent: Component {
                         hasUnseenCloseFriendsItems: hasUnseenCloseFriendsItems,
                         hasItems: hasItems,
                         ringAnimation: itemRingAnimation,
-                        collapseFraction: 1.0 - collapsedState.maxFraction,
                         scale: itemScale,
-                        collapsedWidth: collapsedItemWidth,
+                        fullWidth: expandedItemWidth,
                         expandedAlphaFraction: collapsedState.sideAlphaFraction,
                         leftNeighborDistance: leftNeighborDistance,
                         rightNeighborDistance: rightNeighborDistance,
@@ -1093,46 +1103,110 @@ public final class StoryPeerListComponent: Component {
             
             let defaultCollapsedTitleOffset: CGFloat = 0.0
             
-            var targetCollapsedTitleOffset: CGFloat = collapsedContentOrigin + collapsedContentOriginOffset + collapsedContentWidth + titleContentSpacing
-            if itemLayout.itemCount == 1 && collapsedContentWidth <= 0.1 {
-                let singleScaleFactor = min(1.0, collapsedState.minFraction)
-                targetCollapsedTitleOffset += singleScaleFactor * 4.0
-            }
+            let targetCollapsedTitleOffset: CGFloat = collapsedContentOrigin + collapsedContentOriginOffset + collapsedContentWidth + titleContentSpacing
             
             let collapsedTitleOffset = targetCollapsedTitleOffset - defaultCollapsedTitleOffset
             
-            let titleMinContentOffset: CGFloat = collapsedTitleOffset.interpolate(to: collapsedTitleOffset + 12.0, amount: collapsedState.minFraction)
-            var titleContentOffset: CGFloat = titleMinContentOffset.interpolate(to: floor((itemLayout.containerSize.width - titleContentWidth) * 0.5) as CGFloat, amount: collapsedState.maxFraction)
+            let titleMinContentOffset: CGFloat = collapsedTitleOffset.interpolate(to: collapsedTitleOffset + 12.0, amount: collapsedState.minFraction * (1.0 - collapsedState.activityFraction))
+            var titleContentOffset: CGFloat = titleMinContentOffset.interpolate(to: floor((itemLayout.containerSize.width - collapsedState.titleWidth) * 0.5) as CGFloat, amount: collapsedState.maxFraction * (1.0 - collapsedState.activityFraction))
+            
+            var titleIndicatorSize: CGSize?
+            if collapsedState.activityFraction != 0.0 {
+                let collapsedItemMinX = collapsedContentOrigin - collapsedItemWidth * 0.5
+                let collapsedItemMaxX = collapsedContentOrigin + CGFloat(collapseEndIndex - collapseStartIndex) * collapsedItemDistance * (1.0 - collapsedState.activityFraction) * (1.0 - collapsedState.sideAlphaFraction) + collapsedItemWidth * 0.5
+                let collapsedContentWidth = max(collapsedItemWidth, collapsedItemMaxX - collapsedItemMinX)
+                
+                let titleIndicatorView: ComponentView<Empty>
+                if let current = self.titleIndicatorView {
+                    titleIndicatorView = current
+                } else {
+                    titleIndicatorView = ComponentView()
+                    self.titleIndicatorView = titleIndicatorView
+                }
+                let titleIndicatorSizeValue = titleIndicatorView.update(
+                    transition: .immediate,
+                    component: AnyComponent(TitleActivityIndicatorComponent(
+                        color: component.theme.rootController.navigationBar.accentTextColor
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: collapsedContentWidth - 2.0, height: collapsedItemWidth - 2.0)
+                )
+                titleIndicatorSize = titleIndicatorSizeValue
+            } else if let titleIndicatorView = self.titleIndicatorView {
+                self.titleIndicatorView = nil
+                titleIndicatorView.view?.removeFromSuperview()
+            }
             
             if let titleIndicatorSize, let titleIndicatorView = self.titleIndicatorView?.view {
-                let titleIndicatorFrame = CGRect(origin: CGPoint(x: titleContentOffset, y: collapsedItemOffsetY + 1.0 + floor((56.0 - titleIndicatorSize.height) * 0.5)), size: titleIndicatorSize)
+                let titleIndicatorFrame = CGRect(origin: CGPoint(x: titleContentOffset - titleIndicatorSize.width - 9.0, y: collapsedItemOffsetY + 2.0 + floor((56.0 - titleIndicatorSize.height) * 0.5)), size: titleIndicatorSize)
                 if titleIndicatorView.superview == nil {
                     self.addSubview(titleIndicatorView)
                 }
-                titleIndicatorView.frame = titleIndicatorFrame
-                titleContentOffset += titleIndicatorSize.width + titleIndicatorSpacing
+                titleIndicatorView.center = titleIndicatorFrame.center
+                titleIndicatorView.bounds = CGRect(origin: CGPoint(), size: titleIndicatorFrame.size)
+                
+                var indicatorMinScale: CGFloat = collapsedState.sideAlphaFraction * 0.1 + (1.0 - collapsedState.sideAlphaFraction) * 1.0
+                if collapsedItemCount == 0 {
+                    indicatorMinScale = 0.1
+                }
+                
+                let indicatorScale: CGFloat = collapsedState.activityFraction * 1.0 + (1.0 - collapsedState.activityFraction) * indicatorMinScale
+                let indicatorAlpha: CGFloat = collapsedState.activityFraction
+                titleIndicatorView.layer.transform = CATransform3DMakeScale(indicatorScale, indicatorScale, 1.0)
+                titleIndicatorView.alpha = indicatorAlpha
             }
             
-            let titleFrame = CGRect(origin: CGPoint(x: titleContentOffset, y: collapsedItemOffsetY + 1.0 + floor((56.0 - titleSize.height) * 0.5)), size: titleSize)
-            if let titleComponentView = self.titleView.view {
-                if titleComponentView.superview == nil {
-                    titleComponentView.isUserInteractionEnabled = false
-                    self.addSubview(titleComponentView)
+            let titleFrame = CGRect(origin: CGPoint(x: titleContentOffset, y: collapsedItemOffsetY + 2.0 + floor((56.0 - titleSize.height) * 0.5)), size: titleSize)
+            if let image = self.titleView.image {
+                self.titleView.center = CGPoint(x: titleFrame.minX, y: titleFrame.midY)
+                self.titleView.bounds = CGRect(origin: CGPoint(), size: image.size)
+                
+                let titleFraction: CGFloat
+                if let titleViewAnimation = self.titleViewAnimation {
+                    titleFraction = titleViewAnimation.interpolatedFraction(at: timestamp, effectiveFromFraction: titleViewAnimation.fromFraction, toFraction: titleViewAnimation.toFraction)
+                } else {
+                    titleFraction = 1.0
                 }
-                titleComponentView.frame = titleFrame
+                
+                self.titleView.alpha = titleFraction
+                
+                let titleScale: CGFloat = titleFraction * 1.0 + (1.0 - titleFraction) * 0.3
+                self.titleView.layer.transform = CATransform3DMakeScale(titleScale, titleScale, 1.0)
             }
-            titleContentOffset += titleSize.width
+            
+            for disappearingTitleView in self.disappearingTitleViews {
+                if let image = disappearingTitleView.imageView.image {
+                    disappearingTitleView.imageView.center = CGPoint(x: titleFrame.minX, y: titleFrame.midY)
+                    disappearingTitleView.imageView.bounds = CGRect(origin: CGPoint(), size: image.size)
+                    
+                    let titleFraction = disappearingTitleView.interpolatedFraction(at: timestamp, effectiveFromFraction: disappearingTitleView.fromFraction, toFraction: disappearingTitleView.toFraction)
+                    
+                    disappearingTitleView.imageView.alpha = titleFraction
+                    
+                    let titleScale: CGFloat = titleFraction * 1.0 + (1.0 - titleFraction) * 0.3
+                    disappearingTitleView.imageView.layer.transform = CATransform3DMakeScale(titleScale, titleScale, 1.0)
+                }
+            }
             
             if let titleIconSize, let titleIconView = self.titleIconView?.view {
                 titleContentOffset += titleIconSpacing
                 
-                let titleIconFrame = CGRect(origin: CGPoint(x: titleContentOffset, y: collapsedItemOffsetY + 1.0 + floor((56.0 - titleIconSize.height) * 0.5)), size: titleIconSize)
+                let titleIconFrame = CGRect(origin: CGPoint(x: titleContentOffset + titleIconSpacing + (collapsedState.titleWidth - (titleIconSpacing + titleIconSize.width)) * (1.0 - collapsedState.activityFraction), y: collapsedItemOffsetY + 2.0 + floor((56.0 - titleIconSize.height) * 0.5)), size: titleIconSize)
                 
                 if titleIconView.superview == nil {
                     self.addSubview(titleIconView)
                 }
-                titleIconView.frame = titleIconFrame
+                titleIconView.center = titleIconFrame.center
+                titleIconView.bounds = CGRect(origin: CGPoint(), size: titleIconFrame.size)
+                
+                let titleIconFraction = 1.0 - collapsedState.activityFraction
+                let titleIconAlpha: CGFloat = titleIconFraction
+                let titleIconScale: CGFloat = titleIconFraction * 1.0 + (1.0 - titleIconFraction) * 0.1
+                titleIconView.alpha = titleIconAlpha
+                titleIconView.layer.transform = CATransform3DMakeScale(titleIconScale, titleIconScale, 1.0)
             }
+            
+            titleContentOffset += collapsedState.titleWidth
         }
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -1179,7 +1253,10 @@ public final class StoryPeerListComponent: Component {
                 useAnimation = true
             } else if let animationHint, animationHint.allowAvatarsExpansionUpdated {
                 useAnimation = true
+            } else if let previousComponent = self.component, (component.title != previousComponent.title || component.titleHasActivity != previousComponent.titleHasActivity) {
+                useAnimation = true
             }
+            
             if let animationHint, animationHint.disableAnimations {
                 useAnimation = false
                 self.animationState = nil
@@ -1195,7 +1272,48 @@ public final class StoryPeerListComponent: Component {
                 } else {
                     duration = 0.25
                 }
-                self.animationState = AnimationState(duration: duration * UIView.animationDurationFactor(), fromIsUnlocked: previousComponent.unlocked, fromFraction: self.currentFraction, startTime: timestamp, bounce: animationHint?.bounce ?? true)
+                
+                if useAnimation, let previousComponent = self.component, component.title != previousComponent.title, self.titleView.image != nil {
+                    var fromFraction: CGFloat = 1.0
+                    if let titleViewAnimation = self.titleViewAnimation {
+                        fromFraction = titleViewAnimation.interpolatedFraction(
+                            at: timestamp,
+                            effectiveFromFraction: titleViewAnimation.fromFraction,
+                            toFraction: titleViewAnimation.toFraction
+                        )
+                    }
+                    
+                    if let previousImage = self.titleView.image {
+                        let previousImageView = UIImageView(image: previousImage)
+                        previousImageView.layer.anchorPoint = self.titleView.layer.anchorPoint
+                        self.disappearingTitleViews.append(TitleAnimationState(
+                            duration: duration,
+                            startTime: timestamp,
+                            fromFraction: fromFraction,
+                            toFraction: 0.0,
+                            imageView: previousImageView
+                        ))
+                        self.insertSubview(previousImageView, belowSubview: self.titleView)
+                    }
+                    
+                    self.titleViewAnimation = TitleAnimationState(
+                        duration: duration * UIView.animationDurationFactor(),
+                        startTime: timestamp,
+                        fromFraction: 0.0,
+                        toFraction: 1.0,
+                        imageView: self.titleView
+                    )
+                }
+                
+                self.animationState = AnimationState(
+                    duration: duration * UIView.animationDurationFactor(),
+                    fromIsUnlocked: previousComponent.unlocked,
+                    fromFraction: self.currentFraction,
+                    fromTitleWidth: self.currentTitleWidth,
+                    fromActivityFraction: self.currentActivityFraction,
+                    startTime: timestamp,
+                    bounce: animationHint?.bounce ?? true
+                )
             }
             
             if let animationState = self.animationState {
@@ -1204,7 +1322,20 @@ public final class StoryPeerListComponent: Component {
                 }
             }
             
-            if let _ = self.animationState {
+            if let titleViewAnimation = self.titleViewAnimation {
+                if titleViewAnimation.isFinished(at: timestamp) {
+                    self.titleViewAnimation = nil
+                }
+            }
+            
+            for i in (0 ..< self.disappearingTitleViews.count).reversed() {
+                if self.disappearingTitleViews[i].isFinished(at: timestamp) {
+                    self.disappearingTitleViews[i].imageView.removeFromSuperview()
+                    self.disappearingTitleViews.remove(at: i)
+                }
+            }
+            
+            if self.animationState != nil || self.titleViewAnimation != nil || !self.disappearingTitleViews.isEmpty {
                 if self.animator == nil {
                     let animator = ConstantDisplayLinkAnimator(update: { [weak self] in
                         guard let self else {
@@ -1222,6 +1353,27 @@ public final class StoryPeerListComponent: Component {
             
             self.component = component
             self.state = state
+            
+            let updatedTitleState = TitleState(text: component.title)
+            if self.titleState != updatedTitleState {
+                self.titleState = updatedTitleState
+                
+                let attributedText = NSAttributedString(string: updatedTitleState.text, attributes: [
+                    NSAttributedString.Key.font: Font.semibold(17.0),
+                    NSAttributedString.Key.foregroundColor: component.theme.rootController.navigationBar.primaryTextColor
+                ])
+                var boundingRect = attributedText.boundingRect(with: CGSize(width: max(0.0, component.maxTitleX - component.minTitleX - 30.0), height: 100.0), options: .usesLineFragmentOrigin, context: nil)
+                boundingRect.size.width = ceil(boundingRect.size.width)
+                boundingRect.size.height = ceil(boundingRect.size.height)
+
+                let renderer = UIGraphicsImageRenderer(bounds: CGRect(origin: CGPoint(), size: boundingRect.size))
+                let image = renderer.image { context in
+                    UIGraphicsPushContext(context.cgContext)
+                    attributedText.draw(at: CGPoint())
+                    UIGraphicsPopContext()
+                }
+                self.titleView.image = image
+            }
             
             if let storySubscriptions = component.storySubscriptions, let hasMoreToken = storySubscriptions.hasMoreToken {
                 if self.requestedLoadMoreToken != hasMoreToken {
