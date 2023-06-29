@@ -518,7 +518,7 @@ public final class MediaEditorVideoExport {
                             let exportDuration = end - self.startTimestamp
                             print("video processing took \(exportDuration)s")
                             if duration.seconds > 0 {
-                                print("\(exportDuration / duration.seconds) speed")
+                                Logger.shared.log("VideoExport", "Video processing took \(exportDuration / duration.seconds)")
                             }
                         })
                     }
@@ -534,7 +534,7 @@ public final class MediaEditorVideoExport {
     
         let duration: Double = 5.0
         let frameRate: Double = Double(self.configuration.frameRate)
-        var position: CMTime = CMTime(value: 0, timescale: Int32(self.configuration.frameRate))
+        var position: CMTime = CMTime(value: 0, timescale: Int32(frameRate))
         
         var appendFailed = false
         while writer.isReadyForMoreVideoData {
@@ -542,6 +542,7 @@ public final class MediaEditorVideoExport {
                 return false
             }
             if writer.status != .writing {
+                Logger.shared.log("VideoExport", "Video finished")
                 writer.markVideoAsFinished()
                 return false
             }
@@ -552,9 +553,12 @@ public final class MediaEditorVideoExport {
             composer.processImage(inputImage: image, pool: writer.pixelBufferPool, time: position, completion: { pixelBuffer, timestamp in
                 if let pixelBuffer {
                     if !writer.appendPixelBuffer(pixelBuffer, at: timestamp) {
+                        Logger.shared.log("VideoExport", "Failed to append pixelbuffer")
                         writer.markVideoAsFinished()
                         appendFailed = true
                     }
+                } else {
+                    Logger.shared.log("VideoExport", "No pixelbuffer from composer")
                 }
                 Thread.sleep(forTimeInterval: 0.001)
                 self.semaphore.signal()
@@ -563,6 +567,7 @@ public final class MediaEditorVideoExport {
             
             position = position + CMTime(value: 1, timescale: Int32(frameRate))
             if position.seconds >= duration {
+                Logger.shared.log("VideoExport", "Video finished")
                 writer.markVideoAsFinished()
                 return false
             }

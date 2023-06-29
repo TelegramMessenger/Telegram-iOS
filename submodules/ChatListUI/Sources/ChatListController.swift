@@ -2683,7 +2683,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             }
                         })))
                         
-                        items.append(.action(ContextMenuActionItem(text: "Move to Contacts", icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: "Hide \(peer.compactDisplayTitle)", icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MoveToContacts"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
                             f(.dismissWithoutContent)
