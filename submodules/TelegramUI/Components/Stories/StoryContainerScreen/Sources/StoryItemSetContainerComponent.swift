@@ -2577,6 +2577,36 @@ public final class StoryItemSetContainerComponent: Component {
             return contentSize
         }
         
+        private func presentPrivacyTooltip(privacy: EngineStoryPrivacy) {
+            guard let component = self.component else {
+                return
+            }
+            
+            let text: String
+            if privacy.base == .contacts {
+                text = "This story is shown to all your contacts."
+            } else if privacy.base == .closeFriends {
+                text = "This story is shown to your close friends."
+            } else if privacy.base == .nobody {
+                if !privacy.additionallyIncludePeers.isEmpty {
+                    text = "This story is shown to selected contacts."
+                } else {
+                    text = "This story is shown only to you."
+                }
+            } else {
+                text = "This story is shown to everyone."
+            }
+            
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            self.component?.presentController(UndoOverlayController(
+                presentationData: presentationData,
+                content: .info(title: nil, text: text, timeout: nil),
+                elevatedLayout: false,
+                animateInAsReplacement: false,
+                action: { _ in return false }
+            ), nil)
+        }
+        
         private func openItemPrivacySettings(initialPrivacy: EngineStoryPrivacy? = nil) {
             guard let context = self.component?.context else {
                 return
@@ -2601,6 +2631,8 @@ public final class StoryItemSetContainerComponent: Component {
                             return
                         }
                         let _ = component.context.engine.messages.editStoryPrivacy(id: component.slice.item.storyItem.id, privacy: privacy).start()
+                        
+                        self.presentPrivacyTooltip(privacy: privacy)
                         
                         self.privacyController = nil
                         self.updateIsProgressPaused()
@@ -2938,6 +2970,8 @@ public final class StoryItemSetContainerComponent: Component {
             
             component.controller()?.forEachController { c in
                 if let c = c as? UndoOverlayController {
+                    c.dismiss()
+                } else if let c = c as? TooltipScreen {
                     c.dismiss()
                 }
                 return true

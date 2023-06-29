@@ -361,6 +361,12 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                             return
                         }
                         
+                        if let rootTabController = self.rootTabController {
+                            if let index = rootTabController.controllers.firstIndex(where: { $0 is ChatListController}) {
+                                rootTabController.selectedIndex = index
+                            }
+                        }
+                        
                         if let chatListController = self.chatListController as? ChatListControllerImpl {
                             chatListController.scrollToStories()
                             switch mediaResult {
