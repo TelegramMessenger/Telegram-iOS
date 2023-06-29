@@ -1308,7 +1308,7 @@ public class CameraScreen: ViewController {
                         gestureRecognizer.isEnabled = true
                     }
                 }
-            case .ended:
+            case .ended, .cancelled:
                 let velocity = gestureRecognizer.velocity(in: self.view)
                 let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
                 controller.completeWithTransitionProgress(transitionFraction, velocity: abs(velocity.x), dismissing: true)

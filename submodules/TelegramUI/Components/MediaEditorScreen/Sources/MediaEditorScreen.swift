@@ -705,9 +705,13 @@ final class MediaEditorScreenComponent: Component {
                         guard let controller = environment.controller() as? MediaEditorScreen else {
                             return
                         }
-                        controller.openPrivacySettings(completion: { [weak controller] in
-                            controller?.requestCompletion(animated: true)
-                        })
+                        if controller.isEditingStory {
+                            controller.requestCompletion(animated: true)
+                        } else {
+                            controller.openPrivacySettings(completion: { [weak controller] in
+                                controller?.requestCompletion(animated: true)
+                            })
+                        }
                     }
                 )),
                 environment: {},
