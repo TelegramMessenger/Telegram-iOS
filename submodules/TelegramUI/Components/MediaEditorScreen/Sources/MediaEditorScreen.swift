@@ -3105,6 +3105,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     initialPrivacy: initialPrivacy,
                     allowScreenshots: !privacy.isForwardingDisabled,
                     pin: privacy.pin,
+                    timeout: privacy.timeout,
                     stateContext: stateContext,
                     completion: { [weak self] privacy, allowScreenshots, pin in
                         guard let self else {

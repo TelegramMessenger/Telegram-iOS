@@ -30,6 +30,7 @@ final class ShareWithPeersScreenComponent: Component {
     let initialPrivacy: EngineStoryPrivacy
     let screenshot: Bool
     let pin: Bool
+    let timeout: Int
     let categoryItems: [CategoryItem]
     let optionItems: [OptionItem]
     let completion: (EngineStoryPrivacy, Bool, Bool) -> Void
@@ -41,6 +42,7 @@ final class ShareWithPeersScreenComponent: Component {
         initialPrivacy: EngineStoryPrivacy,
         screenshot: Bool,
         pin: Bool,
+        timeout: Int,
         categoryItems: [CategoryItem],
         optionItems: [OptionItem],
         completion: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void,
@@ -51,6 +53,7 @@ final class ShareWithPeersScreenComponent: Component {
         self.initialPrivacy = initialPrivacy
         self.screenshot = screenshot
         self.pin = pin
+        self.timeout = timeout
         self.categoryItems = categoryItems
         self.optionItems = optionItems
         self.completion = completion
@@ -71,6 +74,9 @@ final class ShareWithPeersScreenComponent: Component {
             return false
         }
         if lhs.pin != rhs.pin {
+            return false
+        }
+        if lhs.timeout != rhs.timeout {
             return false
         }
         if lhs.categoryItems != rhs.categoryItems {
@@ -254,6 +260,7 @@ final class ShareWithPeersScreenComponent: Component {
         
     final class View: UIView, UIScrollViewDelegate {
         private let dimView: UIView
+        private let containerView: UIView
         private let backgroundView: UIImageView
         
         private let navigationContainerView: UIView
@@ -312,8 +319,20 @@ final class ShareWithPeersScreenComponent: Component {
             return self.searchStateContext?.stateValue ?? self.defaultStateValue
         }
         
+        private struct DismissPanState: Equatable {
+            var translation: CGFloat
+            
+            init(translation: CGFloat) {
+                self.translation = translation
+            }
+        }
+        
+        private var dismissPanGesture: UIPanGestureRecognizer?
+        private var dismissPanState: DismissPanState?
+        
         override init(frame: CGRect) {
             self.dimView = UIView()
+            self.containerView = SparseContainerView()
             
             self.backgroundView = UIImageView()
             
@@ -339,7 +358,8 @@ final class ShareWithPeersScreenComponent: Component {
             super.init(frame: frame)
             
             self.addSubview(self.dimView)
-            self.addSubview(self.backgroundView)
+            self.addSubview(self.containerView)
+            self.containerView.addSubview(self.backgroundView)
             
             self.scrollView.delaysContentTouches = true
             self.scrollView.canCancelContentTouches = true
@@ -358,19 +378,23 @@ final class ShareWithPeersScreenComponent: Component {
             self.scrollView.delegate = self
             self.scrollView.clipsToBounds = true
             
-            self.addSubview(self.scrollContentClippingView)
+            self.containerView.addSubview(self.scrollContentClippingView)
             self.scrollContentClippingView.addSubview(self.scrollView)
             
             self.scrollView.addSubview(self.scrollContentView)
             
             self.scrollContentView.addSubview(self.itemContainerView)
             
-            self.addSubview(self.navigationContainerView)
+            self.containerView.addSubview(self.navigationContainerView)
             self.navigationContainerView.addSubview(self.navigationBackgroundView)
             self.navigationContainerView.layer.addSublayer(self.navigationSeparatorLayer)
             
-            self.addSubview(self.bottomBackgroundView)
-            self.layer.addSublayer(self.bottomSeparatorLayer)
+            self.containerView.addSubview(self.bottomBackgroundView)
+            self.containerView.layer.addSublayer(self.bottomSeparatorLayer)
+            
+            let dismissPanGesture = UIPanGestureRecognizer(target: self, action: #selector(self.dismissPanGesture(_:)))
+            self.containerView.addGestureRecognizer(dismissPanGesture)
+            self.dismissPanGesture = dismissPanGesture
             
             self.dimView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
         }
@@ -430,6 +454,38 @@ final class ShareWithPeersScreenComponent: Component {
                     return
                 }
                 controller.requestDismiss()
+            }
+        }
+        
+        @objc private func dismissPanGesture(_ recognizer: UIPanGestureRecognizer) {
+            guard let controller = self.environment?.controller() as? ShareWithPeersScreen else {
+                return
+            }
+            switch recognizer.state {
+            case .began:
+                controller.dismissAllTooltips()
+                
+                self.dismissPanState = DismissPanState(translation: 0.0)
+                self.state?.updated(transition: .immediate)
+            case .changed:
+                let translation = recognizer.translation(in: self)
+                self.dismissPanState = DismissPanState(translation: translation.y)
+                self.state?.updated(transition: .immediate)
+            case .cancelled, .ended:
+                if self.dismissPanState != nil {
+                    let translation = recognizer.translation(in: self)
+                    let velocity = recognizer.velocity(in: self)
+                    
+                    self.dismissPanState = nil
+                
+                    if translation.y > 100.0 || velocity.y > 10.0 {
+                        controller.dismiss()
+                    } else {
+                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                    }
+                }
+            default:
+                break
             }
         }
         
@@ -653,7 +709,7 @@ final class ShareWithPeersScreenComponent: Component {
                                 selectionState: .editing(isSelected: self.selectedCategories.contains(item.id), isTinted: false),
                                 hasNext: i != component.categoryItems.count - 1,
                                 action: { [weak self] in
-                                    guard let self, let environment = self.environment, let controller = environment.controller() else {
+                                    guard let self, let environment = self.environment, let controller = environment.controller() as? ShareWithPeersScreen else {
                                         return
                                     }
                                     if self.selectedCategories.contains(categoryId) {
@@ -669,13 +725,14 @@ final class ShareWithPeersScreenComponent: Component {
                                                 self.selectedOptions.contains(.screenshot),
                                                 self.selectedOptions.contains(.pin)
                                             )
+                                            controller.dismissAllTooltips()
                                             controller.dismiss()
                                         }
                                     }
                                     self.state?.updated(transition: Transition(animation: .curve(duration: 0.35, curve: .spring)))
                                 },
                                 secondaryAction: { [weak self] in
-                                    guard let self, let environment = self.environment, let controller = environment.controller() else {
+                                    guard let self, let environment = self.environment, let controller = environment.controller() as? ShareWithPeersScreen else {
                                         return
                                     }
                                     let base: EngineStoryPrivacy.Base?
@@ -695,6 +752,7 @@ final class ShareWithPeersScreenComponent: Component {
                                             self.selectedOptions.contains(.screenshot),
                                             self.selectedOptions.contains(.pin)
                                         )
+                                        controller.dismissAllTooltips()
                                         controller.dismiss()
                                     }
                                 }
@@ -856,7 +914,7 @@ final class ShareWithPeersScreenComponent: Component {
                     let footerSize = sectionFooter.update(
                         transition: sectionFooterTransition,
                         component: AnyComponent(MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: "Keep this story on your page even after it expires in \(24) hours. Privacy settings will apply.", font: Font.regular(13.0), textColor: environment.theme.list.freeTextColor)),
+                            text: .plain(NSAttributedString(string: "Keep this story on your page even after it expires in \( component.timeout / 3600 ) hours. Privacy settings will apply.", font: Font.regular(13.0), textColor: environment.theme.list.freeTextColor)),
                             maximumNumberOfLines: 0,
                             lineSpacing: 0.2
                         )),
@@ -1068,8 +1126,10 @@ final class ShareWithPeersScreenComponent: Component {
             if case .stories = component.stateContext.subject {
                 sideInset = 16.0
                 self.scrollView.bounces = false
+                self.dismissPanGesture?.isEnabled = true
             } else {
                 self.scrollView.bounces = true
+                self.dismissPanGesture?.isEnabled = false
             }
             
             let containerWidth: CGFloat
@@ -1445,7 +1505,7 @@ final class ShareWithPeersScreenComponent: Component {
                     isEnabled: true,
                     displaysProgress: false,
                     action: { [weak self] in
-                        guard let self, let component = self.component, let controller = self.environment?.controller() else {
+                        guard let self, let component = self.component, let controller = self.environment?.controller() as? ShareWithPeersScreen else {
                             return
                         }
                                                 
@@ -1471,6 +1531,7 @@ final class ShareWithPeersScreenComponent: Component {
                             self.selectedOptions.contains(.pin)
                         )
 
+                        controller.dismissAllTooltips()
                         controller.dismiss()
                     }
                 )),
@@ -1487,7 +1548,7 @@ final class ShareWithPeersScreenComponent: Component {
             let actionButtonFrame = CGRect(origin: CGPoint(x: containerSideInset + navigationSideInset, y: availableSize.height - bottomPanelHeight), size: actionButtonSize)
             if let actionButtonView = self.actionButton.view {
                 if actionButtonView.superview == nil {
-                    self.addSubview(actionButtonView)
+                    self.containerView.addSubview(actionButtonView)
                 }
                 transition.setFrame(view: actionButtonView, frame: actionButtonFrame)
             }
@@ -1513,6 +1574,12 @@ final class ShareWithPeersScreenComponent: Component {
             let scrollClippingFrame = CGRect(origin: CGPoint(x: 0.0, y: containerInset + 10.0), size: CGSize(width: availableSize.width, height: availableSize.height - 10.0))
             transition.setPosition(view: self.scrollContentClippingView, position: scrollClippingFrame.center)
             transition.setBounds(view: self.scrollContentClippingView, bounds: CGRect(origin: CGPoint(x: scrollClippingFrame.minX, y: scrollClippingFrame.minY), size: scrollClippingFrame.size))
+            
+            var dismissOffset: CGFloat = 0.0
+            if let dismissPanState = self.dismissPanState {
+                dismissOffset = max(0.0, dismissPanState.translation)
+            }
+            transition.setFrame(view: self.containerView, frame: CGRect(origin: CGPoint(x: 0.0, y: dismissOffset), size: availableSize))
             
             self.ignoreScrolling = true
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: containerSideInset, y: 0.0), size: CGSize(width: containerWidth, height: availableSize.height)))
@@ -1737,6 +1804,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         initialPrivacy: EngineStoryPrivacy,
         allowScreenshots: Bool = true,
         pin: Bool = false,
+        timeout: Int = 0,
         stateContext: StateContext,
         completion: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void,
         editCategory: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void
@@ -1813,6 +1881,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
             initialPrivacy: initialPrivacy,
             screenshot: allowScreenshots,
             pin: pin,
+            timeout: timeout,
             categoryItems: categoryItems,
             optionItems: optionItems,
             completion: completion,
@@ -1847,7 +1916,22 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         }
     }
     
+    fileprivate func dismissAllTooltips() {
+        self.window?.forEachController { controller in
+            if let controller = controller as? TooltipScreen {
+                controller.dismiss()
+            }
+        }
+        self.forEachController { controller in
+            if let controller = controller as? TooltipScreen {
+                controller.dismiss()
+            }
+            return true
+        }
+    }
+    
     func requestDismiss() {
+        self.dismissAllTooltips()
         self.dismissed()
         self.dismiss()
     }
