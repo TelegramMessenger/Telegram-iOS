@@ -583,6 +583,10 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
         case .changed:
             rotation = gestureRecognizer.rotation
             updatedRotation += rotation
+        
+            updatedRotation = self.snapTool.update(entityView: entityView, velocity: velocity, delta: rotation, updatedRotation: updatedRotation)
+            entity.rotation = updatedRotation
+            entityView.update()
             
             gestureRecognizer.rotation = 0.0
         case .ended, .cancelled:
@@ -591,11 +595,7 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
         default:
             break
         }
-        
-        updatedRotation = self.snapTool.update(entityView: entityView, velocity: velocity, delta: rotation, updatedRotation: updatedRotation)
-        entity.rotation = updatedRotation
-        entityView.update()
-        
+                
         entityView.onPositionUpdated(entity.position)
     }
     
@@ -967,9 +967,9 @@ class DrawingEntitySnapTool {
         
         let currentTimestamp = CACurrentMediaTime()
         
-        let snapDelta: CGFloat = 0.02
-        let snapVelocity: CGFloat = snapDelta * 8.0
-        let snapSkipRotation: CGFloat = snapDelta * 5.0
+        let snapDelta: CGFloat = 0.01
+        let snapVelocity: CGFloat = snapDelta * 35.0
+        let snapSkipRotation: CGFloat = snapDelta * 40.0
         
         if abs(velocity) < snapVelocity || self.rotationState?.waitForLeave == true {
             if let (snapRotation, skipped, waitForLeave) = self.rotationState {

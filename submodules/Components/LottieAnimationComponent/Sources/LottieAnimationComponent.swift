@@ -128,14 +128,21 @@ public final class LottieAnimationComponent: Component {
         }
         
         public func playOnce() {
-            guard let animationView = self.animationView else {
+            guard let animationView = self.animationView, let component = self.component else {
                 return
             }
 
             animationView.stop()
             animationView.loopMode = .playOnce
-            animationView.play { [weak self] _ in
-                self?.currentCompletion?()
+            
+            if let range = component.animation.range {
+                animationView.play(fromProgress: range.0, toProgress: range.1, completion: { [weak self] _ in
+                    self?.currentCompletion?()
+                })
+            } else {
+                animationView.play { [weak self] _ in
+                    self?.currentCompletion?()
+                }
             }
         }
         

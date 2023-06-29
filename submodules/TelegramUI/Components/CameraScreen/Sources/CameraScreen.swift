@@ -374,7 +374,12 @@ private final class CameraScreenComponent: CombinedComponent {
             self.updated(transition: .easeInOut(duration: 0.2))
         }
         
+        private var isTakingPhoto = false
         func takePhoto() {
+            guard !self.isTakingPhoto else {
+                return
+            }
+            self.isTakingPhoto = true
             let takePhoto = self.camera.takePhoto()
             |> mapToSignal { value -> Signal<CameraScreen.Result, NoError> in
                 switch value {
@@ -387,9 +392,15 @@ private final class CameraScreenComponent: CombinedComponent {
                 }
             }
             self.completion.invoke(takePhoto)
+            Queue.mainQueue().after(1.0) {
+                self.isTakingPhoto = false
+            }
         }
         
         func startVideoRecording(pressing: Bool) {
+            guard case .none = self.cameraState.recording else {
+                return
+            }
             self.cameraState = self.cameraState.updatedDuration(0.0).updatedRecording(pressing ? .holding : .handsFree)
             self.resultDisposable.set((self.camera.startRecording()
             |> deliverOnMainQueue).start(next: { [weak self] duration in
@@ -413,7 +424,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 }
             }))
             self.isTransitioning = true
-            Queue.mainQueue().after(0.8, {
+            Queue.mainQueue().after(1.25, {
                 self.isTransitioning = false
                 self.updated(transition: .immediate)
             })
@@ -469,6 +480,14 @@ private final class CameraScreenComponent: CombinedComponent {
             let smallPanelWidth = min(component.panelWidth, 88.0)
             let panelWidth = min(component.panelWidth, 185.0)
             
+            var controlsBottomInset: CGFloat = 0.0
+            if !isTablet {
+                let previewHeight = floorToScreenPixels(availableSize.width * 1.77778)
+                if availableSize.height < previewHeight + 30.0 {
+                    controlsBottomInset = -48.0
+                }
+            }
+            
             let topControlInset: CGFloat = 20.0
             if case .none = state.cameraState.recording, !state.isTransitioning {
                 let cancelButton = cancelButton.update(
@@ -493,7 +512,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     transition: .immediate
                 )
                 context.add(cancelButton
-                    .position(CGPoint(x: isTablet ? smallPanelWidth / 2.0 : topControlInset + cancelButton.size.width / 2.0, y: environment.safeInsets.top + topControlInset + cancelButton.size.height / 2.0))
+                    .position(CGPoint(x: isTablet ? smallPanelWidth / 2.0 : topControlInset + cancelButton.size.width / 2.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + cancelButton.size.height / 2.0))
                     .appear(.default(scale: true))
                     .disappear(.default(scale: true))
                 )
@@ -553,7 +572,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     transition: .immediate
                 )
                 context.add(flashButton
-                    .position(CGPoint(x: isTablet ? availableSize.width - smallPanelWidth / 2.0 : availableSize.width - topControlInset - flashButton.size.width / 2.0 - 5.0, y: environment.safeInsets.top + topControlInset + flashButton.size.height / 2.0))
+                    .position(CGPoint(x: isTablet ? availableSize.width - smallPanelWidth / 2.0 : availableSize.width - topControlInset - flashButton.size.width / 2.0 - 5.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + flashButton.size.height / 2.0))
                     .appear(.default(scale: true))
                     .disappear(.default(scale: true))
                 )
@@ -578,7 +597,7 @@ private final class CameraScreenComponent: CombinedComponent {
                         transition: .immediate
                     )
                     context.add(dualButton
-                        .position(CGPoint(x: availableSize.width - topControlInset - flashButton.size.width / 2.0 - 52.0, y: environment.safeInsets.top + topControlInset + dualButton.size.height / 2.0 + 1.0))
+                        .position(CGPoint(x: availableSize.width - topControlInset - flashButton.size.width / 2.0 - 52.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + dualButton.size.height / 2.0 + 1.0))
                         .appear(.default(scale: true))
                         .disappear(.default(scale: true))
                     )
@@ -702,7 +721,7 @@ private final class CameraScreenComponent: CombinedComponent {
             if isTablet {
                 captureControlsPosition = CGPoint(x: availableSize.width - panelWidth / 2.0, y: availableSize.height / 2.0)
             } else {
-                captureControlsPosition = CGPoint(x: availableSize.width / 2.0, y: availableSize.height - captureControls.size.height / 2.0 - environment.safeInsets.bottom - 5.0)
+                captureControlsPosition = CGPoint(x: availableSize.width / 2.0, y: availableSize.height - captureControls.size.height / 2.0 - environment.safeInsets.bottom - 5.0 + floorToScreenPixels(controlsBottomInset * 0.66))
             }
             context.add(captureControls
                 .position(captureControlsPosition)
@@ -834,7 +853,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 if isTablet {
                     modeControlPosition = CGPoint(x: availableSize.width - panelWidth / 2.0, y: availableSize.height / 2.0 + modeControl.size.height + 26.0)
                 } else {
-                    modeControlPosition = CGPoint(x: availableSize.width / 2.0, y: availableSize.height - environment.safeInsets.bottom + modeControl.size.height / 2.0)
+                    modeControlPosition = CGPoint(x: availableSize.width / 2.0, y: availableSize.height - environment.safeInsets.bottom + modeControl.size.height / 2.0 + controlsBottomInset)
                 }
                 context.add(modeControl
                     .clipsToBounds(true)
@@ -1289,7 +1308,7 @@ public class CameraScreen: ViewController {
                         gestureRecognizer.isEnabled = true
                     }
                 }
-            case .ended:
+            case .ended, .cancelled:
                 let velocity = gestureRecognizer.velocity(in: self.view)
                 let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
                 controller.completeWithTransitionProgress(transitionFraction, velocity: abs(velocity.x), dismissing: true)
@@ -1658,13 +1677,16 @@ public class CameraScreen: ViewController {
                 isTablet = false
             }
             
+            var topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
             let previewSize: CGSize
             if isTablet {
                 previewSize = CGSize(width: floorToScreenPixels(layout.size.height / 1.77778), height: layout.size.height)
             } else {
                 previewSize = CGSize(width: layout.size.width, height: floorToScreenPixels(layout.size.width * 1.77778))
+                if layout.size.height < previewSize.height + 30.0 {
+                    topInset = 0.0
+                }
             }
-            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
             let bottomInset = layout.size.height - previewSize.height - topInset
             
             let panelWidth: CGFloat
@@ -1936,10 +1958,6 @@ public class CameraScreen: ViewController {
         self.navigationPresentation = .flatModal
         
         self.requestAudioSession()
-        
-        if #available(iOS 13.0, *) {
-            try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)
-        }
     }
 
     required public init(coder: NSCoder) {
@@ -1960,7 +1978,11 @@ public class CameraScreen: ViewController {
     }
     
     private func requestAudioSession() {
-        self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .recordWithOthers, activate: { _ in }, deactivate: { _ in
+        self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .recordWithOthers, activate: { _ in
+            if #available(iOS 13.0, *) {
+                try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)
+            }
+        }, deactivate: { _ in
             return .single(Void())
         })
     }

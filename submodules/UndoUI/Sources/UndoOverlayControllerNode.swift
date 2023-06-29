@@ -1374,6 +1374,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         } else {
             self.panelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             self.panelWrapperNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            
+            self.panelNode.layer.animateScale(from: 0.96, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+            self.panelWrapperNode.layer.animateScale(from: 0.96, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
         }
         
         if let iconCheckNode = self.iconCheckNode, self.iconNode != nil {
@@ -1403,6 +1406,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.panelWrapperNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false) { _ in
             completion()
         }
+        self.panelNode.layer.animateScale(from: 1.0, to: 0.96, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+        self.panelWrapperNode.layer.animateScale(from: 1.0, to: 0.96, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
     }
     
     func animateOutWithReplacement(completion: @escaping () -> Void) {

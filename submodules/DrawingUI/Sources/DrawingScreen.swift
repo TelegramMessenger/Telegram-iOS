@@ -485,6 +485,7 @@ private let color6Tag = GenericComponentViewTag()
 private let color7Tag = GenericComponentViewTag()
 private let color8Tag = GenericComponentViewTag()
 private let colorTags = [color1Tag, color2Tag, color3Tag, color4Tag, color5Tag, color6Tag, color7Tag, color8Tag]
+private let cancelButtonTag = GenericComponentViewTag()
 private let doneButtonTag = GenericComponentViewTag()
 
 private final class DrawingScreenComponent: CombinedComponent {
@@ -2074,42 +2075,46 @@ private final class DrawingScreenComponent: CombinedComponent {
                 animatingOut = true
             }
             
-            let backButton = backButton.update(
-                component: Button(
-                    content: AnyComponent(
-                        LottieAnimationComponent(
-                            animation: LottieAnimationComponent.AnimationItem(
-                                name: "media_backToCancel",
-                                mode: .animating(loop: false),
-                                range: animatingOut || component.isAvatar ? (0.5, 1.0) : (0.0, 0.5)
-                            ),
-                            colors: ["__allcolors__": .white],
-                            size: CGSize(width: 33.0, height: 33.0)
-                        )
-                    ),
-                    action: { [weak state] in
-                        if let state = state {
-                            dismissEyedropper.invoke(Void())
-                            state.saveToolState()
-                            dismiss.invoke(Void())
+            if animatingOut && component.sourceHint == .storyEditor {
+                
+            } else {
+                let backButton = backButton.update(
+                    component: Button(
+                        content: AnyComponent(
+                            LottieAnimationComponent(
+                                animation: LottieAnimationComponent.AnimationItem(
+                                    name: "media_backToCancel",
+                                    mode: .animating(loop: false),
+                                    range: animatingOut || component.isAvatar ? (0.5, 1.0) : (0.0, 0.5)
+                                ),
+                                colors: ["__allcolors__": .white],
+                                size: CGSize(width: 33.0, height: 33.0)
+                            )
+                        ),
+                        action: { [weak state] in
+                            if let state = state {
+                                dismissEyedropper.invoke(Void())
+                                state.saveToolState()
+                                dismiss.invoke(Void())
+                            }
                         }
+                    ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(cancelButtonTag),
+                    availableSize: CGSize(width: 33.0, height: 33.0),
+                    transition: .immediate
+                )
+                var backButtonPosition = CGPoint(x: environment.safeInsets.left + backButton.size.width / 2.0 + 3.0, y: context.availableSize.height - environment.safeInsets.bottom - backButton.size.height / 2.0 - 2.0 - UIScreenPixel)
+                if component.sourceHint == .storyEditor {
+                    backButtonPosition.x = backButtonPosition.x + 2.0
+                    if case .regular = environment.metrics.widthClass {
+                        backButtonPosition.x += 20.0
                     }
-                ).minSize(CGSize(width: 44.0, height: 44.0)),
-                availableSize: CGSize(width: 33.0, height: 33.0),
-                transition: .immediate
-            )
-            var backButtonPosition = CGPoint(x: environment.safeInsets.left + backButton.size.width / 2.0 + 3.0, y: context.availableSize.height - environment.safeInsets.bottom - backButton.size.height / 2.0 - 2.0 - UIScreenPixel)
-            if component.sourceHint == .storyEditor {
-                backButtonPosition.x = backButtonPosition.x + 2.0
-                if case .regular = environment.metrics.widthClass {
-                    backButtonPosition.x += 20.0
+                    backButtonPosition.y = floorToScreenPixels(context.availableSize.height - previewBottomInset + 3.0 + backButton.size.height / 2.0)
                 }
-                backButtonPosition.y = floorToScreenPixels(context.availableSize.height - previewBottomInset + 3.0 + backButton.size.height / 2.0)
+                context.add(backButton
+                    .position(backButtonPosition)
+                    .opacity(controlsAreVisible ? 1.0 : 0.0)
+                )
             }
-            context.add(backButton
-                .position(backButtonPosition)
-                .opacity(controlsAreVisible ? 1.0 : 0.0)
-            )
             
             return context.availableSize
         }
@@ -2497,6 +2502,9 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                 view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
             }
             if let view = self.componentHost.findTaggedView(tag: bottomGradientTag) {
+                if self.controller?.sourceHint == .storyEditor {
+                    view.isHidden = true
+                }
                 view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
             }
             if let buttonView = self.componentHost.findTaggedView(tag: undoButtonTag) {
@@ -3029,6 +3037,10 @@ public final class DrawingToolsInteraction {
                 } else if case .dualVideoReference = entity.content {
                     isVideo = true
                 }
+            }
+            
+            guard !isVideo else {
+                return
             }
             
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)

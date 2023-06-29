@@ -378,7 +378,7 @@ private func verticesData(
             pos: simd_float4(x: Float(rect.maxX) * 2.0, y: Float(rect.maxY) * 2.0, z: z, w: 1),
             texCoord: bottomRight,
             localPos: simd_float2(1.0, 1.0)
-        ),
+        )
     ]
 }
 

@@ -778,21 +778,21 @@ public final class ManagedAudioSession: NSObject {
                         options.insert(.allowBluetooth)
                         options.insert(.allowBluetoothA2DP)
                         options.insert(.mixWithOthers)
-                    case .record, .recordWithOthers:
+                    case .record:
                         options.insert(.allowBluetooth)
+                    case .recordWithOthers:
+                        options.insert(.allowBluetoothA2DP)
+                        options.insert(.mixWithOthers)
                 }
                 managedAudioSessionLog("ManagedAudioSession setting category and options")
                 let mode: AVAudioSession.Mode
                 switch type {
                     case .voiceCall:
                         mode = .voiceChat
-                        options.insert(.mixWithOthers)
                     case .videoCall:
                         mode = .videoChat
-                        options.insert(.mixWithOthers)
                     case .recordWithOthers:
                         mode = .videoRecording
-                        options.insert(.mixWithOthers)
                     default:
                         mode = .default
                 }

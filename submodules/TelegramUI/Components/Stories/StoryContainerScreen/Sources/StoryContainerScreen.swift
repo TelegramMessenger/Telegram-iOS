@@ -17,6 +17,7 @@ import AsyncDisplayKit
 import AttachmentUI
 import simd
 import VolumeButtons
+import TooltipUI
 
 func hasFirstResponder(_ view: UIView) -> Bool {
     if view.isFirstResponder {
@@ -827,7 +828,7 @@ private final class StoryContainerScreenComponent: Component {
                                     guard let self, let environment = self.environment else {
                                         return
                                     }
-                                    if c is UndoOverlayController {
+                                    if c is UndoOverlayController || c is TooltipScreen {
                                         environment.controller()?.present(c, in: .current)
                                     } else {
                                         environment.controller()?.present(c, in: .window(.root), with: a)

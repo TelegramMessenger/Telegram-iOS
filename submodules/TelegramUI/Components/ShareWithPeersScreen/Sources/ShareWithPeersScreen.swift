@@ -20,6 +20,7 @@ import AvatarNode
 import LocalizedPeerData
 import PeerListItemComponent
 import LottieComponent
+import TooltipUI
 
 final class ShareWithPeersScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -27,30 +28,36 @@ final class ShareWithPeersScreenComponent: Component {
     let context: AccountContext
     let stateContext: ShareWithPeersScreen.StateContext
     let initialPrivacy: EngineStoryPrivacy
+    let screenshot: Bool
+    let pin: Bool
     let timeout: Int
     let categoryItems: [CategoryItem]
-    let completion: (EngineStoryPrivacy) -> Void
-    let editCategory: (EngineStoryPrivacy) -> Void
-    let secondaryAction: () -> Void
+    let optionItems: [OptionItem]
+    let completion: (EngineStoryPrivacy, Bool, Bool) -> Void
+    let editCategory: (EngineStoryPrivacy, Bool, Bool) -> Void
     
     init(
         context: AccountContext,
         stateContext: ShareWithPeersScreen.StateContext,
         initialPrivacy: EngineStoryPrivacy,
+        screenshot: Bool,
+        pin: Bool,
         timeout: Int,
         categoryItems: [CategoryItem],
-        completion: @escaping (EngineStoryPrivacy) -> Void,
-        editCategory: @escaping (EngineStoryPrivacy) -> Void,
-        secondaryAction: @escaping () -> Void
+        optionItems: [OptionItem],
+        completion: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void,
+        editCategory: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void
     ) {
         self.context = context
         self.stateContext = stateContext
         self.initialPrivacy = initialPrivacy
+        self.screenshot = screenshot
+        self.pin = pin
         self.timeout = timeout
         self.categoryItems = categoryItems
+        self.optionItems = optionItems
         self.completion = completion
         self.editCategory = editCategory
-        self.secondaryAction = secondaryAction
     }
     
     static func ==(lhs: ShareWithPeersScreenComponent, rhs: ShareWithPeersScreenComponent) -> Bool {
@@ -63,14 +70,27 @@ final class ShareWithPeersScreenComponent: Component {
         if lhs.initialPrivacy != rhs.initialPrivacy {
             return false
         }
+        if lhs.screenshot != rhs.screenshot {
+            return false
+        }
+        if lhs.pin != rhs.pin {
+            return false
+        }
         if lhs.timeout != rhs.timeout {
             return false
         }
         if lhs.categoryItems != rhs.categoryItems {
             return false
         }
-        
+        if lhs.optionItems != rhs.optionItems {
+            return false
+        }
         return true
+    }
+    
+    enum Style {
+        case plain
+        case blocks
     }
     
     private struct ItemLayout: Equatable {
@@ -97,6 +117,7 @@ final class ShareWithPeersScreenComponent: Component {
             }
         }
         
+        var style: ShareWithPeersScreenComponent.Style
         var containerSize: CGSize
         var containerInset: CGFloat
         var bottomInset: CGFloat
@@ -107,7 +128,8 @@ final class ShareWithPeersScreenComponent: Component {
         
         var contentHeight: CGFloat
         
-        init(containerSize: CGSize, containerInset: CGFloat, bottomInset: CGFloat, topInset: CGFloat, sideInset: CGFloat, navigationHeight: CGFloat, sections: [Section]) {
+        init(style: ShareWithPeersScreenComponent.Style, containerSize: CGSize, containerInset: CGFloat, bottomInset: CGFloat, topInset: CGFloat, sideInset: CGFloat, navigationHeight: CGFloat, sections: [Section]) {
+            self.style = style
             self.containerSize = containerSize
             self.containerInset = containerInset
             self.bottomInset = bottomInset
@@ -153,6 +175,13 @@ final class ShareWithPeersScreenComponent: Component {
         case purple
         case red
         case violet
+    }
+    
+    enum CategoryId: Int, Hashable {
+        case everyone = 0
+        case contacts = 1
+        case closeFriends = 2
+        case selectedContacts = 3
     }
     
     final class CategoryItem: Equatable {
@@ -204,15 +233,34 @@ final class ShareWithPeersScreenComponent: Component {
         }
     }
     
-    enum CategoryId: Int, Hashable {
-        case everyone = 0
-        case contacts = 1
-        case closeFriends = 2
-        case selectedContacts = 3
+    enum OptionId: Int, Hashable {
+        case screenshot = 0
+        case pin = 1
     }
     
+    final class OptionItem: Equatable {
+        let id: OptionId
+        let title: String
+        
+        init(
+            id: OptionId,
+            title: String
+        ) {
+            self.id = id
+            self.title = title
+        }
+        
+        static func ==(lhs: OptionItem, rhs: OptionItem) -> Bool {
+            if lhs === rhs {
+                return true
+            }
+            return false
+        }
+    }
+        
     final class View: UIView, UIScrollViewDelegate {
         private let dimView: UIView
+        private let containerView: UIView
         private let backgroundView: UIImageView
         
         private let navigationContainerView: UIView
@@ -239,17 +287,20 @@ final class ShareWithPeersScreenComponent: Component {
         
         private let categoryTemplateItem = ComponentView<Empty>()
         private let peerTemplateItem = ComponentView<Empty>()
+        private let optionTemplateItem = ComponentView<Empty>()
         
         private let itemContainerView: UIView
         private var visibleSectionHeaders: [Int: ComponentView<Empty>] = [:]
         private var visibleItems: [AnyHashable: ComponentView<Empty>] = [:]
+        private var visibleSectionBackgrounds: [Int: UIView] = [:]
+        private var visibleSectionFooters: [Int: ComponentView<Empty>] = [:]
         
         private var ignoreScrolling: Bool = false
         private var isDismissed: Bool = false
         
         private var selectedPeers: [EnginePeer.Id] = []
         private var selectedCategories = Set<CategoryId>()
-        private var selectedPeersByCategory: [CategoryId: [EnginePeer.Id]] = [:]
+        private var selectedOptions = Set<OptionId>()
         
         private var component: ShareWithPeersScreenComponent?
         private weak var state: EmptyComponentState?
@@ -268,8 +319,20 @@ final class ShareWithPeersScreenComponent: Component {
             return self.searchStateContext?.stateValue ?? self.defaultStateValue
         }
         
+        private struct DismissPanState: Equatable {
+            var translation: CGFloat
+            
+            init(translation: CGFloat) {
+                self.translation = translation
+            }
+        }
+        
+        private var dismissPanGesture: UIPanGestureRecognizer?
+        private var dismissPanState: DismissPanState?
+        
         override init(frame: CGRect) {
             self.dimView = UIView()
+            self.containerView = SparseContainerView()
             
             self.backgroundView = UIImageView()
             
@@ -295,7 +358,8 @@ final class ShareWithPeersScreenComponent: Component {
             super.init(frame: frame)
             
             self.addSubview(self.dimView)
-            self.addSubview(self.backgroundView)
+            self.addSubview(self.containerView)
+            self.containerView.addSubview(self.backgroundView)
             
             self.scrollView.delaysContentTouches = true
             self.scrollView.canCancelContentTouches = true
@@ -314,19 +378,23 @@ final class ShareWithPeersScreenComponent: Component {
             self.scrollView.delegate = self
             self.scrollView.clipsToBounds = true
             
-            self.addSubview(self.scrollContentClippingView)
+            self.containerView.addSubview(self.scrollContentClippingView)
             self.scrollContentClippingView.addSubview(self.scrollView)
             
             self.scrollView.addSubview(self.scrollContentView)
             
             self.scrollContentView.addSubview(self.itemContainerView)
             
-            self.addSubview(self.navigationContainerView)
+            self.containerView.addSubview(self.navigationContainerView)
             self.navigationContainerView.addSubview(self.navigationBackgroundView)
             self.navigationContainerView.layer.addSublayer(self.navigationSeparatorLayer)
             
-            self.addSubview(self.bottomBackgroundView)
-            self.layer.addSublayer(self.bottomSeparatorLayer)
+            self.containerView.addSubview(self.bottomBackgroundView)
+            self.containerView.layer.addSublayer(self.bottomSeparatorLayer)
+            
+            let dismissPanGesture = UIPanGestureRecognizer(target: self, action: #selector(self.dismissPanGesture(_:)))
+            self.containerView.addGestureRecognizer(dismissPanGesture)
+            self.dismissPanGesture = dismissPanGesture
             
             self.dimView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
         }
@@ -389,8 +457,99 @@ final class ShareWithPeersScreenComponent: Component {
             }
         }
         
+        @objc private func dismissPanGesture(_ recognizer: UIPanGestureRecognizer) {
+            guard let controller = self.environment?.controller() as? ShareWithPeersScreen else {
+                return
+            }
+            switch recognizer.state {
+            case .began:
+                controller.dismissAllTooltips()
+                
+                self.dismissPanState = DismissPanState(translation: 0.0)
+                self.state?.updated(transition: .immediate)
+            case .changed:
+                let translation = recognizer.translation(in: self)
+                self.dismissPanState = DismissPanState(translation: translation.y)
+                self.state?.updated(transition: .immediate)
+            case .cancelled, .ended:
+                if self.dismissPanState != nil {
+                    let translation = recognizer.translation(in: self)
+                    let velocity = recognizer.velocity(in: self)
+                    
+                    self.dismissPanState = nil
+                
+                    if translation.y > 100.0 || velocity.y > 10.0 {
+                        controller.dismiss()
+                    } else {
+                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                    }
+                }
+            default:
+                break
+            }
+        }
+        
+        private func presentOptionsTooltip(optionId: OptionId) {
+            guard let component = self.component, let controller = self.environment?.controller() else {
+                return
+            }
+            let animationName: String
+            let text: String
+            
+            switch optionId {
+            case .screenshot:
+                if self.selectedOptions.contains(.screenshot) {
+                    if self.selectedCategories.contains(.everyone) {
+                        animationName = "anim_savemedia"
+                        text = "Downloading, sharing and taking screenshots will be enabled for this story."
+                    } else {
+                        animationName = "anim_savemedia"
+                        text = "Downloading and taking screenshots will be enabled for this story."
+                    }
+                } else {
+                    if self.selectedCategories.contains(.everyone) {
+                        animationName = "premium_unlock"
+                        text = "Downloading, sharing and taking screenshots will be disabled for this story."
+                    } else {
+                        animationName = "premium_unlock"
+                        text = "Downloading and taking screenshots will be disabled for this story."
+                    }
+                }
+            case .pin:
+                if self.selectedOptions.contains(.pin) {
+                    animationName = "anim_profileadd"
+                    text = "Users allowed to view your story will see it on your page event after it expires."
+                } else {
+                    animationName = "anim_autoremove_on"
+                    text = "The story will disappear after it expires."
+                }
+            }
+            
+            let tooltipScreen = TooltipScreen(
+                context: component.context,
+                account: component.context.account,
+                sharedContext: component.context.sharedContext,
+                text: .markdown(text: text),
+                style: .wide,
+                icon: .animation(name: animationName, delay: 0.0, tintColor: .white),
+                location: .top,
+                displayDuration: .custom(4.0),
+                shouldDismissOnTouch: { point in
+                    return .ignore
+                }
+            )
+            
+            controller.window?.forEachController({ controller in
+                if let controller = controller as? TooltipScreen {
+                    controller.dismiss(inPlace: true)
+                }
+            })
+            
+            controller.present(tooltipScreen, in: .window(.root))
+        }
+        
         private func updateScrolling(transition: Transition) {
-            guard let component = self.component, let environment = self.environment, let controller = environment.controller(), let itemLayout = self.itemLayout else {
+            guard let component = self.component, let environment = self.environment, let itemLayout = self.itemLayout else {
                 return
             }
             guard let stateValue = self.effectiveStateValue else {
@@ -412,9 +571,7 @@ final class ShareWithPeersScreenComponent: Component {
             var topOffsetFraction = topOffset / topOffsetDistance
             topOffsetFraction = max(0.0, min(1.0, topOffsetFraction))
             
-            let transitionFactor: CGFloat = 1.0 - topOffsetFraction
-            let _ = transitionFactor
-            let _ = controller
+            //let transitionFactor: CGFloat = 1.0 - topOffsetFraction
             //controller.updateModalStyleOverlayTransitionFactor(transitionFactor, transition: transition.containedViewLayoutTransition)
             
             var visibleBounds = self.scrollView.bounds
@@ -427,14 +584,42 @@ final class ShareWithPeersScreenComponent: Component {
             
             var validIds: [AnyHashable] = []
             var validSectionHeaders: [AnyHashable] = []
+            var validSectionBackgrounds: [AnyHashable] = []
             var sectionOffset: CGFloat = itemLayout.navigationHeight
             for sectionIndex in 0 ..< itemLayout.sections.count {
                 let section = itemLayout.sections[sectionIndex]
+                        
+                if case .blocks = itemLayout.style {
+                    let sectionBackgroundFrame = CGRect(origin: CGPoint(x: itemLayout.sideInset, y: sectionOffset + section.insets.top), size: CGSize(width: itemLayout.containerSize.width, height: section.totalHeight - section.insets.top))
+                    
+                    if visibleFrame.intersects(sectionBackgroundFrame) {
+                        validSectionBackgrounds.append(section.id)
+                        
+                        var sectionBackground: UIView
+                        var sectionBackgroundTransition = transition
+                        if let current = self.visibleSectionBackgrounds[section.id] {
+                            sectionBackground = current
+                        } else {
+                            if !transition.animation.isImmediate {
+                                sectionBackgroundTransition = .immediate
+                            }
+                            sectionBackground = UIView()
+                            sectionBackground.backgroundColor = environment.theme.list.itemModalBlocksBackgroundColor
+                            sectionBackground.layer.cornerRadius = 10.0
+                            self.visibleSectionBackgrounds[section.id] = sectionBackground
+                        }
+                        
+                        if sectionBackground.superview == nil {
+                            sectionBackground.isUserInteractionEnabled = false
+                            self.itemContainerView.addSubview(sectionBackground)
+                        }
+                        sectionBackgroundTransition.setFrame(view: sectionBackground, frame: sectionBackgroundFrame)
+                    }
+                }
                 
                 var minSectionHeader: UIView?
-                
                 do {
-                    var sectionHeaderFrame = CGRect(origin: CGPoint(x: visibleFrame.minX, y: itemLayout.containerInset + sectionOffset - self.scrollView.bounds.minY + itemLayout.topInset), size: CGSize(width: itemLayout.containerSize.width, height: section.insets.top))
+                    var sectionHeaderFrame = CGRect(origin: CGPoint(x: itemLayout.sideInset, y: itemLayout.containerInset + sectionOffset - self.scrollView.bounds.minY + itemLayout.topInset), size: CGSize(width: itemLayout.containerSize.width, height: section.insets.top))
                     
                     let sectionHeaderMinY = topOffset + itemLayout.containerInset + itemLayout.navigationHeight
                     let sectionHeaderMaxY = itemLayout.containerInset + sectionOffset - self.scrollView.bounds.minY + itemLayout.topInset + section.totalHeight - 28.0
@@ -459,19 +644,17 @@ final class ShareWithPeersScreenComponent: Component {
                         let sectionTitle: String
                         if section.id == 0 {
                             sectionTitle = "WHO CAN VIEW"
+                        } else if section.id == 1 {
+                            sectionTitle = "CONTACTS"
                         } else {
-                            if case .chats = component.stateContext.subject {
-                                sectionTitle = "CHATS"
-                            } else {
-                                sectionTitle = "CONTACTS"
-                            }
+                            sectionTitle = ""
                         }
                         
                         let _ = sectionHeader.update(
                             transition: sectionHeaderTransition,
                             component: AnyComponent(SectionHeaderComponent(
                                 theme: environment.theme,
-                                sideInset: 16.0,
+                                style: itemLayout.style,
                                 title: sectionTitle
                             )),
                             environment: {},
@@ -492,7 +675,7 @@ final class ShareWithPeersScreenComponent: Component {
                 
                 if section.id == 0 {
                     for i in 0 ..< component.categoryItems.count {
-                        let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: sectionOffset + section.insets.top + CGFloat(i) * section.itemHeight), size: CGSize(width: itemLayout.containerSize.width, height: section.itemHeight))
+                        let itemFrame = CGRect(origin: CGPoint(x: itemLayout.sideInset, y: sectionOffset + section.insets.top + CGFloat(i) * section.itemHeight), size: CGSize(width: itemLayout.containerSize.width, height: section.itemHeight))
                         if !visibleBounds.intersects(itemFrame) {
                             continue
                         }
@@ -519,7 +702,6 @@ final class ShareWithPeersScreenComponent: Component {
                             component: AnyComponent(CategoryListItemComponent(
                                 context: component.context,
                                 theme: environment.theme,
-                                sideInset: itemLayout.sideInset,
                                 title: item.title,
                                 color: item.iconColor,
                                 iconName: item.icon,
@@ -527,7 +709,7 @@ final class ShareWithPeersScreenComponent: Component {
                                 selectionState: .editing(isSelected: self.selectedCategories.contains(item.id), isTinted: false),
                                 hasNext: i != component.categoryItems.count - 1,
                                 action: { [weak self] in
-                                    guard let self else {
+                                    guard let self, let environment = self.environment, let controller = environment.controller() as? ShareWithPeersScreen else {
                                         return
                                     }
                                     if self.selectedCategories.contains(categoryId) {
@@ -538,14 +720,19 @@ final class ShareWithPeersScreenComponent: Component {
                                         self.selectedCategories.insert(categoryId)
                                         
                                         if self.selectedPeers.isEmpty && categoryId == .selectedContacts {
-                                            component.editCategory(EngineStoryPrivacy(base: .nobody, additionallyIncludePeers: []))
+                                            component.editCategory(
+                                                EngineStoryPrivacy(base: .nobody, additionallyIncludePeers: []),
+                                                self.selectedOptions.contains(.screenshot),
+                                                self.selectedOptions.contains(.pin)
+                                            )
+                                            controller.dismissAllTooltips()
                                             controller.dismiss()
                                         }
                                     }
                                     self.state?.updated(transition: Transition(animation: .curve(duration: 0.35, curve: .spring)))
                                 },
                                 secondaryAction: { [weak self] in
-                                    guard let self, let environment = self.environment, let controller = environment.controller() else {
+                                    guard let self, let environment = self.environment, let controller = environment.controller() as? ShareWithPeersScreen else {
                                         return
                                     }
                                     let base: EngineStoryPrivacy.Base?
@@ -560,7 +747,12 @@ final class ShareWithPeersScreenComponent: Component {
                                         base = .nobody
                                     }
                                     if let base {
-                                        component.editCategory(EngineStoryPrivacy(base: base, additionallyIncludePeers: self.selectedPeers))
+                                        component.editCategory(
+                                            EngineStoryPrivacy(base: base, additionallyIncludePeers: self.selectedPeers),
+                                            self.selectedOptions.contains(.screenshot),
+                                            self.selectedOptions.contains(.pin)
+                                        )
+                                        controller.dismissAllTooltips()
                                         controller.dismiss()
                                     }
                                 }
@@ -581,7 +773,7 @@ final class ShareWithPeersScreenComponent: Component {
                     }
                 } else if section.id == 1 {
                     for i in 0 ..< stateValue.peers.count {
-                        let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: sectionOffset + section.insets.top + CGFloat(i) * section.itemHeight), size: CGSize(width: itemLayout.containerSize.width, height: section.itemHeight))
+                        let itemFrame = CGRect(origin: CGPoint(x: itemLayout.sideInset, y: sectionOffset + section.insets.top + CGFloat(i) * section.itemHeight), size: CGSize(width: itemLayout.containerSize.width, height: section.itemHeight))
                         if !visibleBounds.intersects(itemFrame) {
                             continue
                         }
@@ -647,6 +839,95 @@ final class ShareWithPeersScreenComponent: Component {
                             itemTransition.setFrame(view: itemView, frame: itemFrame)
                         }
                     }
+                } else if section.id == 2 {
+                    for i in 0 ..< component.optionItems.count {
+                        let itemFrame = CGRect(origin: CGPoint(x: itemLayout.sideInset, y: sectionOffset + section.insets.top + CGFloat(i) * section.itemHeight), size: CGSize(width: itemLayout.containerSize.width, height: section.itemHeight))
+                        if !visibleBounds.intersects(itemFrame) {
+                            continue
+                        }
+                        
+                        let item = component.optionItems[i]
+                        let optionId = item.id
+                        let itemId = AnyHashable(item.id)
+                        validIds.append(itemId)
+                        
+                        var itemTransition = transition
+                        let visibleItem: ComponentView<Empty>
+                        if let current = self.visibleItems[itemId] {
+                            visibleItem = current
+                        } else {
+                            visibleItem = ComponentView()
+                            if !transition.animation.isImmediate {
+                                itemTransition = .immediate
+                            }
+                            self.visibleItems[itemId] = visibleItem
+                        }
+                        
+                        let _ = visibleItem.update(
+                            transition: itemTransition,
+                            component: AnyComponent(OptionListItemComponent(
+                                theme: environment.theme,
+                                title: item.title,
+                                hasNext: i != component.optionItems.count - 1,
+                                selected: self.selectedOptions.contains(item.id),
+                                selectionChanged: { [weak self] selected in
+                                    if let self {
+                                        if selected {
+                                            self.selectedOptions.insert(optionId)
+                                        } else {
+                                            self.selectedOptions.remove(optionId)
+                                        }
+                                        let transition = Transition(animation: .curve(duration: 0.35, curve: .spring))
+                                        self.state?.updated(transition: transition)
+                                        
+                                        self.presentOptionsTooltip(optionId: optionId)
+                                    }
+                                }
+                            )),
+                            environment: {},
+                            containerSize: itemFrame.size
+                        )
+                        if let itemView = visibleItem.view {
+                            if itemView.superview == nil {
+                                if let minSectionHeader {
+                                    self.itemContainerView.insertSubview(itemView, belowSubview: minSectionHeader)
+                                } else {
+                                    self.itemContainerView.addSubview(itemView)
+                                }
+                            }
+                            itemTransition.setFrame(view: itemView, frame: itemFrame)
+                        }
+                    }
+                    
+                    let sectionFooter: ComponentView<Empty>
+                    var sectionFooterTransition = transition
+                    if let current = self.visibleSectionFooters[section.id] {
+                        sectionFooter = current
+                    } else {
+                        if !transition.animation.isImmediate {
+                            sectionFooterTransition = .immediate
+                        }
+                        sectionFooter = ComponentView()
+                        self.visibleSectionFooters[section.id] = sectionFooter
+                    }
+                    
+                    let footerSize = sectionFooter.update(
+                        transition: sectionFooterTransition,
+                        component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: "Keep this story on your page even after it expires in \( component.timeout / 3600 ) hours. Privacy settings will apply.", font: Font.regular(13.0), textColor: environment.theme.list.freeTextColor)),
+                            maximumNumberOfLines: 0,
+                            lineSpacing: 0.2
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: itemLayout.containerSize.width - 16.0 * 2.0, height: itemLayout.contentHeight)
+                    )
+                    let footerFrame = CGRect(origin: CGPoint(x: itemLayout.sideInset + 16.0, y: sectionOffset + section.totalHeight + 7.0), size: footerSize)
+                    if let footerView = sectionFooter.view {
+                        if footerView.superview == nil {
+                            self.itemContainerView.addSubview(footerView)
+                        }
+                        sectionFooterTransition.setFrame(view: footerView, frame: footerFrame)
+                    }
                 }
                 
                 sectionOffset += section.totalHeight
@@ -676,6 +957,17 @@ final class ShareWithPeersScreenComponent: Component {
             }
             for id in removeSectionHeaderIds {
                 self.visibleSectionHeaders.removeValue(forKey: id)
+            }
+            
+            var removeSectionBackgroundIds: [Int] = []
+            for (id, item) in self.visibleSectionBackgrounds {
+                if !validSectionBackgrounds.contains(id) {
+                    removeSectionBackgroundIds.append(id)
+                    item.removeFromSuperview()
+                }
+            }
+            for id in removeSectionBackgroundIds {
+                self.visibleSectionBackgrounds.removeValue(forKey: id)
             }
             
             let fadeTransition = Transition.easeInOut(duration: 0.25)
@@ -830,7 +1122,16 @@ final class ShareWithPeersScreenComponent: Component {
             
             let resetScrolling = self.scrollView.bounds.width != availableSize.width
             
-            let sideInset: CGFloat = 0.0
+            var sideInset: CGFloat = 0.0
+            if case .stories = component.stateContext.subject {
+                sideInset = 16.0
+                self.scrollView.bounces = false
+                self.dismissPanGesture?.isEnabled = true
+            } else {
+                self.scrollView.bounces = true
+                self.dismissPanGesture?.isEnabled = false
+            }
+            
             let containerWidth: CGFloat
             if case .regular = environment.metrics.widthClass {
                 containerWidth = 390.0
@@ -849,6 +1150,13 @@ final class ShareWithPeersScreenComponent: Component {
                     self.selectedCategories.insert(.contacts)
                 case .nobody:
                     self.selectedCategories.insert(.selectedContacts)
+                }
+                
+                if component.screenshot {
+                    self.selectedOptions.insert(.screenshot)
+                }
+                if component.pin {
+                    self.selectedOptions.insert(.pin)
                 }
                 
                 var applyState = false
@@ -880,23 +1188,41 @@ final class ShareWithPeersScreenComponent: Component {
                 self.backgroundView.image = generateImage(CGSize(width: 20.0, height: 20.0), rotatedContext: { size, context in
                     context.clear(CGRect(origin: CGPoint(), size: size))
                     
-                    context.setFillColor(environment.theme.list.plainBackgroundColor.cgColor)
+                    if case .stories = component.stateContext.subject {
+                        context.setFillColor(environment.theme.list.modalBlocksBackgroundColor.cgColor)
+                    } else {
+                        context.setFillColor(environment.theme.list.plainBackgroundColor.cgColor)
+                    }
                     context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
                     context.fill(CGRect(origin: CGPoint(x: 0.0, y: size.height * 0.5), size: CGSize(width: size.width, height: size.height * 0.5)))
                 })?.stretchableImage(withLeftCapWidth: 10, topCapHeight: 19)
                 
-                self.navigationBackgroundView.updateColor(color: environment.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
-                self.navigationSeparatorLayer.backgroundColor = environment.theme.rootController.navigationBar.separatorColor.cgColor
-                self.textFieldSeparatorLayer.backgroundColor = environment.theme.rootController.navigationBar.separatorColor.cgColor
+                if case .stories = component.stateContext.subject {
+                    self.navigationBackgroundView.updateColor(color: environment.theme.list.modalBlocksBackgroundColor, transition: .immediate)
+                    self.navigationSeparatorLayer.backgroundColor = UIColor.clear.cgColor
+                    self.bottomBackgroundView.updateColor(color: environment.theme.list.modalBlocksBackgroundColor, transition: .immediate)
+                    self.bottomSeparatorLayer.backgroundColor = UIColor.clear.cgColor
+                } else {
+                    self.navigationBackgroundView.updateColor(color: environment.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
+                    self.navigationSeparatorLayer.backgroundColor = environment.theme.rootController.navigationBar.separatorColor.cgColor
+                    self.bottomBackgroundView.updateColor(color: environment.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
+                    self.bottomSeparatorLayer.backgroundColor = environment.theme.rootController.navigationBar.separatorColor.cgColor
+                }
                 
-                self.bottomBackgroundView.updateColor(color: environment.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
-                self.bottomSeparatorLayer.backgroundColor = environment.theme.rootController.navigationBar.separatorColor.cgColor
+                self.textFieldSeparatorLayer.backgroundColor = environment.theme.rootController.navigationBar.separatorColor.cgColor
             }
             
+            let itemLayoutStyle: ShareWithPeersScreenComponent.Style
+            let itemsContainerWidth: CGFloat
             let navigationTextFieldSize: CGSize
             if case .stories = component.stateContext.subject {
+                itemLayoutStyle = .blocks
+                itemsContainerWidth = containerWidth - sideInset * 2.0
                 navigationTextFieldSize = .zero
             } else {
+                itemLayoutStyle = .plain
+                itemsContainerWidth = containerWidth
+                
                 var tokens: [TokenListTextField.Token] = []
                 for peerId in self.selectedPeers {
                     guard let stateValue = self.defaultStateValue, let peer = stateValue.peers.first(where: { $0.id == peerId }) else {
@@ -974,12 +1300,12 @@ final class ShareWithPeersScreenComponent: Component {
                 
             transition.setFrame(view: self.dimView, frame: CGRect(origin: CGPoint(), size: availableSize))
             
+            
             let categoryItemSize = self.categoryTemplateItem.update(
                 transition: .immediate,
                 component: AnyComponent(CategoryListItemComponent(
                     context: component.context,
                     theme: environment.theme,
-                    sideInset: sideInset,
                     title: "Title",
                     color: .blue,
                     iconName: nil,
@@ -990,7 +1316,7 @@ final class ShareWithPeersScreenComponent: Component {
                     secondaryAction: {}
                 )),
                 environment: {},
-                containerSize: CGSize(width: containerWidth, height: 1000.0)
+                containerSize: CGSize(width: itemsContainerWidth, height: 1000.0)
             )
             let peerItemSize = self.peerTemplateItem.update(
                 transition: transition,
@@ -1011,7 +1337,19 @@ final class ShareWithPeersScreenComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: containerWidth, height: 1000.0)
+                containerSize: CGSize(width: itemsContainerWidth, height: 1000.0)
+            )
+            let optionItemSize = self.optionTemplateItem.update(
+                transition: transition,
+                component: AnyComponent(OptionListItemComponent(
+                    theme: environment.theme,
+                    title: "Title",
+                    hasNext: true,
+                    selected: false,
+                    selectionChanged: { _ in }
+                )),
+                environment: {},
+                containerSize: CGSize(width: itemsContainerWidth, height: 1000.0)
             )
             
             var sections: [ItemLayout.Section] = []
@@ -1022,6 +1360,12 @@ final class ShareWithPeersScreenComponent: Component {
                         insets: UIEdgeInsets(top: 28.0, left: 0.0, bottom: 0.0, right: 0.0),
                         itemHeight: categoryItemSize.height,
                         itemCount: component.categoryItems.count
+                    ))
+                    sections.append(ItemLayout.Section(
+                        id: 2,
+                        insets: UIEdgeInsets(top: 28.0, left: 0.0, bottom: 0.0, right: 0.0),
+                        itemHeight: optionItemSize.height,
+                        itemCount: component.optionItems.count
                     ))
                 } else {
                     sections.append(ItemLayout.Section(
@@ -1065,9 +1409,13 @@ final class ShareWithPeersScreenComponent: Component {
             var actionButtonTitle = "Save Settings"
             let title: String
             switch component.stateContext.subject {
-            case .stories:
-                title = "Share Story"
-                actionButtonTitle = "Post Story"
+            case let .stories(editing):
+                if editing {
+                    title = "Edit Story"
+                } else {
+                    title = "Share Story"
+                    actionButtonTitle = "Post Story"
+                }
             case .chats:
                 title = "Send as a Message"
             case let .contacts(category):
@@ -1110,15 +1458,25 @@ final class ShareWithPeersScreenComponent: Component {
             }
             navigationHeight += navigationTextFieldFrame.height
             
+            if case .stories = component.stateContext.subject {
+                navigationHeight += 16.0
+            }
+            
             let topInset: CGFloat
             if environment.inputHeight != 0.0 || !self.navigationTextFieldState.text.isEmpty {
                 topInset = 0.0
             } else {
-                if case .stories = component.stateContext.subject {
-                    topInset = max(0.0, availableSize.height - containerInset - 427.0)
+                let inset: CGFloat
+                if case let .stories(editing) = component.stateContext.subject {
+                    if editing {
+                        inset = 430.0
+                    } else {
+                        inset = 605.0
+                    }
                 } else {
-                    topInset = max(0.0, availableSize.height - containerInset - 600.0)
+                    inset = 600.0
                 }
+                topInset = max(0.0, availableSize.height - containerInset - inset)
             }
             
             self.navigationBackgroundView.update(size: CGSize(width: containerWidth, height: navigationHeight), cornerRadius: 10.0, maskedCorners: [.layerMinXMinYCorner, .layerMaxXMinYCorner], transition: transition.containedViewLayoutTransition)
@@ -1147,7 +1505,7 @@ final class ShareWithPeersScreenComponent: Component {
                     isEnabled: true,
                     displaysProgress: false,
                     action: { [weak self] in
-                        guard let self, let component = self.component, let controller = self.environment?.controller() else {
+                        guard let self, let component = self.component, let controller = self.environment?.controller() as? ShareWithPeersScreen else {
                             return
                         }
                                                 
@@ -1164,11 +1522,16 @@ final class ShareWithPeersScreenComponent: Component {
                             base = .nobody
                         }
                         
-                        component.completion(EngineStoryPrivacy(
-                            base: base,
-                            additionallyIncludePeers: self.selectedPeers
-                        ))
+                        component.completion(
+                            EngineStoryPrivacy(
+                                base: base,
+                                additionallyIncludePeers: self.selectedPeers
+                            ),
+                            self.selectedOptions.contains(.screenshot),
+                            self.selectedOptions.contains(.pin)
+                        )
 
+                        controller.dismissAllTooltips()
                         controller.dismiss()
                     }
                 )),
@@ -1185,7 +1548,7 @@ final class ShareWithPeersScreenComponent: Component {
             let actionButtonFrame = CGRect(origin: CGPoint(x: containerSideInset + navigationSideInset, y: availableSize.height - bottomPanelHeight), size: actionButtonSize)
             if let actionButtonView = self.actionButton.view {
                 if actionButtonView.superview == nil {
-                    self.addSubview(actionButtonView)
+                    self.containerView.addSubview(actionButtonView)
                 }
                 transition.setFrame(view: actionButtonView, frame: actionButtonFrame)
             }
@@ -1194,12 +1557,12 @@ final class ShareWithPeersScreenComponent: Component {
             self.bottomBackgroundView.update(size: self.bottomBackgroundView.bounds.size, transition: transition.containedViewLayoutTransition)
             transition.setFrame(layer: self.bottomSeparatorLayer, frame: CGRect(origin: CGPoint(x: containerSideInset + sideInset, y: availableSize.height - bottomPanelHeight - 8.0 - UIScreenPixel), size: CGSize(width: containerWidth, height: UIScreenPixel)))
                         
-            let itemContainerSize = CGSize(width: containerWidth, height: availableSize.height)
-            let itemLayout = ItemLayout(containerSize: itemContainerSize, containerInset: containerInset, bottomInset: bottomPanelHeight, topInset: topInset, sideInset: sideInset, navigationHeight: navigationHeight, sections: sections)
+            let itemContainerSize = CGSize(width: itemsContainerWidth, height: availableSize.height)
+            let itemLayout = ItemLayout(style: itemLayoutStyle, containerSize: itemContainerSize, containerInset: containerInset, bottomInset: bottomPanelHeight, topInset: topInset, sideInset: sideInset, navigationHeight: navigationHeight, sections: sections)
             let previousItemLayout = self.itemLayout
             self.itemLayout = itemLayout
             
-            contentTransition.setFrame(view: self.itemContainerView, frame: CGRect(origin: CGPoint(x: sideInset, y: 0.0), size: CGSize(width: containerWidth, height: itemLayout.contentHeight)))
+            contentTransition.setFrame(view: self.itemContainerView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: containerWidth, height: itemLayout.contentHeight)))
             
             let scrollContentHeight = max(topInset + itemLayout.contentHeight + containerInset, availableSize.height - containerInset)
             
@@ -1208,9 +1571,15 @@ final class ShareWithPeersScreenComponent: Component {
             transition.setPosition(view: self.backgroundView, position: CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0))
             transition.setBounds(view: self.backgroundView, bounds: CGRect(origin: CGPoint(x: containerSideInset, y: 0.0), size: CGSize(width: containerWidth, height: availableSize.height)))
             
-            let scrollClippingFrame = CGRect(origin: CGPoint(x: sideInset, y: containerInset + 10.0), size: CGSize(width: availableSize.width, height: availableSize.height - 10.0))
+            let scrollClippingFrame = CGRect(origin: CGPoint(x: 0.0, y: containerInset + 10.0), size: CGSize(width: availableSize.width, height: availableSize.height - 10.0))
             transition.setPosition(view: self.scrollContentClippingView, position: scrollClippingFrame.center)
             transition.setBounds(view: self.scrollContentClippingView, bounds: CGRect(origin: CGPoint(x: scrollClippingFrame.minX, y: scrollClippingFrame.minY), size: scrollClippingFrame.size))
+            
+            var dismissOffset: CGFloat = 0.0
+            if let dismissPanState = self.dismissPanState {
+                dismissOffset = max(0.0, dismissPanState.translation)
+            }
+            transition.setFrame(view: self.containerView, frame: CGRect(origin: CGPoint(x: 0.0, y: dismissOffset), size: availableSize))
             
             self.ignoreScrolling = true
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: containerSideInset, y: 0.0), size: CGSize(width: containerWidth, height: availableSize.height)))
@@ -1265,7 +1634,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
     
     public final class StateContext {
         public enum Subject: Equatable {
-            case stories
+            case stories(editing: Bool)
             case chats
             case contacts(EngineStoryPrivacy.Base)
             case search(String)
@@ -1430,11 +1799,21 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
     
     public var dismissed: () -> Void = {}
     
-    public init(context: AccountContext, initialPrivacy: EngineStoryPrivacy, timeout: Int, stateContext: StateContext, completion: @escaping (EngineStoryPrivacy) -> Void, editCategory: @escaping (EngineStoryPrivacy) -> Void, secondaryAction: @escaping () -> Void = {}) {
+    public init(
+        context: AccountContext,
+        initialPrivacy: EngineStoryPrivacy,
+        allowScreenshots: Bool = true,
+        pin: Bool = false,
+        timeout: Int = 0,
+        stateContext: StateContext,
+        completion: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void,
+        editCategory: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void
+    ) {
         self.context = context
         
         var categoryItems: [ShareWithPeersScreenComponent.CategoryItem] = []
-        if case .stories = stateContext.subject {
+        var optionItems: [ShareWithPeersScreenComponent.OptionItem] = []
+        if case let .stories(editing) = stateContext.subject {
             categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
                 id: .everyone,
                 title: "Everyone",
@@ -1482,17 +1861,31 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                 iconColor: .violet,
                 actionTitle: selectedContactsSubtitle
             ))
+            
+            if !editing {
+                optionItems.append(ShareWithPeersScreenComponent.OptionItem(
+                    id: .screenshot,
+                    title: "Allow Screenshots"
+                ))
+                
+                optionItems.append(ShareWithPeersScreenComponent.OptionItem(
+                    id: .pin,
+                    title: "Keep on My Page"
+                ))
+            }
         }
         
         super.init(context: context, component: ShareWithPeersScreenComponent(
             context: context,
             stateContext: stateContext,
             initialPrivacy: initialPrivacy,
+            screenshot: allowScreenshots,
+            pin: pin,
             timeout: timeout,
             categoryItems: categoryItems,
+            optionItems: optionItems,
             completion: completion,
-            editCategory: editCategory,
-            secondaryAction: secondaryAction
+            editCategory: editCategory
         ), navigationBarAppearance: .none, theme: .dark)
         
         self.statusBar.statusBarStyle = .Ignore
@@ -1523,7 +1916,22 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         }
     }
     
+    fileprivate func dismissAllTooltips() {
+        self.window?.forEachController { controller in
+            if let controller = controller as? TooltipScreen {
+                controller.dismiss()
+            }
+        }
+        self.forEachController { controller in
+            if let controller = controller as? TooltipScreen {
+                controller.dismiss()
+            }
+            return true
+        }
+    }
+    
     func requestDismiss() {
+        self.dismissAllTooltips()
         self.dismissed()
         self.dismiss()
     }

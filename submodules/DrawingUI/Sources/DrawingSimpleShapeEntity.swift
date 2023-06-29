@@ -383,6 +383,10 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
         case .changed:
             rotation = gestureRecognizer.rotation
             updatedRotation += rotation
+        
+            updatedRotation = self.snapTool.update(entityView: entityView, velocity: velocity, delta: rotation, updatedRotation: updatedRotation)
+            entity.rotation = updatedRotation
+            entityView.update()
             
             gestureRecognizer.rotation = 0.0
         case .ended, .cancelled:
@@ -391,11 +395,7 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
         default:
             break
         }
-        
-        updatedRotation = self.snapTool.update(entityView: entityView, velocity: velocity, delta: rotation, updatedRotation: updatedRotation)
-        entity.rotation = updatedRotation
-        entityView.update()
-        
+                
         entityView.onPositionUpdated(entity.position)
     }
 

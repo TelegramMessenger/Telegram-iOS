@@ -350,6 +350,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             }
         }
 
+        let isMediaEntity = entity is DrawingMediaEntity
         view.onSnapUpdated = { [weak self, weak view] type, snapped in
             guard let self else {
                 return
@@ -380,6 +381,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                         self.hapticFeedback.impact(.light)
                     }
                     transition.updateAlpha(layer: self.angleLayer, alpha: 1.0)
+                    self.angleLayer.isHidden = isMediaEntity
                 } else {
                     transition.updateAlpha(layer: self.angleLayer, alpha: 0.0)
                 }

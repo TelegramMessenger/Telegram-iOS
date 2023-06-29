@@ -24,10 +24,8 @@ import LegacyMediaPickerUI
 import LegacyCamera
 import AvatarNode
 import LocalMediaResources
-import ShareWithPeersScreen
 import ImageCompression
 import TextFormat
-import UndoUI
 
 private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceholderNode {
     private var presentationData: PresentationData
@@ -363,13 +361,19 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                             return
                         }
                         
+                        if let rootTabController = self.rootTabController {
+                            if let index = rootTabController.controllers.firstIndex(where: { $0 is ChatListController}) {
+                                rootTabController.selectedIndex = index
+                            }
+                        }
+                        
                         if let chatListController = self.chatListController as? ChatListControllerImpl {
                             chatListController.scrollToStories()
                             switch mediaResult {
                             case let .image(image, dimensions):
                                 if let imageData = compressImageToJPEG(image, quality: 0.7) {
                                     let entities = generateChatInputTextEntities(caption)
-                                    self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: caption.string, entities: entities, pin: privacy.archive, privacy: privacy.privacy, isForwardingDisabled: false, period: privacy.timeout, randomId: randomId)
+                                    self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: caption.string, entities: entities, pin: privacy.pin, privacy: privacy.privacy, isForwardingDisabled: privacy.isForwardingDisabled, period: privacy.timeout, randomId: randomId)
                                     Queue.mainQueue().justDispatch {
                                         commit({})
                                     }
@@ -392,7 +396,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                     }
                                     let imageData = firstFrameImage.flatMap { compressImageToJPEG($0, quality: 0.6) }
                                     let entities = generateChatInputTextEntities(caption)
-                                    self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameImageData: imageData), text: caption.string, entities: entities, pin: privacy.archive, privacy: privacy.privacy, isForwardingDisabled: false, period: privacy.timeout, randomId: randomId)
+                                    self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameImageData: imageData), text: caption.string, entities: entities, pin: privacy.pin, privacy: privacy.privacy, isForwardingDisabled: privacy.isForwardingDisabled, period: privacy.timeout, randomId: randomId)
                                     Queue.mainQueue().justDispatch {
                                         commit({})
                                     }

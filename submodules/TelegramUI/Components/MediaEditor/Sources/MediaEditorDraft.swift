@@ -9,25 +9,27 @@ import AccountContext
 
 public struct MediaEditorResultPrivacy: Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
-        case type
         case privacy
-        case peers
         case timeout
+        case disableForwarding
         case archive
     }
     
     public let privacy: EngineStoryPrivacy
     public let timeout: Int
-    public let archive: Bool
+    public let isForwardingDisabled: Bool
+    public let pin: Bool
     
     public init(
         privacy: EngineStoryPrivacy,
         timeout: Int,
-        archive: Bool
+        isForwardingDisabled: Bool,
+        pin: Bool
     ) {
         self.privacy = privacy
         self.timeout = timeout
-        self.archive = archive
+        self.isForwardingDisabled = isForwardingDisabled
+        self.pin = pin
     }
     
     public init(from decoder: Decoder) throws {
@@ -35,7 +37,8 @@ public struct MediaEditorResultPrivacy: Codable, Equatable {
 
         self.privacy = try container.decode(EngineStoryPrivacy.self, forKey: .privacy)
         self.timeout = Int(try container.decode(Int32.self, forKey: .timeout))
-        self.archive = try container.decode(Bool.self, forKey: .archive)
+        self.isForwardingDisabled = try container.decodeIfPresent(Bool.self, forKey: .disableForwarding) ?? false
+        self.pin = try container.decode(Bool.self, forKey: .archive)
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -43,7 +46,8 @@ public struct MediaEditorResultPrivacy: Codable, Equatable {
     
         try container.encode(self.privacy, forKey: .privacy)
         try container.encode(Int32(self.timeout), forKey: .timeout)
-        try container.encode(self.archive, forKey: .archive)
+        try container.encode(self.isForwardingDisabled, forKey: .disableForwarding)
+        try container.encode(self.pin, forKey: .archive)
     }
 }
 

@@ -43,7 +43,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
             })))
             
             let isMuted = notificationSettings.storiesMuted == true
-            items.append(.action(ContextMenuActionItem(text: isMuted ? "Notify" : "Not Notify", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: isMuted ? "Notify" : "Don't Notify", icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
             }, action: { _, f in
                 f(.default)
@@ -85,7 +85,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
                 }
             })))
             
-            items.append(.action(ContextMenuActionItem(text: "Move to chats", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: "Move to Chats", icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MoveToChats"), color: theme.contextMenu.primaryColor)
             }, action: { _, f in
                 f(.default)
@@ -102,7 +102,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
                         context: context,
                         account: context.account,
                         sharedContext: context.sharedContext,
-                        text: .markdown(text: "Stories from \(peer.compactDisplayTitle) will now be shown in Chats, not Contacts."),
+                        text: .markdown(text: "Stories from **\(peer.compactDisplayTitle)** will now be shown in Chats, not Contacts."),
                         icon: .peer(peer: peer, isStory: true),
                         action: TooltipScreen.Action(
                             title: "Undo",

@@ -16,72 +16,7 @@ import EmojiStatusComponent
 import PremiumUI
 import ProgressNavigationButtonNode
 import Postbox
-
-private final class SwitchComponent: Component {
-    typealias EnvironmentType = Empty
-    
-    let value: Bool
-    let valueUpdated: (Bool) -> Void
-    
-    init(
-        value: Bool,
-        valueUpdated: @escaping (Bool) -> Void
-    ) {
-        self.value = value
-        self.valueUpdated = valueUpdated
-    }
-    
-    static func ==(lhs: SwitchComponent, rhs: SwitchComponent) -> Bool {
-        if lhs.value != rhs.value {
-            return false
-        }
-        return true
-    }
-    
-    final class View: UIView {
-        private let switchView: UISwitch
-    
-        private var component: SwitchComponent?
-        
-        override init(frame: CGRect) {
-            self.switchView = UISwitch()
-            
-            super.init(frame: frame)
-            
-            self.addSubview(self.switchView)
-            
-            self.switchView.addTarget(self, action: #selector(self.valueChanged(_:)), for: .valueChanged)
-        }
-        
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-        
-        @objc func valueChanged(_ sender: Any) {
-            self.component?.valueUpdated(self.switchView.isOn)
-        }
-        
-        func update(component: SwitchComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
-            self.component = component
-          
-            self.switchView.setOn(component.value, animated: !transition.animation.isImmediate)
-            
-            self.switchView.sizeToFit()
-            self.switchView.frame = CGRect(origin: .zero, size: self.switchView.frame.size)
-                        
-            return self.switchView.frame.size
-        }
-    }
-
-    public func makeView() -> View {
-        return View(frame: CGRect())
-    }
-    
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
-    }
-}
-
+import SwitchComponent
 
 private final class TitleFieldComponent: Component {
     typealias EnvironmentType = Empty

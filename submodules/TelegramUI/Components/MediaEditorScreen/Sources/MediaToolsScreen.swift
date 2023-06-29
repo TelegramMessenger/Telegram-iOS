@@ -284,6 +284,8 @@ private final class MediaToolsScreenComponent: Component {
         func animateOutToEditor(completion: @escaping () -> Void) {
             self.animatingOut = true
             
+            self.cancelButton.view?.isHidden = true
+            
             let buttons = [
                 self.adjustmentsButton,
                 self.tintButton,

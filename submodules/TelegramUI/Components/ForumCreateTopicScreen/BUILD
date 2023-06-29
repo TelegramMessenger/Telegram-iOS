@@ -32,6 +32,7 @@ swift_library(
         "//submodules/Components/PagerComponent:PagerComponent",
         "//submodules/PremiumUI",
         "//submodules/ProgressNavigationButtonNode",
+        "//submodules/TelegramUI/Components/SwitchComponent",
     ],
     visibility = [
         "//visibility:public",

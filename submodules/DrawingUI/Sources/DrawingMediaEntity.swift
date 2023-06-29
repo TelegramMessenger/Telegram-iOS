@@ -49,6 +49,12 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
     
     init(context: AccountContext, entity: DrawingMediaEntity) {
         super.init(context: context, entity: entity)
+        
+        self.snapTool.onSnapUpdated = { [weak self] type, snapped in
+            if let self {
+                self.onSnapUpdated(type, snapped)
+            }
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -196,15 +202,15 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
                 self.beganRotating = true
                 gestureRecognizer.rotation = 0.0
             }
+            
+            updatedRotation = self.snapTool.update(entityView: self, velocity: velocity, delta: rotation, updatedRotation: updatedRotation)
+            self.mediaEntity.rotation = updatedRotation
+            self.update(animated: false)
         case .ended, .cancelled:
             self.snapTool.rotationReset()
             self.beganRotating = false
         default:
             break
         }
-        
-        updatedRotation = self.snapTool.update(entityView: self, velocity: velocity, delta: rotation, updatedRotation: updatedRotation)
-        self.mediaEntity.rotation = updatedRotation
-        self.update(animated: false)
     }
 }
