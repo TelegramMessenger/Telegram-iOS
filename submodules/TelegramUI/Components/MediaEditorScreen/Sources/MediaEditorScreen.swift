@@ -3987,8 +3987,10 @@ final class DoneButtonComponent: CombinedComponent {
             )
             
             let backgroundHeight: CGFloat = 33.0
+            var backgroundSize = CGSize(width: backgroundHeight, height: backgroundHeight)
             
-            var textWidth: CGFloat = 0.0
+            let textSpacing: CGFloat = 7.0
+            
             var title: _UpdatedChildComponent?
             if let titleText = context.component.title {
                 title = text.update(
@@ -4000,14 +4002,15 @@ final class DoneButtonComponent: CombinedComponent {
                     availableSize: CGSize(width: 180.0, height: 100.0),
                     transition: .immediate
                 )
-                textWidth = title!.size.width
+                
+                let updatedBackgroundWidth = backgroundSize.width + textSpacing + title!.size.width
+                if updatedBackgroundWidth < 126.0 {
+                    backgroundSize.width = updatedBackgroundWidth
+                } else {
+                    title = nil
+                }
             }
 
-            var backgroundSize = CGSize(width: 33.0, height: backgroundHeight)
-            if !textWidth.isZero {
-                backgroundSize.width += textWidth + 7.0
-            }
-            
             let background = background.update(
                 component: RoundedRectangle(color: context.component.backgroundColor, cornerRadius: backgroundHeight / 2.0),
                 availableSize: backgroundSize,
