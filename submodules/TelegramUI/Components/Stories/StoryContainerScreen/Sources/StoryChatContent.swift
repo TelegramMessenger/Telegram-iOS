@@ -439,6 +439,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                     hasMoreToken: nil
                 )
                 
+                var preFilterOrder = false
+                
                 let startedWithUnseen: Bool
                 if let current = self.startedWithUnseen {
                     startedWithUnseen = current
@@ -473,11 +475,17 @@ public final class StoryContentContextImpl: StoryContentContext {
                     
                     self.startedWithUnseen = startedWithUnseenValue
                     startedWithUnseen = startedWithUnseenValue
+                    preFilterOrder = true
                 }
                 
                 var sortedItems: [EngineStorySubscriptions.Item] = []
                 for peerId in self.fixedSubscriptionOrder {
                     if let index = storySubscriptions.items.firstIndex(where: { $0.peer.id == peerId }) {
+                        if preFilterOrder {
+                            if startedWithUnseen && !storySubscriptions.items[index].hasUnseen {
+                                continue
+                            }
+                        }
                         sortedItems.append(storySubscriptions.items[index])
                     }
                 }
@@ -507,45 +515,64 @@ public final class StoryContentContextImpl: StoryContentContext {
                     return
                 }
                 
+                var preFilterOrder = false
+                
                 let startedWithUnseen: Bool
                 if let current = self.startedWithUnseen {
                     startedWithUnseen = current
                 } else {
                     var startedWithUnseenValue = false
                     
-                    var centralIndex: Int?
-                    if let (focusedPeerId, _) = self.focusedItem {
-                        if let index = storySubscriptions.items.firstIndex(where: { $0.peer.id == focusedPeerId }) {
-                            centralIndex = index
+                    if let (focusedPeerId, _) = self.focusedItem, focusedPeerId == self.context.account.peerId, let accountItem = storySubscriptions.accountItem {
+                        startedWithUnseenValue = accountItem.hasUnseen || accountItem.hasPending
+                    } else {
+                        var centralIndex: Int?
+                        
+                        if let (focusedPeerId, _) = self.focusedItem {
+                            if let index = storySubscriptions.items.firstIndex(where: { $0.peer.id == focusedPeerId }) {
+                                centralIndex = index
+                            }
                         }
-                    }
-                    if centralIndex == nil {
-                        if let index = storySubscriptions.items.firstIndex(where: { $0.hasUnseen }) {
-                            centralIndex = index
+                        if centralIndex == nil {
+                            if let index = storySubscriptions.items.firstIndex(where: { $0.hasUnseen }) {
+                                centralIndex = index
+                            }
                         }
-                    }
-                    if centralIndex == nil {
-                        if !storySubscriptions.items.isEmpty {
-                            centralIndex = 0
+                        if centralIndex == nil {
+                            if !storySubscriptions.items.isEmpty {
+                                centralIndex = 0
+                            }
                         }
-                    }
-                    
-                    if let centralIndex {
-                        if storySubscriptions.items[centralIndex].hasUnseen {
-                            startedWithUnseenValue = true
+                        
+                        if let centralIndex {
+                            if storySubscriptions.items[centralIndex].hasUnseen {
+                                startedWithUnseenValue = true
+                            }
                         }
                     }
                     
                     self.startedWithUnseen = startedWithUnseenValue
                     startedWithUnseen = startedWithUnseenValue
+                    preFilterOrder = true
                 }
                 
                 var sortedItems: [EngineStorySubscriptions.Item] = []
-                if !startedWithUnseen, let accountItem = storySubscriptions.accountItem, accountItem.storyCount != 0 {
-                    sortedItems.append(accountItem)
+                if let accountItem = storySubscriptions.accountItem {
+                    if startedWithUnseen {
+                        if accountItem.hasUnseen || accountItem.hasPending {
+                            sortedItems.append(accountItem)
+                        }
+                    } else {
+                        sortedItems.append(accountItem)
+                    }
                 }
                 for peerId in self.fixedSubscriptionOrder {
                     if let index = storySubscriptions.items.firstIndex(where: { $0.peer.id == peerId }) {
+                        if preFilterOrder {
+                            if startedWithUnseen && !storySubscriptions.items[index].hasUnseen {
+                                continue
+                            }
+                        }
                         sortedItems.append(storySubscriptions.items[index])
                     }
                 }
