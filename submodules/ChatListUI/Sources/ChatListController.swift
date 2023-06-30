@@ -2560,7 +2560,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     if let rawStorySubscriptions = self.rawStorySubscriptions {
                         var openCamera = false
                         if let accountItem = rawStorySubscriptions.accountItem {
-                            openCamera = accountItem.storyCount == 0
+                            openCamera = accountItem.storyCount == 0 && !accountItem.hasPending
                         } else {
                             openCamera = true
                         }
@@ -2581,9 +2581,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
                 
                 let _ = (self.context.engine.data.get(
-                    TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peer.id)
+                    TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peer.id),
+                    TelegramEngine.EngineData.Item.NotificationSettings.Global()
                 )
-                |> deliverOnMainQueue).start(next: { [weak self] notificationSettings in
+                |> deliverOnMainQueue).start(next: { [weak self] notificationSettings, globalSettings in
                     guard let self else {
                         return
                     }
@@ -2639,7 +2640,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             })
                         })))
                         
-                        let isMuted = notificationSettings.storiesMuted == true
+                        let isMuted = resolvedAreStoriesMuted(globalSettings: globalSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: notificationSettings._asNotificationSettings())
                         items.append(.action(ContextMenuActionItem(text: isMuted ? "Notify" : "Don't Notify", icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
@@ -5338,11 +5339,20 @@ private final class ChatListLocationContext {
             peerStatus = .single(nil)
         }
         
+        let networkState: Signal<AccountNetworkState, NoError>
+        #if DEBUG && false
+        networkState = .single(AccountNetworkState.connecting(proxy: nil)) |> then(.single(AccountNetworkState.updating(proxy: nil)) |> delay(2.0, queue: .mainQueue())) |> then(.single(AccountNetworkState.online(proxy: nil)) |> delay(2.0, queue: .mainQueue())) |> then(.complete() |> delay(2.0, queue: .mainQueue())) |> restart
+        #elseif DEBUG && false
+        networkState = .single(AccountNetworkState.connecting(proxy: nil))
+        #else
+        networkState = context.account.networkState
+        #endif
+        
         switch location {
         case .chatList:
             if !hideNetworkActivityStatus {
                 self.titleDisposable = combineLatest(queue: .mainQueue(),
-                    context.account.networkState,
+                    networkState,
                     hasProxy,
                     passcode,
                     containerNode.currentItemState,
@@ -5354,6 +5364,7 @@ private final class ChatListLocationContext {
                     guard let self else {
                         return
                     }
+                    
                     self.updateChatList(
                         networkState: networkState,
                         proxy: proxy,

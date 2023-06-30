@@ -37,6 +37,7 @@ private final class NotificationsPeerCategoryControllerArguments {
     let soundSelectionDisposable: MetaDisposable
     
     let updateEnabled: (Bool) -> Void
+    let updateEnabledImportant: (Bool) -> Void
     let updatePreviews: (Bool) -> Void
     
     let openSound: (PeerMessageSound) -> Void
@@ -49,11 +50,12 @@ private final class NotificationsPeerCategoryControllerArguments {
         
     let updatedExceptionMode: (NotificationExceptionMode) -> Void
         
-    init(context: AccountContext, soundSelectionDisposable: MetaDisposable, updateEnabled: @escaping (Bool) -> Void, updatePreviews: @escaping (Bool) -> Void, openSound: @escaping (PeerMessageSound) -> Void, addException: @escaping () -> Void, openException: @escaping (EnginePeer) -> Void, removeAllExceptions: @escaping () -> Void, updateRevealedPeerId: @escaping (EnginePeer.Id?) -> Void, removePeer: @escaping (EnginePeer) -> Void, updatedExceptionMode: @escaping (NotificationExceptionMode) -> Void) {
+    init(context: AccountContext, soundSelectionDisposable: MetaDisposable, updateEnabled: @escaping (Bool) -> Void, updateEnabledImportant: @escaping (Bool) -> Void, updatePreviews: @escaping (Bool) -> Void, openSound: @escaping (PeerMessageSound) -> Void, addException: @escaping () -> Void, openException: @escaping (EnginePeer) -> Void, removeAllExceptions: @escaping () -> Void, updateRevealedPeerId: @escaping (EnginePeer.Id?) -> Void, removePeer: @escaping (EnginePeer) -> Void, updatedExceptionMode: @escaping (NotificationExceptionMode) -> Void) {
         self.context = context
         self.soundSelectionDisposable = soundSelectionDisposable
         
         self.updateEnabled = updateEnabled
+        self.updateEnabledImportant = updateEnabledImportant
         self.updatePreviews = updatePreviews
         self.openSound = openSound
         
@@ -90,6 +92,8 @@ public enum NotificationsPeerCategoryEntryTag: ItemListItemTag {
 
 private enum NotificationsPeerCategoryEntry: ItemListNodeEntry {
     case enable(PresentationTheme, String, Bool)
+    case enableImportant(PresentationTheme, String, Bool)
+    case importantInfo(PresentationTheme, String)
     case optionsHeader(PresentationTheme, String)
     case previews(PresentationTheme, String, Bool)
     case sound(PresentationTheme, String, String, PeerMessageSound)
@@ -101,7 +105,7 @@ private enum NotificationsPeerCategoryEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .enable:
+            case .enable, .enableImportant, .importantInfo:
                 return NotificationsPeerCategorySection.enable.rawValue
             case .optionsHeader, .previews, .sound:
                 return NotificationsPeerCategorySection.options.rawValue
@@ -114,18 +118,22 @@ private enum NotificationsPeerCategoryEntry: ItemListNodeEntry {
         switch self {
             case .enable:
                 return 0
-            case .optionsHeader:
+            case .enableImportant:
                 return 1
-            case .previews:
+            case .importantInfo:
                 return 2
-            case .sound:
+            case .optionsHeader:
                 return 3
-            case .exceptionsHeader:
+            case .previews:
                 return 4
-            case .addException:
+            case .sound:
                 return 5
+            case .exceptionsHeader:
+                return 6
+            case .addException:
+                return 7
             case let .exception(index, _, _, _, _, _, _, _, _, _):
-                return 6 + index
+                return 8 + index
             case .removeAllExceptions:
                 return 100000
         }
@@ -148,6 +156,18 @@ private enum NotificationsPeerCategoryEntry: ItemListNodeEntry {
         switch lhs {
             case let .enable(lhsTheme, lhsText, lhsValue):
                 if case let .enable(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .enableImportant(lhsTheme, lhsText, lhsValue):
+                if case let .enableImportant(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .importantInfo(lhsTheme, lhsText):
+                if case let .importantInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -209,6 +229,12 @@ private enum NotificationsPeerCategoryEntry: ItemListNodeEntry {
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateEnabled(updatedValue)
                 }, tag: self.tag)
+            case let .enableImportant(_, text, value):
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
+                    arguments.updateEnabledImportant(updatedValue)
+                }, tag: self.tag)
+            case let .importantInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .optionsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .previews(_, text, value):
@@ -266,7 +292,34 @@ private func notificationsPeerCategoryEntries(category: NotificationsPeerCategor
     }
 
     if case .stories = category {
-        entries.append(.enable(presentationData.theme, "Show All Notifications", notificationSettings.storiesMuted == nil || notificationSettings.storiesMuted == false))
+        var allEnabled = false
+        var importantEnabled = false
+        
+        switch notificationSettings.storySettings.mute {
+        case .muted:
+            allEnabled = false
+            importantEnabled = false
+        case .unmuted:
+            allEnabled = true
+            importantEnabled = true
+        case .default:
+            allEnabled = false
+            importantEnabled = true
+        }
+        
+        //TODO:localize
+        entries.append(.enable(presentationData.theme, "Show All Notifications", allEnabled))
+        if !allEnabled {
+            entries.append(.enableImportant(presentationData.theme, "Show Important Notifications", importantEnabled))
+            entries.append(.importantInfo(presentationData.theme, "Always on for top 5 contacts."))
+        }
+        
+        if notificationSettings.enabled || !notificationExceptions.isEmpty {
+            entries.append(.optionsHeader(presentationData.theme, presentationData.strings.Notifications_Options.uppercased()))
+            
+            entries.append(.previews(presentationData.theme, "Display Author Name", notificationSettings.storySettings.hideSender != .hide))
+            entries.append(.sound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: filteredGlobalSound(notificationSettings.storySettings.sound)), filteredGlobalSound(notificationSettings.storySettings.sound)))
+        }
     } else {
         entries.append(.enable(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsAlert, notificationSettings.enabled))
         
@@ -279,7 +332,6 @@ private func notificationsPeerCategoryEntries(category: NotificationsPeerCategor
     
     entries.append(.exceptionsHeader(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsExceptions.uppercased()))
     entries.append(.addException(presentationData.theme, presentationData.strings.Notification_Exceptions_AddException))
-    
     
     let sortedExceptions = notificationExceptions.settings.sorted(by: { lhs, rhs in
         let lhsName = lhs.value.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
@@ -312,10 +364,38 @@ private func notificationsPeerCategoryEntries(category: NotificationsPeerCategor
             var title: String
             
             if case .stories = category {
-                if value.settings.storiesMuted == true {
+                var muted = false
+                if value.settings.storySettings.mute == .muted {
+                    muted = true
                     title = presentationData.strings.Notification_Exceptions_AlwaysOff
                 } else {
                     title = presentationData.strings.Notification_Exceptions_AlwaysOn
+                }
+                
+                if !muted {
+                    switch value.settings.storySettings.sound {
+                    case .default:
+                        break
+                    default:
+                        if !title.isEmpty {
+                            title.append(", ")
+                        }
+                        title.append(presentationData.strings.Notification_Exceptions_SoundCustom)
+                    }
+                    switch value.settings.storySettings.hideSender {
+                    case .default:
+                        break
+                    default:
+                        if !title.isEmpty {
+                            title += ", "
+                        }
+                        //TODO:localize
+                        if case .show = value.settings.displayPreviews {
+                            title += "Show Names"
+                        } else {
+                            title += "Hide Names"
+                        }
+                    }
                 }
             } else {
                 var muted = false
@@ -427,8 +507,16 @@ private final class NotificationExceptionState : Equatable {
         return NotificationExceptionState(mode: mode.withUpdatedPeerDisplayPreviews(peer, displayPreviews), revealedPeerId: self.revealedPeerId, editing: self.editing)
     }
     
-    func withUpdatedPeerStoryNotifications(_ peer: EnginePeer, _ storyNotifications: PeerNotificationDisplayPreviews) -> NotificationExceptionState {
-        return NotificationExceptionState(mode: mode.withUpdatedPeerStoryNotifications(peer, storyNotifications), revealedPeerId: self.revealedPeerId, editing: self.editing)
+    func withUpdatedPeerStoriesMuted(_ peer: EnginePeer, _ mute: PeerStoryNotificationSettings.Mute) -> NotificationExceptionState {
+        return NotificationExceptionState(mode: mode.withUpdatedPeerStoriesMuted(peer, mute), revealedPeerId: self.revealedPeerId, editing: self.editing)
+    }
+    
+    func withUpdatedPeerStoriesHideSender(_ peer: EnginePeer, _ hideSender: PeerStoryNotificationSettings.HideSender) -> NotificationExceptionState {
+        return NotificationExceptionState(mode: mode.withUpdatedPeerStoriesHideSender(peer, hideSender), revealedPeerId: self.revealedPeerId, editing: self.editing)
+    }
+    
+    func withUpdatedPeerStorySound(_ peer: EnginePeer, _ sound: PeerMessageSound) -> NotificationExceptionState {
+        return NotificationExceptionState(mode: mode.withUpdatedPeerStorySound(peer, sound), revealedPeerId: self.revealedPeerId, editing: self.editing)
     }
     
     static func == (lhs: NotificationExceptionState, rhs: NotificationExceptionState) -> Bool {
@@ -470,17 +558,18 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
         return context.engine.peers.updatePeerDisplayPreviewsSetting(peerId: peerId, threadId: nil, displayPreviews: displayPreviews) |> deliverOnMainQueue
     }
     
-    let updatePeerStoryNotifications: (EnginePeer.Id, PeerNotificationDisplayPreviews) -> Signal<Void, NoError> = { peerId, storyNotifications in
-        var isMuted: Bool?
-        switch storyNotifications {
-        case .default:
-            isMuted = nil
-        case .show:
-            isMuted = false
-        case .hide:
-            isMuted = true
-        }
-        return context.engine.peers.updatePeerStoriesMutedSetting(peerId: peerId, isMuted: isMuted) |> deliverOnMainQueue
+    let updatePeerStoriesMuted: (EnginePeer.Id, PeerStoryNotificationSettings.Mute) -> Signal<Void, NoError> = {
+        peerId, mute in
+        return context.engine.peers.updatePeerStoriesMutedSetting(peerId: peerId, mute: mute) |> deliverOnMainQueue
+    }
+    
+    let updatePeerStoriesHideSender: (EnginePeer.Id, PeerStoryNotificationSettings.HideSender) -> Signal<Void, NoError> = {
+        peerId, hideSender in
+        return context.engine.peers.updatePeerStoriesHideSenderSetting(peerId: peerId, hideSender: hideSender) |> deliverOnMainQueue
+    }
+    
+    let updatePeerStorySound: (EnginePeer.Id, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
+        return context.engine.peers.updatePeerStorySoundInteractive(peerId: peerId, sound: sound) |> deliverOnMainQueue
     }
     
     var peerIds: Set<EnginePeer.Id> = Set(mode.peerIds)
@@ -587,12 +676,32 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
                     }
                     updateNotificationsView({})
                 })
-            }, updatePeerStoryNotifications: { peerId, storyNotifications in
+            }, updatePeerStoriesMuted: { peerId, mute in
                 updateNotificationsDisposable.set(nil)
-                _ = combineLatest(updatePeerStoryNotifications(peerId, storyNotifications), context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)) |> deliverOnMainQueue).start(next: { _, peer in
+                let _ = combineLatest(updatePeerStoriesMuted(peerId, mute), context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)) |> deliverOnMainQueue).start(next: { _, peer in
                     if let peer = peer {
                         updateState { value in
-                            return value.withUpdatedPeerStoryNotifications(peer, storyNotifications)
+                            return value.withUpdatedPeerStoriesMuted(peer, mute)
+                        }
+                    }
+                    updateNotificationsView({})
+                })
+            }, updatePeerStoriesHideSender: { peerId, hideSender in
+                updateNotificationsDisposable.set(nil)
+                let _ = combineLatest(updatePeerStoriesHideSender(peerId, hideSender), context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)) |> deliverOnMainQueue).start(next: { _, peer in
+                    if let peer = peer {
+                        updateState { value in
+                            return value.withUpdatedPeerStoriesHideSender(peer, hideSender)
+                        }
+                    }
+                    updateNotificationsView({})
+                })
+            }, updatePeerStorySound: { peerId, sound in
+                updateNotificationsDisposable.set(nil)
+                let _ = combineLatest(updatePeerStorySound(peerId, sound), context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)) |> deliverOnMainQueue).start(next: { _, peer in
+                    if let peer = peer {
+                        updateState { value in
+                            return value.withUpdatedPeerStorySound(peer, sound)
                         }
                     }
                     updateNotificationsView({})
@@ -608,7 +717,7 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
                             return
                         }
                         updateState { value in
-                            return value.withUpdatedPeerStoryNotifications(peer, .default)
+                            return value.withUpdatedPeerStorySound(peer, .default).withUpdatedPeerStoriesMuted(peer, .default).withUpdatedPeerStoriesHideSender(peer, .default)
                         }
                         updateNotificationsView({})
                     })
@@ -637,14 +746,25 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
         let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             switch category {
-                case .privateChat:
-                    settings.privateChats.enabled = value
-                case .group:
-                    settings.groupChats.enabled = value
-                case .channel:
-                    settings.channels.enabled = value
-                case .stories:
-                    settings.privateChats.storiesMuted = !value
+            case .privateChat:
+                settings.privateChats.enabled = value
+            case .group:
+                settings.groupChats.enabled = value
+            case .channel:
+                settings.channels.enabled = value
+            case .stories:
+                settings.privateChats.storySettings.mute = value ? .unmuted : .default
+            }
+            return settings
+        }).start()
+    }, updateEnabledImportant: { value in
+        let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
+            var settings = settings
+            switch category {
+            case .stories:
+                settings.privateChats.storySettings.mute = value ? .default : .muted
+            default:
+                break
             }
             return settings
         }).start()
@@ -659,7 +779,7 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
                 case .channel:
                     settings.channels.displayPreviews = value
                 case .stories:
-                    break
+                    settings.privateChats.storySettings.hideSender = value ? .show : .hide
             }
             return settings
         }).start()
@@ -675,7 +795,7 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
                     case .channel:
                         settings.channels.sound = value
                     case .stories:
-                        break
+                        settings.privateChats.storySettings.sound = value
                 }
                 return settings
             }).start()
@@ -722,7 +842,7 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
                         updateState { state in
                             var state = state
                             for value in values {
-                                state = state.withUpdatedPeerStoryNotifications(value.peer, .default)
+                                state = state.withUpdatedPeerStorySound(value.peer, .default).withUpdatedPeerStoriesMuted(value.peer, .default).withUpdatedPeerStoriesHideSender(value.peer, .default)
                             }
                             return state
                         }
@@ -765,7 +885,7 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
             |> deliverOnMainQueue).start(completed: {
                 updateNotificationsDisposable.set(nil)
                 updateState { value in
-                    return value.withUpdatedPeerStoryNotifications(peer, .default)
+                    return value.withUpdatedPeerStorySound(peer, .default).withUpdatedPeerStoriesMuted(peer, .default).withUpdatedPeerStoriesHideSender(peer, .default)
                 }
                 let _ = (context.engine.peers.removeCustomStoryNotificationSettings(peerIds: [peer.id])
                 |> deliverOnMainQueue).start(completed: {

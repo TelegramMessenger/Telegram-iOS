@@ -982,9 +982,18 @@ public final class StoryItemSetContainerComponent: Component {
                     return true
                 }
             } else {
-                if let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View {
-                    inputPanelView.activateInput()
-                    return false
+                var canReply = true
+                if component.slice.peer.isService {
+                    canReply = false
+                } else if case .unsupported = component.slice.item.storyItem.media {
+                    canReply = false
+                }
+                
+                if canReply {
+                    if let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View {
+                        inputPanelView.activateInput()
+                        return false
+                    }
                 }
             }
             return false
@@ -3136,8 +3145,11 @@ public final class StoryItemSetContainerComponent: Component {
             guard let component = self.component else {
                 return
             }
-            let _ = (component.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: component.slice.peer.id))
-            |> deliverOnMainQueue).start(next: { [weak self] settings in
+            let _ = (component.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: component.slice.peer.id),
+                TelegramEngine.EngineData.Item.NotificationSettings.Global()
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] settings, globalSettings in
                 guard let self, let component = self.component, let controller = component.controller() else {
                     return
                 }
@@ -3152,7 +3164,8 @@ public final class StoryItemSetContainerComponent: Component {
                 let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                 var items: [ContextMenuItem] = []
                 
-                let isMuted = settings.storiesMuted == true
+                let isMuted = resolvedAreStoriesMuted(globalSettings: globalSettings._asGlobalNotificationSettings(), peer: component.slice.peer._asPeer(), peerSettings: settings._asNotificationSettings())
+                
                 items.append(.action(ContextMenuActionItem(text: isMuted ? "Notify" : "Don't Notify", icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: component.slice.additionalPeerData.isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, a in

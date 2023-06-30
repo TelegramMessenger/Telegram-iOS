@@ -3843,6 +3843,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard let item = self.item else {
+            return nil
+        }
+        
         if let compoundTextButtonNode = self.compoundTextButtonNode, let compoundHighlightingNode = self.compoundHighlightingNode, compoundHighlightingNode.alpha != 0.0 {
             let localPoint = self.view.convert(point, to: compoundHighlightingNode.view)
             var matches = false
@@ -3857,8 +3861,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
         }
         
-        if let avatarStoryIndicatorView = self.avatarStoryIndicator?.view, let result = avatarStoryIndicatorView.hitTest(self.view.convert(point, to: avatarStoryIndicatorView), with: event) {
-            return result
+        if let _ = item.interaction.inlineNavigationLocation {
+        } else {
+            if let avatarStoryIndicatorView = self.avatarStoryIndicator?.view, let result = avatarStoryIndicatorView.hitTest(self.view.convert(point, to: avatarStoryIndicatorView), with: event) {
+                return result
+            }
         }
         
         return super.hitTest(point, with: event)

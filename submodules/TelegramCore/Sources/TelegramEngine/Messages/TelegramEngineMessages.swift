@@ -677,12 +677,17 @@ public extension TelegramEngine {
                         hasMoreToken = ""
                     }
                     
+                    var accountPendingItemCount = 0
+                    if let view = views.views[PostboxViewKey.storiesState(key: .local)] as? StoryStatesView, let localState = view.value?.get(Stories.LocalState.self) {
+                        accountPendingItemCount = localState.items.count
+                    }
+                    
                     var accountItem: EngineStorySubscriptions.Item = EngineStorySubscriptions.Item(
                         peer: EnginePeer(accountPeer),
                         hasUnseen: false,
                         hasUnseenCloseFriends: false,
-                        hasPending: false,
-                        storyCount: 0,
+                        hasPending: accountPendingItemCount != 0,
+                        storyCount: accountPendingItemCount,
                         unseenCount: 0,
                         lastTimestamp: 0
                     )
@@ -698,7 +703,6 @@ public extension TelegramEngine {
                                 var hasUnseen = false
                                 var hasUnseenCloseFriends = false
                                 var unseenCount = 0
-                                var hasPending = false
                                 if let peerState = peerState {
                                     hasUnseen = peerState.maxReadId < lastEntry.id
                                     
@@ -717,18 +721,12 @@ public extension TelegramEngine {
                                     }
                                 }
                                 
-                                if let view = views.views[PostboxViewKey.storiesState(key: .local)] as? StoryStatesView, let localState = view.value?.get(Stories.LocalState.self) {
-                                    if !localState.items.isEmpty {
-                                        hasPending = true
-                                    }
-                                }
-                                
                                 let item = EngineStorySubscriptions.Item(
                                     peer: EnginePeer(accountPeer),
                                     hasUnseen: hasUnseen,
                                     hasUnseenCloseFriends: hasUnseenCloseFriends,
-                                    hasPending: hasPending,
-                                    storyCount: itemsView.items.count,
+                                    hasPending: accountPendingItemCount != 0,
+                                    storyCount: itemsView.items.count + accountPendingItemCount,
                                     unseenCount: unseenCount,
                                     lastTimestamp: lastEntry.timestamp
                                 )

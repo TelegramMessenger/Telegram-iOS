@@ -273,8 +273,20 @@ public extension TelegramEngine {
             return _internal_updatePeerDisplayPreviewsSetting(account: self.account, peerId: peerId, threadId: threadId, displayPreviews: displayPreviews)
         }
         
-        public func updatePeerStoriesMutedSetting(peerId: PeerId, isMuted: Bool?) -> Signal<Void, NoError> {
-            return _internal_updatePeerStoriesMutedSetting(account: self.account, peerId: peerId, isMuted: isMuted)
+        public func updatePeerStoriesMutedSetting(peerId: PeerId, mute: PeerStoryNotificationSettings.Mute) -> Signal<Void, NoError> {
+            return _internal_updatePeerStoriesMutedSetting(account: self.account, peerId: peerId, mute: mute)
+        }
+        
+        public func updatePeerStoriesHideSenderSetting(peerId: PeerId, hideSender: PeerStoryNotificationSettings.HideSender) -> Signal<Void, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                _internal_updatePeerStoriesHideSenderSetting(account: self.account, transaction: transaction, peerId: peerId, hideSender: hideSender)
+            }
+        }
+        
+        public func updatePeerStorySoundInteractive(peerId: PeerId, sound: PeerMessageSound) -> Signal<Void, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                _internal_updatePeerStoryNotificationSoundInteractive(account: self.account, transaction: transaction, peerId: peerId, sound: sound)
+            }
         }
 
         public func updatePeerNotificationSoundInteractive(peerId: PeerId, threadId: Int64?, sound: PeerMessageSound) -> Signal<Void, NoError> {
@@ -306,7 +318,9 @@ public extension TelegramEngine {
         public func removeCustomStoryNotificationSettings(peerIds: [PeerId]) -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
                 for peerId in peerIds {
-                    _internal_updatePeerStoriesMutedSetting(account: self.account, transaction: transaction, peerId: peerId, isMuted: nil)
+                    _internal_updatePeerStoriesMutedSetting(account: self.account, transaction: transaction, peerId: peerId, mute: .default)
+                    _internal_updatePeerStoriesHideSenderSetting(account: self.account, transaction: transaction, peerId: peerId, hideSender: .default)
+                    _internal_updatePeerStoryNotificationSoundInteractive(account: self.account, transaction: transaction, peerId: peerId, sound: .default)
                 }
             }
             |> ignoreValues

@@ -84,22 +84,24 @@ public enum EnginePeer: Equatable {
             case show
             case hide
         }
+        
+        public typealias StorySettigs = PeerStoryNotificationSettings
 
         public var muteState: MuteState
         public var messageSound: MessageSound
         public var displayPreviews: DisplayPreviews
-        public var storiesMuted: Bool?
+        public var storySettings: StorySettigs
 
         public init(
             muteState: MuteState,
             messageSound: MessageSound,
             displayPreviews: DisplayPreviews,
-            storiesMuted: Bool?
+            storySettings: StorySettigs
         ) {
             self.muteState = muteState
             self.messageSound = messageSound
             self.displayPreviews = displayPreviews
-            self.storiesMuted = storiesMuted
+            self.storySettings = storySettings
         }
     }
     
@@ -219,13 +221,13 @@ public struct EngineGlobalNotificationSettings: Equatable {
         public var enabled: Bool
         public var displayPreviews: Bool
         public var sound: EnginePeer.NotificationSettings.MessageSound
-        public var storiesMuted: Bool
+        public var storySettings: EnginePeer.NotificationSettings.StorySettigs
         
-        public init(enabled: Bool, displayPreviews: Bool, sound: EnginePeer.NotificationSettings.MessageSound, storiesMuted: Bool) {
+        public init(enabled: Bool, displayPreviews: Bool, sound: EnginePeer.NotificationSettings.MessageSound, storySettings: EnginePeer.NotificationSettings.StorySettigs) {
             self.enabled = enabled
             self.displayPreviews = displayPreviews
             self.sound = sound
-            self.storiesMuted = storiesMuted
+            self.storySettings = storySettings
         }
     }
     
@@ -333,7 +335,7 @@ public extension EnginePeer.NotificationSettings {
             muteState: MuteState(notificationSettings.muteState),
             messageSound: MessageSound(notificationSettings.messageSound),
             displayPreviews: DisplayPreviews(notificationSettings.displayPreviews),
-            storiesMuted: notificationSettings.storiesMuted
+            storySettings: notificationSettings.storySettings
         )
     }
 
@@ -342,7 +344,7 @@ public extension EnginePeer.NotificationSettings {
             muteState: self.muteState._asMuteState(),
             messageSound: self.messageSound._asMessageSound(),
             displayPreviews: self.displayPreviews._asDisplayPreviews(),
-            storiesMuted: self.storiesMuted
+            storySettings: self.storySettings
         )
     }
 }
@@ -602,7 +604,7 @@ public extension EngineGlobalNotificationSettings.CategorySettings {
             enabled: categorySettings.enabled,
             displayPreviews: categorySettings.displayPreviews,
             sound: EnginePeer.NotificationSettings.MessageSound(categorySettings.sound),
-            storiesMuted: categorySettings.storiesMuted ?? false
+            storySettings: categorySettings.storySettings
         )
     }
     
@@ -611,7 +613,7 @@ public extension EngineGlobalNotificationSettings.CategorySettings {
             enabled: self.enabled,
             displayPreviews: self.displayPreviews,
             sound: self.sound._asMessageSound(),
-            storiesMuted: self.storiesMuted
+            storySettings: self.storySettings
         )
     }
 }
@@ -623,6 +625,15 @@ public extension EngineGlobalNotificationSettings {
             groupChats: CategorySettings(globalNotificationSettings.groupChats),
             channels: CategorySettings(globalNotificationSettings.channels),
             contactsJoined: globalNotificationSettings.contactsJoined
+        )
+    }
+    
+    func _asGlobalNotificationSettings() -> GlobalNotificationSettingsSet {
+        return GlobalNotificationSettingsSet(
+            privateChats: self.privateChats._asMessageNotificationSettings(),
+            groupChats: self.groupChats._asMessageNotificationSettings(),
+            channels: self.channels._asMessageNotificationSettings(),
+            contactsJoined: self.contactsJoined
         )
     }
 }

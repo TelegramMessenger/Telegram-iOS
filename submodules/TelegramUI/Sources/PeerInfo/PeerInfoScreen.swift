@@ -4712,17 +4712,18 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             return context.engine.peers.updatePeerDisplayPreviewsSetting(peerId: peerId, threadId: threadId, displayPreviews: displayPreviews) |> deliverOnMainQueue
                         }
                         
-                        let updatePeerStoryNotifications: (PeerId, PeerNotificationDisplayPreviews) -> Signal<Void, NoError> = { peerId, storyNotifications in
-                            var isMuted: Bool?
-                            switch storyNotifications {
-                            case .default:
-                                isMuted = nil
-                            case .show:
-                                isMuted = false
-                            case .hide:
-                                isMuted = true
-                            }
-                            return context.engine.peers.updatePeerStoriesMutedSetting(peerId: peerId, isMuted: isMuted) |> deliverOnMainQueue
+                        let updatePeerStoriesMuted: (PeerId, PeerStoryNotificationSettings.Mute) -> Signal<Void, NoError> = {
+                            peerId, mute in
+                            return context.engine.peers.updatePeerStoriesMutedSetting(peerId: peerId, mute: mute) |> deliverOnMainQueue
+                        }
+                        
+                        let updatePeerStoriesHideSender: (PeerId, PeerStoryNotificationSettings.HideSender) -> Signal<Void, NoError> = {
+                            peerId, hideSender in
+                            return context.engine.peers.updatePeerStoriesHideSenderSetting(peerId: peerId, hideSender: hideSender) |> deliverOnMainQueue
+                        }
+                        
+                        let updatePeerStorySound: (PeerId, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
+                            return context.engine.peers.updatePeerStorySoundInteractive(peerId: peerId, sound: sound) |> deliverOnMainQueue
                         }
                         
                         let mode: NotificationExceptionMode
@@ -4775,11 +4776,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             |> deliverOnMainQueue).start(next: { _ in
                                 
                             })
-                        }, updatePeerStoryNotifications: { peerId, storyNotifications in
-                            let _ = (updatePeerStoryNotifications(peerId, storyNotifications)
-                            |> deliverOnMainQueue).start(next: { _ in
-                                
-                            })
+                        }, updatePeerStoriesMuted: { peerId, mute in
+                            let _ = (updatePeerStoriesMuted(peerId, mute)
+                            |> deliverOnMainQueue).start()
+                        }, updatePeerStoriesHideSender: { peerId, hideSender in
+                            let _ = (updatePeerStoriesHideSender(peerId, hideSender)
+                            |> deliverOnMainQueue).start()
+                        }, updatePeerStorySound: { peerId, sound in
+                            let _ = (updatePeerStorySound(peer.id, sound)
+                            |> deliverOnMainQueue).start()
                         }, removePeerFromExceptions: {
                         }, modifiedPeer: {
                         })

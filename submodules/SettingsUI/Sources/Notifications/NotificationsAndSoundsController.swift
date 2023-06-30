@@ -551,8 +551,19 @@ private func notificationsAndSoundsEntries(authorizationStatus: AccessType, warn
     entries.append(.privateChats(presentationData.theme, presentationData.strings.Notifications_PrivateChats, !exceptions.users.isEmpty ? presentationData.strings.Notifications_CategoryExceptions(Int32(exceptions.users.peerIds.count)) : "", globalSettings.privateChats.enabled ? presentationData.strings.Notifications_On : presentationData.strings.Notifications_Off))
     entries.append(.groupChats(presentationData.theme, presentationData.strings.Notifications_GroupChats, !exceptions.groups.isEmpty ? presentationData.strings.Notifications_CategoryExceptions(Int32(exceptions.groups.peerIds.count)) : "", globalSettings.groupChats.enabled ? presentationData.strings.Notifications_On : presentationData.strings.Notifications_Off))
     entries.append(.channels(presentationData.theme, presentationData.strings.Notifications_Channels, !exceptions.channels.isEmpty ? presentationData.strings.Notifications_CategoryExceptions(Int32(exceptions.channels.peerIds.count)) : "", globalSettings.channels.enabled ? presentationData.strings.Notifications_On : presentationData.strings.Notifications_Off))
+    
     //TODO:localize
-    entries.append(.stories(presentationData.theme, "Stories", !exceptions.stories.isEmpty ? presentationData.strings.Notifications_CategoryExceptions(Int32(exceptions.stories.peerIds.count)) : "", globalSettings.privateChats.storiesMuted != true ? presentationData.strings.Notifications_On : presentationData.strings.Notifications_Off))
+    let storiesValue: String
+    switch globalSettings.privateChats.storySettings.mute {
+    case .default:
+        storiesValue = "Top 5"
+    case .muted:
+        storiesValue = presentationData.strings.Notifications_Off
+    case .unmuted:
+        storiesValue = presentationData.strings.Notifications_On
+    }
+    
+    entries.append(.stories(presentationData.theme, "Stories", !exceptions.stories.isEmpty ? presentationData.strings.Notifications_CategoryExceptions(Int32(exceptions.stories.peerIds.count)) : "", storiesValue))
     
     entries.append(.inAppHeader(presentationData.theme, presentationData.strings.Notifications_InAppNotifications.uppercased()))
     entries.append(.inAppSounds(presentationData.theme, presentationData.strings.Notifications_InAppNotificationsSounds, inAppSettings.playSounds))
@@ -730,6 +741,8 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
     
     let exceptionsSignal = Signal<NotificationExceptionsList?, NoError>.single(exceptionsList) |> then(context.engine.peers.notificationExceptionsList() |> map(Optional.init))
     
+    let defaultStorySettings = PeerStoryNotificationSettings.default
+    
     notificationExceptions.set(exceptionsSignal |> map { list -> (NotificationExceptionMode, NotificationExceptionMode, NotificationExceptionMode, NotificationExceptionMode) in
         var users:[PeerId : NotificationExceptionWrapper] = [:]
         var groups: [PeerId : NotificationExceptionWrapper] = [:]
@@ -738,7 +751,7 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
         if let list = list {
             for (key, value) in list.settings {
                 if let peer = list.peers[key], !peer.debugDisplayTitle.isEmpty, peer.id != context.account.peerId {
-                    if value.storiesMuted != nil {
+                    if value.storySettings != defaultStorySettings {
                         stories[key] = NotificationExceptionWrapper(settings: value, peer: EnginePeer(peer))
                     }
                     
