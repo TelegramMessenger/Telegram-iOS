@@ -11,6 +11,7 @@ public extension Stories {
             case media
             case text
             case entities
+            case embeddedStickers
             case pin
             case privacy
             case isForwardingDisabled
@@ -23,6 +24,7 @@ public extension Stories {
         public let media: Media
         public let text: String
         public let entities: [MessageTextEntity]
+        public let embeddedStickers: [TelegramMediaFile]
         public let pin: Bool
         public let privacy: EngineStoryPrivacy
         public let isForwardingDisabled: Bool
@@ -35,6 +37,7 @@ public extension Stories {
             media: Media,
             text: String,
             entities: [MessageTextEntity],
+            embeddedStickers: [TelegramMediaFile],
             pin: Bool,
             privacy: EngineStoryPrivacy,
             isForwardingDisabled: Bool,
@@ -46,6 +49,7 @@ public extension Stories {
             self.media = media
             self.text = text
             self.entities = entities
+            self.embeddedStickers = embeddedStickers
             self.pin = pin
             self.privacy = privacy
             self.isForwardingDisabled = isForwardingDisabled
@@ -64,6 +68,11 @@ public extension Stories {
             
             self.text = try container.decode(String.self, forKey: .text)
             self.entities = try container.decode([MessageTextEntity].self, forKey: .entities)
+            
+            let stickersData = try container.decode(Data.self, forKey: .embeddedStickers)
+            let stickersDecoder = PostboxDecoder(buffer: MemoryBuffer(data: stickersData))
+            self.embeddedStickers = (try? stickersDecoder.decodeObjectArrayWithCustomDecoderForKey("stickers", decoder: { TelegramMediaFile(decoder: $0) })) ?? []
+            
             self.pin = try container.decode(Bool.self, forKey: .pin)
             self.privacy = try container.decode(EngineStoryPrivacy.self, forKey: .privacy)
             self.isForwardingDisabled = try container.decodeIfPresent(Bool.self, forKey: .isForwardingDisabled) ?? false
@@ -83,6 +92,11 @@ public extension Stories {
             
             try container.encode(self.text, forKey: .text)
             try container.encode(self.entities, forKey: .entities)
+            
+            let stickersEncoder = PostboxEncoder()
+            stickersEncoder.encodeObjectArray(self.embeddedStickers, forKey: "stickers")
+            try container.encode(stickersEncoder.makeData(), forKey: .embeddedStickers)
+            
             try container.encode(self.pin, forKey: .pin)
             try container.encode(self.privacy, forKey: .privacy)
             try container.encode(self.isForwardingDisabled, forKey: .isForwardingDisabled)
@@ -270,7 +284,7 @@ final class PendingStoryManager {
                 self.currentPendingItemContext = pendingItemContext
                 
                 let stableId = firstItem.stableId
-                pendingItemContext.disposable = (_internal_uploadStoryImpl(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.revalidationContext, auxiliaryMethods: self.auxiliaryMethods, stableId: stableId, media: firstItem.media, text: firstItem.text, entities: firstItem.entities, pin: firstItem.pin, privacy: firstItem.privacy, isForwardingDisabled: firstItem.isForwardingDisabled, period: Int(firstItem.period), randomId: firstItem.randomId)
+                pendingItemContext.disposable = (_internal_uploadStoryImpl(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.revalidationContext, auxiliaryMethods: self.auxiliaryMethods, stableId: stableId, media: firstItem.media, text: firstItem.text, entities: firstItem.entities, embeddedStickers: firstItem.embeddedStickers, pin: firstItem.pin, privacy: firstItem.privacy, isForwardingDisabled: firstItem.isForwardingDisabled, period: Int(firstItem.period), randomId: firstItem.randomId)
                 |> deliverOn(self.queue)).start(next: { [weak self] event in
                     guard let `self` = self else {
                         return

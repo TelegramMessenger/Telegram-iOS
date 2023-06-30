@@ -1088,6 +1088,16 @@ public final class PeerExpiringStoryListContext {
             return self.items.contains(where: { $0.id > self.maxReadId })
         }
         
+        public var unseenCount: Int {
+            var count: Int = 0
+            for item in items {
+                if item.id > maxReadId {
+                    count += 1
+                }
+            }
+            return count
+        }
+        
         public var hasUnseenCloseFriends: Bool {
             return self.items.contains(where: { $0.id > self.maxReadId && $0.isCloseFriends })
         }

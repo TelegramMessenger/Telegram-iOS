@@ -3,6 +3,7 @@ import UIKit
 import Display
 import ComponentFlow
 import SwiftSignalKit
+import TelegramCore
 import AppBundle
 import TextFieldComponent
 import BundleIconComponent
@@ -12,6 +13,8 @@ import ChatPresentationInterfaceState
 import LottieComponent
 import ChatContextQuery
 import TextFormat
+import EmojiSuggestionsComponent
+import AudioToolbox
 
 public final class MessageInputPanelComponent: Component {
     public enum Style {
@@ -210,7 +213,7 @@ public final class MessageInputPanelComponent: Component {
     public enum SendMessageInput {
         case text(NSAttributedString)
     }
-    
+            
     public final class View: UIView {
         private let fieldBackgroundView: BlurredBackgroundView
         private let vibrancyEffectView: UIVisualEffectView
@@ -240,13 +243,15 @@ public final class MessageInputPanelComponent: Component {
         private var currentMediaInputIsVoice: Bool = true
         private var mediaCancelFraction: CGFloat = 0.0
         
+        private var currentInputMode: InputMode?
+        
         private var contextQueryStates: [ChatPresentationInputQueryKind: (ChatPresentationInputQuery, Disposable)] = [:]
         private var contextQueryResults: [ChatPresentationInputQueryKind: ChatPresentationInputQueryResult] = [:]
-        
         private var contextQueryResultPanel: ComponentView<Empty>?
         private var contextQueryResultPanelExternalState: ContextResultPanelComponent.ExternalState?
         
-        private var currentInputMode: InputMode?
+        private var viewForOverlayContent: ViewForOverlayContent?
+        private var currentEmojiSuggestionView: ComponentHostView<Empty>?
         
         private var component: MessageInputPanelComponent?
         private weak var state: EmptyComponentState?
@@ -272,6 +277,28 @@ public final class MessageInputPanelComponent: Component {
             self.addSubview(self.gradientView)
             self.fieldBackgroundView.addSubview(self.vibrancyEffectView)
             self.addSubview(self.fieldBackgroundView)
+            
+            self.viewForOverlayContent = ViewForOverlayContent(
+                ignoreHit: { [weak self] view, point in
+                    guard let self else {
+                        return false
+                    }
+                    if self.hitTest(view.convert(point, to: self), with: nil) != nil {
+                        return true
+                    }
+                    if view.convert(point, to: self).y > self.bounds.maxY {
+                        return true
+                    }
+                    return false
+                },
+                dismissSuggestions: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.textFieldExternalState.dismissedEmojiSuggestionPosition = self.textFieldExternalState.currentEmojiSuggestion?.position
+                    self.state?.updated()
+                }
+            )
         }
         
         required init?(coder: NSCoder) {
@@ -350,6 +377,17 @@ public final class MessageInputPanelComponent: Component {
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             let result = super.hitTest(point, with: event)
+            
+            if let _ = self.textField.view, let currentEmojiSuggestion = self.textFieldExternalState.currentEmojiSuggestion, let currentEmojiSuggestionView = self.currentEmojiSuggestionView {
+                if let result = currentEmojiSuggestionView.hitTest(self.convert(point, to: currentEmojiSuggestionView), with: event) {
+                    return result
+                }
+                self.textFieldExternalState.dismissedEmojiSuggestionPosition = currentEmojiSuggestion.position
+                if let textFieldView = self.textField.view as? TextFieldComponent.View {
+                    textFieldView.updateEmojiSuggestion(transition: .immediate)
+                }
+                self.state?.updated()
+            }
             
             if result == nil, let contextQueryResultPanel = self.contextQueryResultPanel?.view, let panelResult = contextQueryResultPanel.hitTest(self.convert(point, to: contextQueryResultPanel), with: event), panelResult !== contextQueryResultPanel {
                 return panelResult
@@ -513,9 +551,18 @@ public final class MessageInputPanelComponent: Component {
             if let textFieldView = self.textField.view {
                 if textFieldView.superview == nil {
                     self.addSubview(textFieldView)
+                    
+                    if let viewForOverlayContent = self.viewForOverlayContent {
+                        self.addSubview(viewForOverlayContent)
+                    }
                 }
-                transition.setFrame(view: textFieldView, frame: CGRect(origin: CGPoint(x: fieldBackgroundFrame.minX, y: fieldBackgroundFrame.maxY - textFieldSize.height), size: textFieldSize))
+                let textFieldFrame = CGRect(origin: CGPoint(x: fieldBackgroundFrame.minX, y: fieldBackgroundFrame.maxY - textFieldSize.height), size: textFieldSize)
+                transition.setFrame(view: textFieldView, frame: textFieldFrame)
                 transition.setAlpha(view: textFieldView, alpha: (hasMediaRecording || hasMediaEditing || component.disabledPlaceholder != nil) ? 0.0 : 1.0)
+                
+                if let viewForOverlayContent = self.viewForOverlayContent {
+                    transition.setFrame(view: viewForOverlayContent, frame: textFieldFrame)
+                }
             }
             
             if let disabledPlaceholderText = component.disabledPlaceholder {
@@ -1123,6 +1170,9 @@ public final class MessageInputPanelComponent: Component {
             }
             
             self.updateContextQueries()
+                    
+            let panelLeftInset: CGFloat = max(insets.left, 7.0)
+            let panelRightInset: CGFloat = max(insets.right, 41.0)
             
             if let result = self.contextQueryResults[.mention], result.count > 0 && self.textFieldExternalState.isEditing {
                 let availablePanelHeight: CGFloat = 413.0
@@ -1142,8 +1192,6 @@ public final class MessageInputPanelComponent: Component {
                     animateIn = true
                     transition = .immediate
                 }
-                let panelLeftInset: CGFloat = max(insets.left, 7.0)
-                let panelRightInset: CGFloat = max(insets.right, 41.0)
                 let panelSize = panel.update(
                     transition: transition,
                     component: AnyComponent(ContextResultPanelComponent(
@@ -1209,6 +1257,143 @@ public final class MessageInputPanelComponent: Component {
                 })
             }
             
+            if let emojiSuggestion = self.textFieldExternalState.currentEmojiSuggestion, emojiSuggestion.disposable == nil {
+                emojiSuggestion.disposable = (EmojiSuggestionsComponent.suggestionData(context: component.context, isSavedMessages: false, query: emojiSuggestion.position.value)
+                |> deliverOnMainQueue).start(next: { [weak self, weak emojiSuggestion] result in
+                    guard let self, let emojiSuggestion, self.textFieldExternalState.currentEmojiSuggestion === emojiSuggestion else {
+                        return
+                    }
+                    
+                    emojiSuggestion.value = result
+                    self.state?.updated()
+                })
+            }
+            
+            var hasTrackingView = self.textFieldExternalState.hasTrackingView
+            if let currentEmojiSuggestion = self.textFieldExternalState.currentEmojiSuggestion, let value = currentEmojiSuggestion.value as? [TelegramMediaFile], value.isEmpty {
+                hasTrackingView = false
+            }
+            if !self.textFieldExternalState.isEditing {
+                hasTrackingView = false
+            }
+            
+            if !hasTrackingView {
+                if let currentEmojiSuggestion = self.textFieldExternalState.currentEmojiSuggestion {
+                    self.textFieldExternalState.currentEmojiSuggestion = nil
+                    currentEmojiSuggestion.disposable?.dispose()
+                }
+                
+                if let currentEmojiSuggestionView = self.currentEmojiSuggestionView {
+                    self.currentEmojiSuggestionView = nil
+                    
+                    currentEmojiSuggestionView.alpha = 0.0
+                    currentEmojiSuggestionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak currentEmojiSuggestionView] _ in
+                        currentEmojiSuggestionView?.removeFromSuperview()
+                    })
+                }
+            }
+            
+            if let currentEmojiSuggestion = self.textFieldExternalState.currentEmojiSuggestion, let value = currentEmojiSuggestion.value as? [TelegramMediaFile] {
+                let currentEmojiSuggestionView: ComponentHostView<Empty>
+                if let current = self.currentEmojiSuggestionView {
+                    currentEmojiSuggestionView = current
+                } else {
+                    currentEmojiSuggestionView = ComponentHostView<Empty>()
+                    self.currentEmojiSuggestionView = currentEmojiSuggestionView
+                    self.addSubview(currentEmojiSuggestionView)
+                    
+                    currentEmojiSuggestionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                    
+                    //self.installEmojiSuggestionPreviewGesture(hostView: currentEmojiSuggestionView)
+                }
+                
+            
+                let globalPosition: CGPoint
+                if let textView = self.textField.view {
+                    globalPosition = textView.convert(currentEmojiSuggestion.localPosition, to: self)
+                } else {
+                    globalPosition = .zero
+                }
+                
+                let sideInset: CGFloat = 7.0
+                
+                let viewSize = currentEmojiSuggestionView.update(
+                    transition: .immediate,
+                    component: AnyComponent(EmojiSuggestionsComponent(
+                        context: component.context,
+                        userLocation: .other,
+                        theme: EmojiSuggestionsComponent.Theme(
+                            backgroundColor: UIColor(white: 0.0, alpha: 0.5),
+                            textColor: .white,
+                            placeholderColor: UIColor(rgb: 0xffffff).mixedWith(UIColor(rgb: 0x1c1c1d), alpha: 0.9)
+                        ),
+                        animationCache: component.context.animationCache,
+                        animationRenderer: component.context.animationRenderer,
+                        files: value,
+                        action: { [weak self] file in
+                            guard let self, let textView = self.textField.view as? TextFieldComponent.View, let currentEmojiSuggestion = self.textFieldExternalState.currentEmojiSuggestion else {
+                                return
+                            }
+                            
+                            AudioServicesPlaySystemSound(0x450)
+                            
+                            let inputState = textView.getInputState()
+                            let inputText = NSMutableAttributedString(attributedString: inputState.inputText)
+                            
+                            var text: String?
+                            var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
+                    loop:   for attribute in file.attributes {
+                                switch attribute {
+                                case let .CustomEmoji(_, _, displayText, _):
+                                    text = displayText
+                                    emojiAttribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file)
+                                    break loop
+                                default:
+                                    break
+                                }
+                            }
+                            
+                            if let emojiAttribute = emojiAttribute, let text = text {
+                                let replacementText = NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: emojiAttribute])
+                                
+                                let range = currentEmojiSuggestion.position.range
+                                let previousText = inputText.attributedSubstring(from: range)
+                                inputText.replaceCharacters(in: range, with: replacementText)
+                                
+                                var replacedUpperBound = range.lowerBound
+                                while true {
+                                    if inputText.attributedSubstring(from: NSRange(location: 0, length: replacedUpperBound)).string.hasSuffix(previousText.string) {
+                                        let replaceRange = NSRange(location: replacedUpperBound - previousText.length, length: previousText.length)
+                                        if replaceRange.location < 0 {
+                                            break
+                                        }
+                                        let adjacentString = inputText.attributedSubstring(from: replaceRange)
+                                        if adjacentString.string != previousText.string || adjacentString.attribute(ChatTextInputAttributes.customEmoji, at: 0, effectiveRange: nil) != nil {
+                                            break
+                                        }
+                                        inputText.replaceCharacters(in: replaceRange, with: NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: emojiAttribute.interactivelySelectedFromPackId, fileId: emojiAttribute.fileId, file: emojiAttribute.file)]))
+                                        replacedUpperBound = replaceRange.lowerBound
+                                    } else {
+                                        break
+                                    }
+                                }
+                                
+                                let selectionPosition = range.lowerBound + (replacementText.string as NSString).length
+                                textView.updateText(inputText, selectionRange: selectionPosition ..< selectionPosition)
+                            }
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: self.bounds.width - panelLeftInset - panelRightInset, height: 100.0)
+                )
+                
+                let viewFrame = CGRect(origin: CGPoint(x: min(self.bounds.width - sideInset - viewSize.width, max(panelLeftInset, floor(globalPosition.x - viewSize.width / 2.0))), y: globalPosition.y - 4.0 - viewSize.height), size: viewSize)
+                currentEmojiSuggestionView.frame = viewFrame
+                if let componentView = currentEmojiSuggestionView.componentView as? EmojiSuggestionsComponent.View {
+                    componentView.adjustBackground(relativePositionX: floor(globalPosition.x - viewFrame.minX))
+                }
+            }
+            
             return size
         }
     }
@@ -1219,5 +1404,46 @@ public final class MessageInputPanelComponent: Component {
     
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+final class ViewForOverlayContent: UIView {
+    let ignoreHit: (UIView, CGPoint) -> Bool
+    let dismissSuggestions: () -> Void
+    
+    init(ignoreHit: @escaping (UIView, CGPoint) -> Bool, dismissSuggestions: @escaping () -> Void) {
+        self.ignoreHit = ignoreHit
+        self.dismissSuggestions = dismissSuggestions
+        
+        super.init(frame: CGRect())
+    }
+    
+    required init(coder: NSCoder) {
+        preconditionFailure()
+    }
+    
+    func maybeDismissContent(point: CGPoint) {
+        for subview in self.subviews.reversed() {
+            if let _ = subview.hitTest(self.convert(point, to: subview), with: nil) {
+                return
+            }
+        }
+        
+        self.dismissSuggestions()
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        for subview in self.subviews.reversed() {
+            if let result = subview.hitTest(self.convert(point, to: subview), with: event) {
+                return result
+            }
+        }
+        
+        if event == nil || self.ignoreHit(self, point) {
+            return nil
+        }
+        
+        self.dismissSuggestions()
+        return nil
     }
 }

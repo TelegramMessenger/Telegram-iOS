@@ -28,6 +28,7 @@ import CameraButtonComponent
 import UndoUI
 import ChatEntityKeyboardInputNode
 import ChatPresentationInterfaceState
+import TextFormat
 
 enum DrawingScreenType {
     case drawing
@@ -694,13 +695,18 @@ final class MediaEditorScreenComponent: Component {
                 transition.setAlpha(view: cancelButtonView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
             }
             
+            var doneButtonTitle = "NEXT"
+            if let controller = environment.controller() as? MediaEditorScreen, controller.isEditingStory {
+                doneButtonTitle = "DONE"
+            }
+            
             let doneButtonSize = self.doneButton.update(
                 transition: transition,
                 component: AnyComponent(Button(
                     content: AnyComponent(DoneButtonComponent(
                         backgroundColor: UIColor(rgb: 0x007aff),
                         icon: UIImage(bundleImageName: "Media Editor/Next")!,
-                        title: "NEXT")),
+                        title: doneButtonTitle)),
                     action: {
                         guard let controller = environment.controller() as? MediaEditorScreen else {
                             return
@@ -1857,25 +1863,25 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 }
             }
-//#if DEBUG
-//            if case let .asset(asset) = subject, asset.mediaType == .video {
-//                let videoEntity = DrawingStickerEntity(content: .dualVideoReference)
-//                videoEntity.referenceDrawingSize = storyDimensions
-//                videoEntity.scale = 1.49
-//                videoEntity.position = PIPPosition.bottomRight.getPosition(storyDimensions)
-//                self.entitiesView.add(videoEntity, announce: false)
-//
-//                mediaEditor.setAdditionalVideo("", positionChanges: [VideoPositionChange(additional: false, timestamp: 0.0), VideoPositionChange(additional: true, timestamp: 3.0)])
-//                mediaEditor.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
-//                if let entityView = self.entitiesView.getView(for: videoEntity.uuid) as? DrawingStickerEntityView {
-//                    entityView.updated = { [weak videoEntity, weak self] in
-//                        if let self, let videoEntity {
-//                            self.mediaEditor?.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
-//                        }
-//                    }
-//                }
-//        }
-//#endif
+#if targetEnvironment(simulator)
+            if case let .asset(asset) = subject, asset.mediaType == .video {
+                let videoEntity = DrawingStickerEntity(content: .dualVideoReference)
+                videoEntity.referenceDrawingSize = storyDimensions
+                videoEntity.scale = 1.49
+                videoEntity.position = PIPPosition.bottomRight.getPosition(storyDimensions)
+                self.entitiesView.add(videoEntity, announce: false)
+
+                mediaEditor.setAdditionalVideo("", positionChanges: [VideoPositionChange(additional: false, timestamp: 0.0), VideoPositionChange(additional: true, timestamp: 3.0)])
+                mediaEditor.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
+                if let entityView = self.entitiesView.getView(for: videoEntity.uuid) as? DrawingStickerEntityView {
+                    entityView.updated = { [weak videoEntity, weak self] in
+                        if let self, let videoEntity {
+                            self.mediaEditor?.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
+                        }
+                    }
+                }
+        }
+#endif
             
             self.gradientColorsDisposable = mediaEditor.gradientColors.start(next: { [weak self] colors in
                 if let self, let colors {
@@ -3010,7 +3016,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     fileprivate let transitionOut: (Bool, Bool?) -> TransitionOut?
         
     public var cancelled: (Bool) -> Void = { _ in }
-    public var completion: (Int64, MediaEditorScreen.Result?, NSAttributedString, MediaEditorResultPrivacy , @escaping (@escaping () -> Void) -> Void) -> Void = { _, _, _, _, _ in }
+    public var completion: (Int64, MediaEditorScreen.Result?, NSAttributedString, MediaEditorResultPrivacy, [TelegramMediaFile], @escaping (@escaping () -> Void) -> Void) -> Void = { _, _, _, _, _, _ in }
     public var dismissed: () -> Void = { }
     public var willDismiss: () -> Void = { }
     
@@ -3025,7 +3031,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         initialVideoPosition: Double? = nil,
         transitionIn: TransitionIn?,
         transitionOut: @escaping (Bool, Bool?) -> TransitionOut?,
-        completion: @escaping (Int64, MediaEditorScreen.Result?, NSAttributedString, MediaEditorResultPrivacy, @escaping (@escaping () -> Void) -> Void) -> Void
+        completion: @escaping (Int64, MediaEditorScreen.Result?, NSAttributedString, MediaEditorResultPrivacy, [TelegramMediaFile], @escaping (@escaping () -> Void) -> Void) -> Void
     ) {
         self.context = context
         self.subject = subject
@@ -3098,6 +3104,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     
         let privacy = privacy ?? self.state.privacy
         
+        let text = self.getCaption().string
+        let mentions = generateTextEntities(text, enabledTypes: [.mention], currentEntities: []).map { (text as NSString).substring(with: NSRange(location: $0.range.lowerBound + 1, length: $0.range.upperBound - $0.range.lowerBound - 1)) }
+                
         let stateContext = ShareWithPeersScreen.StateContext(context: self.context, subject: .stories(editing: false), initialPeerIds: Set(privacy.privacy.additionallyIncludePeers))
         let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
             guard let self else {
@@ -3112,6 +3121,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 allowScreenshots: !privacy.isForwardingDisabled,
                 pin: privacy.pin,
                 timeout: privacy.timeout,
+                mentions: mentions,
                 stateContext: stateContext,
                 completion: { [weak self] privacy, allowScreenshots, pin in
                     guard let self else {
@@ -3333,6 +3343,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     func requestDismiss(saveDraft: Bool, animated: Bool) {
         self.dismissAllTooltips()
         
+        var showDraftTooltip = saveDraft
+        if let subject = self.node.subject, case .draft = subject {
+            showDraftTooltip = false
+        }
         if saveDraft {
             self.saveDraft(id: nil)
         } else {
@@ -3346,7 +3360,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         self.node.entitiesView.invalidate()
         
-        self.cancelled(saveDraft)
+        self.cancelled(showDraftTooltip)
         
         self.willDismiss()
         
@@ -3470,8 +3484,22 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             randomId = Int64.random(in: .min ... .max)
         }
         
+        var stickers: [TelegramMediaFile] = []
+        for entity in codableEntities {
+            if case let .sticker(stickerEntity) = entity, case let .file(file) = stickerEntity.content {
+                stickers.append(file)
+                if let subEntities = stickerEntity.renderSubEntities {
+                    for entity in subEntities {
+                        if let stickerEntity = entity as? DrawingStickerEntity, case let .file(file) = stickerEntity.content {
+                            stickers.append(file)
+                        }
+                    }
+                }
+            }
+        }
+        
         if self.isEditingStory && !self.node.hasAnyChanges {
-            self.completion(randomId, nil, caption, self.state.privacy, { [weak self] finished in
+            self.completion(randomId, nil, caption, self.state.privacy, stickers, { [weak self] finished in
                 self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                     self?.dismiss()
                     Queue.mainQueue().justDispatch {
@@ -3602,7 +3630,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if let self {
                     makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image ?? UIImage(), dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] coverImage in
                         if let self {
-                            self.completion(randomId, .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions), caption, self.state.privacy, { [weak self] finished in
+                            self.completion(randomId, .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions), caption, self.state.privacy, stickers, { [weak self] finished in
                                 self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                     self?.dismiss()
                                     Queue.mainQueue().justDispatch {
@@ -3624,7 +3652,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 
                 makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] resultImage in
                     if let self, let resultImage {
-                        self.completion(randomId, .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), caption, self.state.privacy, { [weak self] finished in
+                        self.completion(randomId, .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), caption, self.state.privacy, stickers, { [weak self] finished in
                             self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                 self?.dismiss()
                                 Queue.mainQueue().justDispatch {
@@ -3973,8 +4001,10 @@ final class DoneButtonComponent: CombinedComponent {
             )
             
             let backgroundHeight: CGFloat = 33.0
+            var backgroundSize = CGSize(width: backgroundHeight, height: backgroundHeight)
             
-            var textWidth: CGFloat = 0.0
+            let textSpacing: CGFloat = 7.0
+            
             var title: _UpdatedChildComponent?
             if let titleText = context.component.title {
                 title = text.update(
@@ -3986,14 +4016,15 @@ final class DoneButtonComponent: CombinedComponent {
                     availableSize: CGSize(width: 180.0, height: 100.0),
                     transition: .immediate
                 )
-                textWidth = title!.size.width
+                
+                let updatedBackgroundWidth = backgroundSize.width + textSpacing + title!.size.width
+                if updatedBackgroundWidth < 126.0 {
+                    backgroundSize.width = updatedBackgroundWidth
+                } else {
+                    title = nil
+                }
             }
 
-            var backgroundSize = CGSize(width: 33.0, height: backgroundHeight)
-            if !textWidth.isZero {
-                backgroundSize.width += textWidth + 7.0
-            }
-            
             let background = background.update(
                 component: RoundedRectangle(color: context.component.backgroundColor, cornerRadius: backgroundHeight / 2.0),
                 availableSize: backgroundSize,

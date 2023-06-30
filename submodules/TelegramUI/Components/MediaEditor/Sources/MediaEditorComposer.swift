@@ -134,9 +134,9 @@ final class MediaEditorComposer {
     }
     
     private var filteredImage: CIImage?
-    func processImage(inputImage: UIImage, pool: CVPixelBufferPool?, time: CMTime, completion: @escaping (CVPixelBuffer?, CMTime) -> Void) {
+    func processImage(inputImage: UIImage, pool: CVPixelBufferPool?, time: CMTime, completion: @escaping (CVPixelBuffer?) -> Void) {
         guard let pool else {
-            completion(nil, time)
+            completion(nil)
             return
         }
         if self.filteredImage == nil, let device = self.device {
@@ -161,15 +161,15 @@ final class MediaEditorComposer {
                         compositedImage = compositedImage.samplingLinear().transformed(by: CGAffineTransform(scaleX: scale, y: scale))
                         
                         self.ciContext?.render(compositedImage, to: pixelBuffer)
-                        completion(pixelBuffer, time)
+                        completion(pixelBuffer)
                     } else {
-                        completion(nil, time)
+                        completion(nil)
                     }
                 })
                 return
             }
         }
-        completion(nil, time)
+        completion(nil)
     }
     
     func processImage(inputImage: CIImage, time: CMTime, completion: @escaping (CIImage?) -> Void) {

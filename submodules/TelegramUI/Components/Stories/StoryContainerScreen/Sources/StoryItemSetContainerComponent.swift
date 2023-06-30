@@ -2843,7 +2843,7 @@ public final class StoryItemSetContainerComponent: Component {
                 initialVideoPosition: videoPlaybackPosition,
                 transitionIn: nil,
                 transitionOut: { _, _ in return nil },
-                completion: { [weak self] _, mediaResult, caption, privacy, commit in
+                completion: { [weak self] _, mediaResult, caption, privacy, stickers, commit in
                     guard let self else {
                         return
                     }
@@ -2865,7 +2865,7 @@ public final class StoryItemSetContainerComponent: Component {
                             updateProgressImpl?(0.0)
                             
                             if let imageData = compressImageToJPEG(image, quality: 0.7) {
-                                let _ = (context.engine.messages.editStory(media: .image(dimensions: dimensions, data: imageData), id: id, text: updatedText, entities: updatedEntities, privacy: updatedPrivacy)
+                                let _ = (context.engine.messages.editStory(media: .image(dimensions: dimensions, data: imageData, stickers: stickers), id: id, text: updatedText, entities: updatedEntities, privacy: updatedPrivacy)
                                 |> deliverOnMainQueue).start(next: { [weak self] result in
                                     guard let self else {
                                         return
@@ -2904,7 +2904,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 }
                                 
                                 let firstFrameImageData = firstFrameImage.flatMap { compressImageToJPEG($0, quality: 0.6) }
-                                let _ = (context.engine.messages.editStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameImageData: firstFrameImageData), id: id, text: updatedText, entities: updatedEntities, privacy: updatedPrivacy)
+                                let _ = (context.engine.messages.editStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameImageData: firstFrameImageData, stickers: stickers), id: id, text: updatedText, entities: updatedEntities, privacy: updatedPrivacy)
                                 |> deliverOnMainQueue).start(next: { [weak self] result in
                                     guard let self else {
                                         return
@@ -3023,6 +3023,14 @@ public final class StoryItemSetContainerComponent: Component {
             var items: [ContextMenuItem] = []
             
             let additionalCount = component.slice.item.storyItem.privacy?.additionallyIncludePeers.count ?? 0
+            
+            var hasLinkedStickers = false
+            let media = component.slice.item.storyItem.media._asMedia()
+            if let image = media as? TelegramMediaImage {
+                hasLinkedStickers = image.flags.contains(.hasStickers)
+            } else if let file = media as? TelegramMediaFile {
+                hasLinkedStickers = file.hasLinkedStickers
+            }
             
             let privacyText: String
             switch component.slice.item.storyItem.privacy?.base {
@@ -3160,6 +3168,8 @@ public final class StoryItemSetContainerComponent: Component {
                     self.sendMessageContext.performShareAction(view: self)
                 })))
             }
+            
+            let _ = hasLinkedStickers
 
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
             let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
