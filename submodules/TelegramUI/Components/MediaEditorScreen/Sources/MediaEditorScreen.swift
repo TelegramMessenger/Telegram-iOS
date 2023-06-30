@@ -3338,6 +3338,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     func requestDismiss(saveDraft: Bool, animated: Bool) {
         self.dismissAllTooltips()
         
+        var showDraftTooltip = saveDraft
+        if let subject = self.node.subject, case .draft = subject {
+            showDraftTooltip = false
+        }
         if saveDraft {
             self.saveDraft(id: nil)
         } else {
@@ -3351,7 +3355,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         self.node.entitiesView.invalidate()
         
-        self.cancelled(saveDraft)
+        self.cancelled(showDraftTooltip)
         
         self.willDismiss()
         
