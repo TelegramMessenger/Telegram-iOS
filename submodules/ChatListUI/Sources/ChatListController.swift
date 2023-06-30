@@ -2357,7 +2357,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             
                             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 8.0), size: CGSize())
                             
-                            parentController.present(TooltipScreen(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, text: .plain(text: text), icon: .animation(name: "ChatListFoldersTooltip", delay: 0.6, tintColor: nil), location: .point(location, .bottom), shouldDismissOnTouch: { point in
+                            parentController.present(TooltipScreen(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, text: .plain(text: text), icon: .animation(name: "ChatListFoldersTooltip", delay: 0.6, tintColor: nil), location: .point(location, .bottom), shouldDismissOnTouch: { point, _ in
                                 guard let strongSelf = self, let parentController = strongSelf.parent as? TabBarController else {
                                     return .dismiss(consume: false)
                                 }
@@ -2739,7 +2739,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     }
                                 ),
                                 location: .point(location, .bottom),
-                                shouldDismissOnTouch: { _ in return .dismiss(consume: false) }
+                                shouldDismissOnTouch: { _, _ in return .dismiss(consume: false) }
                             )
                             self.present(tooltipController, in: .window(.root))
                         })))

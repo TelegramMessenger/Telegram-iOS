@@ -117,7 +117,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
                             }
                         ),
                         location: .point(location, .bottom),
-                        shouldDismissOnTouch: { _ in return .dismiss(consume: false) }
+                        shouldDismissOnTouch: { _, _ in return .dismiss(consume: false) }
                     )
                     contactsController?.present(tooltipController, in: .window(.root))
                 }

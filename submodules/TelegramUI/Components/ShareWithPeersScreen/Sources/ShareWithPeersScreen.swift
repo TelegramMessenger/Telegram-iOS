@@ -541,7 +541,7 @@ final class ShareWithPeersScreenComponent: Component {
                 icon: .animation(name: animationName, delay: 0.0, tintColor: .white),
                 location: .top,
                 displayDuration: .custom(4.0),
-                shouldDismissOnTouch: { point in
+                shouldDismissOnTouch: { point, _ in
                     return .ignore
                 }
             )
