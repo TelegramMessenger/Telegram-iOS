@@ -562,12 +562,16 @@ public final class StoryContentContextImpl: StoryContentContext {
                 
                 var sortedItems: [EngineStorySubscriptions.Item] = []
                 if let accountItem = storySubscriptions.accountItem {
-                    if startedWithUnseen {
-                        if accountItem.hasUnseen || accountItem.hasPending {
+                    if self.fixedSubscriptionOrder.contains(context.account.peerId) {
+                        sortedItems.append(accountItem)
+                    } else {
+                        if startedWithUnseen {
+                            if accountItem.hasUnseen || accountItem.hasPending {
+                                sortedItems.append(accountItem)
+                            }
+                        } else {
                             sortedItems.append(accountItem)
                         }
-                    } else {
-                        sortedItems.append(accountItem)
                     }
                 }
                 for peerId in self.fixedSubscriptionOrder {

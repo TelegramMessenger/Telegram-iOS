@@ -464,6 +464,7 @@ public final class StoryPeerListItemComponent: Component {
                 }
                 component.contextGesture(self.extractedContainerNode, gesture, component.peer)
             }
+            self.containerNode.additionalActivationProgressLayer = self.avatarBackgroundContainer.layer
             
             self.extractedContainerNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, transition in
                 guard let self, let component = self.component else {
@@ -545,8 +546,6 @@ public final class StoryPeerListItemComponent: Component {
             }
             self.avatarBackgroundView.image = avatarBackgroundImage
             
-            self.avatarBackgroundView.isHidden = component.ringAnimation != nil
-            
             if themeUpdated {
                 self.avatarBackgroundView.tintColor = component.theme.rootController.navigationBar.opaqueBackgroundColor
             }
@@ -625,7 +624,7 @@ public final class StoryPeerListItemComponent: Component {
                 }
                 avatarAddBadgeTransition.setFrame(view: avatarAddBadgeView, frame: CGRect(origin: CGPoint(x: avatarFrame.width - 1.0 - badgeSize.width, y: avatarFrame.height - 2.0 - badgeSize.height), size: badgeSize))
             } else {
-                if indicatorColorLayer.isHidden {
+                if self.indicatorColorLayer.isHidden {
                     self.indicatorColorLayer.isHidden = false
                 }
                 
@@ -634,6 +633,8 @@ public final class StoryPeerListItemComponent: Component {
                     avatarAddBadgeView.removeFromSuperview()
                 }
             }
+            
+            self.avatarBackgroundView.isHidden = component.ringAnimation != nil || self.indicatorColorLayer.isHidden
             
             let baseRadius: CGFloat = 30.0
             let collapsedRadius: CGFloat = 32.0

@@ -99,8 +99,7 @@ final class MediaNavigationStripComponent: Component {
             
             var validIndices: [Int] = []
             if component.count != 0 {
-                var idealItemWidth: CGFloat = (availableSize.width - CGFloat(component.count - 1) * spacing) / CGFloat(component.count)
-                idealItemWidth = floor(idealItemWidth)
+                let idealItemWidth: CGFloat = (availableSize.width - CGFloat(component.count - 1) * spacing) / CGFloat(component.count)
                 
                 let itemWidth: CGFloat
                 if idealItemWidth < minItemWidth {
