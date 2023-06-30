@@ -104,6 +104,7 @@ final class StoryContentCaptionComponent: Component {
         private let shadowPlainLayer: SimpleLayer
         
         private var textNode: TextNodeWithEntities?
+        private var spoilerTextNode: TextNodeWithEntities?
         private var linkHighlightingNode: LinkHighlightingNode?
         private var dustNode: InvisibleInkDustNode?
 
@@ -247,6 +248,8 @@ final class StoryContentCaptionComponent: Component {
                         if titleFrame.contains(location) {
                             if let (index, attributes) = textNode.textNode.attributesAtPoint(CGPoint(x: location.x - titleFrame.minX, y: location.y - titleFrame.minY)) {
                                 if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)], !(self.dustNode?.isRevealed ?? true)  {
+                                    let convertedPoint = recognizer.view?.convert(location, to: self.dustNode?.view) ?? location
+                                    self.dustNode?.revealAtLocation(convertedPoint)
                                     return
                                 } else if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                                     var concealed = true
@@ -369,6 +372,14 @@ final class StoryContentCaptionComponent: Component {
                 textShadowBlur: 4.0
             ))
             
+            let makeSpoilerLayout = TextNodeWithEntities.asyncLayout(self.spoilerTextNode)
+            let spoilerTextLayoutAndApply: (TextNodeLayout, (TextNodeWithEntities.Arguments?) -> TextNodeWithEntities)?
+            if !textLayout.0.spoilers.isEmpty {
+                spoilerTextLayoutAndApply = makeSpoilerLayout(TextNodeLayoutArguments(attributedString: attributedText, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textContainerSize, textShadowColor: UIColor(white: 0.0, alpha: 0.25), textShadowBlur: 4.0, displaySpoilers: true, displayEmbeddedItemsUnderSpoilers: true))
+            } else {
+                spoilerTextLayoutAndApply = nil
+            }
+            
             let maxHeight: CGFloat = 50.0
             let visibleTextHeight = min(maxHeight, textLayout.0.size.height)
             let textOverflowHeight: CGFloat = textLayout.0.size.height - visibleTextHeight
@@ -378,7 +389,8 @@ final class StoryContentCaptionComponent: Component {
                 context: component.context,
                 cache: component.context.animationCache,
                 renderer: component.context.animationRenderer,
-                placeholderColor: UIColor(white: 0.2, alpha: 1.0), attemptSynchronous: true
+                placeholderColor: UIColor(white: 0.2, alpha: 1.0),
+                attemptSynchronous: true
             ))
             if self.textNode !== textNode {
                 self.textNode?.textNode.view.removeFromSuperview()
@@ -403,7 +415,51 @@ final class StoryContentCaptionComponent: Component {
                 textNode.visibilityRect = CGRect(origin: CGPoint(), size: CGSize(width: 100000.0, height: 100000.0))
             }
 
-            textNode.textNode.frame = CGRect(origin: CGPoint(x: sideInset, y: availableSize.height - visibleTextHeight - verticalInset), size: textLayout.0.size)
+            let textFrame = CGRect(origin: CGPoint(x: sideInset, y: availableSize.height - visibleTextHeight - verticalInset), size: textLayout.0.size)
+            textNode.textNode.frame = textFrame
+            
+            if let (_, spoilerTextApply) = spoilerTextLayoutAndApply {
+                let spoilerTextNode = spoilerTextApply(TextNodeWithEntities.Arguments(
+                    context: component.context,
+                    cache: component.context.animationCache,
+                    renderer: component.context.animationRenderer,
+                    placeholderColor: UIColor(white: 0.2, alpha: 1.0),
+                    attemptSynchronous: true
+                ))
+                if self.spoilerTextNode == nil {
+                    spoilerTextNode.textNode.alpha = 0.0
+                    spoilerTextNode.textNode.isUserInteractionEnabled = false
+                    spoilerTextNode.textNode.contentMode = .topLeft
+                    spoilerTextNode.textNode.contentsScale = UIScreenScale
+                    spoilerTextNode.textNode.displaysAsynchronously = false
+                    self.scrollView.insertSubview(spoilerTextNode.textNode.view, belowSubview: textNode.textNode.view)
+                    
+                    spoilerTextNode.visibilityRect = CGRect(origin: CGPoint(), size: CGSize(width: 100000.0, height: 100000.0))
+                    
+                    self.spoilerTextNode = spoilerTextNode
+                }
+                
+                self.spoilerTextNode?.textNode.frame = textFrame
+                
+                let dustNode: InvisibleInkDustNode
+                if let current = self.dustNode {
+                    dustNode = current
+                } else {
+                    dustNode = InvisibleInkDustNode(textNode: spoilerTextNode.textNode, enableAnimations: component.context.sharedContext.energyUsageSettings.fullTranslucency)
+                    self.dustNode = dustNode
+                    self.scrollView.insertSubview(dustNode.view, aboveSubview: spoilerTextNode.textNode.view)
+                }
+                dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
+                dustNode.update(size: dustNode.frame.size, color: .white, textColor: .white, rects: textLayout.0.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.0.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+            } else if let spoilerTextNode = self.spoilerTextNode {
+                self.spoilerTextNode = nil
+                spoilerTextNode.textNode.removeFromSupernode()
+                
+                if let dustNode = self.dustNode {
+                    self.dustNode = nil
+                    dustNode.removeFromSupernode()
+                }
+            }
             
             self.itemLayout = ItemLayout(
                 containerSize: availableSize,

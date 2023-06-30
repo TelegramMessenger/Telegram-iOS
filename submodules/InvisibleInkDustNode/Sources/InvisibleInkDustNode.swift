@@ -496,7 +496,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
         }
     }
     
-    @objc private func tap(_ gestureRecognizer: UITapGestureRecognizer) {
+    public func revealAtLocation(_ location: CGPoint) {
         guard let (_, _, textColor, _, _) = self.currentParams, let textNode = self.textNode, !self.isRevealed else {
             return
         }
@@ -506,14 +506,13 @@ public class InvisibleInkDustNode: ASDisplayNode {
         if self.enableAnimations {
             self.isExploding = true
             
-            let position = gestureRecognizer.location(in: self.view)
             self.emitterLayer?.setValue(true, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
             self.emitterLayer?.setValue(position, forKeyPath: "emitterBehaviors.fingerAttractor.position")
             
             let maskSize = self.emitterNode.frame.size
             Queue.concurrentDefaultQueue().async {
-                let textMaskImage = generateMaskImage(size: maskSize, position: position, inverse: false)
-                let emitterMaskImage = generateMaskImage(size: maskSize, position: position, inverse: true)
+                let textMaskImage = generateMaskImage(size: maskSize, position: location, inverse: false)
+                let emitterMaskImage = generateMaskImage(size: maskSize, position: location, inverse: true)
                 
                 Queue.mainQueue().async {
                     self.textSpotNode.image = textMaskImage
@@ -527,8 +526,8 @@ public class InvisibleInkDustNode: ASDisplayNode {
                 textNode.view.mask = self.textMaskNode.view
                 self.textSpotNode.frame = CGRect(x: 0.0, y: 0.0, width: self.emitterMaskNode.frame.width * 3.0, height: self.emitterMaskNode.frame.height * 3.0)
                 
-                let xFactor = (position.x / self.emitterNode.frame.width - 0.5) * 2.0
-                let yFactor = (position.y / self.emitterNode.frame.height - 0.5) * 2.0
+                let xFactor = (location.x / self.emitterNode.frame.width - 0.5) * 2.0
+                let yFactor = (location.y / self.emitterNode.frame.height - 0.5) * 2.0
                 let maxFactor = max(abs(xFactor), abs(yFactor))
                 
                 var scaleAddition = maxFactor * 4.0
@@ -538,8 +537,8 @@ public class InvisibleInkDustNode: ASDisplayNode {
                     durationAddition *= 2.0
                 }
                 
-                self.textSpotNode.layer.anchorPoint = CGPoint(x: position.x / self.emitterMaskNode.frame.width, y: position.y / self.emitterMaskNode.frame.height)
-                self.textSpotNode.position = position
+                self.textSpotNode.layer.anchorPoint = CGPoint(x: location.x / self.emitterMaskNode.frame.width, y: location.y / self.emitterMaskNode.frame.height)
+                self.textSpotNode.position = location
                 self.textSpotNode.layer.animateScale(from: 0.3333, to: 10.5 + scaleAddition, duration: 0.55 + durationAddition, removeOnCompletion: false, completion: { _ in
                     textNode.view.mask = nil
                 })
@@ -548,8 +547,8 @@ public class InvisibleInkDustNode: ASDisplayNode {
                 self.emitterNode.view.mask = self.emitterMaskNode.view
                 self.emitterSpotNode.frame = CGRect(x: 0.0, y: 0.0, width: self.emitterMaskNode.frame.width * 3.0, height: self.emitterMaskNode.frame.height * 3.0)
                 
-                self.emitterSpotNode.layer.anchorPoint = CGPoint(x: position.x / self.emitterMaskNode.frame.width, y: position.y / self.emitterMaskNode.frame.height)
-                self.emitterSpotNode.position = position
+                self.emitterSpotNode.layer.anchorPoint = CGPoint(x: location.x / self.emitterMaskNode.frame.width, y: location.y / self.emitterMaskNode.frame.height)
+                self.emitterSpotNode.position = location
                 self.emitterSpotNode.layer.animateScale(from: 0.3333, to: 10.5 + scaleAddition, duration: 0.55 + durationAddition, removeOnCompletion: false, completion: { [weak self] _ in
                     self?.alpha = 0.0
                     self?.emitterNode.view.mask = nil
@@ -574,6 +573,11 @@ public class InvisibleInkDustNode: ASDisplayNode {
             self.staticNode?.alpha = 0.0
             self.staticNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
         }
+    }
+    
+    @objc private func tap(_ gestureRecognizer: UITapGestureRecognizer) {
+        let location = gestureRecognizer.location(in: self.view)
+        self.revealAtLocation(location)
     }
     
     private func updateEmitter() {
