@@ -716,7 +716,7 @@ private func notificationPeerExceptionEntries(presentationData: PresentationData
             index += 1
             
             if state.storiesMuted != .alwaysOff {
-                entries.append(.displayPreviewsHeader(index: index, theme: presentationData.theme, title: "Display Author Name"))
+                entries.append(.displayPreviewsHeader(index: index, theme: presentationData.theme, title: "DISPLAY AUTHOR NAME"))
                 index += 1
                 entries.append(.showSender(index: index, theme: presentationData.theme, strings: presentationData.strings, value: .alwaysOn, selected: state.storiesHideSender == .alwaysOn))
                 index += 1

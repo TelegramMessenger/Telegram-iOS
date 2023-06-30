@@ -137,13 +137,14 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     titleString = arguments.strings.User_DeletedAccount
                 }
                 //TODO:localize
-                isMedia = true
                 isText = false
                 if let storyItem = arguments.parentMessage.associatedStories[story], storyItem.data.isEmpty {
                     isExpiredStory = true
                     textString = NSAttributedString(string: "Expired story")
+                    isMedia = false
                 } else {
                     textString = NSAttributedString(string: "Story")
+                    isMedia = true
                 }
             } else {
                 titleString = " "
@@ -187,7 +188,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 case let .bubble(incoming):
                     titleColor = incoming ? (authorNameColor ?? arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor) : arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
                     lineImage = incoming ? (authorNameColor.flatMap({ PresentationResourcesChat.chatBubbleVerticalLineImage(color: $0) }) ??  PresentationResourcesChat.chatBubbleVerticalLineIncomingImage(arguments.presentationData.theme.theme)) : PresentationResourcesChat.chatBubbleVerticalLineOutgoingImage(arguments.presentationData.theme.theme)
-                    if isMedia {
+                    if isMedia || isExpiredStory {
                         textColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.secondaryTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
                     } else {
                         textColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.primaryTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.primaryTextColor
@@ -283,8 +284,6 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                             imageDimensions = representation.dimensions.cgSize
                         }
                     }
-                } else if storyItem.data.isEmpty {
-                    imageDimensions = CGSize(width: 34.0, height: 34.0)
                 }
             }
             
@@ -295,19 +294,18 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             
             let maximumTextWidth = max(0.0, arguments.constrainedSize.width - imageTextInset)
             
-            let contrainedTextSize = CGSize(width: maximumTextWidth, height: arguments.constrainedSize.height)
+            var contrainedTextSize = CGSize(width: maximumTextWidth, height: arguments.constrainedSize.height)
             
             let textInsets = UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0)
             
             let (titleLayout, titleApply) = titleNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleString, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: contrainedTextSize, alignment: .natural, cutout: nil, insets: textInsets))
+            if isExpiredStory {
+                contrainedTextSize.width -= 24.0
+            }
             let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: messageText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: contrainedTextSize, alignment: .natural, cutout: nil, insets: textInsets))
             
             let imageSide: CGFloat
-            if isExpiredStory {
-                imageSide = 38.0
-            } else {
-                imageSide = titleLayout.size.height + textLayout.size.height - 16.0
-            }
+            imageSide = titleLayout.size.height + textLayout.size.height - 16.0
             
             var applyImage: (() -> TransformImageNode)?
             if let imageDimensions = imageDimensions {
@@ -357,9 +355,11 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     }
                 }
             }
-            let _ = isExpiredStory
             
-            let size = CGSize(width: max(titleLayout.size.width - textInsets.left - textInsets.right, textLayout.size.width - textInsets.left - textInsets.right) + leftInset, height: titleLayout.size.height + textLayout.size.height - 2 * (textInsets.top + textInsets.bottom) + 2 * spacing)
+            var size = CGSize(width: max(titleLayout.size.width - textInsets.left - textInsets.right, textLayout.size.width - textInsets.left - textInsets.right) + leftInset, height: titleLayout.size.height + textLayout.size.height - 2 * (textInsets.top + textInsets.bottom) + 2 * spacing)
+            if isExpiredStory {
+                size.width += 14.0
+            }
             
             return (size, { attemptSynchronous in
                 let node: ChatMessageReplyInfoNode
@@ -414,6 +414,11 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     node.imageNode?.captureProtected = message.isCopyProtected()
                 }
                 
+                titleNode.frame = CGRect(origin: CGPoint(x: leftInset - textInsets.left - 2.0, y: spacing - textInsets.top + 1.0), size: titleLayout.size)
+                
+                let textFrame = CGRect(origin: CGPoint(x: leftInset - textInsets.left - 2.0, y: titleNode.frame.maxY - textInsets.bottom + spacing - textInsets.top - 2.0), size: textLayout.size)
+                textNode.textNode.frame = textFrame.offsetBy(dx: isExpiredStory ? 16.0 : 0.0, dy: 0.0)
+                
                 if isExpiredStory {
                     let expiredStoryIconView: UIImageView
                     if let current = node.expiredStoryIconView {
@@ -434,16 +439,12 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     
                     expiredStoryIconView.image = PresentationResourcesChat.chatExpiredStoryIndicatorIcon(arguments.presentationData.theme.theme, type: imageType)
                     if let image = expiredStoryIconView.image {
-                        expiredStoryIconView.frame = CGRect(origin: CGPoint(x: 8.0, y: 3.0), size: image.size)
+                        let imageSize = CGSize(width: floor(image.size.width * 1.22), height: floor(image.size.height * 1.22))
+                        expiredStoryIconView.frame = CGRect(origin: CGPoint(x: textFrame.minX - 2.0, y: textFrame.minY + 2.0), size: imageSize)
                     }
                 } else if let expiredStoryIconView = node.expiredStoryIconView {
                     expiredStoryIconView.removeFromSuperview()
                 }
-                
-                titleNode.frame = CGRect(origin: CGPoint(x: leftInset - textInsets.left - 2.0, y: spacing - textInsets.top + 1.0), size: titleLayout.size)
-                
-                let textFrame = CGRect(origin: CGPoint(x: leftInset - textInsets.left - 2.0, y: titleNode.frame.maxY - textInsets.bottom + spacing - textInsets.top - 2.0), size: textLayout.size)
-                textNode.textNode.frame = textFrame
                 
                 if !textLayout.spoilers.isEmpty {
                     let dustNode: InvisibleInkDustNode

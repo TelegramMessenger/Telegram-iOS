@@ -1249,33 +1249,23 @@ public struct PresentationResourcesChat {
     
     public static func chatExpiredStoryIndicatorIcon(_ theme: PresentationTheme, type: ChatExpiredStoryIndicatorType) -> UIImage? {
         return theme.image(PresentationResourceParameterKey.chatExpiredStoryIndicatorIcon(type: type), { theme in
-            return generateImage(CGSize(width: 34.0, height: 34.0), rotatedContext: { size, context in
+            return generateImage(CGSize(width: 16.0, height: 16.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                
-                context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: 6.0).cgPath)
-                context.clip()
-                
-                let color: UIColor
                 let foregroundColor: UIColor
                 switch type {
                 case .incoming:
-                    color = theme.chat.message.incoming.mediaActiveControlColor.withMultipliedAlpha(0.1)
                     foregroundColor = theme.chat.message.incoming.mediaActiveControlColor
                 case .outgoing:
-                    color = theme.chat.message.outgoing.mediaActiveControlColor.withMultipliedAlpha(0.1)
                     foregroundColor = theme.chat.message.outgoing.mediaActiveControlColor
                 case .free:
-                    color = theme.chat.message.freeform.withWallpaper.reactionActiveMediaPlaceholder
-                    foregroundColor = theme.chat.message.freeform.withWallpaper.reactionActiveBackground
+                    foregroundColor = theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText
                 }
-                
-                context.setFillColor(color.cgColor)
-                context.fill(CGRect(origin: CGPoint(), size: size))
                 
                 if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ExpiredStoryIcon"), color: foregroundColor) {
                     UIGraphicsPushContext(context)
                     
-                    image.draw(at: CGPoint(x: floor((size.width - image.size.width) * 0.5), y: floor((size.height - image.size.height) * 0.5)), blendMode: .normal, alpha: 1.0)
+                    let fittedSize = image.size
+                    image.draw(in: CGRect(origin: CGPoint(x: floor((size.width - fittedSize.width) * 0.5), y: floor((size.height - fittedSize.height) * 0.5)), size: fittedSize), blendMode: .normal, alpha: 1.0)
                     
                     UIGraphicsPopContext()
                 }

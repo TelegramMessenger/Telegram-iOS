@@ -722,7 +722,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories -> PeerInfoScreenData in
                 var availablePanes = availablePanes
                 
-                if hasStories, peerView.peers[peerView.peerId] is TelegramUser {
+                if hasStories, peerView.peers[peerView.peerId] is TelegramUser, peerView.peerId != context.account.peerId {
                     availablePanes?.insert(.stories, at: 0)
                 }
                 

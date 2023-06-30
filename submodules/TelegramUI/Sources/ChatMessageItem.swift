@@ -81,6 +81,9 @@ public enum ChatMessageItemContent: Sequence {
 }
 
 private func mediaMergeableStyle(_ media: Media) -> ChatMessageMerge {
+    if let story = media as? TelegramMediaStory, story.isMention {
+        return .none
+    }
     if let file = media as? TelegramMediaFile {
         for attribute in file.attributes {
             switch attribute {

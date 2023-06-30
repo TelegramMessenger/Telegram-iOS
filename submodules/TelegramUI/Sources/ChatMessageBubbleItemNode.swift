@@ -129,12 +129,17 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 }
                 result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
             } else if let story = media as? TelegramMediaStory {
-                if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), message.text.isEmpty {
-                    messageWithCaptionToAdd = (message, itemAttributes)
-                }
-                if let storyItem = message.associatedStories[story.storyId], storyItem.data.isEmpty {
+                if story.isMention {
+                    if let storyItem = message.associatedStories[story.storyId], storyItem.data.isEmpty {
+                        result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                    } else {
+                        result.append((message, ChatMessageStoryMentionContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                    }
                 } else {
-                    result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
+                    if let storyItem = message.associatedStories[story.storyId], storyItem.data.isEmpty {
+                    } else {
+                        result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
+                    }
                 }
             } else if let file = media as? TelegramMediaFile {
                 let isVideo = file.isVideo || (file.isAnimated && file.dimensions != nil)
@@ -229,7 +234,14 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
         
         inner: for media in message.media {
             if let webpage = media as? TelegramMediaWebpage {
-                if case .Loaded = webpage.content {
+                if case let .Loaded(content) = webpage.content {
+                    if let story = content.story {
+                        if let storyItem = message.associatedStories[story.storyId], !storyItem.data.isEmpty {
+                        } else {
+                            break inner
+                        }
+                    }
+                    
                     result.append((message, ChatMessageWebpageBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
                     needReactions = false
                 }

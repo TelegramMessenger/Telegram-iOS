@@ -516,8 +516,10 @@ private final class StoryContainerScreenComponent: Component {
                 }
                 
                 if subview is ItemSetView {
-                    if let result = subview.hitTest(self.convert(point, to: subview), with: event) {
-                        return result
+                    if let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], itemSetView === subview {
+                        if let result = subview.hitTest(self.convert(point, to: subview), with: event) {
+                            return result
+                        }
                     }
                 } else {
                     if let result = subview.hitTest(self.convert(self.convert(point, to: subview), to: subview), with: event) {
@@ -846,7 +848,7 @@ private final class StoryContainerScreenComponent: Component {
                                     }
                                     
                                     if let stateValue = component.content.stateValue, let slice = stateValue.slice {
-                                        if case .next = direction, slice.nextItemId == nil {
+                                        if case .next = direction, slice.nextItemId == nil, (slice.item.position == nil || slice.item.position == slice.totalCount - 1) {
                                             if stateValue.nextSlice == nil {
                                                 environment.controller()?.dismiss()
                                             } else {

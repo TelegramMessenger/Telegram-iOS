@@ -217,7 +217,7 @@ final class StoryContentCaptionComponent: Component {
             let edgeDistanceFraction = edgeDistance / 7.0
             transition.setAlpha(view: self.scrollFullMaskView, alpha: 1.0 - edgeDistanceFraction)
             
-            let shadowOverflow: CGFloat = 26.0
+            let shadowOverflow: CGFloat = 36.0
             let shadowFrame = CGRect(origin: CGPoint(x: 0.0, y:  -self.scrollView.contentOffset.y + itemLayout.containerSize.height - itemLayout.visibleTextHeight - itemLayout.verticalInset - shadowOverflow), size: CGSize(width: itemLayout.containerSize.width, height: itemLayout.visibleTextHeight + itemLayout.verticalInset + shadowOverflow))
             transition.setFrame(layer: self.shadowGradientLayer, frame: shadowFrame)
             transition.setFrame(layer: self.shadowPlainLayer, frame: CGRect(origin: CGPoint(x: shadowFrame.minX, y: shadowFrame.maxY), size: CGSize(width: shadowFrame.width, height: self.scrollView.contentSize.height + 1000.0)))
@@ -364,7 +364,9 @@ final class StoryContentCaptionComponent: Component {
                 attributedString: attributedText,
                 maximumNumberOfLines: 0,
                 truncationType: .end,
-                constrainedSize: textContainerSize
+                constrainedSize: textContainerSize,
+                textShadowColor: UIColor(white: 0.0, alpha: 0.25),
+                textShadowBlur: 4.0
             ))
             
             let maxHeight: CGFloat = 50.0

@@ -23,6 +23,7 @@ public protocol SparseItemGridView: UIView {
 public protocol SparseItemGridDisplayItem: AnyObject {
     var layer: SparseItemGridLayer? { get }
     var view: SparseItemGridView? { get }
+    var blurLayer: SimpleLayer? { get }
 }
 
 public protocol SparseItemGridShimmerLayer: CALayer {
@@ -342,6 +343,7 @@ public final class SparseItemGrid: ASDisplayNode {
             let layer: SparseItemGridLayer?
             let view: SparseItemGridView?
             var shimmerLayer: SparseItemGridShimmerLayer?
+            var blurLayer: SimpleLayer?
 
             init(layer: SparseItemGridLayer?, view: SparseItemGridView?) {
                 self.layer = layer
@@ -391,8 +393,9 @@ public final class SparseItemGrid: ASDisplayNode {
             let itemSpacing: CGFloat
             let lastItemSize: CGFloat
             let itemsPerRow: Int
+            let centerItems: Bool
 
-            init(containerLayout: ContainerLayout, zoomLevel: ZoomLevel) {
+            init(containerLayout: ContainerLayout, zoomLevel: ZoomLevel, itemCount: Int) {
                 self.containerLayout = containerLayout
                 let width: CGFloat
                 if containerLayout.useSideInsets {
@@ -400,15 +403,23 @@ public final class SparseItemGrid: ASDisplayNode {
                 } else {
                     width = containerLayout.size.width
                 }
+                var centerItems = false
                 if let fixedItemHeight = containerLayout.fixedItemHeight {
                     self.itemsPerRow = 1
                     self.itemSize = CGSize(width: width, height: fixedItemHeight)
                     self.lastItemSize = width
                     self.itemSpacing = 0.0
+                    self.centerItems = false
                 } else {
                     self.itemSpacing = 1.0
 
-                    let itemsPerRow = CGFloat(zoomLevel.rawValue)
+                    let itemsPerRow: CGFloat
+                    if containerLayout.fixedItemAspect != nil && itemCount <= 2 {
+                        itemsPerRow = 2.0
+                        centerItems = itemCount == 1
+                    } else {
+                        itemsPerRow = CGFloat(zoomLevel.rawValue)
+                    }
                     self.itemsPerRow = Int(itemsPerRow)
                     let itemSize = floorToScreenPixels((width - (self.itemSpacing * CGFloat(self.itemsPerRow - 1))) / itemsPerRow)
                     if let fixedItemAspect = containerLayout.fixedItemAspect {
@@ -417,16 +428,24 @@ public final class SparseItemGrid: ASDisplayNode {
                         self.itemSize = CGSize(width: itemSize, height: itemSize)
                     }
 
-                    self.lastItemSize = width - (self.itemSize.width + self.itemSpacing) * CGFloat(self.itemsPerRow - 1)
+                    if centerItems {
+                        self.lastItemSize = self.itemSize.width
+                    } else {
+                        self.lastItemSize = width - (self.itemSize.width + self.itemSpacing) * CGFloat(self.itemsPerRow - 1)
+                    }
+                    self.centerItems = centerItems
                 }
             }
 
             func frame(at index: Int) -> CGRect {
                 let row = index / self.itemsPerRow
                 let column = index % self.itemsPerRow
-
                 
-                return CGRect(origin: CGPoint(x: (self.containerLayout.useSideInsets ? self.containerLayout.insets.left : 0.0) + CGFloat(column) * (self.itemSize.width + self.itemSpacing), y: self.containerLayout.insets.top + CGFloat(row) * (self.itemSize.height + self.itemSpacing)), size: CGSize(width: column == (self.itemsPerRow - 1) ? self.lastItemSize : itemSize.width, height: itemSize.height))
+                var frame = CGRect(origin: CGPoint(x: (self.containerLayout.useSideInsets ? self.containerLayout.insets.left : 0.0) + CGFloat(column) * (self.itemSize.width + self.itemSpacing), y: self.containerLayout.insets.top + CGFloat(row) * (self.itemSize.height + self.itemSpacing)), size: CGSize(width: column == (self.itemsPerRow - 1) ? self.lastItemSize : itemSize.width, height: itemSize.height))
+                if self.centerItems {
+                    frame.origin.x = floor((self.containerLayout.size.width - frame.width) * 0.5)
+                }
+                return frame
             }
 
             func contentHeight(count: Int) -> CGFloat {
@@ -514,7 +533,7 @@ public final class SparseItemGrid: ASDisplayNode {
 
         func update(containerLayout: ContainerLayout, items: Items, restoreScrollPosition: (y: CGFloat, index: Int)?, synchronous: SparseItemGrid.Synchronous) {
             if self.layout?.containerLayout != containerLayout || self.items !== items {
-                self.layout = Layout(containerLayout: containerLayout, zoomLevel: self.zoomLevel)
+                self.layout = Layout(containerLayout: containerLayout, zoomLevel: self.zoomLevel, itemCount: items.count)
                 self.items = items
 
                 self.updateVisibleItems(resetScrolling: true, synchronous: synchronous, restoreScrollPosition: restoreScrollPosition)
@@ -949,6 +968,8 @@ public final class SparseItemGrid: ASDisplayNode {
             var bindItems: [Item] = []
             var bindLayers: [SparseItemGridDisplayItem] = []
             var updateLayers: [SparseItemGridDisplayItem] = []
+            
+            let addBlur = layout.centerItems
 
             let visibleRange = layout.visibleItemRange(for: visibleBounds, count: items.count)
             if visibleRange.maxIndex >= visibleRange.minIndex {
@@ -974,6 +995,22 @@ public final class SparseItemGrid: ASDisplayNode {
                             }
                         }
                         
+                        if addBlur {
+                            let blurLayer: SimpleLayer
+                            if let current = itemLayer.blurLayer {
+                                blurLayer = current
+                            } else {
+                                blurLayer = SimpleLayer()
+                                blurLayer.masksToBounds = true
+                                blurLayer.zPosition = -1.0
+                                self.scrollView.layer.addSublayer(blurLayer)
+                                itemLayer.blurLayer = blurLayer
+                            }
+                        } else if let blurLayer = itemLayer.blurLayer {
+                            itemLayer.blurLayer = nil
+                            blurLayer.removeFromSuperlayer()
+                        }
+                        
                         if itemLayer.needsShimmer {
                             let placeholderLayer: SparseItemGridShimmerLayer
                             if let current = itemLayer.shimmerLayer {
@@ -995,6 +1032,9 @@ public final class SparseItemGrid: ASDisplayNode {
                         validIds.insert(item.id)
                         
                         itemLayer.frame = itemFrame
+                        if let blurLayer = itemLayer.blurLayer {
+                            blurLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: itemFrame.minY), size: CGSize(width: layout.containerLayout.size.width, height: itemFrame.height))
+                        }
                     } else {
                         let placeholderLayer: SparseItemGridShimmerLayer
                         if self.visiblePlaceholders.count > usedPlaceholderCount {
@@ -1022,7 +1062,7 @@ public final class SparseItemGrid: ASDisplayNode {
                 if let layer = item.layer {
                     layer.update(size: layer.frame.size)
                 } else if let view = item.view {
-                    view.update(size: layer.frame.size, insets: layout.containerLayout.insets)
+                    view.update(size: view.layer.frame.size, insets: layout.containerLayout.insets)
                 }
             }
 

@@ -47,6 +47,7 @@ import InviteLinksUI
 import ChatFolderLinkPreviewScreen
 import StoryContainerScreen
 import FullScreenEffectView
+import PeerInfoStoryGridScreen
 
 private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
     let controller: ViewController
@@ -2602,6 +2603,30 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 }
                                 
                                 self.openStoryCamera()
+                            })
+                        })))
+                        
+                        items.append(.action(ContextMenuActionItem(text: "Saved Stories", icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Stories"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] c, _ in
+                            c.dismiss(completion: {
+                                guard let self else {
+                                    return
+                                }
+                                
+                                self.push(PeerInfoStoryGridScreen(context: self.context, peerId: self.context.account.peerId, scope: .saved))
+                            })
+                        })))
+                        
+                        items.append(.action(ContextMenuActionItem(text: "Archived Stories", icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] c, _ in
+                            c.dismiss(completion: {
+                                guard let self else {
+                                    return
+                                }
+                                
+                                self.push(PeerInfoStoryGridScreen(context: self.context, peerId: self.context.account.peerId, scope: .archive))
                             })
                         })))
                     } else {

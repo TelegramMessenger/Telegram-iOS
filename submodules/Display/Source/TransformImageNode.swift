@@ -21,7 +21,7 @@ open class TransformImageNode: ASDisplayNode {
     private var disposable = MetaDisposable()
     
     private var currentTransform: ((TransformImageArguments) -> DrawingContext?)?
-    private var currentArguments: TransformImageArguments?
+    public private(set) var currentArguments: TransformImageArguments?
     public private(set) var image: UIImage?
     private var argumentsPromise = ValuePromise<TransformImageArguments>(ignoreRepeated: true)
     

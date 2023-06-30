@@ -139,9 +139,11 @@ public final class StoryContentContextImpl: StoryContentContext {
                         isPublic: item.isPublic,
                         isPending: false,
                         isCloseFriends: item.isCloseFriends,
-                        isForwardingDisabled: item.isForwardingDisabled
+                        isForwardingDisabled: item.isForwardingDisabled,
+                        isEdited: item.isEdited
                     )
                 }
+                var totalCount = peerStoryItemsView.items.count
                 if peerId == context.account.peerId, let stateView = views.views[PostboxViewKey.storiesState(key: .local)] as? StoryStatesView, let localState = stateView.value?.get(Stories.LocalState.self) {
                     for item in localState.items {
                         mappedItems.append(EngineStoryItem(
@@ -158,8 +160,10 @@ public final class StoryContentContextImpl: StoryContentContext {
                             isPublic: false,
                             isPending: true,
                             isCloseFriends: false,
-                            isForwardingDisabled: false
+                            isForwardingDisabled: false,
+                            isEdited: false
                         ))
+                        totalCount += 1
                     }
                 }
                 
@@ -263,7 +267,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                                 peerId: peer.id,
                                 storyItem: mappedItem
                             ),
-                            totalCount: mappedItems.count,
+                            totalCount: totalCount,
                             previousItemId: previousItemId,
                             nextItemId: nextItemId,
                             allItems: allItems
@@ -982,7 +986,8 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                     isPublic: itemValue.isPublic,
                     isPending: false,
                     isCloseFriends: itemValue.isCloseFriends,
-                    isForwardingDisabled: itemValue.isForwardingDisabled
+                    isForwardingDisabled: itemValue.isForwardingDisabled,
+                    isEdited: itemValue.isEdited
                 )
                 
                 let mainItem = StoryContentItem(

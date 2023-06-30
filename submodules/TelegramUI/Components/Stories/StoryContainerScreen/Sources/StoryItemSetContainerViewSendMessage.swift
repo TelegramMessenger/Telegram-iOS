@@ -344,7 +344,7 @@ final class StoryItemSetContainerSendMessage {
                         animateInAsReplacement: false,
                         action: { [weak view] action in
                             if case .undo = action, let messageId = messageIds.first {
-                                view?.navigateToPeer(peer: peer, messageId: messageId)
+                                view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
                             }
                             return false
                         }
@@ -386,7 +386,7 @@ final class StoryItemSetContainerSendMessage {
                         animateInAsReplacement: false,
                         action: { [weak view] action in
                             if case .undo = action, let messageId = messageIds.first {
-                                view?.navigateToPeer(peer: peer, messageId: messageId)
+                                view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
                             }
                             return false
                         }
@@ -448,7 +448,7 @@ final class StoryItemSetContainerSendMessage {
                                     animateInAsReplacement: false,
                                     action: { [weak view] action in
                                         if case .undo = action, let messageId = messageIds.first {
-                                            view?.navigateToPeer(peer: peer, messageId: messageId)
+                                            view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
                                         }
                                         return false
                                     }
@@ -698,7 +698,7 @@ final class StoryItemSetContainerSendMessage {
             
             let shareController = ShareController(
                 context: component.context,
-                subject: .media(AnyMediaReference.standalone(media: TelegramMediaStory(storyId: StoryId(peerId: peerId, id: focusedItem.storyItem.id)))),
+                subject: .media(AnyMediaReference.standalone(media: TelegramMediaStory(storyId: StoryId(peerId: peerId, id: focusedItem.storyItem.id), isMention: false))),
                 preferredAction: preferredAction ?? .default,
                 externalShare: false,
                 immediateExternalShare: false,
@@ -2134,7 +2134,7 @@ final class StoryItemSetContainerSendMessage {
                         animateInAsReplacement: false,
                         action: { [weak view] action in
                             if case .undo = action, let messageId = messageIds.first {
-                                view?.navigateToPeer(peer: peer, messageId: messageId)
+                                view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
                             }
                             return false
                         }

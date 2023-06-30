@@ -10,16 +10,14 @@ final class StoryAuthorInfoComponent: Component {
 	let context: AccountContext
 	let peer: EnginePeer?
     let timestamp: Int32
+    let isEdited: Bool
     
-    init(context: AccountContext, peer: EnginePeer?, timestamp: Int32) {
+    init(context: AccountContext, peer: EnginePeer?, timestamp: Int32, isEdited: Bool) {
         self.context = context
         self.peer = peer
         self.timestamp = timestamp
+        self.isEdited = isEdited
     }
-
-	convenience init(context: AccountContext, message: EngineMessage) {
-        self.init(context: context, peer: message.author, timestamp: message.timestamp)
-	}
 
 	static func ==(lhs: StoryAuthorInfoComponent, rhs: StoryAuthorInfoComponent) -> Bool {
 		if lhs.context !== rhs.context {
@@ -29,6 +27,9 @@ final class StoryAuthorInfoComponent: Component {
 			return false
 		}
         if lhs.timestamp != rhs.timestamp {
+            return false
+        }
+        if lhs.isEdited != rhs.isEdited {
             return false
         }
 		return true
@@ -69,7 +70,12 @@ final class StoryAuthorInfoComponent: Component {
             }
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-            let subtitle = stringForRelativeActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, relativeTimestamp: component.timestamp, relativeTo: timestamp)
+            var subtitle = stringForRelativeActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, relativeTimestamp: component.timestamp, relativeTo: timestamp)
+            
+            if component.isEdited {
+                subtitle.append(" • ")
+                subtitle.append("edited")
+            }
             
             let titleSize = self.title.update(
                 transition: .immediate,

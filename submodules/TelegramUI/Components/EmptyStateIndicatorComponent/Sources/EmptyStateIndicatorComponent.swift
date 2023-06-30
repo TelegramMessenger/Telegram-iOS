@@ -14,7 +14,7 @@ public final class EmptyStateIndicatorComponent: Component {
     public let animationName: String
     public let title: String
     public let text: String
-    public let actionTitle: String
+    public let actionTitle: String?
     public let action: () -> Void
     
     public init(
@@ -23,7 +23,7 @@ public final class EmptyStateIndicatorComponent: Component {
         animationName: String,
         title: String,
         text: String,
-        actionTitle: String,
+        actionTitle: String?,
         action: @escaping () -> Void
     ) {
         self.context = context
@@ -64,7 +64,7 @@ public final class EmptyStateIndicatorComponent: Component {
         private let animation = ComponentView<Empty>()
         private let title = ComponentView<Empty>()
         private let text = ComponentView<Empty>()
-        private let button = ComponentView<Empty>()
+        private var button: ComponentView<Empty>?
         
         override public init(frame: CGRect) {
             super.init(frame: frame)
@@ -108,35 +108,54 @@ public final class EmptyStateIndicatorComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: min(300.0, availableSize.width - 16.0 * 2.0), height: 1000.0)
             )
-            let buttonSize = self.button.update(
-                transition: transition,
-                component: AnyComponent(ButtonComponent(
-                    background: ButtonComponent.Background(
-                        color: component.theme.list.itemCheckColors.fillColor,
-                        foreground: component.theme.list.itemCheckColors.foregroundColor,
-                        pressedColor: component.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
-                    ),
-                    content: AnyComponentWithIdentity(id: 0, component: AnyComponent(
-                        Text(text: component.actionTitle, font: Font.semibold(17.0), color: component.theme.list.itemCheckColors.foregroundColor)
-                    )),
-                    isEnabled: true,
-                    displaysProgress: false,
-                    action: { [weak self] in
-                        guard let self, let component = self.component else {
-                            return
+            var buttonSize: CGSize?
+            if let actionTitle = component.actionTitle {
+                let button: ComponentView<Empty>
+                if let current = self.button {
+                    button = current
+                } else {
+                    button = ComponentView()
+                    self.button = button
+                }
+                
+                buttonSize = button.update(
+                    transition: transition,
+                    component: AnyComponent(ButtonComponent(
+                        background: ButtonComponent.Background(
+                            color: component.theme.list.itemCheckColors.fillColor,
+                            foreground: component.theme.list.itemCheckColors.foregroundColor,
+                            pressedColor: component.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
+                        ),
+                        content: AnyComponentWithIdentity(id: 0, component: AnyComponent(
+                            Text(text: actionTitle, font: Font.semibold(17.0), color: component.theme.list.itemCheckColors.foregroundColor)
+                        )),
+                        isEnabled: true,
+                        displaysProgress: false,
+                        action: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.action()
                         }
-                        component.action()
-                    }
-                )),
-                environment: {},
-                containerSize: CGSize(width: 240.0, height: 50.0)
-            )
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 240.0, height: 50.0)
+                )
+            } else {
+                if let button = self.button {
+                    self.button = nil
+                    button.view?.removeFromSuperview()
+                }
+            }
             
             let animationSpacing: CGFloat = 11.0
             let titleSpacing: CGFloat = 17.0
             let buttonSpacing: CGFloat = 17.0
             
-            let totalHeight: CGFloat = animationSize.height + animationSpacing + titleSize.height + titleSpacing + textSize.height + buttonSpacing + buttonSize.height
+            var totalHeight: CGFloat = animationSize.height + animationSpacing + titleSize.height + titleSpacing + textSize.height
+            if let buttonSize {
+                totalHeight += buttonSpacing + buttonSize.height
+            }
             
             var contentY = floor((availableSize.height - totalHeight) * 0.5)
             
@@ -161,7 +180,7 @@ public final class EmptyStateIndicatorComponent: Component {
                 transition.setFrame(view: textView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - textSize.width) * 0.5), y: contentY), size: textSize))
                 contentY += textSize.height + buttonSpacing
             }
-            if let buttonView = self.button.view {
+            if let buttonSize, let buttonView = self.button?.view {
                 if buttonView.superview == nil {
                     self.addSubview(buttonView)
                 }

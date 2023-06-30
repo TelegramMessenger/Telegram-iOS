@@ -38,6 +38,8 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     private var videoContent: NativeVideoContent?
     private var videoStartTimestamp: Double?
     private let fetchDisposable = MetaDisposable()
+    
+    private var leadingIconView: UIImageView?
 
     private var cachedMaskBackgroundImage: (CGPoint, UIImage, [CGRect])?
     private var absoluteRect: (CGRect, CGSize)?
@@ -167,6 +169,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, message: item.message, accountPeerId: item.context.account.peerId, forForumOverview: forForumOverview)
             
                 var image: TelegramMediaImage?
+                var story: TelegramMediaStory?
                 for media in item.message.media {
                     if let action = media as? TelegramMediaAction {
                         switch action.action {
@@ -175,12 +178,21 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                         default:
                             break
                         }
+                    } else if let media = media as? TelegramMediaStory {
+                        story = media
                     }
                 }
                 
                 let imageSize = CGSize(width: 212.0, height: 212.0)
                 
-                let (labelLayout, apply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                var updatedAttributedString = attributedString
+                if story != nil, let attributedString {
+                    let mutableString = NSMutableAttributedString(attributedString: attributedString)
+                    mutableString.insert(NSAttributedString(string: "    ", font: Font.regular(13.0), textColor: .clear), at: 0)
+                    updatedAttributedString = mutableString
+                }
+                
+                let (labelLayout, apply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: updatedAttributedString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
                 var labelRects = labelLayout.linesRects()
                 if labelRects.count > 1 {
@@ -306,6 +318,28 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             ))
                             
                             let labelFrame = CGRect(origin: CGPoint(x: 8.0, y: image != nil ? 2 : floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
+                            
+                            if story != nil {
+                                let leadingIconView: UIImageView
+                                if let current = strongSelf.leadingIconView {
+                                    leadingIconView = current
+                                } else {
+                                    leadingIconView = UIImageView()
+                                    strongSelf.leadingIconView = leadingIconView
+                                    strongSelf.view.addSubview(leadingIconView)
+                                }
+                                
+                                leadingIconView.image = PresentationResourcesChat.chatExpiredStoryIndicatorIcon(item.presentationData.theme.theme, type: .free)
+                                
+                                if let lineRect = labelLayout.linesRects().first, let iconImage = leadingIconView.image {
+                                    let iconSize = iconImage.size
+                                    leadingIconView.frame = CGRect(origin: CGPoint(x: lineRect.minX + labelFrame.minX - 1.0, y: labelFrame.minY), size: iconSize)
+                                }
+                            } else if let leadingIconView = strongSelf.leadingIconView {
+                                strongSelf.leadingIconView = nil
+                                leadingIconView.removeFromSuperview()
+                            }
+                            
                             strongSelf.labelNode.textNode.frame = labelFrame
                             strongSelf.backgroundColorNode.backgroundColor = selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
 

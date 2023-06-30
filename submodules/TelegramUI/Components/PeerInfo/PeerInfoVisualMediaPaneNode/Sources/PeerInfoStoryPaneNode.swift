@@ -631,7 +631,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
             }
             
             if let selectedMedia = selectedMedia {
-                if let result = directMediaImageCache.getImage(peer: item.peer, story: story, media: selectedMedia, width: imageWidthSpec, aspectRatio: 0.56, possibleWidths: SparseItemGridBindingImpl.widthSpecs.1, includeBlurred: hasSpoiler, synchronous: synchronous == .full) {
+                if let result = directMediaImageCache.getImage(peer: item.peer, story: story, media: selectedMedia, width: imageWidthSpec, aspectRatio: 0.72, possibleWidths: SparseItemGridBindingImpl.widthSpecs.1, includeBlurred: hasSpoiler || displayItem.blurLayer != nil, synchronous: synchronous == .full) {
                     if let image = result.image {
                         layer.setContents(image)
                         switch synchronous {
@@ -648,6 +648,11 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                     }
                     if let image = result.blurredImage {
                         layer.setSpoilerContents(image)
+                        
+                        if let blurLayer = displayItem.blurLayer {
+                            blurLayer.contentsGravity = .resizeAspectFill
+                            blurLayer.contents = result.blurredImage?.cgImage
+                        }
                     }
                     if let loadSignal = result.loadSignal {
                         layer.disposable?.dispose()
@@ -701,6 +706,11 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                                         self?.updateShimmerLayersImpl?(displayItem)
                                     }
                                 }
+                            }
+                            
+                            if let displayItem, let blurLayer = displayItem.blurLayer {
+                                blurLayer.contentsGravity = .resizeAspectFill
+                                blurLayer.contents = result.blurredImage?.cgImage
                             }
                         })
                     }
@@ -1588,7 +1598,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 }
                 
                 var headerText: String?
-                if strongSelf.isArchive {
+                if strongSelf.isArchive && !mappedItems.isEmpty {
                     //TODO:localize
                     headerText = "Only you can see archived stories unless you choose to save them to your profile."
                 }
@@ -1876,7 +1886,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
 
         transition.updateFrame(node: self.contextGestureContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
         
-        if let items = self.items, items.items.isEmpty, items.count == 0, !self.isArchive {
+        if let items = self.items, items.items.isEmpty, items.count == 0 {
             let emptyStateView: ComponentView<Empty>
             var emptyStateTransition = Transition(transition)
             if let current = self.emptyStateView {
@@ -1893,9 +1903,9 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     context: self.context,
                     theme: presentationData.theme,
                     animationName: "StoryListEmpty",
-                    title: "No saved stories",
-                    text: "Open the Archive to select stories you\nwant to be displayed in your profile.",
-                    actionTitle: "Open Archive",
+                    title: self.isArchive ? "No Archived Stories" : "No saved stories",
+                    text: self.isArchive ? "Upload a new story to view it here" : "Open the Archive to select stories you\nwant to be displayed in your profile.",
+                    actionTitle: self.isArchive ? nil : "Open Archive",
                     action: { [weak self] in
                         guard let self else {
                             return
@@ -1948,10 +1958,11 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 fixedItemHeight = nil
             }
             
-            let fixedItemAspect: CGFloat? = 9.0 / 16.0
+            let fixedItemAspect: CGFloat? = 0.72
             
             let gridTopInset = topInset
          
+            self.itemGrid.pinchEnabled = items.count > 2
             self.itemGrid.update(size: size, insets: UIEdgeInsets(top: gridTopInset, left: sideInset, bottom:  bottomInset, right: sideInset), useSideInsets: !isList, scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, fixedItemAspect: fixedItemAspect, items: items, theme: self.itemGridBinding.chatPresentationData.theme.theme, synchronous: wasFirstTime ? .full : .none)
         }
     }

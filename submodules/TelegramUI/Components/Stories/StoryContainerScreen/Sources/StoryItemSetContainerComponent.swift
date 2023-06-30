@@ -1772,7 +1772,7 @@ public final class StoryItemSetContainerComponent: Component {
                             guard let self else {
                                 return
                             }
-                            self.navigateToPeer(peer: peer)
+                            self.navigateToPeer(peer: peer, chat: false)
                         }
                     )),
                     environment: {},
@@ -2082,7 +2082,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             var currentCenterInfoItem: InfoItem?
             if focusedItem != nil {
-                let centerInfoComponent = AnyComponent(StoryAuthorInfoComponent(context: component.context, peer: component.slice.peer, timestamp: component.slice.item.storyItem.timestamp))
+                let centerInfoComponent = AnyComponent(StoryAuthorInfoComponent(context: component.context, peer: component.slice.peer, timestamp: component.slice.item.storyItem.timestamp, isEdited: component.slice.item.storyItem.isEdited))
                 if let centerInfoItem = self.centerInfoItem, centerInfoItem.component == centerInfoComponent {
                     currentCenterInfoItem = centerInfoItem
                 } else {
@@ -2106,7 +2106,11 @@ public final class StoryItemSetContainerComponent: Component {
                         guard let self, let component = self.component else {
                             return
                         }
-                        self.navigateToPeer(peer: component.slice.peer)
+                        if component.slice.peer.id == component.context.account.peerId {
+                            self.navigateToMyStories()
+                        } else {
+                            self.navigateToPeer(peer: component.slice.peer, chat: false)
+                        }
                     })),
                     environment: {},
                     containerSize: CGSize(width: contentFrame.width, height: 44.0)
@@ -2136,7 +2140,11 @@ public final class StoryItemSetContainerComponent: Component {
                         guard let self, let component = self.component else {
                             return
                         }
-                        self.navigateToPeer(peer: component.slice.peer)
+                        if component.slice.peer.id == component.context.account.peerId {
+                            self.navigateToMyStories()
+                        } else {
+                            self.navigateToPeer(peer: component.slice.peer, chat: false)
+                        }
                     })),
                     environment: {},
                     containerSize: CGSize(width: 32.0, height: 32.0)
@@ -2433,7 +2441,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         presentationData: presentationData,
                                         content: .sticker(context: context, file: animation, loop: false, title: nil, text: "Reaction Sent.", undoText: "View in Chat", customAction: { [weak self] in
                                             if let messageId = messageIds.first, let self {
-                                                self.navigateToPeer(peer: peer, messageId: messageId)
+                                                self.navigateToPeer(peer: peer, chat: true, messageId: messageId)
                                             }
                                         }),
                                         elevatedLayout: false,
@@ -2708,7 +2716,7 @@ public final class StoryItemSetContainerComponent: Component {
             })
         }
         
-        func navigateToPeer(peer: EnginePeer, messageId: EngineMessage.Id? = nil) {
+        func navigateToMyStories() {
             guard let component = self.component else {
                 return
             }
@@ -2718,8 +2726,34 @@ public final class StoryItemSetContainerComponent: Component {
             guard let navigationController = controller.navigationController as? NavigationController else {
                 return
             }
-            if let messageId {
-                component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: false, timecode: nil), keepStack: .always, animated: true, pushController: { [weak controller, weak navigationController] chatController, animated, completion in
+            
+            let targetController = component.context.sharedContext.makeMyStoriesController(context: component.context, isArchive: false)
+            
+            var viewControllers = navigationController.viewControllers
+            if let index = viewControllers.firstIndex(where: { $0 === controller }) {
+                viewControllers.insert(targetController, at: index)
+            } else {
+                viewControllers.append(targetController)
+            }
+            navigationController.setViewControllers(viewControllers, animated: true)
+        }
+        
+        func navigateToPeer(peer: EnginePeer, chat: Bool, messageId: EngineMessage.Id? = nil) {
+            guard let component = self.component else {
+                return
+            }
+            guard let controller = component.controller() as? StoryContainerScreen else {
+                return
+            }
+            guard let navigationController = controller.navigationController as? NavigationController else {
+                return
+            }
+            if messageId != nil || chat {
+                var subject: ChatControllerSubject?
+                if let messageId {
+                    subject = .message(id: .id(messageId), highlight: false, timecode: nil)
+                }
+                component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peer), subject: subject, keepStack: .always, animated: true, pushController: { [weak controller, weak navigationController] chatController, animated, completion in
                     guard let controller, let navigationController else {
                         return
                     }

@@ -275,7 +275,7 @@ private func filteredGlobalSound(_ sound: PeerMessageSound) -> PeerMessageSound 
     }
 }
 
-private func notificationsPeerCategoryEntries(category: NotificationsPeerCategory, globalSettings: GlobalNotificationSettingsSet, state: NotificationExceptionState, presentationData: PresentationData, notificationSoundList: NotificationSoundList?) -> [NotificationsPeerCategoryEntry] {
+private func notificationsPeerCategoryEntries(category: NotificationsPeerCategory, globalSettings: GlobalNotificationSettingsSet, state: NotificationExceptionState, presentationData: PresentationData, notificationSoundList: NotificationSoundList?, automaticTopPeers: [EnginePeer], automaticNotificationSettings: [EnginePeer.Id: EnginePeer.NotificationSettings]) -> [NotificationsPeerCategoryEntry] {
     var entries: [NotificationsPeerCategoryEntry] = []
     
     let notificationSettings: MessageNotificationSettings
@@ -333,7 +333,7 @@ private func notificationsPeerCategoryEntries(category: NotificationsPeerCategor
     entries.append(.exceptionsHeader(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsExceptions.uppercased()))
     entries.append(.addException(presentationData.theme, presentationData.strings.Notification_Exceptions_AddException))
     
-    let sortedExceptions = notificationExceptions.settings.sorted(by: { lhs, rhs in
+    var sortedExceptions = notificationExceptions.settings.sorted(by: { lhs, rhs in
         let lhsName = lhs.value.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
         let rhsName = rhs.value.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
         
@@ -355,99 +355,114 @@ private func notificationsPeerCategoryEntries(category: NotificationsPeerCategor
         
         return lhsName < rhsName
     })
+    var automaticSet = Set<EnginePeer.Id>()
+    if globalSettings.privateChats.storySettings.mute == .default {
+        for peer in automaticTopPeers {
+            if sortedExceptions.contains(where: { $0.key == peer.id }) {
+                continue
+            }
+            sortedExceptions.append((peer.id, NotificationExceptionWrapper(settings: automaticNotificationSettings[peer.id]?._asNotificationSettings() ?? .defaultSettings, peer: peer, date: nil)))
+            automaticSet.insert(peer.id)
+        }
+    }
     
     var existingPeerIds = Set<EnginePeer.Id>()
     var index: Int = 0
     
     for (_, value) in sortedExceptions {
         if !value.peer.isDeleted {
-            var title: String
+            var title: String = ""
             
-            if case .stories = category {
-                var muted = false
-                if value.settings.storySettings.mute == .muted {
-                    muted = true
-                    title = presentationData.strings.Notification_Exceptions_AlwaysOff
-                } else {
-                    title = presentationData.strings.Notification_Exceptions_AlwaysOn
-                }
-                
-                if !muted {
-                    switch value.settings.storySettings.sound {
-                    case .default:
-                        break
-                    default:
-                        if !title.isEmpty {
-                            title.append(", ")
-                        }
-                        title.append(presentationData.strings.Notification_Exceptions_SoundCustom)
-                    }
-                    switch value.settings.storySettings.hideSender {
-                    case .default:
-                        break
-                    default:
-                        if !title.isEmpty {
-                            title += ", "
-                        }
-                        //TODO:localize
-                        if case .show = value.settings.displayPreviews {
-                            title += "Show Names"
-                        } else {
-                            title += "Hide Names"
-                        }
-                    }
-                }
+            if automaticSet.contains(value.peer.id) {
+                //TODO:localize
+                title = "\(presentationData.strings.Notification_Exceptions_AlwaysOn) (automatic)"
             } else {
-                var muted = false
-                switch value.settings.muteState {
-                case let .muted(until):
-                    if until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
-                        if until < Int32.max - 1 {
-                            let formatter = DateFormatter()
-                            formatter.locale = Locale(identifier: presentationData.strings.baseLanguageCode)
-                            
-                            if Calendar.current.isDateInToday(Date(timeIntervalSince1970: Double(until))) {
-                                formatter.dateFormat = "HH:mm"
-                            } else {
-                                formatter.dateFormat = "E, d MMM HH:mm"
-                            }
-                            
-                            let dateString = formatter.string(from: Date(timeIntervalSince1970: Double(until)))
-                            
-                            title = presentationData.strings.Notification_Exceptions_MutedUntil(dateString).string
-                        } else {
-                            muted = true
-                            title = presentationData.strings.Notification_Exceptions_AlwaysOff
-                        }
+                if case .stories = category {
+                    var muted = false
+                    if value.settings.storySettings.mute == .muted {
+                        muted = true
+                        title.append(presentationData.strings.Notification_Exceptions_AlwaysOff)
                     } else {
-                        title = presentationData.strings.Notification_Exceptions_AlwaysOn
+                        title.append(presentationData.strings.Notification_Exceptions_AlwaysOn)
                     }
-                case .unmuted:
-                    title = presentationData.strings.Notification_Exceptions_AlwaysOn
-                default:
-                    title = ""
-                }
-                if !muted {
-                    switch value.settings.messageSound {
-                    case .default:
-                        break
-                    default:
-                        if !title.isEmpty {
-                            title.append(", ")
+                    
+                    if !muted {
+                        switch value.settings.storySettings.sound {
+                        case .default:
+                            break
+                        default:
+                            if !title.isEmpty {
+                                title.append(", ")
+                            }
+                            title.append(presentationData.strings.Notification_Exceptions_SoundCustom)
                         }
-                        title.append(presentationData.strings.Notification_Exceptions_SoundCustom)
+                        switch value.settings.storySettings.hideSender {
+                        case .default:
+                            break
+                        default:
+                            if !title.isEmpty {
+                                title += ", "
+                            }
+                            //TODO:localize
+                            if case .show = value.settings.displayPreviews {
+                                title += "Show Names"
+                            } else {
+                                title += "Hide Names"
+                            }
+                        }
                     }
-                    switch value.settings.displayPreviews {
-                    case .default:
-                        break
-                    default:
-                        if !title.isEmpty {
-                            title += ", "
-                        }
-                        if case .show = value.settings.displayPreviews {
-                            title += presentationData.strings.Notification_Exceptions_PreviewAlwaysOn
+                } else {
+                    var muted = false
+                    switch value.settings.muteState {
+                    case let .muted(until):
+                        if until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
+                            if until < Int32.max - 1 {
+                                let formatter = DateFormatter()
+                                formatter.locale = Locale(identifier: presentationData.strings.baseLanguageCode)
+                                
+                                if Calendar.current.isDateInToday(Date(timeIntervalSince1970: Double(until))) {
+                                    formatter.dateFormat = "HH:mm"
+                                } else {
+                                    formatter.dateFormat = "E, d MMM HH:mm"
+                                }
+                                
+                                let dateString = formatter.string(from: Date(timeIntervalSince1970: Double(until)))
+                                
+                                title = presentationData.strings.Notification_Exceptions_MutedUntil(dateString).string
+                            } else {
+                                muted = true
+                                title = presentationData.strings.Notification_Exceptions_AlwaysOff
+                            }
                         } else {
-                            title += presentationData.strings.Notification_Exceptions_PreviewAlwaysOff
+                            title = presentationData.strings.Notification_Exceptions_AlwaysOn
+                        }
+                    case .unmuted:
+                        title = presentationData.strings.Notification_Exceptions_AlwaysOn
+                    default:
+                        title = ""
+                    }
+                    if !muted {
+                        switch value.settings.messageSound {
+                        case .default:
+                            break
+                        default:
+                            if !title.isEmpty {
+                                title.append(", ")
+                            }
+                            title.append(presentationData.strings.Notification_Exceptions_SoundCustom)
+                        }
+                        switch value.settings.displayPreviews {
+                        case .default:
+                            break
+                        default:
+                            if !title.isEmpty {
+                                title += ", "
+                            }
+                            if case .show = value.settings.displayPreviews {
+                                title += presentationData.strings.Notification_Exceptions_PreviewAlwaysOn
+                            } else {
+                                title += presentationData.strings.Notification_Exceptions_PreviewAlwaysOff
+                            }
                         }
                     }
                 }
@@ -923,8 +938,35 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
     let sharedData = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
     let preferences = context.account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications])
     
-    let signal = combineLatest(context.sharedContext.presentationData, context.engine.peers.notificationSoundList(), sharedData, preferences, statePromise.get())
-    |> map { presentationData, notificationSoundList, sharedData, view, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    var automaticData: Signal<([EnginePeer], [EnginePeer.Id: EnginePeer.NotificationSettings]), NoError> = .single(([], [:]))
+    if case .stories = category {
+        automaticData = context.engine.peers.recentPeers()
+        |> mapToSignal { recentPeers -> Signal<([EnginePeer], [EnginePeer.Id: EnginePeer.NotificationSettings]), NoError> in
+            guard case let .peers(peersValue) = recentPeers else {
+                return .single(([], [:]))
+            }
+            let peers = peersValue.prefix(5).map(EnginePeer.init)
+            return context.engine.data.subscribe(
+                EngineDataMap(peers.map { peer in
+                    return TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peer.id)
+                })
+            )
+            |> map { settings -> ([EnginePeer], [EnginePeer.Id: EnginePeer.NotificationSettings]) in
+                var settingsMap: [EnginePeer.Id: EnginePeer.NotificationSettings] = [:]
+                for peer in peers {
+                    if let value = settings[peer.id] {
+                        settingsMap[peer.id] = value
+                    } else {
+                        settingsMap[peer.id] = EnginePeer.NotificationSettings(TelegramPeerNotificationSettings.defaultSettings)
+                    }
+                }
+                return (peers, settingsMap)
+            }
+        }
+    }
+    
+    let signal = combineLatest(context.sharedContext.presentationData, context.engine.peers.notificationSoundList(), sharedData, preferences, statePromise.get(), automaticData)
+    |> map { presentationData, notificationSoundList, sharedData, view, state, automaticData -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let viewSettings: GlobalNotificationSettingsSet
         if let settings = view.values[PreferencesKeys.globalNotifications]?.get(GlobalNotificationSettings.self) {
             viewSettings = settings.effective
@@ -932,7 +974,7 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
             viewSettings = GlobalNotificationSettingsSet.defaultSettings
         }
         
-        let entries = notificationsPeerCategoryEntries(category: category, globalSettings: viewSettings, state: state, presentationData: presentationData, notificationSoundList: notificationSoundList)
+        let entries = notificationsPeerCategoryEntries(category: category, globalSettings: viewSettings, state: state, presentationData: presentationData, notificationSoundList: notificationSoundList, automaticTopPeers: automaticData.0, automaticNotificationSettings: automaticData.1)
         
         var index = 0
         var scrollToItem: ListViewScrollToItem?

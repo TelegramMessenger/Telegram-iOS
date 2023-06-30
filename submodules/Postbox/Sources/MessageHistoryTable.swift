@@ -2615,6 +2615,13 @@ final class MessageHistoryTable: Table {
                     }
                 }
             }
+            
+            #if DEBUG
+            for key in associatedStories.keys {
+                associatedStories[key] = CodableEntry(data: Data())
+            }
+            #endif
+            
             associatedMessageIds.append(contentsOf: attribute.associatedMessageIds)
             if addAssociatedMessages {
                 for messageId in attribute.associatedMessageIds {

@@ -20,6 +20,7 @@ public final class AvatarStoryIndicatorComponent: Component {
     public let theme: PresentationTheme
     public let activeLineWidth: CGFloat
     public let inactiveLineWidth: CGFloat
+    public let isGlassBackground: Bool
     public let counters: Counters?
     
     public init(
@@ -28,6 +29,7 @@ public final class AvatarStoryIndicatorComponent: Component {
         theme: PresentationTheme,
         activeLineWidth: CGFloat,
         inactiveLineWidth: CGFloat,
+        isGlassBackground: Bool = false,
         counters: Counters?
     ) {
         self.hasUnseen = hasUnseen
@@ -35,6 +37,7 @@ public final class AvatarStoryIndicatorComponent: Component {
         self.theme = theme
         self.activeLineWidth = activeLineWidth
         self.inactiveLineWidth = inactiveLineWidth
+        self.isGlassBackground = isGlassBackground
         self.counters = counters
     }
     
@@ -52,6 +55,9 @@ public final class AvatarStoryIndicatorComponent: Component {
             return false
         }
         if lhs.inactiveLineWidth != rhs.inactiveLineWidth {
+            return false
+        }
+        if lhs.isGlassBackground != rhs.isGlassBackground {
             return false
         }
         if lhs.counters != rhs.counters {
@@ -90,7 +96,7 @@ public final class AvatarStoryIndicatorComponent: Component {
             } else {
                 lineWidth = component.inactiveLineWidth
             }
-            let maxOuterInset = component.activeLineWidth + component.activeLineWidth
+            let maxOuterInset = component.activeLineWidth + lineWidth
             diameter = availableSize.width + maxOuterInset * 2.0
             let imageDiameter = availableSize.width + ceilToScreenPixels(maxOuterInset) * 2.0
             
@@ -112,10 +118,14 @@ public final class AvatarStoryIndicatorComponent: Component {
                     ]
                 }
                 
-                if component.theme.overallDarkAppearance {
-                    inactiveColors = [component.theme.rootController.tabBar.textColor.cgColor, component.theme.rootController.tabBar.textColor.cgColor]
+                if component.isGlassBackground {
+                    inactiveColors = [UIColor(white: 1.0, alpha: 0.2).cgColor, UIColor(white: 1.0, alpha: 0.2).cgColor]
                 } else {
-                    inactiveColors = [UIColor(rgb: 0xD8D8E1).cgColor, UIColor(rgb: 0xD8D8E1).cgColor]
+                    if component.theme.overallDarkAppearance {
+                        inactiveColors = [component.theme.rootController.tabBar.textColor.cgColor, component.theme.rootController.tabBar.textColor.cgColor]
+                    } else {
+                        inactiveColors = [UIColor(rgb: 0xD8D8E1).cgColor, UIColor(rgb: 0xD8D8E1).cgColor]
+                    }
                 }
                 
                 var locations: [CGFloat] = [0.0, 1.0]

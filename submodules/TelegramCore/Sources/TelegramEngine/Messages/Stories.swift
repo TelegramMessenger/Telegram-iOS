@@ -126,6 +126,7 @@ public enum Stories {
             case isPublic
             case isCloseFriends
             case isForwardingDisabled
+            case isEdited
         }
         
         public let id: Int32
@@ -141,6 +142,7 @@ public enum Stories {
         public let isPublic: Bool
         public let isCloseFriends: Bool
         public let isForwardingDisabled: Bool
+        public let isEdited: Bool
         
         public init(
             id: Int32,
@@ -155,7 +157,8 @@ public enum Stories {
             isExpired: Bool,
             isPublic: Bool,
             isCloseFriends: Bool,
-            isForwardingDisabled: Bool
+            isForwardingDisabled: Bool,
+            isEdited: Bool
         ) {
             self.id = id
             self.timestamp = timestamp
@@ -170,6 +173,7 @@ public enum Stories {
             self.isPublic = isPublic
             self.isCloseFriends = isCloseFriends
             self.isForwardingDisabled = isForwardingDisabled
+            self.isEdited = isEdited
         }
         
         public init(from decoder: Decoder) throws {
@@ -194,6 +198,7 @@ public enum Stories {
             self.isPublic = try container.decodeIfPresent(Bool.self, forKey: .isPublic) ?? false
             self.isCloseFriends = try container.decodeIfPresent(Bool.self, forKey: .isCloseFriends) ?? false
             self.isForwardingDisabled = try container.decodeIfPresent(Bool.self, forKey: .isForwardingDisabled) ?? false
+            self.isEdited = try container.decodeIfPresent(Bool.self, forKey: .isEdited) ?? false
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -219,6 +224,7 @@ public enum Stories {
             try container.encode(self.isPublic, forKey: .isPublic)
             try container.encode(self.isCloseFriends, forKey: .isCloseFriends)
             try container.encode(self.isForwardingDisabled, forKey: .isForwardingDisabled)
+            try container.encode(self.isEdited, forKey: .isEdited)
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -267,6 +273,9 @@ public enum Stories {
                 return false
             }
             if lhs.isForwardingDisabled != rhs.isForwardingDisabled {
+                return false
+            }
+            if lhs.isEdited != rhs.isEdited {
                 return false
             }
             
@@ -850,7 +859,8 @@ func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId
                                                         isExpired: item.isExpired,
                                                         isPublic: item.isPublic,
                                                         isCloseFriends: item.isCloseFriends,
-                                                        isForwardingDisabled: item.isForwardingDisabled
+                                                        isForwardingDisabled: item.isForwardingDisabled,
+                                                        isEdited: item.isEdited
                                                     )
                                                     if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                                                         items.append(StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp))
@@ -999,7 +1009,8 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
                 isExpired: item.isExpired,
                 isPublic: item.isPublic,
                 isCloseFriends: item.isCloseFriends,
-                isForwardingDisabled: item.isForwardingDisabled
+                isForwardingDisabled: item.isForwardingDisabled,
+                isEdited: item.isEdited
             )
             if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                 transaction.setStory(id: storyId, value: entry)
@@ -1022,7 +1033,8 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
                 isExpired: item.isExpired,
                 isPublic: item.isPublic,
                 isCloseFriends: item.isCloseFriends,
-                isForwardingDisabled: item.isForwardingDisabled
+                isForwardingDisabled: item.isForwardingDisabled,
+                isEdited: item.isEdited
             )
             if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                 items[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp)
@@ -1154,7 +1166,8 @@ func _internal_updateStoriesArePinned(account: Account, ids: [Int32: EngineStory
                     isExpired: item.isExpired,
                     isPublic: item.isPublic,
                     isCloseFriends: item.isCloseFriends,
-                    isForwardingDisabled: item.isForwardingDisabled
+                    isForwardingDisabled: item.isForwardingDisabled,
+                    isEdited: item.isEdited
                 )
                 if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                     items[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp)
@@ -1176,7 +1189,8 @@ func _internal_updateStoriesArePinned(account: Account, ids: [Int32: EngineStory
                     isExpired: item.isExpired,
                     isPublic: item.isPublic,
                     isCloseFriends: item.isCloseFriends,
-                    isForwardingDisabled: item.isForwardingDisabled
+                    isForwardingDisabled: item.isForwardingDisabled,
+                    isEdited: item.isEdited
                 )
                 updatedItems.append(updatedItem)
             }
@@ -1273,6 +1287,7 @@ extension Stories.StoredItem {
                 let isPublic = (flags & (1 << 7)) != 0
                 let isCloseFriends = (flags & (1 << 8)) != 0
                 let isForwardingDisabled = (flags & (1 << 10)) != 0
+                let isEdited = (flags & (1 << 11)) != 0
                 
                 let item = Stories.Item(
                     id: id,
@@ -1287,7 +1302,8 @@ extension Stories.StoredItem {
                     isExpired: isExpired,
                     isPublic: isPublic,
                     isCloseFriends: isCloseFriends,
-                    isForwardingDisabled: isForwardingDisabled
+                    isForwardingDisabled: isForwardingDisabled,
+                    isEdited: isEdited
                 )
                 self = .item(item)
             } else {

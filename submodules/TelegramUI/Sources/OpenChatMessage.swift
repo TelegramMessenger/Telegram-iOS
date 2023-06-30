@@ -47,10 +47,14 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
             selectedTransitionNode = params.transitionNode(params.message.id, story, true)
             
             if let selectedTransitionNode {
+                var cornerRadius: CGFloat = 0.0
+                if let imageNode = selectedTransitionNode.0 as? TransformImageNode, let currentArguments = imageNode.currentArguments {
+                    cornerRadius = currentArguments.corners.topLeft.radius
+                }
                 transitionIn = StoryContainerScreen.TransitionIn(
                     sourceView: selectedTransitionNode.0.view,
                     sourceRect: selectedTransitionNode.1,
-                    sourceCornerRadius: 0.0,
+                    sourceCornerRadius: cornerRadius,
                     sourceIsAvatar: false
                 )
             }
@@ -67,6 +71,11 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     var selectedTransitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                     selectedTransitionNode = params.transitionNode(params.message.id, story, true)
                     if let selectedTransitionNode {
+                        var cornerRadius: CGFloat = 0.0
+                        if let imageNode = selectedTransitionNode.0 as? TransformImageNode, let currentArguments = imageNode.currentArguments {
+                            cornerRadius = currentArguments.corners.topLeft.radius
+                        }
+                        
                         transitionOut = StoryContainerScreen.TransitionOut(
                             destinationView: selectedTransitionNode.0.view,
                             transitionView: StoryContainerScreen.TransitionView(
@@ -83,20 +92,23 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                                         return
                                     }
                                     if state.progress == 0.0 {
-                                        view.frame = CGRect(origin: CGPoint(), size: state.sourceSize)
+                                        view.frame = CGRect(origin: CGPoint(), size: state.destinationSize)
                                     }
                                     
-                                    let toScale = state.sourceSize.width / state.destinationSize.width
-                                    let fromScale: CGFloat = 1.0
-                                    let scale = toScale.interpolate(to: fromScale, amount: state.progress)
-                                    transition.setTransform(view: view, transform: CATransform3DMakeScale(scale, scale, 1.0))
+                                    let toScaleX = state.sourceSize.width / state.destinationSize.width
+                                    let toScaleY = state.sourceSize.height / state.destinationSize.height
+                                    let fromScaleX: CGFloat = 1.0
+                                    let fromScaleY: CGFloat = 1.0
+                                    let scaleX = toScaleX.interpolate(to: fromScaleX, amount: state.progress)
+                                    let scaleY = toScaleY.interpolate(to: fromScaleY, amount: state.progress)
+                                    transition.setTransform(view: view, transform: CATransform3DMakeScale(scaleX, scaleY, 1.0))
                                 },
                                 insertCloneTransitionView: { view in
                                     params.addToTransitionSurface(view)
                                 }
                             ),
                             destinationRect: selectedTransitionNode.1,
-                            destinationCornerRadius: 0.0,
+                            destinationCornerRadius: cornerRadius,
                             destinationIsAvatar: false,
                             completed: {
                                 params.context.sharedContext.mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaSource)
