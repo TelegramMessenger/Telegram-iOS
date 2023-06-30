@@ -2581,9 +2581,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
                 
                 let _ = (self.context.engine.data.get(
-                    TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peer.id)
+                    TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peer.id),
+                    TelegramEngine.EngineData.Item.NotificationSettings.Global()
                 )
-                |> deliverOnMainQueue).start(next: { [weak self] notificationSettings in
+                |> deliverOnMainQueue).start(next: { [weak self] notificationSettings, globalSettings in
                     guard let self else {
                         return
                     }
@@ -2639,7 +2640,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             })
                         })))
                         
-                        let isMuted = notificationSettings.storiesMuted == true
+                        let isMuted = resolvedAreStoriesMuted(globalSettings: globalSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: notificationSettings._asNotificationSettings())
                         items.append(.action(ContextMenuActionItem(text: isMuted ? "Notify" : "Don't Notify", icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in

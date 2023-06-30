@@ -4,17 +4,17 @@ public struct MessageNotificationSettings: Codable, Equatable {
     public var enabled: Bool
     public var displayPreviews: Bool
     public var sound: PeerMessageSound
-    public var storiesMuted: Bool?
+    public var storySettings: PeerStoryNotificationSettings
     
     public static var defaultSettings: MessageNotificationSettings {
-        return MessageNotificationSettings(enabled: true, displayPreviews: true, sound: defaultCloudPeerNotificationSound, storiesMuted: nil)
+        return MessageNotificationSettings(enabled: true, displayPreviews: true, sound: defaultCloudPeerNotificationSound, storySettings: PeerStoryNotificationSettings.default)
     }
     
-    public init(enabled: Bool, displayPreviews: Bool, sound: PeerMessageSound, storiesMuted: Bool?) {
+    public init(enabled: Bool, displayPreviews: Bool, sound: PeerMessageSound, storySettings: PeerStoryNotificationSettings) {
         self.enabled = enabled
         self.displayPreviews = displayPreviews
         self.sound = sound
-        self.storiesMuted = storiesMuted
+        self.storySettings = storySettings
     }
     
     public init(from decoder: Decoder) throws {
@@ -25,7 +25,7 @@ public struct MessageNotificationSettings: Codable, Equatable {
 
         self.sound = try PeerMessageSound.decodeInline(container)
         
-        self.storiesMuted = try? container.decodeIfPresent(Bool.self, forKey: "st")
+        self.storySettings = try container.decodeIfPresent(PeerStoryNotificationSettings.self, forKey: "stor") ?? PeerStoryNotificationSettings(mute: .unmuted, hideSender: .show, sound: defaultCloudPeerNotificationSound)
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -34,7 +34,7 @@ public struct MessageNotificationSettings: Codable, Equatable {
         try container.encode((self.enabled ? 1 : 0) as Int32, forKey: "e")
         try container.encode((self.displayPreviews ? 1 : 0) as Int32, forKey: "p")
         try self.sound.encodeInline(&container)
-        try container.encodeIfPresent(self.storiesMuted, forKey: "st")
+        try container.encode(self.storySettings, forKey: "stor")
     }
 }
 

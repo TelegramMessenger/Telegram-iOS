@@ -19,7 +19,11 @@ public final class NotificationExceptionsList: Equatable {
 }
 
 func _internal_notificationExceptionsList(postbox: Postbox, network: Network) -> Signal<NotificationExceptionsList, NoError> {
-    return network.request(Api.functions.account.getNotifyExceptions(flags: 1 << 1, peer: nil))
+    var flags: Int32 = 0
+    flags |= 1 << 1
+    flags |= 1 << 2
+    
+    return network.request(Api.functions.account.getNotifyExceptions(flags: flags, peer: nil))
     |> retryRequest
     |> mapToSignal { result -> Signal<NotificationExceptionsList, NoError> in
         return postbox.transaction { transaction -> NotificationExceptionsList in

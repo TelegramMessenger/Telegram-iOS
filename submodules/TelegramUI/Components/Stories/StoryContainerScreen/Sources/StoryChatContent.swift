@@ -100,10 +100,10 @@ public final class StoryContentContextImpl: StoryContentContext {
                 let additionalPeerData: StoryContentContextState.AdditionalPeerData
                 if let cachedPeerDataView = views.views[PostboxViewKey.cachedPeerData(peerId: peerId)] as? CachedPeerDataView, let cachedUserData = cachedPeerDataView.cachedPeerData as? CachedUserData {
                     var isMuted = false
-                    if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings, let storiesMuted = notificationSettings.storiesMuted {
-                        isMuted = storiesMuted
+                    if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
+                        isMuted = resolvedAreStoriesMuted(globalSettings: globalNotificationSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: notificationSettings)
                     } else {
-                        isMuted = globalNotificationSettings.privateChats.storiesMuted
+                        isMuted = resolvedAreStoriesMuted(globalSettings: globalNotificationSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: nil)
                     }
                     additionalPeerData = StoryContentContextState.AdditionalPeerData(isMuted: isMuted, areVoiceMessagesAvailable: cachedUserData.voiceMessagesAvailable)
                 } else {
@@ -913,12 +913,11 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
             let (peer, areVoiceMessagesAvailable, notificationSettings, globalNotificationSettings) = data
             let (item, peers) = itemAndPeers
             
-            var isMuted = false
-            if let storiesMuted = notificationSettings.storiesMuted {
-                isMuted = storiesMuted
-            } else {
-                isMuted = globalNotificationSettings.privateChats.storiesMuted
+            guard let peer else {
+                return
             }
+            
+            let isMuted = resolvedAreStoriesMuted(globalSettings: globalNotificationSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: notificationSettings._asNotificationSettings())
             
             let additionalPeerData = StoryContentContextState.AdditionalPeerData(
                 isMuted: isMuted,
@@ -934,7 +933,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 }
             }
             
-            if let item, case let .item(itemValue) = item, let media = itemValue.media, let peer {
+            if let item, case let .item(itemValue) = item, let media = itemValue.media {
                 let mappedItem = EngineStoryItem(
                     id: itemValue.id,
                     timestamp: itemValue.timestamp,
@@ -1062,12 +1061,11 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
             
             let (peer, areVoiceMessagesAvailable, notificationSettings, globalNotificationSettings) = data
             
-            var isMuted = false
-            if let storiesMuted = notificationSettings.storiesMuted {
-                isMuted = storiesMuted
-            } else {
-                isMuted = globalNotificationSettings.privateChats.storiesMuted
+            guard let peer else {
+                return
             }
+            
+            let isMuted = resolvedAreStoriesMuted(globalSettings: globalNotificationSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: notificationSettings._asNotificationSettings())
             
             let additionalPeerData = StoryContentContextState.AdditionalPeerData(
                 isMuted: isMuted,
@@ -1104,7 +1102,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
             }
             
             let stateValue: StoryContentContextState
-            if let focusedIndex = focusedIndex, let peer = peer {
+            if let focusedIndex = focusedIndex {
                 let item = state.items[focusedIndex]
                 self.focusedId = item.id
                 
@@ -1151,7 +1149,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                 var resultResources: [EngineMediaResource.Id: StoryPreloadInfo] = [:]
                 var pollItems: [StoryKey] = []
                 
-                if let peer, let focusedIndex, let slice = stateValue.slice {
+                if let focusedIndex, let slice = stateValue.slice {
                     var possibleItems: [(EnginePeer, EngineStoryItem)] = []
                     if peer.id == self.context.account.peerId {
                         pollItems.append(StoryKey(peerId: peer.id, id: slice.item.storyItem.id))

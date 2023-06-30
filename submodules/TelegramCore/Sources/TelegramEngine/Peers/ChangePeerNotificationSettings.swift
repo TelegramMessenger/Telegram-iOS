@@ -62,6 +62,20 @@ func _internal_togglePeerMuted(account: Account, peerId: PeerId, threadId: Int64
     }
 }
 
+public func resolvedAreStoriesMuted(globalSettings: GlobalNotificationSettingsSet, peer: Peer, peerSettings: TelegramPeerNotificationSettings?) -> Bool {
+    let defaultIsMuted = globalSettings.privateChats.storySettings.mute == .muted
+    switch peerSettings?.storySettings.mute {
+    case .none:
+        return defaultIsMuted
+    case .muted:
+        return true
+    case .unmuted:
+        return false
+    default:
+        return defaultIsMuted
+    }
+}
+
 func _internal_togglePeerStoriesMuted(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Void in
         guard let peer = transaction.getPeer(peerId) else {
@@ -82,12 +96,22 @@ func _internal_togglePeerStoriesMuted(account: Account, peerId: PeerId) -> Signa
         }
         
         let updatedSettings: TelegramPeerNotificationSettings
-        if let previousStoriesMuted = previousSettings.storiesMuted {
-            updatedSettings = previousSettings.withUpdatedStoriesMuted(!previousStoriesMuted)
-        } else {
-            updatedSettings = previousSettings.withUpdatedStoriesMuted(true)
+        var storySettings = previousSettings.storySettings
+        switch previousSettings.storySettings.mute {
+        case .default:
+            let globalNotificationSettings = transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications)?.get(GlobalNotificationSettings.self) ?? GlobalNotificationSettings.defaultSettings
+            
+            if resolvedAreStoriesMuted(globalSettings: globalNotificationSettings.effective, peer: peer, peerSettings: previousSettings) {
+                storySettings.mute = .unmuted
+            } else {
+                storySettings.mute = .muted
+            }
+        case .unmuted:
+            storySettings.mute = .muted
+        case .muted:
+            storySettings.mute = .unmuted
         }
-        
+        updatedSettings = previousSettings.withUpdatedStorySettings(storySettings)
         transaction.updatePendingPeerNotificationSettings(peerId: notificationPeerId, settings: updatedSettings)
     }
 }
@@ -213,13 +237,13 @@ func _internal_updatePeerDisplayPreviewsSetting(account: Account, transaction: T
     }
 }
 
-func _internal_updatePeerStoriesMutedSetting(account: Account, peerId: PeerId, isMuted: Bool?) -> Signal<Void, NoError> {
+func _internal_updatePeerStoriesMutedSetting(account: Account, peerId: PeerId, mute: PeerStoryNotificationSettings.Mute) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Void in
-        _internal_updatePeerStoriesMutedSetting(account: account, transaction: transaction, peerId: peerId, isMuted: isMuted)
+        _internal_updatePeerStoriesMutedSetting(account: account, transaction: transaction, peerId: peerId, mute: mute)
     }
 }
 
-func _internal_updatePeerStoriesMutedSetting(account: Account, transaction: Transaction, peerId: PeerId, isMuted: Bool?) {
+func _internal_updatePeerStoriesMutedSetting(account: Account, transaction: Transaction, peerId: PeerId, mute: PeerStoryNotificationSettings.Mute) {
     if let peer = transaction.getPeer(peerId) {
         var notificationPeerId = peerId
         if let associatedPeerId = peer.associatedPeerId {
@@ -234,7 +258,31 @@ func _internal_updatePeerStoriesMutedSetting(account: Account, transaction: Tran
             previousSettings = TelegramPeerNotificationSettings.defaultSettings
         }
         
-        let updatedSettings = previousSettings.withUpdatedStoriesMuted(isMuted)
+        var storySettings = previousSettings.storySettings
+        storySettings.mute = mute
+        let updatedSettings = previousSettings.withUpdatedStorySettings(storySettings)
+        transaction.updatePendingPeerNotificationSettings(peerId: peerId, settings: updatedSettings)
+    }
+}
+
+func _internal_updatePeerStoriesHideSenderSetting(account: Account, transaction: Transaction, peerId: PeerId, hideSender: PeerStoryNotificationSettings.HideSender) {
+    if let peer = transaction.getPeer(peerId) {
+        var notificationPeerId = peerId
+        if let associatedPeerId = peer.associatedPeerId {
+            notificationPeerId = associatedPeerId
+        }
+        
+        let currentSettings = transaction.getPeerNotificationSettings(id: notificationPeerId) as? TelegramPeerNotificationSettings
+        let previousSettings: TelegramPeerNotificationSettings
+        if let currentSettings = currentSettings {
+            previousSettings = currentSettings
+        } else {
+            previousSettings = TelegramPeerNotificationSettings.defaultSettings
+        }
+        
+        var storySettings = previousSettings.storySettings
+        storySettings.hideSender = hideSender
+        let updatedSettings = previousSettings.withUpdatedStorySettings(storySettings)
         transaction.updatePendingPeerNotificationSettings(peerId: peerId, settings: updatedSettings)
     }
 }
@@ -277,5 +325,27 @@ func _internal_updatePeerNotificationSoundInteractive(account: Account, transact
             let updatedSettings = previousSettings.withUpdatedMessageSound(sound)
             transaction.updatePendingPeerNotificationSettings(peerId: peerId, settings: updatedSettings)
         }
+    }
+}
+
+func _internal_updatePeerStoryNotificationSoundInteractive(account: Account, transaction: Transaction, peerId: PeerId, sound: PeerMessageSound) {
+    if let peer = transaction.getPeer(peerId) {
+        var notificationPeerId = peerId
+        if let associatedPeerId = peer.associatedPeerId {
+            notificationPeerId = associatedPeerId
+        }
+        
+        let currentSettings = transaction.getPeerNotificationSettings(id: notificationPeerId) as? TelegramPeerNotificationSettings
+        let previousSettings: TelegramPeerNotificationSettings
+        if let currentSettings = currentSettings {
+            previousSettings = currentSettings
+        } else {
+            previousSettings = TelegramPeerNotificationSettings.defaultSettings
+        }
+        
+        var storySettings = previousSettings.storySettings
+        storySettings.sound = sound
+        let updatedSettings = previousSettings.withUpdatedStorySettings(storySettings)
+        transaction.updatePendingPeerNotificationSettings(peerId: peerId, settings: updatedSettings)
     }
 }

@@ -19,9 +19,14 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
         TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
         TelegramEngine.EngineData.Item.Peer.AreVoiceCallsAvailable(id: peerId),
         TelegramEngine.EngineData.Item.Peer.AreVideoCallsAvailable(id: peerId),
-        TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peerId)
+        TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peerId),
+        TelegramEngine.EngineData.Item.NotificationSettings.Global()
     )
-    |> map { [weak contactsController] peer, areVoiceCallsAvailable, areVideoCallsAvailable, notificationSettings -> [ContextMenuItem] in
+    |> map { [weak contactsController] peer, areVoiceCallsAvailable, areVideoCallsAvailable, notificationSettings, globalSettings -> [ContextMenuItem] in
+        guard let peer else {
+            return []
+        }
+        
         var items: [ContextMenuItem] = []
         
         if isStories {
@@ -42,7 +47,8 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
                 })
             })))
             
-            let isMuted = notificationSettings.storiesMuted == true
+            let isMuted = resolvedAreStoriesMuted(globalSettings: globalSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: notificationSettings._asNotificationSettings())
+            
             items.append(.action(ContextMenuActionItem(text: isMuted ? "Notify" : "Don't Notify", icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
             }, action: { _, f in
@@ -50,7 +56,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
                 
                 let _ = context.engine.peers.togglePeerStoriesMuted(peerId: peerId).start()
                 
-                if let peer {
+                do {
                     let iconColor = UIColor.white
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     if isMuted {
@@ -96,7 +102,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
                     return
                 }
                 
-                if let peer {
+                do {
                     let location = CGRect(origin: CGPoint(x: sourceFrame.midX, y: sourceFrame.minY + 1.0), size: CGSize())
                     let tooltipController = TooltipScreen(
                         context: context,

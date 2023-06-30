@@ -62,8 +62,16 @@ private final class NotificationExceptionState : Equatable {
         return NotificationExceptionState(mode: mode.withUpdatedPeerDisplayPreviews(peer, displayPreviews), isSearchMode: isSearchMode, revealedPeerId: self.revealedPeerId, editing: self.editing)
     }
     
-    func withUpdatedPeerStoryNotifications(_ peer: EnginePeer, _ storyNotifications: PeerNotificationDisplayPreviews) -> NotificationExceptionState {
-        return NotificationExceptionState(mode: mode.withUpdatedPeerStoryNotifications(peer, storyNotifications), isSearchMode: isSearchMode, revealedPeerId: self.revealedPeerId, editing: self.editing)
+    func withUpdatedPeerStoriesMuted(_ peer: EnginePeer, _ mute: PeerStoryNotificationSettings.Mute) -> NotificationExceptionState {
+        return NotificationExceptionState(mode: mode.withUpdatedPeerStoriesMuted(peer, mute), isSearchMode: isSearchMode, revealedPeerId: self.revealedPeerId, editing: self.editing)
+    }
+    
+    func withUpdatedPeerStoriesHideSender(_ peer: EnginePeer, _ hideSender: PeerStoryNotificationSettings.HideSender) -> NotificationExceptionState {
+        return NotificationExceptionState(mode: mode.withUpdatedPeerStoriesHideSender(peer, hideSender), isSearchMode: isSearchMode, revealedPeerId: self.revealedPeerId, editing: self.editing)
+    }
+    
+    func withUpdatedPeerStorySound(_ peer: EnginePeer, _ sound: PeerMessageSound) -> NotificationExceptionState {
+        return NotificationExceptionState(mode: mode.withUpdatedPeerStorySound(peer, sound), isSearchMode: isSearchMode, revealedPeerId: self.revealedPeerId, editing: self.editing)
     }
     
     static func == (lhs: NotificationExceptionState, rhs: NotificationExceptionState) -> Bool {
@@ -584,17 +592,18 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             return context.engine.peers.updatePeerDisplayPreviewsSetting(peerId: peerId, threadId: nil, displayPreviews: displayPreviews) |> deliverOnMainQueue
         }
         
-        let updatePeerStoryNotifications: (PeerId, PeerNotificationDisplayPreviews) -> Signal<Void, NoError> = { peerId, storyNotifications in
-            var isMuted: Bool?
-            switch storyNotifications {
-            case .default:
-                isMuted = nil
-            case .show:
-                isMuted = false
-            case .hide:
-                isMuted = true
-            }
-            return context.engine.peers.updatePeerStoriesMutedSetting(peerId: peerId, isMuted: isMuted) |> deliverOnMainQueue
+        let updatePeerStoriesMuted: (PeerId, PeerStoryNotificationSettings.Mute) -> Signal<Void, NoError> = {
+            peerId, mute in
+            return context.engine.peers.updatePeerStoriesMutedSetting(peerId: peerId, mute: mute) |> deliverOnMainQueue
+        }
+        
+        let updatePeerStoriesHideSender: (PeerId, PeerStoryNotificationSettings.HideSender) -> Signal<Void, NoError> = {
+            peerId, hideSender in
+            return context.engine.peers.updatePeerStoriesHideSenderSetting(peerId: peerId, hideSender: hideSender) |> deliverOnMainQueue
+        }
+        
+        let updatePeerStorySound: (PeerId, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
+            return context.engine.peers.updatePeerStorySoundInteractive(peerId: peerId, sound: sound) |> deliverOnMainQueue
         }
         
         self.backgroundColor = presentationData.theme.list.blocksBackgroundColor
@@ -670,12 +679,32 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                         }
                         updateNotificationsView({})
                     })
-                }, updatePeerStoryNotifications: { peerId, displayPreviews in
+                }, updatePeerStoriesMuted: { peerId, mute in
                     updateNotificationsDisposable.set(nil)
-                    _ = combineLatest(updatePeerStoryNotifications(peerId, displayPreviews), context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)) |> deliverOnMainQueue).start(next: { _, peer in
+                    let _ = combineLatest(updatePeerStoriesMuted(peerId, mute), context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)) |> deliverOnMainQueue).start(next: { _, peer in
                         if let peer = peer {
                             updateState { value in
-                                return value.withUpdatedPeerStoryNotifications(peer, displayPreviews)
+                                return value.withUpdatedPeerStoriesMuted(peer, mute)
+                            }
+                        }
+                        updateNotificationsView({})
+                    })
+                }, updatePeerStoriesHideSender: { peerId, hideSender in
+                    updateNotificationsDisposable.set(nil)
+                    let _ = combineLatest(updatePeerStoriesHideSender(peerId, hideSender), context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)) |> deliverOnMainQueue).start(next: { _, peer in
+                        if let peer = peer {
+                            updateState { value in
+                                return value.withUpdatedPeerStoriesHideSender(peer, hideSender)
+                            }
+                        }
+                        updateNotificationsView({})
+                    })
+                }, updatePeerStorySound: { peerId, sound in
+                    updateNotificationsDisposable.set(nil)
+                    let _ = combineLatest(updatePeerStorySound(peerId, sound), context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)) |> deliverOnMainQueue).start(next: { _, peer in
+                        if let peer = peer {
+                            updateState { value in
+                                return value.withUpdatedPeerStorySound(peer, sound)
                             }
                         }
                         updateNotificationsView({})
