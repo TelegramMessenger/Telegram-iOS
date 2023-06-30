@@ -607,7 +607,7 @@ private func prepareUploadStoryContent(account: Account, media: EngineStoryInput
     }
 }
 
-private func uploadedStoryContent(postbox: Postbox, network: Network, media: Media, accountPeerId: PeerId, messageMediaPreuploadManager: MessageMediaPreuploadManager, revalidationContext: MediaReferenceRevalidationContext, auxiliaryMethods: AccountAuxiliaryMethods) -> (signal: Signal<PendingMessageUploadedContentResult?, NoError>, media: Media) {
+private func uploadedStoryContent(postbox: Postbox, network: Network, media: Media, accountPeerId: PeerId, messageMediaPreuploadManager: MessageMediaPreuploadManager, revalidationContext: MediaReferenceRevalidationContext, auxiliaryMethods: AccountAuxiliaryMethods, passFetchProgress: Bool) -> (signal: Signal<PendingMessageUploadedContentResult?, NoError>, media: Media) {
     let originalMedia: Media = media
     let contentToUpload: MessageContentToUpload
     
@@ -621,7 +621,7 @@ private func uploadedStoryContent(postbox: Postbox, network: Network, media: Med
         revalidationContext: revalidationContext,
         forceReupload: true,
         isGrouped: false,
-        passFetchProgress: false,
+        passFetchProgress: passFetchProgress,
         peerId: accountPeerId,
         messageId: nil,
         attributes: [],
@@ -758,7 +758,8 @@ private func _internal_putPendingStoryIdMapping(accountPeerId: PeerId, stableId:
 }
 
 func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId: PeerId, stateManager: AccountStateManager, messageMediaPreuploadManager: MessageMediaPreuploadManager, revalidationContext: MediaReferenceRevalidationContext, auxiliaryMethods: AccountAuxiliaryMethods, stableId: Int32, media: Media, text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, isForwardingDisabled: Bool, period: Int, randomId: Int64) -> Signal<StoryUploadResult, NoError> {
-    let (contentSignal, originalMedia) = uploadedStoryContent(postbox: postbox, network: network, media: media, accountPeerId: accountPeerId, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: revalidationContext, auxiliaryMethods: auxiliaryMethods)
+    let passFetchProgress = media is TelegramMediaFile
+    let (contentSignal, originalMedia) = uploadedStoryContent(postbox: postbox, network: network, media: media, accountPeerId: accountPeerId, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: revalidationContext, auxiliaryMethods: auxiliaryMethods, passFetchProgress: passFetchProgress)
     return contentSignal
     |> mapToSignal { result -> Signal<StoryUploadResult, NoError> in
         switch result {
@@ -896,7 +897,11 @@ func _internal_editStory(account: Account, media: EngineStoryInputMedia?, id: In
     let contentSignal: Signal<PendingMessageUploadedContentResult?, NoError>
     let originalMedia: Media?
     if let media = media {
-        (contentSignal, originalMedia) = uploadedStoryContent(postbox: account.postbox, network: account.network, media: prepareUploadStoryContent(account: account, media: media), accountPeerId: account.peerId, messageMediaPreuploadManager: account.messageMediaPreuploadManager, revalidationContext: account.mediaReferenceRevalidationContext, auxiliaryMethods: account.auxiliaryMethods)
+        var passFetchProgress = false
+        if case .video = media {
+            passFetchProgress = true
+        }
+        (contentSignal, originalMedia) = uploadedStoryContent(postbox: account.postbox, network: account.network, media: prepareUploadStoryContent(account: account, media: media), accountPeerId: account.peerId, messageMediaPreuploadManager: account.messageMediaPreuploadManager, revalidationContext: account.mediaReferenceRevalidationContext, auxiliaryMethods: account.auxiliaryMethods, passFetchProgress: passFetchProgress)
     } else {
         contentSignal = .single(nil)
         originalMedia = nil

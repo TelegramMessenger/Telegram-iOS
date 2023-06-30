@@ -28,6 +28,7 @@ import CameraButtonComponent
 import UndoUI
 import ChatEntityKeyboardInputNode
 import ChatPresentationInterfaceState
+import TextFormat
 
 enum DrawingScreenType {
     case drawing
@@ -1862,25 +1863,25 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 }
             }
-//#if DEBUG
-//            if case let .asset(asset) = subject, asset.mediaType == .video {
-//                let videoEntity = DrawingStickerEntity(content: .dualVideoReference)
-//                videoEntity.referenceDrawingSize = storyDimensions
-//                videoEntity.scale = 1.49
-//                videoEntity.position = PIPPosition.bottomRight.getPosition(storyDimensions)
-//                self.entitiesView.add(videoEntity, announce: false)
-//
-//                mediaEditor.setAdditionalVideo("", positionChanges: [VideoPositionChange(additional: false, timestamp: 0.0), VideoPositionChange(additional: true, timestamp: 3.0)])
-//                mediaEditor.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
-//                if let entityView = self.entitiesView.getView(for: videoEntity.uuid) as? DrawingStickerEntityView {
-//                    entityView.updated = { [weak videoEntity, weak self] in
-//                        if let self, let videoEntity {
-//                            self.mediaEditor?.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
-//                        }
-//                    }
-//                }
-//        }
-//#endif
+#if targetEnvironment(simulator)
+            if case let .asset(asset) = subject, asset.mediaType == .video {
+                let videoEntity = DrawingStickerEntity(content: .dualVideoReference)
+                videoEntity.referenceDrawingSize = storyDimensions
+                videoEntity.scale = 1.49
+                videoEntity.position = PIPPosition.bottomRight.getPosition(storyDimensions)
+                self.entitiesView.add(videoEntity, announce: false)
+
+                mediaEditor.setAdditionalVideo("", positionChanges: [VideoPositionChange(additional: false, timestamp: 0.0), VideoPositionChange(additional: true, timestamp: 3.0)])
+                mediaEditor.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
+                if let entityView = self.entitiesView.getView(for: videoEntity.uuid) as? DrawingStickerEntityView {
+                    entityView.updated = { [weak videoEntity, weak self] in
+                        if let self, let videoEntity {
+                            self.mediaEditor?.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
+                        }
+                    }
+                }
+        }
+#endif
             
             self.gradientColorsDisposable = mediaEditor.gradientColors.start(next: { [weak self] colors in
                 if let self, let colors {
@@ -3103,6 +3104,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     
         let privacy = privacy ?? self.state.privacy
         
+        let text = self.getCaption().string
+        let mentions = generateTextEntities(text, enabledTypes: [.mention], currentEntities: []).map { (text as NSString).substring(with: NSRange(location: $0.range.lowerBound + 1, length: $0.range.upperBound - $0.range.lowerBound - 1)) }
+                
         let stateContext = ShareWithPeersScreen.StateContext(context: self.context, subject: .stories(editing: false), initialPeerIds: Set(privacy.privacy.additionallyIncludePeers))
         let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
             guard let self else {
@@ -3117,6 +3121,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 allowScreenshots: !privacy.isForwardingDisabled,
                 pin: privacy.pin,
                 timeout: privacy.timeout,
+                mentions: mentions,
                 stateContext: stateContext,
                 completion: { [weak self] privacy, allowScreenshots, pin in
                     guard let self else {

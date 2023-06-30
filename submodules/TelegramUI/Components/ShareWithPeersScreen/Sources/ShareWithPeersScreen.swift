@@ -9,6 +9,7 @@ import ComponentDisplayAdapters
 import TelegramPresentationData
 import AccountContext
 import TelegramCore
+import Postbox
 import MultilineTextComponent
 import SolidRoundedButtonComponent
 import PresentationDataUtils
@@ -31,6 +32,7 @@ final class ShareWithPeersScreenComponent: Component {
     let screenshot: Bool
     let pin: Bool
     let timeout: Int
+    let mentions: [String]
     let categoryItems: [CategoryItem]
     let optionItems: [OptionItem]
     let completion: (EngineStoryPrivacy, Bool, Bool) -> Void
@@ -43,6 +45,7 @@ final class ShareWithPeersScreenComponent: Component {
         screenshot: Bool,
         pin: Bool,
         timeout: Int,
+        mentions: [String],
         categoryItems: [CategoryItem],
         optionItems: [OptionItem],
         completion: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void,
@@ -54,6 +57,7 @@ final class ShareWithPeersScreenComponent: Component {
         self.screenshot = screenshot
         self.pin = pin
         self.timeout = timeout
+        self.mentions = mentions
         self.categoryItems = categoryItems
         self.optionItems = optionItems
         self.completion = completion
@@ -77,6 +81,9 @@ final class ShareWithPeersScreenComponent: Component {
             return false
         }
         if lhs.timeout != rhs.timeout {
+            return false
+        }
+        if lhs.mentions != rhs.mentions {
             return false
         }
         if lhs.categoryItems != rhs.categoryItems {
@@ -1508,7 +1515,7 @@ final class ShareWithPeersScreenComponent: Component {
                         guard let self, let component = self.component, let controller = self.environment?.controller() as? ShareWithPeersScreen else {
                             return
                         }
-                                                
+                                                                        
                         let base: EngineStoryPrivacy.Base
                         if self.selectedCategories.contains(.everyone) {
                             base = .everyone
@@ -1522,17 +1529,126 @@ final class ShareWithPeersScreenComponent: Component {
                             base = .nobody
                         }
                         
-                        component.completion(
-                            EngineStoryPrivacy(
-                                base: base,
-                                additionallyIncludePeers: self.selectedPeers
-                            ),
-                            self.selectedOptions.contains(.screenshot),
-                            self.selectedOptions.contains(.pin)
-                        )
+                        let proceed = {
+                            component.completion(
+                                EngineStoryPrivacy(
+                                    base: base,
+                                    additionallyIncludePeers: self.selectedPeers
+                                ),
+                                self.selectedOptions.contains(.screenshot),
+                                self.selectedOptions.contains(.pin)
+                            )
 
-                        controller.dismissAllTooltips()
-                        controller.dismiss()
+                            controller.dismissAllTooltips()
+                            controller.dismiss()
+                        }
+                        
+                        let presentAlert: ([String]) -> Void = { usernames in
+                            let usernamesString = String(usernames.map { "@\($0)" }.joined(separator: ", "))
+                            let alertController = textAlertController(
+                                context: component.context,
+                                forceTheme: defaultDarkColorPresentationTheme,
+                                title: "Privacy Restrictions",
+                                text: "The privacy settings of your story will prevent some users you tagged (\( usernamesString )) from viewing it.",
+                                actions: [
+                                    TextAlertAction(type: .defaultAction, title: "Proceed Anyway", action: {
+                                        proceed()
+                                    }),
+                                    TextAlertAction(type: .genericAction, title: "Cancel", action: {})
+                                ],
+                                actionLayout: .vertical
+                            )
+                            controller.present(alertController, in: .window(.root))
+                        }
+                        
+                        func matchingUsername(user: TelegramUser, usernames: Set<String>) -> String? {
+                            for username in user.usernames {
+                                if usernames.contains(username.username) {
+                                    return username.username
+                                }
+                            }
+                            if let username = user.username {
+                                if usernames.contains(username) {
+                                    return username
+                                }
+                            }
+                            return nil
+                        }
+                        
+                        let context = component.context
+                        let selectedPeerIds = self.selectedPeers
+                        
+                        if case .stories = component.stateContext.subject {
+                            if component.mentions.isEmpty {
+                                proceed()
+                            } else if case .nobody = base {
+                                if selectedPeerIds.isEmpty {
+                                    presentAlert(component.mentions)
+                                } else {
+                                    let _ = (context.account.postbox.transaction { transaction in
+                                        var filteredMentions = Set(component.mentions)
+                                        for peerId in selectedPeerIds {
+                                            if let user = transaction.getPeer(peerId) as? TelegramUser, let username = matchingUsername(user: user, usernames: filteredMentions) {
+                                                filteredMentions.remove(username)
+                                            }
+                                        }
+                                        return Array(filteredMentions)
+                                    }
+                                    |> deliverOnMainQueue).start(next: { mentions in
+                                        if mentions.isEmpty {
+                                            proceed()
+                                        } else {
+                                            presentAlert(mentions)
+                                        }
+                                    })
+                                }
+                            } else if case .contacts = base {
+                                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.List(includePresences: false))
+                                |> map { contacts -> [String] in
+                                    var filteredMentions = Set(component.mentions)
+                                    let peers = contacts.peers
+                                    for peer in peers {
+                                        if selectedPeerIds.contains(peer.id) {
+                                            continue
+                                        }
+                                        if case let .user(user) = peer, let username = matchingUsername(user: user, usernames: filteredMentions) {
+                                            filteredMentions.remove(username)
+                                        }
+                                    }
+                                    return Array(filteredMentions)
+                                }
+                                |> deliverOnMainQueue).start(next: { mentions in
+                                    if mentions.isEmpty {
+                                        proceed()
+                                    } else {
+                                        presentAlert(mentions)
+                                    }
+                                })
+                            } else if case .closeFriends = base {
+                                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.List(includePresences: false))
+                                |> map { contacts -> [String] in
+                                    var filteredMentions = Set(component.mentions)
+                                    let peers = contacts.peers
+                                    for peer in peers {
+                                        if case let .user(user) = peer, user.flags.contains(.isCloseFriend), let username = matchingUsername(user: user, usernames: filteredMentions) {
+                                            filteredMentions.remove(username)
+                                        }
+                                    }
+                                    return Array(filteredMentions)
+                                }
+                                |> deliverOnMainQueue).start(next: { mentions in
+                                    if mentions.isEmpty {
+                                        proceed()
+                                    } else {
+                                        presentAlert(mentions)
+                                    }
+                                })
+                            } else {
+                                proceed()
+                            }
+                        } else {
+                            proceed()
+                        }
                     }
                 )),
                 environment: {},
@@ -1821,6 +1937,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         allowScreenshots: Bool = true,
         pin: Bool = false,
         timeout: Int = 0,
+        mentions: [String] = [],
         stateContext: StateContext,
         completion: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void,
         editCategory: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void
@@ -1921,6 +2038,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
             screenshot: allowScreenshots,
             pin: pin,
             timeout: timeout,
+            mentions: mentions,
             categoryItems: categoryItems,
             optionItems: optionItems,
             completion: completion,
