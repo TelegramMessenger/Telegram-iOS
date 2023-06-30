@@ -38,6 +38,8 @@ protocol MediaEditorVideoExportWriter {
     func markAudioAsFinished()
     
     var status: ExportWriterStatus { get }
+    
+    var error: Error? { get }
 }
 
 public final class MediaEditorVideoAVAssetWriter: MediaEditorVideoExportWriter {
@@ -178,6 +180,10 @@ public final class MediaEditorVideoAVAssetWriter: MediaEditorVideoExportWriter {
             return .unknown
         }
     }
+    
+    var error: Error? {
+        return self.writer?.error
+    }
 }
 
 public final class MediaEditorVideoExport {
@@ -294,6 +300,10 @@ public final class MediaEditorVideoExport {
         self.subject = subject
         self.configuration = configuration
         self.outputPath = outputPath
+        
+        if FileManager.default.fileExists(atPath: outputPath) {
+            try? FileManager.default.removeItem(atPath: outputPath)
+        }
         
         self.setup()
         
@@ -493,10 +503,16 @@ public final class MediaEditorVideoExport {
         }
         
         if writer.status == .failed {
+            if let error = writer.error {
+                Logger.shared.log("VideoExport", "Failed with writer error \(error.localizedDescription)")
+            }
             try? FileManager().removeItem(at: outputUrl)
             self.internalStatus = .finished
             self.statusValue = .failed(.writing(nil))
         } else if let reader = self.reader, reader.status == .failed {
+            if let error = reader.error {
+                Logger.shared.log("VideoExport", "Failed with reader error \(error.localizedDescription)")
+            }
             try? FileManager().removeItem(at: outputUrl)
             writer.cancelWriting()
             self.internalStatus = .finished
@@ -505,6 +521,9 @@ public final class MediaEditorVideoExport {
             writer.finishWriting {
                 self.queue.async {
                     if writer.status == .failed {
+                        if let error = writer.error {
+                            Logger.shared.log("VideoExport", "Failed after finishWriting with writer error \(error.localizedDescription)")
+                        }
                         try? FileManager().removeItem(at: outputUrl)
                         self.internalStatus = .finished
                         self.statusValue = .failed(.writing(nil))

@@ -3092,6 +3092,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     }
             
     func openPrivacySettings(_ privacy: MediaEditorResultPrivacy? = nil, completion: @escaping () -> Void = {}) {
+        self.node.mediaEditor?.stop()
+        
         self.hapticFeedback.impact(.light)
     
         let privacy = privacy ?? self.state.privacy
@@ -3103,39 +3105,42 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
             let initialPrivacy = privacy.privacy
             let timeout = privacy.timeout
-            self.push(
-                ShareWithPeersScreen(
-                    context: self.context,
-                    initialPrivacy: initialPrivacy,
-                    allowScreenshots: !privacy.isForwardingDisabled,
-                    pin: privacy.pin,
-                    timeout: privacy.timeout,
-                    stateContext: stateContext,
-                    completion: { [weak self] privacy, allowScreenshots, pin in
-                        guard let self else {
-                            return
-                        }
-                        self.state.privacy = MediaEditorResultPrivacy(privacy: privacy, timeout: timeout, isForwardingDisabled: !allowScreenshots, pin: pin)
-                        completion()
-                    },
-                    editCategory: { [weak self] privacy, allowScreenshots, pin in
-                        guard let self else {
-                            return
-                        }
-                        self.openEditCategory(privacy: privacy, isForwardingDisabled: !allowScreenshots, pin: pin, completion: { [weak self] privacy in
-                            guard let self else {
-                                return
-                            }
-                            self.openPrivacySettings(MediaEditorResultPrivacy(
-                                privacy: privacy,
-                                timeout: timeout,
-                                isForwardingDisabled: !allowScreenshots,
-                                pin: pin
-                            ), completion: completion)
-                        })
+            
+            let controller =  ShareWithPeersScreen(
+                context: self.context,
+                initialPrivacy: initialPrivacy,
+                allowScreenshots: !privacy.isForwardingDisabled,
+                pin: privacy.pin,
+                timeout: privacy.timeout,
+                stateContext: stateContext,
+                completion: { [weak self] privacy, allowScreenshots, pin in
+                    guard let self else {
+                        return
                     }
-                )
+                    self.state.privacy = MediaEditorResultPrivacy(privacy: privacy, timeout: timeout, isForwardingDisabled: !allowScreenshots, pin: pin)
+                    completion()
+                },
+                editCategory: { [weak self] privacy, allowScreenshots, pin in
+                    guard let self else {
+                        return
+                    }
+                    self.openEditCategory(privacy: privacy, isForwardingDisabled: !allowScreenshots, pin: pin, completion: { [weak self] privacy in
+                        guard let self else {
+                            return
+                        }
+                        self.openPrivacySettings(MediaEditorResultPrivacy(
+                            privacy: privacy,
+                            timeout: timeout,
+                            isForwardingDisabled: !allowScreenshots,
+                            pin: pin
+                        ), completion: completion)
+                    })
+                }
             )
+            controller.dismissed = {
+                self.node.mediaEditor?.play()
+            }
+            self.push(controller)
         })
     }
     
