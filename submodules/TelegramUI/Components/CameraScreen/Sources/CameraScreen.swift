@@ -1620,7 +1620,7 @@ public class CameraScreen: ViewController {
             
             let location = CGRect(origin: CGPoint(x: absoluteLocation.x, y: absoluteLocation.y - 29.0), size: CGSize())
                         
-            let controller = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Draft Saved"), location: .point(location, .bottom), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _ in
+            let controller = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Draft Saved"), location: .point(location, .bottom), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _, _ in
                 return .ignore
             })
             self.controller?.present(controller, in: .current)
@@ -1636,12 +1636,13 @@ public class CameraScreen: ViewController {
             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY + 3.0), size: CGSize())
             
             let accountManager = self.context.sharedContext.accountManager
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Enable Dual Camera Mode"), location: .point(location, .top), displayDuration: .manual(false), inset: 16.0, shouldDismissOnTouch: { _ in
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Enable Dual Camera Mode"), location: .point(location, .top), displayDuration: .manual, inset: 16.0, shouldDismissOnTouch: { point, containerFrame in
+                if containerFrame.contains(point) {
+                    let _ = ApplicationSpecificNotice.incrementStoriesDualCameraTip(accountManager: accountManager).start()
+                    return .dismiss(consume: true)
+                }
                 return .ignore
             })
-            tooltipController.becameDismissed = { _ in
-                let _ = ApplicationSpecificNotice.incrementStoriesDualCameraTip(accountManager: accountManager).start()
-            }
             self.controller?.present(tooltipController, in: .current)
         }
         
@@ -1654,7 +1655,12 @@ public class CameraScreen: ViewController {
             let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY + 3.0), size: CGSize())
             
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Take photos or videos to share with all\nyour contacts or close friends at once."), textAlignment: .center, location: .point(location, .bottom), displayDuration: .custom(3.0), inset: 16.0, shouldDismissOnTouch: { _ in
+            let accountManager = self.context.sharedContext.accountManager
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Take photos or videos to share with all\nyour contacts or close friends at once."), textAlignment: .center, location: .point(location, .bottom), displayDuration: .custom(3.0), inset: 16.0, shouldDismissOnTouch: { point, containerFrame in
+                if containerFrame.contains(point) {
+                    let _ = ApplicationSpecificNotice.incrementStoriesCameraTip(accountManager: accountManager).start()
+                    return .dismiss(consume: true)
+                }
                 return .ignore
             })
             self.controller?.present(tooltipController, in: .current)

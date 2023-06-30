@@ -529,7 +529,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         let _ = (ApplicationSpecificNotice.incrementAudioRateOptionsTip(accountManager: self.context.sharedContext.accountManager)
         |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self, let controller = strongSelf.getController?(), value == 2 {
-                let tooltipController = TooltipScreen(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, text: .plain(text: strongSelf.strings.Conversation_AudioRateOptionsTooltip), style: .default, icon: nil, location: .point(frame.offsetBy(dx: 0.0, dy: 4.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _ in
+                let tooltipController = TooltipScreen(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, text: .plain(text: strongSelf.strings.Conversation_AudioRateOptionsTooltip), style: .default, icon: nil, location: .point(frame.offsetBy(dx: 0.0, dy: 4.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _, _ in
                     return .dismiss(consume: false)
                 })
                 controller.present(tooltipController, in: .window(.root))

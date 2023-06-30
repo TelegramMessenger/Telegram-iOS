@@ -118,7 +118,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         }
     }
     private let displayDuration: TooltipScreen.DisplayDuration
-    private let shouldDismissOnTouch: (CGPoint) -> TooltipScreen.DismissOnTouch
+    private let shouldDismissOnTouch: (CGPoint, CGRect) -> TooltipScreen.DismissOnTouch
     private let requestDismiss: () -> Void
     private let openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?
     
@@ -159,7 +159,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         displayDuration: TooltipScreen.DisplayDuration,
         inset: CGFloat = 12.0,
         cornerRadius: CGFloat? = nil,
-        shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?)
+        shouldDismissOnTouch: @escaping (CGPoint, CGRect) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?)
     {
         self.tooltipStyle = style
         self.icon = icon
@@ -750,18 +750,10 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                 eventIsPresses = event.type == .presses
             }
             if event.type == .touches || eventIsPresses {
-                if case .manual = self.displayDuration {
-                    if self.containerNode.frame.contains(point) {
-                        self.requestDismiss()
-                        return self.view
-                    } else if case .manual(false) = self.displayDuration {
-                        return nil
-                    }
-                }
                 if let actionButtonNode = self.actionButtonNode, let result = actionButtonNode.hitTest(self.convert(point, to: actionButtonNode), with: event) {
                     return result
                 }
-                switch self.shouldDismissOnTouch(point) {
+                switch self.shouldDismissOnTouch(point, self.containerNode.frame) {
                 case .ignore:
                     break
                 case let .dismiss(consume):
@@ -917,7 +909,7 @@ public final class TooltipScreen: ViewController {
         case `default`
         case custom(Double)
         case infinite
-        case manual(Bool)
+        case manual
     }
     
     public enum Style {
@@ -951,7 +943,7 @@ public final class TooltipScreen: ViewController {
     private let displayDuration: DisplayDuration
     private let inset: CGFloat
     private let cornerRadius: CGFloat?
-    private let shouldDismissOnTouch: (CGPoint) -> TooltipScreen.DismissOnTouch
+    private let shouldDismissOnTouch: (CGPoint, CGRect) -> TooltipScreen.DismissOnTouch
     private let openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?
     
     private var controllerNode: TooltipScreenNode {
@@ -981,7 +973,7 @@ public final class TooltipScreen: ViewController {
         displayDuration: DisplayDuration = .default,
         inset: CGFloat = 12.0,
         cornerRadius: CGFloat? = nil,
-        shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch,
+        shouldDismissOnTouch: @escaping (CGPoint, CGRect) -> TooltipScreen.DismissOnTouch,
         openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)? = nil
     ) {
         self.context = context

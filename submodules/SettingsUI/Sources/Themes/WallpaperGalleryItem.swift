@@ -1729,7 +1729,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             if let strongSelf = self, (count < 2 && currentTimestamp > timestamp + 24 * 60 * 60) {
                 strongSelf.displayedPreviewTooltip = true
                 
-                let controller = TooltipScreen(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, text: .plain(text: isDark ? strongSelf.presentationData.strings.WallpaperPreview_PreviewInDayMode : strongSelf.presentationData.strings.WallpaperPreview_PreviewInNightMode), style: .customBlur(UIColor(rgb: 0x333333, alpha: 0.35)), icon: nil, location: .point(frame.offsetBy(dx: 1.0, dy: 6.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _ in
+                let controller = TooltipScreen(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, text: .plain(text: isDark ? strongSelf.presentationData.strings.WallpaperPreview_PreviewInDayMode : strongSelf.presentationData.strings.WallpaperPreview_PreviewInNightMode), style: .customBlur(UIColor(rgb: 0x333333, alpha: 0.35)), icon: nil, location: .point(frame.offsetBy(dx: 1.0, dy: 6.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _, _ in
                     return .dismiss(consume: false)
                 })
                 strongSelf.galleryController()?.present(controller, in: .current)
