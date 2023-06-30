@@ -26,6 +26,7 @@ import AvatarNode
 import LocalMediaResources
 import ImageCompression
 import TextFormat
+import MediaEditor
 
 private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceholderNode {
     private var presentationData: PresentationData
@@ -405,7 +406,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         }
                         
                         dismissCameraImpl?()
-                    }
+                    } as (Int64, MediaEditorScreen.Result?, NSAttributedString, MediaEditorResultPrivacy, [TelegramMediaFile], @escaping (@escaping () -> Void) -> Void) -> Void
                 )
                 controller.cancelled = { showDraftTooltip in
                     if showDraftTooltip {

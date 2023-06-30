@@ -447,8 +447,9 @@ public final class StoryPeerListComponent: Component {
                         itemView.updateIsPreviewing(isPreviewing: peerId == itemId)
                         
                         if component.unlocked && peerId == itemId {
-                            if !self.scrollView.bounds.intersects(itemView.frame.insetBy(dx: 20.0, dy: 0.0)) {
-                                self.scrollView.scrollRectToVisible(itemView.frame.insetBy(dx: -40.0, dy: 0.0), animated: false)
+                            let itemFrame = itemView.frame.offsetBy(dx: self.scrollView.bounds.minX, dy: 0.0)
+                            if !self.scrollView.bounds.intersects(itemFrame.insetBy(dx: 20.0, dy: 0.0)) {
+                                self.scrollView.scrollRectToVisible(itemFrame.insetBy(dx: -40.0, dy: 0.0), animated: false)
                             }
                         }
                     }
@@ -465,7 +466,7 @@ public final class StoryPeerListComponent: Component {
                 return nil
             }
             if let visibleItem = self.visibleItems[peerId], let itemView = visibleItem.view.view as? StoryPeerListItemComponent.View {
-                if !self.scrollView.bounds.intersects(itemView.frame) {
+                if !self.bounds.intersects(itemView.frame) {
                     return nil
                 }
                 

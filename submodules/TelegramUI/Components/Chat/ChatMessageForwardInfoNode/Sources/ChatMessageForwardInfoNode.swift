@@ -247,13 +247,15 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
             if hasPsaInfo {
                 infoWidth += 32.0
             }
-            var leftOffset: CGFloat = 0.0
-            if let storyData, storyData.isExpired {
-                leftOffset += 34.0 + 6.0
-            }
+            let leftOffset: CGFloat = 0.0
             infoWidth += leftOffset
             
-            let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - credibilityIconWidth - infoWidth, height: constrainedSize.height), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            var cutout: TextNodeCutout?
+            if let storyData, storyData.isExpired {
+                cutout = TextNodeCutout(topLeft: CGSize(width: 16.0, height: 10.0))
+            }
+            
+            let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - credibilityIconWidth - infoWidth, height: constrainedSize.height), alignment: .natural, cutout: cutout, insets: UIEdgeInsets()))
             
             return (CGSize(width: textLayout.size.width + credibilityIconWidth + infoWidth, height: textLayout.size.height), { width in
                 let node: ChatMessageForwardInfoNode
@@ -290,8 +292,9 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                     }
                     
                     expiredStoryIconView.image = PresentationResourcesChat.chatExpiredStoryIndicatorIcon(presentationData.theme.theme, type: imageType)
-                    if let image = expiredStoryIconView.image {
-                        expiredStoryIconView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: image.size)
+                    if let _ = expiredStoryIconView.image {
+                        let imageSize = CGSize(width: 18.0, height: 18.0)
+                        expiredStoryIconView.frame = CGRect(origin: CGPoint(x: -1.0, y: -2.0), size: imageSize)
                     }
                 } else if let expiredStoryIconView = node.expiredStoryIconView {
                     expiredStoryIconView.removeFromSuperview()

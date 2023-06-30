@@ -7,19 +7,22 @@ public final class TelegramMediaStory: Media, Equatable {
     public let peerIds: [PeerId]
 
     public let storyId: StoryId
+    public let isMention: Bool
     
     public var storyIds: [StoryId] {
         return [self.storyId]
     }
     
-    public init(storyId: StoryId) {
+    public init(storyId: StoryId, isMention: Bool) {
         self.storyId = storyId
+        self.isMention = isMention
 
         self.peerIds = [self.storyId.peerId]
     }
     
     public init(decoder: PostboxDecoder) {
         self.storyId = StoryId(peerId: PeerId(decoder.decodeInt64ForKey("pid", orElse: 0)), id: decoder.decodeInt32ForKey("sid", orElse: 0))
+        self.isMention = decoder.decodeBoolForKey("mns", orElse: false)
         
         self.peerIds = [self.storyId.peerId]
     }
@@ -27,6 +30,7 @@ public final class TelegramMediaStory: Media, Equatable {
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.storyId.peerId.toInt64(), forKey: "pid")
         encoder.encodeInt32(self.storyId.id, forKey: "sid")
+        encoder.encodeBool(self.isMention, forKey: "mns")
     }
     
     public func isLikelyToBeUpdated() -> Bool {
@@ -46,6 +50,9 @@ public final class TelegramMediaStory: Media, Equatable {
     
     public static func ==(lhs: TelegramMediaStory, rhs: TelegramMediaStory) -> Bool {
         if lhs.storyId != rhs.storyId {
+            return false
+        }
+        if lhs.isMention != rhs.isMention {
             return false
         }
         

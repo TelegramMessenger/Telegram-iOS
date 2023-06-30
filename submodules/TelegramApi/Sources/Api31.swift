@@ -8511,6 +8511,21 @@ public extension Api.functions.stories {
                 }
 }
 public extension Api.functions.stories {
+                static func getAllReadUserStories() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1922848300)
+                    
+                    return (FunctionDescription(name: "stories.getAllReadUserStories", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.stories {
                 static func getAllStories(flags: Int32, state: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.AllStories>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-290400731)

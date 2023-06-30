@@ -38,6 +38,7 @@ import ChatTextLinkEditUI
 import AttachmentTextInputPanelNode
 import ChatEntityKeyboardInputNode
 import HashtagSearchUI
+import PeerInfoStoryGridScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1721,6 +1722,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeHashtagSearchController(context: AccountContext, peer: EnginePeer?, query: String) -> ViewController {
         return HashtagSearchController(context: context, peer: peer, query: query)
+    }
+    
+    public func makeMyStoriesController(context: AccountContext, isArchive: Bool) -> ViewController {
+        return PeerInfoStoryGridScreen(context: context, peerId: context.account.peerId, scope: isArchive ? .archive : .saved)
     }
     
     public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController {

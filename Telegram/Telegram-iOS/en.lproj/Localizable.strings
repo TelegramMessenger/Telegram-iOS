@@ -9373,3 +9373,8 @@ Sorry for the inconvenience.";
 "Conversation.StoryForwardTooltip.TwoChats.One" = "Story forwarded to to **%@** and **%@**";
 "Conversation.StoryForwardTooltip.ManyChats.One" = "Story forwarded to to **%@** and %@ others";
 "Conversation.StoryForwardTooltip.SavedMessages.One" = "Story forwarded to to **Saved Messages**";
+
+"Conversation.StoryMentionTextOutgoing" = "You mentioned %@\nin a story";
+"Conversation.StoryMentionTextIncoming" = "%@ mentioned you\nin a story";
+"Conversation.StoryExpiredMentionTextOutgoing" = "The story where you mentioned %@\n is no longer available";
+"Conversation.StoryExpiredMentionTextIncoming" = "The story you were mentioned in\nis no longer available";

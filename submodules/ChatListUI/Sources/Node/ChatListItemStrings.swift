@@ -295,9 +295,17 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                         messageText = "📊 \(poll.text)"
                     case let dice as TelegramMediaDice:
                         messageText = dice.emoji
-                    case _ as TelegramMediaStory:
-                        //TODO:localize
-                        messageText = "Story"
+                    case let story as TelegramMediaStory:
+                        if story.isMention, let peer {
+                            if message.flags.contains(.Incoming) {
+                                messageText = strings.Conversation_StoryMentionTextIncoming(peer.compactDisplayTitle).string
+                            } else {
+                                messageText = strings.Conversation_StoryMentionTextOutgoing(peer.compactDisplayTitle).string
+                            }
+                        } else {
+                            //TODO:localize
+                            messageText = "Story"
+                        }
                     default:
                         break
                 }

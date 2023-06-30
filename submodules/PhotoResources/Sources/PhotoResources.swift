@@ -952,8 +952,8 @@ public func chatMessagePhotoThumbnail(account: Account, userLocation: MediaResou
     }
 }
 
-public func chatMessageVideoThumbnail(account: Account, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, blurred: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = chatMessageVideoDatas(postbox: account.postbox, userLocation: userLocation, fileReference: fileReference, thumbnailSize: true, autoFetchFullSizeThumbnail: true, forceThumbnail: blurred)
+public func chatMessageVideoThumbnail(account: Account, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, blurred: Bool = false, synchronousLoads: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = chatMessageVideoDatas(postbox: account.postbox, userLocation: userLocation, fileReference: fileReference, thumbnailSize: true, synchronousLoad: synchronousLoads, autoFetchFullSizeThumbnail: true, forceThumbnail: blurred)
     
     return signal
     |> map { value in
