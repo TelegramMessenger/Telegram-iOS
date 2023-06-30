@@ -221,7 +221,11 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         mediaAndFlags = (image, flags)
                     }
                 } else if let story = mainMedia as? TelegramMediaStory {
-                    mediaAndFlags = (story, [])
+                    mediaAndFlags = (story, [.preferMediaBeforeText, .titleBeforeMedia])
+                    if let storyItem = item.message.associatedStories[story.storyId]?.get(Stories.StoredItem.self), case let .item(itemValue) = storyItem {
+                        text = itemValue.text
+                        entities = itemValue.entities
+                    }
                 } else if let type = webpage.type {
                     if type == "telegram_background" {
                         var colors: [UInt32] = []

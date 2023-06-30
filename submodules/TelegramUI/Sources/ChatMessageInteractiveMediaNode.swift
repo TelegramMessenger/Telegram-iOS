@@ -702,9 +702,15 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             var maxHeight = layoutConstants.image.maxDimensions.height
             var isStory = false
             
+            var additionalWidthConstrainment = false
             var unboundSize: CGSize
             if let _ = media as? TelegramMediaStory {
-                unboundSize = CGSize(width: 1080, height: 1920)
+                if message.media.contains(where: { $0 is TelegramMediaWebpage }) {
+                    additionalWidthConstrainment = true
+                    unboundSize = CGSize(width: 174.0, height: 239.0)
+                } else {
+                    unboundSize = CGSize(width: 1080, height: 1920)
+                }
             } else if let image = media as? TelegramMediaImage, let dimensions = largestImageRepresentation(image.representations)?.dimensions {
                 unboundSize = CGSize(width: max(10.0, floor(dimensions.cgSize.width * 0.5)), height: max(10.0, floor(dimensions.cgSize.height * 0.5)))
             } else if let file = media as? TelegramMediaFile, var dimensions = file.dimensions {
@@ -806,7 +812,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     if isSticker {
                         nativeSize = unboundSize.aspectFittedOrSmaller(constrainedSize)
                     } else {
-                        if unboundSize.width > unboundSize.height {
+                        var constrainedSize = constrainedSize
+                        if additionalWidthConstrainment {
+                            constrainedSize.width = min(constrainedSize.width, unboundSize.width)
+                            constrainedSize.height = min(constrainedSize.height, unboundSize.height)
+                        }
+                        if unboundSize.width > unboundSize.height || additionalWidthConstrainment {
                             nativeSize = unboundSize.aspectFitted(constrainedSize)
                         } else {
                             nativeSize = unboundSize.aspectFitted(CGSize(width: constrainedSize.height, height: constrainedSize.width))
@@ -867,7 +878,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         if isSecretMedia {
                             resultWidth = maxWidth
                         } else {
-                            let maxFittedSize = nativeSize.aspectFitted(maxDimensions)
+                            let maxFittedSize: CGSize
+                            if additionalWidthConstrainment {
+                                maxFittedSize = nativeSize.aspectFittedOrSmaller(maxDimensions)
+                            } else {
+                                maxFittedSize = nativeSize.aspectFitted(maxDimensions)
+                            }
                             resultWidth = min(nativeSize.width, min(maxFittedSize.width, min(constrainedSize.width, maxDimensions.width)))
                             resultWidth = max(resultWidth, layoutConstants.image.minDimensions.width)
                         }
@@ -886,7 +902,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                 drawingSize = nativeSize.aspectFilled(boundingSize)
                             } else {
                                 let fittedSize = nativeSize.fittedToWidthOrSmaller(boundingWidth)
-                                let filledSize = fittedSize.aspectFilled(CGSize(width: boundingWidth, height: fittedSize.height))
+                                let filledSize: CGSize
+                                if additionalWidthConstrainment {
+                                    filledSize = fittedSize
+                                } else {
+                                    filledSize = fittedSize.aspectFilled(CGSize(width: boundingWidth, height: fittedSize.height))
+                                }
                                 
                                 boundingSize = CGSize(width: boundingWidth, height: filledSize.height).cropped(CGSize(width: CGFloat.greatestFiniteMagnitude, height: maxHeight))
                                 boundingSize.height = max(boundingSize.height, layoutConstants.image.minDimensions.height)

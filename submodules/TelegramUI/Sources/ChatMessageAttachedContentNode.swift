@@ -41,6 +41,7 @@ struct ChatMessageAttachedContentNodeMediaFlags: OptionSet {
     static let preferMediaInline = ChatMessageAttachedContentNodeMediaFlags(rawValue: 1 << 0)
     static let preferMediaBeforeText = ChatMessageAttachedContentNodeMediaFlags(rawValue: 1 << 1)
     static let preferMediaAspectFilled = ChatMessageAttachedContentNodeMediaFlags(rawValue: 1 << 2)
+    static let titleBeforeMedia = ChatMessageAttachedContentNodeMediaFlags(rawValue: 1 << 3)
 }
 
 final class ChatMessageAttachedContentButtonNode: HighlightTrackingButtonNode {
@@ -261,6 +262,7 @@ final class ChatMessageAttachedContentButtonNode: HighlightTrackingButtonNode {
 
 final class ChatMessageAttachedContentNode: ASDisplayNode {
     private let lineNode: ASImageNode
+    private let topTitleNode: TextNode
     private let textNode: TextNodeWithEntities
     private let inlineImageNode: TransformImageNode
     private var contentImageNode: ChatMessageInteractiveMediaNode?
@@ -306,6 +308,12 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         self.lineNode.displaysAsynchronously = false
         self.lineNode.displayWithoutProcessing = true
         
+        self.topTitleNode = TextNode()
+        self.topTitleNode.isUserInteractionEnabled = false
+        self.topTitleNode.displaysAsynchronously = false
+        self.topTitleNode.contentsScale = UIScreenScale
+        self.topTitleNode.contentMode = .topLeft
+        
         self.textNode = TextNodeWithEntities()
         self.textNode.textNode.isUserInteractionEnabled = false
         self.textNode.textNode.displaysAsynchronously = false
@@ -322,12 +330,14 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         super.init()
         
         self.addSubnode(self.lineNode)
+        self.addSubnode(self.topTitleNode)
         self.addSubnode(self.textNode.textNode)
         
         self.addSubnode(self.statusNode)
     }
     
     func asyncLayout() -> (_ presentationData: ChatPresentationData, _ automaticDownloadSettings: MediaAutoDownloadSettings, _ associatedData: ChatMessageItemAssociatedData, _ attributes: ChatMessageEntryAttributes, _ context: AccountContext, _ controllerInteraction: ChatControllerInteraction, _ message: Message, _ messageRead: Bool, _ chatLocation: ChatLocation, _ title: String?, _ subtitle: NSAttributedString?, _ text: String?, _ entities: [MessageTextEntity]?, _ media: (Media, ChatMessageAttachedContentNodeMediaFlags)?, _ mediaBadge: String?, _ actionIcon: ChatMessageAttachedContentActionIcon?, _ actionTitle: String?, _ displayLine: Bool, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ constrainedSize: CGSize, _ animationCache: AnimationCache, _ animationRenderer: MultiAnimationRenderer) -> (CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+        let topTitleAsyncLayout = TextNode.asyncLayout(self.topTitleNode)
         let textAsyncLayout = TextNodeWithEntities.asyncLayout(self.textNode)
         let currentImage = self.media as? TelegramMediaImage
         let imageLayout = self.inlineImageNode.asyncLayout()
@@ -367,11 +377,13 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 horizontalInsets.left += 12.0
             }
             
+            var titleBeforeMedia = false
             var preferMediaBeforeText = false
             var preferMediaAspectFilled = false
             if let (_, flags) = mediaAndFlags {
                 preferMediaBeforeText = flags.contains(.preferMediaBeforeText)
                 preferMediaAspectFilled = flags.contains(.preferMediaAspectFilled)
+                titleBeforeMedia = flags.contains(.titleBeforeMedia)
             }
             
             var contentMode: InteractiveMediaNodeContentMode = preferMediaAspectFilled ? .aspectFill : .aspectFit
@@ -428,14 +440,20 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
 
             var contentInstantVideoSizeAndApply: (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ListViewItemUpdateAnimation) -> ChatMessageInteractiveInstantVideoNode)?
             
+            let topTitleString = NSMutableAttributedString()
+            
             let string = NSMutableAttributedString()
             var notEmpty = false
             
             let messageTheme = incoming ? presentationData.theme.theme.chat.message.incoming : presentationData.theme.theme.chat.message.outgoing
             
             if let title = title, !title.isEmpty {
-                string.append(NSAttributedString(string: title, font: titleFont, textColor: messageTheme.accentTextColor))
-                notEmpty = true
+                if titleBeforeMedia {
+                    topTitleString.append(NSAttributedString(string: title, font: titleFont, textColor: messageTheme.accentTextColor))
+                } else {
+                    string.append(NSAttributedString(string: title, font: titleFont, textColor: messageTheme.accentTextColor))
+                    notEmpty = true
+                }
             }
             
             if let subtitle = subtitle, subtitle.length > 0 {
@@ -724,6 +742,8 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 
                 let upatedTextCutout = textCutout
                 
+                
+                let (topTitleLayout, topTitleApply) = topTitleAsyncLayout(TextNodeLayoutArguments(attributedString: topTitleString, backgroundColor: nil, maximumNumberOfLines: 12, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 let (textLayout, textApply) = textAsyncLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: 12, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: upatedTextCutout, insets: UIEdgeInsets()))
                 
                 var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))?
@@ -765,6 +785,11 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 
                 var boundingSize = textFrame.size
                 var lineHeight = textLayout.rawTextSize.height
+                if titleBeforeMedia {
+                    lineHeight += topTitleLayout.size.height + 4.0
+                    boundingSize.height += topTitleLayout.size.height + 4.0
+                    boundingSize.width = max(boundingSize.width, topTitleLayout.size.width)
+                }
                 if let inlineImageSize = inlineImageSize {
                     if boundingSize.height < inlineImageSize.height {
                         boundingSize.height = inlineImageSize.height
@@ -946,8 +971,11 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     }
                     
                     var textVerticalOffset: CGFloat = 0.0
+                    if titleBeforeMedia {
+                        textVerticalOffset += topTitleLayout.size.height + 4.0
+                    }
                     if let contentMediaHeight = contentMediaHeight, let (_, flags) = mediaAndFlags, flags.contains(.preferMediaBeforeText) {
-                        textVerticalOffset = contentMediaHeight + 7.0
+                        textVerticalOffset += contentMediaHeight + 7.0
                     }
                     let adjustedTextFrame = textFrame.offsetBy(dx: 0.0, dy: textVerticalOffset)
                                         
@@ -980,6 +1008,9 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             strongSelf.lineNode.isHidden = !displayLine
                             
                             strongSelf.textNode.textNode.displaysAsynchronously = !isPreview
+                            
+                            let _ = topTitleApply()
+                            strongSelf.topTitleNode.frame = CGRect(origin: CGPoint(x: textFrame.minX, y: insets.top), size: topTitleLayout.size)
                             
                             let _ = textApply(TextNodeWithEntities.Arguments(
                                 context: context,
@@ -1036,9 +1067,12 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     contentImageNode.visibility = strongSelf.visibility != .none
                                 }
                                 let _ = contentImageApply(animation, synchronousLoads)
-                                let contentImageFrame: CGRect
+                                var contentImageFrame: CGRect
                                 if let (_, flags) = mediaAndFlags, flags.contains(.preferMediaBeforeText) {
                                     contentImageFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: contentImageSize)
+                                    if titleBeforeMedia {
+                                        contentImageFrame.origin.y += topTitleLayout.size.height + 4.0
+                                    }
                                 } else {
                                     contentImageFrame = CGRect(origin: CGPoint(x: insets.left, y: textFrame.maxY + (textFrame.size.height > CGFloat.ulpOfOne ? 4.0 : 0.0)), size: contentImageSize)
                                 }
