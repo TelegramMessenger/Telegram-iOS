@@ -239,7 +239,7 @@ final class CategoryListItemComponent: Component {
                     text: .plain(NSAttributedString(string: labelData.0, font: Font.regular(15.0), textColor: labelData.1 ? component.theme.list.itemAccentColor : component.theme.list.itemSecondaryTextColor))
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - leftInset - rightInset, height: 100.0)
+                containerSize: CGSize(width: availableSize.width - leftInset - rightInset - 14.0, height: 100.0)
             )
             
             let labelArrowSize = self.labelArrow.update(

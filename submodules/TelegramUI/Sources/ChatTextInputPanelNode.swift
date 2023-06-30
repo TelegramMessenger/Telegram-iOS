@@ -2859,7 +2859,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 component: AnyComponent(EmojiSuggestionsComponent(
                     context: context,
                     userLocation: .other,
-                    theme: theme,
+                    theme: EmojiSuggestionsComponent.Theme(theme: theme),
                     animationCache: presentationContext.animationCache,
                     animationRenderer: presentationContext.animationRenderer,
                     files: value,

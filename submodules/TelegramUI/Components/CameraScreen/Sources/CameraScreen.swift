@@ -359,11 +359,20 @@ private final class CameraScreenComponent: CombinedComponent {
             action.invoke(Void())
         }
         
+        private var lastDualCameraTimestamp: Double?
         func toggleDualCamera() {
+            let currentTimestamp = CACurrentMediaTime()
+            if let lastDualCameraTimestamp = self.lastDualCameraTimestamp, currentTimestamp - lastDualCameraTimestamp < 1.5 {
+                return
+            }
+            self.lastDualCameraTimestamp = currentTimestamp
+            
             let isEnabled = !self.cameraState.isDualCamEnabled
             self.camera.setDualCamEnabled(isEnabled)
             self.cameraState = self.cameraState.updatedIsDualCamEnabled(isEnabled)
             self.updated(transition: .easeInOut(duration: 0.1))
+            
+            self.hapticFeedback.impact(.light)
         }
         
         func updateSwipeHint(_ hint: CaptureControlsComponent.SwipeHint) {
@@ -1600,13 +1609,11 @@ public class CameraScreen: ViewController {
         }
         
         func presentDraftTooltip() {
-            guard let sourceView = self.componentHost.findTaggedView(tag: galleryButtonTag) else {
+            guard let sourceView = self.componentHost.findTaggedView(tag: galleryButtonTag), let absoluteLocation = sourceView.superview?.convert(sourceView.center, to: self.view) else {
                 return
             }
             
-            let parentFrame = self.view.convert(self.bounds, to: nil)
-            let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
-            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 4.0), size: CGSize())
+            let location = CGRect(origin: CGPoint(x: absoluteLocation.x, y: absoluteLocation.y - 29.0), size: CGSize())
                         
             let controller = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Draft Saved"), location: .point(location, .bottom), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _ in
                 return .ignore

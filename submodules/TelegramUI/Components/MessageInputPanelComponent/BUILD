@@ -13,6 +13,7 @@ swift_library(
         "//submodules/Display",
         "//submodules/ComponentFlow",
         "//submodules/AppBundle",
+        "//submodules/TelegramCore",
         "//submodules/TelegramUI/Components/TextFieldComponent",
         "//submodules/Components/BundleIconComponent",
         "//submodules/TelegramUI/Components/ChatTextInputMediaRecordingButton",
@@ -28,6 +29,7 @@ swift_library(
         "//submodules/TextFormat",
         "//submodules/TelegramUI/Components/Stories/PeerListItemComponent",
         "//submodules/TelegramUI/Components/MoreHeaderButton",
+        "//submodules/TelegramUI/Components/EmojiSuggestionsComponent",
     ],
     visibility = [
         "//visibility:public",

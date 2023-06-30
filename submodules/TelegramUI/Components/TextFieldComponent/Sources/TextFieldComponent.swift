@@ -23,7 +23,31 @@ public final class TextFieldComponent: Component {
         public fileprivate(set) var hasText: Bool = false
         public var initialText: NSAttributedString?
         
+        public var hasTrackingView = false
+        
+        public var currentEmojiSuggestion: EmojiSuggestion?
+        public var dismissedEmojiSuggestionPosition: EmojiSuggestion.Position?
+        
         public init() {
+        }
+    }
+    
+    public final class EmojiSuggestion {
+        public struct Position: Equatable {
+            public var range: NSRange
+            public var value: String
+        }
+        
+        public var localPosition: CGPoint
+        public var position: Position
+        public var disposable: Disposable?
+        public var value: Any?
+        
+        init(localPosition: CGPoint, position: Position) {
+            self.localPosition = localPosition
+            self.position = position
+            self.disposable = nil
+            self.value = nil
         }
     }
     
@@ -116,7 +140,7 @@ public final class TextFieldComponent: Component {
         private var spoilerView: InvisibleInkDustView?
         private var customEmojiContainerView: CustomEmojiContainerView?
         private var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
-        
+                
         private var inputState: InputState {
             let selectionRange: Range<Int> = self.textView.selectedRange.location ..< (self.textView.selectedRange.location + self.textView.selectedRange.length)
             return InputState(inputText: stateAttributedStringForText(self.textView.attributedText ?? NSAttributedString()), selectionRange: selectionRange)
@@ -223,6 +247,7 @@ public final class TextFieldComponent: Component {
             }
             
             self.updateSpoilersRevealed()
+            self.updateEmojiSuggestion(transition: .immediate)
         }
         
         public func textViewDidBeginEditing(_ textView: UITextView) {
@@ -335,11 +360,6 @@ public final class TextFieldComponent: Component {
                         }
                         self.textView.becomeFirstResponder()
                     }
-//                    strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, {
-//                        return $0.updatedInputMode({ _ in return inputMode }).updatedInterfaceState({
-//                            $0.withUpdatedEffectiveInputState(ChatTextInputState(inputText: $0.effectiveInputState.inputText, selectionRange: selectionRange.endIndex ..< selectionRange.endIndex))
-//                        })
-//                    })
                 }
             })
             component.present(controller)
@@ -547,6 +567,60 @@ public final class TextFieldComponent: Component {
             }
         }
         
+        public func updateEmojiSuggestion(transition: Transition) {
+            guard let component = self.component else {
+                return
+            }
+                        
+            var hasTracking = false
+            var hasTrackingView = false
+            if self.textView.selectedRange.length == 0 && self.textView.selectedRange.location > 0 {
+                let selectedSubstring = self.textView.attributedText.attributedSubstring(from: NSRange(location: 0, length: self.textView.selectedRange.location))
+                if let lastCharacter = selectedSubstring.string.last, String(lastCharacter).isSingleEmoji {
+                    let queryLength = (String(lastCharacter) as NSString).length
+                    if selectedSubstring.attribute(ChatTextInputAttributes.customEmoji, at: selectedSubstring.length - queryLength, effectiveRange: nil) == nil {
+                        let beginning = self.textView.beginningOfDocument
+                        
+                        let characterRange = NSRange(location: selectedSubstring.length - queryLength, length: queryLength)
+                        
+                        let start = self.textView.position(from: beginning, offset: selectedSubstring.length - queryLength)
+                        let end = self.textView.position(from: beginning, offset: selectedSubstring.length)
+                        
+                        if let start = start, let end = end, let textRange = self.textView.textRange(from: start, to: end) {
+                            let selectionRects = self.textView.selectionRects(for: textRange)
+                            let emojiSuggestionPosition = EmojiSuggestion.Position(range: characterRange, value: String(lastCharacter))
+                            
+                            hasTracking = true
+                            
+                            if let trackingRect = selectionRects.first?.rect {
+                                let trackingPosition = CGPoint(x: trackingRect.midX, y: trackingRect.minY)
+                                if component.externalState.dismissedEmojiSuggestionPosition == emojiSuggestionPosition {
+                                } else {
+                                    hasTrackingView = true
+                                    
+                                    let emojiSuggestion: EmojiSuggestion
+                                    if let current = component.externalState.currentEmojiSuggestion, current.position.value == emojiSuggestionPosition.value {
+                                        emojiSuggestion = current
+                                    } else {
+
+                                        emojiSuggestion = EmojiSuggestion(localPosition: trackingPosition, position: emojiSuggestionPosition)
+                                        component.externalState.currentEmojiSuggestion = emojiSuggestion
+                                    }
+                                    emojiSuggestion.localPosition = trackingPosition
+                                    emojiSuggestion.position = emojiSuggestionPosition
+                                    component.externalState.dismissedEmojiSuggestionPosition = nil
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if !hasTracking {
+                component.externalState.dismissedEmojiSuggestionPosition = nil
+            }
+            component.externalState.hasTrackingView = hasTrackingView
+        }
+        
         func update(component: TextFieldComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.component = component
             self.state = state
@@ -583,6 +657,8 @@ public final class TextFieldComponent: Component {
             let refreshScrolling = self.textView.bounds.size != size
             self.textView.frame = CGRect(origin: CGPoint(), size: size)
             self.textView.panGestureRecognizer.isEnabled = isEditing
+            
+            self.updateEmojiSuggestion(transition: .immediate)
             
             if refreshScrolling {
                 if isEditing {

@@ -641,9 +641,13 @@ final class VideoInputScalePass: RenderPass {
     }
     
     func process(input: MTLTexture, secondInput: MTLTexture?, timestamp: CMTime, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+#if targetEnvironment(simulator)
+        
+#else
         guard max(input.width, input.height) > 1920 || secondInput != nil else {
             return input
         }
+#endif
         
         let scaledSize = CGSize(width: input.width, height: input.height).fitted(CGSize(width: 1920.0, height: 1920.0))
         let width: Int
@@ -691,8 +695,11 @@ final class VideoInputScalePass: RenderPass {
         
         renderCommandEncoder.setRenderPipelineState(self.mainPipelineState!)
         
+#if targetEnvironment(simulator)
+        let secondInput = input
+#endif
+        
         let (mainVideoState, additionalVideoState, transitionVideoState) = self.transitionState(for: timestamp, mainInput: input, additionalInput: secondInput)
-
         
         if let transitionVideoState {
             self.encodeVideo(

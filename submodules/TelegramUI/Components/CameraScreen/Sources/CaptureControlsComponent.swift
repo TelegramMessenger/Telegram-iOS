@@ -772,6 +772,9 @@ final class CaptureControlsComponent: Component {
                         self.component?.swipeHintUpdated(.flip)
                         if location.x > self.frame.width / 2.0 + 60.0 {
                             self.panBlobState = .transientToFlip
+                            if self.didFlip && location.x < self.frame.width - 100.0 {
+                                self.didFlip = false
+                            }
                             if !self.didFlip && location.x > self.frame.width - 70.0 {
                                 self.didFlip = true
                                 self.hapticFeedback.impact(.light)
