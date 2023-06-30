@@ -194,6 +194,7 @@ public final class StoryPeerListComponent: Component {
     
     private final class VisibleItem {
         let view = ComponentView<Empty>()
+        var hasBlur: Bool = false
         
         init() {
         }
@@ -368,6 +369,8 @@ public final class StoryPeerListComponent: Component {
         private var currentFraction: CGFloat = 0.0
         private var currentTitleWidth: CGFloat = 0.0
         private var currentActivityFraction: CGFloat = 0.0
+        
+        private var sharedBlurEffect: NSObject?
         
         public override init(frame: CGRect) {
             self.collapsedButton = HighlightableButton()
@@ -690,6 +693,21 @@ public final class StoryPeerListComponent: Component {
                 expandBoundsFraction = 0.0
             }
             
+            let blurRadius: CGFloat = collapsedState.sideAlphaFraction * 0.0 + (1.0 - collapsedState.sideAlphaFraction) * 14.0
+            if blurRadius == 0.0 {
+                self.sharedBlurEffect = nil
+            } else {
+                if let current = self.sharedBlurEffect, (current.value(forKey: "inputRadius") as? NSNumber)?.doubleValue == blurRadius {
+                } else {
+                    if let sharedBlurEffect = CALayer.blur() {
+                        sharedBlurEffect.setValue(blurRadius as NSNumber, forKey: "inputRadius")
+                        self.sharedBlurEffect = sharedBlurEffect
+                    } else {
+                        self.sharedBlurEffect = nil
+                    }
+                }
+            }
+            
             var targetCollapsedContentWidth: CGFloat = 0.0
             if collapsedItemCount > 0 {
                 targetCollapsedContentWidth = 1.0 * collapsedItemWidth + (collapsedItemDistance) * max(0.0, collapsedItemCount - 1.0)
@@ -819,8 +837,8 @@ public final class StoryPeerListComponent: Component {
                     continue
                 }
                 
-                //let isReallyVisible = effectiveVisibleBounds.intersects(regularItemFrame)
-                //let _ = isReallyVisible
+                let isReallyVisible = effectiveVisibleBounds.intersects(regularItemFrame)
+                let _ = isReallyVisible
                 
                 validIds.append(itemSet.peer.id)
                 
@@ -943,6 +961,16 @@ public final class StoryPeerListComponent: Component {
                     itemTransition.setScale(view: itemView.backgroundContainer, scale: 1.0)
                     
                     itemView.updateIsPreviewing(isPreviewing: self.previewedItemId == itemSet.peer.id)
+                    
+                    if (i >= collapseStartIndex && i <= collapseEndIndex) || !isReallyVisible {
+                        itemView.layer.filters = nil
+                    } else {
+                        if let sharedBlurEffect = self.sharedBlurEffect {
+                            itemView.layer.filters = [sharedBlurEffect]
+                        } else {
+                            itemView.layer.filters = nil
+                        }
+                    }
                 }
             }
             
@@ -1067,8 +1095,6 @@ public final class StoryPeerListComponent: Component {
                     itemTransition.setFrame(view: itemView.backgroundContainer, frame: measuredItem.itemFrame)
                     itemTransition.setAlpha(view: itemView.backgroundContainer, alpha: itemAlpha)
                     itemTransition.setScale(view: itemView.backgroundContainer, scale: 1.0)
-                    
-                    itemView.updateIsPreviewing(isPreviewing: self.previewedItemId == itemSet.peer.id)
                 }
             }
             
