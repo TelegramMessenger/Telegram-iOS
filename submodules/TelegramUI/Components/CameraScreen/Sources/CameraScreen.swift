@@ -20,6 +20,7 @@ import MediaEditor
 import BundleIconComponent
 import CameraButtonComponent
 import VolumeButtons
+import TelegramNotices
 
 let videoRedColor = UIColor(rgb: 0xff3b30)
 
@@ -1634,9 +1635,13 @@ public class CameraScreen: ViewController {
             let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY + 3.0), size: CGSize())
             
+            let accountManager = self.context.sharedContext.accountManager
             let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Enable Dual Camera Mode"), location: .point(location, .top), displayDuration: .manual(false), inset: 16.0, shouldDismissOnTouch: { _ in
                 return .ignore
             })
+            tooltipController.becameDismissed = { _ in
+                let _ = ApplicationSpecificNotice.incrementStoriesDualCameraTip(accountManager: accountManager).start()
+            }
             self.controller?.present(tooltipController, in: .current)
         }
         
@@ -1647,12 +1652,38 @@ public class CameraScreen: ViewController {
             
             let parentFrame = self.view.convert(self.bounds, to: nil)
             let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
-            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 1.0), size: CGSize())
+            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY + 3.0), size: CGSize())
             
             let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Take photos or videos to share with all\nyour contacts or close friends at once."), textAlignment: .center, location: .point(location, .bottom), displayDuration: .custom(3.0), inset: 16.0, shouldDismissOnTouch: { _ in
                 return .ignore
             })
             self.controller?.present(tooltipController, in: .current)
+        }
+        
+        func maybePresentTooltips() {
+            guard let layout = self.validLayout, case .compact = layout.metrics.widthClass else {
+                return
+            }
+            let _ = (ApplicationSpecificNotice.incrementStoriesCameraTip(accountManager: self.context.sharedContext.accountManager)
+            |> deliverOnMainQueue).start(next: { [weak self] count in
+                guard let self else {
+                    return
+                }
+                if count > 1 {
+                    let _ = (ApplicationSpecificNotice.getStoriesDualCameraTip(accountManager: self.context.sharedContext.accountManager)
+                    |> deliverOnMainQueue).start(next: { [weak self] count in
+                        guard let self else {
+                            return
+                        }
+                        if count < 1 {
+                            self.presentDualCameraTooltip()
+                        }
+                    })
+                    return
+                } else {
+                    self.presentCameraTooltip()
+                }
+            })
         }
 
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -1742,9 +1773,7 @@ public class CameraScreen: ViewController {
                 self.hasAppeared = hasAppeared
                 transition = transition.withUserData(CameraScreenTransition.finishedAnimateIn)
                 
-                
-//                self.presentCameraTooltip()
-//                self.presentDualCameraTooltip()
+                self.maybePresentTooltips()
             }
 
             let componentSize = self.componentHost.update(
@@ -2157,6 +2186,19 @@ public class CameraScreen: ViewController {
         let dimAlpha = 0.6 * (1.0 - transitionFraction)
         transition.updateAlpha(layer: self.node.transitionDimView.layer, alpha: dimAlpha)
         transition.updateTransform(layer: self.node.transitionCornersView.layer, transform: CGAffineTransform(translationX: offsetX, y: 0.0))
+        
+        let sublayerOffsetX = offsetX * 1.0 / scale * 0.5
+        self.window?.forEachController({ controller in
+            if let controller = controller as? TooltipScreen {
+                controller.view.layer.sublayerTransform = CATransform3DMakeTranslation(sublayerOffsetX, 0.0, 0.0)
+            }
+        })
+        self.forEachController({ controller in
+            if let controller = controller as? TooltipScreen {
+                controller.view.layer.sublayerTransform = CATransform3DMakeTranslation(sublayerOffsetX, 0.0, 0.0)
+            }
+            return true
+        })
                 
         if let navigationController = self.navigationController as? NavigationController {
             let offsetX = floorToScreenPixels(transitionFraction * self.node.frame.width)

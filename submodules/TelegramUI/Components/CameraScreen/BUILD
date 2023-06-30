@@ -75,7 +75,8 @@ swift_library(
         "//submodules/TelegramUI/Components/MediaEditor",
         "//submodules/Components/MetalImageView",
         "//submodules/TelegramUI/Components/CameraButtonComponent",
-        "//submodules/Utils/VolumeButtons"
+        "//submodules/Utils/VolumeButtons",
+        "//submodules/TelegramNotices",
     ],
     visibility = [
         "//visibility:public",

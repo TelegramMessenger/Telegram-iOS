@@ -4003,7 +4003,7 @@ final class DoneButtonComponent: CombinedComponent {
             let backgroundHeight: CGFloat = 33.0
             var backgroundSize = CGSize(width: backgroundHeight, height: backgroundHeight)
             
-            let textSpacing: CGFloat = 7.0
+            let textSpacing: CGFloat = 8.0
             
             var title: _UpdatedChildComponent?
             if let titleText = context.component.title {
