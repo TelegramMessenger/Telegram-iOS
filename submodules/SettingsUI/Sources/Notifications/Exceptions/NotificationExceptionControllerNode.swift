@@ -643,11 +643,11 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                 case .users:
                     defaultSound = globalSettings.privateChats.sound._asMessageSound()
                 case .stories:
-                    defaultSound = globalSettings.privateChats.sound._asMessageSound()
+                    defaultSound = globalSettings.privateChats.storySettings.sound
                     isStories = true
                 }
                 
-                presentControllerImpl?(notificationPeerExceptionController(context: context, peer: peer, threadId: nil, isStories: isStories, canRemove: canRemove, defaultSound: defaultSound, updatePeerSound: { peerId, sound in
+                presentControllerImpl?(notificationPeerExceptionController(context: context, peer: peer, threadId: nil, isStories: isStories, canRemove: canRemove, defaultSound: defaultSound, defaultStoriesSound: defaultSound, updatePeerSound: { peerId, sound in
                     _ = updatePeerSound(peer.id, sound).start(next: { _ in
                         updateNotificationsDisposable.set(nil)
                         _ = combineLatest(updatePeerSound(peer.id, sound), context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)) |> deliverOnMainQueue).start(next: { _, peer in

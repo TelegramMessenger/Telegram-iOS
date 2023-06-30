@@ -368,6 +368,25 @@ public enum NotificationExceptionMode : Equatable {
         }
     }
     
+    public func removeStoryPeerIfDefault(id: EnginePeer.Id) -> NotificationExceptionMode {
+        switch self {
+        case let .stories(values):
+            if let settings = values[id]?.settings {
+                if settings.storySettings == .default {
+                    var values = values
+                    values.removeValue(forKey: id)
+                    return .stories(values)
+                } else {
+                    return .stories(values)
+                }
+            } else {
+                return .stories(values)
+            }
+        default:
+            return self
+        }
+    }
+    
     public var peerIds: [EnginePeer.Id] {
         switch self {
         case let .users(settings), let .groups(settings), let .channels(settings), let .stories(settings):
@@ -735,6 +754,8 @@ private func notificationPeerExceptionEntries(presentationData: PresentationData
     }
     
     if displaySounds {
+        let defaultSound = isStories == true ? state.defaultStoriesSound : state.defaultSound
+        
         entries.append(.cloudHeader(index: index, text: presentationData.strings.Notifications_TelegramTones))
         index += 1
         
@@ -765,7 +786,7 @@ private func notificationPeerExceptionEntries(presentationData: PresentationData
             
             index = 3000
             
-            entries.append(.default(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: .default, default: state.defaultSound), selected: selectedSound == .default))
+            entries.append(.default(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: .default, default: defaultSound), selected: selectedSound == .default))
             index += 1
 
             entries.append(.none(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: .none), selected: selectedSound == .none))
@@ -797,6 +818,7 @@ private struct NotificationExceptionPeerState : Equatable {
     var mode: NotificationPeerExceptionSwitcher
     var defaultSound: PeerMessageSound
     var displayPreviews: NotificationPeerExceptionSwitcher
+    var defaultStoriesSound: PeerMessageSound
     var storiesMuted: NotificationPeerExceptionSwitcher
     var selectedStoriesSound: PeerMessageSound
     var storiesHideSender: NotificationPeerExceptionSwitcher
@@ -827,6 +849,7 @@ private struct NotificationExceptionPeerState : Equatable {
         }
       
         self.defaultSound = .default
+        self.defaultStoriesSound = .default
         self.removedSounds = []
     }
     
@@ -836,6 +859,7 @@ private struct NotificationExceptionPeerState : Equatable {
         mode: NotificationPeerExceptionSwitcher,
         defaultSound: PeerMessageSound,
         displayPreviews: NotificationPeerExceptionSwitcher,
+        defaultStoriesSound: PeerMessageSound,
         storiesMuted: NotificationPeerExceptionSwitcher,
         selectedStoriesSound: PeerMessageSound,
         storiesHideSender: NotificationPeerExceptionSwitcher,
@@ -846,6 +870,7 @@ private struct NotificationExceptionPeerState : Equatable {
         self.mode = mode
         self.defaultSound = defaultSound
         self.displayPreviews = displayPreviews
+        self.defaultStoriesSound = defaultStoriesSound
         self.storiesMuted = storiesMuted
         self.selectedStoriesSound = selectedStoriesSound
         self.storiesHideSender = storiesHideSender
@@ -862,6 +887,7 @@ public func notificationPeerExceptionController(
     isStories: Bool?,
     canRemove: Bool,
     defaultSound: PeerMessageSound,
+    defaultStoriesSound: PeerMessageSound,
     edit: Bool = false,
     updatePeerSound: @escaping(EnginePeer.Id, PeerMessageSound) -> Void,
     updatePeerNotificationInterval: @escaping(EnginePeer.Id, Int32?) -> Void,
@@ -894,7 +920,7 @@ public func notificationPeerExceptionController(
                 let _ = (context.engine.peers.notificationSoundList()
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { notificationSoundList in
-                    playSoundDisposable.set(playSound(context: context, notificationSoundList: notificationSoundList, sound: sound, defaultSound: state.defaultSound).start())
+                    playSoundDisposable.set(playSound(context: context, notificationSoundList: notificationSoundList, sound: sound, defaultSound: state.defaultStoriesSound).start())
                 })
                 
                 var state = state
@@ -943,7 +969,7 @@ public func notificationPeerExceptionController(
             let _ = (context.engine.peers.notificationSoundList()
             |> take(1)
             |> deliverOnMainQueue).start(next: { notificationSoundList in
-                playSoundDisposable.set(playSound(context: context, notificationSoundList: notificationSoundList, sound: sound, defaultSound: state.defaultSound).start())
+                playSoundDisposable.set(playSound(context: context, notificationSoundList: notificationSoundList, sound: sound, defaultSound: state.defaultStoriesSound).start())
             })
             
             var state = state
@@ -972,6 +998,7 @@ public func notificationPeerExceptionController(
         
         var state = NotificationExceptionPeerState(canRemove: canRemove, notifications: effectiveSettings._asNotificationSettings())
         state.defaultSound = defaultSound
+        state.defaultStoriesSound = defaultStoriesSound
         let _ = stateValue.swap(state)
         return state
     })
