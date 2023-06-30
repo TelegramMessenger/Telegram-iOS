@@ -569,18 +569,30 @@ public final class MediaEditorVideoExport {
             
             let progress = (position - .zero).seconds / duration
             self.statusValue = .progress(Float(progress))
-            composer.processImage(inputImage: image, pool: writer.pixelBufferPool, time: position, completion: { pixelBuffer, timestamp in
+            composer.processImage(inputImage: image, pool: writer.pixelBufferPool, time: position, completion: { pixelBuffer in
                 if let pixelBuffer {
-                    if !writer.appendPixelBuffer(pixelBuffer, at: timestamp) {
-                        Logger.shared.log("VideoExport", "Failed to append pixelbuffer")
-                        writer.markVideoAsFinished()
-                        appendFailed = true
+                    if !writer.appendPixelBuffer(pixelBuffer, at: position) {
+                        Logger.shared.log("VideoExport", "Failed to append pixelbuffer at \(position.seconds), trying to wait")
+                        Queue.concurrentDefaultQueue().after(1.0, {
+                            if !writer.appendPixelBuffer(pixelBuffer, at: position) {
+                                Logger.shared.log("VideoExport", "Failed to append pixelbuffer at \(position.seconds), complete failure")
+                                writer.markVideoAsFinished()
+                                appendFailed = true
+                                self.semaphore.signal()
+                            }
+                        })
+                    } else {
+                        Logger.shared.log("VideoExport", "Appended pixelbuffer at \(position.seconds)")
+                        
+                        Thread.sleep(forTimeInterval: 0.01)
+                        self.semaphore.signal()
                     }
                 } else {
                     Logger.shared.log("VideoExport", "No pixelbuffer from composer")
+                    
+                    Thread.sleep(forTimeInterval: 0.01)
+                    self.semaphore.signal()
                 }
-                Thread.sleep(forTimeInterval: 0.001)
-                self.semaphore.signal()
             })
             self.semaphore.wait()
             

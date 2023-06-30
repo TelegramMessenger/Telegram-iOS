@@ -3016,7 +3016,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     fileprivate let transitionOut: (Bool, Bool?) -> TransitionOut?
         
     public var cancelled: (Bool) -> Void = { _ in }
-    public var completion: (Int64, MediaEditorScreen.Result?, NSAttributedString, MediaEditorResultPrivacy , @escaping (@escaping () -> Void) -> Void) -> Void = { _, _, _, _, _ in }
+    public var completion: (Int64, MediaEditorScreen.Result?, NSAttributedString, MediaEditorResultPrivacy, [TelegramMediaFile], @escaping (@escaping () -> Void) -> Void) -> Void = { _, _, _, _, _, _ in }
     public var dismissed: () -> Void = { }
     public var willDismiss: () -> Void = { }
     
@@ -3031,7 +3031,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         initialVideoPosition: Double? = nil,
         transitionIn: TransitionIn?,
         transitionOut: @escaping (Bool, Bool?) -> TransitionOut?,
-        completion: @escaping (Int64, MediaEditorScreen.Result?, NSAttributedString, MediaEditorResultPrivacy, @escaping (@escaping () -> Void) -> Void) -> Void
+        completion: @escaping (Int64, MediaEditorScreen.Result?, NSAttributedString, MediaEditorResultPrivacy, [TelegramMediaFile], @escaping (@escaping () -> Void) -> Void) -> Void
     ) {
         self.context = context
         self.subject = subject
@@ -3484,8 +3484,22 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             randomId = Int64.random(in: .min ... .max)
         }
         
+        var stickers: [TelegramMediaFile] = []
+        for entity in codableEntities {
+            if case let .sticker(stickerEntity) = entity, case let .file(file) = stickerEntity.content {
+                stickers.append(file)
+                if let subEntities = stickerEntity.renderSubEntities {
+                    for entity in subEntities {
+                        if let stickerEntity = entity as? DrawingStickerEntity, case let .file(file) = stickerEntity.content {
+                            stickers.append(file)
+                        }
+                    }
+                }
+            }
+        }
+        
         if self.isEditingStory && !self.node.hasAnyChanges {
-            self.completion(randomId, nil, caption, self.state.privacy, { [weak self] finished in
+            self.completion(randomId, nil, caption, self.state.privacy, stickers, { [weak self] finished in
                 self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                     self?.dismiss()
                     Queue.mainQueue().justDispatch {
@@ -3616,7 +3630,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if let self {
                     makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image ?? UIImage(), dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] coverImage in
                         if let self {
-                            self.completion(randomId, .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions), caption, self.state.privacy, { [weak self] finished in
+                            self.completion(randomId, .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions), caption, self.state.privacy, stickers, { [weak self] finished in
                                 self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                     self?.dismiss()
                                     Queue.mainQueue().justDispatch {
@@ -3638,7 +3652,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 
                 makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] resultImage in
                     if let self, let resultImage {
-                        self.completion(randomId, .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), caption, self.state.privacy, { [weak self] finished in
+                        self.completion(randomId, .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), caption, self.state.privacy, stickers, { [weak self] finished in
                             self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                 self?.dismiss()
                                 Queue.mainQueue().justDispatch {

@@ -11,7 +11,6 @@ import AddressBook
 import UserNotifications
 import CoreTelephony
 import TelegramPresentationData
-import LegacyComponents
 import AccountContext
 
 public enum DeviceAccessCameraSubject {
@@ -88,7 +87,7 @@ public final class DeviceAccess {
     }
     
     public static func isCameraAccessAuthorized() -> Bool {
-        return PGCamera.cameraAuthorizationStatus() == PGCameraAuthorizationStatusAuthorized
+        return AVCaptureDevice.authorizationStatus(for: .video) == .authorized
     }
     
     public static func authorizationStatus(applicationInForeground: Signal<Bool, NoError>? = nil, siriAuthorization: (() -> AccessType)? = nil, subject: DeviceAccessSubject) -> Signal<AccessType, NoError> {
@@ -257,8 +256,8 @@ public final class DeviceAccess {
     public static func authorizeAccess(to subject: DeviceAccessSubject, onlyCheck: Bool = false, registerForNotifications: ((@escaping (Bool) -> Void) -> Void)? = nil, requestSiriAuthorization: ((@escaping (Bool) -> Void) -> Void)? = nil, locationManager: LocationManager? = nil, presentationData: PresentationData? = nil, present: @escaping (ViewController, Any?) -> Void = { _, _ in }, openSettings: @escaping () -> Void = { }, displayNotificationFromBackground: @escaping (String) -> Void = { _ in }, _ completion: @escaping (Bool) -> Void = { _ in }) {
             switch subject {
                 case let .camera(cameraSubject):
-                    let status = PGCamera.cameraAuthorizationStatus()
-                    if status == PGCameraAuthorizationStatusNotDetermined {
+                    let status = AVCaptureDevice.authorizationStatus(for: .video)
+                    if case .notDetermined = status {
                         if !onlyCheck {
                             AVCaptureDevice.requestAccess(for: AVMediaType.video) { response in
                                 Queue.mainQueue().async {
@@ -282,9 +281,9 @@ public final class DeviceAccess {
                         } else {
                             completion(true)
                         }
-                    } else if status == PGCameraAuthorizationStatusRestricted || status == PGCameraAuthorizationStatusDenied, let presentationData = presentationData {
+                    } else if [.restricted, .denied].contains(status), let presentationData = presentationData {
                         let text: String
-                        if status == PGCameraAuthorizationStatusRestricted {
+                        if case .restricted = status {
                             text = presentationData.strings.AccessDenied_CameraRestricted
                         } else {
                             switch cameraSubject {
@@ -300,7 +299,7 @@ public final class DeviceAccess {
                         present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
                             openSettings()
                         })]), nil)
-                    } else if status == PGCameraAuthorizationStatusAuthorized {
+                    } else if case .authorized = status {
                         completion(true)
                     } else {
                         assertionFailure()

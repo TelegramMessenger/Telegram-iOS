@@ -98,7 +98,7 @@ private final class CameraScreenComponent: CombinedComponent {
     let hasAppeared: Bool
     let isVisible: Bool
     let panelWidth: CGFloat
-    let flipAnimationAction: ActionSlot<Void>
+    let animateFlipAction: ActionSlot<Void>
     let animateShutter: () -> Void
     let present: (ViewController) -> Void
     let push: (ViewController) -> Void
@@ -112,7 +112,7 @@ private final class CameraScreenComponent: CombinedComponent {
         hasAppeared: Bool,
         isVisible: Bool,
         panelWidth: CGFloat,
-        flipAnimationAction: ActionSlot<Void>,
+        animateFlipAction: ActionSlot<Void>,
         animateShutter: @escaping () -> Void,
         present: @escaping (ViewController) -> Void,
         push: @escaping (ViewController) -> Void,
@@ -125,7 +125,7 @@ private final class CameraScreenComponent: CombinedComponent {
         self.hasAppeared = hasAppeared
         self.isVisible = isVisible
         self.panelWidth = panelWidth
-        self.flipAnimationAction = flipAnimationAction
+        self.animateFlipAction = animateFlipAction
         self.animateShutter = animateShutter
         self.present = present
         self.push = push
@@ -169,6 +169,10 @@ private final class CameraScreenComponent: CombinedComponent {
                 return image
             }
         }
+        
+        private var cameraAuthorizationStatus: AVAuthorizationStatus = .notDetermined
+        private var microphoneAuthorizationStatus: AVAuthorizationStatus = .notDetermined
+        private var galleryAuthorizationStatus: PHAuthorizationStatus = .notDetermined
         
         private let context: AccountContext
         fileprivate let camera: Camera
@@ -652,7 +656,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 }
             }
             
-            let flipAnimationAction = component.flipAnimationAction
+            let animateFlipAction = component.animateFlipAction
             let captureControlsAvailableSize: CGSize
             if isTablet {
                 captureControlsAvailableSize = CGSize(width: panelWidth, height: availableSize.height)
@@ -706,7 +710,7 @@ private final class CameraScreenComponent: CombinedComponent {
                         guard let state else {
                             return
                         }
-                        state.togglePosition(flipAnimationAction)
+                        state.togglePosition(animateFlipAction)
                     },
                     galleryTapped: {
                         guard let controller = environment.controller() as? CameraScreen else {
@@ -720,7 +724,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     zoomUpdated: { fraction in
                         state.updateZoom(fraction: fraction)
                     },
-                    flipAnimationAction: flipAnimationAction
+                    flipAnimationAction: animateFlipAction
                 ),
                 availableSize: captureControlsAvailableSize,
                 transition: context.transition
@@ -743,14 +747,14 @@ private final class CameraScreenComponent: CombinedComponent {
                             id: "flip",
                             component: AnyComponent(
                                 FlipButtonContentComponent(
-                                    action: flipAnimationAction,
+                                    action: animateFlipAction,
                                     maskFrame: .zero
                                 )
                             )
                         ),
                         minSize: CGSize(width: 44.0, height: 44.0),
                         action: {
-                            state.togglePosition(flipAnimationAction)
+                            state.togglePosition(animateFlipAction)
                         }
                     ),
                     availableSize: availableSize,
@@ -1036,7 +1040,7 @@ public class CameraScreen: ViewController {
         private var pipPosition: PIPPosition = .bottomRight
         
         fileprivate var previewBlurPromise = ValuePromise<Bool>(false)
-        private let flipAnimationAction = ActionSlot<Void>()
+        private let animateFlipAction = ActionSlot<Void>()
         
         fileprivate var cameraIsActive = true
         fileprivate var hasGallery = false
@@ -1738,6 +1742,7 @@ public class CameraScreen: ViewController {
                 self.hasAppeared = hasAppeared
                 transition = transition.withUserData(CameraScreenTransition.finishedAnimateIn)
                 
+                
 //                self.presentCameraTooltip()
 //                self.presentDualCameraTooltip()
             }
@@ -1753,7 +1758,7 @@ public class CameraScreen: ViewController {
                         hasAppeared: self.hasAppeared,
                         isVisible: self.cameraIsActive && !self.hasGallery,
                         panelWidth: panelWidth,
-                        flipAnimationAction: self.flipAnimationAction,
+                        animateFlipAction: self.animateFlipAction,
                         animateShutter: { [weak self] in
                             self?.mainPreviewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                         },

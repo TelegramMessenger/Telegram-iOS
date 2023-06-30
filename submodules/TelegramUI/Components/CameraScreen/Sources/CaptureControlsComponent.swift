@@ -8,6 +8,7 @@ import LocalMediaResources
 import CameraButtonComponent
 
 enum ShutterButtonState: Equatable {
+    case disabled
     case generic
     case video
     case stopRecording
@@ -162,7 +163,7 @@ private final class ShutterButtonContentComponent: Component {
             let ringWidth: CGFloat = 3.0
             var recordingProgress: Float?
             switch component.shutterState {
-            case .generic:
+            case .generic, .disabled:
                 innerColor = .white
                 innerSize = CGSize(width: 60.0, height: 60.0)
                 ringSize = CGSize(width: 68.0, height: 68.0)
@@ -986,7 +987,7 @@ final class CaptureControlsComponent: Component {
             
             var blobState: ShutterBlobView.BlobState
             switch component.shutterState {
-            case .generic:
+            case .generic, .disabled:
                 blobState = .generic
             case .video, .transition:
                 blobState = .video
