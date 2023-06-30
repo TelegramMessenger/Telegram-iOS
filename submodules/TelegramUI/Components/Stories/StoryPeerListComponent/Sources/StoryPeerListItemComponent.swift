@@ -499,6 +499,7 @@ public final class StoryPeerListItemComponent: Component {
         
         func updateIsPreviewing(isPreviewing: Bool) {
             self.avatarContent.alpha = isPreviewing ? 0.0 : 1.0
+            self.avatarBackgroundView.alpha = isPreviewing ? 0.0 : 1.0
         }
         
         func update(component: StoryPeerListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
