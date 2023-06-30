@@ -26,6 +26,7 @@ import AvatarNode
 import LocalMediaResources
 import ImageCompression
 import TextFormat
+import MediaEditor
 
 private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceholderNode {
     private var presentationData: PresentationData
