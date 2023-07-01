@@ -179,7 +179,7 @@ func managedAutoexpireStoryOperations(network: Network, postbox: Postbox) -> Sig
                 for (peerId, ids) in idsByPeerId {
                     var items = transaction.getStoryItems(peerId: peerId)
                     items.removeAll(where: { ids.contains($0.id) })
-                    transaction.setStoryItems(peerId: topItem.id.peerId, items: items)
+                    transaction.setStoryItems(peerId: peerId, items: items)
                 }
             })
             
