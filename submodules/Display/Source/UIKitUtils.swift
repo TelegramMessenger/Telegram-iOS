@@ -754,6 +754,12 @@ public extension CALayer {
 }
 
 public extension CALayer {
+    static func blur() -> NSObject? {
+        return makeBlurFilter()
+    }
+}
+
+public extension CALayer {
     var layerTintColor: CGColor? {
         get {
             if let value = self.value(forKey: "contentsMultiplyColor"), CFGetTypeID(value as CFTypeRef) == CGColor.typeID {

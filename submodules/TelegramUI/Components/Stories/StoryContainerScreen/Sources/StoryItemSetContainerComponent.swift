@@ -1003,8 +1003,15 @@ public final class StoryItemSetContainerComponent: Component {
             guard let component = self.component else {
                 return nil
             }
-            if component.slice.peer.id == component.context.account.peerId {
-            } else {
+            
+            var canReply = true
+            if component.slice.peer.isService {
+                canReply = false
+            } else if case .unsupported = component.slice.item.storyItem.media {
+                canReply = false
+            }
+            
+            if canReply {
                 if let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View {
                     return { [weak inputPanelView] in
                         inputPanelView?.activateInput()
