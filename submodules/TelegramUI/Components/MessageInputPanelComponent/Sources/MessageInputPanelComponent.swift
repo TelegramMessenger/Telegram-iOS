@@ -836,7 +836,10 @@ public final class MessageInputPanelComponent: Component {
                 } else {
                     inputActionButtonOriginX = size.width
                 }
-                transition.setFrame(view: inputActionButtonView, frame: CGRect(origin: CGPoint(x: inputActionButtonOriginX, y: size.height - insets.bottom - baseFieldHeight + floorToScreenPixels((baseFieldHeight - inputActionButtonSize.height) * 0.5)), size: inputActionButtonSize))
+                let inputActionButtonFrame = CGRect(origin: CGPoint(x: inputActionButtonOriginX, y: size.height - insets.bottom - baseFieldHeight + floor((baseFieldHeight - inputActionButtonSize.height) * 0.5)), size: inputActionButtonSize)
+                transition.setPosition(view: inputActionButtonView, position: inputActionButtonFrame.center)
+                transition.setBounds(view: inputActionButtonView, bounds: CGRect(origin: CGPoint(), size: inputActionButtonFrame.size))
+                
             }
         
             var fieldIconNextX = fieldBackgroundFrame.maxX - 4.0

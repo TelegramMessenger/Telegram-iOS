@@ -43,6 +43,16 @@ extension AVCaptureDevice {
         
         return nil
     }
+    
+    var neutralZoomFactor: CGFloat {
+        if #available(iOS 13.0, *) {
+            if let indexOfWideAngle = self.constituentDevices.firstIndex(where: { $0.deviceType == .builtInWideAngleCamera }), indexOfWideAngle > 0 {
+                let zoomFactor = self.virtualDeviceSwitchOverVideoZoomFactors[indexOfWideAngle - 1]
+                return CGFloat(zoomFactor.doubleValue)
+            }
+        }
+        return 1.0
+    }
 }
 
 extension CMSampleBuffer {

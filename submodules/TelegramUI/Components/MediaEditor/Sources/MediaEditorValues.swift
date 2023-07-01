@@ -1129,14 +1129,24 @@ private let hasHEVCHardwareEncoder: Bool = {
     return result == noErr
 }()
 
-public func recommendedVideoExportConfiguration(values: MediaEditorValues, forceFullHd: Bool = false, frameRate: Float) -> MediaEditorVideoExport.Configuration {
+public func recommendedVideoExportConfiguration(values: MediaEditorValues, duration: Double, image: Bool = false, forceFullHd: Bool = false, frameRate: Float) -> MediaEditorVideoExport.Configuration {
     let compressionProperties: [String: Any]
     let codecType: AVVideoCodecType
-        
+    
     if hasHEVCHardwareEncoder {
+        var bitrate: Int = 3700
+        if image {
+            bitrate = 5000
+        } else {
+            if duration < 10 {
+                bitrate = 5500
+            } else if duration < 25 {
+                bitrate = 4500
+            }
+        }
         codecType = AVVideoCodecType.hevc
         compressionProperties = [
-            AVVideoAverageBitRateKey: 3800000,
+            AVVideoAverageBitRateKey: bitrate * 1000,
             AVVideoProfileLevelKey: kVTProfileLevel_HEVC_Main_AutoLevel
         ]
     } else {

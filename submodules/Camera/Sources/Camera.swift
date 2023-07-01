@@ -64,6 +64,8 @@ final class CameraDeviceContext {
             
         self.device.configureDeviceFormat(maxDimensions: self.preferredMaxDimensions, maxFramerate: self.preferredMaxFrameRate)
         self.output.configureVideoStabilization()
+        
+        self.device.resetZoom()
     }
     
     func invalidate() {
@@ -210,7 +212,7 @@ private final class CameraContext {
     
     func stopCapture(invalidate: Bool = false) {
         if invalidate {
-            self.setZoomLevel(1.0)
+            self.mainDeviceContext.device.resetZoom()
             
             self.configure {
                 self.mainDeviceContext.invalidate()

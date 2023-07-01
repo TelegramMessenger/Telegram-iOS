@@ -162,7 +162,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             self.previousEntity = previousEntity
         }
         
-        self.update(animated: false)
+        self.update(animated: false, updateEditingPosition: false)
         
         if let superview = self.superview {
             let fadeView = UIButton(frame: CGRect(origin: .zero, size: superview.frame.size))
@@ -181,15 +181,8 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         self.textView.window?.makeKey()
         self.textView.becomeFirstResponder()
         
-        UIView.animate(withDuration: 0.4, delay: 0.0, usingSpringWithDamping: 0.65, initialSpringVelocity: 0.0) {
-            if let parentView = self.superview as? DrawingEntitiesView {
-                let scale = parentView.getEntityAdditionalScale() / (parentView.drawingView?.zoomScale ?? 1.0)
-                self.transform = CGAffineTransformMakeRotation(parentView.getEntityInitialRotation()).scaledBy(x: scale, y: scale)
-                
-                self.center = parentView.getEntityCenterPosition()
-            }
-        }
-
+        self.updateEditingPosition(animated: true)
+        
         if let selectionView = self.selectionView as? DrawingTextEntititySelectionView {
             selectionView.alpha = 0.0
             if !self.textEntity.text.string.isEmpty {
@@ -198,7 +191,42 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         }
     }
     
+    func updateEditingPosition(animated: Bool) {
+        guard let parentView = self.superview as? DrawingEntitiesView else {
+            return
+        }
+        
+        var position = parentView.getEntityCenterPosition()
+        if parentView.frame.width == 1080 && parentView.frame.height == 1920 {
+            let width = self.bounds.width
+            switch self.textEntity.alignment {
+            case .left:
+                position = CGPoint(x: 80.0 + width / 2.0, y: position.y)
+            case .right:
+                position = CGPoint(x: parentView.bounds.width - 80.0 - width / 2.0, y: position.y)
+            default:
+                break
+            }
+        }
+        
+        let scale = parentView.getEntityAdditionalScale() / (parentView.drawingView?.zoomScale ?? 1.0)
+        let rotation = parentView.getEntityInitialRotation()
+        if animated {
+            UIView.animate(withDuration: 0.4, delay: 0.0, usingSpringWithDamping: 0.65, initialSpringVelocity: 0.0) {
+                self.transform = CGAffineTransformMakeRotation(rotation).scaledBy(x: scale, y: scale)
+                self.center = position
+            }
+        } else {
+            self.transform = CGAffineTransformMakeRotation(rotation).scaledBy(x: scale, y: scale)
+            self.center = position
+        }
+    }
+    
     func endEditing(reset: Bool = false) {
+        guard let parentView = self.superview as? DrawingEntitiesView else {
+            return
+        }
+        
         self._isEditing = false
         self.textView.resignFirstResponder()
         self.textView.inputView = nil
@@ -220,7 +248,6 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
                 self.containerView?.remove(uuid: self.textEntity.uuid)
             }
         } else {
-//            self.textEntity.text = self.textView.text.trimmingCharacters(in: .whitespacesAndNewlines)
             if self.textEntity.text.string.isEmpty {
                 self.containerView?.remove(uuid: self.textEntity.uuid)
             }
@@ -231,6 +258,18 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             fadeView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak fadeView] _ in
                 fadeView?.removeFromSuperview()
             })
+        }
+        
+        if self.previousEntity == nil && self.textEntity.alignment != .center, parentView.frame.width == 1080 && parentView.frame.height == 1920 {
+            let width = self.bounds.width
+            switch self.textEntity.alignment {
+            case .left:
+                self.textEntity.position = CGPoint(x: 80.0 + width / 2.0, y: self.textEntity.position.y)
+            case .right:
+                self.textEntity.position = CGPoint(x: parentView.bounds.width - 80.0 - width / 2.0, y: self.textEntity.position.y)
+            default:
+                break
+            }
         }
         
         UIView.animate(withDuration: 0.4, delay: 0.0, usingSpringWithDamping: 0.65, initialSpringVelocity: 0.0) {
@@ -305,7 +344,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         self.textView.setNeedsLayersUpdate()
         var result = self.textView.sizeThatFits(CGSize(width: self.textEntity.width, height: .greatestFiniteMagnitude))
         result.width = max(224.0, ceil(result.width) + 20.0)
-        result.height = ceil(result.height) //+ 20.0 + (self.textView.font?.pointSize ?? 0.0) // * _font.sizeCorrection;
+        result.height = ceil(result.height);
         return result;
     }
     
@@ -507,10 +546,10 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
     }
     
     public override func update(animated: Bool = false) {
-        self.update(animated: animated, afterAppendingEmoji: false)
+        self.update(animated: animated, afterAppendingEmoji: false, updateEditingPosition: true)
     }
     
-    func update(animated: Bool = false, afterAppendingEmoji: Bool = false) {
+    func update(animated: Bool = false, afterAppendingEmoji: Bool = false, updateEditingPosition: Bool = true) {
         if !self.isEditing {
             self.center = self.textEntity.position
             self.transform = CGAffineTransformScale(CGAffineTransformMakeRotation(self.textEntity.rotation), self.textEntity.scale, self.textEntity.scale)
@@ -555,12 +594,13 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         
         self.sizeToFit()
         
+        if updateEditingPosition && self.isEditing {
+            self.updateEditingPosition(animated: animated)
+        }
+        
         self.textView.onLayoutUpdate = {
             self.updateEntities()
         }
-//        Queue.mainQueue().after(afterAppendingEmoji ? 0.01 : 0.001) {
-//            self.updateEntities()
-//        }
         
         super.update(animated: animated)
     }

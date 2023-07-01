@@ -247,7 +247,7 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                     if let mediaEditorValues {
                         Logger.shared.log("FetchVideoResource", "Requesting video export")
                         
-                        let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, frameRate: 30.0)
+                        let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, duration: 5.0, image: true, frameRate: 30.0)
                         let videoExport = MediaEditorVideoExport(account: account, subject: .image(image), configuration: configuration, outputPath: tempFile.path)
                         videoExport.start()
                                                 
@@ -337,7 +337,8 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                     let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
                     let updatedSize = Atomic<Int64>(value: 0)
                     if let mediaEditorValues {
-                        let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, frameRate: 30.0)
+                        let duration: Double = avAsset.duration.seconds
+                        let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, duration: duration, frameRate: 30.0)
                         let videoExport = MediaEditorVideoExport(account: account, subject: .video(avAsset), configuration: configuration, outputPath: tempFile.path)
                         videoExport.start()
                         
@@ -487,7 +488,8 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
         let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
         let updatedSize = Atomic<Int64>(value: 0)
         if let mediaEditorValues {
-            let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, frameRate: 30.0)
+            let duration: Double = avAsset.duration.seconds
+            let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, duration: duration, frameRate: 30.0)
             let subject: MediaEditorVideoExport.Subject
             if filteredPath.contains(".jpg"), let data = try? Data(contentsOf: URL(fileURLWithPath: filteredPath), options: [.mappedRead]), let image = UIImage(data: data) {
                 subject = .image(image)

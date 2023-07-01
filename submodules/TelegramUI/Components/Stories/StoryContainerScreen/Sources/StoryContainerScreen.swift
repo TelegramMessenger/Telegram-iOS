@@ -206,8 +206,11 @@ private final class StoryContainerScreenComponent: Component {
                 guard let self, let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View else {
                     return []
                 }
-                if !itemSetComponentView.isPointInsideContentArea(point: self.convert(point, to: itemSetComponentView)) {
-                    return []
+                if let environment = self.environment, case .regular = environment.metrics.widthClass {
+                } else {
+                    if !itemSetComponentView.isPointInsideContentArea(point: self.convert(point, to: itemSetComponentView)) {
+                        return []
+                    }
                 }
                 if !itemSetComponentView.allowsInteractiveGestures() {
                     return []
@@ -220,8 +223,11 @@ private final class StoryContainerScreenComponent: Component {
                 guard let self, let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View else {
                     return []
                 }
-                if !itemSetComponentView.isPointInsideContentArea(point: self.convert(point, to: itemSetComponentView)) {
-                    return []
+                if let environment = self.environment, case .regular = environment.metrics.widthClass {
+                } else {
+                    if !itemSetComponentView.isPointInsideContentArea(point: self.convert(point, to: itemSetComponentView)) {
+                        return []
+                    }
                 }
                 if !itemSetComponentView.allowsInteractiveGestures() {
                     return []
@@ -262,8 +268,12 @@ private final class StoryContainerScreenComponent: Component {
                 return false
             }
             
-            if !itemSetComponentView.isPointInsideContentArea(point: touch.location(in: itemSetComponentView)) {
-                return false
+            if let environment = self.environment, case .regular = environment.metrics.widthClass {
+                
+            } else {
+                if !itemSetComponentView.isPointInsideContentArea(point: touch.location(in: itemSetComponentView)) {
+                    return false
+                }
             }
             
             return true
@@ -481,18 +491,12 @@ private final class StoryContainerScreenComponent: Component {
             let location = recognizer.location(in: recognizer.view)
             if let currentItemView = self.visibleItemSetViews.first?.value {
                 if location.x < currentItemView.frame.minX {
-                    if stateValue.previousSlice == nil {
-                            
-                    } else {
-                        self.beginHorizontalPan(translation: CGPoint())
-                        self.commitHorizontalPan(velocity: CGPoint(x: 100.0, y: 0.0))
-                    }
+                    component.content.navigate(navigation: .item(.previous))
                 } else if location.x > currentItemView.frame.maxX {
                     if stateValue.nextSlice == nil {
                         environment.controller()?.dismiss()
                     } else {
-                        self.beginHorizontalPan(translation: CGPoint())
-                        self.commitHorizontalPan(velocity: CGPoint(x: -100.0, y: 0.0))
+                        component.content.navigate(navigation: .item(.next))
                     }
                 }
             }

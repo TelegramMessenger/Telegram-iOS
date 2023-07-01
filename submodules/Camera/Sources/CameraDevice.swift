@@ -31,10 +31,23 @@ final class CameraDevice {
         
     func configure(for session: CameraSession, position: Camera.Position) {
         self.position = position
-        if let videoDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera, .builtInWideAngleCamera, .builtInTelephotoCamera], mediaType: .video, position: position).devices.first {
-            self.videoDevice = videoDevice
-            self.videoDevicePromise.set(.single(videoDevice))
+        
+        var selectedDevice: AVCaptureDevice?
+        if #available(iOS 13.0, *) {
+            if let device = AVCaptureDevice.default(.builtInTripleCamera, for: .video, position: position) {
+                selectedDevice = device
+            } else if let device = AVCaptureDevice.default(.builtInDualCamera, for: .video, position: position) {
+                selectedDevice = device
+            } else {
+                selectedDevice = AVCaptureDevice.default(.builtInDualWideCamera, for: .video, position: position)
+            }
+        } else {
+            selectedDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera, .builtInWideAngleCamera, .builtInTelephotoCamera], mediaType: .video, position: position).devices.first
         }
+        
+        self.videoDevice = selectedDevice
+        self.videoDevicePromise.set(.single(selectedDevice))
+        
         self.audioDevice = AVCaptureDevice.default(for: .audio)
     }
     
@@ -227,6 +240,15 @@ final class CameraDevice {
         }
         self.transaction(device) { device in
             device.videoZoomFactor = max(1.0, min(10.0, device.videoZoomFactor * zoomDelta))
+        }
+    }
+    
+    func resetZoom() {
+        guard let device = self.videoDevice else {
+            return
+        }
+        self.transaction(device) { device in
+            device.videoZoomFactor = device.neutralZoomFactor
         }
     }
 }
