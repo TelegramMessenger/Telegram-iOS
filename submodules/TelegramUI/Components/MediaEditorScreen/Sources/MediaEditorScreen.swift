@@ -2164,6 +2164,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.previewContainerView.alpha = 1.0
             
             let transitionInView = UIImageView(image: image)
+            transitionInView.contentMode = .scaleAspectFill
             var initialScale: CGFloat
             if image.size.height > image.size.width {
                 initialScale = max(self.previewContainerView.bounds.width / image.size.width, self.previewContainerView.bounds.height / image.size.height)
@@ -3762,7 +3763,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 guard let self else {
                     return
                 }
-                let configuration = recommendedVideoExportConfiguration(values: mediaEditor.values, forceFullHd: true, frameRate: 60.0)
+                var duration: Double = 0.0
+                if case let .video(video) = exportSubject {
+                    duration = video.duration.seconds
+                }
+                let configuration = recommendedVideoExportConfiguration(values: mediaEditor.values, duration: duration, forceFullHd: true, frameRate: 60.0)
                 let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).mp4"
                 let videoExport = MediaEditorVideoExport(account: self.context.account, subject: exportSubject, configuration: configuration, outputPath: outputPath)
                 self.videoExport = videoExport

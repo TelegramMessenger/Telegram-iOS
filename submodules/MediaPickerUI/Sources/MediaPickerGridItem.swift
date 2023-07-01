@@ -526,7 +526,8 @@ final class MediaPickerGridItemNode: GridItemNode {
     override func layout() {
         super.layout()
         
-        self.backgroundNode.frame = self.bounds
+        let backgroundSize = CGSize(width: self.bounds.width, height: floorToScreenPixels(self.bounds.height / 9.0 * 16.0))
+        self.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((self.bounds.height - backgroundSize.height) / 2.0)), size: backgroundSize)
         self.imageNode.frame = self.bounds.insetBy(dx: -1.0 + UIScreenPixel, dy: -1.0 + UIScreenPixel)
         self.gradientNode.frame = CGRect(x: 0.0, y: self.bounds.height - 36.0, width: self.bounds.width, height: 36.0)
         self.typeIconNode.frame = CGRect(x: 0.0, y: self.bounds.height - 20.0, width: 19.0, height: 19.0)
@@ -563,7 +564,8 @@ final class MediaPickerGridItemNode: GridItemNode {
     
     func transitionImage() -> UIImage? {
         if let backgroundImage = self.backgroundNode.image {
-            return generateImage(self.bounds.size, contextGenerator: { size, context in
+            let size = CGSize(width: self.bounds.width, height: self.bounds.height / 9.0 * 16.0)
+            return generateImage(size, contextGenerator: { size, context in
                 if let cgImage = backgroundImage.cgImage {
                     context.draw(cgImage, in: CGRect(origin: .zero, size: size))
                     if let image = self.imageNode.image, let cgImage = image.cgImage {
