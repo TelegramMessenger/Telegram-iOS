@@ -337,7 +337,7 @@ final class CameraOutput: NSObject {
         let outputFileURL = URL(fileURLWithPath: outputFilePath)
         let videoRecorder = VideoRecorder(configuration: VideoRecorder.Configuration(videoSettings: videoSettings, audioSettings: audioSettings), videoTransform: CGAffineTransform(rotationAngle: .pi / 2.0), fileUrl: outputFileURL, completion: { [weak self] result in
             if case let .success(transitionImage, duration, positionChangeTimestamps) = result {
-                self?.recordingCompletionPipe.putNext(.finished((outputFilePath, transitionImage!, false), nil, duration, positionChangeTimestamps.map { ($0 == .front, $1) }, CACurrentMediaTime()))
+                self?.recordingCompletionPipe.putNext(.finished((outputFilePath, transitionImage ?? UIImage(), false), nil, duration, positionChangeTimestamps.map { ($0 == .front, $1) }, CACurrentMediaTime()))
             } else {
                 self?.recordingCompletionPipe.putNext(.failed)
             }
@@ -363,7 +363,10 @@ final class CameraOutput: NSObject {
     }
     
     func stopRecording() -> Signal<VideoCaptureResult, NoError> {
-        self.videoRecorder?.stop()
+        guard let videoRecorder = self.videoRecorder, videoRecorder.isRecording else {
+            return .complete()
+        }
+        videoRecorder.stop()
         
         return self.recordingCompletionPipe.signal()
         |> take(1)
