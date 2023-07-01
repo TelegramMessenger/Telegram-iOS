@@ -101,6 +101,7 @@ private final class CameraScreenComponent: CombinedComponent {
     let panelWidth: CGFloat
     let animateFlipAction: ActionSlot<Void>
     let animateShutter: () -> Void
+    let dismissAllTooltips: () -> Void
     let present: (ViewController) -> Void
     let push: (ViewController) -> Void
     let completion: ActionSlot<Signal<CameraScreen.Result, NoError>>
@@ -115,6 +116,7 @@ private final class CameraScreenComponent: CombinedComponent {
         panelWidth: CGFloat,
         animateFlipAction: ActionSlot<Void>,
         animateShutter: @escaping () -> Void,
+        dismissAllTooltips: @escaping () -> Void,
         present: @escaping (ViewController) -> Void,
         push: @escaping (ViewController) -> Void,
         completion: ActionSlot<Signal<CameraScreen.Result, NoError>>
@@ -128,6 +130,7 @@ private final class CameraScreenComponent: CombinedComponent {
         self.panelWidth = panelWidth
         self.animateFlipAction = animateFlipAction
         self.animateShutter = animateShutter
+        self.dismissAllTooltips = dismissAllTooltips
         self.present = present
         self.push = push
         self.completion = completion
@@ -182,6 +185,7 @@ private final class CameraScreenComponent: CombinedComponent {
         private let updateState: ActionSlot<CameraState>
         
         private let animateShutter: () -> Void
+        private let dismissAllTooltips: () -> Void
         
         private var cameraStateDisposable: Disposable?
         private var resultDisposable = MetaDisposable()
@@ -209,7 +213,8 @@ private final class CameraScreenComponent: CombinedComponent {
             present: @escaping (ViewController) -> Void,
             completion: ActionSlot<Signal<CameraScreen.Result, NoError>>,
             updateState: ActionSlot<CameraState>,
-            animateShutter: @escaping () -> Void = {}
+            animateShutter: @escaping () -> Void = {},
+            dismissAllTooltips: @escaping () -> Void = {}
         ) {
             self.context = context
             self.camera = camera
@@ -217,6 +222,7 @@ private final class CameraScreenComponent: CombinedComponent {
             self.completion = completion
             self.updateState = updateState
             self.animateShutter = animateShutter
+            self.dismissAllTooltips = dismissAllTooltips
             
             super.init()
             
@@ -377,6 +383,9 @@ private final class CameraScreenComponent: CombinedComponent {
             self.cameraState = self.cameraState.updatedIsDualCamEnabled(isEnabled)
             self.updated(transition: .easeInOut(duration: 0.1))
             
+            self.dismissAllTooltips()
+            let _ = ApplicationSpecificNotice.incrementStoriesDualCameraTip(accountManager: self.context.sharedContext.accountManager).start()
+            
             self.hapticFeedback.impact(.light)
         }
         
@@ -394,6 +403,9 @@ private final class CameraScreenComponent: CombinedComponent {
                 return
             }
             self.isTakingPhoto = true
+            
+            self.dismissAllTooltips()
+            
             let takePhoto = self.camera.takePhoto()
             |> mapToSignal { value -> Signal<CameraScreen.Result, NoError> in
                 switch value {
@@ -415,6 +427,9 @@ private final class CameraScreenComponent: CombinedComponent {
             guard case .none = self.cameraState.recording else {
                 return
             }
+            
+            self.dismissAllTooltips()
+            
             self.cameraState = self.cameraState.updatedDuration(0.0).updatedRecording(pressing ? .holding : .handsFree)
             self.resultDisposable.set((self.camera.startRecording()
             |> deliverOnMainQueue).start(next: { [weak self] duration in
@@ -457,7 +472,7 @@ private final class CameraScreenComponent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, camera: self.camera, present: self.present, completion: self.completion, updateState: self.updateState, animateShutter: self.animateShutter)
+        return State(context: self.context, camera: self.camera, present: self.present, completion: self.completion, updateState: self.updateState, animateShutter: self.animateShutter, dismissAllTooltips: self.dismissAllTooltips)
     }
     
     static var body: Body {
@@ -1692,6 +1707,23 @@ public class CameraScreen: ViewController {
             })
         }
 
+        fileprivate func dismissAllTooltips() {
+            guard let controller = self.controller else {
+                return
+            }
+            controller.window?.forEachController({ controller in
+                if let controller = controller as? TooltipScreen {
+                    controller.dismiss()
+                }
+            })
+            controller.forEachController({ controller in
+                if let controller = controller as? TooltipScreen {
+                    controller.dismiss()
+                }
+                return true
+            })
+        }
+        
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             let result = super.hitTest(point, with: event)
             if result == self.componentHost.view {
@@ -1796,6 +1828,9 @@ public class CameraScreen: ViewController {
                         animateFlipAction: self.animateFlipAction,
                         animateShutter: { [weak self] in
                             self?.mainPreviewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                        },
+                        dismissAllTooltips: { [weak self] in
+                            self?.dismissAllTooltips()
                         },
                         present: { [weak self] c in
                             self?.controller?.present(c, in: .window(.root))
@@ -2045,7 +2080,7 @@ public class CameraScreen: ViewController {
             self.hapticFeedback.impact(.light)
         }
         
-        self.dismissAllTooltips()
+        self.node.dismissAllTooltips()
         
         self.node.hasGallery = true
         
@@ -2127,7 +2162,7 @@ public class CameraScreen: ViewController {
             return
         }
         
-        self.dismissAllTooltips()
+        self.node.dismissAllTooltips()
         
         if !interactive {
             self.hapticFeedback.impact(.light)
@@ -2156,28 +2191,14 @@ public class CameraScreen: ViewController {
             self.dismiss(animated: false)
         }
     }
-    
-    private func dismissAllTooltips() {
-        self.window?.forEachController({ controller in
-            if let controller = controller as? TooltipScreen {
-                controller.dismiss()
-            }
-        })
-        self.forEachController({ controller in
-            if let controller = controller as? TooltipScreen {
-                controller.dismiss()
-            }
-            return true
-        })
-    }
-    
+        
     public func updateTransitionProgress(_ transitionFraction: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) {
         if let layout = self.validLayout, case .regular = layout.metrics.widthClass {
             return
         }
         
         if self.node.hasAppeared {
-            self.dismissAllTooltips()
+            self.node.dismissAllTooltips()
         }
         
         let transitionFraction = max(0.0, min(1.0, transitionFraction))
