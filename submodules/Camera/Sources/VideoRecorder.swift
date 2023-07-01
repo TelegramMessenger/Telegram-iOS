@@ -291,7 +291,14 @@ private final class VideoRecorderImpl {
     
     public func stopRecording() {
         self.queue.async {
-            self.recordingStopSampleTime = CMTime(seconds: CACurrentMediaTime(), preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+            var stopTime = CMTime(seconds: CACurrentMediaTime(), preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+            if self.recordingStartSampleTime.isValid {
+                if (stopTime - self.recordingStartSampleTime).seconds < 1.0 {
+                    stopTime = self.recordingStartSampleTime + CMTime(seconds: 1.0, preferredTimescale: self.recordingStartSampleTime.timescale)
+                }
+            }
+            
+            self.recordingStopSampleTime = stopTime
         }
     }
     
