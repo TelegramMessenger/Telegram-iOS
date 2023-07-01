@@ -225,8 +225,10 @@ public final class StoryContentContextImpl: StoryContentContext {
                         nextItemId = mappedItems[focusedIndex + 1].id
                     }
                     
+                    let mappedFocusedIndex = peerStoryItemsView.items.firstIndex(where: { $0.id == mappedItems[focusedIndex].id })
+                    
                     var loadKeys: [StoryKey] = []
-                    if let mappedFocusedIndex = peerStoryItemsView.items.firstIndex(where: { $0.id == mappedItems[focusedIndex].id }) {
+                    if let mappedFocusedIndex {
                         for index in (mappedFocusedIndex - 2) ... (mappedFocusedIndex + 2) {
                             if index >= 0 && index < peerStoryItemsView.items.count {
                                 if let item = peerStoryItemsView.items[index].value.get(Stories.StoredItem.self), case .placeholder = item {
@@ -263,7 +265,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                             peer: peer,
                             additionalPeerData: additionalPeerData,
                             item: StoryContentItem(
-                                position: focusedIndex,
+                                position: mappedFocusedIndex ?? focusedIndex,
                                 peerId: peer.id,
                                 storyItem: mappedItem
                             ),

@@ -326,14 +326,23 @@ private final class StoryContainerScreenComponent: Component {
                 
                 if let component = self.component, let stateValue = component.content.stateValue, let _ = stateValue.slice {
                     var direction: StoryContentContextNavigation.PeerDirection?
-                    if abs(velocity.x) > 10.0 {
+                    var mayDismiss = false
+                    if itemSetPanState.fraction <= -0.3 {
+                        direction = .previous
+                    } else if itemSetPanState.fraction >= 0.3 {
+                        direction = .next
+                    } else if abs(velocity.x) > 100.0 {
                         if velocity.x < 0.0 {
                             if stateValue.nextSlice != nil {
                                 direction = .next
+                            } else {
+                                mayDismiss = true
                             }
                         } else {
                             if stateValue.previousSlice != nil {
                                 direction = .previous
+                            } else {
+                                mayDismiss = true
                             }
                         }
                     }
@@ -349,7 +358,7 @@ private final class StoryContainerScreenComponent: Component {
                         self.itemSetPanState = itemSetPanState
                         self.state?.updated(transition: .immediate)
                     } else {
-                        shouldDismiss = true
+                        shouldDismiss = mayDismiss
                     }
                 }
                 
