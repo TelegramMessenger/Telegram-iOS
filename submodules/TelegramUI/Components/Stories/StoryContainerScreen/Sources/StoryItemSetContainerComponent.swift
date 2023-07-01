@@ -33,6 +33,18 @@ import PeerListItemComponent
 import PremiumUI
 import AttachmentUI
 
+public final class StoryAvailableReactions: Equatable {
+    let reactionItems: [ReactionItem]
+    
+    init(reactionItems: [ReactionItem]) {
+        self.reactionItems = reactionItems
+    }
+    
+    public static func ==(lhs: StoryAvailableReactions, rhs: StoryAvailableReactions) -> Bool {
+        return lhs === rhs
+    }
+}
+
 public final class StoryItemSetContainerComponent: Component {
     public final class ExternalState {
         public fileprivate(set) var derivedBottomInset: CGFloat = 0.0
@@ -63,6 +75,7 @@ public final class StoryItemSetContainerComponent: Component {
     public let context: AccountContext
     public let externalState: ExternalState
     public let storyItemSharedState: StoryContentItem.SharedState
+    public let availableReactions: StoryAvailableReactions?
     public let slice: StoryContentContextState.FocusedSlice
     public let theme: PresentationTheme
     public let strings: PresentationStrings
@@ -84,11 +97,13 @@ public final class StoryItemSetContainerComponent: Component {
     public let markAsSeen: (StoryId) -> Void
     public let controller: () -> ViewController?
     public let toggleAmbientMode: () -> Void
+    public let keyboardInputData: Signal<ChatEntityKeyboardInputNode.InputData, NoError>
     
     public init(
         context: AccountContext,
         externalState: ExternalState,
         storyItemSharedState: StoryContentItem.SharedState,
+        availableReactions: StoryAvailableReactions?,
         slice: StoryContentContextState.FocusedSlice,
         theme: PresentationTheme,
         strings: PresentationStrings,
@@ -109,11 +124,13 @@ public final class StoryItemSetContainerComponent: Component {
         delete: @escaping () -> Void,
         markAsSeen: @escaping (StoryId) -> Void,
         controller: @escaping () -> ViewController?,
-        toggleAmbientMode: @escaping () -> Void
+        toggleAmbientMode: @escaping () -> Void,
+        keyboardInputData: Signal<ChatEntityKeyboardInputNode.InputData, NoError>
     ) {
         self.context = context
         self.externalState = externalState
         self.storyItemSharedState = storyItemSharedState
+        self.availableReactions = availableReactions
         self.slice = slice
         self.theme = theme
         self.strings = strings
@@ -135,6 +152,7 @@ public final class StoryItemSetContainerComponent: Component {
         self.markAsSeen = markAsSeen
         self.controller = controller
         self.toggleAmbientMode = toggleAmbientMode
+        self.keyboardInputData = keyboardInputData
     }
     
     public static func ==(lhs: StoryItemSetContainerComponent, rhs: StoryItemSetContainerComponent) -> Bool {
@@ -307,7 +325,6 @@ public final class StoryItemSetContainerComponent: Component {
         var scrollingOffsetX: CGFloat = 0.0
         var scrollingCenterX: CGFloat = 0.0
         
-        var reactionItems: [ReactionItem]?
         var reactionContextNode: ReactionContextNode?
         weak var disappearingReactionContextNode: ReactionContextNode?
         
@@ -1410,23 +1427,7 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             if self.component == nil {
-                self.sendMessageContext.setup(context: component.context, view: self, inputPanelExternalState: self.inputPanelExternalState)
-                
-                let _ = (allowedStoryReactions(context: component.context)
-                |> deliverOnMainQueue).start(next: { [weak self] reactionItems in
-                    guard let self, let component = self.component else {
-                        return
-                    }
-                    
-                    component.controller()?.forEachController { c in
-                        if let c = c as? UndoOverlayController {
-                            c.dismiss()
-                        }
-                        return true
-                    }
-                    
-                    self.reactionItems = reactionItems
-                })
+                self.sendMessageContext.setup(context: component.context, view: self, inputPanelExternalState: self.inputPanelExternalState, keyboardInputData: component.keyboardInputData)
             }
             
             if self.component?.slice.item.storyItem.id != component.slice.item.storyItem.id {
@@ -2295,7 +2296,7 @@ public final class StoryItemSetContainerComponent: Component {
                 effectiveDisplayReactions = true
             }
             
-            if let reactionItems = self.reactionItems, effectiveDisplayReactions {
+            if let reactionItems = component.availableReactions?.reactionItems, effectiveDisplayReactions {
                 let reactionContextNode: ReactionContextNode
                 var reactionContextNodeTransition = transition
                 if let current = self.reactionContextNode {

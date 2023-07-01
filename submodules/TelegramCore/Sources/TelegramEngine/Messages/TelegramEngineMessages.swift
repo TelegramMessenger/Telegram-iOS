@@ -14,17 +14,20 @@ public final class StoryPreloadInfo {
         case next(position: Int)
     }
     
-    public let resource: MediaResourceReference
-    public let size: Int32?
+    public let peer: PeerReference
+    public let storyId: Int32
+    public let media: EngineMedia
     public let priority: Priority
     
     public init(
-        resource: MediaResourceReference,
-        size: Int32?,
+        peer: PeerReference,
+        storyId: Int32,
+        media: EngineMedia,
         priority: Priority
     ) {
-        self.resource = resource
-        self.size = size
+        self.peer = peer
+        self.storyId = storyId
+        self.media = media
         self.priority = priority
     }
 }
@@ -822,7 +825,7 @@ public extension TelegramEngine {
             }
         }
         
-        public func preloadStorySubscriptions(isHidden: Bool) -> Signal<[EngineMediaResource.Id: StoryPreloadInfo], NoError> {
+        public func preloadStorySubscriptions(isHidden: Bool) -> Signal<[EngineMedia.Id: StoryPreloadInfo], NoError> {
             let basicPeerKey = PostboxViewKey.basicPeer(self.account.peerId)
             let subscriptionsKey: PostboxStorySubscriptionsKey = isHidden ? .hidden : .filtered
             let storySubscriptionsKey = PostboxViewKey.storySubscriptions(key: subscriptionsKey)
@@ -831,7 +834,7 @@ public extension TelegramEngine {
                 storySubscriptionsKey,
                 PostboxViewKey.storiesState(key: .subscriptions(subscriptionsKey))
             ])
-            |> mapToSignal { views -> Signal<[EngineMediaResource.Id: StoryPreloadInfo], NoError> in
+            |> mapToSignal { views -> Signal<[EngineMedia.Id: StoryPreloadInfo], NoError> in
                 guard let basicPeerView = views.views[basicPeerKey] as? BasicPeerView, let accountPeer = basicPeerView.peer else {
                     return .single([:])
                 }
@@ -854,7 +857,7 @@ public extension TelegramEngine {
                 })
                 
                 return self.account.postbox.combinedView(keys: additionalDataKeys)
-                |> map { views -> [EngineMediaResource.Id: StoryPreloadInfo] in
+                |> map { views -> [EngineMedia.Id: StoryPreloadInfo] in
                     let _ = accountPeer
                     let _ = storiesStateView
                     
@@ -893,42 +896,23 @@ public extension TelegramEngine {
                     })
                     
                     var nextPriority: Int = 0
-                    var resultResources: [EngineMediaResource.Id: StoryPreloadInfo] = [:]
+                    var resultResources: [EngineMedia.Id: StoryPreloadInfo] = [:]
                     
                     for itemAndPeer in sortedItems.prefix(10) {
                         guard let peerReference = PeerReference(itemAndPeer.peer) else {
                             continue
                         }
-                        guard let media = itemAndPeer.item.media else {
+                        guard let media = itemAndPeer.item.media, let mediaId = media.id else {
                             continue
                         }
-                        if let image = media as? TelegramMediaImage, let resource = image.representations.last?.resource {
-                            let resource = MediaResourceReference.media(media: .story(peer: peerReference, id: itemAndPeer.item.id, media: media), resource: resource)
-                            resultResources[EngineMediaResource.Id(resource.resource.id)] = StoryPreloadInfo(
-                                resource: resource,
-                                size: nil,
-                                priority: .top(position: nextPriority)
-                            )
-                            nextPriority += 1
-                        } else if let file = media as? TelegramMediaFile {
-                            if let preview = file.previewRepresentations.last {
-                                let resource = MediaResourceReference.media(media: .story(peer: peerReference, id: itemAndPeer.item.id, media: file), resource: preview.resource)
-                                resultResources[EngineMediaResource.Id(resource.resource.id)] = StoryPreloadInfo(
-                                    resource: resource,
-                                    size: nil,
-                                    priority: .top(position: nextPriority)
-                                )
-                                nextPriority += 1
-                            }
-                            
-                            let resource = MediaResourceReference.media(media: .story(peer: peerReference, id: itemAndPeer.item.id, media: file), resource: file.resource)
-                            resultResources[EngineMediaResource.Id(resource.resource.id)] = StoryPreloadInfo(
-                                resource: resource,
-                                size: file.preloadSize,
-                                priority: .top(position: nextPriority)
-                            )
-                            nextPriority += 1
-                        }
+                        
+                        resultResources[mediaId] = StoryPreloadInfo(
+                            peer: peerReference,
+                            storyId: itemAndPeer.item.id,
+                            media: EngineMedia(media),
+                            priority: .top(position: nextPriority)
+                        )
+                        nextPriority += 1
                     }
                     
                     return resultResources

@@ -187,7 +187,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private var storyProgressDisposable: Disposable?
     private var storySubscriptionsDisposable: Disposable?
     private var preloadStorySubscriptionsDisposable: Disposable?
-    private var preloadStoryResourceDisposables: [MediaResourceId: Disposable] = [:]
+    private var preloadStoryResourceDisposables: [MediaId: Disposable] = [:]
     
     private var fullScreenEffectView: RippleEffectView?
     
@@ -1821,23 +1821,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     resources.removeAll()
                 }
                 
-                var validIds: [MediaResourceId] = []
+                var validIds: [MediaId] = []
                 for (_, info) in resources.sorted(by: { $0.value.priority < $1.value.priority }) {
-                    let resource = info.resource
-                    validIds.append(resource.resource.id)
-                    if self.preloadStoryResourceDisposables[resource.resource.id] == nil {
-                        var fetchRange: (Range<Int64>, MediaBoxFetchPriority)?
-                        if let size = info.size {
-                            fetchRange = (0 ..< Int64(size), .default)
+                    if let mediaId = info.media.id {
+                        validIds.append(mediaId)
+                        if self.preloadStoryResourceDisposables[mediaId] == nil {
+                            self.preloadStoryResourceDisposables[mediaId] = preloadStoryMedia(context: self.context, peer: info.peer, storyId: info.storyId, media: info.media).start()
                         }
-                        #if DEBUG
-                        fetchRange = nil
-                        #endif
-                        self.preloadStoryResourceDisposables[resource.resource.id] = fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: resource, range: fetchRange).start()
                     }
                 }
                 
-                var removeIds: [MediaResourceId] = []
+                var removeIds: [MediaId] = []
                 for (id, disposable) in self.preloadStoryResourceDisposables {
                     if !validIds.contains(id) {
                         removeIds.append(id)

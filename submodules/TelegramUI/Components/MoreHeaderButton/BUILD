@@ -12,7 +12,8 @@ swift_library(
     deps = [
         "//submodules/Display",
         "//submodules/AsyncDisplayKit",
-        "//submodules/AnimationUI",
+        "//submodules/ComponentFlow",
+        "//submodules/TelegramUI/Components/LottieComponent",
     ],
     visibility = [
         "//visibility:public",

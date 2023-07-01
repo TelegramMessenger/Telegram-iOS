@@ -18,6 +18,7 @@ import AttachmentUI
 import simd
 import VolumeButtons
 import TooltipUI
+import ChatEntityKeyboardInputNode
 
 func hasFirstResponder(_ view: UIView) -> Bool {
     if view.isFirstResponder {
@@ -177,6 +178,10 @@ private final class StoryContainerScreenComponent: Component {
         
         private var volumeButtonsListener: VolumeButtonsListener?
         private let volumeButtonsListenerShouldBeActive = ValuePromise<Bool>(false, ignoreRepeated: true)
+        
+        private let inputMediaNodeDataPromise = Promise<ChatEntityKeyboardInputNode.InputData>()
+        
+        private var availableReactions: StoryAvailableReactions?
         
         private var isAnimatingOut: Bool = false
         private var didAnimateOut: Bool = false
@@ -399,6 +404,7 @@ private final class StoryContainerScreenComponent: Component {
         @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
             switch recognizer.state {
             case .began:
+                print("began: \(CFAbsoluteTimeGetCurrent())")
                 self.beginHorizontalPan(translation: recognizer.translation(in: self))
             case .changed:
                 self.updateHorizontalPan(translation: recognizer.translation(in: self))
@@ -659,6 +665,34 @@ private final class StoryContainerScreenComponent: Component {
             self.environment = environment
             
             if self.component?.content !== component.content {
+                if self.component == nil {
+                    var update = false
+                    let _ = (allowedStoryReactions(context: component.context)
+                    |> deliverOnMainQueue).start(next: { [weak self] reactionItems in
+                        guard let self else {
+                            return
+                        }
+                        
+                        self.availableReactions = StoryAvailableReactions(reactionItems: reactionItems)
+                        if update {
+                            self.state?.updated(transition: .immediate)
+                        }
+                    })
+                    update = true
+                    
+                    self.inputMediaNodeDataPromise.set(
+                        ChatEntityKeyboardInputNode.inputData(
+                            context: component.context,
+                            chatPeerId: nil,
+                            areCustomEmojiEnabled: true,
+                            hasTrending: false,
+                            hasSearch: false,
+                            hideBackground: true,
+                            sendGif: nil
+                        )
+                    )
+                }
+                
                 self.contentUpdatedDisposable?.dispose()
                 var update = false
                 self.contentUpdatedDisposable = (component.content.updated
@@ -825,6 +859,7 @@ private final class StoryContainerScreenComponent: Component {
                                 context: component.context,
                                 externalState: itemSetView.externalState,
                                 storyItemSharedState: self.storyItemSharedState,
+                                availableReactions: self.availableReactions,
                                 slice: slice,
                                 theme: environment.theme,
                                 strings: environment.strings,
@@ -944,7 +979,8 @@ private final class StoryContainerScreenComponent: Component {
                                             }
                                         }
                                     }
-                                }
+                                },
+                                keyboardInputData: self.inputMediaNodeDataPromise.get()
                             )),
                             environment: {},
                             containerSize: itemSetContainerSize

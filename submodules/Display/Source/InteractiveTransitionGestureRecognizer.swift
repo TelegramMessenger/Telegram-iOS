@@ -136,6 +136,8 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         
         let size = self.view?.bounds.size ?? CGSize()
         
+        print("moved: \(CFAbsoluteTimeGetCurrent()) absTranslationX: \(absTranslationX) absTranslationY: \(absTranslationY)")
+        
         if self.currentAllowedDirections.contains(.down) {
             if !self.validatedGesture {
                 if absTranslationX > 2.0 && absTranslationX > absTranslationY * 2.0 {

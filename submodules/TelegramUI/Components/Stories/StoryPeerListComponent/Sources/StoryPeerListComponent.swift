@@ -693,7 +693,7 @@ public final class StoryPeerListComponent: Component {
                 expandBoundsFraction = 0.0
             }
             
-            let blurRadius: CGFloat = collapsedState.sideAlphaFraction * 0.0 + (1.0 - collapsedState.sideAlphaFraction) * 14.0
+            /*let blurRadius: CGFloat = collapsedState.sideAlphaFraction * 0.0 + (1.0 - collapsedState.sideAlphaFraction) * 14.0
             if blurRadius == 0.0 {
                 self.sharedBlurEffect = nil
             } else {
@@ -706,7 +706,7 @@ public final class StoryPeerListComponent: Component {
                         self.sharedBlurEffect = nil
                     }
                 }
-            }
+            }*/
             
             var targetCollapsedContentWidth: CGFloat = 0.0
             if collapsedItemCount > 0 {

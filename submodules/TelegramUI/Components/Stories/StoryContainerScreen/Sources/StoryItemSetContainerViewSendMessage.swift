@@ -59,7 +59,6 @@ final class StoryItemSetContainerSendMessage {
     var recordedAudioPreview: ChatRecordedMediaPreview?
     
     var inputMediaNodeData: ChatEntityKeyboardInputNode.InputData?
-    var inputMediaNodeDataPromise = Promise<ChatEntityKeyboardInputNode.InputData>()
     var inputMediaNodeDataDisposable: Disposable?
     var inputMediaNodeStateContext = ChatEntityKeyboardInputNode.StateContext()
     var inputMediaInteraction: ChatEntityKeyboardInputNode.Interaction?
@@ -78,13 +77,6 @@ final class StoryItemSetContainerSendMessage {
     var wasRecordingDismissed: Bool = false
     
     init() {
-        self.inputMediaNodeDataDisposable = (self.inputMediaNodeDataPromise.get()
-        |> deliverOnMainQueue).start(next: { [weak self] value in
-            guard let self else {
-                return
-            }
-            self.inputMediaNodeData = value
-        })
     }
     
     deinit {
@@ -95,22 +87,20 @@ final class StoryItemSetContainerSendMessage {
         self.inputMediaNodeDataDisposable?.dispose()
     }
     
-    func setup(context: AccountContext, view: StoryItemSetContainerComponent.View, inputPanelExternalState: MessageInputPanelComponent.ExternalState) {
+    func setup(context: AccountContext, view: StoryItemSetContainerComponent.View, inputPanelExternalState: MessageInputPanelComponent.ExternalState, keyboardInputData: Signal<ChatEntityKeyboardInputNode.InputData, NoError>) {
         self.context = context
         self.inputPanelExternalState = inputPanelExternalState
         self.view = view
         
-        self.inputMediaNodeDataPromise.set(
-            ChatEntityKeyboardInputNode.inputData(
-                context: context,
-                chatPeerId: nil,
-                areCustomEmojiEnabled: true,
-                hasTrending: false,
-                hasSearch: false,
-                hideBackground: true,
-                sendGif: nil
-            )
-        )
+        if self.inputMediaNodeDataDisposable == nil {
+            self.inputMediaNodeDataDisposable = (keyboardInputData
+            |> deliverOnMainQueue).start(next: { [weak self] value in
+                guard let self else {
+                    return
+                }
+                self.inputMediaNodeData = value
+            })
+        }
         
         self.inputMediaInteraction = ChatEntityKeyboardInputNode.Interaction(
             sendSticker: { [weak self] fileReference, _, _, _, _, _, _, _, _ in
@@ -194,7 +184,7 @@ final class StoryItemSetContainerSendMessage {
             return
         }
                 
-        if case .media = self.currentInputMode, let inputData = self.inputMediaNodeData {
+        if let component = self.view?.component, case .media = self.currentInputMode, let inputData = self.inputMediaNodeData {
             let inputMediaNode: ChatEntityKeyboardInputNode
             if let current = self.inputMediaNode {
                 inputMediaNode = current
@@ -202,7 +192,7 @@ final class StoryItemSetContainerSendMessage {
                 inputMediaNode = ChatEntityKeyboardInputNode(
                     context: context,
                     currentInputData: inputData,
-                    updatedInputData: self.inputMediaNodeDataPromise.get(),
+                    updatedInputData: component.keyboardInputData,
                     defaultToEmojiTab: self.inputPanelExternalState?.hasText ?? false,
                     opaqueTopPanelBackground: false,
                     interaction: self.inputMediaInteraction,
