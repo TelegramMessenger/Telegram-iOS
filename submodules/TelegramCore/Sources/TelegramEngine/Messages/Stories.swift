@@ -1737,7 +1737,7 @@ public final class EngineStoryViewListContext {
     }
     
     init(account: Account, storyId: Int32, views: EngineStoryItem.Views) {
-        let queue = Queue()
+        let queue = Queue.mainQueue()
         self.queue = queue
         self.impl = QueueLocalObject(queue: queue, generate: {
             return Impl(queue: queue, account: account, storyId: storyId, views: views)

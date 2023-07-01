@@ -49,7 +49,7 @@ public final class StoryFooterPanelComponent: Component {
     }
     
     public final class View: UIView {
-        private let viewStatsButton: HighlightableButton
+        private let viewStatsButton: HighlightTrackingButton
         private let viewStatsText = ComponentView<Empty>()
         private let viewStatsExpandedText = ComponentView<Empty>()
         private let deleteButton = ComponentView<Empty>()
@@ -67,18 +67,34 @@ public final class StoryFooterPanelComponent: Component {
         private var uploadProgress: Float = 0.0
         private var uploadProgressDisposable: Disposable?
         
+        public let externalContainerView: UIView
+        
         override init(frame: CGRect) {
-            self.viewStatsButton = HighlightableButton()
+            self.viewStatsButton = HighlightTrackingButton()
             
             self.avatarsContext = AnimatedAvatarSetContext()
             self.avatarsNode = AnimatedAvatarSetNode()
             
+            self.externalContainerView = UIView()
+            
             super.init(frame: frame)
             
             self.avatarsNode.view.isUserInteractionEnabled = false
-            self.viewStatsButton.addSubview(self.avatarsNode.view)
+            self.externalContainerView.addSubview(self.avatarsNode.view)
             self.addSubview(self.viewStatsButton)
             
+            self.viewStatsButton.highligthedChanged = { [weak self] highlighted in
+                guard let self else {
+                    return
+                }
+                if highlighted {
+                    self.avatarsNode.view.alpha = 0.7
+                    self.viewStatsText.view?.alpha = 0.7
+                } else {
+                    self.avatarsNode.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
+                    self.viewStatsText.view?.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
+                }
+            }
             self.viewStatsButton.addTarget(self, action: #selector(self.viewStatsPressed), for: .touchUpInside)
         }
         
@@ -224,7 +240,8 @@ public final class StoryFooterPanelComponent: Component {
             let avatarsSize = self.avatarsNode.update(context: component.context, content: avatarsContent, itemSize: CGSize(width: 30.0, height: 30.0), animated: false, synchronousLoad: true)
             
             let avatarsNodeFrame = CGRect(origin: CGPoint(x: leftOffset, y: floor((size.height - avatarsSize.height) * 0.5)), size: avatarsSize)
-            self.avatarsNode.frame = avatarsNodeFrame
+            self.avatarsNode.position = avatarsNodeFrame.center
+            self.avatarsNode.bounds = CGRect(origin: CGPoint(), size: avatarsNodeFrame.size)
             transition.setAlpha(view: self.avatarsNode.view, alpha: avatarsAlpha)
             if !avatarsSize.width.isZero {
                 leftOffset = avatarsNodeFrame.maxX + avatarSpacing
@@ -269,7 +286,7 @@ public final class StoryFooterPanelComponent: Component {
             if let viewStatsTextView = self.viewStatsText.view {
                 if viewStatsTextView.superview == nil {
                     viewStatsTextView.isUserInteractionEnabled = false
-                    self.viewStatsButton.addSubview(viewStatsTextView)
+                    self.externalContainerView.addSubview(viewStatsTextView)
                 }
                 transition.setPosition(view: viewStatsTextView, position: viewStatsTextFrame.center)
                 transition.setBounds(view: viewStatsTextView, bounds: CGRect(origin: CGPoint(), size: viewStatsTextFrame.size))
@@ -281,7 +298,7 @@ public final class StoryFooterPanelComponent: Component {
             if let viewStatsExpandedTextView = self.viewStatsExpandedText.view {
                 if viewStatsExpandedTextView.superview == nil {
                     viewStatsExpandedTextView.isUserInteractionEnabled = false
-                    self.viewStatsButton.addSubview(viewStatsExpandedTextView)
+                    self.addSubview(viewStatsExpandedTextView)
                 }
                 transition.setPosition(view: viewStatsExpandedTextView, position: viewStatsExpandedTextFrame.center)
                 transition.setBounds(view: viewStatsExpandedTextView, bounds: CGRect(origin: CGPoint(), size: viewStatsExpandedTextFrame.size))
@@ -313,7 +330,7 @@ public final class StoryFooterPanelComponent: Component {
             )
             if let deleteButtonView = self.deleteButton.view {
                 if deleteButtonView.superview == nil {
-                    self.addSubview(deleteButtonView)
+                    self.externalContainerView.addSubview(deleteButtonView)
                 }
                 transition.setFrame(view: deleteButtonView, frame: CGRect(origin: CGPoint(x: rightContentOffset - deleteButtonSize.width, y: floor((size.height - deleteButtonSize.height) * 0.5)), size: deleteButtonSize))
                 rightContentOffset -= deleteButtonSize.width + 8.0
