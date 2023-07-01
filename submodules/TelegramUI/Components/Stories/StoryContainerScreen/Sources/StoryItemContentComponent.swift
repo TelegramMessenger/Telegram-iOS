@@ -50,7 +50,7 @@ final class StoryItemContentComponent: Component {
 	}
 
     final class View: StoryContentItem.View {
-        private let imageNode: TransformImageNode
+        private let imageView: StoryItemImageView
         private var videoNode: UniversalVideoNode?
         
         private var currentMessageMedia: EngineMedia?
@@ -80,13 +80,13 @@ final class StoryItemContentComponent: Component {
         
 		override init(frame: CGRect) {
             self.hierarchyTrackingLayer = HierarchyTrackingLayer()
-            self.imageNode = TransformImageNode()
+            self.imageView = StoryItemImageView()
             
 			super.init(frame: frame)
             
             self.layer.addSublayer(self.hierarchyTrackingLayer)
             
-            self.addSubnode(self.imageNode)
+            self.addSubview(self.imageView)
             
             self.hierarchyTrackingLayer.isInHierarchyUpdated = { [weak self] value in
                 guard let self else {
@@ -144,10 +144,17 @@ final class StoryItemContentComponent: Component {
                             captureProtected: component.item.isForwardingDisabled,
                             hintDimensions: file.dimensions?.cgSize,
                             storeAfterDownload: nil,
-                            displayImage: false
+                            displayImage: false,
+                            hasSentFramesToDisplay: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.videoNode?.isHidden = false
+                            }
                         ),
                         priority: .gallery
                     )
+                    videoNode.isHidden = true
                     
                     self.videoNode = videoNode
                     self.addSubnode(videoNode)
@@ -372,6 +379,8 @@ final class StoryItemContentComponent: Component {
                 synchronousLoad = hint.synchronousLoad
             }
             
+            let startTime = CFAbsoluteTimeGetCurrent()
+            
             let peerReference = PeerReference(component.peer._asPeer())
             
             var messageMedia: EngineMedia?
@@ -398,45 +407,13 @@ final class StoryItemContentComponent: Component {
             }
             
             if reloadMedia, let messageMedia, let peerReference {
-                var signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
                 var fetchSignal: Signal<Never, NoError>?
                 switch messageMedia {
-                case let .image(image):
-                    signal = chatMessagePhoto(
-                        postbox: component.context.account.postbox,
-                        userLocation: .other,
-                        photoReference: .story(peer: peerReference, id: component.item.id, media: image),
-                        synchronousLoad: synchronousLoad,
-                        highQuality: true
-                    )
-                    if let representation = image.representations.last {
-                        fetchSignal = fetchedMediaResource(
-                            mediaBox: component.context.account.postbox.mediaBox,
-                            userLocation: .other,
-                            userContentType: .image,
-                            reference: ImageMediaReference.story(peer: peerReference, id: component.item.id, media: image).resourceReference(representation.resource)
-                        )
-                        |> ignoreValues
-                        |> `catch` { _ -> Signal<Never, NoError> in
-                            return .complete()
-                        }
-                    }
+                case .image:
+                    self.contentLoaded = true
                 case let .file(file):
                     self.contentLoaded = true
                     
-                    signal = mediaGridMessageVideo(
-                        postbox: component.context.account.postbox,
-                        userLocation: .other,
-                        videoReference: .story(peer: peerReference, id: component.item.id, media: file),
-                        onlyFullSize: false,
-                        useLargeThumbnail: false,
-                        synchronousLoad: synchronousLoad,
-                        autoFetchFullSizeThumbnail: false,
-                        overlayColor: nil,
-                        nilForEmptyResult: false,
-                        useMiniThumbnailIfAvailable: false,
-                        blurred: false
-                    )
                     fetchSignal = fetchedMediaResource(
                         mediaBox: component.context.account.postbox.mediaBox,
                         userLocation: .other,
@@ -449,20 +426,6 @@ final class StoryItemContentComponent: Component {
                     }
                 default:
                     break
-                }
-                
-                if let signal {
-                    var wasSynchronous = true
-                    self.imageNode.setSignal(signal |> afterCompleted { [weak self] in
-                        Queue.mainQueue().async {
-                            guard let self else {
-                                return
-                            }
-                            
-                            self.performActionAfterImageContentLoaded(update: !wasSynchronous)
-                        }
-                    }, attemptSynchronously: true)
-                    wasSynchronous = false
                 }
                 
                 self.performActionAfterImageContentLoaded(update: false)
@@ -483,6 +446,18 @@ final class StoryItemContentComponent: Component {
             }
             
             if let messageMedia {
+                self.imageView.update(
+                    context: component.context,
+                    peer: component.peer,
+                    storyId: component.item.id,
+                    media: component.item.media,
+                    size: availableSize,
+                    isCaptureProtected: component.item.isForwardingDisabled,
+                    attemptSynchronous: synchronousLoad,
+                    transition: transition
+                )
+                transition.setFrame(view: self.imageView, frame: CGRect(origin: CGPoint(), size: availableSize))
+                
                 var dimensions: CGSize?
                 switch messageMedia {
                 case let .image(image):
@@ -501,14 +476,7 @@ final class StoryItemContentComponent: Component {
                     if imageSize.height < availableSize.height && imageSize.height >= availableSize.height - 5.0 {
                         imageSize.height = availableSize.height
                     }
-                    self.imageNode.captureProtected = component.item.isForwardingDisabled
-                    let apply = self.imageNode.asyncLayout()(TransformImageArguments(
-                        corners: ImageCorners(),
-                        imageSize: imageSize,
-                        boundingSize: availableSize,
-                        intrinsicInsets: UIEdgeInsets()
-                    ))
-                    apply()
+                    let _ = imageSize
                     
                     if let videoNode = self.videoNode {
                         let videoSize = dimensions.aspectFilled(availableSize)
@@ -516,7 +484,6 @@ final class StoryItemContentComponent: Component {
                         videoNode.updateLayout(size: videoSize, transition: .immediate)
                     }
                 }
-                self.imageNode.frame = CGRect(origin: CGPoint(), size: availableSize)
             }
             
             switch component.item.media {
@@ -613,6 +580,10 @@ final class StoryItemContentComponent: Component {
             }
             
             self.updateIsProgressPaused(update: false)
+            
+            if reloadMedia && synchronousLoad {
+                print("\(CFAbsoluteTimeGetCurrent()) Synchronous: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+            }
             
             return availableSize
         }

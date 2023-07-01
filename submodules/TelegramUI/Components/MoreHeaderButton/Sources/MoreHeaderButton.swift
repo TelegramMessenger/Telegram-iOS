@@ -2,7 +2,8 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import AnimationUI
+import ComponentFlow
+import LottieComponent
 
 public final class MoreHeaderButton: HighlightableButtonNode {
     public enum Content {
@@ -13,7 +14,7 @@ public final class MoreHeaderButton: HighlightableButtonNode {
     public let referenceNode: ContextReferenceContentNode
     public let containerNode: ContextControllerSourceNode
     private let iconNode: ASImageNode
-    private var animationNode: AnimationNode?
+    private let animationView = ComponentView<Empty>()
 
     public var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
 
@@ -70,15 +71,23 @@ public final class MoreHeaderButton: HighlightableButtonNode {
 
     private var content: Content?
     public func setContent(_ content: Content, animated: Bool = false) {
-        if case .more = content, self.animationNode == nil {
-            let iconColor = self.color
-            let animationNode = AnimationNode(animation: "anim_profilemore", colors: ["Point 2.Group 1.Fill 1": iconColor,
-                                                                                      "Point 3.Group 1.Fill 1": iconColor,
-                                                                                      "Point 1.Group 1.Fill 1": iconColor], scale: 1.0)
+        if case .more = content {
             let animationSize = CGSize(width: 22.0, height: 22.0)
-            animationNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - animationSize.width) / 2.0), y: floor((self.containerNode.bounds.height - animationSize.height) / 2.0)), size: animationSize)
-            self.addSubnode(animationNode)
-            self.animationNode = animationNode
+            let _ = self.animationView.update(
+                transition: .immediate,
+                component: AnyComponent(LottieComponent(
+                    content: LottieComponent.AppBundleContent(name: "anim_profilemore"),
+                    color: self.color
+                )),
+                environment: {},
+                containerSize: animationSize
+            )
+            if let animationComponentView = self.animationView.view {
+                if animationComponentView.superview == nil {
+                    self.view.addSubview(animationComponentView)
+                }
+                animationComponentView.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - animationSize.width) / 2.0), y: floor((self.containerNode.bounds.height - animationSize.height) / 2.0)), size: animationSize)
+            }
         }
         if animated {
             if let snapshotView = self.referenceNode.view.snapshotContentTree() {
@@ -93,8 +102,10 @@ public final class MoreHeaderButton: HighlightableButtonNode {
                 self.iconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                 self.iconNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3)
 
-                self.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                self.animationNode?.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3)
+                if let animationComponentView = self.animationView.view {
+                    animationComponentView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                    animationComponentView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3)
+                }
             }
 
             switch content {
@@ -105,7 +116,9 @@ public final class MoreHeaderButton: HighlightableButtonNode {
 
                     self.iconNode.image = image
                     self.iconNode.isHidden = false
-                    self.animationNode?.isHidden = true
+                    if let animationComponentView = self.animationView.view {
+                        animationComponentView.isHidden = true
+                    }
                 case let .more(image):
                     if let image = image {
                         self.iconNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - image.size.width) / 2.0), y: floor((self.containerNode.bounds.height - image.size.height) / 2.0)), size: image.size)
@@ -113,7 +126,9 @@ public final class MoreHeaderButton: HighlightableButtonNode {
 
                     self.iconNode.image = image
                     self.iconNode.isHidden = false
-                    self.animationNode?.isHidden = false
+                    if let animationComponentView = self.animationView.view {
+                        animationComponentView.isHidden = false
+                    }
             }
         } else {
             self.content = content
@@ -125,7 +140,9 @@ public final class MoreHeaderButton: HighlightableButtonNode {
 
                     self.iconNode.image = image
                     self.iconNode.isHidden = false
-                    self.animationNode?.isHidden = true
+                    if let animationComponentView = self.animationView.view {
+                        animationComponentView.isHidden = true
+                    }
                 case let .more(image):
                     if let image = image {
                         self.iconNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - image.size.width) / 2.0), y: floor((self.containerNode.bounds.height - image.size.height) / 2.0)), size: image.size)
@@ -133,7 +150,9 @@ public final class MoreHeaderButton: HighlightableButtonNode {
 
                     self.iconNode.image = image
                     self.iconNode.isHidden = false
-                    self.animationNode?.isHidden = false
+                    if let animationComponentView = self.animationView.view {
+                        animationComponentView.isHidden = false
+                    }
             }
         }
     }
@@ -151,7 +170,9 @@ public final class MoreHeaderButton: HighlightableButtonNode {
     }
 
     public func play() {
-        self.animationNode?.playOnce()
+        if let animationComponentView = self.animationView.view as? LottieComponent.View {
+            animationComponentView.playOnce()
+        }
     }
     
     public static func optionsCircleImage(color: UIColor) -> UIImage? {
