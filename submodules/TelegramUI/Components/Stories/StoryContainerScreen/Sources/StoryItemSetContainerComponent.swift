@@ -983,7 +983,9 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             } else {
                 var canReply = true
-                if component.slice.peer.isService {
+                if component.slice.peer.id == component.context.account.peerId {
+                    canReply = false
+                } else if component.slice.peer.isService {
                     canReply = false
                 } else if case .unsupported = component.slice.item.storyItem.media {
                     canReply = false
@@ -1005,7 +1007,9 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             var canReply = true
-            if component.slice.peer.isService {
+            if component.slice.peer.id == component.context.account.peerId {
+                canReply = false
+            } else if component.slice.peer.isService {
                 canReply = false
             } else if case .unsupported = component.slice.item.storyItem.media {
                 canReply = false
