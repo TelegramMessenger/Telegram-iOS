@@ -331,7 +331,7 @@ private final class StoryContainerScreenComponent: Component {
                         direction = .previous
                     } else if itemSetPanState.fraction >= 0.3 {
                         direction = .next
-                    } else if abs(velocity.x) > 100.0 {
+                    } else if abs(velocity.x) >= 100.0 {
                         if velocity.x < 0.0 {
                             if stateValue.nextSlice != nil {
                                 direction = .next
@@ -863,7 +863,7 @@ private final class StoryContainerScreenComponent: Component {
                                             } else {
                                                 self.beginHorizontalPan(translation: CGPoint())
                                                 self.updateHorizontalPan(translation: CGPoint())
-                                                self.commitHorizontalPan(velocity: CGPoint(x: -100.0, y: 0.0))
+                                                self.commitHorizontalPan(velocity: CGPoint(x: -200.0, y: 0.0))
                                             }
                                         } else if case .previous = direction, slice.previousItemId == nil {
                                             if stateValue.previousSlice == nil {
@@ -875,7 +875,7 @@ private final class StoryContainerScreenComponent: Component {
                                             } else {
                                                 self.beginHorizontalPan(translation: CGPoint())
                                                 self.updateHorizontalPan(translation: CGPoint())
-                                                self.commitHorizontalPan(velocity: CGPoint(x: 100.0, y: 0.0))
+                                                self.commitHorizontalPan(velocity: CGPoint(x: 200.0, y: 0.0))
                                             }
                                         } else {
                                             let mappedDirection: StoryContentContextNavigation.ItemDirection
