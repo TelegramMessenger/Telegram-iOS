@@ -50,7 +50,7 @@ private final class AvatarComponent: Component {
             self.component = component
             self.state = state
             
-            let size = CGSize(width: 36.0, height: 36.0)
+            let size = CGSize(width: 32.0, height: 32.0)
 
             self.avatarNode.frame = CGRect(origin: CGPoint(), size: size)
             self.avatarNode.setPeer(
@@ -177,14 +177,14 @@ final class StoryPreviewComponent: Component {
             let cancelButtonSize = self.cancelButton.update(
                 transition: transition,
                 component: AnyComponent(BundleIconComponent(
-                    name: "Media Gallery/Close",
+                    name: "Stories/Close",
                     tintColor: UIColor.white
                 )),
                 environment: {},
                 containerSize: CGSize(width: 44.0, height: 44.0)
             )
             let cancelButtonFrame = CGRect(
-                origin: CGPoint(x: 17.0, y: 24.0),
+                origin: CGPoint(x: availableSize.width - 40.0, y: 19.0),
                 size: cancelButtonSize
             )
             if let cancelButtonView = self.cancelButton.view {
@@ -203,10 +203,10 @@ final class StoryPreviewComponent: Component {
                         peer: accountPeer
                     )),
                     environment: {},
-                    containerSize: CGSize(width: 44.0, height: 44.0)
+                    containerSize: CGSize(width: 32.0, height: 32.0)
                 )
                 let avatarFrame = CGRect(
-                    origin: CGPoint(x: availableSize.width - avatarSize.width - 6.0, y: 14.0),
+                    origin: CGPoint(x: 12.0, y: 18.0),
                     size: avatarSize
                 )
                 if let avatarView = self.avatar.view {
@@ -222,14 +222,14 @@ final class StoryPreviewComponent: Component {
                 transition: transition,
                 component: AnyComponent(Text(
                     text: "My story",
-                    font: Font.semibold(17.0),
+                    font: Font.medium(14.0),
                     color: .white
                 )),
                 environment: {},
                 containerSize: CGSize(width: 180.0, height: 44.0)
             )
             let titleFrame = CGRect(
-                origin: CGPoint(x: floorToScreenPixels((availableSize.width - titleSize.width) / 2.0), y: 21.0),
+                origin: CGPoint(x: 53.0, y: floorToScreenPixels(33.0 - titleSize.height / 2.0)),
                 size: titleSize
             )
             if let titleView = self.title.view {

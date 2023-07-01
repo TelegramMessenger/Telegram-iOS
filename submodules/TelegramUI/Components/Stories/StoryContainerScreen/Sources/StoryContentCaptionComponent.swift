@@ -449,7 +449,7 @@ final class StoryContentCaptionComponent: Component {
                     self.dustNode = dustNode
                     self.scrollView.insertSubview(dustNode.view, aboveSubview: spoilerTextNode.textNode.view)
                 }
-                dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
+                dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 0.0)
                 dustNode.update(size: dustNode.frame.size, color: .white, textColor: .white, rects: textLayout.0.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.0.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
             } else if let spoilerTextNode = self.spoilerTextNode {
                 self.spoilerTextNode = nil
