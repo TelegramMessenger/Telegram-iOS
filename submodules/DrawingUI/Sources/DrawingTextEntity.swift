@@ -699,12 +699,10 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
     }
 }
 
-final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGestureRecognizerDelegate {
+final class DrawingTextEntititySelectionView: DrawingEntitySelectionView {
     private let border = SimpleShapeLayer()
     private let leftHandle = SimpleShapeLayer()
     private let rightHandle = SimpleShapeLayer()
-    
-    private var panGestureRecognizer: UIPanGestureRecognizer!
     
     override init(frame: CGRect) {
         let handleBounds = CGRect(origin: .zero, size: entitySelectionViewHandleSize)
@@ -732,12 +730,7 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
             
             self.layer.addSublayer(handle)
         }
-        
-        let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
-        panGestureRecognizer.delegate = self
-        self.addGestureRecognizer(panGestureRecognizer)
-        self.panGestureRecognizer = panGestureRecognizer
-        
+                
         self.snapTool.onSnapUpdated = { [weak self] type, snapped in
             if let self, let entityView = self.entityView {
                 entityView.onSnapUpdated(type, snapped)
@@ -769,7 +762,7 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
     private let snapTool = DrawingEntitySnapTool()
     
     private var currentHandle: CALayer?
-    @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+    override func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
         guard let entityView = self.entityView, let entity = entityView.entity as? DrawingTextEntity else {
             return
         }
@@ -801,6 +794,9 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
             var updatedRotation = entity.rotation
             
             if self.currentHandle === self.leftHandle || self.currentHandle === self.rightHandle {
+                if gestureRecognizer.numberOfTouches > 1 {
+                    return
+                }
                 var deltaX = gestureRecognizer.translation(in: self).x
                 if self.currentHandle === self.leftHandle {
                     deltaX *= -1.0

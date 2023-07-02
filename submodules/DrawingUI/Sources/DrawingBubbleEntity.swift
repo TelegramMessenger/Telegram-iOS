@@ -98,7 +98,7 @@ final class DrawingBubbleEntityView: DrawingEntityView {
     override func updateSelectionView() {
         super.updateSelectionView()
         
-        guard let selectionView = self.selectionView as? DrawingBubbleEntititySelectionView else {
+        guard let selectionView = self.selectionView as? DrawingBubbleEntitySelectionView else {
             return
         }
         
@@ -110,7 +110,7 @@ final class DrawingBubbleEntityView: DrawingEntityView {
         if let selectionView = self.selectionView {
             return selectionView
         }
-        let selectionView = DrawingBubbleEntititySelectionView()
+        let selectionView = DrawingBubbleEntitySelectionView()
         selectionView.entityView = self
         return selectionView
     }
@@ -125,7 +125,7 @@ final class DrawingBubbleEntityView: DrawingEntityView {
     }
 }
 
-final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGestureRecognizerDelegate {
+final class DrawingBubbleEntitySelectionView: DrawingEntitySelectionView {
     private let leftHandle = SimpleShapeLayer()
     private let topLeftHandle = SimpleShapeLayer()
     private let topHandle = SimpleShapeLayer()
@@ -135,9 +135,7 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
     private let bottomHandle = SimpleShapeLayer()
     private let bottomRightHandle = SimpleShapeLayer()
     private let tailHandle = SimpleShapeLayer()
-    
-    private var panGestureRecognizer: UIPanGestureRecognizer!
-  
+      
     override init(frame: CGRect) {
         let handleBounds = CGRect(origin: .zero, size: entitySelectionViewHandleSize)
         let handles = [
@@ -170,12 +168,7 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
             
             self.layer.addSublayer(handle)
         }
-                        
-        let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
-        panGestureRecognizer.delegate = self
-        self.addGestureRecognizer(panGestureRecognizer)
-        self.panGestureRecognizer = panGestureRecognizer
-        
+                                
         self.snapTool.onSnapUpdated = { [weak self] type, snapped in
             if let self, let entityView = self.entityView {
                 entityView.onSnapUpdated(type, snapped)
@@ -196,15 +189,11 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
     override var selectionInset: CGFloat {
         return 5.5
     }
-        
-    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        return true
-    }
 
     private let snapTool = DrawingEntitySnapTool()
     
     private var currentHandle: CALayer?
-    @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+    override func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
         guard let entityView = self.entityView as? DrawingBubbleEntityView, let entity = entityView.entity as? DrawingBubbleEntity else {
             return
         }
@@ -234,6 +223,12 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
             var updatedTailPosition = entity.tailPosition
             
             let minimumSize = entityView.minimumSize
+            
+            if self.currentHandle != nil && self.currentHandle !== self.layer {
+                if gestureRecognizer.numberOfTouches > 1 {
+                    return
+                }
+            }
             
             if self.currentHandle === self.leftHandle {
                 updatedSize.width = max(minimumSize.width, updatedSize.width - delta.x)
@@ -391,9 +386,5 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
         
         let selectionScale = (self.bounds.width - inset * 2.0) / (max(0.001, entity.size.width))
         self.tailHandle.position = CGPoint(x: inset + (self.bounds.width - inset * 2.0) * entity.tailPosition.x, y: self.bounds.height - inset + entity.tailPosition.y * selectionScale)
-    }
-    
-    var isTracking: Bool {
-        return gestureIsTracking(self.panGestureRecognizer)
     }
 }

@@ -123,13 +123,11 @@ private func midPointPositionFor(start: CGPoint, end: CGPoint, length: CGFloat, 
     return p2
 }
 
-final class DrawingVectorEntititySelectionView: DrawingEntitySelectionView, UIGestureRecognizerDelegate {
+final class DrawingVectorEntititySelectionView: DrawingEntitySelectionView {
     private let startHandle = SimpleShapeLayer()
     private let midHandle = SimpleShapeLayer()
     private let endHandle = SimpleShapeLayer()
- 
-    private var panGestureRecognizer: UIPanGestureRecognizer!
- 
+  
     var scale: CGFloat = 1.0 {
         didSet {
             self.setNeedsLayout()
@@ -164,23 +162,14 @@ final class DrawingVectorEntititySelectionView: DrawingEntitySelectionView, UIGe
         self.layer.addSublayer(self.startHandle)
         self.layer.addSublayer(self.midHandle)
         self.layer.addSublayer(self.endHandle)
-       
-        let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
-        panGestureRecognizer.delegate = self
-        self.addGestureRecognizer(panGestureRecognizer)
-        self.panGestureRecognizer = panGestureRecognizer
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-        
-    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        return true
-    }
 
     private var currentHandle: CALayer?
-    @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+    override func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
         guard let entityView = self.entityView as? DrawingVectorEntityView, let entity = entityView.entity as? DrawingVectorEntity else {
             return
         }
@@ -199,6 +188,10 @@ final class DrawingVectorEntititySelectionView: DrawingEntitySelectionView, UIGe
             }
             self.currentHandle = self.layer
         case .changed:
+            if gestureRecognizer.numberOfTouches > 1 {
+                return
+            }
+            
             let delta = gestureRecognizer.translation(in: entityView)
             
             var updatedStart = entity.start
@@ -286,9 +279,5 @@ final class DrawingVectorEntititySelectionView: DrawingEntitySelectionView, UIGe
         self.endHandle.position = entity.end
         self.endHandle.bounds = bounds
         self.endHandle.lineWidth = lineWidth
-    }
-    
-    var isTracking: Bool {
-        return gestureIsTracking(self.panGestureRecognizer)
     }
 }

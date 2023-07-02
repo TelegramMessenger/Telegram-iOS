@@ -33,7 +33,7 @@ final class CameraDevice {
         self.position = position
         
         var selectedDevice: AVCaptureDevice?
-        if #available(iOS 13.0, *) {
+        if #available(iOS 13.0, *), position != .front {
             if let device = AVCaptureDevice.default(.builtInTripleCamera, for: .video, position: position) {
                 selectedDevice = device
             } else if let device = AVCaptureDevice.default(.builtInDualCamera, for: .video, position: position) {

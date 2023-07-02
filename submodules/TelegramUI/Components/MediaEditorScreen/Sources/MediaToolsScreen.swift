@@ -951,20 +951,6 @@ public final class MediaToolsScreen: ViewController {
             
             self.view.disablesInteractiveModalDismiss = true
             self.view.disablesInteractiveKeyboardGestureRecognizer = true
-            
-//            let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
-//            panGestureRecognizer.delegate = self
-//            panGestureRecognizer.minimumNumberOfTouches = 2
-//            panGestureRecognizer.maximumNumberOfTouches = 2
-//            self.previewContainerView.addGestureRecognizer(panGestureRecognizer)
-//
-//            let pinchGestureRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(self.handlePinch(_:)))
-//            pinchGestureRecognizer.delegate = self
-//            self.previewContainerView.addGestureRecognizer(pinchGestureRecognizer)
-//
-//            let rotateGestureRecognizer = UIRotationGestureRecognizer(target: self, action: #selector(self.handleRotate(_:)))
-//            rotateGestureRecognizer.delegate = self
-//            self.previewContainerView.addGestureRecognizer(rotateGestureRecognizer)
         }
         
         @objc func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {

@@ -338,14 +338,15 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             guard let self else {
                 return
             }
-            let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
             if snapped {
+                let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
                 self.insertSubview(snapView, belowSubview: view)
                 if snapView.alpha < 1.0 {
                     self.hapticFeedback.impact(.light)
                 }
                 transition.updateAlpha(layer: snapView.layer, alpha: 1.0)
             } else {
+                let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .easeInOut)
                 transition.updateAlpha(layer: snapView.layer, alpha: 0.0)
             }
         }
@@ -373,8 +374,8 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                 processSnap(snapped, self.bottomEdgeView)
                 self.edgePreviewUpdated(snapped)
             case let .rotation(angle):
-                let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
                 if let angle, let view {
+                    let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
                     self.layer.insertSublayer(self.angleLayer, below: view.layer)
                     self.angleLayer.transform = CATransform3DMakeRotation(angle, 0.0, 0.0, 1.0)
                     if self.angleLayer.opacity < 1.0 {
@@ -383,6 +384,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                     transition.updateAlpha(layer: self.angleLayer, alpha: 1.0)
                     self.angleLayer.isHidden = isMediaEntity
                 } else {
+                    let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .easeInOut)
                     transition.updateAlpha(layer: self.angleLayer, alpha: 0.0)
                 }
             }
@@ -653,8 +655,18 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         return self.selectedEntityView != nil
     }
     
+    public var isEditingText: Bool {
+        if let entityView = self.selectedEntityView as? DrawingTextEntityView, entityView.isEditing {
+            return true
+        } else {
+            return false
+        }
+    }
+    
     public func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
-        if !self.hasSelection, let mediaEntityView = self.subviews.first(where: { $0 is DrawingEntityMediaView }) as? DrawingEntityMediaView {
+        if let selectedEntityView = self.selectedEntityView, let selectionView = selectedEntityView.selectionView {
+            selectionView.handlePan(gestureRecognizer)
+        } else if let mediaEntityView = self.subviews.first(where: { $0 is DrawingEntityMediaView }) as? DrawingEntityMediaView {
             mediaEntityView.handlePan(gestureRecognizer)
         }
     }
@@ -795,7 +807,7 @@ public class DrawingEntityView: UIView {
 
 let entitySelectionViewHandleSize = CGSize(width: 44.0, height: 44.0)
 public class DrawingEntitySelectionView: UIView {
-    weak var entityView: DrawingEntityView?
+    public weak var entityView: DrawingEntityView?
     
     var tapped: () -> Void = { }
     
@@ -818,6 +830,10 @@ public class DrawingEntitySelectionView: UIView {
     @objc func handleRotate(_ gestureRecognizer: UIRotationGestureRecognizer) {
     }
     
+    @objc public func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+        
+    }
+        
     var selectionInset: CGFloat {
         return 0.0
     }
