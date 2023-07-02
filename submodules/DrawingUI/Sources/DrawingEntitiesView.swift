@@ -666,7 +666,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     public func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
         if let selectedEntityView = self.selectedEntityView, let selectionView = selectedEntityView.selectionView {
             selectionView.handlePan(gestureRecognizer)
-        } else if let mediaEntityView = self.subviews.first(where: { $0 is DrawingEntityMediaView }) as? DrawingEntityMediaView {
+        } else if gestureRecognizer.numberOfTouches == 2, let mediaEntityView = self.subviews.first(where: { $0 is DrawingEntityMediaView }) as? DrawingEntityMediaView {
             mediaEntityView.handlePan(gestureRecognizer)
         }
     }
