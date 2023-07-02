@@ -327,7 +327,11 @@ public final class MediaEditorVideoExport {
                 self.durationValue = trimmedVideoDuration
             } else {
                 asset.loadValuesAsynchronously(forKeys: ["tracks", "duration"]) {
-                    self.durationValue = asset.duration
+                    if asset.duration.seconds > 60.0 {
+                        self.durationValue = CMTime(seconds: 60.0, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+                    } else {
+                        self.durationValue = asset.duration
+                    }
                 }
             }
         } else {
@@ -373,6 +377,10 @@ public final class MediaEditorVideoExport {
         if let timeRange = self.configuration.timeRange {
             reader.timeRange = timeRange
             self.additionalReader?.timeRange = timeRange
+        } else if asset.duration.seconds > 60.0 {
+            let trimmedRange = CMTimeRange(start: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), end: CMTime(seconds: 60.0, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))
+            reader.timeRange = trimmedRange
+            self.additionalReader?.timeRange = trimmedRange
         }
         
         self.writer = MediaEditorVideoAVAssetWriter()
