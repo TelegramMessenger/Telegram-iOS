@@ -38,8 +38,10 @@ final class CameraDevice {
                 selectedDevice = device
             } else if let device = AVCaptureDevice.default(.builtInDualCamera, for: .video, position: position) {
                 selectedDevice = device
+            } else if let device = AVCaptureDevice.default(.builtInDualWideCamera, for: .video, position: position) {
+                selectedDevice = device
             } else {
-                selectedDevice = AVCaptureDevice.default(.builtInDualWideCamera, for: .video, position: position)
+                selectedDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera, .builtInWideAngleCamera, .builtInTelephotoCamera], mediaType: .video, position: position).devices.first
             }
         } else {
             selectedDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera, .builtInWideAngleCamera, .builtInTelephotoCamera], mediaType: .video, position: position).devices.first
