@@ -183,6 +183,8 @@ private final class StoryContainerScreenComponent: Component {
         
         private var availableReactions: StoryAvailableReactions?
         
+        private let sharedViewListsContext = StoryItemSetViewListComponent.SharedListsContext()
+        
         private var isAnimatingOut: Bool = false
         private var didAnimateOut: Bool = false
         
@@ -448,10 +450,10 @@ private final class StoryContainerScreenComponent: Component {
                     self.verticalPanState = nil
                     var updateState = true
                     
-                    if translation.y > 100.0 || velocity.y > 10.0 {
+                    if translation.y > 200.0 || (translation.y > 100.0 && velocity.y > 200.0) {
                         self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
                         self.environment?.controller()?.dismiss()
-                    } else if translation.y < -100.0 || velocity.y < -40.0 {
+                    } else if translation.y < -200.0 || (translation.y < -100.0 && velocity.y < -100.0) {
                         if let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id] {
                             if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
                                 if itemSetComponentView.activateInput() {
@@ -980,7 +982,8 @@ private final class StoryContainerScreenComponent: Component {
                                         }
                                     }
                                 },
-                                keyboardInputData: self.inputMediaNodeDataPromise.get()
+                                keyboardInputData: self.inputMediaNodeDataPromise.get(),
+                                sharedViewListsContext: self.sharedViewListsContext
                             )),
                             environment: {},
                             containerSize: itemSetContainerSize

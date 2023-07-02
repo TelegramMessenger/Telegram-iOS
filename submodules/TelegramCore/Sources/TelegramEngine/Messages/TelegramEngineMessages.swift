@@ -861,7 +861,7 @@ public extension TelegramEngine {
                     let _ = accountPeer
                     let _ = storiesStateView
                     
-                    var sortedItems: [(peer: Peer, item: Stories.Item)] = []
+                    var sortedItems: [(peer: Peer, item: Stories.Item, hasUnseen: Bool, lastTimestamp: Int32)] = []
                     
                     for peerId in storySubscriptionsView.peerIds {
                         guard let peerView = views.views[PostboxViewKey.basicPeer(peerId)] as? BasicPeerView else {
@@ -878,21 +878,48 @@ public extension TelegramEngine {
                         }
                         
                         var nextItem: Stories.StoredItem? = itemsView.items.first?.value.get(Stories.StoredItem.self)
+                        let lastTimestamp = itemsView.items.last?.value.get(Stories.StoredItem.self)?.timestamp
                         
                         let peerState: Stories.PeerState? = stateView.value?.get(Stories.PeerState.self)
+                        var hasUnseen = false
                         if let peerState = peerState {
                             if let item = itemsView.items.first(where: { $0.id > peerState.maxReadId }) {
+                                hasUnseen = true
                                 nextItem = item.value.get(Stories.StoredItem.self)
                             }
                         }
                         
-                        if let nextItem = nextItem, case let .item(item) = nextItem {
-                            sortedItems.append((peer, item))
+                        if let nextItem = nextItem, case let .item(item) = nextItem, let lastTimestamp {
+                            sortedItems.append((peer, item, hasUnseen, lastTimestamp))
                         }
                     }
                     
                     sortedItems.sort(by: { lhs, rhs in
-                        return lhs.item.timestamp > rhs.item.timestamp
+                        if lhs.hasUnseen != rhs.hasUnseen {
+                            if lhs.hasUnseen {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
+                        if EnginePeer(lhs.peer).isService != EnginePeer(rhs.peer).isService {
+                            if EnginePeer(lhs.peer).isService {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
+                        if lhs.peer.isPremium != rhs.peer.isPremium {
+                            if lhs.peer.isPremium {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
+                        if lhs.lastTimestamp != rhs.lastTimestamp {
+                            return lhs.lastTimestamp > rhs.lastTimestamp
+                        }
+                        return lhs.peer.id < rhs.peer.id
                     })
                     
                     var nextPriority: Int = 0

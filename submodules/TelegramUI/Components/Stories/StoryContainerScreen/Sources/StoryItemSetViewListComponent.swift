@@ -4,6 +4,7 @@ import Display
 import ComponentFlow
 import MultilineTextComponent
 import TelegramCore
+import Postbox
 import TelegramPresentationData
 import ComponentDisplayAdapters
 import AccountContext
@@ -14,9 +15,24 @@ import StoryFooterPanelComponent
 import PeerListItemComponent
 
 final class StoryItemSetViewListComponent: Component {
+    final class AnimationHint {
+        let synchronous: Bool
+        
+        init(synchronous: Bool) {
+            self.synchronous = synchronous
+        }
+    }
+    
     final class ExternalState {
         fileprivate(set) var minimizedHeight: CGFloat = 0.0
         fileprivate(set) var effectiveHeight: CGFloat = 0.0
+        
+        init() {
+        }
+    }
+    
+    final class SharedListsContext {
+        var viewLists: [StoryId: EngineStoryViewListContext] = [:]
         
         init() {
         }
@@ -26,6 +42,8 @@ final class StoryItemSetViewListComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let sharedListsContext: SharedListsContext
+    let peerId: EnginePeer.Id
     let safeInsets: UIEdgeInsets
     let storyItem: EngineStoryItem
     let outerExpansionFraction: CGFloat
@@ -40,6 +58,8 @@ final class StoryItemSetViewListComponent: Component {
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
+        sharedListsContext: SharedListsContext,
+        peerId: EnginePeer.Id,
         safeInsets: UIEdgeInsets,
         storyItem: EngineStoryItem,
         outerExpansionFraction: CGFloat,
@@ -53,6 +73,8 @@ final class StoryItemSetViewListComponent: Component {
         self.context = context
         self.theme = theme
         self.strings = strings
+        self.sharedListsContext = sharedListsContext
+        self.peerId = peerId
         self.safeInsets = safeInsets
         self.storyItem = storyItem
         self.outerExpansionFraction = outerExpansionFraction
@@ -68,6 +90,9 @@ final class StoryItemSetViewListComponent: Component {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.peerId != rhs.peerId {
             return false
         }
         if lhs.safeInsets != rhs.safeInsets {
@@ -175,7 +200,6 @@ final class StoryItemSetViewListComponent: Component {
         
         private var ignoreScrolling: Bool = false
         
-        private var viewList: EngineStoryViewListContext?
         private var viewListDisposable: Disposable?
         private var viewListState: EngineStoryViewListContext.State?
         private var requestedLoadMoreToken: EngineStoryViewListContext.LoadMoreToken?
@@ -495,7 +519,7 @@ final class StoryItemSetViewListComponent: Component {
                 self.visiblePlaceholderViews.removeValue(forKey: id)
             }
             
-            if let viewList = self.viewList, let viewListState = self.viewListState, viewListState.loadMoreToken != nil, visibleBounds.maxY >= self.scrollView.contentSize.height - 200.0 {
+            if let viewList = component.sharedListsContext.viewLists[StoryId(peerId: component.peerId, id: component.storyItem.id)], let viewListState = self.viewListState, viewListState.loadMoreToken != nil, visibleBounds.maxY >= self.scrollView.contentSize.height - 200.0 {
                 if self.requestedLoadMoreToken != viewListState.loadMoreToken {
                     self.requestedLoadMoreToken = viewListState.loadMoreToken
                     viewList.loadMore()
@@ -510,6 +534,11 @@ final class StoryItemSetViewListComponent: Component {
             self.component = component
             self.state = state
             
+            var synchronous = false
+            if let animationHint = transition.userData(AnimationHint.self) {
+                synchronous = animationHint.synchronous
+            }
+            
             let minimizedHeight = min(availableSize.height, 500.0)
             
             if themeUpdated {
@@ -520,24 +549,37 @@ final class StoryItemSetViewListComponent: Component {
             
             if itemUpdated {
                 self.viewListState = nil
-                self.viewList = nil
                 self.viewListDisposable?.dispose()
                 
                 if let views = component.storyItem.views {
-                    let viewList = component.context.engine.messages.storyViewList(id: component.storyItem.id, views: views)
-                    self.viewList = viewList
+                    let viewList: EngineStoryViewListContext
+                    if let current = component.sharedListsContext.viewLists[StoryId(peerId: component.peerId, id: component.storyItem.id)] {
+                        viewList = current
+                    } else {
+                        viewList = component.context.engine.messages.storyViewList(id: component.storyItem.id, views: views)
+                        component.sharedListsContext.viewLists[StoryId(peerId: component.peerId, id: component.storyItem.id)] = viewList
+                    }
+                    
                     var applyState = false
+                    var firstTime = true
                     self.viewListDisposable = (viewList.state
                     |> deliverOnMainQueue).start(next: { [weak self] listState in
                         guard let self else {
                             return
                         }
+                        if firstTime {
+                            firstTime = false
+                            self.ignoreScrolling = true
+                            self.scrollView.setContentOffset(CGPoint(), animated: false)
+                            self.ignoreScrolling = false
+                        }
                         self.viewListState = listState
                         if applyState {
-                            self.state?.updated(transition: Transition.immediate.withUserData(PeerListItemComponent.TransitionHint(synchronousLoad: true)))
+                            self.state?.updated(transition: Transition.immediate.withUserData(PeerListItemComponent.TransitionHint(synchronousLoad: false)))
                         }
                     })
                     applyState = true
+                    let _ = synchronous
                 }
             }
             
@@ -611,15 +653,17 @@ final class StoryItemSetViewListComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 200.0)
             )
-            if let navigationPanelView = self.navigationPanel.view {
+            if let navigationPanelView = self.navigationPanel.view as? StoryFooterPanelComponent.View {
                 if navigationPanelView.superview == nil {
                     self.addSubview(navigationPanelView)
+                    self.insertSubview(navigationPanelView.externalContainerView, belowSubview: self.navigationBarBackground)
                 }
                 
                 let expandedNavigationPanelFrame = CGRect(origin: CGPoint(x: navigationBarFrame.minX, y: navigationBarFrame.minY + 4.0), size: navigationPanelSize)
                 let collapsedNavigationPanelFrame = CGRect(origin: CGPoint(x: navigationBarFrame.minX, y: navigationBarFrame.minY - navigationPanelSize.height - component.safeInsets.bottom - 1.0), size: navigationPanelSize)
                 
                 transition.setFrame(view: navigationPanelView, frame: collapsedNavigationPanelFrame.interpolate(to: expandedNavigationPanelFrame, amount: dismissFraction))
+                transition.setFrame(view: navigationPanelView.externalContainerView, frame: collapsedNavigationPanelFrame.interpolate(to: expandedNavigationPanelFrame, amount: dismissFraction))
             }
             
             transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarFrame.maxY), size: CGSize(width: availableSize.width, height: availableSize.height)))

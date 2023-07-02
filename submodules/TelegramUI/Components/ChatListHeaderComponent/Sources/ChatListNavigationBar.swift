@@ -337,7 +337,7 @@ public final class ChatListNavigationBar: Component {
             if allowAvatarsExpansion && transition.animation.isImmediate {
                 if self.storiesUnlocked != storiesUnlocked {
                     if storiesUnlocked {
-                        HapticFeedback().impact(.veryLight)
+                        HapticFeedback().tap()
                     } else {
                         HapticFeedback().impact(.veryLight)
                     }

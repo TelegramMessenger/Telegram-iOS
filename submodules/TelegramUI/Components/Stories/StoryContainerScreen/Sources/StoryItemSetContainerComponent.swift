@@ -98,8 +98,9 @@ public final class StoryItemSetContainerComponent: Component {
     public let controller: () -> ViewController?
     public let toggleAmbientMode: () -> Void
     public let keyboardInputData: Signal<ChatEntityKeyboardInputNode.InputData, NoError>
+    let sharedViewListsContext: StoryItemSetViewListComponent.SharedListsContext
     
-    public init(
+    init(
         context: AccountContext,
         externalState: ExternalState,
         storyItemSharedState: StoryContentItem.SharedState,
@@ -125,7 +126,8 @@ public final class StoryItemSetContainerComponent: Component {
         markAsSeen: @escaping (StoryId) -> Void,
         controller: @escaping () -> ViewController?,
         toggleAmbientMode: @escaping () -> Void,
-        keyboardInputData: Signal<ChatEntityKeyboardInputNode.InputData, NoError>
+        keyboardInputData: Signal<ChatEntityKeyboardInputNode.InputData, NoError>,
+        sharedViewListsContext: StoryItemSetViewListComponent.SharedListsContext
     ) {
         self.context = context
         self.externalState = externalState
@@ -153,6 +155,7 @@ public final class StoryItemSetContainerComponent: Component {
         self.controller = controller
         self.toggleAmbientMode = toggleAmbientMode
         self.keyboardInputData = keyboardInputData
+        self.sharedViewListsContext = sharedViewListsContext
     }
     
     public static func ==(lhs: StoryItemSetContainerComponent, rhs: StoryItemSetContainerComponent) -> Bool {
@@ -1705,12 +1708,16 @@ public final class StoryItemSetContainerComponent: Component {
                 let viewListSize = viewList.view.update(
                     transition: viewListTransition.withUserData(PeerListItemComponent.TransitionHint(
                         synchronousLoad: false
+                    )).withUserData(StoryItemSetViewListComponent.AnimationHint(
+                        synchronous: false
                     )),
                     component: AnyComponent(StoryItemSetViewListComponent(
                         externalState: viewList.externalState,
                         context: component.context,
                         theme: component.theme,
                         strings: component.strings,
+                        sharedListsContext: component.sharedViewListsContext,
+                        peerId: component.slice.peer.id,
                         safeInsets: component.safeInsets,
                         storyItem: component.slice.item.storyItem,
                         outerExpansionFraction: outerExpansionFraction,
