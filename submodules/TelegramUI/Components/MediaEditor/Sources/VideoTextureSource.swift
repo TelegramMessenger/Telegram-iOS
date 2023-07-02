@@ -660,6 +660,7 @@ final class VideoInputScalePass: RenderPass {
             width = Int(scaledSize.width)
             height = Int(scaledSize.height)
         }
+        self.mainPosition = VideoPosition(position: CGPoint(x: width / 2, y: height / 2), size: CGSize(width: width, height: height), scale: 1.0, rotation: 0.0)
         
         let containerSize = CGSize(width: width, height: height)
         

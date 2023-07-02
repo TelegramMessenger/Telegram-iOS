@@ -29,11 +29,11 @@ final class CameraDevice {
     
     public private(set) var audioDevice: AVCaptureDevice? = nil
         
-    func configure(for session: CameraSession, position: Camera.Position) {
+    func configure(for session: CameraSession, position: Camera.Position, dual: Bool) {
         self.position = position
         
         var selectedDevice: AVCaptureDevice?
-        if #available(iOS 13.0, *), position != .front {
+        if #available(iOS 13.0, *), position != .front && !dual {
             if let device = AVCaptureDevice.default(.builtInTripleCamera, for: .video, position: position) {
                 selectedDevice = device
             } else if let device = AVCaptureDevice.default(.builtInDualCamera, for: .video, position: position) {
