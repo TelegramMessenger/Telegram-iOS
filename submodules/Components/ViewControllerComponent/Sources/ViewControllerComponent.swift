@@ -184,6 +184,7 @@ open class ViewControllerComponentContainer: ViewController {
                 environment: {
                     environment
                 },
+                forceUpdate: self.controller?.forceNextUpdate ?? false,
                 containerSize: layout.size
             )
             transition.setFrame(view: self.hostView, frame: CGRect(origin: CGPoint(), size: layout.size), completion: nil)
@@ -304,6 +305,13 @@ open class ViewControllerComponentContainer: ViewController {
     
     open override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         super.dismiss(animated: flag, completion: completion)
+    }
+    
+    fileprivate var forceNextUpdate = false
+    public func requestLayout(forceUpdate: Bool, transition: ContainedViewLayoutTransition) {
+        self.forceNextUpdate = forceUpdate
+        self.requestLayout(transition: transition)
+        self.forceNextUpdate = false
     }
     
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

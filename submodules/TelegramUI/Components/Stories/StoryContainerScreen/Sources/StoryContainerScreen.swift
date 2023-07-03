@@ -688,7 +688,7 @@ private final class StoryContainerScreenComponent: Component {
                             chatPeerId: nil,
                             areCustomEmojiEnabled: true,
                             hasTrending: false,
-                            hasSearch: false,
+                            hasSearch: true,
                             hideBackground: true,
                             sendGif: nil
                         )
@@ -847,7 +847,7 @@ private final class StoryContainerScreenComponent: Component {
                         var itemSetContainerSafeInsets = environment.safeInsets
                         if case .regular = environment.metrics.widthClass {
                             let availableHeight = min(1080.0, availableSize.height - max(45.0, environment.safeInsets.bottom) * 2.0)
-                            let mediaHeight = availableHeight - 40.0
+                            let mediaHeight = availableHeight - 60.0
                             let mediaWidth = floor(mediaHeight * 0.5625)
                             itemSetContainerSize = CGSize(width: mediaWidth, height: availableHeight)
                             itemSetContainerInsets.top = 0.0
@@ -885,6 +885,12 @@ private final class StoryContainerScreenComponent: Component {
                                     } else {
                                         environment.controller()?.present(c, in: .window(.root), with: a)
                                     }
+                                },
+                                presentInGlobalOverlay: { [weak self] c, a in
+                                    guard let self, let environment = self.environment else {
+                                        return
+                                    }
+                                    environment.controller()?.presentInGlobalOverlay(c, with: a)
                                 },
                                 close: { [weak self] in
                                     guard let self, let environment = self.environment else {

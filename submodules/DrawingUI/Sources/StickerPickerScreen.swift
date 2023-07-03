@@ -301,7 +301,8 @@ private final class StickerSelectionComponent: Component {
                     inputHeight: 0.0,
                     displayBottomPanel: true,
                     isExpanded: true,
-                    clipContentToTopPanel: false
+                    clipContentToTopPanel: false,
+                    useExternalSearchContainer: false
                 )),
                 environment: {},
                 forceUpdate: self.forceUpdate,

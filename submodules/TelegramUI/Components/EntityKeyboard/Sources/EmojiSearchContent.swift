@@ -506,6 +506,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                 displayBottomPanel: false,
                 isExpanded: false,
                 clipContentToTopPanel: false,
+                useExternalSearchContainer: false,
                 hidePanels: true
             )),
             environment: {},

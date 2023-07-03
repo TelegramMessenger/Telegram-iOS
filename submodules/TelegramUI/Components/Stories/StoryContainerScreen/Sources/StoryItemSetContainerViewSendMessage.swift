@@ -35,6 +35,7 @@ import Postbox
 import OverlayStatusController
 import PresentationDataUtils
 import TextFieldComponent
+import StickerPackPreviewUI
 
 final class StoryItemSetContainerSendMessage {
     enum InputMode {
@@ -127,7 +128,11 @@ final class StoryItemSetContainerSendMessage {
             switchToTextInput: { [weak self] in
                 if let self {
                     self.currentInputMode = .text
-                    self.view?.state?.updated(transition: .immediate)
+                    if let view = self.view, !hasFirstResponder(view) {
+                        let _ = view.activateInput()
+                    } else {
+                        self.view?.state?.updated(transition: .immediate)
+                    }
                 }
             },
             dismissTextInput: {
@@ -156,9 +161,9 @@ final class StoryItemSetContainerSendMessage {
             getNavigationController: {
                 return self.view?.component?.controller()?.navigationController as? NavigationController
             },
-            requestLayout: { [weak self] _ in
+            requestLayout: { [weak self] transition in
                 if let self {
-                    self.view?.state?.updated()
+                    self.view?.state?.updated(transition: Transition(transition))
                 }
             }
         )
@@ -179,11 +184,12 @@ final class StoryItemSetContainerSendMessage {
         }
     }
     
-    func updateInputMediaNode(inputPanel: ComponentView<Empty>, availableSize: CGSize, bottomInset: CGFloat, inputHeight: CGFloat, effectiveInputHeight: CGFloat, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, transition: Transition) {
+    func updateInputMediaNode(inputPanel: ComponentView<Empty>, availableSize: CGSize, bottomInset: CGFloat, inputHeight: CGFloat, effectiveInputHeight: CGFloat, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, transition: Transition) -> CGFloat {
         guard let context = self.context, let inputPanelView = inputPanel.view as? MessageInputPanelComponent.View else {
-            return
+            return 0.0
         }
-                
+               
+        var height: CGFloat = 0.0
         if let component = self.view?.component, case .media = self.currentInputMode, let inputData = self.inputMediaNodeData {
             let inputMediaNode: ChatEntityKeyboardInputNode
             if let current = self.inputMediaNode {
@@ -200,10 +206,10 @@ final class StoryItemSetContainerSendMessage {
                     stateContext: self.inputMediaNodeStateContext
                 )
                 inputMediaNode.externalTopPanelContainerImpl = nil
+                inputMediaNode.useExternalSearchContainer = true
                 if inputMediaNode.view.superview == nil {
                     self.inputMediaNodeBackground.removeAllAnimations()
                     self.inputMediaNodeBackground.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.7).cgColor
-//                    inputPanelView.superview?.layer.insertSublayer(self.inputMediaNodeBackground, below: inputPanelView.layer)
                     inputPanelView.superview?.insertSubview(inputMediaNode.view, belowSubview: inputPanelView)
                 }
                 self.inputMediaNode = inputMediaNode
@@ -241,6 +247,8 @@ final class StoryItemSetContainerSendMessage {
             }
             transition.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
             transition.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeFrame)
+            
+            height = heightAndOverflow.0
         } else if let inputMediaNode = self.inputMediaNode {
             self.inputMediaNode = nil
             
@@ -279,6 +287,8 @@ final class StoryItemSetContainerSendMessage {
                 inputPanelView.activateInput()
             }
         }
+        
+        return height
     }
     
     func animateOut(bounds: CGRect) {
@@ -317,7 +327,25 @@ final class StoryItemSetContainerSendMessage {
         let peer = component.slice.peer
         
         let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-        let controller = component.controller()
+        let controller = component.controller() as? StoryContainerScreen
+        
+        if let navigationController = controller?.navigationController as? NavigationController {
+            var controllers = navigationController.viewControllers
+            for controller in controllers.reversed() {
+                if !(controller is StoryContainerScreen) {
+                    controllers.removeLast()
+                } else {
+                    break
+                }
+            }
+            navigationController.setViewControllers(controllers, animated: true)
+            
+            controller?.window?.forEachController({ controller in
+                if let controller = controller as? StickerPackScreenImpl {
+                    controller.dismiss()
+                }
+            })
+        }
         
         let _ = (component.context.engine.messages.enqueueOutgoingMessage(
             to: peerId,
@@ -344,7 +372,12 @@ final class StoryItemSetContainerSendMessage {
         })
         
         self.currentInputMode = .text
-        view.endEditing(true)
+        if hasFirstResponder(view) {
+            view.endEditing(true)
+        } else {
+            view.state?.updated(transition: .spring(duration: 0.3))
+            controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
+        }
     }
     
     func performSendGifAction(view: StoryItemSetContainerComponent.View, fileReference: FileMediaReference) {
