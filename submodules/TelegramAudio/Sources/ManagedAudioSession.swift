@@ -16,7 +16,7 @@ func managedAudioSessionLog(_ what: @autoclosure () -> String) {
 
 public enum ManagedAudioSessionType: Equatable {
     case ambient
-    case play
+    case play(mixWithOthers: Bool)
     case playWithPossiblePortOverride
     case record(speaker: Bool, withOthers: Bool)
     case voiceCall
@@ -766,23 +766,25 @@ public final class ManagedAudioSession: NSObject {
                 managedAudioSessionLog("ManagedAudioSession setting category for \(type) (native: \(nativeCategory)) activateNow: \(activateNow)")
                 var options: AVAudioSession.CategoryOptions = []
                 switch type {
-                    case .play:
-                        break
-                    case .ambient:
+                case let .play(mixWithOthers):
+                    if mixWithOthers {
                         options.insert(.mixWithOthers)
-                    case .playWithPossiblePortOverride:
-                        if case .playAndRecord = nativeCategory {
-                            options.insert(.allowBluetoothA2DP)
-                        }
-                    case .voiceCall, .videoCall:
-                        options.insert(.allowBluetooth)
+                    }
+                case .ambient:
+                    options.insert(.mixWithOthers)
+                case .playWithPossiblePortOverride:
+                    if case .playAndRecord = nativeCategory {
                         options.insert(.allowBluetoothA2DP)
-                        options.insert(.mixWithOthers)
-                    case .record:
-                        options.insert(.allowBluetooth)
-                    case .recordWithOthers:
-                        options.insert(.allowBluetoothA2DP)
-                        options.insert(.mixWithOthers)
+                    }
+                case .voiceCall, .videoCall:
+                    options.insert(.allowBluetooth)
+                    options.insert(.allowBluetoothA2DP)
+                    options.insert(.mixWithOthers)
+                case .record:
+                    options.insert(.allowBluetooth)
+                case .recordWithOthers:
+                    options.insert(.allowBluetoothA2DP)
+                    options.insert(.mixWithOthers)
                 }
                 managedAudioSessionLog("ManagedAudioSession setting category and options")
                 let mode: AVAudioSession.Mode
@@ -796,11 +798,24 @@ public final class ManagedAudioSession: NSObject {
                     default:
                         mode = .default
                 }
+                
+                switch type {
+                case .play(mixWithOthers: true), .ambient:
+                    try AVAudioSession.sharedInstance().setActive(false)
+                default:
+                    break
+                }
+                
                 try AVAudioSession.sharedInstance().setCategory(nativeCategory, options: options)
                 try AVAudioSession.sharedInstance().setMode(mode)
                 if AVAudioSession.sharedInstance().categoryOptions != options {
-                    managedAudioSessionLog("ManagedAudioSession resetting options")
-                    try AVAudioSession.sharedInstance().setCategory(nativeCategory, options: options)
+                    switch type {
+                    case .voiceCall, .videoCall, .recordWithOthers:
+                        managedAudioSessionLog("ManagedAudioSession resetting options")
+                        try AVAudioSession.sharedInstance().setCategory(nativeCategory, options: options)
+                    default:
+                        break
+                    }
                 }
             } catch let error {
                 managedAudioSessionLog("ManagedAudioSession setup error \(error)")

@@ -319,7 +319,7 @@ public func playSound(context: AccountContext, notificationSoundList: Notificati
         return Signal { subscriber in
             var currentPlayer: AudioPlayerWrapper?
             var deactivateImpl: (() -> Void)?
-            let session = context.sharedContext.mediaManager.audioSession.push(audioSessionType: .play, activate: { _ in
+            let session = context.sharedContext.mediaManager.audioSession.push(audioSessionType: .play(mixWithOthers: true), activate: { _ in
                 Queue.mainQueue().async {
                     let filePath = fileNameForNotificationSound(account: context.account, notificationSoundList: notificationSoundList, sound: sound, defaultSound: defaultSound)
                     

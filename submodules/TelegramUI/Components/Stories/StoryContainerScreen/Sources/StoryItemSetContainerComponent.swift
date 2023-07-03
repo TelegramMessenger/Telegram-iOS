@@ -85,6 +85,8 @@ public final class StoryItemSetContainerComponent: Component {
     public let metrics: LayoutMetrics
     public let deviceMetrics: DeviceMetrics
     public let isProgressPaused: Bool
+    public let isAudioMuted: Bool
+    public let useAmbientMode: Bool
     public let hideUI: Bool
     public let visibilityFraction: CGFloat
     public let isPanning: Bool
@@ -115,6 +117,8 @@ public final class StoryItemSetContainerComponent: Component {
         metrics: LayoutMetrics,
         deviceMetrics: DeviceMetrics,
         isProgressPaused: Bool,
+        isAudioMuted: Bool,
+        useAmbientMode: Bool,
         hideUI: Bool,
         visibilityFraction: CGFloat,
         isPanning: Bool,
@@ -144,6 +148,8 @@ public final class StoryItemSetContainerComponent: Component {
         self.metrics = metrics
         self.deviceMetrics = deviceMetrics
         self.isProgressPaused = isProgressPaused
+        self.isAudioMuted = isAudioMuted
+        self.useAmbientMode = useAmbientMode
         self.hideUI = hideUI
         self.visibilityFraction = visibilityFraction
         self.isPanning = isPanning
@@ -190,6 +196,12 @@ public final class StoryItemSetContainerComponent: Component {
             return false
         }
         if lhs.isProgressPaused != rhs.isProgressPaused {
+            return false
+        }
+        if lhs.isAudioMuted != rhs.isAudioMuted {
+            return false
+        }
+        if lhs.useAmbientMode != rhs.useAmbientMode {
             return false
         }
         if lhs.hideUI != rhs.hideUI {
@@ -612,7 +624,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.state?.updated(transition: .immediate)
         }
         
-        func enterAmbientMode() {
+        func enterAmbientMode(ambient: Bool) {
             guard let component = self.component else {
                 return
             }
@@ -620,7 +632,7 @@ public final class StoryItemSetContainerComponent: Component {
                 return
             }
             if let itemView = visibleItem.view.view as? StoryContentItem.View {
-                itemView.enterAmbientMode()
+                itemView.enterAmbientMode(ambient: ambient)
             }
             
             self.state?.updated(transition: .immediate)
@@ -1034,7 +1046,8 @@ public final class StoryItemSetContainerComponent: Component {
                         component: AnyComponent(StoryItemContentComponent(
                             context: component.context,
                             peer: component.slice.peer,
-                            item: item.storyItem
+                            item: item.storyItem,
+                            useAmbientMode: component.useAmbientMode
                         )),
                         environment: {
                             itemEnvironment
@@ -2197,7 +2210,7 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             let soundImage: String
-            if isSilentVideo || component.storyItemSharedState.useAmbientMode {
+            if isSilentVideo || component.isAudioMuted {
                 soundImage = "Stories/SoundOff"
             } else {
                 soundImage = "Stories/SoundOn"
@@ -2270,7 +2283,7 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
-            if component.slice.item.storyItem.isCloseFriends && component.slice.peer.id != component.context.account.peerId {
+            if component.slice.item.storyItem.isCloseFriends {
                 let closeFriendIcon: ComponentView<Empty>
                 var closeFriendIconTransition = transition
                 if let current = self.closeFriendIcon {
@@ -2296,10 +2309,16 @@ public final class StoryItemSetContainerComponent: Component {
                             guard let closeFriendIconView = self.closeFriendIcon?.view else {
                                 return
                             }
+                            let tooltipText: String
+                            if component.slice.peer.id == component.context.account.peerId {
+                                tooltipText = "Only people from your close friends list will see this story."
+                            } else {
+                                tooltipText = "You are seeing this story because you have\nbeen added to \(component.slice.peer.compactDisplayTitle)'s list of close friends."
+                            }
                             let tooltipScreen = TooltipScreen(
                                 account: component.context.account,
                                 sharedContext: component.context.sharedContext,
-                                text: .plain(text: "You are seeing this story because you have\nbeen added to \(component.slice.peer.compactDisplayTitle)'s list of close friends."), style: .default, location: TooltipScreen.Location.point(closeFriendIconView.convert(closeFriendIconView.bounds, to: self).offsetBy(dx: 1.0, dy: 6.0), .top), displayDuration: .manual, shouldDismissOnTouch: { _, _ in
+                                text: .plain(text: tooltipText), style: .default, location: TooltipScreen.Location.point(closeFriendIconView.convert(closeFriendIconView.bounds, to: self).offsetBy(dx: 1.0, dy: 6.0), .top), displayDuration: .manual, shouldDismissOnTouch: { _, _ in
                                     return .dismiss(consume: true)
                                 }
                             )
@@ -3010,13 +3029,17 @@ public final class StoryItemSetContainerComponent: Component {
             
             let targetController = component.context.sharedContext.makeMyStoriesController(context: component.context, isArchive: false)
             
-            var viewControllers = navigationController.viewControllers
-            if let index = viewControllers.firstIndex(where: { $0 === controller }) {
-                viewControllers.insert(targetController, at: index)
+            if "".isEmpty {
+                navigationController.pushViewController(targetController)
             } else {
-                viewControllers.append(targetController)
+                var viewControllers = navigationController.viewControllers
+                if let index = viewControllers.firstIndex(where: { $0 === controller }) {
+                    viewControllers.insert(targetController, at: index)
+                } else {
+                    viewControllers.append(targetController)
+                }
+                navigationController.setViewControllers(viewControllers, animated: true)
             }
-            navigationController.setViewControllers(viewControllers, animated: true)
         }
         
         func navigateToPeer(peer: EnginePeer, chat: Bool, messageId: EngineMessage.Id? = nil) {
@@ -3038,29 +3061,35 @@ public final class StoryItemSetContainerComponent: Component {
                     guard let controller, let navigationController else {
                         return
                     }
-                    var viewControllers = navigationController.viewControllers
-                    if let index = viewControllers.firstIndex(where: { $0 === controller }) {
-                        viewControllers.insert(chatController, at: index)
+                    if "".isEmpty {
+                        navigationController.pushViewController(chatController)
                     } else {
-                        viewControllers.append(chatController)
+                        var viewControllers = navigationController.viewControllers
+                        if let index = viewControllers.firstIndex(where: { $0 === controller }) {
+                            viewControllers.insert(chatController, at: index)
+                        } else {
+                            viewControllers.append(chatController)
+                        }
+                        navigationController.setViewControllers(viewControllers, animated: animated)
                     }
-                    navigationController.setViewControllers(viewControllers, animated: animated)
                 }))
             } else {
                 guard let chatController = component.context.sharedContext.makePeerInfoController(context: component.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) else {
                     return
                 }
                 
-                var viewControllers = navigationController.viewControllers
-                if let index = viewControllers.firstIndex(where: { $0 === controller }) {
-                    viewControllers.insert(chatController, at: index)
+                if "".isEmpty {
+                    navigationController.pushViewController(chatController)
                 } else {
-                    viewControllers.append(chatController)
+                    var viewControllers = navigationController.viewControllers
+                    if let index = viewControllers.firstIndex(where: { $0 === controller }) {
+                        viewControllers.insert(chatController, at: index)
+                    } else {
+                        viewControllers.append(chatController)
+                    }
+                    navigationController.setViewControllers(viewControllers, animated: true)
                 }
-                navigationController.setViewControllers(viewControllers, animated: true)
             }
-            
-            controller.dismissWithoutTransitionOut()
         }
         
         private func openStoryEditing() {

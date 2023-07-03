@@ -23,7 +23,7 @@ public protocol UniversalVideoContentNode: AnyObject {
     func setSoundEnabled(_ value: Bool)
     func seek(_ timestamp: Double)
     func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd)
-    func continueWithOverridingAmbientMode()
+    func continueWithOverridingAmbientMode(isAmbient: Bool)
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool)
     func continuePlayingWithoutSound(actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd)
     func setContinuePlayingWithoutSoundOnLostAudioSession(_ value: Bool)
@@ -284,10 +284,10 @@ public final class UniversalVideoNode: ASDisplayNode {
         })
     }
     
-    public func continueWithOverridingAmbientMode() {
+    public func continueWithOverridingAmbientMode(isAmbient: Bool) {
         self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
             if let contentNode = contentNode {
-                contentNode.continueWithOverridingAmbientMode()
+                contentNode.continueWithOverridingAmbientMode(isAmbient: isAmbient)
             }
         })
     }

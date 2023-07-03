@@ -2270,25 +2270,28 @@ final class StoryItemSetContainerSendMessage {
                 return
             }
             
-            controller.dismissWithoutTransitionOut()
-            
             switch navigation {
             case let .chat(_, subject, peekData):
                 if let navigationController = controller.navigationController as? NavigationController {
                     if case let .channel(channel) = peerId, channel.flags.contains(.isForum) {
+                        controller.dismissWithoutTransitionOut()
                         component.context.sharedContext.navigateToForumChannel(context: component.context, peerId: peerId.id, navigationController: navigationController)
                     } else {
                         component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peerId), subject: subject, keepStack: .always, peekData: peekData, pushController: { [weak controller, weak navigationController] chatController, animated, completion in
                             guard let controller, let navigationController else {
                                 return
                             }
-                            var viewControllers = navigationController.viewControllers
-                            if let index = viewControllers.firstIndex(where: { $0 === controller }) {
-                                viewControllers.insert(chatController, at: index)
+                            if "".isEmpty {
+                                navigationController.pushViewController(chatController)
                             } else {
-                                viewControllers.append(chatController)
+                                var viewControllers = navigationController.viewControllers
+                                if let index = viewControllers.firstIndex(where: { $0 === controller }) {
+                                    viewControllers.insert(chatController, at: index)
+                                } else {
+                                    viewControllers.append(chatController)
+                                }
+                                navigationController.setViewControllers(viewControllers, animated: animated)
                             }
-                            navigationController.setViewControllers(viewControllers, animated: animated)
                         }))
                     }
                 }
