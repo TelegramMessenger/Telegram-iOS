@@ -72,7 +72,7 @@ swift_library(
         "//submodules/TinyThumbnail",
         "//submodules/ImageBlur",
         "//submodules/StickerPackPreviewUI",
-                        
+        "//submodules/Components/AnimatedStickerComponent",
     ],
     visibility = [
         "//visibility:public",

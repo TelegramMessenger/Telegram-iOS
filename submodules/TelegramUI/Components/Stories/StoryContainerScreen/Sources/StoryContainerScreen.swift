@@ -33,6 +33,7 @@ func hasFirstResponder(_ view: UIView) -> Bool {
 }
 
 private final class StoryLongPressRecognizer: UILongPressGestureRecognizer {
+    var shouldBegin: ((UITouch) -> Bool)?
     var updateIsTracking: ((Bool) -> Void)?
     
     override var state: UIGestureRecognizer.State {
@@ -50,10 +51,12 @@ private final class StoryLongPressRecognizer: UILongPressGestureRecognizer {
     }
     
     private var isTracking: Bool = false
+    private var isValidated: Bool = false
     
     override func reset() {
         super.reset()
         
+        self.isValidated = false
         if self.isTracking {
             self.isTracking = false
             self.updateIsTracking?(false)
@@ -61,11 +64,21 @@ private final class StoryLongPressRecognizer: UILongPressGestureRecognizer {
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
-        super.touchesBegan(touches, with: event)
+        if !self.isValidated, let touch = touches.first {
+            if let shouldBegin = self.shouldBegin, shouldBegin(touch) {
+                self.isValidated = true
+            } else {
+                return
+            }
+        }
         
-        if !self.isTracking {
-            self.isTracking = true
-            self.updateIsTracking?(true)
+        if self.isValidated {
+            super.touchesBegan(touches, with: event)
+            
+            if !self.isTracking {
+                self.isTracking = true
+                self.updateIsTracking?(true)
+            }
         }
     }
 }
@@ -153,9 +166,8 @@ private final class StoryContainerScreenComponent: Component {
             self.didBegin = didBegin
         }
     }
-    
 
-    final class View: UIView, UIScrollViewDelegate, UIGestureRecognizerDelegate {
+    final class View: UIView, UIGestureRecognizerDelegate {
         private var component: StoryContainerScreenComponent?
         private weak var state: EmptyComponentState?
         private var environment: ViewControllerComponentContainer.Environment?
@@ -189,6 +201,8 @@ private final class StoryContainerScreenComponent: Component {
         private var didAnimateOut: Bool = false
         
         var dismissWithoutTransitionOut: Bool = false
+        
+        var longPressRecognizer: StoryLongPressRecognizer?
         
         override init(frame: CGRect) {
             self.backgroundLayer = SimpleLayer()
@@ -236,7 +250,7 @@ private final class StoryContainerScreenComponent: Component {
                         return []
                     }
                 }
-                if !itemSetComponentView.allowsInteractiveGestures() {
+                if !itemSetComponentView.allowsVerticalPanGesture() {
                     return []
                 }
                 
@@ -253,6 +267,19 @@ private final class StoryContainerScreenComponent: Component {
                 self.isHoldingTouch = isTracking
                 self.state?.updated(transition: .immediate)
             }
+            longPressRecognizer.shouldBegin = { [weak self] touch in
+                guard let self else {
+                    return false
+                }
+                guard let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View else {
+                    return false
+                }
+                if !itemSetComponentView.isPointInsideContentArea(point: touch.location(in: itemSetComponentView)) {
+                    return false
+                }
+                return true
+            }
+            self.longPressRecognizer = longPressRecognizer
             self.addGestureRecognizer(longPressRecognizer)
             
             let pinchRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(self.pinchGesture(_:)))
@@ -406,7 +433,7 @@ private final class StoryContainerScreenComponent: Component {
         @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
             switch recognizer.state {
             case .began:
-                print("began: \(CFAbsoluteTimeGetCurrent())")
+                //print("began: \(CFAbsoluteTimeGetCurrent())")
                 self.beginHorizontalPan(translation: recognizer.translation(in: self))
             case .changed:
                 self.updateHorizontalPan(translation: recognizer.translation(in: self))
@@ -450,7 +477,7 @@ private final class StoryContainerScreenComponent: Component {
                     self.verticalPanState = nil
                     var updateState = true
                     
-                    if translation.y > 200.0 || (translation.y > 100.0 && velocity.y > 200.0) {
+                    if translation.y > 200.0 || (translation.y > 5.0 && velocity.y > 200.0) {
                         self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
                         self.environment?.controller()?.dismiss()
                     } else if translation.y < -200.0 || (translation.y < -100.0 && velocity.y < -100.0) {

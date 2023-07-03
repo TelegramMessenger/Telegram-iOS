@@ -1669,6 +1669,56 @@ public final class EngineStoryViewListContext {
                                 }
                             }
                             
+                            if let storedItem = transaction.getStory(id: StoryId(peerId: account.peerId, id: storyId))?.get(Stories.StoredItem.self), case let .item(item) = storedItem, let currentViews = item.views {
+                                let updatedItem: Stories.StoredItem = .item(Stories.Item(
+                                    id: item.id,
+                                    timestamp: item.timestamp,
+                                    expirationTimestamp: item.expirationTimestamp,
+                                    media: item.media,
+                                    text: item.text,
+                                    entities: item.entities,
+                                    views: Stories.Item.Views(seenCount: Int(count), seenPeerIds: currentViews.seenPeerIds),
+                                    privacy: item.privacy,
+                                    isPinned: item.isPinned,
+                                    isExpired: item.isExpired,
+                                    isPublic: item.isPublic,
+                                    isCloseFriends: item.isCloseFriends,
+                                    isForwardingDisabled: item.isForwardingDisabled,
+                                    isEdited: item.isEdited
+                                ))
+                                if let entry = CodableEntry(updatedItem) {
+                                    transaction.setStory(id: StoryId(peerId: account.peerId, id: storyId), value: entry)
+                                }
+                            }
+                            
+                            var currentItems = transaction.getStoryItems(peerId: account.peerId)
+                            for i in 0 ..< currentItems.count {
+                                if currentItems[i].id == storyId {
+                                    if case let .item(item) = currentItems[i].value.get(Stories.StoredItem.self), let currentViews = item.views {
+                                        let updatedItem: Stories.StoredItem = .item(Stories.Item(
+                                            id: item.id,
+                                            timestamp: item.timestamp,
+                                            expirationTimestamp: item.expirationTimestamp,
+                                            media: item.media,
+                                            text: item.text,
+                                            entities: item.entities,
+                                            views: Stories.Item.Views(seenCount: Int(count), seenPeerIds: currentViews.seenPeerIds),
+                                            privacy: item.privacy,
+                                            isPinned: item.isPinned,
+                                            isExpired: item.isExpired,
+                                            isPublic: item.isPublic,
+                                            isCloseFriends: item.isCloseFriends,
+                                            isForwardingDisabled: item.isForwardingDisabled,
+                                            isEdited: item.isEdited
+                                        ))
+                                        if let entry = CodableEntry(updatedItem) {
+                                            currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp)
+                                        }
+                                    }
+                                }
+                            }
+                            transaction.setStoryItems(peerId: account.peerId, items: currentItems)
+                            
                             return InternalState(totalCount: Int(count), items: items, canLoadMore: nextOffset != nil, nextOffset: nextOffset)
                         case .none:
                             return InternalState(totalCount: 0, items: [], canLoadMore: false, nextOffset: nil)

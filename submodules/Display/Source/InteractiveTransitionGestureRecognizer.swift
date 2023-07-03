@@ -75,6 +75,7 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         super.init(target: target, action: action)
         
         self.maximumNumberOfTouches = 1
+        self.delaysTouchesBegan = false
     }
     
     override public func reset() {
@@ -136,7 +137,9 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         
         let size = self.view?.bounds.size ?? CGSize()
         
-        print("moved: \(CFAbsoluteTimeGetCurrent()) absTranslationX: \(absTranslationX) absTranslationY: \(absTranslationY)")
+        //print("moved: \(CFAbsoluteTimeGetCurrent()) absTranslationX: \(absTranslationX) absTranslationY: \(absTranslationY)")
+        
+        var fireBegan = false
         
         if self.currentAllowedDirections.contains(.down) {
             if !self.validatedGesture {
@@ -177,12 +180,18 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
                     self.state = .failed
                 } else if absTranslationX > 2.0 && absTranslationY * 2.0 < absTranslationX {
                     self.validatedGesture = true
+                    fireBegan = true
                 }
             }
         }
         
         if self.validatedGesture {
             super.touchesMoved(touches, with: event)
+            if fireBegan {
+                if self.state == .possible {
+                    self.state = .began
+                }
+            }
         }
     }
 }

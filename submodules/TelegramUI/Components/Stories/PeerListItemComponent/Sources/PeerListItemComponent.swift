@@ -13,6 +13,7 @@ import CheckNode
 import TelegramStringFormatting
 import AppBundle
 import PeerPresenceStatusManager
+import EmojiStatusComponent
 
 private let avatarFont = avatarPlaceholderFont(size: 15.0)
 private let readIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuReadIcon"), color: .white)?.withRenderingMode(.alwaysTemplate)
@@ -132,6 +133,7 @@ public final class PeerListItemComponent: Component {
         private let label = ComponentView<Empty>()
         private let separatorLayer: SimpleLayer
         private let avatarNode: AvatarNode
+        private var avatarIcon: ComponentView<Empty>?
         
         private var iconView: UIImageView?
         private var checkLayer: CheckLayer?
@@ -316,6 +318,8 @@ public final class PeerListItemComponent: Component {
             } else {
                 transition.setFrame(layer: self.avatarNode.layer, frame: avatarFrame)
             }
+            
+            var statusIcon: EmojiStatusComponent.Content?
             if let peer = component.peer {
                 let clipStyle: AvatarNodeClipStyle
                 if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
@@ -324,6 +328,18 @@ public final class PeerListItemComponent: Component {
                     clipStyle = .round
                 }
                 self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, clipStyle: clipStyle, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
+                
+                if peer.isScam {
+                    statusIcon = .text(color: component.theme.chat.message.incoming.scamColor, string: component.strings.Message_ScamAccount.uppercased())
+                } else if peer.isFake {
+                    statusIcon = .text(color: component.theme.chat.message.incoming.scamColor, string: component.strings.Message_FakeAccount.uppercased())
+                } else if case let .user(user) = peer, let emojiStatus = user.emojiStatus {
+                    statusIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: component.theme.list.mediaPlaceholderColor, themeColor: component.theme.list.itemAccentColor, loopMode: .count(2))
+                } else if peer.isVerified {
+                    statusIcon = .verified(fillColor: component.theme.list.itemCheckColors.fillColor, foregroundColor: component.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
+                } else if peer.isPremium {
+                    statusIcon = .premium(color: component.theme.list.itemAccentColor)
+                }
             }
             
             let labelSize = self.label.update(
@@ -350,7 +366,7 @@ public final class PeerListItemComponent: Component {
                 containerSize: CGSize(width: availableSize.width - leftInset - rightInset, height: 100.0)
             )
             
-            let titleSpacing: CGFloat = 1.0
+            let titleSpacing: CGFloat = 2.0
             let centralContentHeight: CGFloat
             if labelSize.height > 0.0, case .generic = component.style {
                 centralContentHeight = titleSize.height + labelSize.height + titleSpacing
@@ -358,7 +374,7 @@ public final class PeerListItemComponent: Component {
                 centralContentHeight = titleSize.height
             }
             
-            let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((height - verticalInset * 2.0 - centralContentHeight) / 2.0)), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: -1.0 + floor((height - verticalInset * 2.0 - centralContentHeight) / 2.0)), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     titleView.isUserInteractionEnabled = false
@@ -417,6 +433,48 @@ public final class PeerListItemComponent: Component {
                 }
                 
                 transition.setFrame(view: labelView, frame: labelFrame)
+            }
+            
+            if let statusIcon {
+                let animationCache = component.context.animationCache
+                let animationRenderer = component.context.animationRenderer
+                
+                let avatarIcon: ComponentView<Empty>
+                var avatarIconTransition = transition
+                if let current = self.avatarIcon {
+                    avatarIcon = current
+                } else {
+                    avatarIconTransition = transition.withAnimation(.none)
+                    avatarIcon = ComponentView<Empty>()
+                    self.avatarIcon = avatarIcon
+                }
+                
+                let avatarIconComponent = EmojiStatusComponent(
+                    context: component.context,
+                    animationCache: animationCache,
+                    animationRenderer: animationRenderer,
+                    content: statusIcon,
+                    isVisibleForAnimations: true,
+                    action: nil,
+                    emojiFileUpdated: nil
+                )
+                let iconSize = avatarIcon.update(
+                    transition: avatarIconTransition,
+                    component: AnyComponent(avatarIconComponent),
+                    environment: {},
+                    containerSize: CGSize(width: 20.0, height: 20.0)
+                )
+                
+                if let avatarIconView = avatarIcon.view {
+                    if avatarIconView.superview == nil {
+                        avatarIconView.isUserInteractionEnabled = false
+                        self.containerButton.addSubview(avatarIconView)
+                    }
+                    avatarIconTransition.setFrame(view: avatarIconView, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0)), size: iconSize))
+                }
+            } else if let avatarIcon = self.avatarIcon {
+                self.avatarIcon = nil
+                avatarIcon.view?.removeFromSuperview()
             }
             
             if themeUpdated {

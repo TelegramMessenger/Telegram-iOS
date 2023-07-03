@@ -398,7 +398,7 @@ public final class StoryContentContextImpl: StoryContentContext {
     private var requestStoryDisposables = DisposableSet()
     
     private var preloadStoryResourceDisposables: [MediaId: Disposable] = [:]
-    private var pollStoryMetadataDisposables = DisposableSet()
+    private var pollStoryMetadataDisposables: [StoryId: Disposable] = [:]
     
     private var singlePeerListContext: PeerExpiringStoryListContext?
     
@@ -615,7 +615,9 @@ public final class StoryContentContextImpl: StoryContentContext {
         for (_, disposable) in self.preloadStoryResourceDisposables {
             disposable.dispose()
         }
-        self.pollStoryMetadataDisposables.dispose()
+        for (_, disposable) in self.pollStoryMetadataDisposables {
+            disposable.dispose()
+        }
         self.storySubscriptionsDisposable?.dispose()
     }
     
@@ -805,7 +807,11 @@ public final class StoryContentContextImpl: StoryContentContext {
             }
         }
         for (peerId, ids) in pollIdByPeerId {
-            self.pollStoryMetadataDisposables.add(self.context.engine.messages.refreshStoryViews(peerId: peerId, ids: ids).start())
+            for id in ids {
+                if self.pollStoryMetadataDisposables[StoryId(peerId: peerId, id: id)] == nil {
+                    self.pollStoryMetadataDisposables[StoryId(peerId: peerId, id: id)] = self.context.engine.messages.refreshStoryViews(peerId: peerId, ids: ids).start()
+                }
+            }
         }
     }
     
