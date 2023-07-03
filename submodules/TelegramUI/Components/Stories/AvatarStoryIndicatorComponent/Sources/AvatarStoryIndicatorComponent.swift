@@ -107,25 +107,15 @@ public final class AvatarStoryIndicatorComponent: Component {
                 let inactiveColors: [CGColor]
                 
                 if component.hasUnseenCloseFriendsItems {
-                    activeColors = [
-                        UIColor(rgb: 0x7CD636).cgColor,
-                        UIColor(rgb: 0x26B470).cgColor
-                    ]
+                    activeColors = [component.theme.chatList.storyUnseenPrivateColors.topColor.cgColor, component.theme.chatList.storyUnseenPrivateColors.bottomColor.cgColor]
                 } else {
-                    activeColors = [
-                        UIColor(rgb: 0x34C76F).cgColor,
-                        UIColor(rgb: 0x3DA1FD).cgColor
-                    ]
+                    activeColors = [component.theme.chatList.storyUnseenColors.topColor.cgColor, component.theme.chatList.storyUnseenColors.bottomColor.cgColor]
                 }
                 
                 if component.isGlassBackground {
                     inactiveColors = [UIColor(white: 1.0, alpha: 0.2).cgColor, UIColor(white: 1.0, alpha: 0.2).cgColor]
                 } else {
-                    if component.theme.overallDarkAppearance {
-                        inactiveColors = [component.theme.rootController.tabBar.textColor.cgColor, component.theme.rootController.tabBar.textColor.cgColor]
-                    } else {
-                        inactiveColors = [UIColor(rgb: 0xD8D8E1).cgColor, UIColor(rgb: 0xD8D8E1).cgColor]
-                    }
+                    inactiveColors = [component.theme.chatList.storySeenColors.topColor.cgColor, component.theme.chatList.storySeenColors.bottomColor.cgColor]
                 }
                 
                 var locations: [CGFloat] = [0.0, 1.0]

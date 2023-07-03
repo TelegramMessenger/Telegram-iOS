@@ -341,30 +341,11 @@ public final class StorySetIndicatorComponent: Component {
             let effectiveItemsWidth: CGFloat = outerDiameter * 0.5 + CGFloat(max(0, items.count - 1)) * (outerDiameter - overflow) + outerDiameter * 0.5
             
             let borderColors: [UInt32]
-            if component.theme.overallDarkAppearance {
-                if component.hasUnseen {
-                    borderColors = [
-                        0xFF34C76F,
-                        0xFF3DA1FD
-                    ]
-                } else {
-                    borderColors = [
-                        UIColor(white: 1.0, alpha: 0.3).argb,
-                        UIColor(white: 1.0, alpha: 0.3).argb
-                    ]
-                }
+            
+            if component.hasUnseen {
+                borderColors = [component.theme.chatList.storyUnseenColors.topColor.argb, component.theme.chatList.storyUnseenColors.bottomColor.argb]
             } else {
-                if component.hasUnseen {
-                    borderColors = [
-                        0xFF34C76F,
-                        0xFF3DA1FD
-                    ]
-                } else {
-                    borderColors = [
-                        UIColor(white: 1.0, alpha: 0.3).argb,
-                        UIColor(white: 1.0, alpha: 0.3).argb
-                    ]
-                }
+                borderColors = [component.theme.chatList.storySeenColors.topColor.argb, component.theme.chatList.storySeenColors.bottomColor.argb]
             }
             
             let imageSize = CGSize(width: maxItemsWidth, height: outerDiameter)

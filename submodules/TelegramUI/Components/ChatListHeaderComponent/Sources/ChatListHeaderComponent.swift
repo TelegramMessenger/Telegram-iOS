@@ -947,7 +947,7 @@ public final class ChatListHeaderComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width, height: 94.0)
+                    containerSize: CGSize(width: availableSize.width, height: ChatListNavigationBar.storiesScrollHeight)
                 )
             }
             
@@ -1031,7 +1031,7 @@ public final class ChatListHeaderComponent: Component {
                 }
                 
                 //let storyPeerListMinOffset: CGFloat = -7.0
-                let storyPeerListMaxOffset: CGFloat = availableSize.height + 8.0
+                let storyPeerListMaxOffset: CGFloat = availableSize.height + 2.0
                 
                 //let storyPeerListPosition: CGFloat = storyPeerListMinOffset * (1.0 - component.storiesFraction) + storyPeerListMaxOffset * component.storiesFraction
                 

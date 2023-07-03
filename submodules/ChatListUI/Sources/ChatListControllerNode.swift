@@ -944,7 +944,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                     if value > 4.0 {
                         self.currentItemNode.startedScrollingAtUpperBound = false
                         self.tempTopInset = 0.0
-                    } else if value <= -94.0 {
+                    } else if value <= -ChatListNavigationBar.storiesScrollHeight {
                     } else if value > -82.0 {
                     }
                 } else if case .unknown = offset {
@@ -958,7 +958,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                 return
             }
             let tempTopInset: CGFloat
-            if self.currentItemNode.startedScrollingAtUpperBound {
+            if self.currentItemNode.startedScrollingAtUpperBound && !self.isInlineMode {
                 if let storySubscriptions = self.controller?.orderedStorySubscriptions, (shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions) || true) {
                     tempTopInset = ChatListNavigationBar.storiesScrollHeight
                 } else {
@@ -2063,10 +2063,12 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             return
         }
         
-        if let storySubscriptions = self.controller?.orderedStorySubscriptions, (shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions) || true) {
+        if let storySubscriptions = self.controller?.orderedStorySubscriptions {
+            let _ = storySubscriptions
+        
             self.tempAllowAvatarExpansion = true
             self.tempDisableStoriesAnimations = !animated
-            self.tempNavigationScrollingTransition = animated ? .animated(duration: 0.3, curve: .spring) : .immediate
+            self.tempNavigationScrollingTransition = animated ? .animated(duration: 0.3, curve: .custom(0.33, 0.52, 0.25, 0.99)) : .immediate
             self.mainContainerNode.scrollToTop(animated: animated, adjustForTempInset: true)
             self.tempAllowAvatarExpansion = false
             self.tempDisableStoriesAnimations = false
