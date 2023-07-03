@@ -2236,7 +2236,7 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
-            if component.slice.item.storyItem.isCloseFriends && component.slice.peer.id != component.context.account.peerId {
+            if component.slice.item.storyItem.isCloseFriends {
                 let closeFriendIcon: ComponentView<Empty>
                 var closeFriendIconTransition = transition
                 if let current = self.closeFriendIcon {
@@ -2262,10 +2262,16 @@ public final class StoryItemSetContainerComponent: Component {
                             guard let closeFriendIconView = self.closeFriendIcon?.view else {
                                 return
                             }
+                            let tooltipText: String
+                            if component.slice.peer.id == component.context.account.peerId {
+                                tooltipText = "Only people from your close friends list will see this story."
+                            } else {
+                                tooltipText = "You are seeing this story because you have\nbeen added to \(component.slice.peer.compactDisplayTitle)'s list of close friends."
+                            }
                             let tooltipScreen = TooltipScreen(
                                 account: component.context.account,
                                 sharedContext: component.context.sharedContext,
-                                text: .plain(text: "You are seeing this story because you have\nbeen added to \(component.slice.peer.compactDisplayTitle)'s list of close friends."), style: .default, location: TooltipScreen.Location.point(closeFriendIconView.convert(closeFriendIconView.bounds, to: self).offsetBy(dx: 1.0, dy: 6.0), .top), displayDuration: .manual, shouldDismissOnTouch: { _, _ in
+                                text: .plain(text: tooltipText), style: .default, location: TooltipScreen.Location.point(closeFriendIconView.convert(closeFriendIconView.bounds, to: self).offsetBy(dx: 1.0, dy: 6.0), .top), displayDuration: .manual, shouldDismissOnTouch: { _, _ in
                                     return .dismiss(consume: true)
                                 }
                             )

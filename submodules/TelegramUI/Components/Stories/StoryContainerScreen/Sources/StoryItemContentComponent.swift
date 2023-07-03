@@ -138,6 +138,7 @@ final class StoryItemContentComponent: Component {
                             loopVideo: true,
                             enableSound: true,
                             beginWithAmbientSound: environment.sharedState.useAmbientMode,
+                            mixWithOthers: true,
                             useLargeThumbnail: false,
                             autoFetchFullSizeThumbnail: false,
                             tempFilePath: nil,
