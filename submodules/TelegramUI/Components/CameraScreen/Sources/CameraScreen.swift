@@ -1912,8 +1912,7 @@ public class CameraScreen: ViewController {
             }
             
             let additionalPreviewInnerSize = previewFrame.size.aspectFilled(CGSize(width: circleSide, height: circleSide))
-            let additionalPreviewInnerFrame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((circleSide - additionalPreviewInnerSize.height) / 2.0)), size: additionalPreviewInnerSize)
-            
+    
             let additionalPreviewFrame = CGRect(origin: CGPoint(x: origin.x - circleSide / 2.0, y: origin.y - circleSide / 2.0), size: CGSize(width: circleSide, height: circleSide))
             
             transition.setPosition(view: self.additionalPreviewContainerView, position: additionalPreviewFrame.center)
@@ -1931,15 +1930,22 @@ public class CameraScreen: ViewController {
                 }
             }
             
+            var mainPreviewInnerSize = previewFrame.size
+            
             let mainPreviewView: CameraSimplePreviewView
             let additionalPreviewView: CameraSimplePreviewView
             if self.cameraPosition == .front && self.isDualCamEnabled {
                 mainPreviewView = self.additionalPreviewView
                 additionalPreviewView = self.mainPreviewView
+                
+                mainPreviewInnerSize = CGSize(width: floorToScreenPixels(mainPreviewInnerSize.height / 3.0 * 4.0), height: mainPreviewInnerSize.height)
             } else {
                 mainPreviewView = self.mainPreviewView
                 additionalPreviewView = self.additionalPreviewView
             }
+            
+            let mainPreviewInnerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((previewSize.width - mainPreviewInnerSize.width) / 2.0), y: floorToScreenPixels((previewSize.height - mainPreviewInnerSize.height) / 2.0)), size: mainPreviewInnerSize)
+            let additionalPreviewInnerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((circleSide - additionalPreviewInnerSize.width) / 2.0), y: floorToScreenPixels((circleSide - additionalPreviewInnerSize.height) / 2.0)), size: additionalPreviewInnerSize)
             
             if mainPreviewView.superview != self.mainPreviewContainerView {
                 self.mainPreviewContainerView.insertSubview(mainPreviewView, at: 0)
@@ -1948,7 +1954,7 @@ public class CameraScreen: ViewController {
                 self.additionalPreviewContainerView.insertSubview(additionalPreviewView, at: 0)
             }
             
-            mainPreviewView.frame = CGRect(origin: .zero, size: previewFrame.size)
+            mainPreviewView.frame = mainPreviewInnerFrame
             additionalPreviewView.frame = additionalPreviewInnerFrame
                               
             self.previewFrameLeftDimView.isHidden = !isTablet
