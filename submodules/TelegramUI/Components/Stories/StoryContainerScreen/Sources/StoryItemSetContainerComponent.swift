@@ -2973,13 +2973,17 @@ public final class StoryItemSetContainerComponent: Component {
             
             let targetController = component.context.sharedContext.makeMyStoriesController(context: component.context, isArchive: false)
             
-            var viewControllers = navigationController.viewControllers
-            if let index = viewControllers.firstIndex(where: { $0 === controller }) {
-                viewControllers.insert(targetController, at: index)
+            if "".isEmpty {
+                navigationController.pushViewController(targetController)
             } else {
-                viewControllers.append(targetController)
+                var viewControllers = navigationController.viewControllers
+                if let index = viewControllers.firstIndex(where: { $0 === controller }) {
+                    viewControllers.insert(targetController, at: index)
+                } else {
+                    viewControllers.append(targetController)
+                }
+                navigationController.setViewControllers(viewControllers, animated: true)
             }
-            navigationController.setViewControllers(viewControllers, animated: true)
         }
         
         func navigateToPeer(peer: EnginePeer, chat: Bool, messageId: EngineMessage.Id? = nil) {
@@ -3001,29 +3005,35 @@ public final class StoryItemSetContainerComponent: Component {
                     guard let controller, let navigationController else {
                         return
                     }
-                    var viewControllers = navigationController.viewControllers
-                    if let index = viewControllers.firstIndex(where: { $0 === controller }) {
-                        viewControllers.insert(chatController, at: index)
+                    if "".isEmpty {
+                        navigationController.pushViewController(chatController)
                     } else {
-                        viewControllers.append(chatController)
+                        var viewControllers = navigationController.viewControllers
+                        if let index = viewControllers.firstIndex(where: { $0 === controller }) {
+                            viewControllers.insert(chatController, at: index)
+                        } else {
+                            viewControllers.append(chatController)
+                        }
+                        navigationController.setViewControllers(viewControllers, animated: animated)
                     }
-                    navigationController.setViewControllers(viewControllers, animated: animated)
                 }))
             } else {
                 guard let chatController = component.context.sharedContext.makePeerInfoController(context: component.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) else {
                     return
                 }
                 
-                var viewControllers = navigationController.viewControllers
-                if let index = viewControllers.firstIndex(where: { $0 === controller }) {
-                    viewControllers.insert(chatController, at: index)
+                if "".isEmpty {
+                    navigationController.pushViewController(chatController)
                 } else {
-                    viewControllers.append(chatController)
+                    var viewControllers = navigationController.viewControllers
+                    if let index = viewControllers.firstIndex(where: { $0 === controller }) {
+                        viewControllers.insert(chatController, at: index)
+                    } else {
+                        viewControllers.append(chatController)
+                    }
+                    navigationController.setViewControllers(viewControllers, animated: true)
                 }
-                navigationController.setViewControllers(viewControllers, animated: true)
             }
-            
-            controller.dismissWithoutTransitionOut()
         }
         
         private func openStoryEditing() {

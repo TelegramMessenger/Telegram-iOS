@@ -14,6 +14,7 @@ import ChatPresentationInterfaceState
 import AttachmentUI
 import ForumCreateTopicScreen
 import LegacyInstantVideoController
+import StoryContainerScreen
 
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
     if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
@@ -149,12 +150,16 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
         }
         let resolvedKeepStack: Bool
         switch params.keepStack {
-            case .default:
-                resolvedKeepStack = params.context.sharedContext.immediateExperimentalUISettings.keepChatNavigationStack
-            case .always:
+        case .default:
+            if params.navigationController.viewControllers.contains(where: { $0 is StoryContainerScreen }) {
                 resolvedKeepStack = true
-            case .never:
-                resolvedKeepStack = false
+            } else {
+                resolvedKeepStack = params.context.sharedContext.immediateExperimentalUISettings.keepChatNavigationStack
+            }
+        case .always:
+            resolvedKeepStack = true
+        case .never:
+            resolvedKeepStack = false
         }
         if resolvedKeepStack {
             if let pushController = params.pushController {

@@ -1320,6 +1320,7 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
     
     deinit {
         self.context.sharedContext.hasPreloadBlockingContent.set(.single(false))
+        self.focusedItemPromise.set(.single(nil))
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
