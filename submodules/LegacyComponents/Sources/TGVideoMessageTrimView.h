@@ -12,4 +12,6 @@
 - (void)setTrimming:(bool)trimming animated:(bool)animated;
 - (void)setLeftHandleImage:(UIImage *)leftHandleImage rightHandleImage:(UIImage *)rightHandleImage;
 
+- (instancetype)initWithFrame:(CGRect)frame forStory:(bool)forStory;
+
 @end

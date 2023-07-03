@@ -1,10 +1,11 @@
 #import <UIKit/UIKit.h>
 #import <LegacyComponents/TGVideoMessageScrubber.h>
+#import <LegacyComponents/TGPhotoEditorSparseView.h>
 
 @class TGVideoMessageCaptureControllerAssets;
 @class TGModernConversationInputMicPallete;
 
-@interface TGVideoMessageControls : UIView
+@interface TGVideoMessageControls : TGPhotoEditorSparseView
 
 @property (nonatomic, readonly) TGVideoMessageScrubber *scrubberView;
 
@@ -23,7 +24,7 @@
 
 @property (nonatomic, weak) id<TGVideoMessageScrubberDelegate, TGVideoMessageScrubberDataSource> parent;
 
-- (instancetype)initWithFrame:(CGRect)frame assets:(TGVideoMessageCaptureControllerAssets *)assets slowmodeTimestamp:(int32_t)slowmodeTimestamp slowmodeView:(UIView *(^)(void))slowmodeView;
+- (instancetype)initWithFrame:(CGRect)frame forStory:(bool)forStory assets:(TGVideoMessageCaptureControllerAssets *)assets slowmodeTimestamp:(int32_t)slowmodeTimestamp slowmodeView:(UIView *(^)(void))slowmodeView;
 
 - (void)captureStarted;
 - (void)recordingStarted;

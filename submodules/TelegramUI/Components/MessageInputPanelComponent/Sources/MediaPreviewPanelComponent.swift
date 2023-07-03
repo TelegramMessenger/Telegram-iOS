@@ -120,9 +120,7 @@ public final class MediaPreviewPanelComponent: Component {
         public let vibrancyContainer: UIView
         
         private let trackingLayer: HierarchyTrackingLayer
-        
-        private let indicator = ComponentView<Empty>()
-        
+                
         private let timerFont: UIFont
         private let timerText = ComponentView<Empty>()
         

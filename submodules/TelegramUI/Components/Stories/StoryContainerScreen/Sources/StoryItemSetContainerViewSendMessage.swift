@@ -59,6 +59,10 @@ final class StoryItemSetContainerSendMessage {
     var audioRecorder = Promise<ManagedAudioRecorder?>()
     var recordedAudioPreview: ChatRecordedMediaPreview?
     
+    var videoRecorderValue: InstantVideoController?
+    var videoRecorder = Promise<InstantVideoController?>()
+    var hasRecordedVideoPreview = false
+    
     var inputMediaNodeData: ChatEntityKeyboardInputNode.InputData?
     var inputMediaNodeDataDisposable: Disposable?
     var inputMediaNodeStateContext = ChatEntityKeyboardInputNode.StateContext()
@@ -66,9 +70,6 @@ final class StoryItemSetContainerSendMessage {
     var inputMediaNode: ChatEntityKeyboardInputNode?
     var inputMediaNodeBackground = SimpleLayer()
     
-    var videoRecorderValue: InstantVideoController?
-    var tempVideoRecorderValue: InstantVideoController?
-    var videoRecorder = Promise<InstantVideoController?>()
     let controllerNavigationDisposable = MetaDisposable()
     let enqueueMediaMessageDisposable = MetaDisposable()
     let navigationActionDisposable = MetaDisposable()
@@ -451,6 +452,11 @@ final class StoryItemSetContainerSendMessage {
             let _ = enqueueMessages(account: component.context.account, peerId: peerId, messages: messages).start()
             
             view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+        } else if self.hasRecordedVideoPreview, let videoRecorderValue = self.videoRecorderValue {
+            videoRecorderValue.send()
+            self.hasRecordedVideoPreview = false
+            self.videoRecorder.set(.single(nil))
+            view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
         } else {
             switch inputPanelView.getSendMessageInput() {
             case let .text(text):
@@ -515,7 +521,7 @@ final class StoryItemSetContainerSendMessage {
                 if isVideo {
                     if self.videoRecorderValue == nil {
                         if let currentInputPanelFrame = view.inputPanel.view?.frame {
-                            self.videoRecorder.set(.single(legacyInstantVideoController(theme: component.theme, panelFrame: view.convert(currentInputPanelFrame, to: nil), context: component.context, peerId: peer.id, slowmodeState: nil, hasSchedule: true, send: { [weak self, weak view] videoController, message in
+                            self.videoRecorder.set(.single(legacyInstantVideoController(theme: defaultDarkPresentationTheme, forStory: true, panelFrame: view.convert(currentInputPanelFrame, to: nil), context: component.context, peerId: peer.id, slowmodeState: nil, hasSchedule: true, send: { [weak self, weak view] videoController, message in
                                 guard let self, let view, let component = view.component else {
                                     return
                                 }
@@ -599,8 +605,16 @@ final class StoryItemSetContainerSendMessage {
                         }
                     })
                 } else if let videoRecorderValue = self.videoRecorderValue {
-                    let _ = videoRecorderValue
-                    self.videoRecorder.set(.single(nil))
+                    self.wasRecordingDismissed = !sendAction
+                    
+                    if sendAction {
+                        videoRecorderValue.completeVideo()
+                    } else {
+                        self.videoRecorder.set(.single(nil))
+                    }
+                    self.hasRecordedVideoPreview = false
+                    
+                    view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
                 }
             }
         })
@@ -633,11 +647,8 @@ final class StoryItemSetContainerSendMessage {
             })
         } else if let videoRecorderValue = self.videoRecorderValue {
             if videoRecorderValue.stopVideo() {
-                /*self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                    $0.updatedInputTextPanelState { panelState in
-                        return panelState.withUpdatedMediaRecordingState(.video(status: .editing, isLocked: false))
-                    }
-                })*/
+                self.hasRecordedVideoPreview = true
+                view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
             } else {
                 self.videoRecorder.set(.single(nil))
             }
@@ -647,6 +658,11 @@ final class StoryItemSetContainerSendMessage {
     func discardMediaRecordingPreview(view: StoryItemSetContainerComponent.View) {
         if self.recordedAudioPreview != nil {
             self.recordedAudioPreview = nil
+            self.wasRecordingDismissed = true
+            view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+        } else if self.hasRecordedVideoPreview {
+            self.videoRecorder.set(.single(nil))
+            self.hasRecordedVideoPreview = false
             self.wasRecordingDismissed = true
             view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
         }

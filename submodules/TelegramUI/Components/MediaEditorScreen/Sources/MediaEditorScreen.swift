@@ -1139,6 +1139,7 @@ final class MediaEditorScreenComponent: Component {
                     videoRecordingStatus: nil,
                     isRecordingLocked: false,
                     recordedAudioPreview: nil,
+                    hasRecordedVideoPreview: false,
                     wasRecordingDismissed: false,
                     timeoutValue: timeoutValue,
                     timeoutSelected: timeoutSelected,
@@ -2201,7 +2202,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let layout = self.validLayout, (layout.inputHeight ?? 0.0) > 0.0 {
                         self.view.endEditing(true)
                     } else {
-                        let textEntity = DrawingTextEntity(text: NSAttributedString(), style: .regular, animation: .none, font: .sanFrancisco, alignment: .center, fontSize: 1.0, color: DrawingColor(color: .white))
+                        let textEntity = DrawingTextEntity(text: NSAttributedString(), style: .filled, animation: .none, font: .sanFrancisco, alignment: .center, fontSize: 1.0, color: DrawingColor(color: .white))
                         self.interaction?.insertEntity(textEntity)
                     }
                 }
@@ -2803,7 +2804,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     self.controller?.present(controller, in: .window(.root))
                                     return
                                 case .text:
-                                    let textEntity = DrawingTextEntity(text: NSAttributedString(), style: .regular, animation: .none, font: .sanFrancisco, alignment: .center, fontSize: 1.0, color: DrawingColor(color: .white))
+                                    let textEntity = DrawingTextEntity(text: NSAttributedString(), style: .filled, animation: .none, font: .sanFrancisco, alignment: .center, fontSize: 1.0, color: DrawingColor(color: .white))
                                     self.interaction?.insertEntity(textEntity)
                                     
                                     self.hasAnyChanges = true
@@ -3325,7 +3326,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let text = "Subscribe to **Telegram Premium** to make your stories disappear \(timeoutString)."
         
         let context = self.context
-        let controller = UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: true, title: nil, text: text, customUndoText: "More"), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { [weak self] action in
+        let controller = UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: true, title: nil, text: text, customUndoText: "More"), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
             if case .undo = action, let self {
                 let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings)
                 self.push(controller)

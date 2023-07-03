@@ -272,6 +272,7 @@ final class StoryPreviewComponent: Component {
                     videoRecordingStatus: nil,
                     isRecordingLocked: false,
                     recordedAudioPreview: nil,
+                    hasRecordedVideoPreview: false,
                     wasRecordingDismissed: false,
                     timeoutValue: nil,
                     timeoutSelected: false,

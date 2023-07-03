@@ -995,7 +995,7 @@ private final class DrawingScreenComponent: CombinedComponent {
         }
         
         func addTextEntity() {
-            let textEntity = DrawingTextEntity(text: NSAttributedString(), style: .regular, animation: .none, font: .sanFrancisco, alignment: .center, fontSize: 1.0, color: DrawingColor(color: .white))
+            let textEntity = DrawingTextEntity(text: NSAttributedString(), style: .filled, animation: .none, font: .sanFrancisco, alignment: .center, fontSize: 1.0, color: DrawingColor(color: .white))
             self.insertEntity.invoke(textEntity)
         }
         

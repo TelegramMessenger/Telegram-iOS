@@ -222,6 +222,7 @@ private final class StickerSelectionComponent: Component {
             let context = component.context
             let stickerPeekBehavior = EmojiContentPeekBehaviorImpl(
                 context: context,
+                forceTheme: defaultDarkColorPresentationTheme,
                 interaction: nil,
                 chatPeerId: nil,
                 present: { c, a in
@@ -859,6 +860,7 @@ public class StickerPickerScreen: ViewController {
             if let controller = self.controller {
                 stickerPeekBehavior = EmojiContentPeekBehaviorImpl(
                     context: controller.context,
+                    forceTheme: defaultDarkColorPresentationTheme,
                     interaction: nil,
                     chatPeerId: nil,
                     present: { [weak controller] c, a in

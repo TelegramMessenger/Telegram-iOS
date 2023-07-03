@@ -354,7 +354,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var audioRecorderStatusDisposable: Disposable?
     
     private var videoRecorderValue: InstantVideoController?
-    private var tempVideoRecorderValue: InstantVideoController?
     private var videoRecorder = Promise<InstantVideoController?>()
     private var videoRecorderDisposable: Disposable?
     
@@ -15407,7 +15406,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     isScheduledMessages = true
                 }
                 
-                self.videoRecorder.set(.single(legacyInstantVideoController(theme: self.presentationData.theme, panelFrame: self.view.convert(currentInputPanelFrame, to: nil), context: self.context, peerId: peerId, slowmodeState: !isScheduledMessages ? self.presentationInterfaceState.slowmodeState : nil, hasSchedule: !isScheduledMessages && peerId.namespace != Namespaces.Peer.SecretChat, send: { [weak self] videoController, message in
+                self.videoRecorder.set(.single(legacyInstantVideoController(theme: self.presentationData.theme, forStory: false, panelFrame: self.view.convert(currentInputPanelFrame, to: nil), context: self.context, peerId: peerId, slowmodeState: !isScheduledMessages ? self.presentationInterfaceState.slowmodeState : nil, hasSchedule: !isScheduledMessages && peerId.namespace != Namespaces.Peer.SecretChat, send: { [weak self] videoController, message in
                     if let strongSelf = self {
                         guard let message = message else {
                             strongSelf.videoRecorder.set(.single(nil))
