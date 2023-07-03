@@ -253,10 +253,10 @@ final class StoryPreviewComponent: Component {
                     alwaysDarkWhenHasText: false,
                     nextInputMode: { _ in return .stickers },
                     areVoiceMessagesAvailable: false,
-                    presentController: { _ in
-                    },
-                    sendMessageAction: {
-                    },
+                    presentController: { _ in },
+                    presentInGlobalOverlay: { _ in },
+                    sendMessageAction: { },
+                    sendStickerAction: { _ in },
                     setMediaRecordingActive: { _, _, _ in },
                     lockMediaRecording: nil,
                     stopAndPreviewMediaRecording: nil,
@@ -277,6 +277,7 @@ final class StoryPreviewComponent: Component {
                     displayGradient: false,
                     bottomInset: 0.0,
                     hideKeyboard: false,
+                    forceIsEditing: false,
                     disabledPlaceholder: nil
                 )),
                 environment: {},

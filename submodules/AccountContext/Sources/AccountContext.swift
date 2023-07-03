@@ -1118,3 +1118,23 @@ public struct StoriesConfiguration {
 //#endif
     }
 }
+
+public struct StickersSearchConfiguration {
+    static var defaultValue: StickersSearchConfiguration {
+        return StickersSearchConfiguration(disableLocalSuggestions: false)
+    }
+    
+    public let disableLocalSuggestions: Bool
+    
+    fileprivate init(disableLocalSuggestions: Bool) {
+        self.disableLocalSuggestions = disableLocalSuggestions
+    }
+    
+    public static func with(appConfiguration: AppConfiguration) -> StickersSearchConfiguration {
+        if let data = appConfiguration.data, let suggestOnlyApi = data["stickers_emoji_suggest_only_api"] as? Bool {
+            return StickersSearchConfiguration(disableLocalSuggestions: suggestOnlyApi)
+        } else {
+            return .defaultValue
+        }
+    }
+}

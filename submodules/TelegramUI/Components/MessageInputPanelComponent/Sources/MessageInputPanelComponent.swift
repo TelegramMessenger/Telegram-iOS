@@ -52,7 +52,9 @@ public final class MessageInputPanelComponent: Component {
     public let nextInputMode: (Bool) -> InputMode?
     public let areVoiceMessagesAvailable: Bool
     public let presentController: (ViewController) -> Void
+    public let presentInGlobalOverlay: (ViewController) -> Void
     public let sendMessageAction: () -> Void
+    public let sendStickerAction: (TelegramMediaFile) -> Void
     public let setMediaRecordingActive: ((Bool, Bool, Bool) -> Void)?
     public let lockMediaRecording: (() -> Void)?
     public let stopAndPreviewMediaRecording: (() -> Void)?
@@ -73,6 +75,7 @@ public final class MessageInputPanelComponent: Component {
     public let displayGradient: Bool
     public let bottomInset: CGFloat
     public let hideKeyboard: Bool
+    public let forceIsEditing: Bool
     public let disabledPlaceholder: String?
     
     public init(
@@ -86,7 +89,9 @@ public final class MessageInputPanelComponent: Component {
         nextInputMode: @escaping (Bool) -> InputMode?,
         areVoiceMessagesAvailable: Bool,
         presentController: @escaping (ViewController) -> Void,
+        presentInGlobalOverlay: @escaping (ViewController) -> Void,
         sendMessageAction: @escaping () -> Void,
+        sendStickerAction: @escaping (TelegramMediaFile) -> Void,
         setMediaRecordingActive: ((Bool, Bool, Bool) -> Void)?,
         lockMediaRecording: (() -> Void)?,
         stopAndPreviewMediaRecording: (() -> Void)?,
@@ -107,6 +112,7 @@ public final class MessageInputPanelComponent: Component {
         displayGradient: Bool,
         bottomInset: CGFloat,
         hideKeyboard: Bool,
+        forceIsEditing: Bool,
         disabledPlaceholder: String?
     ) {
         self.externalState = externalState
@@ -119,7 +125,9 @@ public final class MessageInputPanelComponent: Component {
         self.alwaysDarkWhenHasText = alwaysDarkWhenHasText
         self.areVoiceMessagesAvailable = areVoiceMessagesAvailable
         self.presentController = presentController
+        self.presentInGlobalOverlay = presentInGlobalOverlay
         self.sendMessageAction = sendMessageAction
+        self.sendStickerAction = sendStickerAction
         self.setMediaRecordingActive = setMediaRecordingActive
         self.lockMediaRecording = lockMediaRecording
         self.stopAndPreviewMediaRecording = stopAndPreviewMediaRecording
@@ -140,6 +148,7 @@ public final class MessageInputPanelComponent: Component {
         self.displayGradient = displayGradient
         self.bottomInset = bottomInset
         self.hideKeyboard = hideKeyboard
+        self.forceIsEditing = forceIsEditing
         self.disabledPlaceholder = disabledPlaceholder
     }
     
@@ -204,6 +213,9 @@ public final class MessageInputPanelComponent: Component {
         if lhs.hideKeyboard != rhs.hideKeyboard {
             return false
         }
+        if lhs.forceIsEditing != rhs.forceIsEditing {
+            return false
+        }
         if lhs.disabledPlaceholder != rhs.disabledPlaceholder {
             return false
         }
@@ -248,7 +260,8 @@ public final class MessageInputPanelComponent: Component {
         private var contextQueryStates: [ChatPresentationInputQueryKind: (ChatPresentationInputQuery, Disposable)] = [:]
         private var contextQueryResults: [ChatPresentationInputQueryKind: ChatPresentationInputQueryResult] = [:]
         private var contextQueryResultPanel: ComponentView<Empty>?
-        private var contextQueryResultPanelExternalState: ContextResultPanelComponent.ExternalState?
+        
+        private var stickersResultPanel: ComponentView<Empty>?
         
         private var viewForOverlayContent: ViewForOverlayContent?
         private var currentEmojiSuggestionView: ComponentHostView<Empty>?
@@ -389,6 +402,10 @@ public final class MessageInputPanelComponent: Component {
                 self.state?.updated()
             }
             
+            if result == nil, let stickersResultPanel = self.stickersResultPanel?.view, let panelResult = stickersResultPanel.hitTest(self.convert(point, to: stickersResultPanel), with: event), panelResult !== stickersResultPanel {
+                return panelResult
+            }
+            
             if result == nil, let contextQueryResultPanel = self.contextQueryResultPanel?.view, let panelResult = contextQueryResultPanel.hitTest(self.convert(point, to: contextQueryResultPanel), with: event), panelResult !== contextQueryResultPanel {
                 return panelResult
             }
@@ -471,6 +488,8 @@ public final class MessageInputPanelComponent: Component {
                 environment: {},
                 containerSize: availableTextFieldSize
             )
+            let isEditing = self.textFieldExternalState.isEditing || component.forceIsEditing
+            
             
             let placeholderSize = self.placeholder.update(
                 transition: .immediate,
@@ -493,7 +512,7 @@ public final class MessageInputPanelComponent: Component {
                 environment: {},
                 containerSize: availableTextFieldSize
             )
-            if !self.textFieldExternalState.isEditing && component.setMediaRecordingActive == nil {
+            if !isEditing && component.setMediaRecordingActive == nil {
                 insets.right = insets.left
             }
             
@@ -518,7 +537,7 @@ public final class MessageInputPanelComponent: Component {
             transition.setAlpha(view: self.bottomGradientView, alpha: component.displayGradient ? 1.0 : 0.0)
 
             let placeholderOriginX: CGFloat
-            if self.textFieldExternalState.isEditing || component.style == .story {
+            if isEditing || component.style == .story {
                 placeholderOriginX = 16.0
             } else {
                 placeholderOriginX = floorToScreenPixels((availableSize.width - placeholderSize.width) / 2.0)
@@ -729,14 +748,14 @@ public final class MessageInputPanelComponent: Component {
             
             let inputActionButtonMode: MessageInputActionButtonComponent.Mode
             if case .editor = component.style {
-                inputActionButtonMode = self.textFieldExternalState.isEditing ? .apply : .none
+                inputActionButtonMode = isEditing ? .apply : .none
             } else {
                 if hasMediaEditing {
                     inputActionButtonMode = .send
                 } else {
                     if self.textFieldExternalState.hasText {
                         inputActionButtonMode = .send
-                    } else if !self.textFieldExternalState.isEditing && component.forwardAction != nil {
+                    } else if !isEditing && component.forwardAction != nil {
                         inputActionButtonMode = .forward
                     } else {
                         if component.areVoiceMessagesAvailable {
@@ -831,7 +850,7 @@ public final class MessageInputPanelComponent: Component {
                     self.addSubview(inputActionButtonView)
                 }
                 let inputActionButtonOriginX: CGFloat
-                if component.setMediaRecordingActive != nil || self.textFieldExternalState.isEditing {
+                if component.setMediaRecordingActive != nil || isEditing {
                     inputActionButtonOriginX = size.width - insets.right + floorToScreenPixels((insets.right - inputActionButtonSize.width) * 0.5)
                 } else {
                     inputActionButtonOriginX = size.width
@@ -845,7 +864,7 @@ public final class MessageInputPanelComponent: Component {
             var fieldIconNextX = fieldBackgroundFrame.maxX - 4.0
             
             var inputModeVisible = false
-            if component.style == .story || self.textFieldExternalState.isEditing {
+            if component.style == .story || isEditing {
                 inputModeVisible = true
             }
             
@@ -996,15 +1015,15 @@ public final class MessageInputPanelComponent: Component {
                     transition.setPosition(view: timeoutButtonView, position: timeoutIconFrame.center)
                     transition.setBounds(view: timeoutButtonView, bounds: CGRect(origin: CGPoint(), size: timeoutIconFrame.size))
                     
-                    transition.setAlpha(view: timeoutButtonView, alpha: self.textFieldExternalState.isEditing ? 0.0 : 1.0)
-                    transition.setScale(view: timeoutButtonView, scale: self.textFieldExternalState.isEditing ? 0.1 : 1.0)
+                    transition.setAlpha(view: timeoutButtonView, alpha: isEditing ? 0.0 : 1.0)
+                    transition.setScale(view: timeoutButtonView, scale: isEditing ? 0.1 : 1.0)
                 }
             }
             
             var fieldBackgroundIsDark = false
             if self.textFieldExternalState.hasText && component.alwaysDarkWhenHasText {
                 fieldBackgroundIsDark = true
-            } else if self.textFieldExternalState.isEditing || component.style == .editor {
+            } else if isEditing || component.style == .editor {
                 fieldBackgroundIsDark = true
             }
             self.fieldBackgroundView.updateColor(color: fieldBackgroundIsDark ? UIColor(white: 0.0, alpha: 0.5) : UIColor(white: 1.0, alpha: 0.09), transition: transition.containedViewLayoutTransition)
@@ -1013,7 +1032,7 @@ public final class MessageInputPanelComponent: Component {
                 vibrancyPlaceholderView.isHidden = placeholder.isHidden
             }
             
-            component.externalState.isEditing = self.textFieldExternalState.isEditing
+            component.externalState.isEditing = isEditing
             component.externalState.hasText = self.textFieldExternalState.hasText
             component.externalState.insertText = { [weak self] text in
                 if let self, let view = self.textField.view as? TextFieldComponent.View {
@@ -1177,63 +1196,128 @@ public final class MessageInputPanelComponent: Component {
             let panelLeftInset: CGFloat = max(insets.left, 7.0)
             let panelRightInset: CGFloat = max(insets.right, 41.0)
             
-            if let result = self.contextQueryResults[.mention], result.count > 0 && self.textFieldExternalState.isEditing {
+            var contextResults: ContextResultPanelComponent.Results?
+            if let result = self.contextQueryResults[.mention], case let .mentions(mentions) = result, !mentions.isEmpty {
+                contextResults = .mentions(mentions)
+            }
+            
+            if let result = self.contextQueryResults[.emoji], case let .stickers(stickers) = result, !stickers.isEmpty {
                 let availablePanelHeight: CGFloat = 413.0
                 
                 var animateIn = false
                 let panel: ComponentView<Empty>
-                let externalState: ContextResultPanelComponent.ExternalState
                 var transition = transition
-                if let current = self.contextQueryResultPanel, let currentState = self.contextQueryResultPanelExternalState {
+                if let current = self.stickersResultPanel {
                     panel = current
-                    externalState = currentState
                 } else {
                     panel = ComponentView<Empty>()
-                    externalState = ContextResultPanelComponent.ExternalState()
+                    self.stickersResultPanel = panel
+                    animateIn = true
+                    transition = .immediate
+                }
+                let panelSize = panel.update(
+                    transition: transition,
+                    component: AnyComponent(StickersResultPanelComponent(
+                        context: component.context,
+                        theme: component.theme,
+                        strings: component.strings,
+                        files: stickers.map { $0.file },
+                        action: { [weak self] sticker in
+                            if let self, let textView = self.textField.view as? TextFieldComponent.View {
+                                textView.updateText(NSAttributedString(), selectionRange: 0 ..< 0)
+                                self.component?.sendStickerAction(sticker)
+                            }
+                        },
+                        present: { [weak self] c in
+                            if let self, let component = self.component {
+                                component.presentController(c)
+                            }
+                        },
+                        presentInGlobalOverlay: { [weak self] c in
+                            if let self, let component = self.component {
+                                component.presentInGlobalOverlay(c)
+                            }
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width, height: availablePanelHeight)
+                )
+                
+                let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: -panelSize.height + 60.0), size: panelSize)
+                if let panelView = panel.view as? StickersResultPanelComponent.View {
+                    if panelView.superview == nil {
+                        self.insertSubview(panelView, at: 0)
+                    }
+                    transition.setFrame(view: panelView, frame: panelFrame)
+                    
+                    if animateIn {
+                        panelView.animateIn(transition: .spring(duration: 0.4))
+                    }
+                }
+            } else if let stickersResultPanel = self.stickersResultPanel?.view as? StickersResultPanelComponent.View {
+                self.stickersResultPanel = nil
+                stickersResultPanel.animateOut(transition: .spring(duration: 0.4), completion: { [weak stickersResultPanel] in
+                    stickersResultPanel?.removeFromSuperview()
+                })
+            }
+            
+            if let contextResults, isEditing {
+                let availablePanelHeight: CGFloat = 413.0
+                
+                var animateIn = false
+                let panel: ComponentView<Empty>
+                var transition = transition
+                if let current = self.contextQueryResultPanel {
+                    panel = current
+                } else {
+                    panel = ComponentView<Empty>()
                     self.contextQueryResultPanel = panel
-                    self.contextQueryResultPanelExternalState = externalState
                     animateIn = true
                     transition = .immediate
                 }
                 let panelSize = panel.update(
                     transition: transition,
                     component: AnyComponent(ContextResultPanelComponent(
-                        externalState: externalState,
                         context: component.context,
                         theme: component.theme,
                         strings: component.strings,
-                        results: result,
+                        results: contextResults,
                         action: { [weak self] action in
-                            if let self, case let .mention(peer) = action, let textView = self.textField.view as? TextFieldComponent.View {
+                            if let self, let textView = self.textField.view as? TextFieldComponent.View {
                                 let inputState = textView.getInputState()
                                 
-                                var mentionQueryRange: NSRange?
-                                inner: for (range, type, _) in textInputStateContextQueryRangeAndType(inputState: inputState) {
-                                    if type == [.mention] {
-                                        mentionQueryRange = range
-                                        break inner
+                                switch action {
+                                case let .mention(peer):
+                                    var mentionQueryRange: NSRange?
+                                    inner: for (range, type, _) in textInputStateContextQueryRangeAndType(inputState: inputState) {
+                                        if type == [.mention] {
+                                            mentionQueryRange = range
+                                            break inner
+                                        }
                                     }
-                                }
-                                
-                                if let range = mentionQueryRange {
-                                    let inputText = NSMutableAttributedString(attributedString: inputState.inputText)
-                                    if let addressName = peer.addressName, !addressName.isEmpty {
-                                        let replacementText = addressName + " "
-                                        inputText.replaceCharacters(in: range, with: replacementText)
-                                        
-                                        let selectionPosition = range.lowerBound + (replacementText as NSString).length
-                                        textView.updateText(inputText, selectionRange: selectionPosition ..< selectionPosition)
-                                    } else if !peer.compactDisplayTitle.isEmpty {
-                                        let replacementText = NSMutableAttributedString()
-                                        replacementText.append(NSAttributedString(string: peer.compactDisplayTitle, attributes: [ChatTextInputAttributes.textMention: ChatTextInputTextMentionAttribute(peerId: peer.id)]))
-                                        replacementText.append(NSAttributedString(string: " "))
-                                        
-                                        let updatedRange = NSRange(location: range.location - 1, length: range.length + 1)
-                                        inputText.replaceCharacters(in: updatedRange, with: replacementText)
-                                        
-                                        let selectionPosition = updatedRange.lowerBound + replacementText.length
-                                        textView.updateText(inputText, selectionRange: selectionPosition ..< selectionPosition)
+                                    
+                                    if let range = mentionQueryRange {
+                                        let inputText = NSMutableAttributedString(attributedString: inputState.inputText)
+                                        if let addressName = peer.addressName, !addressName.isEmpty {
+                                            let replacementText = addressName + " "
+                                            inputText.replaceCharacters(in: range, with: replacementText)
+                                            
+                                            let selectionPosition = range.lowerBound + (replacementText as NSString).length
+                                            textView.updateText(inputText, selectionRange: selectionPosition ..< selectionPosition)
+                                        } else if !peer.compactDisplayTitle.isEmpty {
+                                            let replacementText = NSMutableAttributedString()
+                                            replacementText.append(NSAttributedString(string: peer.compactDisplayTitle, attributes: [ChatTextInputAttributes.textMention: ChatTextInputTextMentionAttribute(peerId: peer.id)]))
+                                            replacementText.append(NSAttributedString(string: " "))
+                                            
+                                            let updatedRange = NSRange(location: range.location - 1, length: range.length + 1)
+                                            inputText.replaceCharacters(in: updatedRange, with: replacementText)
+                                            
+                                            let selectionPosition = updatedRange.lowerBound + replacementText.length
+                                            textView.updateText(inputText, selectionRange: selectionPosition ..< selectionPosition)
+                                        }
                                     }
+                                case let .hashtag(hashtag):
+                                    let _ = hashtag
                                 }
                             }
                         }
@@ -1309,7 +1393,6 @@ public final class MessageInputPanelComponent: Component {
                     
                     //self.installEmojiSuggestionPreviewGesture(hostView: currentEmojiSuggestionView)
                 }
-                
             
                 let globalPosition: CGPoint
                 if let textView = self.textField.view {

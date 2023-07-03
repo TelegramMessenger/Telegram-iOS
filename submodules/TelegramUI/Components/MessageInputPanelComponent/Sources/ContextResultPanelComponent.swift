@@ -8,30 +8,18 @@ import AccountContext
 import TelegramPresentationData
 import PeerListItemComponent
 
-extension ChatPresentationInputQueryResult {
-    var count: Int {
-        switch self {
-        case let .stickers(stickers):
-            return stickers.count
-        case let .hashtags(hashtags):
-            return hashtags.count
-        case let .mentions(peers):
-            return peers.count
-        case let .commands(commands):
-            return commands.count
-        default:
-            return 0
-        }
-    }
-    
-}
-
 final class ContextResultPanelComponent: Component {
-    final class ExternalState {
-        fileprivate(set) var minimizedHeight: CGFloat = 0.0
-        fileprivate(set) var effectiveHeight: CGFloat = 0.0
-        
-        init() {
+    enum Results: Equatable {
+        case mentions([EnginePeer])
+        case hashtags([String])
+       
+        var count: Int {
+            switch self {
+            case let .hashtags(hashtags):
+                return hashtags.count
+            case let .mentions(peers):
+                return peers.count
+            }
         }
     }
     
@@ -40,22 +28,19 @@ final class ContextResultPanelComponent: Component {
         case hashtag(String)
     }
     
-    let externalState: ExternalState
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let results: ChatPresentationInputQueryResult
+    let results: Results
     let action: (ResultAction) -> Void
     
     init(
-        externalState: ExternalState,
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
-        results: ChatPresentationInputQueryResult,
+        results: Results,
         action: @escaping (ResultAction) -> Void
     ) {
-        self.externalState = externalState
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -64,9 +49,6 @@ final class ContextResultPanelComponent: Component {
     }
     
     static func ==(lhs: ContextResultPanelComponent, rhs: ContextResultPanelComponent) -> Bool {
-        if lhs.externalState !== rhs.externalState {
-            return false
-        }
         if lhs.context !== rhs.context {
             return false
         }
@@ -87,27 +69,27 @@ final class ContextResultPanelComponent: Component {
         var bottomInset: CGFloat
         var topInset: CGFloat
         var sideInset: CGFloat
-        var itemHeight: CGFloat
+        var itemSize: CGSize
         var itemCount: Int
         
         var contentSize: CGSize
         
-        init(containerSize: CGSize, bottomInset: CGFloat, topInset: CGFloat, sideInset: CGFloat, itemHeight: CGFloat, itemCount: Int) {
+        init(containerSize: CGSize, bottomInset: CGFloat, topInset: CGFloat, sideInset: CGFloat, itemSize: CGSize, itemCount: Int) {
             self.containerSize = containerSize
             self.bottomInset = bottomInset
             self.topInset = topInset
             self.sideInset = sideInset
-            self.itemHeight = itemHeight
+            self.itemSize = itemSize
             self.itemCount = itemCount
             
-            self.contentSize = CGSize(width: containerSize.width, height: topInset + CGFloat(itemCount) * itemHeight + bottomInset)
+            self.contentSize = CGSize(width: containerSize.width, height: topInset + CGFloat(itemCount) * itemSize.height + bottomInset)
         }
         
         func visibleItems(for rect: CGRect) -> Range<Int>? {
             let offsetRect = rect.offsetBy(dx: 0.0, dy: -self.topInset)
-            var minVisibleRow = Int(floor((offsetRect.minY) / (self.itemHeight)))
+            var minVisibleRow = Int(floor((offsetRect.minY) / (self.itemSize.height)))
             minVisibleRow = max(0, minVisibleRow)
-            let maxVisibleRow = Int(ceil((offsetRect.maxY) / (self.itemHeight)))
+            let maxVisibleRow = Int(ceil((offsetRect.maxY) / (self.itemSize.height)))
             
             let minVisibleIndex = minVisibleRow
             let maxVisibleIndex = maxVisibleRow
@@ -120,7 +102,7 @@ final class ContextResultPanelComponent: Component {
         }
         
         func itemFrame(for index: Int) -> CGRect {
-            return CGRect(origin: CGPoint(x: 0.0, y: self.topInset + CGFloat(index) * self.itemHeight), size: CGSize(width: self.containerSize.width, height: self.itemHeight))
+            return CGRect(origin: CGPoint(x: 0.0, y: self.topInset + CGFloat(index) * self.itemSize.height), size: CGSize(width: self.containerSize.width, height: self.itemSize.height))
         }
     }
     
@@ -159,7 +141,7 @@ final class ContextResultPanelComponent: Component {
             self.scrollView = ScrollView()
             self.scrollView.canCancelContentTouches = true
             self.scrollView.delaysContentTouches = false
-            self.scrollView.showsVerticalScrollIndicator = true
+            self.scrollView.showsVerticalScrollIndicator = false
             self.scrollView.contentInsetAdjustmentBehavior = .never
             self.scrollView.alwaysBounceVertical = true
             self.scrollView.indicatorStyle = .white
@@ -329,7 +311,7 @@ final class ContextResultPanelComponent: Component {
                 bottomInset: 0.0,
                 topInset: 0.0,
                 sideInset: sideInset,
-                itemHeight: measureItemSize.height,
+                itemSize: measureItemSize,
                 itemCount: component.results.count
             )
             self.itemLayout = itemLayout
@@ -357,11 +339,6 @@ final class ContextResultPanelComponent: Component {
             
             self.ignoreScrolling = false
             self.updateScrolling(transition: transition)
-                        
-//            component.externalState.minimizedHeight = minimizedHeight
-            
-//            let effectiveHeight: CGFloat = minimizedHeight * dismissFraction + (1.0 - dismissFraction) * (60.0 + component.safeInsets.bottom + 1.0)
-//            component.externalState.effectiveHeight = min(minimizedHeight, max(0.0, effectiveHeight))
             
             return availableSize
         }

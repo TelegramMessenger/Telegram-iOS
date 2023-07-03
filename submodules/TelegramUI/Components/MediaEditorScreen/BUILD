@@ -32,6 +32,7 @@ swift_library(
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
         "//submodules/Components/BundleIconComponent:BundleIconComponent",
         "//submodules/TelegramUI/Components/MessageInputPanelComponent",
+        "//submodules/TelegramUI/Components/TextFieldComponent",
         "//submodules/TelegramUI/Components/ChatInputNode",
         "//submodules/TelegramUI/Components/ChatEntityKeyboardInputNode",
         "//submodules/TooltipUI",

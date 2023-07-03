@@ -59,7 +59,7 @@ public final class TextFieldComponent: Component {
         
         public let kind: Kind
         
-        fileprivate init(kind: Kind) {
+        public init(kind: Kind) {
             self.kind = kind
         }
     }

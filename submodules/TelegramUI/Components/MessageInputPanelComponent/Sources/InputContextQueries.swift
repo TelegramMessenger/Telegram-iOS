@@ -4,6 +4,7 @@ import TelegramCore
 import TextFieldComponent
 import ChatContextQuery
 import AccountContext
+import TelegramUIPreferences
 
 func textInputStateContextQueryRangeAndType(inputState: TextFieldComponent.InputState) -> [(NSRange, PossibleContextQueryTypes, NSRange?)] {
     return textInputStateContextQueryRangeAndType(inputText: inputState.inputText, selectionRange: inputState.selectionRange)
@@ -40,7 +41,7 @@ func inputContextQueries(_ inputState: TextFieldComponent.InputState) -> [ChatPr
 func contextQueryResultState(context: AccountContext, inputState: TextFieldComponent.InputState, currentQueryStates: inout [ChatPresentationInputQueryKind: (ChatPresentationInputQuery, Disposable)]) -> [ChatPresentationInputQueryKind: ChatContextQueryUpdate] {
     let inputQueries = inputContextQueries(inputState).filter({ query in
         switch query {
-        case .contextRequest, .command, .emoji:
+        case .contextRequest, .command:
             return false
         default:
             return true
@@ -75,6 +76,57 @@ func contextQueryResultState(context: AccountContext, inputState: TextFieldCompo
 
 private func updatedContextQueryResultStateForQuery(context: AccountContext, inputQuery: ChatPresentationInputQuery, previousQuery: ChatPresentationInputQuery?) -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> {
     switch inputQuery {
+    case let .emoji(query):
+        var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = .complete()
+        if let previousQuery = previousQuery {
+            switch previousQuery {
+                case .emoji:
+                    break
+                default:
+                    signal = .single({ _ in return .stickers([]) })
+            }
+        } else {
+            signal = .single({ _ in return .stickers([]) })
+        }
+        
+        let stickerConfiguration = context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+        |> map { preferencesView -> StickersSearchConfiguration in
+            let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
+            return StickersSearchConfiguration.with(appConfiguration: appConfiguration)
+        }
+        let stickerSettings = context.sharedContext.accountManager.transaction { transaction -> StickerSettings in
+            let stickerSettings: StickerSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.stickerSettings)?.get(StickerSettings.self) ?? .defaultSettings
+            return stickerSettings
+        }
+
+        let stickers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = combineLatest(stickerConfiguration, stickerSettings)
+        |> castError(ChatContextQueryError.self)
+        |> mapToSignal { stickerConfiguration, stickerSettings -> Signal<[FoundStickerItem], ChatContextQueryError> in
+            let scope: SearchStickersScope
+            switch stickerSettings.emojiStickerSuggestionMode {
+                case .none:
+                    scope = []
+                case .all:
+                    if stickerConfiguration.disableLocalSuggestions {
+                        scope = [.remote]
+                    } else {
+                        scope = [.installed, .remote]
+                    }
+                case .installed:
+                    scope = [.installed]
+            }
+            return context.engine.stickers.searchStickers(query: [query.basicEmoji.0], scope: scope)
+            |> map { items -> [FoundStickerItem] in
+                return items.items
+            }
+            |> castError(ChatContextQueryError.self)
+        }
+        |> map { stickers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+            return { _ in
+                return .stickers(stickers)
+            }
+        }
+        return signal |> then(stickers)
     case let .hashtag(query):
         var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = .complete()
         if let previousQuery = previousQuery {

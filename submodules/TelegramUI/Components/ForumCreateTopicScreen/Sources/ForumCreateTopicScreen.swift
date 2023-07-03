@@ -364,7 +364,8 @@ private final class TopicIconSelectionComponent: Component {
                     inputHeight: 0.0,
                     displayBottomPanel: false,
                     isExpanded: true,
-                    clipContentToTopPanel: false
+                    clipContentToTopPanel: false,
+                    useExternalSearchContainer: false
                 )),
                 environment: {},
                 containerSize: availableSize

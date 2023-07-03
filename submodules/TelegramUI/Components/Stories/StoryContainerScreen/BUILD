@@ -71,8 +71,8 @@ swift_library(
         "//submodules/Components/BundleIconComponent",
         "//submodules/TinyThumbnail",
         "//submodules/ImageBlur",
+        "//submodules/StickerPackPreviewUI",
         "//submodules/Components/AnimatedStickerComponent",
-                        
     ],
     visibility = [
         "//visibility:public",

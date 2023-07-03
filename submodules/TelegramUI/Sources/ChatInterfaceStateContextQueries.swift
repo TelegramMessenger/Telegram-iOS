@@ -57,26 +57,6 @@ func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentation
     return updates
 }
 
-struct StickersSearchConfiguration {
-    static var defaultValue: StickersSearchConfiguration {
-        return StickersSearchConfiguration(disableLocalSuggestions: false)
-    }
-    
-    public let disableLocalSuggestions: Bool
-    
-    fileprivate init(disableLocalSuggestions: Bool) {
-        self.disableLocalSuggestions = disableLocalSuggestions
-    }
-    
-    static func with(appConfiguration: AppConfiguration) -> StickersSearchConfiguration {
-        if let data = appConfiguration.data, let suggestOnlyApi = data["stickers_emoji_suggest_only_api"] as? Bool {
-            return StickersSearchConfiguration(disableLocalSuggestions: suggestOnlyApi)
-        } else {
-            return .defaultValue
-        }
-    }
-}
-
 private func updatedContextQueryResultStateForQuery(context: AccountContext, peer: Peer, chatLocation: ChatLocation, inputQuery: ChatPresentationInputQuery, previousQuery: ChatPresentationInputQuery?, requestBotLocationStatus: @escaping (PeerId) -> Void) -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> {
     switch inputQuery {
         case let .emoji(query):

@@ -406,6 +406,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         return true
     }
     
+    public var useExternalSearchContainer: Bool = false
+    
     private final class GifContext {
         private var componentValue: EntityKeyboardGifContent? {
             didSet {
@@ -1608,10 +1610,11 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             hideBackground: false,
             stateContext: nil
         )
+                
         
         self.inputDataDisposable = (combineLatest(queue: .mainQueue(),
             updatedInputData,
-            self.gifComponent.get(),
+            .single(self.currentInputData.gifs) |> then(self.gifComponent.get() |> map(Optional.init)),
             self.emojiSearchState.get(),
             self.stickerSearchState.get()
         )
@@ -1980,11 +1983,10 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         mappedMode = .gif
                     }
                     
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     let searchContainerNode = PaneSearchContainerNode(
                         context: context,
-                        theme: presentationData.theme,
-                        strings: presentationData.strings,
+                        theme: interfaceState.theme,
+                        strings: interfaceState.strings,
                         interaction: interaction,
                         inputNodeInteraction: inputNodeInteraction,
                         mode: mappedMode,
@@ -2008,7 +2010,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 inputHeight: inputHeight,
                 displayBottomPanel: true,
                 isExpanded: isExpanded && !self.isEmojiSearchActive,
-                clipContentToTopPanel: self.clipContentToTopPanel
+                clipContentToTopPanel: self.clipContentToTopPanel,
+                useExternalSearchContainer: self.useExternalSearchContainer
             )),
             environment: {},
             containerSize: CGSize(width: width, height: expandedHeight)

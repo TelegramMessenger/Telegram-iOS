@@ -91,6 +91,7 @@ public final class StoryItemSetContainerComponent: Component {
     public let verticalPanFraction: CGFloat
     public let pinchState: PinchState?
     public let presentController: (ViewController, Any?) -> Void
+    public let presentInGlobalOverlay: (ViewController, Any?) -> Void
     public let close: () -> Void
     public let navigate: (NavigationDirection) -> Void
     public let delete: () -> Void
@@ -120,6 +121,7 @@ public final class StoryItemSetContainerComponent: Component {
         verticalPanFraction: CGFloat,
         pinchState: PinchState?,
         presentController: @escaping (ViewController, Any?) -> Void,
+        presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void,
         close: @escaping () -> Void,
         navigate: @escaping (NavigationDirection) -> Void,
         delete: @escaping () -> Void,
@@ -148,6 +150,7 @@ public final class StoryItemSetContainerComponent: Component {
         self.verticalPanFraction = verticalPanFraction
         self.pinchState = pinchState
         self.presentController = presentController
+        self.presentInGlobalOverlay = presentInGlobalOverlay
         self.close = close
         self.navigate = navigate
         self.delete = delete
@@ -368,6 +371,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.sendMessageContext = StoryItemSetContainerSendMessage()
             
             self.itemsContainerView = UIView()
+            //self.itemsContainerView.clipsToBounds = true
             
             self.scroller = Scroller()
             self.scroller.alwaysBounceHorizontal = true
@@ -394,9 +398,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.transitionCloneContainerView = UIView()
             
             super.init(frame: frame)
-            
-            self.clipsToBounds = true
-            
+
             self.itemsContainerView.addSubview(self.scroller)
             self.scroller.delegate = self
             self.itemsContainerView.addGestureRecognizer(self.scroller.panGestureRecognizer)
@@ -629,6 +631,9 @@ public final class StoryItemSetContainerComponent: Component {
                 if hasFirstResponder(self) {
                     self.sendMessageContext.currentInputMode = .text
                     self.endEditing(true)
+                } else if case .media = self.sendMessageContext.currentInputMode {
+                    self.sendMessageContext.currentInputMode = .text
+                    self.state?.updated(transition: .spring(duration: 0.4))
                 } else if self.displayViewList {
                     let point = recognizer.location(in: self)
                     
@@ -1553,9 +1558,9 @@ public final class StoryItemSetContainerComponent: Component {
         func update(component: StoryItemSetContainerComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let isFirstTime = self.component == nil
             
-            if let hint = transition.userData(TextFieldComponent.AnimationHint.self), case .textFocusChanged = hint.kind, !hasFirstResponder(self) {
-                self.sendMessageContext.currentInputMode = .text
-            }
+//            if let hint = transition.userData(TextFieldComponent.AnimationHint.self), case .textFocusChanged = hint.kind, !hasFirstResponder(self) {
+//                self.sendMessageContext.currentInputMode = .text
+//            }
             
             if self.component == nil {
                 self.sendMessageContext.setup(context: component.context, view: self, inputPanelExternalState: self.inputPanelExternalState, keyboardInputData: component.keyboardInputData)
@@ -1645,6 +1650,7 @@ public final class StoryItemSetContainerComponent: Component {
                 disabledPlaceholder = "You can't reply to this story"
             }
              
+            var keyboardHeight = component.deviceMetrics.standardInputHeight(inLandscape: false)
             let keyboardWasHidden = self.inputPanelExternalState.isKeyboardHidden
             let inputNodeVisible = self.sendMessageContext.currentInputMode == .media || hasFirstResponder(self)
             self.inputPanel.parentState = state
@@ -1672,11 +1678,23 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         component.presentController(c, nil)
                     },
+                    presentInGlobalOverlay: { [weak self] c in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.presentInGlobalOverlay(c, nil)
+                    },
                     sendMessageAction: { [weak self] in
                         guard let self else {
                             return
                         }
                         self.sendMessageContext.performSendMessageAction(view: self)
+                    },
+                    sendStickerAction: { [weak self] sticker in
+                        guard let self else {
+                            return
+                        }
+                        self.sendMessageContext.performSendStickerAction(view: self, fileReference: .standalone(media: sticker))
                     },
                     setMediaRecordingActive: { [weak self] isActive, isVideo, sendAction in
                         guard let self else {
@@ -1762,6 +1780,7 @@ public final class StoryItemSetContainerComponent: Component {
                     displayGradient: false, //(component.inputHeight != 0.0 || inputNodeVisible) && component.metrics.widthClass != .regular,
                     bottomInset: component.inputHeight != 0.0 || inputNodeVisible ? 0.0 : bottomContentInset,
                     hideKeyboard: self.sendMessageContext.currentInputMode == .media,
+                    forceIsEditing: self.sendMessageContext.currentInputMode == .media,
                     disabledPlaceholder: disabledPlaceholder
                 )),
                 environment: {},
@@ -1774,12 +1793,18 @@ public final class StoryItemSetContainerComponent: Component {
                     inputHeight = component.deviceMetrics.standardInputHeight(inLandscape: false)
                 }
             }
+                        
+            let inputMediaNodeHeight = self.sendMessageContext.updateInputMediaNode(inputPanel: self.inputPanel, availableSize: availableSize, bottomInset: component.safeInsets.bottom, inputHeight: component.inputHeight, effectiveInputHeight: inputHeight, metrics: component.metrics, deviceMetrics: component.deviceMetrics, transition: transition)
+            if inputMediaNodeHeight > 0.0 {
+                inputHeight = inputMediaNodeHeight
+            }
+            keyboardHeight = max(keyboardHeight, inputMediaNodeHeight)
             
             let inputPanelBackgroundSize = self.inputPanelBackground.update(
                 transition: transition,
                 component: AnyComponent(BlurredGradientComponent(position: .bottom, dark: true, tag: nil)),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width, height: component.deviceMetrics.standardInputHeight(inLandscape: false) + 100.0)
+                containerSize: CGSize(width: availableSize.width, height: keyboardHeight + 100.0)
             )
             if let inputPanelBackgroundView = self.inputPanelBackground.view {
                 if inputPanelBackgroundView.superview == nil {
@@ -1789,8 +1814,6 @@ public final class StoryItemSetContainerComponent: Component {
                 transition.setFrame(view: inputPanelBackgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: isVisible ? availableSize.height - inputPanelBackgroundSize.height : availableSize.height), size: inputPanelBackgroundSize))
                 transition.setAlpha(view: inputPanelBackgroundView, alpha: isVisible ? 1.0 : 0.0, delay: isVisible ? 0.0 : 0.4)
             }
-            
-            self.sendMessageContext.updateInputMediaNode(inputPanel: self.inputPanel, availableSize: availableSize, bottomInset: component.safeInsets.bottom, inputHeight: component.inputHeight, effectiveInputHeight: inputHeight, metrics: component.metrics, deviceMetrics: component.deviceMetrics, transition: transition)
             
             var viewListInset: CGFloat = 0.0
             
@@ -2492,9 +2515,9 @@ public final class StoryItemSetContainerComponent: Component {
             if self.voiceMessagesRestrictedTooltipController != nil {
                 effectiveDisplayReactions = false
             }
-//            if self.sendMessageContext.currentInputMode != .text {
-//                effectiveDisplayReactions = false
-//            }
+            if self.sendMessageContext.currentInputMode != .text {
+                effectiveDisplayReactions = false
+            }
             
             if let reactionContextNode = self.reactionContextNode, reactionContextNode.isReactionSearchActive {
                 effectiveDisplayReactions = true
@@ -2727,7 +2750,8 @@ public final class StoryItemSetContainerComponent: Component {
                             reactionContextNode.animateOut(to: reactionsAnchorRect, animatingOutToReaction: true)
                         }
                     } else {
-                        transition.setAlpha(view: reactionContextNode.view, alpha: 0.0, completion: { [weak reactionContextNode] _ in
+                        let reactionTransition = Transition.easeInOut(duration: 0.25)
+                        reactionTransition.setAlpha(view: reactionContextNode.view, alpha: 0.0, completion: { [weak reactionContextNode] _ in
                             reactionContextNode?.view.removeFromSuperview()
                         })
                     }

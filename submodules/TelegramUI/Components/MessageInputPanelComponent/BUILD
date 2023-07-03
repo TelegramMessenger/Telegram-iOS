@@ -30,6 +30,8 @@ swift_library(
         "//submodules/TelegramUI/Components/Stories/PeerListItemComponent",
         "//submodules/TelegramUI/Components/MoreHeaderButton",
         "//submodules/TelegramUI/Components/EmojiSuggestionsComponent",
+        "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
+        "//submodules/StickerPeekUI",
     ],
     visibility = [
         "//visibility:public",

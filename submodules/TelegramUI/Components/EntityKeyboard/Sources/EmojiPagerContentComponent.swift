@@ -5201,7 +5201,7 @@ public final class EmojiPagerContentComponent: Component {
                 scrollView.layer.removeAllAnimations()
             }
             
-            if self.isSearchActivated, let component = self.component, component.searchState == .empty(hasResults: false), !component.searchAlwaysActive, let visibleSearchHeader = self.visibleSearchHeader, visibleSearchHeader.currentPresetSearchTerm == nil {
+            if self.isSearchActivated, let component = self.component, component.searchState == .empty(hasResults: true), !component.searchAlwaysActive, let visibleSearchHeader = self.visibleSearchHeader, visibleSearchHeader.currentPresetSearchTerm == nil {
                 scrollView.isScrollEnabled = false
                 DispatchQueue.main.async {
                     scrollView.isScrollEnabled = true
@@ -6176,6 +6176,10 @@ public final class EmojiPagerContentComponent: Component {
             if let topVisibleGroupId = topVisibleGroupId {
                 self.activeItemUpdated?.invoke((topVisibleGroupId, topVisibleSubgroupId, .immediate))
             }
+            
+            if let fadingMaskLayer = self.fadingMaskLayer {
+                fadingMaskLayer.internalAlpha = max(0.0, min(1.0, self.scrollView.contentOffset.y / 30.0))
+            }
         }
         
         private func updateShimmerIfNeeded() {
@@ -6254,7 +6258,7 @@ public final class EmojiPagerContentComponent: Component {
                 if self.layer.mask == nil {
                     self.layer.mask = maskLayer
                 }
-                maskLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: (topPanelHeight - 34.0) * 0.75), size: backgroundFrame.size)
+                maskLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((topPanelHeight - 34.0) * 0.75)), size: backgroundFrame.size)
             } else if component.warpContentsOnEdges {
                 self.backgroundView.isHidden = true
             } else {
@@ -6772,10 +6776,13 @@ public final class EmojiPagerContentComponent: Component {
                 
                 let searchHeaderFrame = CGRect(origin: CGPoint(x: itemLayout.searchInsets.left, y: itemLayout.searchInsets.top), size: CGSize(width: itemLayout.width - itemLayout.searchInsets.left - itemLayout.searchInsets.right, height: itemLayout.searchHeight))
                 visibleSearchHeader.update(context: component.context, theme: keyboardChildEnvironment.theme, strings: keyboardChildEnvironment.strings, text: displaySearchWithPlaceholder, useOpaqueTheme: useOpaqueTheme, isActive: self.isSearchActivated, size: searchHeaderFrame.size, canFocus: !component.searchIsPlaceholderOnly, searchCategories: component.searchCategories, searchState: component.searchState, transition: transition)
-                if !useOpaqueTheme {
-                    transition.setFrame(view: visibleSearchHeader, frame: searchHeaderFrame)
-                    transition.attachAnimation(view: visibleSearchHeader, id: "search_transition", completion: { [weak self] completed in
-                        guard let strongSelf = self, completed, let visibleSearchHeader = strongSelf.visibleSearchHeader else {
+       
+                transition.setFrame(view: visibleSearchHeader, frame: searchHeaderFrame)
+                // Temporary workaround for status selection; use a separate search container (see GIF)
+
+                if case let .curve(duration, _) = transition.animation, duration != 0.0 {
+                    DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + duration, execute: { [weak self] in
+                        guard let strongSelf = self, let visibleSearchHeader = strongSelf.visibleSearchHeader else {
                             return
                         }
                         
@@ -6785,37 +6792,9 @@ public final class EmojiPagerContentComponent: Component {
                         }
                     })
                 } else {
-                    transition.setFrame(view: visibleSearchHeader, frame: searchHeaderFrame, completion: { [weak self] completed in
-                        if !useOpaqueTheme {
-                            guard let strongSelf = self, completed, let visibleSearchHeader = strongSelf.visibleSearchHeader else {
-                                return
-                            }
-                            
-                            if !strongSelf.isSearchActivated && visibleSearchHeader.superview != strongSelf.scrollView {
-                                strongSelf.scrollView.addSubview(visibleSearchHeader)
-                                strongSelf.mirrorContentScrollView.addSubview(visibleSearchHeader.tintContainerView)
-                            }
-                        }
-                    })
-                    // Temporary workaround for status selection; use a separate search container (see GIF)
-                    if useOpaqueTheme {
-                        if case let .curve(duration, _) = transition.animation, duration != 0.0 {
-                            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + duration, execute: { [weak self] in
-                                guard let strongSelf = self, let visibleSearchHeader = strongSelf.visibleSearchHeader else {
-                                    return
-                                }
-                                
-                                if !strongSelf.isSearchActivated && visibleSearchHeader.superview != strongSelf.scrollView {
-                                    strongSelf.scrollView.addSubview(visibleSearchHeader)
-                                    strongSelf.mirrorContentScrollView.addSubview(visibleSearchHeader.tintContainerView)
-                                }
-                            })
-                        } else {
-                            if !self.isSearchActivated && visibleSearchHeader.superview != self.scrollView {
-                                self.scrollView.addSubview(visibleSearchHeader)
-                                self.mirrorContentScrollView.addSubview(visibleSearchHeader.tintContainerView)
-                            }
-                        }
+                    if !self.isSearchActivated && visibleSearchHeader.superview != self.scrollView {
+                        self.scrollView.addSubview(visibleSearchHeader)
+                        self.mirrorContentScrollView.addSubview(visibleSearchHeader.tintContainerView)
                     }
                 }
             } else {
@@ -8553,20 +8532,30 @@ func generateTopicIcon(backgroundColors: [UIColor], strokeColors: [UIColor], tit
 private final class FadingMaskLayer: SimpleLayer {
     let gradientLayer = SimpleLayer()
     let fillLayer = SimpleLayer()
+    let gradientFillLayer = SimpleLayer()
+    
+    var internalAlpha: CGFloat = 1.0 {
+        didSet {
+            self.gradientFillLayer.opacity = Float(1.0 - self.internalAlpha)
+        }
+    }
     
     override func layoutSublayers() {
         let gradientHeight: CGFloat = 66.0
         if self.gradientLayer.contents == nil {
             self.addSublayer(self.gradientLayer)
             self.addSublayer(self.fillLayer)
+            self.addSublayer(self.gradientFillLayer)
             
             let gradientImage = generateGradientImage(size: CGSize(width: 1.0, height: gradientHeight), colors: [UIColor.white.withAlphaComponent(0.0), UIColor.white.withAlphaComponent(0.0), UIColor.white, UIColor.white], locations: [0.0, 0.4, 0.9, 1.0], direction: .vertical)
             self.gradientLayer.contents = gradientImage?.cgImage
             self.gradientLayer.contentsGravity = .resize
             self.fillLayer.backgroundColor = UIColor.white.cgColor
+            self.gradientFillLayer.backgroundColor = UIColor.white.cgColor
         }
         
         self.gradientLayer.frame = CGRect(origin: .zero, size: CGSize(width: self.bounds.width, height: gradientHeight))
+        self.gradientFillLayer.frame = self.gradientLayer.frame
         self.fillLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: gradientHeight), size: CGSize(width: self.bounds.width, height: self.bounds.height - gradientHeight))
     }
 }

@@ -1272,7 +1272,8 @@ final class AvatarEditorScreenComponent: Component {
                         inputHeight: 0.0,
                         displayBottomPanel: false,
                         isExpanded: true,
-                        clipContentToTopPanel: false
+                        clipContentToTopPanel: false,
+                        useExternalSearchContainer: false
                     )),
                     environment: {},
                     containerSize: CGSize(width: keyboardContainerFrame.size.width, height: keyboardContainerFrame.size.height - 6.0 + (isSearchActive ? 40.0 : 0.0))
