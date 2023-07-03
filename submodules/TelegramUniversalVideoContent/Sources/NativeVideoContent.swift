@@ -422,7 +422,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     func setSoundEnabled(_ value: Bool) {
         assert(Queue.mainQueue().isCurrent())
         if value {
-            self.player.playOnceWithSound(playAndRecord: true, seek: .none)
+            self.player.playOnceWithSound(playAndRecord: false, seek: .none)
         } else {
             self.player.continuePlayingWithoutSound(seek: .none)
         }
@@ -475,8 +475,8 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         self.player.setForceAudioToSpeaker(forceAudioToSpeaker)
     }
     
-    func continueWithOverridingAmbientMode() {
-        self.player.continueWithOverridingAmbientMode()
+    func continueWithOverridingAmbientMode(isAmbient: Bool) {
+        self.player.continueWithOverridingAmbientMode(isAmbient: isAmbient)
     }
     
     func setBaseRate(_ baseRate: Double) {

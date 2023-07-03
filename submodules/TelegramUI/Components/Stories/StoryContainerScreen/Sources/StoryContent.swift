@@ -13,9 +13,13 @@ public final class StoryContentItem: Equatable {
         }
     }
     
+    public enum AudioMode {
+        case ambient
+        case on
+        case off
+    }
+    
     public final class SharedState {
-        public var useAmbientMode: Bool = true
-        
         public init() {
         }
     }
@@ -30,7 +34,7 @@ public final class StoryContentItem: Equatable {
         open func leaveAmbientMode() {
         }
         
-        open func enterAmbientMode() {
+        open func enterAmbientMode(ambient: Bool) {
         }
         
         open var videoPlaybackPosition: Double? {

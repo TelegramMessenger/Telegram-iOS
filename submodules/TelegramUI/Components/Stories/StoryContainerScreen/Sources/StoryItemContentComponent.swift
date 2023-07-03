@@ -29,11 +29,13 @@ final class StoryItemContentComponent: Component {
 	let context: AccountContext
     let peer: EnginePeer
     let item: EngineStoryItem
+    let useAmbientMode: Bool
 
-    init(context: AccountContext, peer: EnginePeer, item: EngineStoryItem) {
+    init(context: AccountContext, peer: EnginePeer, item: EngineStoryItem, useAmbientMode: Bool) {
 		self.context = context
         self.peer = peer
 		self.item = item
+        self.useAmbientMode = useAmbientMode
 	}
 
 	static func ==(lhs: StoryItemContentComponent, rhs: StoryItemContentComponent) -> Bool {
@@ -118,7 +120,7 @@ final class StoryItemContentComponent: Component {
                 return
             }
             
-            guard let component = self.component, let environment = self.environment, let currentMessageMedia = self.currentMessageMedia else {
+            guard let component = self.component, let currentMessageMedia = self.currentMessageMedia else {
                 return
             }
             
@@ -137,7 +139,7 @@ final class StoryItemContentComponent: Component {
                             streamVideo: .story,
                             loopVideo: true,
                             enableSound: true,
-                            beginWithAmbientSound: environment.sharedState.useAmbientMode,
+                            beginWithAmbientSound: component.useAmbientMode,
                             mixWithOthers: true,
                             useLargeThumbnail: false,
                             autoFetchFullSizeThumbnail: false,
@@ -216,13 +218,17 @@ final class StoryItemContentComponent: Component {
         override func leaveAmbientMode() {
             if let videoNode = self.videoNode {
                 videoNode.setSoundEnabled(true)
-                videoNode.continueWithOverridingAmbientMode()
+                videoNode.continueWithOverridingAmbientMode(isAmbient: false)
             }
         }
         
-        override func enterAmbientMode() {
+        override func enterAmbientMode(ambient: Bool) {
             if let videoNode = self.videoNode {
-                videoNode.setSoundEnabled(false)
+                if ambient {
+                    videoNode.continueWithOverridingAmbientMode(isAmbient: true)
+                } else {
+                    videoNode.setSoundEnabled(false)
+                }
             }
         }
         

@@ -601,10 +601,27 @@ private final class MediaPlayerContext {
         self.stoppedAtEnd = false
     }
     
-    fileprivate func continueWithOverridingAmbientMode() {
-        if self.ambient {
+    fileprivate func continueWithOverridingAmbientMode(isAmbient: Bool) {
+        if !isAmbient {
             self.ambient = false
+            var loadedState: MediaPlayerLoadedState?
+            switch self.state {
+                case .empty:
+                    break
+                case let .playing(currentLoadedState):
+                    loadedState = currentLoadedState
+                case let .paused(currentLoadedState):
+                    loadedState = currentLoadedState
+                case .seeking:
+                    break
+            }
             
+            if let loadedState = loadedState {
+                let timestamp = CMTimeGetSeconds(CMTimebaseGetTime(loadedState.controlTimebase.timebase))
+                self.seek(timestamp: timestamp, action: .play)
+            }
+        } else {
+            self.ambient = true
             var loadedState: MediaPlayerLoadedState?
             switch self.state {
                 case .empty:
@@ -1169,10 +1186,10 @@ public final class MediaPlayer {
         }
     }
     
-    public func continueWithOverridingAmbientMode() {
+    public func continueWithOverridingAmbientMode(isAmbient: Bool) {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
-                context.continueWithOverridingAmbientMode()
+                context.continueWithOverridingAmbientMode(isAmbient: isAmbient)
             }
         }
     }

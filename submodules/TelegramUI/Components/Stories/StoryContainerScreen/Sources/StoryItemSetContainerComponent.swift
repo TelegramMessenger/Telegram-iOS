@@ -85,6 +85,8 @@ public final class StoryItemSetContainerComponent: Component {
     public let metrics: LayoutMetrics
     public let deviceMetrics: DeviceMetrics
     public let isProgressPaused: Bool
+    public let isAudioMuted: Bool
+    public let useAmbientMode: Bool
     public let hideUI: Bool
     public let visibilityFraction: CGFloat
     public let isPanning: Bool
@@ -115,6 +117,8 @@ public final class StoryItemSetContainerComponent: Component {
         metrics: LayoutMetrics,
         deviceMetrics: DeviceMetrics,
         isProgressPaused: Bool,
+        isAudioMuted: Bool,
+        useAmbientMode: Bool,
         hideUI: Bool,
         visibilityFraction: CGFloat,
         isPanning: Bool,
@@ -144,6 +148,8 @@ public final class StoryItemSetContainerComponent: Component {
         self.metrics = metrics
         self.deviceMetrics = deviceMetrics
         self.isProgressPaused = isProgressPaused
+        self.isAudioMuted = isAudioMuted
+        self.useAmbientMode = useAmbientMode
         self.hideUI = hideUI
         self.visibilityFraction = visibilityFraction
         self.isPanning = isPanning
@@ -190,6 +196,12 @@ public final class StoryItemSetContainerComponent: Component {
             return false
         }
         if lhs.isProgressPaused != rhs.isProgressPaused {
+            return false
+        }
+        if lhs.isAudioMuted != rhs.isAudioMuted {
+            return false
+        }
+        if lhs.useAmbientMode != rhs.useAmbientMode {
             return false
         }
         if lhs.hideUI != rhs.hideUI {
@@ -605,7 +617,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.state?.updated(transition: .immediate)
         }
         
-        func enterAmbientMode() {
+        func enterAmbientMode(ambient: Bool) {
             guard let component = self.component else {
                 return
             }
@@ -613,7 +625,7 @@ public final class StoryItemSetContainerComponent: Component {
                 return
             }
             if let itemView = visibleItem.view.view as? StoryContentItem.View {
-                itemView.enterAmbientMode()
+                itemView.enterAmbientMode(ambient: ambient)
             }
             
             self.state?.updated(transition: .immediate)
@@ -1027,7 +1039,8 @@ public final class StoryItemSetContainerComponent: Component {
                         component: AnyComponent(StoryItemContentComponent(
                             context: component.context,
                             peer: component.slice.peer,
-                            item: item.storyItem
+                            item: item.storyItem,
+                            useAmbientMode: component.useAmbientMode
                         )),
                         environment: {
                             itemEnvironment
@@ -2163,7 +2176,7 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             let soundImage: String
-            if isSilentVideo || component.storyItemSharedState.useAmbientMode {
+            if isSilentVideo || component.isAudioMuted {
                 soundImage = "Stories/SoundOff"
             } else {
                 soundImage = "Stories/SoundOn"

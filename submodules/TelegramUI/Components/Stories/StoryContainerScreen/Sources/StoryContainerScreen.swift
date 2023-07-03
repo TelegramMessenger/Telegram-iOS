@@ -19,6 +19,7 @@ import simd
 import VolumeButtons
 import TooltipUI
 import ChatEntityKeyboardInputNode
+import notify
 
 func hasFirstResponder(_ view: UIView) -> Bool {
     if view.isFirstResponder {
@@ -30,6 +31,49 @@ func hasFirstResponder(_ view: UIView) -> Bool {
         }
     }
     return false
+}
+
+private final class MuteMonitor {
+    private let updated: (Bool) -> Void
+    
+    private var token: Int32 = NOTIFY_TOKEN_INVALID
+    private(set) var currentValue: Bool = false
+    
+    init(updated: @escaping (Bool) -> Void) {
+        self.updated = updated
+        
+        let status = notify_register_dispatch("com.apple.springboard.ringerstate", &self.token, DispatchQueue.main, { [weak self] value in
+            guard let self else {
+                return
+            }
+            let value = self.refresh()
+            if self.currentValue != value {
+                self.currentValue = value
+                self.updated(value)
+            }
+        })
+        let _ = status
+        //print("Notify status: \(status)")
+        
+        self.currentValue = self.refresh()
+    }
+    
+    private func refresh() -> Bool {
+        var state: UInt64 = 0
+        if self.token != NOTIFY_TOKEN_INVALID {
+            let status = notify_get_state(self.token, &state)
+            let _ = status
+            //print("Notify refresh status: \(status)")
+        }
+        
+        return state != 0
+    }
+    
+    deinit {
+        if self.token != NOTIFY_TOKEN_INVALID {
+            notify_cancel(self.token)
+        }
+    }
 }
 
 private final class StoryLongPressRecognizer: UILongPressGestureRecognizer {
@@ -189,7 +233,20 @@ private final class StoryContainerScreenComponent: Component {
         private var transitionCloneMasterView: UIView
         
         private var volumeButtonsListener: VolumeButtonsListener?
-        private let volumeButtonsListenerShouldBeActive = ValuePromise<Bool>(false, ignoreRepeated: true)
+        private let contentWantsVolumeButtonMonitoring = ValuePromise<Bool>(false, ignoreRepeated: true)
+        private let isMuteSwitchOnPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+        private let volumeButtonsListenerShouldBeActive = Promise<Bool>()
+        private var volumeButtonsListenerShouldBeActiveDisposable: Disposable?
+        
+        private var isMuteSwitchOn: Bool = false
+        private var muteMonitor: MuteMonitor?
+        
+        private var audioMode: StoryContentItem.AudioMode = .ambient {
+            didSet {
+                self.audioModePromise.set(self.audioMode)
+            }
+        }
+        private let audioModePromise = ValuePromise<StoryContentItem.AudioMode>(.ambient, ignoreRepeated: true)
         
         private let inputMediaNodeDataPromise = Promise<ChatEntityKeyboardInputNode.InputData>()
         
@@ -287,6 +344,70 @@ private final class StoryContainerScreenComponent: Component {
             
             let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
             self.backgroundEffectView.addGestureRecognizer(tapGestureRecognizer)
+            
+            let muteMonitor = MuteMonitor(updated: { [weak self] isMuteSwitchOn in
+                Queue.mainQueue().async {
+                    guard let self else {
+                        return
+                    }
+                    if self.isMuteSwitchOn != isMuteSwitchOn {
+                        let changedToOff = self.isMuteSwitchOn && !isMuteSwitchOn
+                        
+                        self.isMuteSwitchOn = isMuteSwitchOn
+                        
+                        self.isMuteSwitchOnPromise.set(self.isMuteSwitchOn)
+                        
+                        if changedToOff {
+                            switch self.audioMode {
+                            case .on:
+                                self.audioMode = .ambient
+                                for (_, itemSetView) in self.visibleItemSetViews {
+                                    if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                                        componentView.enterAmbientMode(ambient: !self.isMuteSwitchOn)
+                                    }
+                                }
+                            default:
+                                break
+                            }
+                        }
+                        
+                        self.state?.updated(transition: .immediate)
+                    }
+                }
+            })
+            self.muteMonitor = muteMonitor
+            self.isMuteSwitchOn = muteMonitor.currentValue
+            self.isMuteSwitchOnPromise.set(self.isMuteSwitchOn)
+            
+            self.volumeButtonsListenerShouldBeActiveDisposable = (combineLatest(queue: .mainQueue(),
+                self.contentWantsVolumeButtonMonitoring.get(),
+                self.isMuteSwitchOnPromise.get(),
+                self.audioModePromise.get()
+            )
+            |> map { contentWantsVolumeButtonMonitoring, isMuteSwitchOn, audioMode -> Bool in
+                if !contentWantsVolumeButtonMonitoring {
+                    return false
+                }
+                switch audioMode {
+                case .ambient:
+                    if isMuteSwitchOn {
+                        return false
+                    } else {
+                        return true
+                    }
+                case .on:
+                    return false
+                case .off:
+                    return true
+                }
+            }
+            |> distinctUntilChanged).start(next: { [weak self] enable in
+                guard let self else {
+                    return
+                }
+                self.volumeButtonsListenerShouldBeActive.set(.single(enable))
+                self.updateVolumeButtonMonitoring()
+            })
         }
         
         required init?(coder: NSCoder) {
@@ -295,6 +416,7 @@ private final class StoryContainerScreenComponent: Component {
         
         deinit {
             self.contentUpdatedDisposable?.dispose()
+            self.volumeButtonsListenerShouldBeActiveDisposable?.dispose()
         }
         
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
@@ -665,17 +787,24 @@ private final class StoryContainerScreenComponent: Component {
         private func updateVolumeButtonMonitoring() {
             if self.volumeButtonsListener == nil {
                 let buttonAction = { [weak self] in
-                    guard let self, self.storyItemSharedState.useAmbientMode else {
+                    guard let self else {
                         return
                     }
-                    self.storyItemSharedState.useAmbientMode = false
-                    self.volumeButtonsListenerShouldBeActive.set(false)
+                    switch self.audioMode {
+                    case .off, .ambient:
+                        break
+                    case .on:
+                        return
+                    }
+                    self.audioMode = .on
                     
                     for (_, itemSetView) in self.visibleItemSetViews {
                         if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
                             componentView.leaveAmbientMode()
                         }
                     }
+                    
+                    self.state?.updated(transition: .immediate)
                 }
                 self.volumeButtonsListener = VolumeButtonsListener(
                     shouldBeActive: self.volumeButtonsListenerShouldBeActive.get(),
@@ -740,12 +869,7 @@ private final class StoryContainerScreenComponent: Component {
                         }
                         self.focusedItem.set(focusedItemId)
                         
-                        if self.storyItemSharedState.useAmbientMode {
-                            self.volumeButtonsListenerShouldBeActive.set(isVideo)
-                            if isVideo {
-                                self.updateVolumeButtonMonitoring()
-                            }
-                        }
+                        self.contentWantsVolumeButtonMonitoring.set(isVideo)
                         
                         if component.content.stateValue?.slice == nil {
                             self.environment?.controller()?.dismiss()
@@ -898,6 +1022,8 @@ private final class StoryContainerScreenComponent: Component {
                                 metrics: environment.metrics,
                                 deviceMetrics: environment.deviceMetrics,
                                 isProgressPaused: isProgressPaused || i != focusedIndex,
+                                isAudioMuted: self.audioMode == .off || (self.audioMode == .ambient && !self.isMuteSwitchOn),
+                                useAmbientMode: self.audioMode == .ambient,
                                 hideUI: (i == focusedIndex && (self.itemSetPanState?.didBegin == false || self.itemSetPinchState != nil)),
                                 visibilityFraction: 1.0 - abs(panFraction + cubeAdditionalRotationFraction),
                                 isPanning: self.itemSetPanState?.didBegin == true,
@@ -995,25 +1121,31 @@ private final class StoryContainerScreenComponent: Component {
                                         return
                                     }
                                     
-                                    if self.storyItemSharedState.useAmbientMode {
-                                        self.storyItemSharedState.useAmbientMode = false
-                                        self.volumeButtonsListenerShouldBeActive.set(false)
-                                        
+                                    switch self.audioMode {
+                                    case .ambient:
+                                        self.audioMode = .on
                                         for (_, itemSetView) in self.visibleItemSetViews {
                                             if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
                                                 componentView.leaveAmbientMode()
                                             }
                                         }
-                                    } else {
-                                        self.storyItemSharedState.useAmbientMode = true
-                                        self.volumeButtonsListenerShouldBeActive.set(true)
-                                        
+                                    case .on:
+                                        self.audioMode = .off
                                         for (_, itemSetView) in self.visibleItemSetViews {
                                             if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
-                                                componentView.enterAmbientMode()
+                                                componentView.enterAmbientMode(ambient: !self.isMuteSwitchOn)
+                                            }
+                                        }
+                                    case .off:
+                                        self.audioMode = .on
+                                        for (_, itemSetView) in self.visibleItemSetViews {
+                                            if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                                                componentView.leaveAmbientMode()
                                             }
                                         }
                                     }
+                                    
+                                    self.state?.updated(transition: .immediate)
                                 },
                                 keyboardInputData: self.inputMediaNodeDataPromise.get(),
                                 sharedViewListsContext: self.sharedViewListsContext
