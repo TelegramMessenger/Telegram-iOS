@@ -58,7 +58,7 @@ final class CameraDeviceContext {
         
         self.previewView = previewView
         
-        self.device.configure(for: session, position: position)
+        self.device.configure(for: session, position: position, dual: !exclusive || additional)
         self.input.configure(for: session, device: self.device, audio: audio)
         self.output.configure(for: session, device: self.device, input: self.input, previewView: previewView, audio: audio, photo: photo, metadata: metadata)
             

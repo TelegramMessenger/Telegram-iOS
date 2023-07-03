@@ -1960,7 +1960,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
             panGestureRecognizer.delegate = self
-            panGestureRecognizer.minimumNumberOfTouches = 2
+            panGestureRecognizer.minimumNumberOfTouches = 1
             panGestureRecognizer.maximumNumberOfTouches = 2
             self.previewContainerView.addGestureRecognizer(panGestureRecognizer)
             
@@ -2036,7 +2036,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         @objc func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
             if let panRecognizer = gestureRecognizer as? UIPanGestureRecognizer, panRecognizer.minimumNumberOfTouches == 1, panRecognizer.state == .changed {
-                return false
+                if otherGestureRecognizer is UIPinchGestureRecognizer || otherGestureRecognizer is UIRotationGestureRecognizer {
+                    return true
+                } else {
+                    return false
+                }
             } else if let panRecognizer = otherGestureRecognizer as? UIPanGestureRecognizer, panRecognizer.minimumNumberOfTouches == 1, panRecognizer.state == .changed {
                 return false
             } else if gestureRecognizer is UITapGestureRecognizer, (otherGestureRecognizer is UIPinchGestureRecognizer || otherGestureRecognizer is UIRotationGestureRecognizer) && otherGestureRecognizer.state == .changed {
@@ -2046,6 +2050,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            if self.entitiesView.isEditingText {
+                return false
+            }
             if gestureRecognizer === self.dismissPanGestureRecognizer {
                 if self.isDisplayingTool || self.entitiesView.hasSelection {
                     return false

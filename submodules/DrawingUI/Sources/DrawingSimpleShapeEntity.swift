@@ -136,11 +136,7 @@ final class DrawingSimpleShapeEntityView: DrawingEntityView {
     }
 }
 
-func gestureIsTracking(_ gestureRecognizer: UIPanGestureRecognizer) -> Bool {
-    return [.began, .changed].contains(gestureRecognizer.state)
-}
-
-final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView, UIGestureRecognizerDelegate {
+final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView {
     private let leftHandle = SimpleShapeLayer()
     private let topLeftHandle = SimpleShapeLayer()
     private let topHandle = SimpleShapeLayer()
@@ -150,8 +146,7 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
     private let bottomHandle = SimpleShapeLayer()
     private let bottomRightHandle = SimpleShapeLayer()
     
-    private var panGestureRecognizer: UIPanGestureRecognizer!
-  
+
     override init(frame: CGRect) {
         let handleBounds = CGRect(origin: .zero, size: entitySelectionViewHandleSize)
         let handles = [
@@ -179,11 +174,6 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
             
             self.layer.addSublayer(handle)
         }
-                        
-        let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
-        panGestureRecognizer.delegate = self
-        self.addGestureRecognizer(panGestureRecognizer)
-        self.panGestureRecognizer = panGestureRecognizer
         
         self.snapTool.onSnapUpdated = { [weak self] type, snapped in
             if let self, let entityView = self.entityView {
@@ -206,14 +196,10 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
         return 5.5
     }
         
-    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        return true
-    }
-
     private let snapTool = DrawingEntitySnapTool()
     
     private var currentHandle: CALayer?
-    @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+    override func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
         guard let entityView = self.entityView as? DrawingSimpleShapeEntityView, let entity = entityView.entity as? DrawingSimpleShapeEntity else {
             return
         }
@@ -243,6 +229,12 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
             var updatedPosition = entity.position
             
             let minimumSize = entityView.minimumSize
+            
+            if self.currentHandle != nil && self.currentHandle !== self.layer {
+                if gestureRecognizer.numberOfTouches > 1 {
+                    return
+                }
+            }
             
             if self.currentHandle === self.leftHandle {
                 let deltaX = delta.x * cos(entity.rotation)
@@ -436,9 +428,5 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
         self.bottomLeftHandle.position = CGPoint(x: inset, y: self.bounds.maxY - inset)
         self.bottomHandle.position = CGPoint(x: self.bounds.midX, y: self.bounds.maxY - inset)
         self.bottomRightHandle.position = CGPoint(x: self.bounds.maxX - inset, y: self.bounds.maxY - inset)
-    }
-    
-    var isTracking: Bool {
-        return gestureIsTracking(self.panGestureRecognizer)
     }
 }

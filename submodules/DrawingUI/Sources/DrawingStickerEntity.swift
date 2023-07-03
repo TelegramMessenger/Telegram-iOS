@@ -401,12 +401,10 @@ public final class DrawingStickerEntityView: DrawingEntityView {
     }
 }
 
-final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIGestureRecognizerDelegate {
+final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
     private let border = SimpleShapeLayer()
     private let leftHandle = SimpleShapeLayer()
     private let rightHandle = SimpleShapeLayer()
-    
-    private var panGestureRecognizer: UIPanGestureRecognizer!
     
     override init(frame: CGRect) {
         let handleBounds = CGRect(origin: .zero, size: entitySelectionViewHandleSize)
@@ -438,12 +436,7 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
             
             self.layer.addSublayer(handle)
         }
-        
-        let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
-        panGestureRecognizer.delegate = self
-        self.addGestureRecognizer(panGestureRecognizer)
-        self.panGestureRecognizer = panGestureRecognizer
-        
+                
         self.snapTool.onSnapUpdated = { [weak self] type, snapped in
             if let self, let entityView = self.entityView {
                 entityView.onSnapUpdated(type, snapped)
@@ -465,14 +458,10 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
         return 18.0
     }
     
-    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        return true
-    }
-    
     private let snapTool = DrawingEntitySnapTool()
     
     private var currentHandle: CALayer?
-    @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+    override func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
         guard let entityView = self.entityView, let entity = entityView.entity as? DrawingStickerEntity else {
             return
         }
@@ -502,7 +491,11 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
             var updatedPosition = entity.position
             var updatedScale = entity.scale
             var updatedRotation = entity.rotation
+            
             if self.currentHandle === self.leftHandle || self.currentHandle === self.rightHandle {
+                if gestureRecognizer.numberOfTouches > 1 {
+                    return
+                }
                 var deltaX = gestureRecognizer.translation(in: self).x
                 if self.currentHandle === self.leftHandle {
                     deltaX *= -1.0
@@ -549,6 +542,10 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
         guard let entityView = self.entityView, let entity = entityView.entity as? DrawingStickerEntity else {
             return
         }
+        
+        if self.currentHandle != nil && self.currentHandle !== self.layer {
+            return
+        }
 
         switch gestureRecognizer.state {
         case .began, .changed:
@@ -569,6 +566,10 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
     
     override func handleRotate(_ gestureRecognizer: UIRotationGestureRecognizer) {
         guard let entityView = self.entityView, let entity = entityView.entity as? DrawingStickerEntity else {
+            return
+        }
+        
+        if self.currentHandle != nil && self.currentHandle !== self.layer {
             return
         }
         
