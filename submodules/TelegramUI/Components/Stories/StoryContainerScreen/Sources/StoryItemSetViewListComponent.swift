@@ -549,6 +549,7 @@ final class StoryItemSetViewListComponent: Component {
         func update(component: StoryItemSetViewListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let themeUpdated = self.component?.theme !== component.theme
             let itemUpdated = self.component?.storyItem.id != component.storyItem.id
+            let viewsNilUpdated = (self.component?.storyItem.views == nil) != (component.storyItem.views == nil)
             
             self.component = component
             self.state = state
@@ -566,7 +567,7 @@ final class StoryItemSetViewListComponent: Component {
                 self.navigationSeparator.backgroundColor = component.theme.rootController.navigationBar.separatorColor.cgColor
             }
             
-            if itemUpdated {
+            if itemUpdated || viewsNilUpdated {
                 self.viewListState = nil
                 self.viewListDisposable?.dispose()
                 
