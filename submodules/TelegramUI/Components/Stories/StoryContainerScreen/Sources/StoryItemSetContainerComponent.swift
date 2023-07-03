@@ -2479,6 +2479,7 @@ public final class StoryItemSetContainerComponent: Component {
                         context: component.context,
                         text: component.slice.item.storyItem.text,
                         entities: component.slice.item.storyItem.entities,
+                        entityFiles: component.slice.item.entityFiles,
                         action: { [weak self] action in
                             guard let self, let component = self.component else {
                                 return
@@ -2607,7 +2608,7 @@ public final class StoryItemSetContainerComponent: Component {
                     reactionContextNode.displayTail = false
                     self.reactionContextNode = reactionContextNode
                     
-                    reactionContextNode.reactionSelected = { [weak self] updateReaction, _ in
+                    reactionContextNode.reactionSelected = { [weak self, weak reactionContextNode] updateReaction, _ in
                         guard let self, let component = self.component else {
                             return
                         }
@@ -2631,23 +2632,24 @@ public final class StoryItemSetContainerComponent: Component {
                             targetView.isUserInteractionEnabled = false
                             self.addSubview(targetView)
                             
-                            reactionContextNode.willAnimateOutToReaction(value: updateReaction.reaction)
-                            reactionContextNode.animateOutToReaction(value: updateReaction.reaction, targetView: targetView, hideNode: false, animateTargetContainer: nil, addStandaloneReactionAnimation: "".isEmpty ? nil : { [weak self] standaloneReactionAnimation in
-                                guard let self else {
-                                    return
-                                }
-                                standaloneReactionAnimation.frame = self.bounds
-                                self.addSubview(standaloneReactionAnimation.view)
-                            }, completion: { [weak targetView, weak reactionContextNode] in
-                                targetView?.removeFromSuperview()
-                                if let reactionContextNode {
-                                    reactionContextNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.3, removeOnCompletion: false)
-                                    reactionContextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak reactionContextNode] _ in
-                                        reactionContextNode?.view.removeFromSuperview()
-                                    })
-                                }
-                            })
-    
+                            if let reactionContextNode {
+                                reactionContextNode.willAnimateOutToReaction(value: updateReaction.reaction)
+                                reactionContextNode.animateOutToReaction(value: updateReaction.reaction, targetView: targetView, hideNode: false, animateTargetContainer: nil, addStandaloneReactionAnimation: "".isEmpty ? nil : { [weak self] standaloneReactionAnimation in
+                                    guard let self else {
+                                        return
+                                    }
+                                    standaloneReactionAnimation.frame = self.bounds
+                                    self.addSubview(standaloneReactionAnimation.view)
+                                }, completion: { [weak targetView, weak reactionContextNode] in
+                                    targetView?.removeFromSuperview()
+                                    if let reactionContextNode {
+                                        reactionContextNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.3, removeOnCompletion: false)
+                                        reactionContextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak reactionContextNode] _ in
+                                            reactionContextNode?.view.removeFromSuperview()
+                                        })
+                                    }
+                                })
+                            }
                             
                             if hasFirstResponder(self) {
                                 self.sendMessageContext.currentInputMode = .text
@@ -2758,6 +2760,7 @@ public final class StoryItemSetContainerComponent: Component {
                     
                     if animateReactionsIn {
                         reactionContextNode.animateIn(from: reactionsAnchorRect)
+                        reactionContextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                     }
                 }
             } else {

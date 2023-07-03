@@ -43,6 +43,7 @@ final class StoryContentCaptionComponent: Component {
     let context: AccountContext
     let text: String
     let entities: [MessageTextEntity]
+    let entityFiles: [EngineMedia.Id: TelegramMediaFile]
     let action: (Action) -> Void
     
     init(
@@ -50,12 +51,14 @@ final class StoryContentCaptionComponent: Component {
         context: AccountContext,
         text: String,
         entities: [MessageTextEntity],
+        entityFiles: [EngineMedia.Id: TelegramMediaFile],
         action: @escaping (Action) -> Void
     ) {
         self.externalState = externalState
         self.context = context
         self.text = text
         self.entities = entities
+        self.entityFiles = entityFiles
         self.action = action
     }
 
@@ -70,6 +73,9 @@ final class StoryContentCaptionComponent: Component {
             return false
         }
         if lhs.entities != rhs.entities {
+            return false
+        }
+        if lhs.entityFiles != rhs.entityFiles {
             return false
         }
         return true
@@ -359,7 +365,8 @@ final class StoryContentCaptionComponent: Component {
                 boldItalicFont: Font.semiboldItalic(16.0),
                 fixedFont: Font.monospace(16.0),
                 blockQuoteFont: Font.monospace(16.0),
-                message: nil
+                message: nil,
+                entityFiles: component.entityFiles
             )
             
             let makeLayout = TextNodeWithEntities.asyncLayout(self.textNode)

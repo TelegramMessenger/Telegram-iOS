@@ -1123,10 +1123,19 @@ private final class StoryContainerScreenComponent: Component {
                                     
                                     switch self.audioMode {
                                     case .ambient:
-                                        self.audioMode = .on
-                                        for (_, itemSetView) in self.visibleItemSetViews {
-                                            if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
-                                                componentView.leaveAmbientMode()
+                                        if self.isMuteSwitchOn {
+                                            self.audioMode = .off
+                                            for (_, itemSetView) in self.visibleItemSetViews {
+                                                if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                                                    componentView.enterAmbientMode(ambient: !self.isMuteSwitchOn)
+                                                }
+                                            }
+                                        } else {
+                                            self.audioMode = .on
+                                            for (_, itemSetView) in self.visibleItemSetViews {
+                                                if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                                                    componentView.leaveAmbientMode()
+                                                }
                                             }
                                         }
                                     case .on:
