@@ -17,6 +17,22 @@ import EmojiSuggestionsComponent
 import AudioToolbox
 
 public final class MessageInputPanelComponent: Component {
+    public struct ContextQueryTypes: OptionSet {
+        public var rawValue: Int32
+        
+        public init() {
+            self.rawValue = 0
+        }
+        
+        public init(rawValue: Int32) {
+            self.rawValue = rawValue
+        }
+        
+        public static let emoji = ContextQueryTypes(rawValue: (1 << 0))
+        public static let hashtag = ContextQueryTypes(rawValue: (1 << 1))
+        public static let mention = ContextQueryTypes(rawValue: (1 << 2))
+    }
+    
     public enum Style {
         case story
         case editor
@@ -48,6 +64,7 @@ public final class MessageInputPanelComponent: Component {
     public let strings: PresentationStrings
     public let style: Style
     public let placeholder: String
+    public let queryTypes: ContextQueryTypes
     public let alwaysDarkWhenHasText: Bool
     public let nextInputMode: (Bool) -> InputMode?
     public let areVoiceMessagesAvailable: Bool
@@ -85,6 +102,7 @@ public final class MessageInputPanelComponent: Component {
         strings: PresentationStrings,
         style: Style,
         placeholder: String,
+        queryTypes: ContextQueryTypes,
         alwaysDarkWhenHasText: Bool,
         nextInputMode: @escaping (Bool) -> InputMode?,
         areVoiceMessagesAvailable: Bool,
@@ -122,6 +140,7 @@ public final class MessageInputPanelComponent: Component {
         self.style = style
         self.nextInputMode = nextInputMode
         self.placeholder = placeholder
+        self.queryTypes = queryTypes
         self.alwaysDarkWhenHasText = alwaysDarkWhenHasText
         self.areVoiceMessagesAvailable = areVoiceMessagesAvailable
         self.presentController = presentController
@@ -169,6 +188,9 @@ public final class MessageInputPanelComponent: Component {
             return false
         }
         if lhs.placeholder != rhs.placeholder {
+            return false
+        }
+        if lhs.queryTypes != rhs.queryTypes {
             return false
         }
         if lhs.alwaysDarkWhenHasText != rhs.alwaysDarkWhenHasText {
@@ -352,7 +374,17 @@ public final class MessageInputPanelComponent: Component {
             let context = component.context
             let inputState = textFieldView.getInputState()
             
-            let contextQueryUpdates = contextQueryResultState(context: context, inputState: inputState, currentQueryStates: &self.contextQueryStates)
+            var availableTypes: [ChatPresentationInputQueryKind] = []
+            if component.queryTypes.contains(.mention) {
+                availableTypes.append(.mention)
+            }
+            if component.queryTypes.contains(.hashtag) {
+                availableTypes.append(.hashtag)
+            }
+            if component.queryTypes.contains(.emoji) {
+                availableTypes.append(.emoji)
+            }
+            let contextQueryUpdates = contextQueryResultState(context: context, inputState: inputState, availableTypes: availableTypes, currentQueryStates: &self.contextQueryStates)
 
             for (kind, update) in contextQueryUpdates {
                 switch update {

@@ -272,7 +272,7 @@ final class StickersResultPanelComponent: Component {
 //                                        }
 //                                    }))
 //                                )
-                                return (self, selectedLayer.frame, StickerPreviewPeekContent(context: component.context, theme: component.theme, strings: component.strings, item: .pack(file), menu: menuItems, openPremiumIntro: { [weak self] in
+                                return (self, self.scrollView.convert(selectedLayer.frame, to: self), StickerPreviewPeekContent(context: component.context, theme: component.theme, strings: component.strings, item: .pack(file), menu: menuItems, openPremiumIntro: { [weak self] in
                                     guard let self, let component = self.component else {
                                         return
                                     }
@@ -290,7 +290,7 @@ final class StickersResultPanelComponent: Component {
                 return nil
             }, present: { [weak self] content, sourceView, sourceRect in
                 if let self, let component = self.component {
-                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: component.theme)
                     let controller = PeekController(presentationData: presentationData, content: content, sourceView: {
                         return (sourceView, sourceRect)
                     })

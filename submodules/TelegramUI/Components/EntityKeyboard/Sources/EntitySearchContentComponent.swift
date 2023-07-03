@@ -60,6 +60,10 @@ public final class EntitySearchContainerController: ViewController {
             super.init()
             
             self.addSubnode(containerNode)
+            
+            containerNode.onCancel = { [weak self] in
+                self?.controller?.dismiss()
+            }
         }
         
         func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

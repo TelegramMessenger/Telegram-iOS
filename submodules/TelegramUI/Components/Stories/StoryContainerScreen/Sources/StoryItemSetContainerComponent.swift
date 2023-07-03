@@ -1666,6 +1666,7 @@ public final class StoryItemSetContainerComponent: Component {
                     strings: component.strings,
                     style: .story,
                     placeholder: "Reply Privately...",
+                    queryTypes: [.mention, .emoji],
                     alwaysDarkWhenHasText: component.metrics.widthClass == .regular,
                     nextInputMode: { [weak self] hasText in
                         if case .media = self?.sendMessageContext.currentInputMode {
