@@ -1646,7 +1646,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     
                                     for filter in filters {
                                         if filter.id == filterId, case let .filter(_, title, _, data) = filter {
-                                            if let filterPeersAreMuted {
+                                            if let filterPeersAreMuted, filterPeersAreMuted.peerIds.count <= 200 {
                                                 items.append(.action(ContextMenuActionItem(text: filterPeersAreMuted.areMuted ? strongSelf.presentationData.strings.ChatList_ContextUnmuteAll : strongSelf.presentationData.strings.ChatList_ContextMuteAll, textColor: .primary, badge: nil, icon: { theme in
                                                     return generateTintedImage(image: UIImage(bundleImageName: filterPeersAreMuted.areMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
                                                 }, action: { c, f in
