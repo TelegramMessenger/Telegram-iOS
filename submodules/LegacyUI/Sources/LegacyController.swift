@@ -34,6 +34,7 @@ private final class LegacyComponentsOverlayWindowManagerImpl: NSObject, LegacyCo
     init(parentController: ViewController?, theme: PresentationTheme?) {
         self.parentController = parentController
         self.controller = LegacyController(presentation: .custom, theme: theme)
+        self.controller?.hasSparseContainerView = (parentController as? LegacyController)?.hasSparseContainerView ?? false
         
         super.init()
         
@@ -429,6 +430,14 @@ open class LegacyController: ViewController, PresentableController, AttachmentCo
     }
     private var enableContainerLayoutUpdates = false
     
+    public var hasSparseContainerView = false {
+        didSet {
+            if self.isNodeLoaded {
+                self.controllerNode.hasSparseContainerView = self.hasSparseContainerView
+            }
+        }
+    }
+    
     public var disposables = DisposableSet()
     
     open var requestAttachmentMenuExpansion: () -> Void = {}
@@ -483,6 +492,8 @@ open class LegacyController: ViewController, PresentableController, AttachmentCo
     override open func loadDisplayNode() {
         self.displayNode = LegacyControllerNode()
         self.displayNodeDidLoad()
+        
+        self.controllerNode.hasSparseContainerView = self.hasSparseContainerView
     }
     
     override open func viewWillAppear(_ animated: Bool) {

@@ -39,6 +39,8 @@
 
 - (void)setThumbnailImage:(UIImage *)image forTimestamp:(NSTimeInterval)timestamp isSummaryThubmnail:(bool)isSummaryThumbnail;
 
+- (instancetype)initWithFrame:(CGRect)frame forStory:(bool)forStory;
+
 @end
 
 @protocol TGVideoMessageScrubberDelegate <NSObject>

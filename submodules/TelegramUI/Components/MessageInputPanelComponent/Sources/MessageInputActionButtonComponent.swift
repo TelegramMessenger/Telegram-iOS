@@ -173,7 +173,7 @@ public final class MessageInputActionButtonComponent: Component {
             if self.micButton == nil {
                 let micButton = ChatTextInputMediaRecordingButton(
                     context: component.context,
-                    theme: component.theme,
+                    theme: defaultDarkPresentationTheme,
                     useDarkTheme: true,
                     strings: component.strings,
                     presentController: component.presentController
@@ -181,6 +181,8 @@ public final class MessageInputActionButtonComponent: Component {
                 self.micButton = micButton
                 micButton.statusBarHost = component.context.sharedContext.mainWindow?.statusBarHost
                 self.addSubview(micButton)
+                
+                micButton.disablesInteractiveKeyboardGestureRecognizer = true
                 
                 micButton.beginRecording = { [weak self] in
                     guard let self, let component = self.component else {
@@ -356,7 +358,7 @@ public final class MessageInputActionButtonComponent: Component {
             
             if let micButton = self.micButton {
                 if themeUpdated {
-                    micButton.updateTheme(theme: component.theme)
+                    micButton.updateTheme(theme: defaultDarkPresentationTheme)
                 }
                 
                 let micButtonFrame = CGRect(origin: CGPoint(), size: availableSize)

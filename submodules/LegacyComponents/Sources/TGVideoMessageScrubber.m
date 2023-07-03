@@ -25,6 +25,8 @@ typedef enum
 
 @interface TGVideoMessageScrubber () <UIGestureRecognizerDelegate>
 {
+    bool _forStory;
+    
     UIControl *_wrapperView;
     UIView *_summaryThumbnailSnapshotView;
     UIView *_zoomedThumbnailWrapperView;
@@ -64,24 +66,27 @@ typedef enum
 
 @implementation TGVideoMessageScrubber
 
-- (instancetype)initWithFrame:(CGRect)frame
+- (instancetype)initWithFrame:(CGRect)frame forStory:(bool)forStory
 {
     self = [super initWithFrame:frame];
     if (self != nil)
     {
         _allowsTrimming = true;
+        _forStory = forStory;
 
         self.clipsToBounds = true;
         self.layer.cornerRadius = 16.0f;
         
-        _wrapperView = [[UIControl alloc] initWithFrame:CGRectMake(0, 0, 0, 33)];
+        CGFloat height = _forStory ? 40.0 : 33.0;
+        
+        _wrapperView = [[UIControl alloc] initWithFrame:CGRectMake(0, 0, 0, height)];
         _wrapperView.hitTestEdgeInsets = UIEdgeInsetsMake(-5, -10, -5, -10);
         [self addSubview:_wrapperView];
         
-        _zoomedThumbnailWrapperView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 0, 33)];
+        _zoomedThumbnailWrapperView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 0, height)];
         [_wrapperView addSubview:_zoomedThumbnailWrapperView];
         
-        _summaryThumbnailWrapperView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 0, 33)];
+        _summaryThumbnailWrapperView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 0, height)];
         _summaryThumbnailWrapperView.clipsToBounds = true;
         [_wrapperView addSubview:_summaryThumbnailWrapperView];
         
@@ -100,7 +105,7 @@ typedef enum
         [_wrapperView addSubview:_rightCurtainView];
         
         __weak TGVideoMessageScrubber *weakSelf = self;
-        _trimView = [[TGVideoMessageTrimView alloc] initWithFrame:CGRectZero];
+        _trimView = [[TGVideoMessageTrimView alloc] initWithFrame:CGRectZero forStory:forStory];
         _trimView.exclusiveTouch = true;
         _trimView.trimmingEnabled = _allowsTrimming;
         _trimView.didBeginEditing = ^(__unused bool start)
@@ -264,7 +269,7 @@ typedef enum
         };
         [_wrapperView addSubview:_trimView];
         
-        _scrubberHandle = [[UIControl alloc] initWithFrame:CGRectMake(0, -1, 8, 33.0f)];
+        _scrubberHandle = [[UIControl alloc] initWithFrame:CGRectMake(0, -1, 8, height)];
         _scrubberHandle.hitTestEdgeInsets = UIEdgeInsetsMake(-5, -10, -5, -10);
         //[_wrapperView addSubview:_scrubberHandle];
         
@@ -310,7 +315,10 @@ typedef enum
     _rightCurtainView.backgroundColor = [pallete.backgroundColor colorWithAlphaComponent:0.8f];
     
     CGSize size = _leftMaskView.image.size;
-    UIGraphicsBeginImageContextWithOptions(_leftMaskView.image.size, false, 0.0f);
+    if (_forStory) {
+        size.height = 40.0;
+    }
+    UIGraphicsBeginImageContextWithOptions(size, false, 0.0f);
     CGContextRef context = UIGraphicsGetCurrentContext();
     CGContextSetFillColorWithColor(context, pallete.backgroundColor.CGColor);
     CGContextFillRect(context, CGRectMake(0.0f, 0.0f, size.width, size.height));
@@ -323,13 +331,15 @@ typedef enum
     _leftMaskView.image = maskView;
     _rightMaskView.image = [UIImage imageWithCGImage:maskView.CGImage scale:maskView.scale orientation:UIImageOrientationUpMirrored];
     
-    size = CGSizeMake(16.0f, 33.0f);
-    UIGraphicsBeginImageContextWithOptions(_leftMaskView.image.size, false, 0.0f);
+    CGFloat height = _forStory ? 40.0f : 33.0f;
+    
+    size = CGSizeMake(16.0f, height);
+    UIGraphicsBeginImageContextWithOptions(size, false, 0.0f);
     context = UIGraphicsGetCurrentContext();
     CGContextSetFillColorWithColor(context, pallete.buttonColor.CGColor);
     CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, size.width * 2.0f, size.height));
     CGContextSetFillColorWithColor(context, pallete.iconColor.CGColor);
-    UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(8.0f, 12.0f, 1.666f, 9.0f) cornerRadius:0.833f];
+    UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(8.0f, (size.height - 9.0) / 2.0, 1.666f, 9.0f) cornerRadius:0.833f];
     CGContextAddPath(context, path.CGPath);
     CGContextFillPath(context);
     UIImage *handleImage = UIGraphicsGetImageFromCurrentImageContext();
@@ -477,7 +487,8 @@ typedef enum
 
 - (CGSize)_thumbnailSizeWithAspectRatio:(CGFloat)__unused aspectRatio orientation:(UIImageOrientation)__unused orientation
 {
-    return CGSizeMake(33, 33);
+    CGFloat height = _forStory ? 40.0f : 33.0f;
+    return CGSizeMake(height, height);
 }
 
 - (void)_layoutSummaryThumbnailViews
@@ -785,7 +796,8 @@ typedef enum
         origin = 2;
     }
     
-    return CGRectMake(origin, 0, width, 33);
+    CGFloat height = _forStory ? 40.0f : 33.0f;
+    return CGRectMake(origin, 0, width, height);
 }
 
 #pragma mark - Trimming
@@ -861,7 +873,8 @@ typedef enum
     CGFloat minX = (CGFloat)startPosition * trimRect.size.width / (CGFloat)duration + trimRect.origin.x - normalScrubbingRect.origin.x;
     CGFloat maxX = (CGFloat)endPosition * trimRect.size.width / (CGFloat)duration + trimRect.origin.x + normalScrubbingRect.origin.x;
     
-    return CGRectMake(minX, 0, maxX - minX, 33);
+    CGFloat height = _forStory ? 40.0f : 33.0f;
+    return CGRectMake(minX, 0, maxX - minX, height);
 }
 
 - (void)_layoutTrimView
@@ -887,13 +900,15 @@ typedef enum
     _leftCurtainView.hidden = !self.allowsTrimming;
     _rightCurtainView.hidden = !self.allowsTrimming;
     
+    CGFloat height = _forStory ? 40.0f : 33.0f;
+    
     if (self.allowsTrimming)
     {
         CGRect scrubbingRect = [self _scrubbingRect];
         CGRect normalScrubbingRect = [self _scrubbingRect];
         
-        _leftCurtainView.frame = CGRectMake(scrubbingRect.origin.x - 16.0f, 0.0f, _trimView.frame.origin.x - scrubbingRect.origin.x + normalScrubbingRect.origin.x + 16.0f, 33);
-        _rightCurtainView.frame = CGRectMake(CGRectGetMaxX(_trimView.frame) - 16.0f, 0.0f, scrubbingRect.origin.x + scrubbingRect.size.width - CGRectGetMaxX(_trimView.frame) - scrubbingRect.origin.x + normalScrubbingRect.origin.x + 32.0f, 33);
+        _leftCurtainView.frame = CGRectMake(scrubbingRect.origin.x - 16.0f, 0.0f, _trimView.frame.origin.x - scrubbingRect.origin.x + normalScrubbingRect.origin.x + 16.0f, height);
+        _rightCurtainView.frame = CGRectMake(CGRectGetMaxX(_trimView.frame) - 16.0f, 0.0f, scrubbingRect.origin.x + scrubbingRect.size.width - CGRectGetMaxX(_trimView.frame) - scrubbingRect.origin.x + normalScrubbingRect.origin.x + 32.0f, height);
     }
 }
 
@@ -903,16 +918,20 @@ typedef enum
 {
     [super setFrame:frame];
     
-    _summaryThumbnailWrapperView.frame = CGRectMake(0.0f, 0.0f, frame.size.width, 33);
+    CGFloat height = _forStory ? 40.0f : 33.0f;
+    
+    _summaryThumbnailWrapperView.frame = CGRectMake(0.0f, 0.0f, frame.size.width, height);
     _zoomedThumbnailWrapperView.frame = _summaryThumbnailWrapperView.frame;
     
-    _leftMaskView.frame = CGRectMake(0.0f, 0.0f, 16.0f, 33.0f);
-    _rightMaskView.frame = CGRectMake(frame.size.width - 16.0f, 0.0f, 16.0f, 33.0f);
+    _leftMaskView.frame = CGRectMake(0.0f, 0.0f, 16.0f, height);
+    _rightMaskView.frame = CGRectMake(frame.size.width - 16.0f, 0.0f, 16.0f, height);
 }
 
 - (void)layoutSubviews
 {
-    _wrapperView.frame = CGRectMake(0, 0, self.frame.size.width, 33);
+    CGFloat height = _forStory ? 40.0f : 33.0f;
+    
+    _wrapperView.frame = CGRectMake(0, 0, self.frame.size.width, height);
     [self _layoutTrimView];
     
     [self _updateScrubberAnimationsAndResetCurrentPosition:true];

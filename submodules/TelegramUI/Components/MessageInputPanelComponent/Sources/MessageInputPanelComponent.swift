@@ -86,6 +86,7 @@ public final class MessageInputPanelComponent: Component {
     public let videoRecordingStatus: InstantVideoControllerRecordingStatus?
     public let isRecordingLocked: Bool
     public let recordedAudioPreview: ChatRecordedMediaPreview?
+    public let hasRecordedVideoPreview: Bool
     public let wasRecordingDismissed: Bool
     public let timeoutValue: String?
     public let timeoutSelected: Bool
@@ -124,6 +125,7 @@ public final class MessageInputPanelComponent: Component {
         videoRecordingStatus: InstantVideoControllerRecordingStatus?,
         isRecordingLocked: Bool,
         recordedAudioPreview: ChatRecordedMediaPreview?,
+        hasRecordedVideoPreview: Bool,
         wasRecordingDismissed: Bool,
         timeoutValue: String?,
         timeoutSelected: Bool,
@@ -162,6 +164,7 @@ public final class MessageInputPanelComponent: Component {
         self.isRecordingLocked = isRecordingLocked
         self.wasRecordingDismissed = wasRecordingDismissed
         self.recordedAudioPreview = recordedAudioPreview
+        self.hasRecordedVideoPreview = hasRecordedVideoPreview
         self.timeoutValue = timeoutValue
         self.timeoutSelected = timeoutSelected
         self.displayGradient = displayGradient
@@ -212,6 +215,9 @@ public final class MessageInputPanelComponent: Component {
             return false
         }
         if lhs.recordedAudioPreview !== rhs.recordedAudioPreview {
+            return false
+        }
+        if lhs.hasRecordedVideoPreview != rhs.hasRecordedVideoPreview {
             return false
         }
         if lhs.timeoutValue != rhs.timeoutValue {
@@ -468,8 +474,8 @@ public final class MessageInputPanelComponent: Component {
                 self.textFieldExternalState.initialText = initialText
             }
 
-            let hasMediaRecording = component.audioRecorder != nil || component.videoRecordingStatus != nil
-            let hasMediaEditing = component.recordedAudioPreview != nil
+            let hasMediaRecording = component.audioRecorder != nil || (component.videoRecordingStatus != nil && !component.hasRecordedVideoPreview)
+            let hasMediaEditing = component.recordedAudioPreview != nil || component.hasRecordedVideoPreview
             
             let topGradientHeight: CGFloat = 32.0
             if self.gradientView.image == nil {
@@ -813,6 +819,8 @@ public final class MessageInputPanelComponent: Component {
                         case .send:
                             if case .up = action {
                                 if component.recordedAudioPreview != nil {
+                                    component.sendMessageAction()
+                                } else if component.hasRecordedVideoPreview {
                                     component.sendMessageAction()
                                 } else if case let .text(string) = self.getSendMessageInput(), string.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                 } else {

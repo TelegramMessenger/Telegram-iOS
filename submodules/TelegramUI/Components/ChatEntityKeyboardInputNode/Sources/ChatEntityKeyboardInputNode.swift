@@ -2647,6 +2647,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
     }
     
     private let context: AccountContext
+    private let forceTheme: PresentationTheme?
     private let interaction: Interaction?
     private let chatPeerId: EnginePeer.Id?
     private let present: (ViewController, Any?) -> Void
@@ -2654,8 +2655,9 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
     private var viewRecords: [ViewRecord] = []
     private weak var peekController: PeekController?
     
-    public init(context: AccountContext, interaction: Interaction?, chatPeerId: EnginePeer.Id?, present: @escaping (ViewController, Any?) -> Void) {
+    public init(context: AccountContext, forceTheme: PresentationTheme? = nil, interaction: Interaction?, chatPeerId: EnginePeer.Id?, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
+        self.forceTheme = forceTheme
         self.interaction = interaction
         self.chatPeerId = chatPeerId
         self.present = present
@@ -2926,7 +2928,10 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                     return nil
                 }
                 
-                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                var presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                if let forceTheme = strongSelf.forceTheme {
+                    presentationData = presentationData.withUpdated(theme: forceTheme)
+                }
                 let controller = PeekController(presentationData: presentationData, content: content, sourceView: {
                     return (sourceView, sourceRect)
                 })

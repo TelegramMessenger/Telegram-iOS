@@ -36,6 +36,8 @@ static CGRect viewFrame(UIView *view)
     UIImageView *_slideToCancelArrow;
     UILabel *_slideToCancelLabel;
     
+    bool _forStory;
+    
     TGModernButton *_cancelButton;
     
     TGModernButton *_deleteButton;
@@ -59,10 +61,11 @@ static CGRect viewFrame(UIView *view)
 
 @implementation TGVideoMessageControls
 
-- (instancetype)initWithFrame:(CGRect)frame assets:(TGVideoMessageCaptureControllerAssets *)assets slowmodeTimestamp:(int32_t)slowmodeTimestamp slowmodeView:(UIView *(^)(void))slowmodeView {
+- (instancetype)initWithFrame:(CGRect)frame forStory:(bool)forStory assets:(TGVideoMessageCaptureControllerAssets *)assets slowmodeTimestamp:(int32_t)slowmodeTimestamp slowmodeView:(UIView *(^)(void))slowmodeView {
     self = [super initWithFrame:frame];
     if (self != nil) {
         _assets = assets;
+        _forStory = forStory;
         _slowmodeTimestamp = slowmodeTimestamp;
         _generateSlowmodeView = [slowmodeView copy];
     }
@@ -270,8 +273,12 @@ static CGRect viewFrame(UIView *view)
             _sendButton.transform = CGAffineTransformMakeScale(0.01, 0.01);
             _sendButton.alpha = 0.0f;
             
-            transform = CGAffineTransformMakeTranslation(0.0f, -44.0f);
-            transform = CGAffineTransformScale(transform, 0.25f, 0.25f);
+            if (_forStory) {
+                transform = CGAffineTransformMakeScale(0.25f, 0.25f);
+            } else {
+                transform = CGAffineTransformMakeTranslation(0.0f, -44.0f);
+                transform = CGAffineTransformScale(transform, 0.25f, 0.25f);
+            }
             
             _deleteButton.transform = transform;
             _deleteButton.alpha = 0.0f;
@@ -361,7 +368,9 @@ static CGRect viewFrame(UIView *view)
     _deleteButton.adjustsImageWhenDisabled = false;
     _deleteButton.adjustsImageWhenHighlighted = false;
     [_deleteButton addTarget:self action:@selector(deleteButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-    [self addSubview:_deleteButton];
+    if (!_forStory) {
+        [self addSubview:_deleteButton];
+    }
     
     CGAffineTransform transform = CGAffineTransformMakeTranslation(0.0f, 45.0f);
     transform = CGAffineTransformScale(transform, 0.88f, 0.88f);
@@ -380,7 +389,9 @@ static CGRect viewFrame(UIView *view)
     _longPressGestureRecognizer.minimumPressDuration = 0.4;
     [_sendButton addGestureRecognizer:_longPressGestureRecognizer];
     
-    [self addSubview:_sendButton];
+    if (!_forStory) {
+        [self addSubview:_sendButton];
+    }
     
     if (_slowmodeTimestamp != 0) {
         int32_t timestamp = (int32_t)[[NSDate date] timeIntervalSince1970];
@@ -410,16 +421,21 @@ static CGRect viewFrame(UIView *view)
         }
     }
     
-    _scrubberView = [[TGVideoMessageScrubber alloc] init];
+    _scrubberView = [[TGVideoMessageScrubber alloc] initWithFrame:CGRectZero forStory:_forStory];
     _scrubberView.pallete = self.pallete;
     _scrubberView.dataSource = self.parent;
     _scrubberView.delegate = self.parent;
     [self addSubview:_scrubberView];
+
+    if (_forStory) {
+        _scrubberView.alpha = 0.0f;
+    }
+
     
     [self layoutSubviews];
     
-    transform = CGAffineTransformMakeTranslation(0.0f, 44.0f);
-    _scrubberView.transform = transform;
+    //transform = CGAffineTransformMakeTranslation(0.0f, 44.0f);
+    //_scrubberView.transform = transform;
     
     int animationCurveOption = iosMajorVersion() >= 7 ? (7 << 16) : 0;
     [UIView animateWithDuration:0.25 delay:0.0 options:UIViewAnimationOptionBeginFromCurrentState | animationCurveOption animations:^
@@ -467,13 +483,17 @@ static CGRect viewFrame(UIView *view)
 - (void)showScrubberView
 {
     int animationCurveOption = iosMajorVersion() >= 7 ? (7 << 16) : 0;
-    [UIView animateWithDuration:0.2 delay:0.0 options:UIViewAnimationOptionBeginFromCurrentState | animationCurveOption animations:^
-    {
-        CGAffineTransform transform = CGAffineTransformMakeTranslation(0.0f, -22.0f);
-        transform = CGAffineTransformScale(transform, 0.25f, 0.25f);
-    
-        _scrubberView.transform = CGAffineTransformIdentity;
-    } completion:nil];
+    if (_forStory) {
+        CGAffineTransform transform = CGAffineTransformMakeScale(0.25f, 0.25f);
+        _scrubberView.transform = transform;
+        [UIView animateWithDuration:0.2 delay:0.0 options:UIViewAnimationOptionBeginFromCurrentState | animationCurveOption animations:^{
+            _scrubberView.transform = CGAffineTransformIdentity;
+        } completion:nil];
+        
+        [UIView animateWithDuration:0.2 animations:^{
+            _scrubberView.alpha = 1.0f;
+        }];
+    }
 }
 
 - (void)deleteButtonPressed
@@ -570,7 +590,17 @@ static CGFloat floorToScreenPixels(CGFloat value) {
         _sendButton.layer.sublayerTransform = CATransform3DIdentity;
     }
     _deleteButton.center = CGPointMake(24.0f, self.bounds.size.height / 2.0f);
-    setViewFrame(_scrubberView, CGRectMake(46.0f, (self.frame.size.height - 33.0f) / 2.0f, self.frame.size.width - 46.0f * 2.0f, 33.0f));
+    
+    CGFloat offset = 0.0f;
+    CGFloat height = 33.0f;
+    CGFloat sideInset = 46.0f;
+    if (_forStory) {
+        offset += 4.0;
+        sideInset -= 5.0f;
+        height = 40.0f;
+    }
+    
+    setViewFrame(_scrubberView, CGRectMake(sideInset, (self.frame.size.height - height) / 2.0f + offset, self.frame.size.width - sideInset * 2.0f, height));
 }
 
 - (CGRect)frameForSendButton {

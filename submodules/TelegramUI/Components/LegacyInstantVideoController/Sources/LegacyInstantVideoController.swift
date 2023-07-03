@@ -22,6 +22,7 @@ public final class InstantVideoController: LegacyController, StandalonePresentab
     
     public var onDismiss: ((Bool) -> Void)?
     public var onStop: (() -> Void)?
+    public var didStop: (() -> Void)?
     
     private let micLevelValue = ValuePromise<Float>(0.0)
     private let durationValue = ValuePromise<TimeInterval>(0.0)
@@ -35,6 +36,7 @@ public final class InstantVideoController: LegacyController, StandalonePresentab
         
         super.init(presentation: presentation, theme: theme, initialLayout: initialLayout)
         
+        self.hasSparseContainerView = true
         self.lockOrientation = true
     }
     
@@ -55,11 +57,15 @@ public final class InstantVideoController: LegacyController, StandalonePresentab
                 self?.durationValue.set(duration)
             }
             captureController.onDismiss = { [weak self] _, isCancelled in
-                guard let strongSelf = self else { return }
-                if !strongSelf.dismissed {
-                    self?.dismissed = true
-                    self?.onDismiss?(isCancelled)
+                guard let self = self else { return }
+                if !self.dismissed {
+                    self.dismissed = true
+                    self.onDismiss?(isCancelled)
                 }
+            }
+            captureController.didStop = { [weak self] in
+                guard let self else { return }
+                self.didStop?()
             }
             captureController.onStop = { [weak self] in
                 self?.onStop?()
@@ -114,6 +120,12 @@ public final class InstantVideoController: LegacyController, StandalonePresentab
             captureController.buttonInteractionUpdate(CGPoint(x: value, y: 0.0))
         }
     }
+    
+    public func send() {
+        if let captureController = self.captureController {
+            captureController.send()
+        }
+    }
 }
 
 public func legacyInputMicPalette(from theme: PresentationTheme) -> TGModernConversationInputMicPallete {
@@ -121,7 +133,7 @@ public func legacyInputMicPalette(from theme: PresentationTheme) -> TGModernConv
     return TGModernConversationInputMicPallete(dark: theme.overallDarkAppearance, buttonColor: inputPanelTheme.actionControlFillColor, iconColor: inputPanelTheme.actionControlForegroundColor, backgroundColor: theme.rootController.navigationBar.opaqueBackgroundColor, borderColor: inputPanelTheme.panelSeparatorColor, lock: inputPanelTheme.panelControlAccentColor, textColor: inputPanelTheme.primaryTextColor, secondaryTextColor: inputPanelTheme.secondaryTextColor, recording: inputPanelTheme.mediaRecordingDotColor)
 }
 
-public func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, context: AccountContext, peerId: PeerId, slowmodeState: ChatSlowmodeState?, hasSchedule: Bool, send: @escaping (InstantVideoController, EnqueueMessage?) -> Void, displaySlowmodeTooltip: @escaping (UIView, CGRect) -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void) -> InstantVideoController {
+public func legacyInstantVideoController(theme: PresentationTheme, forStory: Bool, panelFrame: CGRect, context: AccountContext, peerId: PeerId, slowmodeState: ChatSlowmodeState?, hasSchedule: Bool, send: @escaping (InstantVideoController, EnqueueMessage?) -> Void, displaySlowmodeTooltip: @escaping (UIView, CGRect) -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void) -> InstantVideoController {
     let isSecretChat = peerId.namespace == Namespaces.Peer.SecretChat
     
     let legacyController = InstantVideoController(presentation: .custom, theme: theme)
@@ -129,6 +141,7 @@ public func legacyInstantVideoController(theme: PresentationTheme, panelFrame: C
     legacyController.lockOrientation = true
     legacyController.statusBar.statusBarStyle = .Hide
     let baseController = TGViewController(context: legacyController.context)!
+    baseController.view.isUserInteractionEnabled = false
     legacyController.bind(controller: baseController)
     legacyController.presentationCompleted = { [weak legacyController, weak baseController] in
         if let legacyController = legacyController, let baseController = baseController {
@@ -143,7 +156,7 @@ public func legacyInstantVideoController(theme: PresentationTheme, panelFrame: C
                 slowmodeValidUntil = timestamp
             }
             
-            let controller = TGVideoMessageCaptureController(context: legacyController.context, assets: TGVideoMessageCaptureControllerAssets(send: PresentationResourcesChat.chatInputPanelSendButtonImage(theme)!, slideToCancel: PresentationResourcesChat.chatInputPanelMediaRecordingCancelArrowImage(theme)!, actionDelete: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: theme.chat.inputPanel.panelControlAccentColor))!, transitionInView: {
+            let controller = TGVideoMessageCaptureController(context: legacyController.context, forStory: forStory, assets: TGVideoMessageCaptureControllerAssets(send: PresentationResourcesChat.chatInputPanelSendButtonImage(theme)!, slideToCancel: PresentationResourcesChat.chatInputPanelMediaRecordingCancelArrowImage(theme)!, actionDelete: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: theme.chat.inputPanel.panelControlAccentColor))!, transitionInView: {
                 return nil
             }, parentController: baseController, controlsFrame: panelFrame, isAlreadyLocked: {
                 return false

@@ -320,7 +320,7 @@ public final class StoryItemSetContainerComponent: Component {
         
         var captionItem: CaptionItem?
         
-        let inputBackground = ComponentView<Empty>()
+        var videoRecordingBackgroundView: UIVisualEffectView?
         let inputPanel = ComponentView<Empty>()
         let inputPanelExternalState = MessageInputPanelComponent.ExternalState()
         private let inputPanelBackground = ComponentView<Empty>()
@@ -487,6 +487,7 @@ public final class StoryItemSetContainerComponent: Component {
                 if self.sendMessageContext.videoRecorderValue !== videoRecorder {
                     let previousVideoRecorderValue = self.sendMessageContext.videoRecorderValue
                     self.sendMessageContext.videoRecorderValue = videoRecorder
+                    self.component?.controller()?.lockOrientation = videoRecorder != nil
                     
                     if let videoRecorder = videoRecorder {
                         self.sendMessageContext.wasRecordingDismissed = false
@@ -511,7 +512,13 @@ public final class StoryItemSetContainerComponent: Component {
                                 })
                             }*/
                             let _ = self
-                            //TODO:editing
+                        }
+                        videoRecorder.didStop = { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.sendMessageContext.hasRecordedVideoPreview = true
+                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                         }
                         self.component?.controller()?.present(videoRecorder, in: .window(.root))
                         
@@ -521,10 +528,10 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                     
                     if let previousVideoRecorderValue {
-                        previousVideoRecorderValue.dismissVideo()
+                        let _ = previousVideoRecorderValue.dismissVideo()
                     }
                     
-                    self.state?.updated(transition: .immediate)
+                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                 }
             })
         }
@@ -1723,6 +1730,7 @@ public final class StoryItemSetContainerComponent: Component {
                         guard let self else {
                             return
                         }
+                        self.sendMessageContext.videoRecorderValue?.dismissVideo()
                         self.sendMessageContext.discardMediaRecordingPreview(view: self)
                     },
                     attachmentAction: { [weak self] in
@@ -1775,9 +1783,10 @@ public final class StoryItemSetContainerComponent: Component {
                         self.state?.updated(transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)))
                     },
                     audioRecorder: self.sendMessageContext.audioRecorderValue,
-                    videoRecordingStatus: self.sendMessageContext.videoRecorderValue?.audioStatus,
+                    videoRecordingStatus: !self.sendMessageContext.hasRecordedVideoPreview ? self.sendMessageContext.videoRecorderValue?.audioStatus : nil,
                     isRecordingLocked: self.sendMessageContext.isMediaRecordingLocked,
                     recordedAudioPreview: self.sendMessageContext.recordedAudioPreview,
+                    hasRecordedVideoPreview: self.sendMessageContext.hasRecordedVideoPreview,
                     wasRecordingDismissed: self.sendMessageContext.wasRecordingDismissed,
                     timeoutValue: nil,
                     timeoutSelected: false,
@@ -1804,6 +1813,31 @@ public final class StoryItemSetContainerComponent: Component {
             }
             keyboardHeight = max(keyboardHeight, inputMediaNodeHeight)
             
+            let hasRecordingBlurBackground = self.sendMessageContext.videoRecorderValue != nil || self.sendMessageContext.hasRecordedVideoPreview
+            if hasRecordingBlurBackground {
+                let videoRecordingBackgroundView: UIVisualEffectView
+                if let current = self.videoRecordingBackgroundView {
+                    videoRecordingBackgroundView = current
+                } else {
+                    videoRecordingBackgroundView = UIVisualEffectView(effect: nil)
+                    UIView.animate(withDuration: 0.3, animations: {
+                        videoRecordingBackgroundView.effect = UIBlurEffect(style: .dark)
+                    })
+                    if let inputPanelView = self.inputPanel.view {
+                        inputPanelView.superview?.insertSubview(videoRecordingBackgroundView, belowSubview: inputPanelView)
+                    }
+                    self.videoRecordingBackgroundView = videoRecordingBackgroundView
+                }
+                transition.setFrame(view: videoRecordingBackgroundView, frame: CGRect(origin: .zero, size: availableSize))
+            } else if let videoRecordingBackgroundView = self.videoRecordingBackgroundView {
+                self.videoRecordingBackgroundView = nil
+                UIView.animate(withDuration: 0.3, animations: {
+                    videoRecordingBackgroundView.effect = nil
+                }, completion: { _ in
+                    videoRecordingBackgroundView.removeFromSuperview()
+                })
+            }
+            
             let inputPanelBackgroundSize = self.inputPanelBackground.update(
                 transition: transition,
                 component: AnyComponent(BlurredGradientComponent(position: .bottom, dark: true, tag: nil)),
@@ -1814,7 +1848,7 @@ public final class StoryItemSetContainerComponent: Component {
                 if inputPanelBackgroundView.superview == nil {
                     self.addSubview(inputPanelBackgroundView)
                 }
-                let isVisible = inputHeight > 44.0
+                let isVisible = inputHeight > 44.0 && !hasRecordingBlurBackground
                 transition.setFrame(view: inputPanelBackgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: isVisible ? availableSize.height - inputPanelBackgroundSize.height : availableSize.height), size: inputPanelBackgroundSize))
                 transition.setAlpha(view: inputPanelBackgroundView, alpha: isVisible ? 1.0 : 0.0, delay: isVisible ? 0.0 : 0.4)
             }
@@ -2514,6 +2548,9 @@ public final class StoryItemSetContainerComponent: Component {
                 effectiveDisplayReactions = false
             }
             if self.sendMessageContext.recordedAudioPreview != nil {
+                effectiveDisplayReactions = false
+            }
+            if self.sendMessageContext.hasRecordedVideoPreview {
                 effectiveDisplayReactions = false
             }
             if self.voiceMessagesRestrictedTooltipController != nil {
