@@ -325,9 +325,11 @@ public final class StoryPeerListComponent: Component {
     
     private struct TitleState: Equatable {
         var text: String
+        var color: UIColor
         
-        init(text: String) {
+        init(text: String, color: UIColor) {
             self.text = text
+            self.color = color
         }
     }
     
@@ -618,7 +620,7 @@ public final class StoryPeerListComponent: Component {
             
             let collapsedItemWidth: CGFloat = 24.0
             let collapsedItemDistance: CGFloat = 14.0
-            let collapsedItemOffsetY: CGFloat = -60.0
+            let collapsedItemOffsetY: CGFloat = -54.0
             let titleContentSpacing: CGFloat = 8.0
             
             let collapsedItemCount: CGFloat = CGFloat(min(self.sortedItems.count - collapseStartIndex, 3))
@@ -1381,7 +1383,7 @@ public final class StoryPeerListComponent: Component {
             self.component = component
             self.state = state
             
-            let updatedTitleState = TitleState(text: component.title)
+            let updatedTitleState = TitleState(text: component.title, color: component.theme.rootController.navigationBar.primaryTextColor)
             if self.titleState != updatedTitleState {
                 self.titleState = updatedTitleState
                 
@@ -1436,7 +1438,7 @@ public final class StoryPeerListComponent: Component {
             
             let itemLayout = ItemLayout(
                 containerSize: availableSize,
-                containerInsets: UIEdgeInsets(top: 4.0, left: component.sideInset - 4.0, bottom: 0.0, right: component.sideInset - 4.0),
+                containerInsets: UIEdgeInsets(top: 4.0, left: component.sideInset - 6.0, bottom: 0.0, right: component.sideInset - 6.0),
                 itemSize: CGSize(width: 60.0, height: 77.0),
                 itemSpacing: 24.0,
                 itemCount: self.sortedItems.count

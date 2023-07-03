@@ -649,22 +649,12 @@ public final class StoryPeerListItemComponent: Component {
                 
                 if component.hasUnseen || component.ringAnimation != nil {
                     if component.hasUnseenCloseFriendsItems {
-                        colors = [
-                            UIColor(rgb: 0x7CD636).cgColor,
-                            UIColor(rgb: 0x26B470).cgColor
-                        ]
+                        colors = [component.theme.chatList.storyUnseenPrivateColors.topColor.cgColor, component.theme.chatList.storyUnseenPrivateColors.bottomColor.cgColor]
                     } else {
-                        colors = [
-                            UIColor(rgb: 0x34C76F).cgColor,
-                            UIColor(rgb: 0x3DA1FD).cgColor
-                        ]
+                        colors = [component.theme.chatList.storyUnseenColors.topColor.cgColor, component.theme.chatList.storyUnseenColors.bottomColor.cgColor]
                     }
                 } else {
-                    if component.theme.overallDarkAppearance {
-                        colors = [component.theme.rootController.tabBar.textColor.cgColor, component.theme.rootController.tabBar.textColor.cgColor]
-                    } else {
-                        colors = [UIColor(rgb: 0xD8D8E1).cgColor, UIColor(rgb: 0xD8D8E1).cgColor]
-                    }
+                    colors = [component.theme.chatList.storySeenColors.topColor.cgColor, component.theme.chatList.storySeenColors.bottomColor.cgColor]
                 }
                 
                 self.indicatorColorLayer.locations = locations.map { $0 as NSNumber }

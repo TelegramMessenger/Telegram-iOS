@@ -144,7 +144,9 @@ public final class ChatListNavigationBar: Component {
     }
     
     public static let searchScrollHeight: CGFloat = 52.0
-    public static let storiesScrollHeight: CGFloat = 94.0
+    public static let storiesScrollHeight: CGFloat = {
+        return 79.0
+    }()
 
     public final class View: UIView {
         private let backgroundView: BlurredBackgroundView
@@ -298,8 +300,8 @@ public final class ChatListNavigationBar: Component {
                 self.addSubview(searchContentNode.view)
             }
             
-            let searchSize = CGSize(width: currentLayout.size.width, height: navigationBarSearchContentHeight)
-            var searchFrame = CGRect(origin: CGPoint(x: 0.0, y: visibleSize.height - searchSize.height), size: searchSize)
+            let searchSize = CGSize(width: currentLayout.size.width - 6.0 * 2.0, height: navigationBarSearchContentHeight)
+            var searchFrame = CGRect(origin: CGPoint(x: 6.0, y: visibleSize.height - searchSize.height), size: searchSize)
             if component.tabsNode != nil {
                 searchFrame.origin.y -= 40.0
             }
@@ -322,9 +324,9 @@ public final class ChatListNavigationBar: Component {
             if allowAvatarsExpansion {
                 storiesOffsetFraction = max(0.0, min(1.0, -offset / ChatListNavigationBar.storiesScrollHeight))
                 
-                if offset <= -80.0 {
+                if offset <= -60.0 {
                     storiesUnlocked = true
-                } else if offset >= -66.0 {
+                } else if offset >= -56.0 {
                     storiesUnlocked = false
                 } else {
                     storiesUnlocked = self.storiesUnlocked
