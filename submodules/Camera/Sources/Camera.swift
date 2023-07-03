@@ -65,7 +65,7 @@ final class CameraDeviceContext {
         self.device.configureDeviceFormat(maxDimensions: self.preferredMaxDimensions, maxFramerate: self.preferredMaxFrameRate)
         self.output.configureVideoStabilization()
         
-        self.device.resetZoom()
+        self.device.resetZoom(neutral: self.exclusive || !self.additional)
     }
     
     func invalidate() {
@@ -77,7 +77,11 @@ final class CameraDeviceContext {
     }
     
     private var preferredMaxDimensions: CMVideoDimensions {
-        return CMVideoDimensions(width: 1920, height: 1080)
+        if self.additional {
+            return CMVideoDimensions(width: 1920, height: 1440)
+        } else {
+            return CMVideoDimensions(width: 1920, height: 1080)
+        }
     }
     
     private var preferredMaxFrameRate: Double {

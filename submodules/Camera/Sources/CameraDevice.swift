@@ -44,7 +44,14 @@ final class CameraDevice {
                 selectedDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera, .builtInWideAngleCamera, .builtInTelephotoCamera], mediaType: .video, position: position).devices.first
             }
         } else {
-            selectedDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera, .builtInWideAngleCamera, .builtInTelephotoCamera], mediaType: .video, position: position).devices.first
+            if #available(iOS 11.1, *), dual, case .front = position {
+                if let trueDepthDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInTrueDepthCamera], mediaType: .video, position: position).devices.first {
+                    selectedDevice = trueDepthDevice
+                }
+            }
+            if selectedDevice == nil {
+                selectedDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera, .builtInWideAngleCamera, .builtInTelephotoCamera], mediaType: .video, position: position).devices.first
+            }
         }
         
         self.videoDevice = selectedDevice
@@ -245,12 +252,12 @@ final class CameraDevice {
         }
     }
     
-    func resetZoom() {
+    func resetZoom(neutral: Bool = true) {
         guard let device = self.videoDevice else {
             return
         }
         self.transaction(device) { device in
-            device.videoZoomFactor = device.neutralZoomFactor
+            device.videoZoomFactor = neutral ? device.neutralZoomFactor : device.minAvailableVideoZoomFactor
         }
     }
 }

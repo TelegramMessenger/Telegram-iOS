@@ -514,7 +514,7 @@ final class VideoInputScalePass: RenderPass {
     
     func update(values: MediaEditorValues) {
         if let position = values.additionalVideoPosition, let scale = values.additionalVideoScale, let rotation = values.additionalVideoRotation {
-            self.additionalPosition = VideoInputScalePass.VideoPosition(position: position, size: CGSize(width: 1080.0 / 4.0, height: 1920.0 / 4.0), scale: scale, rotation: rotation)
+            self.additionalPosition = VideoInputScalePass.VideoPosition(position: position, size: CGSize(width: 1080.0 / 4.0, height: 1440.0 / 4.0), scale: scale, rotation: rotation)
         }
         if !values.additionalVideoPositionChanges.isEmpty {
             self.videoPositionChanges = values.additionalVideoPositionChanges
@@ -530,7 +530,7 @@ final class VideoInputScalePass: RenderPass {
     
     private var additionalPosition = VideoPosition(
         position: CGPoint(x: 1080 / 2.0, y: 1920.0 / 2.0),
-        size: CGSize(width: 1080.0, height: 1920.0),
+        size: CGSize(width: 1440.0, height: 1920.0),
         scale: 0.5,
         rotation: 0.0
     )
@@ -549,7 +549,6 @@ final class VideoInputScalePass: RenderPass {
         let size: CGSize
         let scale: CGFloat
         let rotation: CGFloat
-        
         
         func mixed(with other: VideoPosition, fraction: CGFloat) -> VideoPosition {
             let position = CGPoint(
@@ -589,6 +588,10 @@ final class VideoInputScalePass: RenderPass {
         var foregroundTexture = additionalInput
         var foregroundTextureRotation = self.additionalTextureRotation
         
+        var mainPosition = self.mainPosition
+        var additionalPosition = self.additionalPosition
+        var disappearingPosition = self.mainPosition
+        
         var transitionFraction = 1.0
         if let additionalInput {
             var previousChange: VideoPositionChange?
@@ -606,8 +609,13 @@ final class VideoInputScalePass: RenderPass {
                     backgroundTexture = additionalInput
                     backgroundTextureRotation = self.additionalTextureRotation
                     
+                    mainPosition = VideoPosition(position: mainPosition.position, size: CGSize(width: 1440.0, height: 1920.0), scale: mainPosition.scale, rotation: mainPosition.rotation)
+                    additionalPosition = VideoPosition(position: additionalPosition.position, size: CGSize(width: 1080.0 / 4.0, height: 1920.0 / 4.0), scale: additionalPosition.scale, rotation: additionalPosition.rotation)
+                    
                     foregroundTexture = mainInput
                     foregroundTextureRotation = self.mainTextureRotation
+                } else {
+                    disappearingPosition = VideoPosition(position: mainPosition.position, size: CGSize(width: 1440.0, height: 1920.0), scale: mainPosition.scale, rotation: mainPosition.rotation)
                 }
                 if previousChange.timestamp > 0.0 && timestamp < previousChange.timestamp + transitionDuration {
                     transitionFraction = (timestamp - previousChange.timestamp) / transitionDuration
@@ -615,22 +623,23 @@ final class VideoInputScalePass: RenderPass {
             }
         }
         
-        var backgroundVideoState = VideoState(texture: backgroundTexture, textureRotation: backgroundTextureRotation, position: self.mainPosition, roundness: 0.0, alpha: 1.0)
+        var backgroundVideoState = VideoState(texture: backgroundTexture, textureRotation: backgroundTextureRotation, position: mainPosition, roundness: 0.0, alpha: 1.0)
         var foregroundVideoState: VideoState?
         var disappearingVideoState: VideoState?
         
         if let foregroundTexture {
-            var foregroundPosition = self.additionalPosition
+            var foregroundPosition = additionalPosition
             var foregroundAlpha: Float = 1.0
             if transitionFraction < 1.0 {
                 let springFraction = lookupSpringValue(transitionFraction)
                 
-                let appearingPosition = VideoPosition(position: self.additionalPosition.position, size: self.additionalPosition.size, scale: 0.01, rotation: self.additionalPosition.rotation)
+                let appearingPosition = VideoPosition(position: additionalPosition.position, size: additionalPosition.size, scale: 0.01, rotation: self.additionalPosition.rotation)
+                let backgroundInitialPosition = VideoPosition(position: additionalPosition.position, size: CGSize(width: mainPosition.size.width / 4.0, height: mainPosition.size.height / 4.0), scale: additionalPosition.scale, rotation: additionalPosition.rotation)
                 
-                foregroundPosition = appearingPosition.mixed(with: self.additionalPosition, fraction: springFraction)
+                foregroundPosition = appearingPosition.mixed(with: additionalPosition, fraction: springFraction)
                 
-                disappearingVideoState = VideoState(texture: foregroundTexture, textureRotation: foregroundTextureRotation, position: self.mainPosition, roundness: 0.0, alpha: 1.0)
-                backgroundVideoState = VideoState(texture: backgroundTexture, textureRotation: backgroundTextureRotation, position: self.additionalPosition.mixed(with: self.mainPosition, fraction: springFraction), roundness: Float(1.0 - springFraction), alpha: 1.0)
+                disappearingVideoState = VideoState(texture: foregroundTexture, textureRotation: foregroundTextureRotation, position: disappearingPosition, roundness: 0.0, alpha: 1.0)
+                backgroundVideoState = VideoState(texture: backgroundTexture, textureRotation: backgroundTextureRotation, position: backgroundInitialPosition.mixed(with: mainPosition, fraction: springFraction), roundness: Float(1.0 - springFraction), alpha: 1.0)
                 
                 foregroundAlpha = min(1.0, max(0.0, Float(transitionFraction) * 2.5))
             }
