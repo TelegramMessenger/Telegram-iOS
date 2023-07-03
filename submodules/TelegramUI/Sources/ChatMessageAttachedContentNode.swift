@@ -526,11 +526,18 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 }
             }
 
-            if preferMediaBeforeText {
+            if preferMediaBeforeText, let textString, textString.length != 0 {
                 isImage = false
             }
 
-            let statusInText = !isImage
+            var statusInText = !isImage
+            if let textString {
+                if textString.length == 0 {
+                    statusInText = false
+                }
+            } else {
+                statusInText = false
+            }
 
             switch preparePosition {
                 case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):

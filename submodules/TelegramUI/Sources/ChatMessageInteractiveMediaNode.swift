@@ -893,7 +893,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 
                 return (resultWidth, { boundingWidth in
                     var boundingSize: CGSize
-                    let drawingSize: CGSize
+                    var drawingSize: CGSize
                     
                     switch sizeCalculation {
                         case .constrained:
@@ -917,6 +917,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                         drawingSize = nativeSize.aspectFittedWithOverflow(boundingSize, leeway: 4.0)
                                     case .aspectFill:
                                         drawingSize = nativeSize.aspectFilled(boundingSize)
+                                }
+                                if additionalWidthConstrainment {
+                                    drawingSize.height = drawingSize.width * (1920.0 / 1080.0)
                                 }
                             }
                         case .unconstrained:
