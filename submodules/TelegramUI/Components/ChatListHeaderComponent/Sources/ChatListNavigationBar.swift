@@ -145,7 +145,7 @@ public final class ChatListNavigationBar: Component {
     
     public static let searchScrollHeight: CGFloat = 52.0
     public static let storiesScrollHeight: CGFloat = {
-        return 79.0
+        return 83.0
     }()
 
     public final class View: UIView {
