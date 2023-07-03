@@ -16,6 +16,9 @@ final class StoryItemImageView: UIView {
     private var disposable: Disposable?
     private var fetchDisposable: Disposable?
     
+    private(set) var isContentLoaded: Bool = false
+    var didLoadContents: (() -> Void)?
+    
     override init(frame: CGRect) {
         self.contentView = UIImageView()
         self.contentView.contentMode = .scaleAspectFill
@@ -55,6 +58,8 @@ final class StoryItemImageView: UIView {
                                 self.updateImage(image: image)
                             }
                         }
+                        self.isContentLoaded = true
+                        self.didLoadContents?()
                     } else {
                         if let thumbnailData = image.immediateThumbnailData.flatMap(decodeTinyThumbnail), let thumbnailImage = UIImage(data: thumbnailData) {
                             self.contentView.image = blurredImage(thumbnailImage, radius: 10.0, iterations: 3)
@@ -89,6 +94,8 @@ final class StoryItemImageView: UIView {
                             }
                             if let image {
                                 self.updateImage(image: image)
+                                self.isContentLoaded = true
+                                self.didLoadContents?()
                             }
                         })
                     }
@@ -110,6 +117,8 @@ final class StoryItemImageView: UIView {
                             self.updateImage(image: image)
                         }
                     }
+                    self.isContentLoaded = true
+                    self.didLoadContents?()
                 } else {
                     if let thumbnailData = file.immediateThumbnailData.flatMap(decodeTinyThumbnail), let thumbnailImage = UIImage(data: thumbnailData) {
                         self.contentView.image = blurredImage(thumbnailImage, radius: 10.0, iterations: 3)
@@ -141,6 +150,8 @@ final class StoryItemImageView: UIView {
                         }
                         if let image {
                             self.updateImage(image: image)
+                            self.isContentLoaded = true
+                            self.didLoadContents?()
                         }
                     })
                 }

@@ -721,7 +721,7 @@ public final class StoryPeerListComponent: Component {
             
             let centralContentWidth: CGFloat = collapsedContentWidth + titleContentSpacing + collapsedState.titleWidth
             
-            collapsedContentOrigin = floor((itemLayout.containerSize.width - centralContentWidth) * 0.5)
+            collapsedContentOrigin = (itemLayout.containerSize.width - centralContentWidth) * 0.5
             
             collapsedContentOrigin = min(collapsedContentOrigin, component.maxTitleX - centralContentWidth - 4.0)
             
@@ -1135,7 +1135,7 @@ public final class StoryPeerListComponent: Component {
             let collapsedTitleOffset = targetCollapsedTitleOffset - defaultCollapsedTitleOffset
             
             let titleMinContentOffset: CGFloat = collapsedTitleOffset.interpolate(to: collapsedTitleOffset + 12.0, amount: collapsedState.minFraction * (1.0 - collapsedState.activityFraction))
-            var titleContentOffset: CGFloat = titleMinContentOffset.interpolate(to: floor((itemLayout.containerSize.width - collapsedState.titleWidth) * 0.5) as CGFloat, amount: collapsedState.maxFraction * (1.0 - collapsedState.activityFraction))
+            var titleContentOffset: CGFloat = titleMinContentOffset.interpolate(to: ((itemLayout.containerSize.width - collapsedState.titleWidth) * 0.5) as CGFloat, amount: collapsedState.maxFraction * (1.0 - collapsedState.activityFraction))
             
             var titleIndicatorSize: CGSize?
             if collapsedState.activityFraction != 0.0 {

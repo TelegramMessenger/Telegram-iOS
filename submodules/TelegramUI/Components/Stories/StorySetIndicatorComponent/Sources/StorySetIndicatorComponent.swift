@@ -49,7 +49,7 @@ private final class ShapeImageView: UIView {
         
         context.setBlendMode(.sourceIn)
         let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: params.borderColors.map {
-            UIColor(rgb: $0).cgColor
+            UIColor(argb: $0).cgColor
         } as CFArray, locations: nil)!
         context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: 50.0), options: [])
         
@@ -344,25 +344,25 @@ public final class StorySetIndicatorComponent: Component {
             if component.theme.overallDarkAppearance {
                 if component.hasUnseen {
                     borderColors = [
-                        0x34C76F,
-                        0x3DA1FD
+                        0xFF34C76F,
+                        0xFF3DA1FD
                     ]
                 } else {
                     borderColors = [
-                        0x48484A,
-                        0x48484A
+                        UIColor(white: 1.0, alpha: 0.3).argb,
+                        UIColor(white: 1.0, alpha: 0.3).argb
                     ]
                 }
             } else {
                 if component.hasUnseen {
                     borderColors = [
-                        0x34C76F,
-                        0x3DA1FD
+                        0xFF34C76F,
+                        0xFF3DA1FD
                     ]
                 } else {
                     borderColors = [
-                        0xD8D8E1,
-                        0xD8D8E1
+                        UIColor(white: 1.0, alpha: 0.3).argb,
+                        UIColor(white: 1.0, alpha: 0.3).argb
                     ]
                 }
             }

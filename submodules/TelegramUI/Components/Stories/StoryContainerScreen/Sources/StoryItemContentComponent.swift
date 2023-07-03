@@ -410,10 +410,8 @@ final class StoryItemContentComponent: Component {
                 var fetchSignal: Signal<Never, NoError>?
                 switch messageMedia {
                 case .image:
-                    self.contentLoaded = true
+                    break
                 case let .file(file):
-                    self.contentLoaded = true
-                    
                     fetchSignal = fetchedMediaResource(
                         mediaBox: component.context.account.postbox.mediaBox,
                         userLocation: .other,
@@ -446,6 +444,16 @@ final class StoryItemContentComponent: Component {
             }
             
             if let messageMedia {
+                var applyState = false
+                self.imageView.didLoadContents = { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.contentLoaded = true
+                    if applyState {
+                        self.state?.updated(transition: .immediate)
+                    }
+                }
                 self.imageView.update(
                     context: component.context,
                     peer: component.peer,
@@ -456,6 +464,10 @@ final class StoryItemContentComponent: Component {
                     attemptSynchronous: synchronousLoad,
                     transition: transition
                 )
+                applyState = true
+                if self.imageView.isContentLoaded {
+                    self.contentLoaded = true
+                }
                 transition.setFrame(view: self.imageView, frame: CGRect(origin: CGPoint(), size: availableSize))
                 
                 var dimensions: CGSize?
