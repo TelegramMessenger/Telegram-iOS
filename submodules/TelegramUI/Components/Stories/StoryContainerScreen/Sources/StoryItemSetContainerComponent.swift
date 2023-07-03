@@ -1224,6 +1224,8 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 self.closeButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                 
+                self.topContentGradientLayer.animateAlpha(from: 0.0, to: CGFloat(self.topContentGradientLayer.opacity), duration: 0.25)
+                
                 let sourceLocalFrame = sourceView.convert(transitionIn.sourceRect, to: self)
                 let innerSourceLocalFrame = CGRect(origin: CGPoint(x: sourceLocalFrame.minX - contentContainerView.frame.minX, y: sourceLocalFrame.minY - contentContainerView.frame.minY), size: sourceLocalFrame.size)
                 
@@ -1347,6 +1349,7 @@ public final class StoryItemSetContainerComponent: Component {
                     closeFriendIconView.layer.animateAlpha(from: closeFriendIconView.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false)
                 }
                 self.closeButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
+                self.topContentGradientLayer.animateAlpha(from: CGFloat(self.topContentGradientLayer.opacity), to: 0.0, duration: 0.25, removeOnCompletion: false)
                 
                 if let leftInfoView = self.leftInfoItem?.view.view {
                     if transitionOut.destinationIsAvatar {
