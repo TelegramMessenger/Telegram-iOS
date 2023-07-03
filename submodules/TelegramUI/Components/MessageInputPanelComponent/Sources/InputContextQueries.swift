@@ -38,14 +38,9 @@ func inputContextQueries(_ inputState: TextFieldComponent.InputState) -> [ChatPr
     return result
 }
 
-func contextQueryResultState(context: AccountContext, inputState: TextFieldComponent.InputState, currentQueryStates: inout [ChatPresentationInputQueryKind: (ChatPresentationInputQuery, Disposable)]) -> [ChatPresentationInputQueryKind: ChatContextQueryUpdate] {
+func contextQueryResultState(context: AccountContext, inputState: TextFieldComponent.InputState, availableTypes: [ChatPresentationInputQueryKind], currentQueryStates: inout [ChatPresentationInputQueryKind: (ChatPresentationInputQuery, Disposable)]) -> [ChatPresentationInputQueryKind: ChatContextQueryUpdate] {
     let inputQueries = inputContextQueries(inputState).filter({ query in
-        switch query {
-        case .contextRequest, .command:
-            return false
-        default:
-            return true
-        }
+        return availableTypes.contains(query.kind)
     })
     
     var updates: [ChatPresentationInputQueryKind: ChatContextQueryUpdate] = [:]

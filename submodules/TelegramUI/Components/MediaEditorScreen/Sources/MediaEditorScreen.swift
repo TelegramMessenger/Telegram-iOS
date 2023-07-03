@@ -1071,6 +1071,7 @@ final class MediaEditorScreenComponent: Component {
                     strings: environment.strings,
                     style: .editor,
                     placeholder: "Add a caption...",
+                    queryTypes: [.mention],
                     alwaysDarkWhenHasText: false,
                     nextInputMode: { _ in  return nextInputMode },
                     areVoiceMessagesAvailable: false,
