@@ -3010,6 +3010,10 @@ public final class DrawingToolsInteraction {
         self.activate()
     }
     
+    public func reset() {
+        self.drawingView.stateUpdated = { _ in }
+    }
+    
     public func activate() {
         self.isActive = true
         

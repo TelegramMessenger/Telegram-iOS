@@ -197,6 +197,17 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         }
     }
     
+    public func setup(with entities: [DrawingEntity]) {
+        self.clear()
+        
+        for entity in entities {
+            if entity is DrawingMediaEntity {
+                continue
+            }
+            self.add(entity, announce: false)
+        }
+    }
+    
     public static func encodeEntities(_ entities: [DrawingEntity], entitiesView: DrawingEntitiesView? = nil) -> [CodableDrawingEntity] {
         let entities = entities
         guard !entities.isEmpty else {
@@ -230,7 +241,14 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             let entitiesData = self.entitiesData
             return entitiesData != initialEntitiesData
         } else {
-            let filteredEntities = self.entities.filter { !$0.isMedia }
+            let filteredEntities = self.entities.filter { entity in
+                if entity.isMedia {
+                    return false
+                } else if let stickerEntity = entity as? DrawingStickerEntity, case .dualVideoReference = stickerEntity.content {
+                    return false
+                }
+                return true
+            }
             return !filteredEntities.isEmpty
         }
     }
