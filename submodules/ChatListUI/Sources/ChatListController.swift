@@ -1966,7 +1966,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             guard let self else {
                                 return nil
                             }
-                            return (self.displayNode, absoluteFrame.insetBy(dx: 0.0, dy: 0.0).offsetBy(dx: 0.0, dy: 0.0))
+                            return (self.displayNode, absoluteFrame.insetBy(dx: 0.0, dy: 0.0).offsetBy(dx: 0.0, dy: 4.0))
                         }))
                         
                         #if !DEBUG

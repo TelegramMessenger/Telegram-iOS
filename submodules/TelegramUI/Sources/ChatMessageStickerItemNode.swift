@@ -625,6 +625,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             }
             
             var replyMessage: Message?
+            var replyStory: StoryId?
             for attribute in item.message.attributes {
                 if let attribute = attribute as? InlineBotMessageAttribute {
                     var inlineBotNameString: String?
@@ -651,12 +652,14 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     } else {
                         replyMessage = item.message.associatedMessages[replyAttribute.messageId]
                     }
+                } else if let attribute = attribute as? ReplyStoryAttribute {
+                    replyStory = attribute.storyId
                 } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
                     replyMarkup = attribute
                 }
             }
             
-            var hasReply = replyMessage != nil
+            var hasReply = replyMessage != nil || replyStory != nil
             if case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
                 if let threadId = item.message.threadId, let replyMessage = replyMessage, Int64(replyMessage.id.id) == threadId {
                     hasReply = false
@@ -676,14 +679,14 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 ))
             }
             
-            if let replyMessage = replyMessage, hasReply {
+            if hasReply, (replyMessage != nil || replyStory != nil) {
                 replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
                     presentationData: item.presentationData,
                     strings: item.presentationData.strings,
                     context: item.context,
                     type: .standalone,
                     message: replyMessage,
-                    story: nil,
+                    story: replyStory,
                     parentMessage: item.message,
                     constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
                     animationCache: item.controllerInteraction.presentationContext.animationCache,
@@ -1302,6 +1305,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                                 return .optionalAction({
                                     item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
                                 })
+                            } else if let attribute = attribute as? ReplyStoryAttribute {
+                                return .optionalAction({
+                                    item.controllerInteraction.navigateToStory(item.message, attribute.storyId)
+                                })
                             }
                         }
                     }
@@ -1830,16 +1837,6 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil, nil)
     }
     
-    override func targetReactionView(value: MessageReaction.Reaction) -> UIView? {
-        if let result = self.reactionButtonsNode?.reactionTargetView(value: value) {
-            return result
-        }
-        if !self.dateAndStatusNode.isHidden {
-            return self.dateAndStatusNode.reactionView(value: value)
-        }
-        return nil
-    }
-    
     override func targetForStoryTransition(id: StoryId) -> UIView? {
         guard let item = self.item else {
             return nil
@@ -1852,6 +1849,16 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                 }
             }
+        }
+        return nil
+    }
+    
+    override func targetReactionView(value: MessageReaction.Reaction) -> UIView? {
+        if let result = self.reactionButtonsNode?.reactionTargetView(value: value) {
+            return result
+        }
+        if !self.dateAndStatusNode.isHidden {
+            return self.dateAndStatusNode.reactionView(value: value)
         }
         return nil
     }

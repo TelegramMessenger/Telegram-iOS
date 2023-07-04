@@ -1625,7 +1625,7 @@ private final class NotificationServiceHandler {
                             } else {
                                 completed()
                             }
-                        case let .pollStories(peerId, initialContent, _):
+                        case let .pollStories(peerId, initialContent, storyId):
                             Logger.shared.log("NotificationService \(episode)", "Will poll stories for \(peerId)")
                             if let stateManager = strongSelf.stateManager {
                                 let pollCompletion: (NotificationContent) -> Void = { content in
@@ -1643,7 +1643,92 @@ private final class NotificationServiceHandler {
                                         fetchStoriesSignal = _internal_pollPeerStories(postbox: stateManager.postbox, network: stateManager.network, accountPeerId: stateManager.accountPeerId, peerId: peerId)
                                         |> map { _ -> Void in
                                         }
-                                        |> then(.single(Void()))
+                                        |> then(
+                                            stateManager.postbox.transaction { transaction -> (MediaResourceReference, Int64?)? in
+                                                guard let state = transaction.getPeerStoryState(peerId: peerId)?.get(Stories.PeerState.self) else {
+                                                    return nil
+                                                }
+                                                let firstUnseenItem = transaction.getStoryItems(peerId: peerId).first(where: { entry in
+                                                    return entry.id > state.maxReadId
+                                                })
+                                                guard let firstUnseenItem, firstUnseenItem.id == storyId else {
+                                                    return nil
+                                                }
+                                                guard let peer = transaction.getPeer(peerId).flatMap(PeerReference.init) else {
+                                                    return nil
+                                                }
+                                                
+                                                if let storyItem = transaction.getStory(id: StoryId(peerId: peerId, id: storyId))?.get(Stories.StoredItem.self), case let .item(item) = storyItem, let media = item.media {
+                                                    var resource: MediaResource?
+                                                    var fetchSize: Int64?
+                                                    if let image = media as? TelegramMediaImage {
+                                                        resource = largestImageRepresentation(image.representations)?.resource
+                                                    } else if let file = media as? TelegramMediaFile {
+                                                        resource = file.resource
+                                                        for attribute in file.attributes {
+                                                            if case let .Video(_, _, _, preloadSize) = attribute {
+                                                                fetchSize = preloadSize.flatMap(Int64.init)
+                                                            }
+                                                        }
+                                                    }
+                                                    
+                                                    guard let resource else {
+                                                        return nil
+                                                    }
+                                                    return (MediaResourceReference.media(media: .story(peer: peer, id: storyId, media: media), resource: resource), fetchSize)
+                                                }
+                                                
+                                                return nil
+                                            }
+                                            |> mapToSignal { resourceData -> Signal<Void, NoError> in
+                                                guard let (resource, _) = resourceData, let resourceValue = resource.resource as? TelegramMultipartFetchableResource else {
+                                                    return .single(Void())
+                                                }
+                                                
+                                                let intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError> = .single([(0 ..< Int64.max, MediaBoxFetchPriority.maximum)])
+                                                return Signal<Void, NoError> { subscriber in
+                                                    let collectedData = Atomic<Data>(value: Data())
+                                                    return standaloneMultipartFetch(
+                                                        accountPeerId: stateManager.accountPeerId,
+                                                        postbox: stateManager.postbox,
+                                                        network: stateManager.network,
+                                                        resource: resourceValue,
+                                                        datacenterId: resourceValue.datacenterId,
+                                                        size: nil,
+                                                        intervals: intervals,
+                                                        parameters: MediaResourceFetchParameters(
+                                                            tag: nil,
+                                                            info: resourceFetchInfo(reference: resource),
+                                                            location: .init(peerId: peerId, messageId: nil),
+                                                            contentType: .other,
+                                                            isRandomAccessAllowed: true
+                                                        ),
+                                                        encryptionKey: nil,
+                                                        decryptedSize: nil,
+                                                        continueInBackground: false,
+                                                        useMainConnection: true
+                                                    ).start(next: { result in
+                                                        switch result {
+                                                        case let .dataPart(_, data, _, _):
+                                                            let _ = collectedData.modify { current in
+                                                                var current = current
+                                                                current.append(data)
+                                                                return current
+                                                            }
+                                                        default:
+                                                            break
+                                                        }
+                                                    }, error: { _ in
+                                                        subscriber.putNext(Void())
+                                                        subscriber.putCompletion()
+                                                    }, completed: {
+                                                        stateManager.postbox.mediaBox.storeResourceData(resource.resource.id, data: collectedData.with({ $0 }))
+                                                        subscriber.putNext(Void())
+                                                        subscriber.putCompletion()
+                                                    })
+                                                }
+                                            }
+                                        )
 
                                         let fetchMediaSignal: Signal<Data?, NoError> = .single(nil)
                                         

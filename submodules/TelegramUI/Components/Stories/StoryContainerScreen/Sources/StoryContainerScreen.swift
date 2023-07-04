@@ -42,7 +42,19 @@ private final class MuteMonitor {
     init(updated: @escaping (Bool) -> Void) {
         self.updated = updated
         
-        let status = notify_register_dispatch("com.apple.springboard.ringerstate", &self.token, DispatchQueue.main, { [weak self] value in
+        func encodeText(string: String, key: Int16) -> String {
+            let nsString = string as NSString
+            let result = NSMutableString()
+            for i in 0 ..< nsString.length {
+                var c: unichar = nsString.character(at: i)
+                c = unichar(Int16(c) + key)
+                result.append(NSString(characters: &c, length: 1) as String)
+            }
+            return result as String
+        }
+        
+        let keyString = encodeText(string: "dpn/bqqmf/tqsjohcpbse/sjohfstubuf", key: -1)
+        let status = notify_register_dispatch(keyString, &self.token, DispatchQueue.main, { [weak self] value in
             guard let self else {
                 return
             }

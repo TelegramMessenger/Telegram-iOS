@@ -86,10 +86,15 @@ struct NetworkResponseInfo {
     var networkDuration: Double
 }
 
+final class RequestManagerPriorityContext {
+    
+}
+
 private final class MultiplexedRequestManagerContext {
     private let queue: Queue
     private let takeWorker: (MultiplexedRequestTarget, MediaResourceFetchTag?, Bool) -> Download?
     
+    private let priorityContext = RequestManagerPriorityContext()
     private var queuedRequests: [RequestData] = []
     private var nextId: Int32 = 0
     
@@ -163,9 +168,9 @@ private final class MultiplexedRequestManagerContext {
         let maxRequestsPerWorker = 3
         let maxWorkersPerTarget = 4
         
-        var requestIndex = 0
-        while requestIndex < self.queuedRequests.count {
-            let request = self.queuedRequests[requestIndex]
+        for request in self.queuedRequests.sorted(by: { lhs, rhs in
+            return lhs.id < rhs.id
+        }) {
             let targetKey = MultiplexedRequestTargetKey(target: request.target, continueInBackground: request.continueInBackground)
             
             if self.targetContexts[targetKey] == nil {
@@ -228,11 +233,11 @@ private final class MultiplexedRequestManagerContext {
                     }
                 }))
                 
-                self.queuedRequests.remove(at: requestIndex)
+                if let requestIndex = self.queuedRequests.firstIndex(where: { $0 === request }) {
+                    self.queuedRequests.remove(at: requestIndex)
+                }
                 continue
             }
-            
-            requestIndex += 1
         }
         
         self.checkEmptyContexts()

@@ -54,6 +54,7 @@ final class StoryItemContentComponent: Component {
     final class View: StoryContentItem.View {
         private let imageView: StoryItemImageView
         private var videoNode: UniversalVideoNode?
+        private var loadingEffectView: StoryItemLoadingEffectView?
         
         private var currentMessageMedia: EngineMedia?
         private var fetchDisposable: Disposable?
@@ -363,6 +364,11 @@ final class StoryItemContentComponent: Component {
                             self.environment?.markAsSeen(StoryId(peerId: component.peer.id, id: component.item.id))
                         }
                     }
+                    
+                    if !self.contentLoaded {
+                        self.contentLoaded = true
+                        self.state?.updated(transition: .immediate)
+                    }
                 }
             }
             
@@ -606,6 +612,23 @@ final class StoryItemContentComponent: Component {
             
             if reloadMedia && synchronousLoad {
                 print("\(CFAbsoluteTimeGetCurrent()) Synchronous: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+            }
+            
+            if !self.contentLoaded {
+                let loadingEffectView: StoryItemLoadingEffectView
+                if let current = self.loadingEffectView {
+                    loadingEffectView = current
+                } else {
+                    loadingEffectView = StoryItemLoadingEffectView(frame: CGRect())
+                    self.loadingEffectView = loadingEffectView
+                    self.addSubview(loadingEffectView)
+                }
+                loadingEffectView.update(size: availableSize, transition: transition)
+            } else if let loadingEffectView = self.loadingEffectView{
+                self.loadingEffectView = nil
+                loadingEffectView.layer.animateAlpha(from: loadingEffectView.alpha, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak loadingEffectView] _ in
+                    loadingEffectView?.removeFromSuperview()
+                })
             }
             
             return availableSize
