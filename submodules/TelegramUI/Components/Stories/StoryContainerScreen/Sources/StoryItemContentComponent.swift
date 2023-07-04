@@ -29,13 +29,13 @@ final class StoryItemContentComponent: Component {
 	let context: AccountContext
     let peer: EnginePeer
     let item: EngineStoryItem
-    let useAmbientMode: Bool
+    let audioMode: StoryContentItem.AudioMode
 
-    init(context: AccountContext, peer: EnginePeer, item: EngineStoryItem, useAmbientMode: Bool) {
+    init(context: AccountContext, peer: EnginePeer, item: EngineStoryItem, audioMode: StoryContentItem.AudioMode) {
 		self.context = context
         self.peer = peer
 		self.item = item
-        self.useAmbientMode = useAmbientMode
+        self.audioMode = audioMode
 	}
 
 	static func ==(lhs: StoryItemContentComponent, rhs: StoryItemContentComponent) -> Bool {
@@ -138,8 +138,8 @@ final class StoryItemContentComponent: Component {
                             imageReference: nil,
                             streamVideo: .story,
                             loopVideo: true,
-                            enableSound: true,
-                            beginWithAmbientSound: component.useAmbientMode,
+                            enableSound: component.audioMode != .off,
+                            beginWithAmbientSound: component.audioMode == .ambient,
                             mixWithOthers: true,
                             useLargeThumbnail: false,
                             autoFetchFullSizeThumbnail: false,
@@ -169,12 +169,16 @@ final class StoryItemContentComponent: Component {
                         self.environment?.presentationProgressUpdated(1.0, true)
                     }
                     videoNode.ownsContentNodeUpdated = { [weak self] value in
-                        guard let self else {
+                        guard let self, let component = self.component else {
                             return
                         }
                         if value {
                             self.videoNode?.seek(0.0)
-                            self.videoNode?.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
+                            if component.audioMode != .off {
+                                self.videoNode?.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
+                            } else {
+                                self.videoNode?.play()
+                            }
                         }
                     }
                     videoNode.canAttachContent = true

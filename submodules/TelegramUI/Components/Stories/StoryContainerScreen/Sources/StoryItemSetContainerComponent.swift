@@ -86,7 +86,7 @@ public final class StoryItemSetContainerComponent: Component {
     public let deviceMetrics: DeviceMetrics
     public let isProgressPaused: Bool
     public let isAudioMuted: Bool
-    public let useAmbientMode: Bool
+    public let audioMode: StoryContentItem.AudioMode
     public let hideUI: Bool
     public let visibilityFraction: CGFloat
     public let isPanning: Bool
@@ -118,7 +118,7 @@ public final class StoryItemSetContainerComponent: Component {
         deviceMetrics: DeviceMetrics,
         isProgressPaused: Bool,
         isAudioMuted: Bool,
-        useAmbientMode: Bool,
+        audioMode: StoryContentItem.AudioMode,
         hideUI: Bool,
         visibilityFraction: CGFloat,
         isPanning: Bool,
@@ -149,7 +149,7 @@ public final class StoryItemSetContainerComponent: Component {
         self.deviceMetrics = deviceMetrics
         self.isProgressPaused = isProgressPaused
         self.isAudioMuted = isAudioMuted
-        self.useAmbientMode = useAmbientMode
+        self.audioMode = audioMode
         self.hideUI = hideUI
         self.visibilityFraction = visibilityFraction
         self.isPanning = isPanning
@@ -201,7 +201,7 @@ public final class StoryItemSetContainerComponent: Component {
         if lhs.isAudioMuted != rhs.isAudioMuted {
             return false
         }
-        if lhs.useAmbientMode != rhs.useAmbientMode {
+        if lhs.audioMode != rhs.audioMode {
             return false
         }
         if lhs.hideUI != rhs.hideUI {
@@ -1047,7 +1047,7 @@ public final class StoryItemSetContainerComponent: Component {
                             context: component.context,
                             peer: component.slice.peer,
                             item: item.storyItem,
-                            useAmbientMode: component.useAmbientMode
+                            audioMode: component.audioMode
                         )),
                         environment: {
                             itemEnvironment

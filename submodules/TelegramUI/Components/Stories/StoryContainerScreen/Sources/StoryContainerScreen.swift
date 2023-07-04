@@ -1005,7 +1005,7 @@ private final class StoryContainerScreenComponent: Component {
                             itemSetContainerInsets.bottom = floorToScreenPixels((availableSize.height - itemSetContainerSize.height) / 2.0)
                             itemSetContainerSafeInsets.bottom = 0.0
                         }
-                                                
+                        
                         let _ = itemSetView.view.update(
                             transition: itemSetTransition,
                             component: AnyComponent(StoryItemSetContainerComponent(
@@ -1023,7 +1023,7 @@ private final class StoryContainerScreenComponent: Component {
                                 deviceMetrics: environment.deviceMetrics,
                                 isProgressPaused: isProgressPaused || i != focusedIndex,
                                 isAudioMuted: self.audioMode == .off || (self.audioMode == .ambient && !self.isMuteSwitchOn),
-                                useAmbientMode: self.audioMode == .ambient,
+                                audioMode: self.audioMode,
                                 hideUI: (i == focusedIndex && (self.itemSetPanState?.didBegin == false || self.itemSetPinchState != nil)),
                                 visibilityFraction: 1.0 - abs(panFraction + cubeAdditionalRotationFraction),
                                 isPanning: self.itemSetPanState?.didBegin == true,
