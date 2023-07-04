@@ -74,7 +74,7 @@ final class MediaNavigationStripComponent: Component {
                 return
             }
             
-            let gradientWidth: CGFloat = floor(max(10.0, min(size.width * 0.6, 50.0)))
+            let gradientWidth: CGFloat = floor(max(10.0, size.width * 0.6))
             
             bufferingGradientLayer.frame = CGRect(origin: CGPoint(x: -gradientWidth, y: 0.0), size: CGSize(width: gradientWidth, height: 3.0))
             
