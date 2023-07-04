@@ -528,7 +528,11 @@ private final class MultipartFetchManager {
         
         if isStory {
             self.defaultPartSize = 512 * 1024
-            self.parallelParts = 4
+            if let size, size > self.defaultPartSize {
+                self.parallelParts = 4
+            } else {
+                self.parallelParts = 1
+            }
         } else if let size = size {
             if size <= 512 * 1024 {
                 self.defaultPartSize = 16 * 1024
