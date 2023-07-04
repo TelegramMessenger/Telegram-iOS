@@ -102,7 +102,7 @@ public final class DrawingStickerEntityView: DrawingEntityView {
     }
     
     private var image: UIImage? {
-        if case let .image(image) = self.stickerEntity.content {
+        if case let .image(image, _) = self.stickerEntity.content {
             return image
         } else {
             return nil
@@ -121,7 +121,7 @@ public final class DrawingStickerEntityView: DrawingEntityView {
         switch self.stickerEntity.content {
         case let .file(file):
             return file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
-        case let .image(image):
+        case let .image(image, _):
             return image.size
         case let .video(_, image, _):
             if let image {
@@ -605,6 +605,10 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
     }
     
     override func layoutSubviews() {
+        guard let entityView = self.entityView, let entity = entityView.entity as? DrawingStickerEntity else {
+            return
+        }
+        
         let inset = self.selectionInset - 10.0
 
         let bounds = CGRect(origin: .zero, size: CGSize(width: entitySelectionViewHandleSize.width / self.scale, height: entitySelectionViewHandleSize.height / self.scale))
@@ -635,7 +639,15 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
         self.border.lineDashPattern = [dashLength * relativeDashLength, dashLength * relativeDashLength] as [NSNumber]
         
         self.border.lineWidth = 2.0 / self.scale
-        self.border.path = UIBezierPath(ovalIn: CGRect(origin: CGPoint(x: inset, y: inset), size: CGSize(width: self.bounds.width - inset * 2.0, height: self.bounds.height - inset * 2.0))).cgPath
+        
+        if entity.isRectangle {
+            let width: CGFloat = self.bounds.width - inset * 2.0
+            let height: CGFloat = self.bounds.height - inset * 2.0
+            let cornerRadius: CGFloat = 12.0 - self.scale
+            self.border.path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: inset, y: inset), size: CGSize(width: width, height: height)), cornerRadius: cornerRadius).cgPath
+        } else {
+            self.border.path = UIBezierPath(ovalIn: CGRect(origin: CGPoint(x: inset, y: inset), size: CGSize(width: self.bounds.width - inset * 2.0, height: self.bounds.height - inset * 2.0))).cgPath
+        }
     }
 }
 

@@ -18,7 +18,7 @@ func composerEntitiesForDrawingEntity(account: Account, entity: DrawingEntity, c
         switch entity.content {
         case let .file(file):
             content = .file(file)
-        case let .image(image):
+        case let .image(image, _):
             content = .image(image)
         case let .video(path, _, _):
             content = .video(path)
