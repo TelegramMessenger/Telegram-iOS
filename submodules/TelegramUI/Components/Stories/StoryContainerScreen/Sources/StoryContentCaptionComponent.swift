@@ -43,6 +43,7 @@ final class StoryContentCaptionComponent: Component {
     let context: AccountContext
     let text: String
     let entities: [MessageTextEntity]
+    let entityFiles: [EngineMedia.Id: TelegramMediaFile]
     let action: (Action) -> Void
     let longTapAction: (Action) -> Void
     
@@ -51,6 +52,7 @@ final class StoryContentCaptionComponent: Component {
         context: AccountContext,
         text: String,
         entities: [MessageTextEntity],
+        entityFiles: [EngineMedia.Id: TelegramMediaFile],
         action: @escaping (Action) -> Void,
         longTapAction: @escaping (Action) -> Void
     ) {
@@ -58,6 +60,7 @@ final class StoryContentCaptionComponent: Component {
         self.context = context
         self.text = text
         self.entities = entities
+        self.entityFiles = entityFiles
         self.action = action
         self.longTapAction = longTapAction
     }
@@ -73,6 +76,9 @@ final class StoryContentCaptionComponent: Component {
             return false
         }
         if lhs.entities != rhs.entities {
+            return false
+        }
+        if lhs.entityFiles != rhs.entityFiles {
             return false
         }
         return true
@@ -221,7 +227,7 @@ final class StoryContentCaptionComponent: Component {
             let edgeDistanceFraction = edgeDistance / 7.0
             transition.setAlpha(view: self.scrollFullMaskView, alpha: 1.0 - edgeDistanceFraction)
             
-            let shadowOverflow: CGFloat = 56.0
+            let shadowOverflow: CGFloat = 58.0
             let shadowFrame = CGRect(origin: CGPoint(x: 0.0, y:  -self.scrollView.contentOffset.y + itemLayout.containerSize.height - itemLayout.visibleTextHeight - itemLayout.verticalInset - shadowOverflow), size: CGSize(width: itemLayout.containerSize.width, height: itemLayout.visibleTextHeight + itemLayout.verticalInset + shadowOverflow))
             transition.setFrame(layer: self.shadowGradientLayer, frame: shadowFrame)
             transition.setFrame(layer: self.shadowPlainLayer, frame: CGRect(origin: CGPoint(x: shadowFrame.minX, y: shadowFrame.maxY), size: CGSize(width: shadowFrame.width, height: self.scrollView.contentSize.height + 1000.0)))
@@ -365,7 +371,8 @@ final class StoryContentCaptionComponent: Component {
                 boldItalicFont: Font.semiboldItalic(16.0),
                 fixedFont: Font.monospace(16.0),
                 blockQuoteFont: Font.monospace(16.0),
-                message: nil
+                message: nil,
+                entityFiles: component.entityFiles
             )
             
             let makeLayout = TextNodeWithEntities.asyncLayout(self.textNode)
@@ -485,11 +492,11 @@ final class StoryContentCaptionComponent: Component {
                 var locations: [NSNumber] = []
                 var colors: [CGColor] = []
                 let numStops = 10
-                let baseAlpha: CGFloat = 0.5
+                let baseAlpha: CGFloat = 0.6
                 for i in 0 ..< numStops {
                     let step = 1.0 - CGFloat(i) / CGFloat(numStops - 1)
                     locations.append((1.0 - step) as NSNumber)
-                    let alphaStep: CGFloat = pow(step, 1.2)
+                    let alphaStep: CGFloat = pow(step, 1.0)
                     colors.append(UIColor.black.withAlphaComponent(alphaStep * baseAlpha).cgColor)
                 }
                 

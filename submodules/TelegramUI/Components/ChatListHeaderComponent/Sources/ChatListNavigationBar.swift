@@ -145,7 +145,7 @@ public final class ChatListNavigationBar: Component {
     
     public static let searchScrollHeight: CGFloat = 52.0
     public static let storiesScrollHeight: CGFloat = {
-        return 79.0
+        return 83.0
     }()
 
     public final class View: UIView {
@@ -404,7 +404,7 @@ public final class ChatListNavigationBar: Component {
                 if component.statusBarHeight < 1.0 {
                     headerContentY = 0.0
                 } else {
-                    headerContentY = component.statusBarHeight + 12.0
+                    headerContentY = component.statusBarHeight + 5.0
                 }
             }
             let headerContentFrame = CGRect(origin: CGPoint(x: 0.0, y: headerContentY), size: headerContentSize)
@@ -579,7 +579,7 @@ public final class ChatListNavigationBar: Component {
             var contentHeight = component.statusBarHeight
             
             if component.statusBarHeight >= 1.0 {
-                contentHeight += 10.0
+                contentHeight += 3.0
             }
             contentHeight += 44.0
             

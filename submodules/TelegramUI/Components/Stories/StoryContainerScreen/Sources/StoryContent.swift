@@ -80,15 +80,18 @@ public final class StoryContentItem: Equatable {
     public let position: Int?
     public let peerId: EnginePeer.Id?
     public let storyItem: EngineStoryItem
+    public let entityFiles: [EngineMedia.Id: TelegramMediaFile]
 
     public init(
         position: Int?,
         peerId: EnginePeer.Id?,
-        storyItem: EngineStoryItem
+        storyItem: EngineStoryItem,
+        entityFiles: [EngineMedia.Id: TelegramMediaFile]
     ) {
         self.position = position
         self.peerId = peerId
         self.storyItem = storyItem
+        self.entityFiles = entityFiles
     }
     
     public static func ==(lhs: StoryContentItem, rhs: StoryContentItem) -> Bool {
@@ -99,6 +102,9 @@ public final class StoryContentItem: Equatable {
             return false
         }
         if lhs.storyItem != rhs.storyItem {
+            return false
+        }
+        if lhs.entityFiles != rhs.entityFiles {
             return false
         }
         return true

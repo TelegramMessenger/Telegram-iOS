@@ -513,7 +513,23 @@ private final class MultipartFetchManager {
         self.useMainConnection = useMainConnection
         
         self.completeSize = size
-        if let size = size {
+        
+        var isStory = false
+        if let info = parameters?.info as? TelegramCloudMediaResourceFetchInfo {
+            switch info.reference {
+            case let .media(media, _):
+                if case .story = media {
+                    isStory = true
+                }
+            default:
+                break
+            }
+        }
+        
+        if isStory {
+            self.defaultPartSize = 512 * 1024
+            self.parallelParts = 4
+        } else if let size = size {
             if size <= 512 * 1024 {
                 self.defaultPartSize = 16 * 1024
                 self.parallelParts = 4 * 4

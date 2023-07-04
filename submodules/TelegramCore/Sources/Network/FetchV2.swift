@@ -215,6 +215,7 @@ private final class FetchImpl {
         private var requiredRangesDisposable: Disposable?
         private var requiredRanges: [RequiredRange] = []
         
+        private let defaultPartSize: Int64
         private var state: State?
         
         private let loggingIdentifier: String
@@ -263,6 +264,24 @@ private final class FetchImpl {
             self.updatedFileReference = Data()
             #endif*/
             
+            var isStory = false
+            if let info = parameters?.info as? TelegramCloudMediaResourceFetchInfo {
+                switch info.reference {
+                case let .media(media, _):
+                    if case .story = media {
+                        isStory = true
+                    }
+                default:
+                    break
+                }
+            }
+            
+            if isStory {
+                self.defaultPartSize = 512 * 1024
+            } else {
+                self.defaultPartSize = 128 * 1024
+            }
+            
             if let resource = resource as? TelegramCloudMediaResource {
                 if let apiInputLocation = resource.apiInputLocation(fileReference: Data()) {
                     self.loggingIdentifier = "\(apiInputLocation)"
@@ -297,7 +316,7 @@ private final class FetchImpl {
                 
                 self.state = .fetching(FetchingState(
                     fetchLocation: .datacenter(self.datacenterId),
-                    partSize: 128 * 1024,
+                    partSize: self.defaultPartSize,
                     minPartSize: 4 * 1024,
                     maxPartSize: 1 * 1024 * 1024,
                     partAlignment: 4 * 1024,
@@ -451,9 +470,9 @@ private final class FetchImpl {
                         }
                         self.state = .fetching(FetchImpl.FetchingState(
                             fetchLocation: .cdn(cdnData),
-                            partSize: 128 * 1024,
+                            partSize: self.defaultPartSize,
                             minPartSize: 4 * 1024,
-                            maxPartSize: 128 * 1024,
+                            maxPartSize: self.defaultPartSize,
                             partAlignment: 4 * 1024,
                             partDivision: 1 * 1024 * 1024,
                             maxPendingParts: 6
@@ -499,9 +518,9 @@ private final class FetchImpl {
                             
                             self.state = .fetching(FetchingState(
                                 fetchLocation: fetchLocation,
-                                partSize: 128 * 1024,
+                                partSize: self.defaultPartSize,
                                 minPartSize: 4 * 1024,
-                                maxPartSize: 128 * 1024,
+                                maxPartSize: self.defaultPartSize,
                                 partAlignment: 4 * 1024,
                                 partDivision: 1 * 1024 * 1024,
                                 maxPendingParts: 6
@@ -686,9 +705,9 @@ private final class FetchImpl {
                     case let .cdnRedirect(cdnData):
                         self.state = .fetching(FetchImpl.FetchingState(
                             fetchLocation: .cdn(cdnData),
-                            partSize: 128 * 1024,
+                            partSize: self.defaultPartSize,
                             minPartSize: 4 * 1024,
-                            maxPartSize: 128 * 1024,
+                            maxPartSize: self.defaultPartSize,
                             partAlignment: 4 * 1024,
                             partDivision: 1 * 1024 * 1024,
                             maxPendingParts: 6

@@ -188,7 +188,9 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 case let .bubble(incoming):
                     titleColor = incoming ? (authorNameColor ?? arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor) : arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
                     lineImage = incoming ? (authorNameColor.flatMap({ PresentationResourcesChat.chatBubbleVerticalLineImage(color: $0) }) ??  PresentationResourcesChat.chatBubbleVerticalLineIncomingImage(arguments.presentationData.theme.theme)) : PresentationResourcesChat.chatBubbleVerticalLineOutgoingImage(arguments.presentationData.theme.theme)
-                    if isMedia || isExpiredStory {
+                    if isExpiredStory {
+                        textColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                    } else if isMedia {
                         textColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.secondaryTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
                     } else {
                         textColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.primaryTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.primaryTextColor

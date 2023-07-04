@@ -410,7 +410,7 @@ public final class ChatListHeaderComponent: Component {
             }
         }
         
-        func updateNavigationTransitionAsNext(previousView: ContentView, fraction: CGFloat, transition: Transition, completion: @escaping () -> Void) {
+        func updateNavigationTransitionAsNext(previousView: ContentView, storyPeerListView: StoryPeerListComponent.View?, fraction: CGFloat, transition: Transition, completion: @escaping () -> Void) {
             transition.setBounds(view: self.titleOffsetContainer, bounds: CGRect(origin: CGPoint(x: -(1.0 - fraction) * self.bounds.width, y: 0.0), size: self.titleOffsetContainer.bounds.size), completion: { _ in
                 completion()
             })
@@ -420,7 +420,15 @@ public final class ChatListHeaderComponent: Component {
                 transition.setScale(view: backButtonView.arrowView, scale: pow(max(0.001, fraction), 2.0))
                 transition.setAlpha(view: backButtonView.arrowView, alpha: pow(fraction, 2.0))
                 
-                if let previousChatListTitleView = previousView.chatListTitleView {
+                if let storyPeerListView {
+                    let previousTitleFrame = storyPeerListView.titleFrame()
+                    let backButtonTitleFrame = backButtonView.convert(backButtonView.titleView.frame, to: self)
+                    
+                    let totalOffset = previousTitleFrame.minX - backButtonTitleFrame.minX
+                    
+                    transition.setBounds(view: backButtonView.titleOffsetContainer, bounds: CGRect(origin: CGPoint(x: -totalOffset * (1.0 - fraction), y: 0.0), size: backButtonView.titleOffsetContainer.bounds.size))
+                    transition.setAlpha(view: backButtonView.titleOffsetContainer, alpha: pow(fraction, 2.0))
+                } else if let previousChatListTitleView = previousView.chatListTitleView {
                     let previousTitleFrame = previousChatListTitleView.titleNode.view.convert(previousChatListTitleView.titleNode.bounds, to: previousView.titleOffsetContainer)
                     let backButtonTitleFrame = backButtonView.convert(backButtonView.titleView.frame, to: self)
                     
@@ -993,7 +1001,7 @@ public final class ChatListHeaderComponent: Component {
                             secondaryContentView.updateNavigationTransitionAsNextInplace(previousView: primaryContentView, fraction: 0.0, transition: .immediate, completion: {})
                         } else {
                             primaryContentView.updateNavigationTransitionAsPrevious(nextView: secondaryContentView, fraction: 0.0, transition: .immediate, completion: {})
-                            secondaryContentView.updateNavigationTransitionAsNext(previousView: primaryContentView, fraction: 0.0, transition: .immediate, completion: {})
+                            secondaryContentView.updateNavigationTransitionAsNext(previousView: primaryContentView, storyPeerListView: self.storyPeerListView(), fraction: 0.0, transition: .immediate, completion: {})
                         }
                     }
                     
@@ -1002,7 +1010,7 @@ public final class ChatListHeaderComponent: Component {
                         secondaryContentView.updateNavigationTransitionAsNextInplace(previousView: primaryContentView, fraction: component.secondaryTransition, transition: transition, completion: {})
                     } else {
                         primaryContentView.updateNavigationTransitionAsPrevious(nextView: secondaryContentView, fraction: component.secondaryTransition, transition: transition, completion: {})
-                        secondaryContentView.updateNavigationTransitionAsNext(previousView: primaryContentView, fraction: component.secondaryTransition, transition: transition, completion: {})
+                        secondaryContentView.updateNavigationTransitionAsNext(previousView: primaryContentView, storyPeerListView: self.storyPeerListView(), fraction: component.secondaryTransition, transition: transition, completion: {})
                     }
                 }
             } else if let secondaryContentView = self.secondaryContentView {
@@ -1016,7 +1024,7 @@ public final class ChatListHeaderComponent: Component {
                         })
                     } else {
                         primaryContentView.updateNavigationTransitionAsPrevious(nextView: secondaryContentView, fraction: 0.0, transition: transition, completion: {})
-                        secondaryContentView.updateNavigationTransitionAsNext(previousView: primaryContentView, fraction: 0.0, transition: transition, completion: { [weak secondaryContentView] in
+                        secondaryContentView.updateNavigationTransitionAsNext(previousView: primaryContentView, storyPeerListView: self.storyPeerListView(), fraction: 0.0, transition: transition, completion: { [weak secondaryContentView] in
                             secondaryContentView?.removeFromSuperview()
                         })
                     }
@@ -1025,7 +1033,7 @@ public final class ChatListHeaderComponent: Component {
                 }
             }
             
-            if let storyPeerList = self.storyPeerList, let storyPeerListComponentView = storyPeerList.view {
+            if let storyPeerList = self.storyPeerList, let storyPeerListComponentView = storyPeerList.view as? StoryPeerListComponent.View {
                 if storyPeerListComponentView.superview == nil {
                     self.addSubview(storyPeerListComponentView)
                 }
@@ -1035,13 +1043,15 @@ public final class ChatListHeaderComponent: Component {
                 
                 //let storyPeerListPosition: CGFloat = storyPeerListMinOffset * (1.0 - component.storiesFraction) + storyPeerListMaxOffset * component.storiesFraction
                 
-                var defaultStoryListX: CGFloat = 0.0
-                if let primaryContentView = self.primaryContentView {
-                    defaultStoryListX = primaryContentView.centerContentOrigin - (self.storyPeerListExternalState.collapsedWidth * 0.5 + 12.0) - availableSize.width * 0.5
+                var storiesX: CGFloat = 0.0
+                if let nextBackButtonView = self.secondaryContentView?.backButtonView {
+                    let backButtonTitleFrame = nextBackButtonView.convert(nextBackButtonView.titleView.frame, to: self)
+                    let storyListTitleFrame = storyPeerListComponentView.titleFrame()
+                    
+                    storiesX += (backButtonTitleFrame.minX - storyListTitleFrame.minX) * component.secondaryTransition
                 }
-                let _ = defaultStoryListX
                 
-                storyListTransition.setFrame(view: storyPeerListComponentView, frame: CGRect(origin: CGPoint(x: -1.0 * availableSize.width * component.secondaryTransition + 0.0, y: storyPeerListMaxOffset), size: CGSize(width: availableSize.width, height: 79.0)))
+                storyListTransition.setFrame(view: storyPeerListComponentView, frame: CGRect(origin: CGPoint(x: storiesX, y: storyPeerListMaxOffset), size: CGSize(width: availableSize.width, height: 79.0)))
                 
                 let storyListNormalAlpha: CGFloat = 1.0
                 

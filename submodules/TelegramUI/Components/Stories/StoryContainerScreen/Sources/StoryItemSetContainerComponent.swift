@@ -86,7 +86,7 @@ public final class StoryItemSetContainerComponent: Component {
     public let deviceMetrics: DeviceMetrics
     public let isProgressPaused: Bool
     public let isAudioMuted: Bool
-    public let useAmbientMode: Bool
+    public let audioMode: StoryContentItem.AudioMode
     public let hideUI: Bool
     public let visibilityFraction: CGFloat
     public let isPanning: Bool
@@ -118,7 +118,7 @@ public final class StoryItemSetContainerComponent: Component {
         deviceMetrics: DeviceMetrics,
         isProgressPaused: Bool,
         isAudioMuted: Bool,
-        useAmbientMode: Bool,
+        audioMode: StoryContentItem.AudioMode,
         hideUI: Bool,
         visibilityFraction: CGFloat,
         isPanning: Bool,
@@ -149,7 +149,7 @@ public final class StoryItemSetContainerComponent: Component {
         self.deviceMetrics = deviceMetrics
         self.isProgressPaused = isProgressPaused
         self.isAudioMuted = isAudioMuted
-        self.useAmbientMode = useAmbientMode
+        self.audioMode = audioMode
         self.hideUI = hideUI
         self.visibilityFraction = visibilityFraction
         self.isPanning = isPanning
@@ -201,7 +201,7 @@ public final class StoryItemSetContainerComponent: Component {
         if lhs.isAudioMuted != rhs.isAudioMuted {
             return false
         }
-        if lhs.useAmbientMode != rhs.useAmbientMode {
+        if lhs.audioMode != rhs.audioMode {
             return false
         }
         if lhs.hideUI != rhs.hideUI {
@@ -1058,7 +1058,7 @@ public final class StoryItemSetContainerComponent: Component {
                             context: component.context,
                             peer: component.slice.peer,
                             item: item.storyItem,
-                            useAmbientMode: component.useAmbientMode
+                            audioMode: component.audioMode
                         )),
                         environment: {
                             itemEnvironment
@@ -1378,6 +1378,9 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 if let closeFriendIconView = self.closeFriendIcon?.view {
                     closeFriendIconView.layer.animateAlpha(from: closeFriendIconView.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false)
+                }
+                if let captionView = self.captionItem?.view.view {
+                    captionView.layer.animateAlpha(from: captionView.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false)
                 }
                 self.closeButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
                 self.topContentGradientLayer.animateAlpha(from: CGFloat(self.topContentGradientLayer.opacity), to: 0.0, duration: 0.25, removeOnCompletion: false)
@@ -2332,7 +2335,7 @@ public final class StoryItemSetContainerComponent: Component {
                             let tooltipScreen = TooltipScreen(
                                 account: component.context.account,
                                 sharedContext: component.context.sharedContext,
-                                text: .plain(text: tooltipText), style: .default, location: TooltipScreen.Location.point(closeFriendIconView.convert(closeFriendIconView.bounds, to: self).offsetBy(dx: 1.0, dy: 6.0), .top), displayDuration: .manual, shouldDismissOnTouch: { _, _ in
+                                text: .plain(text: tooltipText), style: .default, location: TooltipScreen.Location.point(closeFriendIconView.convert(closeFriendIconView.bounds, to: self).offsetBy(dx: 1.0, dy: 6.0), .top), displayDuration: .infinite, shouldDismissOnTouch: { _, _ in
                                     return .dismiss(consume: true)
                                 }
                             )
@@ -2527,6 +2530,7 @@ public final class StoryItemSetContainerComponent: Component {
                         context: component.context,
                         text: component.slice.item.storyItem.text,
                         entities: component.slice.item.storyItem.entities,
+                        entityFiles: component.slice.item.entityFiles,
                         action: { [weak self] action in
                             guard let self, let component = self.component else {
                                 return
@@ -2676,7 +2680,7 @@ public final class StoryItemSetContainerComponent: Component {
                     reactionContextNode.displayTail = false
                     self.reactionContextNode = reactionContextNode
                     
-                    reactionContextNode.reactionSelected = { [weak self] updateReaction, _ in
+                    reactionContextNode.reactionSelected = { [weak self, weak reactionContextNode] updateReaction, _ in
                         guard let self, let component = self.component else {
                             return
                         }
@@ -2700,23 +2704,24 @@ public final class StoryItemSetContainerComponent: Component {
                             targetView.isUserInteractionEnabled = false
                             self.addSubview(targetView)
                             
-                            reactionContextNode.willAnimateOutToReaction(value: updateReaction.reaction)
-                            reactionContextNode.animateOutToReaction(value: updateReaction.reaction, targetView: targetView, hideNode: false, animateTargetContainer: nil, addStandaloneReactionAnimation: "".isEmpty ? nil : { [weak self] standaloneReactionAnimation in
-                                guard let self else {
-                                    return
-                                }
-                                standaloneReactionAnimation.frame = self.bounds
-                                self.addSubview(standaloneReactionAnimation.view)
-                            }, completion: { [weak targetView, weak reactionContextNode] in
-                                targetView?.removeFromSuperview()
-                                if let reactionContextNode {
-                                    reactionContextNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.3, removeOnCompletion: false)
-                                    reactionContextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak reactionContextNode] _ in
-                                        reactionContextNode?.view.removeFromSuperview()
-                                    })
-                                }
-                            })
-    
+                            if let reactionContextNode {
+                                reactionContextNode.willAnimateOutToReaction(value: updateReaction.reaction)
+                                reactionContextNode.animateOutToReaction(value: updateReaction.reaction, targetView: targetView, hideNode: false, animateTargetContainer: nil, addStandaloneReactionAnimation: "".isEmpty ? nil : { [weak self] standaloneReactionAnimation in
+                                    guard let self else {
+                                        return
+                                    }
+                                    standaloneReactionAnimation.frame = self.bounds
+                                    self.addSubview(standaloneReactionAnimation.view)
+                                }, completion: { [weak targetView, weak reactionContextNode] in
+                                    targetView?.removeFromSuperview()
+                                    if let reactionContextNode {
+                                        reactionContextNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.3, removeOnCompletion: false)
+                                        reactionContextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak reactionContextNode] _ in
+                                            reactionContextNode?.view.removeFromSuperview()
+                                        })
+                                    }
+                                })
+                            }
                             
                             if hasFirstResponder(self) {
                                 self.sendMessageContext.currentInputMode = .text
