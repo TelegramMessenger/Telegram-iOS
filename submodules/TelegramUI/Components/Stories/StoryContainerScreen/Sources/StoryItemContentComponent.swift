@@ -167,7 +167,7 @@ final class StoryItemContentComponent: Component {
                         guard let self else {
                             return
                         }
-                        self.environment?.presentationProgressUpdated(1.0, true)
+                        self.environment?.presentationProgressUpdated(1.0, false, true)
                     }
                     videoNode.ownsContentNodeUpdated = { [weak self] value in
                         guard let self, let component = self.component else {
@@ -296,7 +296,7 @@ final class StoryItemContentComponent: Component {
                                 currentProgressTimerValue = max(0.0, min(currentProgressTimerLimit, currentProgressTimerValue))
                                 self.currentProgressTimerValue = currentProgressTimerValue
                                 
-                                self.environment?.presentationProgressUpdated(currentProgressTimerValue / currentProgressTimerLimit, true)
+                                self.environment?.presentationProgressUpdated(currentProgressTimerValue / currentProgressTimerLimit, false, true)
                             }
                         }, queue: .mainQueue()
                     )
@@ -332,6 +332,11 @@ final class StoryItemContentComponent: Component {
                 effectiveDuration = 1.0
             }
             
+            var isBuffering = false
+            if case .buffering(false, true, _, _) = videoPlaybackStatus.status {
+                isBuffering = true
+            }
+            
             if case .buffering(true, _, _, _) = videoPlaybackStatus.status {
                 timestampAndDuration = (nil, effectiveDuration)
             } else if effectiveDuration > 0.0 {
@@ -355,6 +360,10 @@ final class StoryItemContentComponent: Component {
                 }
                 progress = min(1.0, progress)
                 
+                if actualTimestamp < 0.1 {
+                    isBuffering = false
+                }
+                
                 currentProgress = progress
                 
                 if isPlaying {
@@ -373,7 +382,7 @@ final class StoryItemContentComponent: Component {
             }
             
             let clippedProgress = max(0.0, min(1.0, currentProgress))
-            self.environment?.presentationProgressUpdated(clippedProgress, false)
+            self.environment?.presentationProgressUpdated(clippedProgress, isBuffering, false)
         }
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
