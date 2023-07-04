@@ -252,6 +252,12 @@ public final class StorySetIndicatorComponent: Component {
         private var component: StorySetIndicatorComponent?
         private weak var state: EmptyComponentState?
         
+        private var effectiveItemsWidth: CGFloat = 0.0
+        
+        public var transitionView: (UIView, CGRect) {
+            return (self.imageView, CGRect(origin: CGPoint(), size: CGSize(width: self.effectiveItemsWidth, height: self.imageView.bounds.height)))
+        }
+        
         override init(frame: CGRect) {
             self.button = HighlightTrackingButton()
             
@@ -339,6 +345,7 @@ public final class StorySetIndicatorComponent: Component {
             
             let maxItemsWidth: CGFloat = outerDiameter * 0.5 + CGFloat(max(0, 3 - 1)) * (outerDiameter - overflow) + outerDiameter * 0.5
             let effectiveItemsWidth: CGFloat = outerDiameter * 0.5 + CGFloat(max(0, items.count - 1)) * (outerDiameter - overflow) + outerDiameter * 0.5
+            self.effectiveItemsWidth = effectiveItemsWidth
             
             let borderColors: [UInt32]
             

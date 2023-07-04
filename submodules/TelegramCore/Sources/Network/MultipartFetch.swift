@@ -939,6 +939,14 @@ public func resourceFetchInfo(resource: TelegramMediaResource) -> MediaResourceF
     )
 }
 
+public func resourceFetchInfo(reference: MediaResourceReference) -> MediaResourceFetchInfo? {
+    return TelegramCloudMediaResourceFetchInfo(
+        reference: reference,
+        preferBackgroundReferenceRevalidation: false,
+        continueInBackground: false
+    )
+}
+
 private func multipartFetchV1(
     accountPeerId: PeerId,
     postbox: Postbox,

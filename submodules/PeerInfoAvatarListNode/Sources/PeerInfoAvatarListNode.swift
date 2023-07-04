@@ -582,6 +582,13 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     
     public var storyParams: (peer: EnginePeer, items: [EngineStoryItem], count: Int, hasUnseen: Bool)?
     private var expandedStorySetIndicator: ComponentView<Empty>?
+    public var expandedStorySetIndicatorTransitionView: (UIView, CGRect)? {
+        if let setView = self.expandedStorySetIndicator?.view as? StorySetIndicatorComponent.View {
+            return setView.transitionView
+        } else {
+            return nil
+        }
+    }
     
     public let contentNode: ASDisplayNode
     let leftHighlightNode: ASDisplayNode
