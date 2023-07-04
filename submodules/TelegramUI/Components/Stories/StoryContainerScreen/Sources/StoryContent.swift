@@ -46,14 +46,14 @@ public final class StoryContentItem: Equatable {
         public let externalState: ExternalState
         public let sharedState: SharedState
         public let theme: PresentationTheme
-        public let presentationProgressUpdated: (Double, Bool) -> Void
+        public let presentationProgressUpdated: (Double, Bool, Bool) -> Void
         public let markAsSeen: (StoryId) -> Void
         
         public init(
             externalState: ExternalState,
             sharedState: SharedState,
             theme: PresentationTheme,
-            presentationProgressUpdated: @escaping (Double, Bool) -> Void,
+            presentationProgressUpdated: @escaping (Double, Bool, Bool) -> Void,
             markAsSeen: @escaping (StoryId) -> Void
         ) {
             self.externalState = externalState

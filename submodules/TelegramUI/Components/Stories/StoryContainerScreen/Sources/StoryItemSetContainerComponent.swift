@@ -243,6 +243,7 @@ public final class StoryItemSetContainerComponent: Component {
         let contentContainerView: UIView
         let view = ComponentView<StoryContentItem.Environment>()
         var currentProgress: Double = 0.0
+        var isBuffering: Bool = false
         var requestedNext: Bool = false
         
         init() {
@@ -1025,22 +1026,25 @@ public final class StoryItemSetContainerComponent: Component {
                         externalState: visibleItem.externalState,
                         sharedState: component.storyItemSharedState,
                         theme: component.theme,
-                        presentationProgressUpdated: { [weak self, weak visibleItem] progress, canSwitch in
+                        presentationProgressUpdated: { [weak self, weak visibleItem] progress, isBuffering, canSwitch in
                             guard let self = self, let component = self.component else {
                                 return
                             }
                             guard let visibleItem else {
                                 return
                             }
-                            visibleItem.currentProgress = progress
-                            
-                            if let navigationStripView = self.navigationStrip.view as? MediaNavigationStripComponent.View {
-                                navigationStripView.updateCurrentItemProgress(value: progress, transition: .immediate)
-                            }
-                            if progress >= 1.0 && canSwitch && !visibleItem.requestedNext {
-                                visibleItem.requestedNext = true
+                            if visibleItem.currentProgress != progress || visibleItem.isBuffering != isBuffering {
+                                visibleItem.currentProgress = progress
+                                visibleItem.isBuffering = isBuffering
                                 
-                                component.navigate(.next)
+                                if let navigationStripView = self.navigationStrip.view as? MediaNavigationStripComponent.View {
+                                    navigationStripView.updateCurrentItemProgress(value: progress, isBuffering: isBuffering, transition: .immediate)
+                                }
+                                if progress >= 1.0 && canSwitch && !visibleItem.requestedNext {
+                                    visibleItem.requestedNext = true
+                                    
+                                    component.navigate(.next)
+                                }
                             }
                         },
                         markAsSeen: { [weak self] id in
@@ -2906,7 +2910,8 @@ public final class StoryItemSetContainerComponent: Component {
                     )),
                     environment: {
                         MediaNavigationStripComponent.EnvironmentType(
-                            currentProgress: visibleItem.currentProgress
+                            currentProgress: visibleItem.currentProgress,
+                            currentIsBuffering: visibleItem.isBuffering
                         )
                     },
                     containerSize: CGSize(width: availableSize.width - navigationStripSideInset * 2.0, height: 2.0)

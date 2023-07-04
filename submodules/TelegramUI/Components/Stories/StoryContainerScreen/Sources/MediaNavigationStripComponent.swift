@@ -2,17 +2,23 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import HierarchyTrackingLayer
 
 final class MediaNavigationStripComponent: Component {
     final class EnvironmentType: Equatable {
         let currentProgress: Double
+        let currentIsBuffering: Bool
         
-        init(currentProgress: Double) {
+        init(currentProgress: Double, currentIsBuffering: Bool) {
             self.currentProgress = currentProgress
+            self.currentIsBuffering = currentIsBuffering
         }
         
         static func ==(lhs: EnvironmentType, rhs: EnvironmentType) -> Bool {
             if lhs.currentProgress != rhs.currentProgress {
+                return false
+            }
+            if lhs.currentIsBuffering != rhs.currentIsBuffering {
                 return false
             }
             return true
@@ -39,6 +45,8 @@ final class MediaNavigationStripComponent: Component {
     
     private final class ItemLayer: SimpleLayer {
         let foregroundLayer: SimpleLayer
+        var bufferingGradientLayer: SimpleGradientLayer?
+        var bufferingLayer: HierarchyTrackingLayer?
         
         override init() {
             self.foregroundLayer = SimpleLayer()
@@ -60,6 +68,67 @@ final class MediaNavigationStripComponent: Component {
             
             super.init(layer: layer)
         }
+        
+        private func updateProgressAnimation(size: CGSize) {
+            guard let bufferingGradientLayer = self.bufferingGradientLayer else {
+                return
+            }
+            
+            let gradientWidth: CGFloat = floor(max(10.0, min(size.width * 0.6, 50.0)))
+            
+            bufferingGradientLayer.frame = CGRect(origin: CGPoint(x: -gradientWidth, y: 0.0), size: CGSize(width: gradientWidth, height: 3.0))
+            
+            let animation = bufferingGradientLayer.makeAnimation(from: 0.0 as NSNumber, to: (size.width + gradientWidth * 2.0) as NSNumber, keyPath: "position.x", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.6, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: true, additive: true)
+            animation.repeatCount = Float.infinity
+            bufferingGradientLayer.add(animation, forKey: "shimmer")
+        }
+        
+        func updateIsBuffering(size: CGSize, isBuffering: Bool) {
+            if isBuffering {
+                let bufferingLayer: HierarchyTrackingLayer
+                if let current = self.bufferingLayer {
+                    bufferingLayer = current
+                } else {
+                    bufferingLayer = HierarchyTrackingLayer()
+                    bufferingLayer.cornerRadius = 1.5
+                    bufferingLayer.masksToBounds = true
+                    self.bufferingLayer = bufferingLayer
+                    self.addSublayer(bufferingLayer)
+                    bufferingLayer.didEnterHierarchy = { [weak self] in
+                        guard let self, !self.bounds.isEmpty else {
+                            return
+                        }
+                        self.updateProgressAnimation(size: self.bounds.size)
+                    }
+                }
+                
+                let bufferingGradientLayer: SimpleGradientLayer
+                if let current = self.bufferingGradientLayer {
+                    bufferingGradientLayer = current
+                } else {
+                    bufferingGradientLayer = SimpleGradientLayer()
+                    self.bufferingGradientLayer = bufferingGradientLayer
+                    bufferingLayer.addSublayer(bufferingGradientLayer)
+                    
+                    let colorCount = 7
+                    bufferingGradientLayer.colors = (0 ..< colorCount).map { index -> CGColor in
+                        let t = CGFloat(index) / CGFloat(colorCount - 1)
+                        let fraction: CGFloat = 1.0 - max(0.0, min(1.0, abs(0.5 - t) / 0.5))
+                        return UIColor(white: 1.0, alpha: 0.3 * sin(fraction)).cgColor
+                    }
+                }
+                
+                bufferingLayer.frame = CGRect(origin: CGPoint(), size: size)
+                
+                self.updateProgressAnimation(size: size)
+            } else if let bufferingLayer = self.bufferingLayer {
+                self.bufferingLayer = nil
+                self.bufferingGradientLayer = nil
+                bufferingLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak bufferingLayer] _ in
+                    bufferingLayer?.removeFromSuperlayer()
+                })
+            }
+        }
     }
 
     final class View: UIView {
@@ -78,7 +147,7 @@ final class MediaNavigationStripComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func updateCurrentItemProgress(value: CGFloat, transition: Transition) {
+        func updateCurrentItemProgress(value: CGFloat, isBuffering: Bool, transition: Transition) {
             guard let component = self.component else {
                 return
             }
@@ -88,10 +157,13 @@ final class MediaNavigationStripComponent: Component {
             
             let itemFrame = itemLayer.bounds
             transition.setFrame(layer: itemLayer.foregroundLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value * itemFrame.width, height: itemFrame.height)))
+            itemLayer.updateIsBuffering(size: itemFrame.size, isBuffering: isBuffering)
         }
         
         func update(component: MediaNavigationStripComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             self.component = component
+            
+            let environment = environment[EnvironmentType.self].value
             
             let spacing: CGFloat = 3.0
             let itemHeight: CGFloat = 2.0
@@ -156,15 +228,18 @@ final class MediaNavigationStripComponent: Component {
                     itemLayer.foregroundLayer.backgroundColor = UIColor(white: 1.0, alpha: 1.0).cgColor
                     
                     let itemProgress: CGFloat
+                    var itemIsBuffering = false
                     if i < component.index {
                         itemProgress = 1.0
                     } else if i == component.index {
-                        itemProgress = max(0.0, min(1.0, environment[EnvironmentType.self].value.currentProgress))
+                        itemProgress = max(0.0, min(1.0, environment.currentProgress))
+                        itemIsBuffering = environment.currentIsBuffering
                     } else {
                         itemProgress = 0.0
                     }
                     
                     transition.setFrame(layer: itemLayer.foregroundLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: itemProgress * itemFrame.width, height: itemFrame.height)))
+                    itemLayer.updateIsBuffering(size: itemFrame.size, isBuffering: itemIsBuffering)
                 }
             }
             
