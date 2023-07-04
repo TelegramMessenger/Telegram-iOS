@@ -4122,6 +4122,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         sourceIsAvatar: true
                     )
                     self.headerNode.avatarListNode.avatarContainerNode.avatarNode.isHidden = true
+                } else if let (expandedStorySetIndicatorTransitionView, subRect) = self.headerNode.avatarListNode.listContainerNode.expandedStorySetIndicatorTransitionView {
+                    transitionIn = StoryContainerScreen.TransitionIn(
+                        sourceView: expandedStorySetIndicatorTransitionView,
+                        sourceRect: subRect,
+                        sourceCornerRadius: expandedStorySetIndicatorTransitionView.bounds.height * 0.5,
+                        sourceIsAvatar: false
+                    )
+                    expandedStorySetIndicatorTransitionView.isHidden = true
                 }
                 
                 let storyContainerScreen = StoryContainerScreen(
@@ -4134,6 +4142,44 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         }
                         if !fromAvatar {
                             self.headerNode.avatarListNode.avatarContainerNode.avatarNode.isHidden = false
+                            
+                            if let (expandedStorySetIndicatorTransitionView, subRect) = self.headerNode.avatarListNode.listContainerNode.expandedStorySetIndicatorTransitionView {
+                                return StoryContainerScreen.TransitionOut(
+                                    destinationView: expandedStorySetIndicatorTransitionView,
+                                    transitionView: StoryContainerScreen.TransitionView(
+                                        makeView: { [weak expandedStorySetIndicatorTransitionView] in
+                                            let parentView = UIView()
+                                            if let copyView = expandedStorySetIndicatorTransitionView?.snapshotContentTree(unhide: true) {
+                                                copyView.layer.anchorPoint = CGPoint()
+                                                parentView.addSubview(copyView)
+                                            }
+                                            return parentView
+                                        },
+                                        updateView: { copyView, state, transition in
+                                            guard let view = copyView.subviews.first else {
+                                                return
+                                            }
+                                            let size = state.sourceSize.interpolate(to: state.destinationSize, amount: state.progress)
+                                            transition.setPosition(view: view, position: CGPoint(x: 0.0, y: 0.0))
+                                            transition.setScale(view: view, scale: size.width / state.destinationSize.width)
+                                        },
+                                        insertCloneTransitionView: nil
+                                    ),
+                                    destinationRect: subRect,
+                                    destinationCornerRadius: expandedStorySetIndicatorTransitionView.bounds.height * 0.5,
+                                    destinationIsAvatar: false,
+                                    completed: { [weak self] in
+                                        guard let self else {
+                                            return
+                                        }
+                                        
+                                        if let (expandedStorySetIndicatorTransitionView, _) = self.headerNode.avatarListNode.listContainerNode.expandedStorySetIndicatorTransitionView {
+                                            expandedStorySetIndicatorTransitionView.isHidden = false
+                                        }
+                                    }
+                                )
+                            }
+                            
                             return nil
                         }
                         

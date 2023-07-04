@@ -528,7 +528,11 @@ private final class MultipartFetchManager {
         
         if isStory {
             self.defaultPartSize = 512 * 1024
-            self.parallelParts = 4
+            if let size, size > self.defaultPartSize {
+                self.parallelParts = 4
+            } else {
+                self.parallelParts = 1
+            }
         } else if let size = size {
             if size <= 512 * 1024 {
                 self.defaultPartSize = 16 * 1024
@@ -934,6 +938,14 @@ public func standaloneMultipartFetch(accountPeerId: PeerId, postbox: Postbox, ne
 public func resourceFetchInfo(resource: TelegramMediaResource) -> MediaResourceFetchInfo? {
     return TelegramCloudMediaResourceFetchInfo(
         reference: MediaResourceReference.standalone(resource: resource),
+        preferBackgroundReferenceRevalidation: false,
+        continueInBackground: false
+    )
+}
+
+public func resourceFetchInfo(reference: MediaResourceReference) -> MediaResourceFetchInfo? {
+    return TelegramCloudMediaResourceFetchInfo(
+        reference: reference,
         preferBackgroundReferenceRevalidation: false,
         continueInBackground: false
     )
