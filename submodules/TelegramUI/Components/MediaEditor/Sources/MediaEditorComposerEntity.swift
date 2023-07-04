@@ -25,7 +25,7 @@ func composerEntitiesForDrawingEntity(account: Account, entity: DrawingEntity, c
         case .dualVideoReference:
             return []
         }
-        return [MediaEditorComposerStickerEntity(account: account, content: content, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: entity.mirrored, colorSpace: colorSpace)]
+        return [MediaEditorComposerStickerEntity(account: account, content: content, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: entity.mirrored, colorSpace: colorSpace, isStatic: entity.isExplicitlyStatic)]
     } else if let renderImage = entity.renderImage, let image = CIImage(image: renderImage, options: [.colorSpace: colorSpace]) {
         if let entity = entity as? DrawingBubbleEntity {
             return [MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: 1.0, rotation: entity.rotation, baseSize: entity.size, mirrored: false)]
@@ -90,6 +90,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
     let baseSize: CGSize?
     let mirrored: Bool
     let colorSpace: CGColorSpace
+    let isStatic: Bool
     
     var isAnimated: Bool
     var source: AnimatedStickerNodeSource?
@@ -113,7 +114,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
     var imagePixelBuffer: CVPixelBuffer?
     let imagePromise = Promise<UIImage>()
     
-    init(account: Account, content: Content, position: CGPoint, scale: CGFloat, rotation: CGFloat, baseSize: CGSize, mirrored: Bool, colorSpace: CGColorSpace) {
+    init(account: Account, content: Content, position: CGPoint, scale: CGFloat, rotation: CGFloat, baseSize: CGSize, mirrored: Bool, colorSpace: CGColorSpace, isStatic: Bool) {
         self.content = content
         self.position = position
         self.scale = scale
@@ -121,6 +122,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
         self.baseSize = baseSize
         self.mirrored = mirrored
         self.colorSpace = colorSpace
+        self.isStatic = isStatic
         
         switch content {
         case let .file(file):
@@ -132,7 +134,13 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                 let pathPrefix = account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
                 if let source = self.source {
                     let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
-                    let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384, height: 384))
+                    let fitToSize: CGSize
+                    if self.isStatic {
+                        fitToSize = CGSize(width: 768, height: 768)
+                    } else {
+                        fitToSize = CGSize(width: 384, height: 384)
+                    }
+                    let fittedDimensions = dimensions.cgSize.aspectFitted(fitToSize)
                     self.disposables.add((source.directDataPath(attemptSynchronously: true)
                     |> deliverOn(self.queue)).start(next: { [weak self] path in
                         if let strongSelf = self, let path {
