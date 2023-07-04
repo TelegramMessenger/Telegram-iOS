@@ -1305,6 +1305,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                                 return .optionalAction({
                                     item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
                                 })
+                            } else if let attribute = attribute as? ReplyStoryAttribute {
+                                return .optionalAction({
+                                    item.controllerInteraction.navigateToStory(item.message, attribute.storyId)
+                                })
                             }
                         }
                     }
