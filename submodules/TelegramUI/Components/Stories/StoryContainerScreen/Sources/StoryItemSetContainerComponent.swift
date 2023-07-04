@@ -645,14 +645,25 @@ public final class StoryItemSetContainerComponent: Component {
             return false
         }
         
+        private func deactivateInput() {
+            
+        }
+        
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state, let component = self.component, let itemLayout = self.itemLayout {
-                if hasFirstResponder(self) {
-                    self.sendMessageContext.currentInputMode = .text
-                    self.endEditing(true)
-                } else if case .media = self.sendMessageContext.currentInputMode {
-                    self.sendMessageContext.currentInputMode = .text
-                    self.state?.updated(transition: .spring(duration: 0.4))
+                if hasFirstResponder(self) || self.sendMessageContext.currentInputMode == .media {
+                    if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
+                        if view.canDeactivateInput() {
+                            self.sendMessageContext.currentInputMode = .text
+                            if hasFirstResponder(self) {
+                                view.deactivateInput()
+                            } else {
+                                self.state?.updated(transition: .spring(duration: 0.4).withUserData(TextFieldComponent.AnimationHint(kind: .textFocusChanged)))
+                            }
+                        } else {
+                            view.animateError()
+                        }
+                    }
                 } else if self.displayViewList {
                     let point = recognizer.location(in: self)
                     
@@ -1689,6 +1700,7 @@ public final class StoryItemSetContainerComponent: Component {
                     strings: component.strings,
                     style: .story,
                     placeholder: "Reply Privately...",
+                    maxLength: 4096,
                     queryTypes: [.mention, .emoji],
                     alwaysDarkWhenHasText: component.metrics.widthClass == .regular,
                     nextInputMode: { [weak self] hasText in
@@ -2542,11 +2554,29 @@ public final class StoryItemSetContainerComponent: Component {
                                 self.sendMessageContext.openPeerMention(view: self, peerId: peerId)
                             case let .hashtag(username, value):
                                 self.sendMessageContext.openHashtag(view: self, hashtag: value, peerName: username)
-                            case let .bankCard(value):
-                                let _ = value
+                            case .bankCard:
+                                break
                             case .customEmoji:
                                 break
                             }
+                        },
+                        longTapAction: { [weak self] action in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            self.sendMessageContext.presentTextEntityActions(view: self, action: action, openUrl: { [weak self] url, concealed in
+                                openUserGeneratedUrl(context: component.context, peerId: component.slice.peer.id, url: url, concealed: concealed, skipUrlAuth: false, skipConcealedAlert: false, present: { [weak self] c in
+                                    guard let self, let component = self.component, let controller = component.controller() else {
+                                        return
+                                    }
+                                    controller.present(c, in: .window(.root))
+                                }, openResolved: { [weak self] resolved in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.sendMessageContext.openResolved(view: self, result: resolved, forceExternal: false, concealed: concealed)
+                                })
+                            })
                         }
                     )),
                     environment: {},

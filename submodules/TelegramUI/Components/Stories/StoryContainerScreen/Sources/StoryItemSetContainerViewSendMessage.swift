@@ -36,6 +36,8 @@ import OverlayStatusController
 import PresentationDataUtils
 import TextFieldComponent
 import StickerPackPreviewUI
+import OpenInExternalAppUI
+import SafariServices
 
 final class StoryItemSetContainerSendMessage {
     enum InputMode {
@@ -526,7 +528,7 @@ final class StoryItemSetContainerSendMessage {
                     if self.videoRecorderValue == nil {
                         if let currentInputPanelFrame = view.inputPanel.view?.frame {
                             self.videoRecorder.set(.single(legacyInstantVideoController(theme: defaultDarkPresentationTheme, forStory: true, panelFrame: view.convert(currentInputPanelFrame, to: nil), context: component.context, peerId: peer.id, slowmodeState: nil, hasSchedule: true, send: { [weak self, weak view] videoController, message in
-                                guard let self, let view, let component = view.component else {
+                                guard let self, let view else {
                                     return
                                 }
                                 guard let message = message else {
@@ -541,15 +543,6 @@ final class StoryItemSetContainerSendMessage {
                                 self.videoRecorder.set(.single(nil))
 
                                 self.sendMessages(view: view, peer: peer, messages: [updatedMessage])
-                                
-                                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                view.component?.controller()?.present(UndoOverlayController(
-                                    presentationData: presentationData,
-                                    content: .succeed(text: "Message Sent"),
-                                    elevatedLayout: false,
-                                    animateInAsReplacement: false,
-                                    action: { _ in return false }
-                                ), in: .current)
                             }, displaySlowmodeTooltip: { [weak self] view, rect in
                                 //self?.interfaceInteraction?.displaySlowmodeTooltip(view, rect)
                                 let _ = self
@@ -597,15 +590,6 @@ final class StoryItemSetContainerSendMessage {
                             self.sendMessages(view: view, peer: peer, messages: [.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(data.compressedData.count), attributes: [.Audio(isVoice: true, duration: Int(data.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: nil, replyToStoryId: focusedStoryId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
                             
                             HapticFeedback().tap()
-                            
-                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                            view.component?.controller()?.present(UndoOverlayController(
-                                presentationData: presentationData,
-                                content: .succeed(text: "Message Sent"),
-                                elevatedLayout: false,
-                                animateInAsReplacement: false,
-                                action: { _ in return false }
-                            ), in: .current)
                         }
                     })
                 } else if let videoRecorderValue = self.videoRecorderValue {
@@ -2519,5 +2503,98 @@ final class StoryItemSetContainerSendMessage {
                 component.controller()?.push(infoController)
             }
         }))
+    }
+    
+    func presentTextEntityActions(view: StoryItemSetContainerComponent.View, action: StoryContentCaptionComponent.Action, openUrl: @escaping (String, Bool) -> Void) {
+        guard let component = view.component else {
+            return
+        }
+                
+        let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: component.theme, fontSize: .regular), allowInputInset: false)
+        
+        var canOpenIn = false
+        
+        let title: String
+        let value: String
+        var openAction: String? = component.strings.Conversation_LinkDialogOpen
+        var copyAction = component.strings.Conversation_ContextMenuCopy
+        switch action {
+        case let .url(url, _):
+            title = url
+            value = url
+            canOpenIn = availableOpenInOptions(context: component.context, item: .url(url: url)).count > 1
+            if canOpenIn {
+                openAction = component.strings.Conversation_FileOpenIn
+            }
+            copyAction = component.strings.Conversation_ContextMenuCopyLink
+        case let .hashtag(_, hashtag):
+            title = hashtag
+            value = hashtag
+        case let .bankCard(bankCard):
+            title = bankCard
+            value = bankCard
+            openAction = nil
+        case let .peerMention(_, mention):
+            title = mention
+            value = mention
+        case let .textMention(mention):
+            title = mention
+            value = mention
+        case .customEmoji:
+            return
+        }
+        
+        var items: [ActionSheetItem] = []
+        items.append(ActionSheetTextItem(title: title))
+        
+        if let openAction {
+            items.append(ActionSheetButtonItem(title: openAction, color: .accent, action: { [weak self, weak view, weak actionSheet] in
+                actionSheet?.dismissAnimated()
+                if let self, let view {
+                    switch action {
+                    case let .url(url, concealed):
+                        if canOpenIn {
+                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                            let actionSheet = OpenInActionSheetController(context: component.context, item: .url(url: url), openUrl: { url in
+                                if let navigationController = component.controller()?.navigationController as? NavigationController {
+                                    component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+                                }
+                            })
+                            component.controller()?.present(actionSheet, in: .window(.root))
+                        } else {
+                            openUrl(url, concealed)
+                        }
+                    case let .hashtag(peerName, value):
+                        self.openHashtag(view: view, hashtag: value, peerName: peerName)
+                    case let .peerMention(peerId, _):
+                        self.openPeerMention(view: view, peerId: peerId)
+                    case let .textMention(mention):
+                        self.openPeerMention(view: view, name: mention)
+                    case .customEmoji, .bankCard:
+                        return
+                    }
+                }
+            }))
+        }
+        
+        items.append(ActionSheetButtonItem(title: copyAction, color: .accent, action: { [weak actionSheet] in
+            actionSheet?.dismissAnimated()
+            UIPasteboard.general.string = value
+        }))
+        
+        if case let .url(url, _) = action, let link = URL(string: url) {
+            items.append(ActionSheetButtonItem(title: component.strings.Conversation_AddToReadingList, color: .accent, action: { [weak actionSheet] in
+                actionSheet?.dismissAnimated()
+                let _ = try? SSReadingList.default()?.addItem(with: link, title: nil, previewText: nil)
+            }))
+        }
+        
+        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+            ActionSheetButtonItem(title: component.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                actionSheet?.dismissAnimated()
+            })
+        ])])
+        
+        component.controller()?.present(actionSheet, in: .window(.root))
     }
 }

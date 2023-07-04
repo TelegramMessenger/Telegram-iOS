@@ -45,6 +45,7 @@ final class StoryContentCaptionComponent: Component {
     let entities: [MessageTextEntity]
     let entityFiles: [EngineMedia.Id: TelegramMediaFile]
     let action: (Action) -> Void
+    let longTapAction: (Action) -> Void
     
     init(
         externalState: ExternalState,
@@ -52,7 +53,8 @@ final class StoryContentCaptionComponent: Component {
         text: String,
         entities: [MessageTextEntity],
         entityFiles: [EngineMedia.Id: TelegramMediaFile],
-        action: @escaping (Action) -> Void
+        action: @escaping (Action) -> Void,
+        longTapAction: @escaping (Action) -> Void
     ) {
         self.externalState = externalState
         self.context = context
@@ -60,6 +62,7 @@ final class StoryContentCaptionComponent: Component {
         self.entities = entities
         self.entityFiles = entityFiles
         self.action = action
+        self.longTapAction = longTapAction
     }
 
     static func ==(lhs: StoryContentCaptionComponent, rhs: StoryContentCaptionComponent) -> Bool {
@@ -248,44 +251,47 @@ final class StoryContentCaptionComponent: Component {
             switch recognizer.state {
             case .ended:
                 if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation, let component = self.component, let textNode = self.textNode {
-                    switch gesture {
-                    case .tap:
-                        let titleFrame = textNode.textNode.view.bounds
-                        if titleFrame.contains(location) {
-                            if let (index, attributes) = textNode.textNode.attributesAtPoint(CGPoint(x: location.x - titleFrame.minX, y: location.y - titleFrame.minY)) {
-                                if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)], !(self.dustNode?.isRevealed ?? true)  {
-                                    let convertedPoint = recognizer.view?.convert(location, to: self.dustNode?.view) ?? location
-                                    self.dustNode?.revealAtLocation(convertedPoint)
-                                    return
-                                } else if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
-                                    var concealed = true
-                                    if let (attributeText, fullText) = textNode.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
-                                        concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
-                                    }
-                                    component.action(.url(url: url, concealed: concealed))
-                                    return
-                                } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
-                                    component.action(.peerMention(peerId: peerMention.peerId, mention: peerMention.mention))
-                                    return
-                                } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
-                                    component.action(.textMention(peerName))
-                                    return
-                                } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
-                                    component.action(.hashtag(hashtag.peerName, hashtag.hashtag))
-                                    return
-                                } else if let bankCard = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BankCard)] as? String {
-                                    component.action(.bankCard(bankCard))
-                                    return
-                                } else if let emoji = attributes[NSAttributedString.Key(rawValue: ChatTextInputAttributes.customEmoji.rawValue)] as? ChatTextInputTextCustomEmojiAttribute, let file = emoji.file {
-                                    component.action(.customEmoji(file))
-                                    return
+                    let titleFrame = textNode.textNode.view.bounds
+                    if titleFrame.contains(location) {
+                        if let (index, attributes) = textNode.textNode.attributesAtPoint(CGPoint(x: location.x - titleFrame.minX, y: location.y - titleFrame.minY)) {
+                            let action: Action?
+                            if case .tap = gesture, let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)], !(self.dustNode?.isRevealed ?? true)  {
+                                let convertedPoint = recognizer.view?.convert(location, to: self.dustNode?.view) ?? location
+                                self.dustNode?.revealAtLocation(convertedPoint)
+                                return
+                            } else if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
+                                var concealed = true
+                                if let (attributeText, fullText) = textNode.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
+                                    concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
                                 }
+                                action = .url(url: url, concealed: concealed)
+                            } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
+                                action = .peerMention(peerId: peerMention.peerId, mention: peerMention.mention)
+                            } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+                                action = .textMention(peerName)
+                            } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
+                                action = .hashtag(hashtag.peerName, hashtag.hashtag)
+                            } else if let bankCard = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BankCard)] as? String {
+                                action = .bankCard(bankCard)
+                            } else if let emoji = attributes[NSAttributedString.Key(rawValue: ChatTextInputAttributes.customEmoji.rawValue)] as? ChatTextInputTextCustomEmojiAttribute, let file = emoji.file {
+                                action = .customEmoji(file)
+                            } else {
+                                action = nil
                             }
+                            guard let action else {
+                                return
+                            }
+                            switch gesture {
+                            case .tap:
+                                component.action(action)
+                            case .longTap:
+                                component.longTapAction(action)
+                            default:
+                                return
+                            }
+                            self.expand(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            return
                         }
-                        
-                        self.expand(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
-                    default:
-                        break
                     }
                 }
             default:

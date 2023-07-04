@@ -24,6 +24,7 @@ public final class TextFieldComponent: Component {
     public final class ExternalState {
         public fileprivate(set) var isEditing: Bool = false
         public fileprivate(set) var hasText: Bool = false
+        public fileprivate(set) var textLength: Int = 0
         public var initialText: NSAttributedString?
         
         public var hasTrackingView = false
@@ -492,6 +493,10 @@ public final class TextFieldComponent: Component {
             self.textView.becomeFirstResponder()
         }
         
+        public func deactivateInput() {
+            self.textView.resignFirstResponder()
+        }
+        
         private var spoilersRevealed = false
         private var spoilerIsDisappearing = false
         private func updateSpoilersRevealed(animated: Bool = true) {
@@ -775,6 +780,7 @@ public final class TextFieldComponent: Component {
             
             component.externalState.hasText = self.textStorage.length != 0
             component.externalState.isEditing = isEditing
+            component.externalState.textLength = self.textStorage.string.count
             
             if component.hideKeyboard {
                 if self.textView.inputView == nil {

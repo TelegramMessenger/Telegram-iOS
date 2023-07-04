@@ -17,6 +17,7 @@ public struct UserLimitsConfiguration: Equatable {
     public let maxReactionsPerMessage: Int32
     public let maxSharedFolderInviteLinks: Int32
     public let maxSharedFolderJoin: Int32
+    public let maxStoryCaptionLength: Int32
     
     public static var defaultValue: UserLimitsConfiguration {
         return UserLimitsConfiguration(
@@ -34,7 +35,8 @@ public struct UserLimitsConfiguration: Equatable {
             maxAnimatedEmojisInText: 10,
             maxReactionsPerMessage: 1,
             maxSharedFolderInviteLinks: 3,
-            maxSharedFolderJoin: 2
+            maxSharedFolderJoin: 2,
+            maxStoryCaptionLength: 1024
         )
     }
 
@@ -53,7 +55,8 @@ public struct UserLimitsConfiguration: Equatable {
         maxAnimatedEmojisInText: Int32,
         maxReactionsPerMessage: Int32,
         maxSharedFolderInviteLinks: Int32,
-        maxSharedFolderJoin: Int32
+        maxSharedFolderJoin: Int32,
+        maxStoryCaptionLength: Int32
     ) {
         self.maxPinnedChatCount = maxPinnedChatCount
         self.maxArchivedPinnedChatCount = maxArchivedPinnedChatCount
@@ -70,6 +73,7 @@ public struct UserLimitsConfiguration: Equatable {
         self.maxReactionsPerMessage = maxReactionsPerMessage
         self.maxSharedFolderInviteLinks = maxSharedFolderInviteLinks
         self.maxSharedFolderJoin = maxSharedFolderJoin
+        self.maxStoryCaptionLength = maxStoryCaptionLength
     }
 }
 
@@ -109,5 +113,6 @@ extension UserLimitsConfiguration {
         self.maxReactionsPerMessage = getValue("reactions_user_max", orElse: 1)
         self.maxSharedFolderInviteLinks = getValue("chatlist_invites_limit", orElse: isPremium ? 100 : 3)
         self.maxSharedFolderJoin = getValue("chatlists_joined_limit", orElse: isPremium ? 100 : 2)
+        self.maxStoryCaptionLength = getGeneralValue("story_caption_length_limit", orElse: defaultValue.maxStoryCaptionLength)
     }
 }

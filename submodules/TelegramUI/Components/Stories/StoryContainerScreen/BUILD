@@ -73,6 +73,7 @@ swift_library(
         "//submodules/ImageBlur",
         "//submodules/StickerPackPreviewUI",
         "//submodules/Components/AnimatedStickerComponent",
+        "//submodules/OpenInExternalAppUI",
     ],
     visibility = [
         "//visibility:public",
