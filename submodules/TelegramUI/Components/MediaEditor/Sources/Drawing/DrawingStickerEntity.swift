@@ -62,6 +62,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case scale
         case rotation
         case mirrored
+        case isExplicitlyStatic
     }
     
     public let uuid: UUID
@@ -72,6 +73,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     public var scale: CGFloat
     public var rotation: CGFloat
     public var mirrored: Bool
+    
+    public var isExplicitlyStatic: Bool
         
     public var color: DrawingColor = DrawingColor.clear
     public var lineWidth: CGFloat = 0.0
@@ -88,7 +91,11 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     public var isAnimated: Bool {
         switch self.content {
         case let .file(file):
-            return file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm"
+            if self.isExplicitlyStatic {
+                return false
+            } else {
+                return file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm"
+            }
         case .image:
             return false
         case .video:
@@ -123,6 +130,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         self.scale = 1.0
         self.rotation = 0.0
         self.mirrored = false
+        
+        self.isExplicitlyStatic = false
     }
     
     public init(from decoder: Decoder) throws {
@@ -150,6 +159,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         self.scale = try container.decode(CGFloat.self, forKey: .scale)
         self.rotation = try container.decode(CGFloat.self, forKey: .rotation)
         self.mirrored = try container.decode(Bool.self, forKey: .mirrored)
+        self.isExplicitlyStatic = try container.decodeIfPresent(Bool.self, forKey: .isExplicitlyStatic) ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -185,6 +195,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         try container.encode(self.scale, forKey: .scale)
         try container.encode(self.rotation, forKey: .rotation)
         try container.encode(self.mirrored, forKey: .mirrored)
+        try container.encode(self.isExplicitlyStatic, forKey: .isExplicitlyStatic)
     }
         
     public func duplicate() -> DrawingEntity {
@@ -194,6 +205,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         newEntity.scale = self.scale
         newEntity.rotation = self.rotation
         newEntity.mirrored = self.mirrored
+        newEntity.isExplicitlyStatic = self.isExplicitlyStatic
         return newEntity
     }
     
@@ -220,6 +232,9 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             return false
         }
         if self.mirrored != other.mirrored {
+            return false
+        }
+        if self.isExplicitlyStatic != other.isExplicitlyStatic {
             return false
         }
         return true
