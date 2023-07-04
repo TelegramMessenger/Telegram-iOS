@@ -843,7 +843,7 @@ private final class StoryContainerScreenComponent: Component {
                             context: component.context,
                             chatPeerId: nil,
                             areCustomEmojiEnabled: true,
-                            hasTrending: false,
+                            hasTrending: true,
                             hasSearch: true,
                             hideBackground: true,
                             sendGif: nil

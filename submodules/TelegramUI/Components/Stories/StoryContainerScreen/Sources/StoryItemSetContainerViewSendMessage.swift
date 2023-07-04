@@ -159,8 +159,12 @@ final class StoryItemSetContainerSendMessage {
                     self.view?.component?.controller()?.presentInGlobalOverlay(c, with: a)
                 }
             },
-            getNavigationController: {
-                return self.view?.component?.controller()?.navigationController as? NavigationController
+            getNavigationController: { [weak self] in
+                if let self {
+                    return self.view?.component?.controller()?.navigationController as? NavigationController
+                } else {
+                    return nil
+                }
             },
             requestLayout: { [weak self] transition in
                 if let self {

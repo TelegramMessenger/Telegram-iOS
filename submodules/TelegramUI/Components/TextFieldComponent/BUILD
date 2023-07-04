@@ -18,7 +18,9 @@ swift_library(
         "//submodules/AccountContext",
         "//submodules/InvisibleInkDustNode",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
-        "//submodules/ChatTextLinkEditUI"
+        "//submodules/ChatTextLinkEditUI",
+        "//submodules/Pasteboard",
+        "//submodules/ImageTransparency",
     ],
     visibility = [
         "//visibility:public",

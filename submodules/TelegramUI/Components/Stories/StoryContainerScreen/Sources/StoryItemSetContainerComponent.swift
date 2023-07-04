@@ -1795,6 +1795,8 @@ public final class StoryItemSetContainerComponent: Component {
                         self.voiceMessagesRestrictedTooltipController = controller
                         self.state?.updated(transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)))
                     },
+                    paste: { _ in
+                    },
                     audioRecorder: self.sendMessageContext.audioRecorderValue,
                     videoRecordingStatus: !self.sendMessageContext.hasRecordedVideoPreview ? self.sendMessageContext.videoRecorderValue?.audioStatus : nil,
                     isRecordingLocked: self.sendMessageContext.isMediaRecordingLocked,

@@ -82,6 +82,7 @@ public final class MessageInputPanelComponent: Component {
     public let forwardAction: (() -> Void)?
     public let moreAction: ((UIView, ContextGesture?) -> Void)?
     public let presentVoiceMessagesUnavailableTooltip: ((UIView) -> Void)?
+    public let paste: (TextFieldComponent.PasteData) -> Void
     public let audioRecorder: ManagedAudioRecorder?
     public let videoRecordingStatus: InstantVideoControllerRecordingStatus?
     public let isRecordingLocked: Bool
@@ -121,6 +122,7 @@ public final class MessageInputPanelComponent: Component {
         forwardAction: (() -> Void)?,
         moreAction: ((UIView, ContextGesture?) -> Void)?,
         presentVoiceMessagesUnavailableTooltip: ((UIView) -> Void)?,
+        paste: @escaping (TextFieldComponent.PasteData) -> Void,
         audioRecorder: ManagedAudioRecorder?,
         videoRecordingStatus: InstantVideoControllerRecordingStatus?,
         isRecordingLocked: Bool,
@@ -159,6 +161,7 @@ public final class MessageInputPanelComponent: Component {
         self.forwardAction = forwardAction
         self.moreAction = moreAction
         self.presentVoiceMessagesUnavailableTooltip = presentVoiceMessagesUnavailableTooltip
+        self.paste = paste
         self.audioRecorder = audioRecorder
         self.videoRecordingStatus = videoRecordingStatus
         self.isRecordingLocked = isRecordingLocked
@@ -521,6 +524,9 @@ public final class MessageInputPanelComponent: Component {
                     hideKeyboard: component.hideKeyboard,
                     present: { c in
                         component.presentController(c)
+                    },
+                    paste: { data in
+                        component.paste(data)
                     }
                 )),
                 environment: {},

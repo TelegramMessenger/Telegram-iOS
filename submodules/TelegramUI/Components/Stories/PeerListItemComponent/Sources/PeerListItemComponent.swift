@@ -367,14 +367,17 @@ public final class PeerListItemComponent: Component {
             )
             
             let titleSpacing: CGFloat = 2.0
+            var titleVerticalOffset: CGFloat = 0.0
             let centralContentHeight: CGFloat
             if labelSize.height > 0.0, case .generic = component.style {
                 centralContentHeight = titleSize.height + labelSize.height + titleSpacing
+                titleVerticalOffset = -1.0
             } else {
                 centralContentHeight = titleSize.height
             }
             
-            let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: -1.0 + floor((height - verticalInset * 2.0 - centralContentHeight) / 2.0)), size: titleSize)
+            
+            let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: titleVerticalOffset + floor((height - verticalInset * 2.0 - centralContentHeight) / 2.0)), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     titleView.isUserInteractionEnabled = false
@@ -396,46 +399,8 @@ public final class PeerListItemComponent: Component {
                     transition.animateAlpha(view: titleView, from: 0.0, to: 1.0)
                 }
             }
-            if let labelView = self.label.view {
-                var iconLabelOffset: CGFloat = 0.0
-                
-                if case .checks = component.subtitleAccessory {
-                    let iconView: UIImageView
-                    if let current = self.iconView {
-                        iconView = current
-                    } else {
-                        iconView = UIImageView(image: readIconImage)
-                        iconView.tintColor = component.theme.list.itemSecondaryTextColor
-                        self.iconView = iconView
-                        self.containerButton.addSubview(iconView)
-                    }
-                    
-                    if let image = iconView.image {
-                        iconLabelOffset = image.size.width + 4.0
-                        transition.setFrame(view: iconView, frame: CGRect(origin: CGPoint(x: titleFrame.minX, y: titleFrame.maxY + titleSpacing + 3.0 + floor((labelSize.height - image.size.height) * 0.5)), size: image.size))
-                    }
-                } else if let iconView = self.iconView {
-                    self.iconView = nil
-                    iconView.removeFromSuperview()
-                }
-                
-                if labelView.superview == nil {
-                    labelView.isUserInteractionEnabled = false
-                    self.containerButton.addSubview(labelView)
-                }
-                
-                let labelFrame: CGRect
-                switch component.style {
-                case .generic:
-                    labelFrame = CGRect(origin: CGPoint(x: titleFrame.minX + iconLabelOffset, y: titleFrame.maxY + titleSpacing), size: labelSize)
-                case .compact:
-                    labelFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: floor((height - verticalInset * 2.0 - centralContentHeight) / 2.0)), size: labelSize)
-                }
-                
-                transition.setFrame(view: labelView, frame: labelFrame)
-            }
             
-            if let statusIcon {
+            if let statusIcon, case .generic = component.style {
                 let animationCache = component.context.animationCache
                 let animationRenderer = component.context.animationRenderer
                 
@@ -475,6 +440,45 @@ public final class PeerListItemComponent: Component {
             } else if let avatarIcon = self.avatarIcon {
                 self.avatarIcon = nil
                 avatarIcon.view?.removeFromSuperview()
+            }
+            
+            if let labelView = self.label.view {
+                var iconLabelOffset: CGFloat = 0.0
+                
+                if case .checks = component.subtitleAccessory {
+                    let iconView: UIImageView
+                    if let current = self.iconView {
+                        iconView = current
+                    } else {
+                        iconView = UIImageView(image: readIconImage)
+                        iconView.tintColor = component.theme.list.itemSecondaryTextColor
+                        self.iconView = iconView
+                        self.containerButton.addSubview(iconView)
+                    }
+                    
+                    if let image = iconView.image {
+                        iconLabelOffset = image.size.width + 4.0
+                        transition.setFrame(view: iconView, frame: CGRect(origin: CGPoint(x: titleFrame.minX, y: titleFrame.maxY + titleSpacing + 3.0 + floor((labelSize.height - image.size.height) * 0.5)), size: image.size))
+                    }
+                } else if let iconView = self.iconView {
+                    self.iconView = nil
+                    iconView.removeFromSuperview()
+                }
+                
+                if labelView.superview == nil {
+                    labelView.isUserInteractionEnabled = false
+                    self.containerButton.addSubview(labelView)
+                }
+                
+                let labelFrame: CGRect
+                switch component.style {
+                case .generic:
+                    labelFrame = CGRect(origin: CGPoint(x: titleFrame.minX + iconLabelOffset, y: titleFrame.maxY + titleSpacing), size: labelSize)
+                case .compact:
+                    labelFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: floor((height - verticalInset * 2.0 - centralContentHeight) / 2.0)), size: labelSize)
+                }
+                
+                transition.setFrame(view: labelView, frame: labelFrame)
             }
             
             if themeUpdated {

@@ -9,7 +9,10 @@ import InvisibleInkDustNode
 import EmojiTextAttachmentView
 import AccountContext
 import TextFormat
+import Pasteboard
 import ChatTextLinkEditUI
+import MobileCoreServices
+import ImageTransparency
 
 public final class EmptyInputView: UIView, UIInputViewAudioFeedback {
     public var enableInputClicksWhenVisible: Bool {
@@ -51,6 +54,14 @@ public final class TextFieldComponent: Component {
         }
     }
     
+    public enum PasteData {
+        case sticker(image: UIImage, isMemoji: Bool)
+        case images([UIImage])
+        case video(Data)
+        case gif(Data)
+    }
+    
+    
     public final class AnimationHint {
         public enum Kind {
             case textChanged
@@ -72,6 +83,7 @@ public final class TextFieldComponent: Component {
     public let insets: UIEdgeInsets
     public let hideKeyboard: Bool
     public let present: (ViewController) -> Void
+    public let paste: (PasteData) -> Void
     
     public init(
         context: AccountContext,
@@ -81,7 +93,8 @@ public final class TextFieldComponent: Component {
         textColor: UIColor,
         insets: UIEdgeInsets,
         hideKeyboard: Bool,
-        present: @escaping (ViewController) -> Void
+        present: @escaping (ViewController) -> Void,
+        paste: @escaping (PasteData) -> Void
     ) {
         self.context = context
         self.strings = strings
@@ -91,6 +104,7 @@ public final class TextFieldComponent: Component {
         self.insets = insets
         self.hideKeyboard = hideKeyboard
         self.present = present
+        self.paste = paste
     }
     
     public static func ==(lhs: TextFieldComponent, rhs: TextFieldComponent) -> Bool {
@@ -131,11 +145,21 @@ public final class TextFieldComponent: Component {
         }
     }
     
+    final class TextView: UITextView {
+        var onPaste: () -> Bool = { return true }
+        
+        override func paste(_ sender: Any?) {
+            if self.onPaste() {
+                super.paste(sender)
+            }
+        }
+    }
+    
     public final class View: UIView, UITextViewDelegate, UIScrollViewDelegate {
         private let textContainer: NSTextContainer
         private let textStorage: NSTextStorage
         private let layoutManager: NSLayoutManager
-        private let textView: UITextView
+        private let textView: TextView
         
         private var spoilerView: InvisibleInkDustView?
         private var customEmojiContainerView: CustomEmojiContainerView?
@@ -163,7 +187,7 @@ public final class TextFieldComponent: Component {
             self.layoutManager.addTextContainer(self.textContainer)
             self.textStorage.addLayoutManager(self.layoutManager)
             
-            self.textView = UITextView(frame: CGRect(), textContainer: self.textContainer)
+            self.textView = TextView(frame: CGRect(), textContainer: self.textContainer)
             self.textView.translatesAutoresizingMaskIntoConstraints = false
             self.textView.backgroundColor = nil
             self.textView.layer.isOpaque = false
@@ -185,6 +209,10 @@ public final class TextFieldComponent: Component {
                 NSAttributedString.Key.font: Font.regular(17.0),
                 NSAttributedString.Key.foregroundColor: UIColor.white
             ]
+            
+            self.textView.onPaste = { [weak self] in
+                return self?.onPaste() ?? false
+            }
         }
         
         required init?(coder: NSCoder) {
@@ -224,6 +252,81 @@ public final class TextFieldComponent: Component {
             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
         }
         
+        private func onPaste() -> Bool {
+            guard let component = self.component else {
+                return false
+            }
+            let pasteboard = UIPasteboard.general
+                        
+            var attributedString: NSAttributedString?
+            if let data = pasteboard.data(forPasteboardType: kUTTypeRTF as String) {
+                attributedString = chatInputStateStringFromRTF(data, type: NSAttributedString.DocumentType.rtf)
+            } else if let data = pasteboard.data(forPasteboardType: "com.apple.flat-rtfd") {
+                attributedString = chatInputStateStringFromRTF(data, type: NSAttributedString.DocumentType.rtfd)
+            }
+            
+            if let attributedString = attributedString {
+                self.updateInputState { current in
+                    if let inputText = current.inputText.mutableCopy() as? NSMutableAttributedString {
+                        inputText.replaceCharacters(in: NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count), with: attributedString)
+                        let updatedRange = current.selectionRange.lowerBound + attributedString.length
+                        return InputState(inputText: inputText, selectionRange: updatedRange ..< updatedRange)
+                    } else {
+                        return InputState(inputText: attributedString)
+                    }
+                }
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+                return false
+            }
+            
+            var images: [UIImage] = []
+            if let data = pasteboard.data(forPasteboardType: "com.compuserve.gif") {
+                component.paste(.gif(data))
+                return false
+            } else if let data = pasteboard.data(forPasteboardType: "public.mpeg-4") {
+                component.paste(.video(data))
+                return false
+            } else {
+                var isPNG = false
+                var isMemoji = false
+                for item in pasteboard.items {
+                    if let image = item["com.apple.png-sticker"] as? UIImage {
+                        images.append(image)
+                        isPNG = true
+                        isMemoji = true
+                    } else if let image = item[kUTTypePNG as String] as? UIImage {
+                        images.append(image)
+                        isPNG = true
+                    } else if let image = item["com.apple.uikit.image"] as? UIImage {
+                        images.append(image)
+                        isPNG = true
+                    } else if let image = item[kUTTypeJPEG as String] as? UIImage {
+                        images.append(image)
+                    } else if let image = item[kUTTypeGIF as String] as? UIImage {
+                        images.append(image)
+                    }
+                }
+                
+                if isPNG && images.count == 1, let image = images.first, let cgImage = image.cgImage {
+                    let maxSide = max(image.size.width, image.size.height)
+                    if maxSide.isZero {
+                        return false
+                    }
+                    let aspectRatio = min(image.size.width, image.size.height) / maxSide
+                    if isMemoji || (imageHasTransparency(cgImage) && aspectRatio > 0.2) {
+                        component.paste(.sticker(image: image, isMemoji: isMemoji))
+                        return false
+                    }
+                }
+                
+                if !images.isEmpty {
+                    component.paste(.images(images))
+                    return false
+                }
+            }
+            return true
+        }
+        
         public func textViewDidChange(_ textView: UITextView) {
             guard let component = self.component else {
                 return
@@ -257,7 +360,7 @@ public final class TextFieldComponent: Component {
         public func textViewDidEndEditing(_ textView: UITextView) {
             self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(kind: .textFocusChanged)))
         }
-        
+                
         @available(iOS 16.0, *)
         public func textView(_ textView: UITextView, editMenuForTextIn range: NSRange, suggestedActions: [UIMenuElement]) -> UIMenu? {
             let filteredActions: Set<String> = Set([

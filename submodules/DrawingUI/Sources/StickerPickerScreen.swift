@@ -504,7 +504,7 @@ public class StickerPickerScreen: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-                    if let file = item.itemFile {
+                   if let file = item.itemFile {
                         strongSelf.controller?.completion(.file(file))
                     } else if case let .staticEmoji(emoji) = item.content {
                         if let image = generateImage(CGSize(width: 256.0, height: 256.0), scale: 1.0, rotatedContext: { size, context in
@@ -870,12 +870,42 @@ public class StickerPickerScreen: ViewController {
             }
             
             content.stickers?.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
-                performItemAction: { [weak self] _, item, _, _, _, _ in
-                    guard let strongSelf = self, let file = item.itemFile else {
+                performItemAction: { [weak self] groupId, item, _, _, _, _ in
+                    guard let self, let controller = self.controller, let file = item.itemFile else {
                         return
                     }
-                    strongSelf.controller?.completion(.file(file))
-                    strongSelf.controller?.dismiss(animated: true)
+                    if groupId == AnyHashable("featuredTop") {
+                        let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
+                        let _ = (controller.context.account.postbox.combinedView(keys: [viewKey])
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { [weak self] views in
+                            guard let self, let controller = self.controller, let view = views.views[viewKey] as? OrderedItemListView else {
+                                return
+                            }
+                            for featuredStickerPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                                if featuredStickerPack.topItems.contains(where: { $0.file.fileId == file.fileId }) {
+                                    controller.push(FeaturedStickersScreen(
+                                        context: controller.context,
+                                        highlightedPackId: featuredStickerPack.info.id,
+                                        forceTheme: defaultDarkPresentationTheme,
+                                        sendSticker: { [weak self] fileReference, _, _ in
+                                            guard let self else {
+                                                return false
+                                            }
+                                            self.controller?.completion(.file(fileReference.media))
+                                            self.controller?.dismiss(animated: true)
+                                            return true
+                                        }
+                                    ))
+                                    
+                                    break
+                                }
+                            }
+                        })
+                    } else {
+                        self.controller?.completion(.file(file))
+                        self.controller?.dismiss(animated: true)
+                    }
                 },
                 deleteBackwards: nil,
                 openStickerSettings: nil,
