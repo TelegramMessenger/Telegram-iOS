@@ -391,6 +391,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
     }
     
     public func setup(withDrawing drawingData: Data?) {
+        self.undoStack = []
+        self.redoStack = []
         if let drawingData = drawingData, let image = UIImage(data: drawingData) {
             self.hasOpaqueData = true
             
@@ -406,11 +408,15 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
             }
             self.layer.contents = image.cgImage
             self.updateInternalState()
+        } else {
+            self.drawingImage = nil
+            self.layer.contents = nil
+            self.updateInternalState()
         }
     }
     
     var hasOpaqueData = false
-    var drawingData: Data? {
+    public var drawingData: Data? {
         guard !self.undoStack.isEmpty || self.hasOpaqueData else {
             return nil
         }

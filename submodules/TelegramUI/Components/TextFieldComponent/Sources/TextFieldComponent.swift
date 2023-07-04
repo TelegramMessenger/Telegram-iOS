@@ -154,6 +154,13 @@ public final class TextFieldComponent: Component {
                 super.paste(sender)
             }
         }
+        
+        override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
+            if action == #selector(self.paste(_:)) {
+                return true
+            }
+            return super.canPerformAction(action, withSender: sender)
+        }
     }
     
     public final class View: UIView, UITextViewDelegate, UIScrollViewDelegate {

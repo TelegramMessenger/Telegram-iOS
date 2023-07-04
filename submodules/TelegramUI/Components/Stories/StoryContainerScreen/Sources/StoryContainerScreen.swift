@@ -653,20 +653,16 @@ private final class StoryContainerScreenComponent: Component {
         }
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
-            guard let component = self.component, let environment = self.environment, let stateValue = component.content.stateValue, case .recognized = recognizer.state else {
+            guard case .recognized = recognizer.state else {
                 return
             }
         
             let location = recognizer.location(in: recognizer.view)
             if let currentItemView = self.visibleItemSetViews.first?.value {
                 if location.x < currentItemView.frame.minX {
-                    component.content.navigate(navigation: .item(.previous))
+                    self.navigate(direction: .previous)
                 } else if location.x > currentItemView.frame.maxX {
-                    if stateValue.nextSlice == nil {
-                        environment.controller()?.dismiss()
-                    } else {
-                        component.content.navigate(navigation: .item(.next))
-                    }
+                    self.navigate(direction: .next)
                 }
             }
         }
@@ -823,6 +819,47 @@ private final class StoryContainerScreenComponent: Component {
                     upPressed: buttonAction,
                     downPressed: buttonAction
                 )
+            }
+        }
+        
+        private func navigate(direction: StoryItemSetContainerComponent.NavigationDirection) {
+            guard let component = self.component, let environment = self.environment else {
+                return
+            }
+            
+            if let stateValue = component.content.stateValue, let slice = stateValue.slice {
+                if case .next = direction, slice.nextItemId == nil, (slice.item.position == nil || slice.item.position == slice.totalCount - 1) {
+                    if stateValue.nextSlice == nil {
+                        environment.controller()?.dismiss()
+                    } else {
+                        self.beginHorizontalPan(translation: CGPoint())
+                        self.updateHorizontalPan(translation: CGPoint())
+                        self.commitHorizontalPan(velocity: CGPoint(x: -200.0, y: 0.0))
+                    }
+                } else if case .previous = direction, slice.previousItemId == nil {
+                    if stateValue.previousSlice == nil {
+                        if let itemSetView = self.visibleItemSetViews[slice.peer.id] {
+                            if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                                componentView.rewindCurrentItem()
+                            }
+                        }
+                    } else {
+                        self.beginHorizontalPan(translation: CGPoint())
+                        self.updateHorizontalPan(translation: CGPoint())
+                        self.commitHorizontalPan(velocity: CGPoint(x: 200.0, y: 0.0))
+                    }
+                } else {
+                    let mappedDirection: StoryContentContextNavigation.ItemDirection
+                    switch direction {
+                    case .previous:
+                        mappedDirection = .previous
+                    case .next:
+                        mappedDirection = .next
+                    case let .id(id):
+                        mappedDirection = .id(id)
+                    }
+                    component.content.navigate(navigation: .item(mappedDirection))
+                }
             }
         }
         
@@ -1064,44 +1101,11 @@ private final class StoryContainerScreenComponent: Component {
                                     environment.controller()?.dismiss()
                                 },
                                 navigate: { [weak self] direction in
-                                    guard let self, let component = self.component, let environment = self.environment else {
+                                    guard let self else {
                                         return
                                     }
                                     
-                                    if let stateValue = component.content.stateValue, let slice = stateValue.slice {
-                                        if case .next = direction, slice.nextItemId == nil, (slice.item.position == nil || slice.item.position == slice.totalCount - 1) {
-                                            if stateValue.nextSlice == nil {
-                                                environment.controller()?.dismiss()
-                                            } else {
-                                                self.beginHorizontalPan(translation: CGPoint())
-                                                self.updateHorizontalPan(translation: CGPoint())
-                                                self.commitHorizontalPan(velocity: CGPoint(x: -200.0, y: 0.0))
-                                            }
-                                        } else if case .previous = direction, slice.previousItemId == nil {
-                                            if stateValue.previousSlice == nil {
-                                                if let itemSetView = self.visibleItemSetViews[slice.peer.id] {
-                                                    if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
-                                                        componentView.rewindCurrentItem()
-                                                    }
-                                                }
-                                            } else {
-                                                self.beginHorizontalPan(translation: CGPoint())
-                                                self.updateHorizontalPan(translation: CGPoint())
-                                                self.commitHorizontalPan(velocity: CGPoint(x: 200.0, y: 0.0))
-                                            }
-                                        } else {
-                                            let mappedDirection: StoryContentContextNavigation.ItemDirection
-                                            switch direction {
-                                            case .previous:
-                                                mappedDirection = .previous
-                                            case .next:
-                                                mappedDirection = .next
-                                            case let .id(id):
-                                                mappedDirection = .id(id)
-                                            }
-                                            component.content.navigate(navigation: .item(mappedDirection))
-                                        }
-                                    }
+                                    self.navigate(direction: direction)
                                 },
                                 delete: { [weak self] in
                                     guard let self else {

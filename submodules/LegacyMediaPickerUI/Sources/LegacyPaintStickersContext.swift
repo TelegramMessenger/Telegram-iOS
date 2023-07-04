@@ -143,7 +143,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                     }
                 }))
             }
-        case let .image(image):
+        case let .image(image, _):
             self.file = nil
             self.imagePromise.set(.single(image))
         case .video:

@@ -15,7 +15,7 @@ private func fullEntityMediaPath(_ path: String) -> String {
 public final class DrawingStickerEntity: DrawingEntity, Codable {
     public enum Content: Equatable {
         case file(TelegramMediaFile)
-        case image(UIImage)
+        case image(UIImage, Bool)
         case video(String, UIImage?, Bool)
         case dualVideoReference
         
@@ -27,9 +27,9 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
                 } else {
                     return false
                 }
-            case let .image(lhsImage):
-                if case let .image(rhsImage) = rhs {
-                    return lhsImage === rhsImage
+            case let .image(lhsImage, lhsIsRectangle):
+                if case let .image(rhsImage, rhsIsRectangle) = rhs {
+                    return lhsImage === rhsImage && lhsIsRectangle == rhsIsRectangle
                 } else {
                     return false
                 }
@@ -55,6 +55,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case videoPath
         case videoImagePath
         case videoMirrored
+        case isRectangle
         case dualVideo
         case referenceDrawingSize
         case position
@@ -71,7 +72,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     public var scale: CGFloat
     public var rotation: CGFloat
     public var mirrored: Bool
-    
+        
     public var color: DrawingColor = DrawingColor.clear
     public var lineWidth: CGFloat = 0.0
     
@@ -94,6 +95,15 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             return true
         case .dualVideoReference:
             return true
+        }
+    }
+    
+    public var isRectangle: Bool {
+        switch self.content {
+        case let .image(_, isRectangle):
+            return isRectangle
+        default:
+            return false
         }
     }
     
@@ -123,7 +133,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         } else if let file = try container.decodeIfPresent(TelegramMediaFile.self, forKey: .file) {
             self.content = .file(file)
         } else if let imagePath = try container.decodeIfPresent(String.self, forKey: .imagePath), let image = UIImage(contentsOfFile: fullEntityMediaPath(imagePath)) {
-            self.content = .image(image)
+            let isRectangle = try container.decodeIfPresent(Bool.self, forKey: .isRectangle) ?? false
+            self.content = .image(image, isRectangle)
         } else if let videoPath = try container.decodeIfPresent(String.self, forKey: .videoPath) {
             var imageValue: UIImage?
             if let imagePath = try container.decodeIfPresent(String.self, forKey: .videoImagePath), let image = UIImage(contentsOfFile: fullEntityMediaPath(imagePath)) {
@@ -147,7 +158,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         switch self.content {
         case let .file(file):
             try container.encode(file, forKey: .file)
-        case let .image(image):
+        case let .image(image, isRectangle):
             let imagePath = "\(self.uuid).png"
             let fullImagePath = fullEntityMediaPath(imagePath)
             if let imageData = image.pngData() {
@@ -155,6 +166,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
                 try? imageData.write(to: URL(fileURLWithPath: fullImagePath))
                 try container.encodeIfPresent(imagePath, forKey: .imagePath)
             }
+            try container.encode(isRectangle, forKey: .isRectangle)
         case let .video(path, image, videoMirrored):
             try container.encode(path, forKey: .videoPath)
             let imagePath = "\(self.uuid).jpg"

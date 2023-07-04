@@ -2929,7 +2929,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
             }
             let images = imageItems as! [UIImage]
             if images.count == 1, let image = images.first, max(image.size.width, image.size.height) > 1.0 {
-                let entity = DrawingStickerEntity(content: .image(image))
+                let entity = DrawingStickerEntity(content: .image(image, false))
                 strongSelf.node.insertEntity.invoke(entity)
             }
         }
@@ -3008,6 +3008,10 @@ public final class DrawingToolsInteraction {
         self.textEditAccessoryHost = ComponentView<Empty>()
         
         self.activate()
+    }
+    
+    public func reset() {
+        self.drawingView.stateUpdated = { _ in }
     }
     
     public func activate() {
@@ -3106,8 +3110,11 @@ public final class DrawingToolsInteraction {
         self.isActive = false
     }
     
-    public func insertEntity(_ entity: DrawingEntity) {
+    public func insertEntity(_ entity: DrawingEntity, scale: CGFloat? = nil) {
         self.entitiesView.prepareNewEntity(entity)
+        if let scale {
+            entity.scale = scale
+        }
         self.entitiesView.add(entity)
         self.entitiesView.selectEntity(entity)
         

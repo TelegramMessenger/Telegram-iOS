@@ -1153,8 +1153,26 @@ final class MediaEditorScreenComponent: Component {
                     forwardAction: nil,
                     moreAction: nil,
                     presentVoiceMessagesUnavailableTooltip: nil,
-                    paste: { data in
-                        let _ = data
+                    paste: { [weak self] data in
+                        guard let self, let environment = self.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                            return
+                        }
+                        switch data {
+                        case let .sticker(image, _):
+                            if max(image.size.width, image.size.height) > 1.0 {
+                                let entity = DrawingStickerEntity(content: .image(image, false))
+                                controller.node.interaction?.insertEntity(entity, scale: 1.0)
+                                self.deactivateInput()
+                            }
+                        case let .images(images):
+                            if images.count == 1, let image = images.first, max(image.size.width, image.size.height) > 1.0 {
+                                let entity = DrawingStickerEntity(content: .image(image, true))
+                                controller.node.interaction?.insertEntity(entity, scale: 2.5)
+                                self.deactivateInput()
+                            }
+                        default:
+                            break
+                        }
                     },
                     audioRecorder: nil,
                     videoRecordingStatus: nil,
@@ -1899,7 +1917,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         context.draw(cgImage, in: CGRect(origin: CGPoint(x: (size.width - additionalImage.size.width) / 2.0, y: (size.height - additionalImage.size.height) / 2.0), size: additionalImage.size))
                     }
                 })
-                let imageEntity = DrawingStickerEntity(content: .image(image ?? additionalImage))
+                let imageEntity = DrawingStickerEntity(content: .image(image ?? additionalImage, false))
                 imageEntity.referenceDrawingSize = storyDimensions
                 imageEntity.scale = 1.49
                 imageEntity.position = position.getPosition(storyDimensions)
@@ -2737,6 +2755,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         private var drawingScreen: DrawingScreen?
         private var stickerScreen: StickerPickerScreen?
         
+        private var previousDrawingData: Data?
+        private var previousDrawingEntities: [DrawingEntity]?
+        
         func requestLayout(forceUpdate: Bool, transition: Transition) {
             guard let layout = self.validLayout else {
                 return
@@ -2862,38 +2883,57 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     self.controller?.requestLayout(transition: .immediate)
                                     return
                                 case .drawing:
+                                    self.previousDrawingData = self.drawingView.drawingData
+                                    self.previousDrawingEntities = self.entitiesView.entities
+                                    
                                     self.interaction?.deactivate()
                                     let controller = DrawingScreen(context: self.context, sourceHint: .storyEditor, size: self.previewContainerView.frame.size, originalSize: storyDimensions, isVideo: false, isAvatar: false, drawingView: self.drawingView, entitiesView: self.entitiesView, selectionContainerView: self.selectionContainerView, existingStickerPickerInputData: self.stickerPickerInputData)
                                     self.drawingScreen = controller
                                     self.drawingView.isUserInteractionEnabled = true
 
                                     controller.requestDismiss = { [weak controller, weak self] in
-                                        self?.drawingScreen = nil
+                                        guard let self else {
+                                            return
+                                        }
+                                        self.drawingScreen = nil
                                         controller?.animateOut({
                                             controller?.dismiss()
                                         })
-                                        self?.drawingView.isUserInteractionEnabled = false
-                                        self?.animateInFromTool()
+                                        self.drawingView.isUserInteractionEnabled = false
+                                        self.animateInFromTool()
 
-                                        self?.interaction?.activate()
-                                        self?.entitiesView.selectEntity(nil)
+                                        self.interaction?.reset()
+                                        
+                                        self.interaction?.activate()
+                                        self.entitiesView.selectEntity(nil)
+                                        
+                                        self.drawingView.setup(withDrawing: self.previousDrawingData)
+                                        self.entitiesView.setup(with: self.previousDrawingEntities ?? [])
+                                        
+                                        self.previousDrawingData = nil
+                                        self.previousDrawingEntities = nil
                                     }
                                     controller.requestApply = { [weak controller, weak self] in
-                                        self?.drawingScreen = nil
+                                        guard let self else {
+                                            return
+                                        }
+                                        self.drawingScreen = nil
                                         controller?.animateOut({
                                             controller?.dismiss()
                                         })
-                                        self?.drawingView.isUserInteractionEnabled = false
-                                        self?.animateInFromTool()
+                                        self.drawingView.isUserInteractionEnabled = false
+                                        self.animateInFromTool()
+                                        
+                                        self.interaction?.reset()
 
                                         if let result = controller?.generateDrawingResultData() {
-                                            self?.mediaEditor?.setDrawingAndEntities(data: result.data, image: result.drawingImage, entities: result.entities)
+                                            self.mediaEditor?.setDrawingAndEntities(data: result.data, image: result.drawingImage, entities: result.entities)
                                         } else {
-                                            self?.mediaEditor?.setDrawingAndEntities(data: nil, image: nil, entities: [])
+                                            self.mediaEditor?.setDrawingAndEntities(data: nil, image: nil, entities: [])
                                         }
 
-                                        self?.interaction?.activate()
-                                        self?.entitiesView.selectEntity(nil)
+                                        self.interaction?.activate()
+                                        self.entitiesView.selectEntity(nil)
                                     }
                                     self.controller?.present(controller, in: .window(.root))
                                     self.animateOutToTool()
@@ -3995,7 +4035,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
             let images = imageItems as! [UIImage]
             if images.count == 1, let image = images.first, max(image.size.width, image.size.height) > 1.0 {
-                self.node.interaction?.insertEntity(DrawingStickerEntity(content: .image(image)))
+                self.node.interaction?.insertEntity(DrawingStickerEntity(content: .image(image, false)), scale: 2.5)
             }
         }
     }

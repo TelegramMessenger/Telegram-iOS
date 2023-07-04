@@ -584,7 +584,7 @@ public class StickerPickerScreen: ViewController {
                             CTLineDraw(line, context)
                             context.translateBy(x: -lineOrigin.x, y: -lineOrigin.y)
                         }) {
-                            strongSelf.controller?.completion(.image(image))
+                            strongSelf.controller?.completion(.image(image, false))
                         }
                         strongSelf.controller?.dismiss(animated: true)
                     }
