@@ -345,7 +345,7 @@ public final class StorySetIndicatorComponent: Component {
             if component.hasUnseen {
                 borderColors = [component.theme.chatList.storyUnseenColors.topColor.argb, component.theme.chatList.storyUnseenColors.bottomColor.argb]
             } else {
-                borderColors = [UIColor(white: 1.0, alpha: 0.3).argb, UIColor(white: 1.0, alpha: 0.3).argb]
+                borderColors = [component.theme.chatList.storySeenColors.topColor.argb, component.theme.chatList.storySeenColors.bottomColor.argb]
             }
             
             let imageSize = CGSize(width: maxItemsWidth, height: outerDiameter)

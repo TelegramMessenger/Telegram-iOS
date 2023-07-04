@@ -841,6 +841,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     if let pagerView = self.entityKeyboardView.componentView as? EntityKeyboardComponent.View, let emojiInputInteraction = self.emojiInputInteraction {
                                         pagerView.openCustomSearch(content: EmojiSearchContent(
                                             context: self.context,
+                                            forceTheme: self.interaction?.forceTheme,
                                             items: stickerPacks,
                                             initialFocusId: featuredStickerPack.info.id,
                                             hasPremiumForUse: hasPremium,

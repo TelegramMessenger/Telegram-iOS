@@ -79,7 +79,8 @@ final class StickersResultPanelComponent: Component {
             self.itemsPerRow = itemsPerRow
             self.itemCount = itemCount
             
-            self.contentSize = CGSize(width: containerSize.width, height: topInset + CGFloat(itemCount) * itemSize.height + bottomInset)
+            let rowsCount = ceil(CGFloat(itemCount) / CGFloat(itemsPerRow))
+            self.contentSize = CGSize(width: containerSize.width, height: topInset + rowsCount * (itemSize.height + itemSpacing) - itemSpacing + bottomInset)
         }
         
         func visibleItems(for rect: CGRect) -> Range<Int>? {
@@ -445,7 +446,7 @@ final class StickersResultPanelComponent: Component {
             
             let itemLayout = ItemLayout(
                 containerSize: CGSize(width: availableSize.width, height: minimizedHeight),
-                bottomInset: 9.0,
+                bottomInset: 40.0,
                 topInset: 9.0,
                 sideInset: sideInset,
                 itemSize: CGSize(width: itemSize, height: itemSize),

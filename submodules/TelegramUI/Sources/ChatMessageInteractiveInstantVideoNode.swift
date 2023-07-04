@@ -316,9 +316,6 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             let availableContentWidth = width - bubbleEdgeInset * 2.0 - bubbleContentInsetsLeft - 20.0
             
             if !ignoreHeaders {
-                var replyMessage: Message?
-                var replyStory: StoryId?
-                
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? InlineBotMessageAttribute {
                         var inlineBotNameString: String?
@@ -341,32 +338,23 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         }
                     }
                     
-                    if let replyAttribute = attribute as? ReplyMessageAttribute {
+                    if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
                         if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyAttribute.messageId {
                         } else {
-                            replyMessage = item.message.associatedMessages[replyAttribute.messageId]
+                            replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
+                                presentationData: item.presentationData,
+                                strings: item.presentationData.strings,
+                                context: item.context,
+                                type: .standalone,
+                                message: replyMessage,
+                                story: nil,
+                                parentMessage: item.message,
+                                constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
+                                animationCache: item.controllerInteraction.presentationContext.animationCache,
+                                animationRenderer: item.controllerInteraction.presentationContext.animationRenderer,
+                                associatedData: item.associatedData
+                            ))
                         }
-                    } else if let attribute = attribute as? ReplyStoryAttribute {
-                        replyStory = attribute.storyId
-                    }
-                }
-                
-                if replyMessage != nil || replyStory != nil {
-                    if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyMessage?.id {
-                    } else {
-                        replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
-                            presentationData: item.presentationData,
-                            strings: item.presentationData.strings,
-                            context: item.context,
-                            type: .standalone,
-                            message: replyMessage,
-                            story: replyStory,
-                            parentMessage: item.message,
-                            constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
-                            animationCache: item.controllerInteraction.presentationContext.animationCache,
-                            animationRenderer: item.controllerInteraction.presentationContext.animationRenderer,
-                            associatedData: item.associatedData
-                        ))
                     }
                 }
             }
@@ -1271,9 +1259,6 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                         if let attribute = attribute as? ReplyMessageAttribute {
                                             item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
                                             return
-                                        } else if let attribute = attribute as? ReplyStoryAttribute {
-                                            item.controllerInteraction.navigateToStory(item.message, attribute.storyId)
-                                            return
                                         }
                                     }
                                 }
@@ -1829,21 +1814,5 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
         
         self.canAttachContent = false
-    }
-    
-    func targetForStoryTransition(id: StoryId) -> UIView? {
-        guard let item = self.item else {
-            return nil
-        }
-        for attribute in item.message.attributes {
-            if let attribute = attribute as? ReplyStoryAttribute {
-                if attribute.storyId == id {
-                    if let replyInfoNode = self.replyInfoNode {
-                        return replyInfoNode.mediaTransitionView()
-                    }
-                }
-            }
-        }
-        return nil
     }
 }

@@ -1243,7 +1243,7 @@ public final class ChatListNode: ListView {
         
         super.init()
         
-        //self.useMainQueueTransactions = true
+        self.useMainQueueTransactions = true
         
         self.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
         self.verticalScrollIndicatorFollowsOverscroll = true

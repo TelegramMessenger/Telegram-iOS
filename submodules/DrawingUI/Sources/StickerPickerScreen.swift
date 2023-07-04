@@ -500,12 +500,70 @@ public class StickerPickerScreen: ViewController {
             self.content = content
             
             content.emoji.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
-                performItemAction: { [weak self] _, item, _, _, _, _ in
-                    guard let strongSelf = self else {
+                performItemAction: { [weak self] groupId, item, _, _, _, _ in
+                    guard let strongSelf = self, let controller = strongSelf.controller else {
                         return
                     }
-                    if let file = item.itemFile {
+                    let context = controller.context
+                    if groupId == AnyHashable("featuredTop"), let file = item.itemFile {
+                        let _ = (
+                        combineLatest(
+                            ChatEntityKeyboardInputNode.hasPremium(context: context, chatPeerId: controller.context.account.peerId, premiumIfSavedMessages: true),
+                            ChatEntityKeyboardInputNode.hasPremium(context: context, chatPeerId: controller.context.account.peerId, premiumIfSavedMessages: false)
+                        )
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { [weak self] hasPremium, hasGlobalPremium in
+                            guard let self else {
+                                return
+                            }
+                            
+                            let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)
+                            let _ = (combineLatest(
+                                context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
+                                context.account.postbox.combinedView(keys: [viewKey])
+                            )
+                            |> take(1)
+                            |> deliverOnMainQueue).start(next: { [weak self] emojiPacksView, views in
+                                guard let view = views.views[viewKey] as? OrderedItemListView else {
+                                    return
+                                }
+                                guard let self else {
+                                    return
+                                }
+                                                                
+                                var installedCollectionIds = Set<ItemCollectionId>()
+                                for (id, _, _) in emojiPacksView.collectionInfos {
+                                    installedCollectionIds.insert(id)
+                                }
+                                
+                                let stickerPacks = view.items.map({ $0.contents.get(FeaturedStickerPackItem.self)! }).filter({
+                                    !installedCollectionIds.contains($0.info.id)
+                                })
+                                
+                                for featuredStickerPack in stickerPacks {
+                                    if featuredStickerPack.topItems.contains(where: { $0.file.fileId == file.fileId }) {
+                                        if let componentView = self.hostView.componentView as? StickerSelectionComponent.View {
+                                            if let pagerView = componentView.keyboardView.view as? EntityKeyboardComponent.View, let emojiInputInteraction = self.content?.emoji.inputInteractionHolder.inputInteraction {
+                                                pagerView.openCustomSearch(content: EmojiSearchContent(
+                                                    context: context,
+                                                    forceTheme: defaultDarkPresentationTheme,
+                                                    items: stickerPacks,
+                                                    initialFocusId: featuredStickerPack.info.id,
+                                                    hasPremiumForUse: hasPremium,
+                                                    hasPremiumForInstallation: hasGlobalPremium,
+                                                    parentInputInteraction: emojiInputInteraction
+                                                ))
+                                            }
+                                        }
+                                    
+                                        break
+                                    }
+                                }
+                            })
+                        })
+                    } else if let file = item.itemFile {
                         strongSelf.controller?.completion(.file(file))
+                        strongSelf.controller?.dismiss(animated: true)
                     } else if case let .staticEmoji(emoji) = item.content {
                         if let image = generateImage(CGSize(width: 256.0, height: 256.0), scale: 1.0, rotatedContext: { size, context in
                             context.clear(CGRect(origin: .zero, size: size))
@@ -528,8 +586,8 @@ public class StickerPickerScreen: ViewController {
                         }) {
                             strongSelf.controller?.completion(.image(image))
                         }
+                        strongSelf.controller?.dismiss(animated: true)
                     }
-                    strongSelf.controller?.dismiss(animated: true)
                 },
                 deleteBackwards: nil,
                 openStickerSettings: nil,
@@ -870,12 +928,42 @@ public class StickerPickerScreen: ViewController {
             }
             
             content.stickers?.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
-                performItemAction: { [weak self] _, item, _, _, _, _ in
-                    guard let strongSelf = self, let file = item.itemFile else {
+                performItemAction: { [weak self] groupId, item, _, _, _, _ in
+                    guard let self, let controller = self.controller, let file = item.itemFile else {
                         return
                     }
-                    strongSelf.controller?.completion(.file(file))
-                    strongSelf.controller?.dismiss(animated: true)
+                    if groupId == AnyHashable("featuredTop") {
+                        let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
+                        let _ = (controller.context.account.postbox.combinedView(keys: [viewKey])
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { [weak self] views in
+                            guard let self, let controller = self.controller, let view = views.views[viewKey] as? OrderedItemListView else {
+                                return
+                            }
+                            for featuredStickerPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                                if featuredStickerPack.topItems.contains(where: { $0.file.fileId == file.fileId }) {
+                                    controller.push(FeaturedStickersScreen(
+                                        context: controller.context,
+                                        highlightedPackId: featuredStickerPack.info.id,
+                                        forceTheme: defaultDarkPresentationTheme,
+                                        sendSticker: { [weak self] fileReference, _, _ in
+                                            guard let self else {
+                                                return false
+                                            }
+                                            self.controller?.completion(.file(fileReference.media))
+                                            self.controller?.dismiss(animated: true)
+                                            return true
+                                        }
+                                    ))
+                                    
+                                    break
+                                }
+                            }
+                        })
+                    } else {
+                        self.controller?.completion(.file(file))
+                        self.controller?.dismiss(animated: true)
+                    }
                 },
                 deleteBackwards: nil,
                 openStickerSettings: nil,

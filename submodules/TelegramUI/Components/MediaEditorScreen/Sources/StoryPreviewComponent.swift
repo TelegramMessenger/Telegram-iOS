@@ -268,6 +268,7 @@ final class StoryPreviewComponent: Component {
                     forwardAction: {},
                     moreAction: { _, _ in },
                     presentVoiceMessagesUnavailableTooltip: nil,
+                    paste: { _ in },
                     audioRecorder: nil,
                     videoRecordingStatus: nil,
                     isRecordingLocked: false,

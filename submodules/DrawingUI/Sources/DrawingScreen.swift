@@ -2440,6 +2440,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                         self.requestUpdate(transition: .easeInOut(duration: 0.2))
                     }
                 },
+                onTextEditingEnded: { _ in },
                 getCurrentImage: { [weak controller] in
                     return controller?.getCurrentImage()
                 },
@@ -2954,6 +2955,8 @@ public final class DrawingToolsInteraction {
     private let updateColor: (DrawingColor) -> Void
     
     private let onInteractionUpdated: (Bool) -> Void
+    private let onTextEditingEnded: (Bool) -> Void
+    
     private let getCurrentImage: () -> UIImage?
     private let getControllerNode: () -> ASDisplayNode?
     private let present: (ViewController, PresentationContextType, Any?) -> Void
@@ -2980,6 +2983,7 @@ public final class DrawingToolsInteraction {
         updateVideoPlayback: @escaping (Bool) -> Void,
         updateColor: @escaping (DrawingColor) -> Void,
         onInteractionUpdated: @escaping (Bool) -> Void,
+        onTextEditingEnded: @escaping (Bool) -> Void,
         getCurrentImage: @escaping () -> UIImage?,
         getControllerNode: @escaping () -> ASDisplayNode?,
         present: @escaping (ViewController, PresentationContextType, Any?) -> Void,
@@ -2994,6 +2998,7 @@ public final class DrawingToolsInteraction {
         self.updateVideoPlayback = updateVideoPlayback
         self.updateColor = updateColor
         self.onInteractionUpdated = onInteractionUpdated
+        self.onTextEditingEnded = onTextEditingEnded
         self.getCurrentImage = getCurrentImage
         self.getControllerNode = getControllerNode
         self.present = present
@@ -3123,6 +3128,7 @@ public final class DrawingToolsInteraction {
     public func endTextEditing(reset: Bool) {
         if let entityView = self.entitiesView.selectedEntityView as? DrawingTextEntityView {
             entityView.endEditing(reset: reset)
+            self.onTextEditingEnded(reset)
         }
     }
     

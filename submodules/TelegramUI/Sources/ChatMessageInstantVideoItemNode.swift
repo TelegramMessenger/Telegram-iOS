@@ -431,8 +431,6 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 }
             }
             
-            var replyMessage: Message?
-            var replyStory: StoryId?
             for attribute in item.message.attributes {
                 if let attribute = attribute as? InlineBotMessageAttribute {
                     var inlineBotNameString: String?
@@ -469,33 +467,27 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                     }
                 }
                 
-                if let replyAttribute = attribute as? ReplyMessageAttribute {
+                if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
                     if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyAttribute.messageId {
                     } else {
-                        replyMessage = item.message.associatedMessages[replyAttribute.messageId]
+                        replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
+                            presentationData: item.presentationData,
+                            strings: item.presentationData.strings,
+                            context: item.context,
+                            type: .standalone,
+                            message: replyMessage,
+                            story: nil,
+                            parentMessage: item.message,
+                            constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
+                            animationCache: item.controllerInteraction.presentationContext.animationCache,
+                            animationRenderer: item.controllerInteraction.presentationContext.animationRenderer,
+                            associatedData: item.associatedData
+                        ))
                     }
-                } else if let attribute = attribute as? ReplyStoryAttribute {
-                    replyStory = attribute.storyId
                 } else if let _ = attribute as? InlineBotMessageAttribute {
                 } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
                     replyMarkup = attribute
                 }
-            }
-            
-            if replyMessage != nil || replyStory != nil {
-                replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
-                    presentationData: item.presentationData,
-                    strings: item.presentationData.strings,
-                    context: item.context,
-                    type: .standalone,
-                    message: replyMessage,
-                    story: replyStory,
-                    parentMessage: item.message,
-                    constrainedSize: CGSize(width: max(0, availableWidth), height: CGFloat.greatestFiniteMagnitude),
-                    animationCache: item.controllerInteraction.presentationContext.animationCache,
-                    animationRenderer: item.controllerInteraction.presentationContext.animationRenderer,
-                    associatedData: item.associatedData
-                ))
             }
                         
             var updatedShareButtonNode: ChatMessageShareButton?

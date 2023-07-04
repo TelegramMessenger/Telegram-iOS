@@ -227,9 +227,6 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                     let cropRect = CGRect(origin: CGPoint(x: floor((ciImage.extent.size.width - minSide) / 2.0), y: floor((ciImage.extent.size.height - minSide) / 2.0)), size: CGSize(width: minSide, height: minSide))
                     ciImage = ciImage.cropped(to: cropRect).samplingLinear()
                     ciImage = ciImage.transformed(by: CGAffineTransform(translationX: 0.0, y: -420.0))
-                   // ciImage = ciImage.transformed(by: CGAffineTransform(translationX: -ciImage.extent.midX, y: -ciImage.extent.midY))
-                   // ciImage = ciImage.transformed(by: CGAffineTransform(rotationAngle: -.pi / 2.0))
-                   // ciImage = ciImage.transformed(by: CGAffineTransform(translationX: ciImage.extent.midX, y: ciImage.extent.midY))
                     
                     var circleMaskFilter: CIFilter?
                     if let current = self.circleMaskFilter {

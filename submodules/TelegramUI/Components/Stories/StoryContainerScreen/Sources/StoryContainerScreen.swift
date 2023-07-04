@@ -843,7 +843,7 @@ private final class StoryContainerScreenComponent: Component {
                             context: component.context,
                             chatPeerId: nil,
                             areCustomEmojiEnabled: true,
-                            hasTrending: false,
+                            hasTrending: true,
                             hasSearch: true,
                             hideBackground: true,
                             sendGif: nil
@@ -1123,19 +1123,10 @@ private final class StoryContainerScreenComponent: Component {
                                     
                                     switch self.audioMode {
                                     case .ambient:
-                                        if self.isMuteSwitchOn {
-                                            self.audioMode = .off
-                                            for (_, itemSetView) in self.visibleItemSetViews {
-                                                if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
-                                                    componentView.enterAmbientMode(ambient: !self.isMuteSwitchOn)
-                                                }
-                                            }
-                                        } else {
-                                            self.audioMode = .on
-                                            for (_, itemSetView) in self.visibleItemSetViews {
-                                                if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
-                                                    componentView.leaveAmbientMode()
-                                                }
+                                        self.audioMode = .on
+                                        for (_, itemSetView) in self.visibleItemSetViews {
+                                            if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                                                componentView.leaveAmbientMode()
                                             }
                                         }
                                     case .on:

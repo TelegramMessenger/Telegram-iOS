@@ -254,10 +254,6 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
         return nil
     }
     
-    func targetForStoryTransition(id: StoryId) -> UIView? {
-        return nil
-    }
-    
     func getStatusNode() -> ASDisplayNode? {
         return nil
     }

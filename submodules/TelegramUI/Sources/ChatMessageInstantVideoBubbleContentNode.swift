@@ -429,10 +429,6 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
         return nil
     }
     
-    override func targetForStoryTransition(id: StoryId) -> UIView? {
-        return self.interactiveVideoNode.targetForStoryTransition(id: id)
-    }
-    
     override var disablesClipping: Bool {
         return true
     }

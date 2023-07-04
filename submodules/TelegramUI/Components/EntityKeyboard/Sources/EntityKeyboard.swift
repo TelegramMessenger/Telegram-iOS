@@ -916,7 +916,6 @@ public final class EntityKeyboardComponent: Component {
                 
                 if component.useExternalSearchContainer, let containerNode = component.makeSearchContainerNode(contentType) {
                     let controller = EntitySearchContainerController(containerNode: containerNode)
-                    
                     self.component?.emojiContent?.inputInteractionHolder.inputInteraction?.pushController(controller)
                 } else {
                     self.searchComponent = EntitySearchContentComponent(
@@ -941,14 +940,19 @@ public final class EntityKeyboardComponent: Component {
                 return
             }
             
-            self.searchComponent = EntitySearchContentComponent(
-                makeContainerNode: {
-                    return content
-                },
-                dismissSearch: { [weak self] in
-                    self?.closeSearch()
-                }
-            )
+            if component.useExternalSearchContainer {
+                let controller = EntitySearchContainerController(containerNode: content)
+                self.component?.emojiContent?.inputInteractionHolder.inputInteraction?.pushController(controller)
+            } else {
+                self.searchComponent = EntitySearchContentComponent(
+                    makeContainerNode: {
+                        return content
+                    },
+                    dismissSearch: { [weak self] in
+                        self?.closeSearch()
+                    }
+                )
+            }
             component.hideInputUpdated(true, true, Transition(animation: .curve(duration: 0.3, curve: .spring)))
         }
         

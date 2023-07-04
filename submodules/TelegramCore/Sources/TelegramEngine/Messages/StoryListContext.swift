@@ -466,18 +466,17 @@ public final class PeerStoryListContext {
             self.peerId = peerId
             self.isArchived = isArchived
             
-            self.stateValue = State(peerReference: nil, items: [], totalCount: 0, loadMoreToken: 0, isCached: true, allEntityFiles: [:])
+            self.stateValue = State(peerReference: nil, items: [], totalCount: 0, loadMoreToken: 0, isCached: true)
             
-            let _ = (account.postbox.transaction { transaction -> (PeerReference?, [EngineStoryItem], Int, [MediaId: TelegramMediaFile]) in
+            let _ = (account.postbox.transaction { transaction -> (PeerReference?, [EngineStoryItem], Int) in
                 let key = ValueBoxKey(length: 8 + 1)
                 key.setInt64(0, value: peerId.toInt64())
                 key.setInt8(8, value: isArchived ? 1 : 0)
                 let cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerStoryListHeads, key: key))?.get(CachedPeerStoryListHead.self)
                 guard let cached = cached else {
-                    return (nil, [], 0, [:])
+                    return (nil, [], 0)
                 }
                 var items: [EngineStoryItem] = []
-                var allEntityFiles: [MediaId: TelegramMediaFile] = [:]
                 for storedItem in cached.items {
                     if case let .item(item) = storedItem, let media = item.media {
                         let mappedItem = EngineStoryItem(
@@ -505,30 +504,19 @@ public final class PeerStoryListContext {
                             isEdited: item.isEdited
                         )
                         items.append(mappedItem)
-                        
-                        for entity in mappedItem.entities {
-                            if case let .CustomEmoji(_, fileId) = entity.type {
-                                let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
-                                if allEntityFiles[mediaId] == nil {
-                                    if let file = transaction.getMedia(mediaId) as? TelegramMediaFile {
-                                        allEntityFiles[file.fileId] = file
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
                 
                 let peerReference = transaction.getPeer(peerId).flatMap(PeerReference.init)
                 
-                return (peerReference, items, Int(cached.totalCount), allEntityFiles)
+                return (peerReference, items, Int(cached.totalCount))
             }
-            |> deliverOn(self.queue)).start(next: { [weak self] peerReference, items, totalCount, allEntityFiles in
+            |> deliverOn(self.queue)).start(next: { [weak self] peerReference, items, totalCount in
                 guard let `self` = self else {
                     return
                 }
                 
-                self.stateValue = State(peerReference: peerReference, items: items, totalCount: totalCount, loadMoreToken: 0, isCached: true, allEntityFiles: allEntityFiles)
+                self.stateValue = State(peerReference: peerReference, items: items, totalCount: totalCount, loadMoreToken: 0, isCached: true)
                 self.loadMore()
             })
         }
@@ -840,22 +828,19 @@ public final class PeerStoryListContext {
         public var totalCount: Int
         public var loadMoreToken: Int?
         public var isCached: Bool
-        public var allEntityFiles: [MediaId: TelegramMediaFile]
         
         init(
             peerReference: PeerReference?,
             items: [EngineStoryItem],
             totalCount: Int,
             loadMoreToken: Int?,
-            isCached: Bool,
-            allEntityFiles: [MediaId: TelegramMediaFile]
+            isCached: Bool
         ) {
             self.peerReference = peerReference
             self.items = items
             self.totalCount = totalCount
             self.loadMoreToken = loadMoreToken
             self.isCached = isCached
-            self.allEntityFiles = allEntityFiles
         }
     }
     

@@ -41,6 +41,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
     }
     
     private let context: AccountContext
+    private let forceTheme: PresentationTheme?
     private var initialFocusId: ItemCollectionId?
     private let hasPremiumForUse: Bool
     private let hasPremiumForInstallation: Bool
@@ -70,6 +71,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
 
     public init(
         context: AccountContext,
+        forceTheme: PresentationTheme?,
         items: [FeaturedStickerPackItem],
         initialFocusId: ItemCollectionId?,
         hasPremiumForUse: Bool,
@@ -77,12 +79,17 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
         parentInputInteraction: EmojiPagerContentComponent.InputInteraction
     ) {
         self.context = context
+        self.forceTheme = forceTheme
         self.initialFocusId = initialFocusId
         self.hasPremiumForUse = hasPremiumForUse
         self.hasPremiumForInstallation = hasPremiumForInstallation
         self.parentInputInteraction = parentInputInteraction
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        if let forceTheme {
+            presentationData = presentationData.withUpdated(theme: forceTheme)
+        }
+        self.presentationData = presentationData
         
         self.panelHostView = PagerExternalTopPanelContainer()
         self.inputInteractionHolder = EmojiPagerContentComponent.InputInteractionHolder()

@@ -363,7 +363,13 @@ final class MediaEditorScreenComponent: Component {
                             self.environment?.controller()?.presentInGlobalOverlay(c, with: a)
                         }
                     },
-                    getNavigationController: { return nil },
+                    getNavigationController: { [weak self] in
+                        if let self {
+                            return self.environment?.controller()?.navigationController as? NavigationController
+                        } else {
+                            return nil
+                        }
+                    },
                     requestLayout: { [weak self] transition in
                         if let self {
                             (self.environment?.controller() as? MediaEditorScreen)?.node.requestLayout(forceUpdate: true, transition: Transition(transition))
@@ -985,6 +991,7 @@ final class MediaEditorScreenComponent: Component {
                         stateContext: self.inputMediaNodeStateContext
                     )
                     inputMediaNode.externalTopPanelContainerImpl = nil
+                    inputMediaNode.useExternalSearchContainer = true
                     if let inputPanelView = self.inputPanel.view, inputMediaNode.view.superview == nil {
                         self.insertSubview(inputMediaNode.view, belowSubview: inputPanelView)
                     }
@@ -1135,6 +1142,9 @@ final class MediaEditorScreenComponent: Component {
                     forwardAction: nil,
                     moreAction: nil,
                     presentVoiceMessagesUnavailableTooltip: nil,
+                    paste: { data in
+                        let _ = data
+                    },
                     audioRecorder: nil,
                     videoRecordingStatus: nil,
                     isRecordingLocked: false,
@@ -2057,6 +2067,18 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         self.requestUpdate(transition: .easeInOut(duration: 0.2))
                     }
                 },
+                onTextEditingEnded: { [weak self] reset in
+                    if let self, !reset, let entity = self.entitiesView.selectedEntityView?.entity as? DrawingTextEntity, !entity.text.string.isEmpty {
+                        let _ = updateMediaEditorStoredStateInteractively(engine: self.context.engine, { current in
+                            let textSettings = MediaEditorStoredTextSettings(style: entity.style, font: entity.font, fontSize: entity.fontSize, alignment: entity.alignment)
+                            if let current {
+                                return current.withUpdatedTextSettings(textSettings)
+                            } else {
+                                return MediaEditorStoredState(privacy: nil, textSettings: textSettings)
+                            }
+                        }).start()
+                    }
+                },
                 getCurrentImage: {
                     return nil
                 },
@@ -2202,11 +2224,31 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let layout = self.validLayout, (layout.inputHeight ?? 0.0) > 0.0 {
                         self.view.endEditing(true)
                     } else {
-                        let textEntity = DrawingTextEntity(text: NSAttributedString(), style: .filled, animation: .none, font: .sanFrancisco, alignment: .center, fontSize: 1.0, color: DrawingColor(color: .white))
-                        self.interaction?.insertEntity(textEntity)
+                        self.insertTextEntity()
                     }
                 }
             }
+        }
+        
+        private func insertTextEntity() {
+            let _ = (mediaEditorStoredState(engine: self.context.engine)
+            |> deliverOnMainQueue).start(next: { [weak self] state in
+                guard let self else {
+                    return
+                }
+                var style: DrawingTextEntity.Style = .filled
+                var font: DrawingTextEntity.Font = .sanFrancisco
+                var alignment: DrawingTextEntity.Alignment = .center
+                var fontSize: CGFloat = 1.0
+                if let textSettings = state?.textSettings {
+                    style = textSettings.style
+                    font = textSettings.font
+                    alignment = textSettings.alignment
+                    fontSize = textSettings.fontSize
+                }
+                let textEntity = DrawingTextEntity(text: NSAttributedString(), style: style, animation: .none, font: font, alignment: alignment, fontSize: fontSize, color: DrawingColor(color: .white))
+                self.interaction?.insertEntity(textEntity)
+            })
         }
         
         private func setupTransitionImage(_ image: UIImage) {
@@ -2804,8 +2846,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     self.controller?.present(controller, in: .window(.root))
                                     return
                                 case .text:
-                                    let textEntity = DrawingTextEntity(text: NSAttributedString(), style: .filled, animation: .none, font: .sanFrancisco, alignment: .center, fontSize: 1.0, color: DrawingColor(color: .white))
-                                    self.interaction?.insertEntity(textEntity)
+                                    self.insertTextEntity()
                                     
                                     self.hasAnyChanges = true
                                     self.controller?.isSavingAvailable = true
@@ -2957,6 +2998,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.interaction?.containerLayoutUpdated(layout: layout, transition: transition)
             
             var layout = layout
+            layout.intrinsicInsets.top = topInset
             layout.intrinsicInsets.bottom = bottomInset + 60.0
             controller.presentationContext.containerLayoutUpdated(layout, transition: transition.containedViewLayoutTransition)
             
@@ -3172,7 +3214,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let initialPrivacy = privacy.privacy
             let timeout = privacy.timeout
             
-            let controller =  ShareWithPeersScreen(
+            let controller = ShareWithPeersScreen(
                 context: self.context,
                 initialPrivacy: initialPrivacy,
                 allowScreenshots: !privacy.isForwardingDisabled,
@@ -3569,7 +3611,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         if !self.isEditingStory {
-            let _ = updateMediaEditorStoredStateInteractively(engine: self.context.engine, state: MediaEditorStoredState(privacy: self.state.privacy)).start()
+            let privacy = self.state.privacy
+            let _ = updateMediaEditorStoredStateInteractively(engine: self.context.engine, { current in
+                if let current {
+                    return current.withUpdatedPrivacy(privacy)
+                } else {
+                    return MediaEditorStoredState(privacy: privacy, textSettings: nil)
+                }
+            }).start()
         }
         
         if mediaEditor.resultIsVideo {
