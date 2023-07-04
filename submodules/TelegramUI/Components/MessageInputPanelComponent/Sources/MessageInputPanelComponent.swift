@@ -64,6 +64,7 @@ public final class MessageInputPanelComponent: Component {
     public let strings: PresentationStrings
     public let style: Style
     public let placeholder: String
+    public let maxLength: Int?
     public let queryTypes: ContextQueryTypes
     public let alwaysDarkWhenHasText: Bool
     public let nextInputMode: (Bool) -> InputMode?
@@ -104,6 +105,7 @@ public final class MessageInputPanelComponent: Component {
         strings: PresentationStrings,
         style: Style,
         placeholder: String,
+        maxLength: Int?,
         queryTypes: ContextQueryTypes,
         alwaysDarkWhenHasText: Bool,
         nextInputMode: @escaping (Bool) -> InputMode?,
@@ -144,6 +146,7 @@ public final class MessageInputPanelComponent: Component {
         self.style = style
         self.nextInputMode = nextInputMode
         self.placeholder = placeholder
+        self.maxLength = maxLength
         self.queryTypes = queryTypes
         self.alwaysDarkWhenHasText = alwaysDarkWhenHasText
         self.areVoiceMessagesAvailable = areVoiceMessagesAvailable
@@ -194,6 +197,9 @@ public final class MessageInputPanelComponent: Component {
             return false
         }
         if lhs.placeholder != rhs.placeholder {
+            return false
+        }
+        if lhs.maxLength != rhs.maxLength {
             return false
         }
         if lhs.queryTypes != rhs.queryTypes {
@@ -266,6 +272,8 @@ public final class MessageInputPanelComponent: Component {
         private let placeholder = ComponentView<Empty>()
         private let vibrancyPlaceholder = ComponentView<Empty>()
         
+        private let counter = ComponentView<Empty>()
+        
         private var disabledPlaceholder: ComponentView<Empty>?
         private let textField = ComponentView<Empty>()
         private let textFieldExternalState = TextFieldComponent.ExternalState()
@@ -296,6 +304,8 @@ public final class MessageInputPanelComponent: Component {
         
         private var viewForOverlayContent: ViewForOverlayContent?
         private var currentEmojiSuggestionView: ComponentHostView<Empty>?
+        
+        private let hapticFeedback = HapticFeedback()
         
         private var component: MessageInputPanelComponent?
         private weak var state: EmptyComponentState?
@@ -374,6 +384,30 @@ public final class MessageInputPanelComponent: Component {
             if let textFieldView = self.textField.view as? TextFieldComponent.View {
                 textFieldView.activateInput()
             }
+        }
+        
+        public func canDeactivateInput() -> Bool {
+            guard let component = self.component else {
+                return true
+            }
+            if let maxLength = component.maxLength, self.textFieldExternalState.textLength > maxLength {
+                return false
+            } else {
+                return true
+            }
+        }
+        
+        public func deactivateInput() {
+            if self.canDeactivateInput() {
+                if let textFieldView = self.textField.view as? TextFieldComponent.View {
+                    textFieldView.deactivateInput()
+                }
+            }
+        }
+        
+        public func animateError() {
+            self.textField.view?.layer.addShakeAnimation()
+            self.hapticFeedback.error()
         }
         
         public func updateContextQueries() {
@@ -534,7 +568,6 @@ public final class MessageInputPanelComponent: Component {
             )
             let isEditing = self.textFieldExternalState.isEditing || component.forceIsEditing
             
-            
             let placeholderSize = self.placeholder.update(
                 transition: .immediate,
                 component: AnyComponent(Text(
@@ -568,7 +601,7 @@ public final class MessageInputPanelComponent: Component {
             } else {
                 fieldBackgroundFrame = fieldFrame
             }
-            
+                        
             transition.setFrame(view: self.vibrancyEffectView, frame: CGRect(origin: CGPoint(), size: fieldBackgroundFrame.size))
             
             transition.setFrame(view: self.fieldBackgroundView, frame: fieldBackgroundFrame)
@@ -657,6 +690,36 @@ public final class MessageInputPanelComponent: Component {
                     self.disabledPlaceholder = nil
                     disabledPlaceholder.view?.removeFromSuperview()
                 }
+            }
+            
+            if let maxLength = component.maxLength, maxLength - self.textFieldExternalState.textLength < 5 {
+                let remainingLength = max(-999, maxLength - self.textFieldExternalState.textLength)
+                let counterSize = self.counter.update(
+                    transition: .immediate,
+                    component: AnyComponent(Text(
+                        text: "\(remainingLength)",
+                        font: Font.with(size: 14.0, traits: .monospacedNumbers),
+                        color: self.textFieldExternalState.textLength > maxLength ? UIColor(rgb: 0xff3b30) : UIColor(rgb: 0xffffff, alpha: 0.25)
+                    )),
+                    environment: {},
+                    containerSize: availableTextFieldSize
+                )
+                let counterFrame = CGRect(origin: CGPoint(x: availableSize.width - insets.right + floorToScreenPixels((insets.right - counterSize.width) * 0.5), y: size.height - insets.bottom - baseFieldHeight - counterSize.height - 5.0), size: counterSize)
+                if let counterView = self.counter.view {
+                    if counterView.superview == nil {
+                        self.addSubview(counterView)
+                        counterView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        
+                        counterView.center = counterFrame.center
+                    } else {
+                        transition.setPosition(view: counterView, position: counterFrame.center)
+                    }
+                    counterView.bounds = CGRect(origin: .zero, size: counterFrame.size)
+                }
+            } else if let counterView = self.counter.view, counterView.superview != nil {
+                counterView.layer.animateAlpha(from: 1.00, to: 0.0, duration: 0.2, completion: { _ in
+                    counterView.removeFromSuperview()
+                })
             }
             
             if component.attachmentAction != nil {
@@ -830,12 +893,20 @@ public final class MessageInputPanelComponent: Component {
                                     component.sendMessageAction()
                                 } else if case let .text(string) = self.getSendMessageInput(), string.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                 } else {
-                                    component.sendMessageAction()
+                                    if let maxLength = component.maxLength, self.textFieldExternalState.textLength > maxLength {
+                                        self.animateError()
+                                    } else {
+                                        component.sendMessageAction()
+                                    }
                                 }
                             }
                         case .apply:
                             if case .up = action {
-                                component.sendMessageAction()
+                                if let maxLength = component.maxLength, self.textFieldExternalState.textLength > maxLength {
+                                    self.animateError()
+                                } else {
+                                    component.sendMessageAction()
+                                }
                             }
                         case .voiceInput, .videoInput:
                             component.setMediaRecordingActive?(action == .down, mode == .videoInput, sendAction)

@@ -392,11 +392,20 @@ final class MediaEditorScreenComponent: Component {
         }
         
         @objc private func deactivateInput() {
-            self.currentInputMode = .text
-            if hasFirstResponder(self) {
-                self.endEditing(true)
+            guard let view = self.inputPanel.view as? MessageInputPanelComponent.View else {
+                return
+            }
+            if view.canDeactivateInput() {
+                self.currentInputMode = .text
+                if hasFirstResponder(self) {
+                    if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
+                        view.deactivateInput()
+                    }
+                } else {
+                    self.state?.updated(transition: .spring(duration: 0.4).withUserData(TextFieldComponent.AnimationHint(kind: .textFocusChanged)))
+                }
             } else {
-                self.state?.updated(transition: .spring(duration: 0.4).withUserData(TextFieldComponent.AnimationHint(kind: .textFocusChanged)))
+                view.animateError()
             }
         }
         
@@ -967,13 +976,14 @@ final class MediaEditorScreenComponent: Component {
                     inputPanelAvailableWidth += 200.0
                 }
             }
-            if environment.inputHeight > 0.0 || self.currentInputMode == .emoji {
+            
+            let keyboardWasHidden = self.inputPanelExternalState.isKeyboardHidden
+            if environment.inputHeight > 0.0 || self.currentInputMode == .emoji || keyboardWasHidden {
                 inputPanelAvailableHeight = 200.0
             }
             
             var inputHeight = environment.inputHeight
             var keyboardHeight = environment.deviceMetrics.standardInputHeight(inLandscape: false)
-            let keyboardWasHidden = self.inputPanelExternalState.isKeyboardHidden
             
             if case .emoji = self.currentInputMode, let inputData = self.inputMediaNodeData {
                 let inputMediaNode: ChatEntityKeyboardInputNode
@@ -1078,6 +1088,7 @@ final class MediaEditorScreenComponent: Component {
                     strings: environment.strings,
                     style: .editor,
                     placeholder: "Add a caption...",
+                    maxLength: Int(component.context.userLimits.maxStoryCaptionLength),
                     queryTypes: [.mention],
                     alwaysDarkWhenHasText: false,
                     nextInputMode: { _ in  return nextInputMode },
@@ -1424,10 +1435,8 @@ final class MediaEditorScreenComponent: Component {
                             muteButtonView.layer.shadowOpacity = 0.35
                             self.addSubview(muteButtonView)
                             
-                            if self.animatingButtons {
-                                muteButtonView.layer.animateAlpha(from: 0.0, to: muteButtonView.alpha, duration: 0.1)
-                                muteButtonView.layer.animateScale(from: 0.4, to: 1.0, duration: 0.1)
-                            }
+                            muteButtonView.layer.animateAlpha(from: 0.0, to: muteButtonView.alpha, duration: self.animatingButtons ? 0.1 : 0.2)
+                            muteButtonView.layer.animateScale(from: 0.4, to: 1.0, duration: self.animatingButtons ? 0.1 : 0.2)
                         }
                         transition.setPosition(view: muteButtonView, position: muteButtonFrame.center)
                         transition.setBounds(view: muteButtonView, bounds: CGRect(origin: .zero, size: muteButtonFrame.size))

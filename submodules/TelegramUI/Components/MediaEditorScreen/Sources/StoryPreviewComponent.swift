@@ -250,6 +250,7 @@ final class StoryPreviewComponent: Component {
                     strings: presentationData.strings,
                     style: .story,
                     placeholder: "Reply Privately...",
+                    maxLength: nil,
                     queryTypes: [],
                     alwaysDarkWhenHasText: false,
                     nextInputMode: { _ in return .stickers },
