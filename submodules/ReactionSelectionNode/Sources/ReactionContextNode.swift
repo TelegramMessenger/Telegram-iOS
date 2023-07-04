@@ -284,6 +284,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     
     public var isReactionSearchActive: Bool = false
     
+    public var reduceMotion: Bool = false
+    
     public static func randomGenericReactionEffect(context: AccountContext) -> Signal<String?, NoError> {
         return context.engine.stickers.loadedStickerPack(reference: .emojiGenericAnimations, forceActualized: false)
         |> map { result -> [TelegramMediaFile]? in
@@ -907,7 +909,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                     
                     if animateIn {
-                        itemNode.appear(animated: !self.context.sharedContext.currentPresentationData.with({ $0 }).reduceMotion)
+                        itemNode.appear(animated: !self.context.sharedContext.currentPresentationData.with({ $0 }).reduceMotion && !self.reduceMotion)
                     }
                     
                     if self.getEmojiContent != nil, i == itemLayout.visibleItemCount - 1, let itemNode = itemNode as? ReactionNode {
@@ -1197,7 +1199,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        if let animateInFromAnchorRect = animateInFromAnchorRect {
+        if let animateInFromAnchorRect = animateInFromAnchorRect, !self.reduceMotion {
             let springDuration: Double = 0.5
             let springDamping: CGFloat = 104.0
             let springScaleDelay: Double = 0.1
@@ -1606,11 +1608,13 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         let mainCircleDelay: Double = 0.01
         
-        self.backgroundNode.animateIn()
+        if !self.presentationData.reduceMotion && !self.reduceMotion {
+            self.backgroundNode.animateIn()
+        }
         
         self.didAnimateIn = true
         
-        if !self.presentationData.reduceMotion {
+        if !self.presentationData.reduceMotion && !self.reduceMotion {
             for i in 0 ..< self.items.count {
                 guard let itemNode = self.visibleItemNodes[i] else {
                     continue

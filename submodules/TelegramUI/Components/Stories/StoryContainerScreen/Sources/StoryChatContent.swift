@@ -63,9 +63,11 @@ public final class StoryContentContextImpl: StoryContentContext {
                 ),
                 context.engine.data.subscribe(TelegramEngine.EngineData.Item.NotificationSettings.Global())
             )
-            |> mapToSignal { _, views, globalNotificationSettings -> Signal<(CombinedView, [PeerId: Peer], EngineGlobalNotificationSettings), NoError> in
-                return context.account.postbox.transaction { transaction -> (CombinedView, [PeerId: Peer], EngineGlobalNotificationSettings) in
+            |> mapToSignal { _, views, globalNotificationSettings -> Signal<(CombinedView, [PeerId: Peer], EngineGlobalNotificationSettings, [MediaId: TelegramMediaFile]), NoError> in
+                return context.account.postbox.transaction { transaction -> (CombinedView, [PeerId: Peer], EngineGlobalNotificationSettings, [MediaId: TelegramMediaFile]) in
                     var peers: [PeerId: Peer] = [:]
+                    var allEntityFiles: [MediaId: TelegramMediaFile] = [:]
+                    
                     if let itemsView = views.views[PostboxViewKey.storyItems(peerId: peerId)] as? StoryItemsView {
                         for item in itemsView.items {
                             if let item = item.value.get(Stories.StoredItem.self), case let .item(itemValue) = item {
@@ -76,13 +78,24 @@ public final class StoryContentContextImpl: StoryContentContext {
                                         }
                                     }
                                 }
+                                for entity in itemValue.entities {
+                                    if case let .CustomEmoji(_, fileId) = entity.type {
+                                        let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                                        if allEntityFiles[mediaId] == nil {
+                                            if let file = transaction.getMedia(mediaId) as? TelegramMediaFile {
+                                                allEntityFiles[file.fileId] = file
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
-                    return (views, peers, globalNotificationSettings)
+                    
+                    return (views, peers, globalNotificationSettings, allEntityFiles)
                 }
             }
-            |> deliverOnMainQueue).start(next: { [weak self] views, peers, globalNotificationSettings in
+            |> deliverOnMainQueue).start(next: { [weak self] views, peers, globalNotificationSettings, allEntityFiles in
                 guard let self else {
                     return
                 }
@@ -257,7 +270,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                             return StoryContentItem(
                                 position: nil,
                                 peerId: peer.id,
-                                storyItem: item
+                                storyItem: item,
+                                entityFiles: extractItemEntityFiles(item: item, allEntityFiles: allEntityFiles)
                             )
                         }
                         
@@ -268,7 +282,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                             item: StoryContentItem(
                                 position: mappedFocusedIndex ?? focusedIndex,
                                 peerId: peer.id,
-                                storyItem: mappedItem
+                                storyItem: mappedItem,
+                                entityFiles: extractItemEntityFiles(item: mappedItem, allEntityFiles: allEntityFiles)
                             ),
                             totalCount: totalCount,
                             previousItemId: previousItemId,
@@ -907,11 +922,12 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: storyId.peerId),
                 TelegramEngine.EngineData.Item.NotificationSettings.Global()
             ),
-            context.account.postbox.transaction { transaction -> (Stories.StoredItem?, [PeerId: Peer]) in
+            context.account.postbox.transaction { transaction -> (Stories.StoredItem?, [PeerId: Peer], [MediaId: TelegramMediaFile]) in
                 guard let item = transaction.getStory(id: storyId)?.get(Stories.StoredItem.self) else {
-                    return (nil, [:])
+                    return (nil, [:], [:])
                 }
                 var peers: [PeerId: Peer] = [:]
+                var allEntityFiles: [MediaId: TelegramMediaFile] = [:]
                 if case let .item(item) = item {
                     if let views = item.views {
                         for id in views.seenPeerIds {
@@ -920,8 +936,18 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                             }
                         }
                     }
+                    for entity in item.entities {
+                        if case let .CustomEmoji(_, fileId) = entity.type {
+                            let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                            if allEntityFiles[mediaId] == nil {
+                                if let file = transaction.getMedia(mediaId) as? TelegramMediaFile {
+                                    allEntityFiles[file.fileId] = file
+                                }
+                            }
+                        }
+                    }
                 }
-                return (item, peers)
+                return (item, peers, allEntityFiles)
             }
         )
         |> deliverOnMainQueue).start(next: { [weak self] data, itemAndPeers in
@@ -930,7 +956,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
             }
             
             let (peer, areVoiceMessagesAvailable, notificationSettings, globalNotificationSettings) = data
-            let (item, peers) = itemAndPeers
+            let (item, peers, allEntityFiles) = itemAndPeers
             
             guard let peer else {
                 return
@@ -981,7 +1007,8 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 let mainItem = StoryContentItem(
                     position: 0,
                     peerId: peer.id,
-                    storyItem: mappedItem
+                    storyItem: mappedItem,
+                    entityFiles: extractItemEntityFiles(item: mappedItem, allEntityFiles: allEntityFiles)
                 )
                 let stateValue = StoryContentContextState(
                     slice: StoryContentContextState.FocusedSlice(
@@ -1130,7 +1157,8 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                     return StoryContentItem(
                         position: nil,
                         peerId: peer.id,
-                        storyItem: stateItem
+                        storyItem: stateItem,
+                        entityFiles: extractItemEntityFiles(item: stateItem, allEntityFiles: state.allEntityFiles)
                     )
                 }
                 
@@ -1141,7 +1169,8 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                         item: StoryContentItem(
                             position: nil,
                             peerId: peer.id,
-                            storyItem: item
+                            storyItem: item,
+                            entityFiles: extractItemEntityFiles(item: item, allEntityFiles: state.allEntityFiles)
                         ),
                         totalCount: state.totalCount,
                         previousItemId: focusedIndex == 0 ? nil : state.items[focusedIndex - 1].id,
@@ -1325,4 +1354,17 @@ public func preloadStoryMedia(context: AccountContext, peer: PeerReference, stor
     }
     
     return combineLatest(signals) |> ignoreValues
+}
+
+func extractItemEntityFiles(item: EngineStoryItem, allEntityFiles: [MediaId: TelegramMediaFile]) -> [MediaId: TelegramMediaFile] {
+    var result: [MediaId: TelegramMediaFile] = [:]
+    for entity in item.entities {
+        if case let .CustomEmoji(_, fileId) = entity.type {
+            let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+            if let file = allEntityFiles[mediaId] {
+                result[file.fileId] = file
+            }
+        }
+    }
+    return result
 }

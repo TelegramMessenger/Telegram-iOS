@@ -4589,6 +4589,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         guard let item = self.item else {
             return nil
         }
+        for contentNode in self.contentNodes {
+            if let value = contentNode.targetForStoryTransition(id: id) {
+                return value
+            }
+        }
         for attribute in item.message.attributes {
             if let attribute = attribute as? ReplyStoryAttribute {
                 if attribute.storyId == id {
