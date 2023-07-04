@@ -466,6 +466,10 @@ public final class StoryPeerListComponent: Component {
             return (self.collapsedButton, self.collapsedButton.bounds)
         }
         
+        public func titleFrame() -> CGRect {
+            return self.titleView.frame
+        }
+        
         public func transitionViewForItem(peerId: EnginePeer.Id) -> (UIView, StoryContainerScreen.TransitionView)? {
             if self.collapsedButton.isUserInteractionEnabled {
                 return nil
