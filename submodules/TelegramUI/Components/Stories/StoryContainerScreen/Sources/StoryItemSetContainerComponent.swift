@@ -1368,6 +1368,9 @@ public final class StoryItemSetContainerComponent: Component {
                 if let closeFriendIconView = self.closeFriendIcon?.view {
                     closeFriendIconView.layer.animateAlpha(from: closeFriendIconView.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false)
                 }
+                if let captionView = self.captionItem?.view.view {
+                    captionView.layer.animateAlpha(from: captionView.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false)
+                }
                 self.closeButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
                 self.topContentGradientLayer.animateAlpha(from: CGFloat(self.topContentGradientLayer.opacity), to: 0.0, duration: 0.25, removeOnCompletion: false)
                 
