@@ -889,7 +889,7 @@ public extension TelegramEngine {
                             }
                         }
                         
-                        if let nextItem = nextItem, case let .item(item) = nextItem, let lastTimestamp {
+                        if let nextItem = nextItem, case let .item(item) = nextItem, let lastTimestamp = lastTimestamp {
                             sortedItems.append((peer, item, hasUnseen, lastTimestamp))
                         }
                     }
