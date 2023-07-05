@@ -234,6 +234,24 @@ final class CameraDevice {
         }
     }
     
+    func setTorchMode(_ flashMode: AVCaptureDevice.FlashMode) {
+        guard let device = self.videoDevice else {
+            return
+        }
+        self.transaction(device) { device in
+            switch flashMode {
+            case .on:
+                device.torchMode = .on
+            case .off:
+                device.torchMode = .off
+            case .auto:
+                device.torchMode = .auto
+            @unknown default:
+                device.torchMode = .off
+            }
+        }
+    }
+    
     func setZoomLevel(_ zoomLevel: CGFloat) {
         guard let device = self.videoDevice else {
             return

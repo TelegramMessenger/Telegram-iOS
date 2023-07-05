@@ -473,6 +473,8 @@ private final class CameraContext {
     }
     
     public func startRecording() -> Signal<Double, NoError> {
+        self.mainDeviceContext.device.setTorchMode(self._flashMode)
+        
         if let additionalDeviceContext = self.additionalDeviceContext {
             return combineLatest(
                 self.mainDeviceContext.output.startRecording(isDualCamera: true, position: self.positionValue),
