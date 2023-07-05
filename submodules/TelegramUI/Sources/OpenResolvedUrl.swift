@@ -805,23 +805,39 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 dismissInput()
             }
         case let .story(peerId, id):
-            let storyContent = SingleStoryContentContextImpl(context: context, storyId: StoryId(peerId: peerId, id: id))
-            let _ = (storyContent.state
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak navigationController] _ in
-                let transitionIn: StoryContainerScreen.TransitionIn? = nil
-                
-                let storyContainerScreen = StoryContainerScreen(
-                    context: context,
-                    content: storyContent,
-                    transitionIn: transitionIn,
-                    transitionOut: { _, _ in
-                        let transitionOut: StoryContainerScreen.TransitionOut? = nil
+            let _ = (context.account.postbox.transaction { transaction -> Bool in
+                if let value = transaction.getStory(id: StoryId(peerId: peerId, id: id)), !value.data.isEmpty {
+                    return true
+                } else {
+                    return false
+                }
+            }
+            |> deliverOnMainQueue).start(next: { exists in
+                if exists {
+                    let storyContent = SingleStoryContentContextImpl(context: context, storyId: StoryId(peerId: peerId, id: id))
+                    let _ = (storyContent.state
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak navigationController] _ in
+                        let transitionIn: StoryContainerScreen.TransitionIn? = nil
                         
-                        return transitionOut
-                    }
-                )
-                navigationController?.pushViewController(storyContainerScreen)
+                        let storyContainerScreen = StoryContainerScreen(
+                            context: context,
+                            content: storyContent,
+                            transitionIn: transitionIn,
+                            transitionOut: { _, _ in
+                                let transitionOut: StoryContainerScreen.TransitionOut? = nil
+                                
+                                return transitionOut
+                            }
+                        )
+                        navigationController?.pushViewController(storyContainerScreen)
+                    })
+                } else {
+                    //TODO:localize
+                    present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "story_expired", scale: 0.066, colors: [:], title: nil, text: "This story does not exist", customUndoText: nil, timeout: nil), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
+                        return true
+                    }), nil)
+                }
             })
     }
 }

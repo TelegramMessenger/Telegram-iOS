@@ -709,7 +709,10 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                             case let .voiceChat(invite):
                                 return .single(.joinVoiceChat(peer.id, invite))
                             case let .story(id):
-                                return .single(.story(peerId: peer.id, id: id))
+                                return context.engine.messages.refreshStories(peerId: peer.id, ids: [id])
+                                |> map { _ -> ResolvedUrl? in
+                                }
+                                |> then(.single(.story(peerId: peer.id, id: id)))
                         }
                     } else {
                         return .single(.peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil)))
