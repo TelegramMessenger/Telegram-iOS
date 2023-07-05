@@ -3812,7 +3812,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             })
         
             if case let .draft(draft, id) = subject, id == nil {
-                removeStoryDraft(engine: self.context.engine, path: draft.path, delete: true)
+                removeStoryDraft(engine: self.context.engine, path: draft.path, delete: !draft.isVideo)
             }
         } else {
             if let image = mediaEditor.resultImage {

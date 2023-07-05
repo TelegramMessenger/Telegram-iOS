@@ -6,6 +6,7 @@ import TelegramApi
 public enum EngineOutgoingMessageContent {
     case text(String, [MessageTextEntity])
     case file(FileMediaReference)
+    case contextResult(ChatContextResultCollection, ChatContextResult)
 }
 
 public final class StoryPreloadInfo {
@@ -225,30 +226,41 @@ public extension TelegramEngine {
             storyId: StoryId? = nil,
             content: EngineOutgoingMessageContent
         ) -> Signal<[MessageId?], NoError> {
-            var attributes: [MessageAttribute] = []
-            var text: String = ""
-            var mediaReference: AnyMediaReference?
-            
-            switch content {
-            case let .text(textValue, entities):
-                if !entities.isEmpty {
-                    attributes.append(TextEntitiesMessageAttribute(entities: entities))
+            let message: EnqueueMessage?
+            if case let .contextResult(results, result) = content {
+                message = self.outgoingMessageWithChatContextResult(to: peerId, threadId: nil, botId: results.botId, result: result, replyToMessageId: replyToMessageId, replyToStoryId: storyId, hideVia: true, silentPosting: false, scheduleTime: nil, correlationId: nil)
+            } else {
+                var attributes: [MessageAttribute] = []
+                var text: String = ""
+                var mediaReference: AnyMediaReference?
+                switch content {
+                case let .text(textValue, entities):
+                    if !entities.isEmpty {
+                        attributes.append(TextEntitiesMessageAttribute(entities: entities))
+                    }
+                    text = textValue
+                case let .file(fileReference):
+                    mediaReference = fileReference.abstract
+                default:
+                    fatalError()
                 }
-                text = textValue
-            case let .file(fileReference):
-                mediaReference = fileReference.abstract
+                message = .message(
+                    text: text,
+                    attributes: attributes,
+                    inlineStickers: [:],
+                    mediaReference: mediaReference,
+                    replyToMessageId: replyToMessageId,
+                    replyToStoryId: storyId,
+                    localGroupingKey: nil,
+                    correlationId: nil,
+                    bubbleUpEmojiOrStickersets: []
+                )
             }
-            let message: EnqueueMessage = .message(
-                text: text,
-                attributes: attributes,
-                inlineStickers: [:],
-                mediaReference: mediaReference,
-                replyToMessageId: replyToMessageId,
-                replyToStoryId: storyId,
-                localGroupingKey: nil,
-                correlationId: nil,
-                bubbleUpEmojiOrStickersets: []
-            )
+            
+            guard let message else {
+                return .complete()
+            }
+         
             return enqueueMessages(
                 account: self.account,
                 peerId: peerId,

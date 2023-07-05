@@ -109,23 +109,26 @@ final class StoryItemSetContainerSendMessage {
         
         self.inputMediaInteraction = ChatEntityKeyboardInputNode.Interaction(
             sendSticker: { [weak self] fileReference, _, _, _, _, _, _, _, _ in
-                if let view = self?.view {
-                    self?.performSendStickerAction(view: view, fileReference: fileReference)
+                if let self, let view = self.view {
+                    self.performSendStickerAction(view: view, fileReference: fileReference)
                 }
                 return false
             },
-            sendEmoji: { [weak self] text, attribute, bool1 in
+            sendEmoji: { [weak self] text, attribute, _ in
                 if let self {
                     let _ = self
                 }
             },
             sendGif: { [weak self] fileReference, _, _, _, _ in
-                if let view = self?.view {
-                    self?.performSendGifAction(view: view, fileReference: fileReference)
+                if let self, let view = self.view {
+                    self.performSendStickerAction(view: view, fileReference: fileReference)
                 }
                 return false
             },
-            sendBotContextResultAsGif: { _, _, _, _, _, _ in
+            sendBotContextResultAsGif: { [weak self] results, result, _, _, _, _ in
+                if let self, let view = self.view {
+                    self.performSendContextResultAction(view: view, results: results, result: result)
+                }
                 return false
             },
             updateChoosingSticker: { _ in },
@@ -323,113 +326,6 @@ final class StoryItemSetContainerSendMessage {
         }
     }
     
-    func performSendStickerAction(view: StoryItemSetContainerComponent.View, fileReference: FileMediaReference) {
-        guard let component = view.component else {
-            return
-        }
-        let focusedItem = component.slice.item
-        guard let peerId = focusedItem.peerId else {
-            return
-        }
-        let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
-        let peer = component.slice.peer
-        
-        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-        let controller = component.controller() as? StoryContainerScreen
-        
-        if let navigationController = controller?.navigationController as? NavigationController {
-            var controllers = navigationController.viewControllers
-            for controller in controllers.reversed() {
-                if !(controller is StoryContainerScreen) {
-                    controllers.removeLast()
-                } else {
-                    break
-                }
-            }
-            navigationController.setViewControllers(controllers, animated: true)
-            
-            controller?.window?.forEachController({ controller in
-                if let controller = controller as? StickerPackScreenImpl {
-                    controller.dismiss()
-                }
-            })
-        }
-        
-        let _ = (component.context.engine.messages.enqueueOutgoingMessage(
-            to: peerId,
-            replyTo: nil,
-            storyId: focusedStoryId,
-            content: .file(fileReference)
-        ) |> deliverOnMainQueue).start(next: { [weak controller, weak view] messageIds in
-            if let controller {
-                Queue.mainQueue().after(0.3) {
-                    controller.present(UndoOverlayController(
-                        presentationData: presentationData,
-                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat", destructive: false),
-                        elevatedLayout: false,
-                        animateInAsReplacement: false,
-                        action: { [weak view] action in
-                            if case .undo = action, let messageId = messageIds.first {
-                                view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
-                            }
-                            return false
-                        }
-                    ), in: .current)
-                }
-            }
-        })
-        
-        self.currentInputMode = .text
-        if hasFirstResponder(view) {
-            view.endEditing(true)
-        } else {
-            view.state?.updated(transition: .spring(duration: 0.3))
-            controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
-        }
-    }
-    
-    func performSendGifAction(view: StoryItemSetContainerComponent.View, fileReference: FileMediaReference) {
-        guard let component = view.component else {
-            return
-        }
-        let focusedItem = component.slice.item
-        guard let peerId = focusedItem.peerId else {
-            return
-        }
-        let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
-        let peer = component.slice.peer
-        
-        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-        let controller = component.controller()
-        
-        let _ = (component.context.engine.messages.enqueueOutgoingMessage(
-            to: peerId,
-            replyTo: nil,
-            storyId: focusedStoryId,
-            content: .file(fileReference)
-        ) |> deliverOnMainQueue).start(next: { [weak controller, weak view] messageIds in
-            if let controller {
-                Queue.mainQueue().after(0.3) {
-                    controller.present(UndoOverlayController(
-                        presentationData: presentationData,
-                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat", destructive: false),
-                        elevatedLayout: false,
-                        animateInAsReplacement: false,
-                        action: { [weak view] action in
-                            if case .undo = action, let messageId = messageIds.first {
-                                view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
-                            }
-                            return false
-                        }
-                    ), in: .current)
-                }
-            }
-        })
-        
-        self.currentInputMode = .text
-        view.endEditing(true)
-    }
-    
     func performSendMessageAction(
         view: StoryItemSetContainerComponent.View
     ) {
@@ -497,6 +393,136 @@ final class StoryItemSetContainerSendMessage {
                     view.endEditing(true)
                 }
             }
+        }
+    }
+    
+    func performSendStickerAction(view: StoryItemSetContainerComponent.View, fileReference: FileMediaReference) {
+        guard let component = view.component else {
+            return
+        }
+        let focusedItem = component.slice.item
+        guard let peerId = focusedItem.peerId else {
+            return
+        }
+        let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
+        let peer = component.slice.peer
+        
+        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+        let controller = component.controller() as? StoryContainerScreen
+        
+        if let navigationController = controller?.navigationController as? NavigationController {
+            var controllers = navigationController.viewControllers
+            for controller in controllers.reversed() {
+                if !(controller is StoryContainerScreen) {
+                    controllers.removeLast()
+                } else {
+                    break
+                }
+            }
+            navigationController.setViewControllers(controllers, animated: true)
+            
+            controller?.window?.forEachController({ controller in
+                if let controller = controller as? StickerPackScreenImpl {
+                    controller.dismiss()
+                }
+            })
+        }
+        
+        let _ = (component.context.engine.messages.enqueueOutgoingMessage(
+            to: peerId,
+            replyTo: nil,
+            storyId: focusedStoryId,
+            content: .file(fileReference)
+        ) |> deliverOnMainQueue).start(next: { [weak controller, weak view] messageIds in
+            if let controller {
+                Queue.mainQueue().after(0.3) {
+                    controller.present(UndoOverlayController(
+                        presentationData: presentationData,
+                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat", destructive: false),
+                        elevatedLayout: false,
+                        animateInAsReplacement: false,
+                        action: { [weak view] action in
+                            if case .undo = action, let messageId = messageIds.first {
+                                view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
+                            }
+                            return false
+                        }
+                    ), in: .current)
+                }
+            }
+        })
+        
+        self.currentInputMode = .text
+        if hasFirstResponder(view) {
+            view.endEditing(true)
+        } else {
+            view.state?.updated(transition: .spring(duration: 0.3))
+            controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
+        }
+    }
+    
+    func performSendContextResultAction(view: StoryItemSetContainerComponent.View, results: ChatContextResultCollection, result: ChatContextResult) {
+        guard let component = view.component else {
+            return
+        }
+        let focusedItem = component.slice.item
+        guard let peerId = focusedItem.peerId else {
+            return
+        }
+        let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
+        let peer = component.slice.peer
+        
+        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+        let controller = component.controller() as? StoryContainerScreen
+        
+        if let navigationController = controller?.navigationController as? NavigationController {
+            var controllers = navigationController.viewControllers
+            for controller in controllers.reversed() {
+                if !(controller is StoryContainerScreen) {
+                    controllers.removeLast()
+                } else {
+                    break
+                }
+            }
+            navigationController.setViewControllers(controllers, animated: true)
+            
+            controller?.window?.forEachController({ controller in
+                if let controller = controller as? StickerPackScreenImpl {
+                    controller.dismiss()
+                }
+            })
+        }
+        
+        let _ = (component.context.engine.messages.enqueueOutgoingMessage(
+            to: peerId,
+            replyTo: nil,
+            storyId: focusedStoryId,
+            content: .contextResult(results, result)
+        ) |> deliverOnMainQueue).start(next: { [weak controller, weak view] messageIds in
+            if let controller {
+                Queue.mainQueue().after(0.3) {
+                    controller.present(UndoOverlayController(
+                        presentationData: presentationData,
+                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat", destructive: false),
+                        elevatedLayout: false,
+                        animateInAsReplacement: false,
+                        action: { [weak view] action in
+                            if case .undo = action, let messageId = messageIds.first {
+                                view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
+                            }
+                            return false
+                        }
+                    ), in: .current)
+                }
+            }
+        })
+        
+        self.currentInputMode = .text
+        if hasFirstResponder(view) {
+            view.endEditing(true)
+        } else {
+            view.state?.updated(transition: .spring(duration: 0.3))
+            controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
         }
     }
     
