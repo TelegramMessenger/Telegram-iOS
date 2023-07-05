@@ -253,7 +253,7 @@ final class VideoInputPass: DefaultRenderPass {
         
         func textureDimensionsForRotation(width: Int, height: Int, rotation: TextureRotation) -> (width: Int, height: Int) {
             switch rotation {
-            case .rotate90Degrees, .rotate270Degrees:
+            case .rotate90Degrees, .rotate270Degrees, .rotate90DegreesMirrored:
                 return (height, width)
             default:
                 return (width, height)

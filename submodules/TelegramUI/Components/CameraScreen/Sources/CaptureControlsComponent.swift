@@ -749,10 +749,10 @@ final class CaptureControlsComponent: Component {
                     blobOffset -= self.frame.width / 2.0
                     var isBanding = false
                     if location.y < -10.0 {
-                        let fraction = 1.0 + min(8.0, ((abs(location.y) - 10.0) / 60.0))
+                        let fraction = min(8.0, ((abs(location.y) - 10.0) / 60.0))
                         component.zoomUpdated(fraction)
                     } else {
-                        component.zoomUpdated(1.0)
+                        component.zoomUpdated(0.0)
                     }
                     
                     if location.x < self.frame.width / 2.0 - 30.0 {

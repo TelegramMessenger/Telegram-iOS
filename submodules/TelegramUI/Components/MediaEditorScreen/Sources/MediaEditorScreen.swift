@@ -1897,12 +1897,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if let self, let controller = self.controller, values.gradientColors != nil, controller.previousSavedValues != values {
                     if !isSavingAvailable && controller.previousSavedValues == nil {
                         controller.previousSavedValues = values
+                        controller.isSavingAvailable = false
                     } else {
                         self.hasAnyChanges = true
-                        
                         controller.isSavingAvailable = true
-                        controller.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
                     }
+                    controller.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
                 }
             }
             

@@ -239,15 +239,19 @@ final class CameraDevice {
             return
         }
         self.transaction(device) { device in
+            let torchMode: AVCaptureDevice.TorchMode
             switch flashMode {
             case .on:
-                device.torchMode = .on
+                torchMode = .on
             case .off:
-                device.torchMode = .off
+                torchMode = .off
             case .auto:
-                device.torchMode = .auto
+                torchMode = .auto
             @unknown default:
-                device.torchMode = .off
+                torchMode = .off
+            }
+            if device.isTorchModeSupported(torchMode) {
+                device.torchMode = torchMode
             }
         }
     }
@@ -257,7 +261,7 @@ final class CameraDevice {
             return
         }
         self.transaction(device) { device in
-            device.videoZoomFactor = max(1.0, min(10.0, zoomLevel))
+            device.videoZoomFactor = max(device.neutralZoomFactor, min(10.0, device.neutralZoomFactor + zoomLevel))
         }
     }
     
