@@ -53,6 +53,7 @@ final class StoryItemSetContainerSendMessage {
     weak var shareController: ShareController?
     weak var tooltipScreen: ViewController?
     weak var actionSheet: ViewController?
+    var isViewingAttachedStickers = false
     
     var currentInputMode: InputMode = .text
     private var needsInputActivation = false
@@ -2594,7 +2595,82 @@ final class StoryItemSetContainerSendMessage {
                 actionSheet?.dismissAnimated()
             })
         ])])
+        actionSheet.dismissed = { [weak self, weak view] _ in
+            guard let self, let view else {
+                return
+            }
+            self.actionSheet = nil
+            view.updateIsProgressPaused()
+        }
         
         component.controller()?.present(actionSheet, in: .window(.root))
+        
+        self.actionSheet = actionSheet
+        view.updateIsProgressPaused()
+    }
+    
+    func openAttachedStickers(view: StoryItemSetContainerComponent.View, packs: Signal<[StickerPackReference], NoError>) {
+        guard let component = view.component else {
+            return
+        }
+        
+        guard let parentController = component.controller() as? StoryContainerScreen else {
+            return
+        }
+        let context = component.context
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
+        let progressSignal = Signal<Never, NoError> { [weak parentController] subscriber in
+            let progressController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+            parentController?.present(progressController, in: .window(.root), with: nil)
+            return ActionDisposable { [weak progressController] in
+                Queue.mainQueue().async() {
+                    progressController?.dismiss()
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> delay(0.15, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.start()
+        
+        let signal = packs
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        let _ = (signal
+        |> deliverOnMainQueue).start(next: { [weak parentController] packs in
+            guard !packs.isEmpty else {
+                return
+            }
+            let controller = StickerPackScreen(context: context, updatedPresentationData: (presentationData, .single(presentationData)), mainStickerPack: packs[0], stickerPacks: packs, sendSticker: nil, actionPerformed: { actions in
+                if let (info, items, action) = actions.first {
+                    let animateInAsReplacement = false
+                    switch action {
+                    case .add:
+                        parentController?.present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                            return true
+                        }), in: .window(.root))
+                    case let .remove(positionInList):
+                        parentController?.present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { action in
+                            if case .undo = action {
+                                let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
+                            }
+                            return true
+                        }), in: .window(.root))
+                    }
+                }
+            }, dismissed: { [weak self, weak view] in
+                guard let self, let view else {
+                    return
+                }
+                self.isViewingAttachedStickers = false
+                view.updateIsProgressPaused()
+            })
+            parentController?.present(controller, in: .window(.root), with: nil)
+        })
+        
+        self.isViewingAttachedStickers = true
+        view.updateIsProgressPaused()
     }
 }

@@ -145,8 +145,11 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                         self.animationNode = animationNode
                         animationNode.started = { [weak self, weak animationNode] in
                             self?.imageNode.isHidden = true
-                            
+                                                        
                             if let animationNode = animationNode {
+                                if animationNode.currentFrameCount == 1 {
+                                    self?.stickerEntity.isExplicitlyStatic = true
+                                }
                                 let _ = (animationNode.status
                                 |> take(1)
                                 |> deliverOnMainQueue).start(next: { [weak self] status in

@@ -908,7 +908,7 @@ public final class StoryItemSetContainerComponent: Component {
             if component.pinchState != nil {
                 return true
             }
-            if self.inputPanelExternalState.isEditing || component.isProgressPaused || self.sendMessageContext.actionSheet != nil || self.contextController != nil || self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil || self.displayViewList {
+            if self.inputPanelExternalState.isEditing || component.isProgressPaused || self.sendMessageContext.actionSheet != nil || self.sendMessageContext.isViewingAttachedStickers || self.contextController != nil || self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil || self.displayViewList {
                 return true
             }
             if let reactionContextNode = self.reactionContextNode, reactionContextNode.isReactionSearchActive {
@@ -3349,62 +3349,6 @@ public final class StoryItemSetContainerComponent: Component {
             }
         }
         
-        private func openAttachedStickers(packs: Signal<[StickerPackReference], NoError>) {
-            guard let component = self.component else {
-                return
-            }
-            
-            guard let parentController = component.controller() as? StoryContainerScreen else {
-                return
-            }
-            let context = component.context
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
-            let progressSignal = Signal<Never, NoError> { [weak parentController] subscriber in
-                let progressController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
-                parentController?.present(progressController, in: .window(.root), with: nil)
-                return ActionDisposable { [weak progressController] in
-                    Queue.mainQueue().async() {
-                        progressController?.dismiss()
-                    }
-                }
-            }
-            |> runOn(Queue.mainQueue())
-            |> delay(0.15, queue: Queue.mainQueue())
-            let progressDisposable = progressSignal.start()
-            
-            let signal = packs
-            |> afterDisposed {
-                Queue.mainQueue().async {
-                    progressDisposable.dispose()
-                }
-            }
-            let _ = (signal
-            |> deliverOnMainQueue).start(next: { [weak parentController] packs in
-                guard !packs.isEmpty else {
-                    return
-                }
-                let controller = StickerPackScreen(context: context, updatedPresentationData: (presentationData, .single(presentationData)), mainStickerPack: packs[0], stickerPacks: packs, sendSticker: nil, actionPerformed: { actions in
-                    if let (info, items, action) = actions.first {
-                        let animateInAsReplacement = false
-                        switch action {
-                        case .add:
-                            parentController?.present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { _ in
-                                return true
-                            }), in: .window(.root))
-                        case let .remove(positionInList):
-                            parentController?.present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { action in
-                                if case .undo = action {
-                                    let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
-                                }
-                                return true
-                            }), in: .window(.root))
-                        }
-                    }
-                })
-                parentController?.present(controller, in: .window(.root), with: nil)
-            })
-        }
-        
         private func performMoreAction(sourceView: UIView, gesture: ContextGesture?) {
             guard let component = self.component else {
                 return
@@ -3432,15 +3376,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
             var items: [ContextMenuItem] = []
-                        
-            var hasLinkedStickers = false
-            let media = component.slice.item.storyItem.media._asMedia()
-            if let image = media as? TelegramMediaImage {
-                hasLinkedStickers = image.flags.contains(.hasStickers)
-            } else if let file = media as? TelegramMediaFile {
-                hasLinkedStickers = file.hasLinkedStickers
-            }
-            
+                                    
             let additionalCount = component.slice.item.storyItem.privacy?.additionallyIncludePeers.count ?? 0
             let privacyText: String
             switch component.slice.item.storyItem.privacy?.base {
@@ -3578,9 +3514,16 @@ public final class StoryItemSetContainerComponent: Component {
                 })))
             }
             
+            var hasLinkedStickers = false
+            let media = component.slice.item.storyItem.media._asMedia()
+            if let image = media as? TelegramMediaImage {
+                hasLinkedStickers = image.flags.contains(.hasStickers)
+            } else if let file = media as? TelegramMediaFile {
+                hasLinkedStickers = file.hasLinkedStickers
+            }
+            
             var tip: ContextController.Tip?
             var tipSignal: Signal<ContextController.Tip?, NoError>?
-            
             if hasLinkedStickers {
                 let context = component.context
                 tip = .animatedEmoji(text: nil, arguments: nil, file: nil, action: nil)
@@ -3589,7 +3532,9 @@ public final class StoryItemSetContainerComponent: Component {
                 packsPromise.set(context.engine.stickers.stickerPacksAttachedToMedia(media: .standalone(media: media)))
                 
                 let action: () -> Void = { [weak self] in
-                    self?.openAttachedStickers(packs: packsPromise.get() |> take(1))
+                    if let self {
+                        self.sendMessageContext.openAttachedStickers(view: self, packs: packsPromise.get() |> take(1))
+                    }
                 }
                 tipSignal = packsPromise.get()
                 |> mapToSignal { packReferences -> Signal<ContextController.Tip?, NoError> in
@@ -3606,8 +3551,9 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         |> mapToSignal { result -> Signal<ContextController.Tip?, NoError> in
                             if case let .result(info, items, _) = result {
+                                let isEmoji = info.flags.contains(.isEmoji)
                                 let tip: ContextController.Tip = .animatedEmoji(
-                                    text: "This story contains\n#[\(info.title)]() stickers.",
+                                    text: isEmoji ? "This story contains\n#[\(info.title)]() emoji." : "This story contains\n#[\(info.title)]() stickers.",
                                     arguments: TextNodeWithEntities.Arguments(
                                         context: context,
                                         cache: context.animationCache,
@@ -3626,40 +3572,6 @@ public final class StoryItemSetContainerComponent: Component {
                         return .complete()
                     }
                 }
-                
-//                if packReferences.count > 1 {
-//                    items.tip = .animatedEmoji(text: presentationData.strings.ChatContextMenu_EmojiSet(Int32(packReferences.count)), arguments: nil, file: nil, action: action)
-//                } else if let reference = packReferences.first {
-//                    var tipSignal: Signal<LoadedStickerPack, NoError>
-//                    tipSignal = context.engine.stickers.loadedStickerPack(reference: reference, forceActualized: false)
-//
-//                    items.tipSignal = tipSignal
-//                    |> filter { result in
-//                        if case .result = result {
-//                            return true
-//                        } else {
-//                            return false
-//                        }
-//                    }
-//                    |> mapToSignal { result -> Signal<ContextController.Tip?, NoError> in
-//                        if case let .result(info, items, _) = result {
-//                            let tip: ContextController.Tip = .animatedEmoji(
-//                                text: presentationData.strings.ChatContextMenu_ReactionEmojiSetSingle(info.title).string,
-//                                arguments: TextNodeWithEntities.Arguments(
-//                                    context: context,
-//                                    cache: presentationContext.animationCache,
-//                                    renderer: presentationContext.animationRenderer,
-//                                    placeholderColor: .clear,
-//                                    attemptSynchronous: true
-//                                ),
-//                                file: items.first?.file,
-//                                action: action)
-//                            return .single(tip)
-//                        } else {
-//                            return .complete()
-//                        }
-//                    }
-//                }
             }
             
             let contextItems = ContextController.Items(content: .list(items), tip: tip, tipSignal: tipSignal)
@@ -3699,16 +3611,7 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                 var items: [ContextMenuItem] = []
-                
-                var hasLinkedStickers = false
-                let media = component.slice.item.storyItem.media._asMedia()
-                if let image = media as? TelegramMediaImage {
-                    hasLinkedStickers = image.flags.contains(.hasStickers)
-                } else if let file = media as? TelegramMediaFile {
-                    hasLinkedStickers = file.hasLinkedStickers
-                }
-                let _ = hasLinkedStickers
-                
+                                
                 let isMuted = resolvedAreStoriesMuted(globalSettings: globalSettings._asGlobalNotificationSettings(), peer: component.slice.peer._asPeer(), peerSettings: settings._asNotificationSettings())
                 
                 items.append(.action(ContextMenuActionItem(text: isMuted ? "Notify" : "Don't Notify", icon: { theme in
@@ -3833,8 +3736,70 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                     )
                 })))
+                
+                var hasLinkedStickers = false
+                let media = component.slice.item.storyItem.media._asMedia()
+                if let image = media as? TelegramMediaImage {
+                    hasLinkedStickers = image.flags.contains(.hasStickers)
+                } else if let file = media as? TelegramMediaFile {
+                    hasLinkedStickers = file.hasLinkedStickers
+                }
+                
+                var tip: ContextController.Tip?
+                var tipSignal: Signal<ContextController.Tip?, NoError>?
+                if hasLinkedStickers {
+                    let context = component.context
+                    tip = .animatedEmoji(text: nil, arguments: nil, file: nil, action: nil)
+                    
+                    let packsPromise = Promise<[StickerPackReference]>()
+                    packsPromise.set(context.engine.stickers.stickerPacksAttachedToMedia(media: .standalone(media: media)))
+                    
+                    let action: () -> Void = { [weak self] in
+                        if let self {
+                            self.sendMessageContext.openAttachedStickers(view: self, packs: packsPromise.get() |> take(1))
+                        }
+                    }
+                    tipSignal = packsPromise.get()
+                    |> mapToSignal { packReferences -> Signal<ContextController.Tip?, NoError> in
+                        if packReferences.count > 1 {
+                            return .single(.animatedEmoji(text: "This story contains stickers from [\(packReferences.count) packs]().", arguments: nil, file: nil, action: action))
+                        } else if let reference = packReferences.first {
+                            return context.engine.stickers.loadedStickerPack(reference: reference, forceActualized: false)
+                            |> filter { result in
+                                if case .result = result {
+                                    return true
+                                } else {
+                                    return false
+                                }
+                            }
+                            |> mapToSignal { result -> Signal<ContextController.Tip?, NoError> in
+                                if case let .result(info, items, _) = result {
+                                    let isEmoji = info.flags.contains(.isEmoji)
+                                    let tip: ContextController.Tip = .animatedEmoji(
+                                        text: isEmoji ? "This story contains\n#[\(info.title)]() emoji." : "This story contains\n#[\(info.title)]() stickers.",
+                                        arguments: TextNodeWithEntities.Arguments(
+                                            context: context,
+                                            cache: context.animationCache,
+                                            renderer: context.animationRenderer,
+                                            placeholderColor: .clear,
+                                            attemptSynchronous: true
+                                        ),
+                                        file: items.first?.file,
+                                        action: action)
+                                    return .single(tip)
+                                } else {
+                                    return .complete()
+                                }
+                            }
+                        } else {
+                            return .complete()
+                        }
+                    }
+                }
+                
+                let contextItems = ContextController.Items(content: .list(items), tip: tip, tipSignal: tipSignal)
                                 
-                let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+                let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(contextItems), gesture: gesture)
                 contextController.dismissed = { [weak self] in
                     guard let self else {
                         return
