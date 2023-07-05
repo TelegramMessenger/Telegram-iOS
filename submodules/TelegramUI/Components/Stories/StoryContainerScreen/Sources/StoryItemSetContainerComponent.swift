@@ -1035,7 +1035,7 @@ public final class StoryItemSetContainerComponent: Component {
                             guard let visibleItem else {
                                 return
                             }
-                            if visibleItem.currentProgress != progress || visibleItem.isBuffering != isBuffering {
+                            if visibleItem.currentProgress != progress || visibleItem.isBuffering != isBuffering || canSwitch {
                                 visibleItem.currentProgress = progress
                                 visibleItem.isBuffering = isBuffering
                                 
