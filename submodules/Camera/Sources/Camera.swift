@@ -9,7 +9,7 @@ final class CameraSession {
     private let multiSession: Any?
     
     init() {
-        if #available(iOS 13.0, *) {
+        if #available(iOS 13.0, *), AVCaptureMultiCamSession.isMultiCamSupported {
             self.multiSession = AVCaptureMultiCamSession()
             self.singleSession = nil
         } else {

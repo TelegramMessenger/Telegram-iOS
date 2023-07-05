@@ -1475,7 +1475,7 @@ final class StoryItemSetContainerSendMessage {
             guard let self, let view, let controller else {
                 return
             }
-            self.presentWebSearch(view: view, editingMessage: false, attachment: true, activateOnDisplay: activateOnDisplay, present: { [weak controller] c, a in
+            self.presentWebSearch(view: view, activateOnDisplay: activateOnDisplay, present: { [weak controller] c, a in
                 controller?.present(c, in: .current)
                 if let webSearchController = c as? WebSearchController {
                     webSearchController.searchingUpdated = { [weak mediaGroups] searching in
@@ -1793,118 +1793,41 @@ final class StoryItemSetContainerSendMessage {
         sendMessage(nil)
     }
     
-    private func presentWebSearch(view: StoryItemSetContainerComponent.View, editingMessage: Bool, attachment: Bool, activateOnDisplay: Bool = true, present: @escaping (ViewController, Any?) -> Void) {
-        /*guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
+    private func presentWebSearch(view: StoryItemSetContainerComponent.View, activateOnDisplay: Bool = true, present: @escaping (ViewController, Any?) -> Void) {
+        guard let component = view.component else {
             return
         }
+        let context = component.context
+        let peer = component.slice.peer
+        let storyId = component.slice.item.storyItem.id
         
-        let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.SearchBots())
-        |> deliverOnMainQueue).start(next: { [weak self] configuration in
-            if let strongSelf = self {
-                let controller = WebSearchController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: EnginePeer(peer), chatLocation: strongSelf.chatLocation, configuration: configuration, mode: .media(attachment: attachment, completion: { [weak self] results, selectionState, editingState, silentPosting in
-                    self?.attachmentController?.dismiss(animated: true, completion: nil)
-                    legacyEnqueueWebSearchMessages(selectionState, editingState, enqueueChatContextResult: { [weak self] result in
-                        if let strongSelf = self {
-                            strongSelf.enqueueChatContextResult(results, result, hideVia: true)
+        let theme = component.theme
+        let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
+         
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.SearchBots())
+        |> deliverOnMainQueue).start(next: { [weak self, weak view] configuration in
+            if let self {
+                let controller = WebSearchController(context: context, updatedPresentationData: updatedPresentationData, peer: peer, chatLocation: .peer(id: peer.id), configuration: configuration, mode: .media(attachment: true, completion: { [weak self] results, selectionState, editingState, silentPosting in
+                    legacyEnqueueWebSearchMessages(selectionState, editingState, enqueueChatContextResult: { [weak self, weak view] result in
+                        if let self, let view {
+                            self.performSendContextResultAction(view: view, results: results, result: result)
                         }
-                    }, enqueueMediaMessages: { [weak self] signals in
-                        if let strongSelf = self, !signals.isEmpty {
-                            if editingMessage {
-                                strongSelf.editMessageMediaWithLegacySignals(signals)
-                            } else {
-                                strongSelf.enqueueMediaMessages(signals: signals, silentPosting: silentPosting)
-                            }
+                    }, enqueueMediaMessages: { [weak self, weak view] signals in
+                        if let self, let view, !signals.isEmpty {
+                            self.enqueueMediaMessages(view: view, peer: peer, replyToMessageId: nil, replyToStoryId: StoryId(peerId: peer.id, id: storyId), signals: signals, silentPosting: false)
                         }
                     })
                 }), activateOnDisplay: activateOnDisplay)
-                controller.attemptItemSelection = { [weak strongSelf] item in
-                    guard let strongSelf, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
-                        return false
+                controller.getCaptionPanelView = { [weak self, weak view] in
+                    if let view {
+                        return self?.getCaptionPanelView(view: view, peer: peer)
+                    } else {
+                        return nil
                     }
-                    
-                    enum ItemType {
-                        case gif
-                        case image
-                        case video
-                    }
-                    
-                    var itemType: ItemType?
-                    switch item {
-                    case let .internalReference(reference):
-                        if reference.type == "gif" {
-                            itemType = .gif
-                        } else if reference.type == "photo" {
-                            itemType = .image
-                        } else if reference.type == "video" {
-                            itemType = .video
-                        }
-                    case let .externalReference(reference):
-                        if reference.type == "gif" {
-                            itemType = .gif
-                        } else if reference.type == "photo" {
-                            itemType = .image
-                        } else if reference.type == "video" {
-                            itemType = .video
-                        }
-                    }
-                    
-                    var bannedSendPhotos: (Int32, Bool)?
-                    var bannedSendVideos: (Int32, Bool)?
-                    var bannedSendGifs: (Int32, Bool)?
-                    
-                    if let channel = peer as? TelegramChannel {
-                        if let value = channel.hasBannedPermission(.banSendPhotos) {
-                            bannedSendPhotos = value
-                        }
-                        if let value = channel.hasBannedPermission(.banSendVideos) {
-                            bannedSendVideos = value
-                        }
-                        if let value = channel.hasBannedPermission(.banSendGifs) {
-                            bannedSendGifs = value
-                        }
-                    } else if let group = peer as? TelegramGroup {
-                        if group.hasBannedPermission(.banSendPhotos) {
-                            bannedSendPhotos = (Int32.max, false)
-                        }
-                        if group.hasBannedPermission(.banSendVideos) {
-                            bannedSendVideos = (Int32.max, false)
-                        }
-                        if group.hasBannedPermission(.banSendGifs) {
-                            bannedSendGifs = (Int32.max, false)
-                        }
-                    }
-                    
-                    if let itemType {
-                        switch itemType {
-                        case .image:
-                            if bannedSendPhotos != nil {
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.restrictedSendingContentsText(), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                                
-                                return false
-                            }
-                        case .video:
-                            if bannedSendVideos != nil {
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.restrictedSendingContentsText(), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                                
-                                return false
-                            }
-                        case .gif:
-                            if bannedSendGifs != nil {
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.restrictedSendingContentsText(), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                                
-                                return false
-                            }
-                        }
-                    }
-                    
-                    return true
-                }
-                controller.getCaptionPanelView = { [weak strongSelf] in
-                    return strongSelf?.getCaptionPanelView()
                 }
                 present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
-        })*/
+        })
     }
     
     private func getCaptionPanelView(view: StoryItemSetContainerComponent.View, peer: EnginePeer) -> TGCaptionPanelView? {
