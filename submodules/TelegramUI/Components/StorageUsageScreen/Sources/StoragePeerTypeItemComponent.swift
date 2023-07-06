@@ -159,7 +159,7 @@ final class StoragePeerTypeItemComponent: Component {
             let previousComponent = self.component
             self.component = component
             
-            let leftInset: CGFloat = 62.0
+            let leftInset: CGFloat = 15.0//62.0
             let rightInset: CGFloat = 32.0
             
             var availableWidth: CGFloat = availableSize.width - leftInset - rightInset
@@ -255,7 +255,9 @@ final class StoragePeerTypeItemComponent: Component {
             
             if themeUpdated || previousComponent?.iconName != component.iconName {
                 self.separatorLayer.backgroundColor = component.theme.list.itemBlocksSeparatorColor.cgColor
+                /*
                 self.iconView.image = UIImage(bundleImageName: component.iconName)
+                */
              
                 if component.value.isEmpty {
                     self.arrowIconView.image = PresentationResourcesItemList.disclosureArrowImage(component.theme)

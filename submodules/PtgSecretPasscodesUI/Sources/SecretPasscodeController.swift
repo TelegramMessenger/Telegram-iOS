@@ -447,7 +447,10 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
                     |> take(1)).start(next: { state in
                         let _ = updatePtgSecretPasscodes(context.sharedContext.accountManager, { current in
                             let updated = current.secretPasscodes.filter { $0.passcode != state.settings.passcode }
-                            return PtgSecretPasscodes(secretPasscodes: updated)
+                            let updatedAllHidableAccountIds = updated.reduce(into: Set<AccountRecordId>()) { result, sp in
+                                result.formUnion(sp.accountIds)
+                            }
+                            return PtgSecretPasscodes(secretPasscodes: updated, dbCoveringAccounts: current.dbCoveringAccounts.filter({ updatedAllHidableAccountIds.contains($0.key) }), cacheCoveringAccounts: current.cacheCoveringAccounts.filter({ updatedAllHidableAccountIds.contains($0.key) }))
                         }).start()
                     })
                     
@@ -488,12 +491,25 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
                     }
                     
                     updateState { state in
-                        let _ = updatePtgSecretPasscodes(context.sharedContext.accountManager, { current in
-                            return current.withUpdatedItem(passcode: state.settings.passcode) { sp in
-                                return sp
-                                    .withUpdated(accountIds: sp.accountIds.union([selectedContext.account.id]))
-                                    .withUpdated(secretChats: sp.secretChats.filter({ $0.accountId != selectedContext.account.id }))
-                            }
+                        let _ = (context.sharedContext.calculateCoveringAccount(excludingId: selectedContext.account.id)
+                        |> mapToSignal { coveringAccount in
+                            return updatePtgSecretPasscodes(context.sharedContext.accountManager, { current in
+                                let updated = current.withUpdatedItem(passcode: state.settings.passcode) { sp in
+                                    return sp
+                                        .withUpdated(accountIds: sp.accountIds.union([selectedContext.account.id]))
+                                        .withUpdated(secretChats: sp.secretChats.filter({ $0.accountId != selectedContext.account.id }))
+                                }.secretPasscodes
+                                var dbCoveringAccounts = current.dbCoveringAccounts
+                                var cacheCoveringAccounts = current.cacheCoveringAccounts
+                                assert(coveringAccount != nil)
+                                if let coveringAccount {
+                                    assert(selectedContext.account.id != coveringAccount.db)
+                                    dbCoveringAccounts[selectedContext.account.id] = coveringAccount.db
+                                    assert(selectedContext.account.id != coveringAccount.cache)
+                                    cacheCoveringAccounts[selectedContext.account.id] = coveringAccount.cache
+                                }
+                                return PtgSecretPasscodes(secretPasscodes: updated, dbCoveringAccounts: dbCoveringAccounts, cacheCoveringAccounts: cacheCoveringAccounts)
+                            })
                         }).start(completed: {
                             if #available(iOSApplicationExtension 14.0, iOS 14.0, *) {
                                 WidgetCenter.shared.reloadAllTimelines()
@@ -505,6 +521,13 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
                             .withUpdated(secretChats: state.settings.secretChats.filter({ $0.accountId != selectedContext.account.id }))
                         )
                     }
+                    
+                    let _ = context.sharedContext.maybeTriggerCoveringProtection(maybeCoveringAccountId: selectedContext.account.id, cleanCache: false).start()
+                    
+                    let _ = (selectedContext.account.cleanOldCloudMessages()
+                    |> then (
+                        selectedContext.account.postbox.optimizeStorage(minFreePagesFraction: 0.2)
+                    )).start()
                     
                     let _ = (updateIntentsSettingsInteractively(accountManager: context.sharedContext.accountManager) { current in
                         if current.account == selectedContext.account.peerId {
@@ -547,9 +570,13 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
     }, removeAccount: { accountId in
         updateState { state in
             let _ = updatePtgSecretPasscodes(context.sharedContext.accountManager, { current in
-                return current.withUpdatedItem(passcode: state.settings.passcode) { sp in
+                let updated = current.withUpdatedItem(passcode: state.settings.passcode) { sp in
                     return sp.withUpdated(accountIds: sp.accountIds.filter({ $0 != accountId }))
+                }.secretPasscodes
+                let updatedAllHidableAccountIds = updated.reduce(into: Set<AccountRecordId>()) { result, sp in
+                    result.formUnion(sp.accountIds)
                 }
+                return PtgSecretPasscodes(secretPasscodes: updated, dbCoveringAccounts: current.dbCoveringAccounts.filter({ updatedAllHidableAccountIds.contains($0.key) }), cacheCoveringAccounts: current.cacheCoveringAccounts.filter({ updatedAllHidableAccountIds.contains($0.key) }))
             }).start()
             
             return state.withUpdated(settings: state.settings.withUpdated(accountIds: state.settings.accountIds.filter({ $0 != accountId })))
@@ -733,7 +760,7 @@ extension PtgSecretPasscodes {
         if let ind = self.secretPasscodes.firstIndex(where: { $0.passcode == passcode }) {
             var updated = self.secretPasscodes
             updated[ind] = f(self.secretPasscodes[ind])
-            return PtgSecretPasscodes(secretPasscodes: updated)
+            return PtgSecretPasscodes(secretPasscodes: updated, dbCoveringAccounts: self.dbCoveringAccounts, cacheCoveringAccounts: self.cacheCoveringAccounts)
         }
         return self
     }
@@ -783,11 +810,11 @@ public func passcodeAttemptWaitString(strings: PresentationStrings, waitTime: In
     return strings.PasscodeAttempts_TryAgainIn(timeString).string.replacingOccurrences(of: #"\.\.$"#, with: ".", options: .regularExpression)
 }
 
-public func hideAllSecrets(accountManager: AccountManager<TelegramAccountManagerTypes>) {
-    let _ = updatePtgSecretPasscodes(accountManager, { current in
+public func hideAllSecrets(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Void, NoError> {
+    return updatePtgSecretPasscodes(accountManager, { current in
         let updated = current.secretPasscodes.map { $0.withUpdated(active: false) }
-        return PtgSecretPasscodes(secretPasscodes: updated)
-    }).start()
+        return PtgSecretPasscodes(secretPasscodes: updated, dbCoveringAccounts: current.dbCoveringAccounts, cacheCoveringAccounts: current.cacheCoveringAccounts)
+    })
 }
 
 private func areThereAnyWidgetsContainingChatsFromAccount(id accountId: AccountRecordId) -> Signal<Bool, NoError> {

@@ -106,7 +106,9 @@ final class StorageCategoriesComponent: Component {
             self.component = component
             self.state = state
             
+            /*
             let expandedCategory: StorageUsageScreenComponent.Category? = component.isOtherExpanded ? .other : nil
+            */
             
             var totalSelectedSize: Int64 = 0
             var hasDeselected = false
@@ -130,6 +132,7 @@ final class StorageCategoriesComponent: Component {
             
             var contentHeight: CGFloat = 0.0
             
+            /*
             var validKeys = Set<StorageUsageScreenComponent.Category>()
             for i in 0 ..< component.categories.count {
                 let category = component.categories[i]
@@ -200,6 +203,7 @@ final class StorageCategoriesComponent: Component {
             for key in removeKeys {
                 self.itemViews.removeValue(forKey: key)
             }
+            */
             
             if component.displayAction {
                 let clearTitle: String
@@ -215,7 +219,7 @@ final class StorageCategoriesComponent: Component {
                     label = dataSizeString(totalSelectedSize, formatting: DataSizeStringFormatting(strings: component.strings, decimalSeparator: "."))
                 }
                 
-                contentHeight += 8.0
+                contentHeight += 16.0//8.0
                 let buttonSize = self.button.update(
                     transition: transition,
                     component: AnyComponent(SolidRoundedButtonComponent(

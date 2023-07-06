@@ -221,22 +221,25 @@ public extension TelegramEngine {
             return self.account.messageMediaPreuploadManager.add(network: self.account.network, postbox: self.account.postbox, id: id, encrypt: encrypt, tag: tag, source: source, onComplete: onComplete)
         }
 
+        /*
         public func collectCacheUsageStats(peerId: PeerId? = nil, additionalCachePaths: [String] = [], logFilesPath: String? = nil) -> Signal<CacheUsageStatsResult, NoError> {
             return _internal_collectCacheUsageStats(account: self.account, peerId: peerId, additionalCachePaths: additionalCachePaths, logFilesPath: logFilesPath)
         }
         
-        public func collectStorageUsageStats(excludePeerIds: Signal<Set<PeerId>, NoError>) -> Signal<AllStorageUsageStats, NoError> {
-            return _internal_collectStorageUsageStats(account: self.account, excludePeerIds: excludePeerIds)
+        public func collectStorageUsageStats() -> Signal<AllStorageUsageStats, NoError> {
+            return _internal_collectStorageUsageStats(account: self.account)
         }
 
         public func renderStorageUsageStatsMessages(stats: StorageUsageStats, categories: [StorageUsageStats.CategoryKey], existingMessages: [EngineMessage.Id: Message]) -> Signal<[EngineMessage.Id: Message], NoError> {
             return _internal_renderStorageUsageStatsMessages(account: self.account, stats: stats, categories: categories, existingMessages: existingMessages)
         }
+        */
         
         public func clearStorage(peerId: EnginePeer.Id?, categories: [StorageUsageStats.CategoryKey], includeMessages: [Message], excludeMessages: [Message]) -> Signal<Float, NoError> {
             return _internal_clearStorage(account: self.account, peerId: peerId, categories: categories, includeMessages: includeMessages, excludeMessages: excludeMessages)
         }
         
+        /*
         public func clearStorage(peerIds: Set<EnginePeer.Id>, includeMessages: [Message], excludeMessages: [Message]) -> Signal<Float, NoError> {
             _internal_clearStorage(account: self.account, peerIds: peerIds, includeMessages: includeMessages, excludeMessages: excludeMessages)
         }
@@ -248,6 +251,7 @@ public extension TelegramEngine {
         public func clearCachedMediaResources(mediaResourceIds: Set<MediaResourceId>) -> Signal<Float, NoError> {
             return _internal_clearCachedMediaResources(account: self.account, mediaResourceIds: mediaResourceIds)
         }
+        */
         
         public func reindexCacheInBackground(lowImpact: Bool) -> Signal<Never, NoError> {
             let mediaBox = self.account.postbox.mediaBox

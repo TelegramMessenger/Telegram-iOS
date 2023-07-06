@@ -540,6 +540,24 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
             return lhs == rhs
         })
     }
+    
+    fileprivate func optimizeStorage(minFreePagesFraction: Double) -> Signal<Never, NoError> {
+        return Signal { subscriber in
+            if let valueBox = self.valueBox as? SqliteValueBox {
+                if valueBox.freePagesFraction() >= minFreePagesFraction {
+                    valueBox.vacuum()
+                }
+            }
+            subscriber.putCompletion()
+            return EmptyDisposable
+        }
+    }
+    
+    #if DEBUG
+    fileprivate func debugDumpDbStat() -> Signal<String, NoError> {
+        return (self.valueBox as? SqliteValueBox)?.debugDumpStat() ?? .complete()
+    }
+    #endif
 }
 
 private let sharedQueue = Queue()
@@ -677,4 +695,42 @@ public final class AccountManager<Types: AccountManagerTypes> {
             return disposable
         }
     }
+    
+    public func optimizeStorage(minFreePagesFraction: Double) -> Signal<Never, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.impl.with { impl in
+                disposable.set(impl.optimizeStorage(minFreePagesFraction: minFreePagesFraction).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+            
+            return disposable
+        }
+    }
+    
+    public func optimizeAllStorages(minFreePagesFraction: Double) -> Signal<Never, NoError> {
+        return self.optimizeStorage(minFreePagesFraction: minFreePagesFraction)
+        |> then (self.mediaBox.storageBox.optimizeStorage(minFreePagesFraction: minFreePagesFraction))
+        |> then (self.mediaBox.cacheStorageBox.optimizeStorage(minFreePagesFraction: minFreePagesFraction))
+    }
+    
+    #if DEBUG
+    public func debugDumpDbStat() -> Signal<String, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.impl.with { impl in
+                disposable.set(impl.debugDumpDbStat().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+            
+            return disposable
+        }
+    }
+    
+    public func debugDumpAllDbStats() -> Signal<String, NoError> {
+        return self.debugDumpDbStat()
+        |> then (self.mediaBox.storageBox.debugDumpDbStat())
+        |> then (self.mediaBox.cacheStorageBox.debugDumpDbStat())
+    }
+    #endif
 }

@@ -341,7 +341,7 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
     }
 }
 
-public func managedCleanupAccounts(networkArguments: NetworkInitializationArguments, accountManager: AccountManager<TelegramAccountManagerTypes>, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<Void, NoError> {
+public func managedCleanupAccounts(networkArguments: NetworkInitializationArguments, accountManager: AccountManager<TelegramAccountManagerTypes>, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods, encryptionParameters: ValueBoxEncryptionParameters, maybeTriggerCoveringProtection: @escaping (AccountRecordId) -> Signal<Never, NoError>) -> Signal<Void, NoError> {
     let currentTemporarySessionId = accountManager.temporarySessionId
     return Signal { subscriber in
         let loggedOutAccounts = Atomic<[AccountRecordId: MetaDisposable]>(value: [:])
@@ -354,6 +354,7 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
                 }
             }
         }).start()
+        let removeAccountDirectoriesDisposable = MetaDisposable()
         let disposable = accountManager.accountRecords(excludeAccountIds: .single([])).start(next: { view in
             var disposeList: [(AccountRecordId, MetaDisposable)] = []
             var beginList: [(AccountRecordId, [TelegramAccountManagerTypes.Attribute], MetaDisposable)] = []
@@ -396,6 +397,8 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
             for (id, attributes, disposable) in beginList {
                 Logger.shared.log("managedCleanupAccounts", "cleanup \(id), current is \(String(describing: view.currentRecord?.id))")
                 disposable.set(cleanupAccount(networkArguments: networkArguments, accountManager: accountManager, id: id, encryptionParameters: encryptionParameters, attributes: attributes, rootPath: rootPath, auxiliaryMethods: auxiliaryMethods).start())
+                
+                let _ = maybeTriggerCoveringProtection(id).start()
             }
             
             var validPaths = Set<String>()
@@ -409,7 +412,9 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
                 validPaths.insert("\(accountRecordIdPathName(record.id))")
             }
             
-            DispatchQueue.global(qos: .utility).async {
+            // use of DispatchQueue.global(qos: .utility).async is buggy, because if multiple changes to accounts are made and several tasks are queued, this can delete valid account directory. because tasks are postponed because of qos=utility, at time when they start new account folders may already be added, which will be deleted because they did not exist when tasks were queued.
+            // when using signals, new tasks replace the old ones
+            let removeAccountDirectoriesSignal = Signal<Never, NoError> { subscriber in
                 if let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: rootPath), includingPropertiesForKeys: [], options: []) {
                     for url in files {
                         if url.lastPathComponent.hasPrefix("account-") {
@@ -419,7 +424,12 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
                         }
                     }
                 }
+                subscriber.putCompletion()
+                return EmptyDisposable
             }
+            |> runOn(Queue(qos: .utility))
+            
+            removeAccountDirectoriesDisposable.set(removeAccountDirectoriesSignal.start())
         })
         
         return ActionDisposable {

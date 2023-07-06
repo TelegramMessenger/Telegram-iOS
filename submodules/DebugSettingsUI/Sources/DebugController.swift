@@ -65,6 +65,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case sendNotificationLogs(PresentationTheme)
     case sendCriticalLogs(PresentationTheme)
     case sendAllLogs
+    #if DEBUG
+    case sendDatabaseStats
+    case sendChatMessagesStats
+    #endif
     case accounts(PresentationTheme)
     case logToFile(PresentationTheme, Bool)
     case logToConsole(PresentationTheme, Bool)
@@ -114,6 +118,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.sticker.rawValue
         case .sendLogs, .sendOneLog, .sendShareLogs, .sendGroupCallLogs, .sendStorageStats, .sendNotificationLogs, .sendCriticalLogs, .sendAllLogs:
             return DebugControllerSection.logs.rawValue
+        #if DEBUG
+        case .sendDatabaseStats, .sendChatMessagesStats:
+            return DebugControllerSection.logs.rawValue
+        #endif
         case .accounts:
             return DebugControllerSection.logs.rawValue
         case .logToFile, .logToConsole, .redactSensitiveData:
@@ -135,7 +143,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         }
     }
     
-    var stableId: Int {
+    var stableId: Double {
         switch self {
         case .testStickerImport:
             return 0
@@ -155,6 +163,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 7
         case .sendStorageStats:
             return 8
+        #if DEBUG
+        case .sendDatabaseStats:
+            return 8.1
+        case .sendChatMessagesStats:
+            return 8.2
+        #endif
         case .accounts:
             return 9
         case .logToFile:
@@ -226,7 +240,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         case .voiceConference:
             return 46
         case let .preferredVideoCodec(index, _, _, _):
-            return 47 + index
+            return Double(47 + index)
         case .disableVideoAspectScaling:
             return 100
         case .enableNetworkFramework:
@@ -888,6 +902,114 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     arguments.presentController(actionSheet, nil)
                 })
             })
+        #if DEBUG
+        case .sendDatabaseStats:
+            return ItemListDisclosureItem(presentationData: presentationData, title: "Send Database Stats", label: "", sectionId: self.section, style: .blocks, action: {
+                guard let context = arguments.context else {
+                    return
+                }
+                
+                let fillerPath = context.sharedContext.basePath + "/filler.data"
+                let fillerSize = fileSize(fillerPath, useTotalFileAllocatedSize: true) ?? 0
+                
+                let allStats: Signal<Data, NoError> = context.sharedContext.activeAccountContexts
+                |> take(1)
+                |> mapToSignal { activeAccountContexts in
+                    let contexts = activeAccountContexts.accounts.map({ $0.1 }) + activeAccountContexts.inactiveAccounts.map({ $0.1 })
+                    return combineLatest(
+                        [context.sharedContext.accountManager.debugDumpAllDbStats() |> reduceLeft(value: "", f: +)] +
+                        contexts.map { context in
+                            return (
+                                context.account.postbox.transaction { transaction in
+                                    let accountName = transaction.getPeer(context.account.peerId)?.debugDisplayTitle ?? ""
+                                    return "Account: \(accountName)\n\n"
+                                }
+                                |> then (context.account.debugDumpAllDbStats())
+                            )
+                            |> reduceLeft(value: "", f: +)
+                        }
+                    )
+                    |> map { stats in
+                        return ("Filler file size: \(fillerSize / (1024 * 1024)) MB\n\n" + stats.reduce("", +)).data(using: .utf8) ?? Data()
+                    }
+                }
+                
+                let _ = (allStats
+                |> deliverOnMainQueue).start(next: { allStatsData in
+                    let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                    let actionSheet = ActionSheetController(presentationData: presentationData)
+                    
+                    var items: [ActionSheetButtonItem] = []
+                    
+                    if let context = arguments.context {
+                        items.append(ActionSheetButtonItem(title: "Add to Saved Messages", color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            
+                            let peerId = context.account.peerId
+                            
+                            let id = Int64.random(in: Int64.min ... Int64.max)
+                            let fileResource = LocalFileMediaResource(fileId: id, size: Int64(allStatsData.count), isSecretRelated: false)
+                            context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: allStatsData)
+                            
+                            let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/zip", size: Int64(allStatsData.count), attributes: [.FileName(fileName: "DatabaseReport.txt")])
+                            let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+                            
+                            let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
+                        }))
+                    }
+                    
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    arguments.presentController(actionSheet, nil)
+                })
+            })
+        case .sendChatMessagesStats:
+            return ItemListDisclosureItem(presentationData: presentationData, title: "Send Chat Messages Stats", label: "", sectionId: self.section, style: .blocks, action: {
+                guard let context = arguments.context else {
+                    return
+                }
+                
+                let allStats: Signal<Data, NoError> = context.account.debugChatMessagesStat()
+                |> map { stats in
+                    return stats.data(using: .utf8) ?? Data()
+                }
+                
+                let _ = (allStats
+                |> deliverOnMainQueue).start(next: { allStatsData in
+                    let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                    let actionSheet = ActionSheetController(presentationData: presentationData)
+                    
+                    var items: [ActionSheetButtonItem] = []
+                    
+                    if let context = arguments.context {
+                        items.append(ActionSheetButtonItem(title: "Add to Saved Messages", color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            
+                            let peerId = context.account.peerId
+                            
+                            let id = Int64.random(in: Int64.min ... Int64.max)
+                            let fileResource = LocalFileMediaResource(fileId: id, size: Int64(allStatsData.count), isSecretRelated: false)
+                            context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: allStatsData)
+                            
+                            let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/zip", size: Int64(allStatsData.count), attributes: [.FileName(fileName: "ChatMessagesReport.txt")])
+                            let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+                            
+                            let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
+                        }))
+                    }
+                    
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    arguments.presentController(actionSheet, nil)
+                })
+            })
+        #endif
         case .accounts:
             return ItemListDisclosureItem(presentationData: presentationData, title: "Accounts", label: "", sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
@@ -1135,7 +1257,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
                 let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                 arguments.presentController(controller, nil)
-                let _ = (context.account.postbox.optimizeStorage()
+                let _ = (context.account.postbox.optimizeStorage(minFreePagesFraction: 0.0)
                     |> deliverOnMainQueue).start(completed: {
                         controller.dismiss()
                         
@@ -1353,6 +1475,10 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.sendCriticalLogs(presentationData.theme))
         entries.append(.sendAllLogs)
         entries.append(.sendStorageStats)
+        #if DEBUG
+        entries.append(.sendDatabaseStats)
+        entries.append(.sendChatMessagesStats)
+        #endif
         if isMainApp {
             entries.append(.accounts(presentationData.theme))
         }

@@ -2899,6 +2899,28 @@ final class MessageHistoryTable: Table {
         return messages
     }
     
+    func topMessageIndices(peerId: PeerId, namespace: MessageId.Namespace, limit: Int) -> [MessageIndex] {
+        var messages: [MessageIndex] = []
+        let start = self.upperBound(peerId: peerId, namespace: namespace)
+        let end = self.lowerBound(peerId: peerId, namespace: namespace)
+        self.valueBox.range(self.table, start: start, end: end, keys: { key in
+            messages.append(extractKey(key))
+            return true
+        }, limit: limit)
+        return messages
+    }
+    
+    func allEarlierMessageIndices(index: MessageIndex) -> [MessageIndex] {
+        var messages: [MessageIndex] = []
+        let start = self.key(index)
+        let end = self.lowerBound(peerId: index.id.peerId, namespace: index.id.namespace)
+        self.valueBox.range(self.table, start: start, end: end, keys: { key in
+            messages.append(extractKey(key))
+            return true
+        }, limit: 0)
+        return messages
+    }
+    
     func allIndicesWithAuthor(peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace) -> [MessageIndex] {
         var indices: [MessageIndex] = []
         self.valueBox.range(self.table, start: self.lowerBound(peerId: peerId, namespace: namespace), end: self.upperBound(peerId: peerId, namespace: namespace), values: { key, value in
@@ -3009,7 +3031,7 @@ final class MessageHistoryTable: Table {
         var mediaRefs: [MediaId: Media] = [:]
         var lastIndex: MessageIndex?
         var count = 0
-        self.valueBox.range(self.table, start: self.key(lowerBound == nil ? MessageIndex.absoluteLowerBound() : lowerBound!), end: self.key(upperBound == nil ? MessageIndex.absoluteUpperBound() : upperBound!), values: { key, value in
+        self.valueBox.range(self.table, start: self.key(lowerBound == nil ? MessageIndex.absoluteLowerBound() : lowerBound!), end: self.key(upperBound == nil ? MessageIndex(id: MessageId(peerId: PeerId.max64, namespace: Int32(Int8.max), id: Int32.max), timestamp: Int32.max) : upperBound!), values: { key, value in
             count += 1
             
             let entry = self.readIntermediateEntry(key, value: value)

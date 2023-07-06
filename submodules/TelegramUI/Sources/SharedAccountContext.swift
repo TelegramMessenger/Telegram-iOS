@@ -1,5 +1,6 @@
 import PtgSettings
 import PtgSecretPasscodes
+import PtgSecretPasscodesUI
 import GalleryUI
 import ContextUI
 import LegacyComponents
@@ -222,6 +223,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         |> distinctUntilChanged
     }
+    
+    private let timeBasedCleanup = TimeBasedCleanup()
+    private var timeBasedCleanupDisposable: Disposable?
+    
+    private var maintainFillerFileDisposable: Disposable?
+    private var trackLastNonHidingAccountDisposable: Disposable?
     
     public var presentGlobalController: (ViewController, Any?) -> Void = { _, _ in }
     public var presentCrossfadeController: () -> Void = {}
@@ -528,6 +535,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             
             let _ = strongSelf.currentPtgSecretPasscodes.swap(next)
             
+            strongSelf.inactiveAccountsUpdated(next.inactiveAccountIds())
+            
             if (!newlyHiddenAccountIds.isEmpty || !newlyHiddenPeerIds.isEmpty) && applicationBindings.isMainApp {
                 strongSelf.hideUIOfInactiveSecrets(accountIds: newlyHiddenAccountIds, peerIds: newlyHiddenPeerIds)
             }
@@ -570,7 +579,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let startTime = CFAbsoluteTimeGetCurrent()
         
         let differenceDisposable = MetaDisposable()
-        let _ = (combineLatest(accountManager.accountRecords(excludeAccountIds: .single([]))
+        let _ = (accountManager.accountRecords(excludeAccountIds: .single([]))
         |> map { view -> (AccountRecordId?, [AccountRecordId: AccountAttributes], (AccountRecordId, Bool)?) in
             print("SharedAccountContextImpl: records appeared in \(CFAbsoluteTimeGetCurrent() - startTime)")
             
@@ -630,8 +639,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 return false
             }
             return true
-        }), self.inactiveAccountIds)
-        |> deliverOnMainQueue).start(next: { accountRecords, inactiveAccountIds in
+        })
+        |> deliverOnMainQueue).start(next: { accountRecords in
             let (primaryId, records, authRecord) = accountRecords
             var addedSignals: [Signal<AddedAccountResult, NoError>] = []
             var addedAuthSignal: Signal<UnauthorizedAccount?, NoError> = .single(nil)
@@ -755,9 +764,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                                 }).start()
                             }
 
-                            let context = AccountContextImpl(sharedContext: self, account: account, limitsConfiguration: accountRecord.3 ?? .defaultValue, contentSettings: accountRecord.4 ?? .default, appConfiguration: accountRecord.5 ?? .defaultValue, initialInactiveSecretChatPeerIds: initialPresentationDataAndSettings.ptgSecretPasscodes.inactiveSecretChatPeerIds(accountId: account.id))
+                            let context = AccountContextImpl(sharedContext: self, account: account, limitsConfiguration: accountRecord.3 ?? .defaultValue, contentSettings: accountRecord.4 ?? .default, appConfiguration: accountRecord.5 ?? .defaultValue)
 
-                            if !inactiveAccountIds.contains(account.id) {
+                            if !self.currentPtgSecretPasscodes.with({ $0.inactiveAccountIds() }).contains(account.id) {
                                 self.activeAccountsValue!.accounts.append((account.id, context, accountRecord.2))
                             } else {
                                 self.activeAccountsValue!.inactiveAccounts.append((account.id, context, accountRecord.2))
@@ -800,16 +809,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         self.activeAccountsValue?.inactiveAccounts.remove(at: index)
                         self.managedAccountDisposables.set(nil, forKey: id)
                     }
-                }
-                if self.activeAccountsValue!.accounts.contains(where: { inactiveAccountIds.contains($0.0) }) {
-                    self.activeAccountsValue!.inactiveAccounts.append(contentsOf: self.activeAccountsValue!.accounts.filter({ inactiveAccountIds.contains($0.0) }))
-                    self.activeAccountsValue!.accounts.removeAll(where: { inactiveAccountIds.contains($0.0) })
-                    hadUpdates = true
-                }
-                if self.activeAccountsValue!.inactiveAccounts.contains(where: { !inactiveAccountIds.contains($0.0) }) {
-                    self.activeAccountsValue!.accounts.append(contentsOf: self.activeAccountsValue!.inactiveAccounts.filter({ !inactiveAccountIds.contains($0.0) }))
-                    self.activeAccountsValue!.inactiveAccounts.removeAll(where: { !inactiveAccountIds.contains($0.0) })
-                    hadUpdates = true
                 }
                 var primary: AccountContext?
                 if let primaryId = primaryId {
@@ -1062,7 +1061,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             let _ = immediateHasOngoingCallValue.swap(value)
         })
         
-        let _ = managedCleanupAccounts(networkArguments: networkArguments, accountManager: self.accountManager, rootPath: rootPath, auxiliaryMethods: makeTelegramAccountAuxiliaryMethods(appDelegate: appDelegate), encryptionParameters: encryptionParameters).start()
+        let _ = managedCleanupAccounts(networkArguments: networkArguments, accountManager: self.accountManager, rootPath: rootPath, auxiliaryMethods: makeTelegramAccountAuxiliaryMethods(appDelegate: appDelegate), encryptionParameters: encryptionParameters, maybeTriggerCoveringProtection: { [weak self] maybeCoveringAccountId in
+            return self?.maybeTriggerCoveringProtection(maybeCoveringAccountId: maybeCoveringAccountId, cleanCache: true) ?? .complete()
+        }).start()
         
         if applicationBindings.isMainApp {
             self.updateNotificationTokensRegistration()
@@ -1093,6 +1094,35 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             })
         }
+        
+        if applicationBindings.isMainApp {
+            self.timeBasedCleanupDisposable = combineLatest(self.activeAccountContexts, accountManager.sharedData(keys: [SharedDataKeys.cacheStorageSettings])).start(next: { [weak self] activeAccountContexts, sharedData in
+                let contexts = activeAccountContexts.accounts.map({ $0.1 }) + activeAccountContexts.inactiveAccounts.map({ $0.1 })
+                
+                let cleanedAccounts = Dictionary(uniqueKeysWithValues: contexts.map { context in
+                    let mediaBox = context.account.postbox.mediaBox
+                    return (context.account.id.int64, AccountCleanupPaths(storageBox: mediaBox.storageBox, cacheStorageBox: mediaBox.cacheStorageBox, generalPaths: [
+                        mediaBox.basePath + "/cache",
+                        mediaBox.basePath + "/animation-cache"
+                    ], totalSizeBasedPath: mediaBox.basePath, shortLivedPaths: [
+                        mediaBox.basePath + "/short-cache"
+                    ]))
+                })
+                
+                let settings: CacheStorageSettings = sharedData.entries[SharedDataKeys.cacheStorageSettings]?.get(CacheStorageSettings.self) ?? CacheStorageSettings.defaultSettings
+                
+                self?.timeBasedCleanup.setup(cleanedAccounts: cleanedAccounts, general: settings.defaultCacheStorageTimeout, shortLived: 60 * 60, gigabytesLimit: settings.defaultCacheStorageLimitGigabytes)
+            })
+            
+            self.maintainFillerFileDisposable = self.maintainFillerFile().start()
+            
+            self.trackLastNonHidingAccountDisposable = combineLatest(self.activeAccountContexts, self.allHidableAccountIds).start(next: { activeAccountContexts, allHidableAccountIds in
+                if Set(activeAccountContexts.accounts.map({ $0.0 })).subtracting(allHidableAccountIds).isEmpty {
+                    // If logged out from last non-hiding account, deactivate all hidable accounts (if any is active) since their use is not secure any more. Otherwise cache size may grow and this can reveal them.
+                    let _ = hideAllSecrets(accountManager: accountManager).start()
+                }
+            })
+        }
     }
     
     deinit {
@@ -1113,6 +1143,60 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.experimentalUISettingsDisposable?.dispose()
         self.ptgSecretPasscodesDisposable?.dispose()
         self.applicationInForegroundDisposable?.dispose()
+        self.timeBasedCleanupDisposable?.dispose()
+        self.maintainFillerFileDisposable?.dispose()
+        self.trackLastNonHidingAccountDisposable?.dispose()
+    }
+    
+    func inactiveAccountsUpdated(_ inactiveAccountIds: Set<AccountRecordId>) {
+        assert(Queue.mainQueue().isCurrent())
+        
+        guard self.activeAccountsValue != nil else {
+            return
+        }
+        
+        var hadUpdates = false
+        
+        if self.activeAccountsValue!.accounts.contains(where: { inactiveAccountIds.contains($0.0) }) {
+            self.activeAccountsValue!.inactiveAccounts.append(contentsOf: self.activeAccountsValue!.accounts.filter({ inactiveAccountIds.contains($0.0) }))
+            self.activeAccountsValue!.accounts.removeAll(where: { inactiveAccountIds.contains($0.0) })
+            hadUpdates = true
+        }
+        if self.activeAccountsValue!.inactiveAccounts.contains(where: { !inactiveAccountIds.contains($0.0) }) {
+            self.activeAccountsValue!.accounts.append(contentsOf: self.activeAccountsValue!.inactiveAccounts.filter({ !inactiveAccountIds.contains($0.0) }))
+            self.activeAccountsValue!.inactiveAccounts.removeAll(where: { !inactiveAccountIds.contains($0.0) })
+            hadUpdates = true
+        }
+        
+        var primary: AccountContext?
+        if let currentPrimary = self.activeAccountsValue!.primary, !inactiveAccountIds.contains(currentPrimary.account.id) {
+            primary = currentPrimary
+        }
+        if primary == nil && !self.activeAccountsValue!.accounts.isEmpty {
+            primary = self.activeAccountsValue!.accounts.sorted(by: { $0.2 < $1.2 }).first?.1
+        }
+        
+        var previousPrimaryId: AccountRecordId?
+        if primary !== self.activeAccountsValue!.primary {
+            previousPrimaryId = self.activeAccountsValue!.primary?.account.id
+            hadUpdates = true
+            self.activeAccountsValue!.primary?.account.postbox.clearCaches()
+            self.activeAccountsValue!.primary?.account.resetCachedData()
+            self.activeAccountsValue!.primary = primary
+        }
+        
+        if hadUpdates {
+            self.activeAccountsValue!.accounts.sort(by: { $0.2 < $1.2 })
+            self.activeAccountsPromise.set(.single(self.activeAccountsValue!))
+        }
+        
+        if self.activeAccountsValue!.primary == nil && self.activeAccountsValue!.currentAuth == nil {
+            self.beginNewAuth(testingEnvironment: false)
+        }
+        
+        if let previousPrimaryId {
+            self.accountBecameNonPrimary(previousPrimaryId)
+        }
     }
     
     public func updatePtgSecretPasscodesPromise(_ ptgSecretPasscodesSignal: Signal<PtgSecretPasscodes, NoError>) {
@@ -1372,6 +1456,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func beginNewAuth(testingEnvironment: Bool) {
         let _ = self.accountManager.transaction({ transaction -> Void in
+            assert(transaction.getCurrentAuth() == nil)
             let _ = transaction.createAuth([.environment(AccountEnvironmentAttribute(environment: testingEnvironment ? .test : .production))])
         }).start()
     }
@@ -2216,6 +2301,135 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 (self?.appLockContext as? AppLockContextImpl)?.dismissPresentedViewController()
             }
         })
+    }
+    
+    public func calculateCoveringAccount(excludingId: AccountRecordId?) -> Signal<(db: AccountRecordId, cache: AccountRecordId)?, NoError> {
+        return combineLatest(self.activeAccountContexts, self.allHidableAccountIds)
+        |> mapToSignal { activeAccountContexts, allHidableAccountIds in
+            let contexts = activeAccountContexts.accounts.filter({ !allHidableAccountIds.contains($0.0) && $0.0 != excludingId }).map({ $0.1 })
+            return combineLatest(contexts.map { context in
+                return combineLatest(
+                    context.account.postbox.dbFilesSize(),
+                    context.account.postbox.mediaBox.storageBox.totalSize(),
+                    context.account.postbox.mediaBox.cacheStorageBox.totalSize()
+                )
+                |> map { dbFilesSize, disk1, disk2 in
+                    return (context.account.id, dbFilesSize, disk1 + disk2)
+                }
+            })
+            |> map { values in
+                if values.isEmpty {
+                    return nil
+                }
+                let dbCoveringAccountId = values.max(by: { $0.1 < $1.1 })!.0
+                let cacheCoveringAccountId = values.max(by: { $0.2 < $1.2 })!.0
+                return (db: dbCoveringAccountId, cache: cacheCoveringAccountId)
+            }
+        }
+        |> take(1)
+    }
+    
+    public func maybeTriggerCoveringProtection(maybeCoveringAccountId: AccountRecordId, cleanCache: Bool) -> Signal<Never, NoError> {
+        return combineLatest(self.activeAccountContexts, self.ptgSecretPasscodes)
+        |> take(1)
+        |> mapToSignal { activeAccountContexts, ptgSecretPasscodes in
+            let accounts = activeAccountContexts.accounts.map({ $0.1.account }) + activeAccountContexts.inactiveAccounts.map({ $0.1.account })
+            
+            var tasks: [Signal<Never, NoError>] = []
+            var alreadyOptimizedCacheForAccountIds: Set<AccountRecordId> = []
+            
+            if cleanCache {
+                for (coveredAccountId, coveringAccountId) in ptgSecretPasscodes.cacheCoveringAccounts {
+                    if coveringAccountId == maybeCoveringAccountId {
+                        if let account = accounts.first(where: { $0.id == coveredAccountId }) {
+                            tasks.append(
+                                account.postbox.mediaBox.cleanAllCache()
+                                |> then (
+                                    combineLatest(
+                                        account.postbox.mediaBox.storageBox.optimizeStorage(minFreePagesFraction: 0.0),
+                                        account.postbox.mediaBox.cacheStorageBox.optimizeStorage(minFreePagesFraction: 0.0)
+                                    )
+                                    |> ignoreValues
+                                )
+                            )
+                            alreadyOptimizedCacheForAccountIds.insert(account.id)
+                        }
+                    }
+                }
+            }
+            
+            for (coveredAccountId, coveringAccountId) in ptgSecretPasscodes.dbCoveringAccounts {
+                if coveringAccountId == maybeCoveringAccountId {
+                    if let account = accounts.first(where: { $0.id == coveredAccountId }) {
+                        tasks.append(
+                            account.cleanAllCloudMessages()
+                            |> then (
+                                account.postbox.optimizeStorage(minFreePagesFraction: 0.0)
+                            )
+                        )
+                        if !alreadyOptimizedCacheForAccountIds.contains(account.id) {
+                            tasks.append(account.postbox.mediaBox.storageBox.optimizeStorage(minFreePagesFraction: 0.0))
+                            tasks.append(account.postbox.mediaBox.cacheStorageBox.optimizeStorage(minFreePagesFraction: 0.0))
+                        }
+                    }
+                }
+            }
+            
+            // simultaneous run should be faster
+            return combineLatest(tasks)
+            |> ignoreValues
+        }
+    }
+    
+    private func maintainFillerFile() -> Signal<Never, NoError> {
+        let minimumSizeInMb = 200
+        
+        let queue = Queue(qos: .utility)
+        let fillerPath = self.basePath + "/filler.data"
+        
+        if !FileManager.default.fileExists(atPath: fillerPath) {
+            FileManager.default.createFile(atPath: fillerPath, contents: nil)
+        }
+        
+        return self.activeAccountContexts
+        |> mapToSignal { activeAccountContexts -> Signal<[Int64], NoError> in
+            let contexts = activeAccountContexts.accounts.map({ $0.1 }) + activeAccountContexts.inactiveAccounts.map({ $0.1 })
+            return combineLatest(contexts.reduce(into: [], { result, context in
+                result.append(contentsOf: [
+                    context.account.postbox.dbFilesSize(),
+                    context.account.postbox.mediaBox.storageBox.dbFilesSize(),
+                    context.account.postbox.mediaBox.cacheStorageBox.dbFilesSize(),
+                ])
+            }))
+        }
+        |> deliverOn(queue)
+        |> map { sizes in
+            let totalDbSizeInMb = Int(sizes.reduce(0, +)) / (1024 * 1024)
+            let neededFillerSizeInMb = max(0, minimumSizeInMb - totalDbSizeInMb)
+            let currentFillerSizeInMb = Int(fileSize(fillerPath) ?? 0) / (1024 * 1024)
+            
+            if currentFillerSizeInMb != neededFillerSizeInMb {
+                if let fileHandle = FileHandle(forWritingAtPath: fillerPath) {
+                    if currentFillerSizeInMb > neededFillerSizeInMb {
+                        fileHandle.truncateFile(atOffset: UInt64(neededFillerSizeInMb) * 1024 * 1024)
+                    } else {
+                        fileHandle.seekToEndOfFile()
+                        for _ in currentFillerSizeInMb ..< neededFillerSizeInMb {
+                            var data = Data(count: 1024 * 1024)
+                            data.withUnsafeMutableBytes { buffer in
+                                guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                                    return
+                                }
+                                arc4random_buf(bytes, 1024 * 1024)
+                            }
+                            fileHandle.write(data)
+                        }
+                    }
+                    fileHandle.closeFile()
+                }
+            }
+        }
+        |> ignoreValues
     }
 }
 

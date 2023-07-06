@@ -679,6 +679,7 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
         var network: Int64
         var storage: Int64
     }
+    /*
     let usageSignal: Signal<UsageData, NoError> = combineLatest(
         context.account.postbox.mediaBox.storageBox.totalSize(),
         context.account.postbox.mediaBox.cacheStorageBox.totalSize(),
@@ -734,6 +735,25 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
         }
         
         return UsageData(network: network, storage: disk1 + disk2)
+    }
+    */
+    
+    // calculating cache size including hidden accounts
+    let usageSignal = context.sharedContext.activeAccountContexts
+    |> mapToSignal { activeAccountContexts in
+        let contexts = activeAccountContexts.accounts.map({ $0.1 }) + activeAccountContexts.inactiveAccounts.map({ $0.1 })
+        return combineLatest(contexts.map { context in
+            return combineLatest(
+                context.account.postbox.mediaBox.storageBox.totalSize(),
+                context.account.postbox.mediaBox.cacheStorageBox.totalSize()
+            )
+            |> map { disk1, disk2 in
+                return disk1 + disk2
+            }
+        })
+        |> map { sizes in
+            return UsageData(network: 0, storage: sizes.reduce(0, +))
+        }
     }
     
     let dataAndStorageDataPromise = Promise<DataAndStorageData>()

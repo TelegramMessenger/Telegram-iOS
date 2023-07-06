@@ -24,6 +24,7 @@ private func stringForCacheSize(strings: PresentationStrings, size: Int32) -> St
     }
 }
 
+/*
 private func totalDiskSpace() -> Int64 {
     do {
         let systemAttributes = try FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory() as String)
@@ -45,6 +46,7 @@ private let maximumCacheSizeValues: [Int32] = {
         return [1, 4, 8, Int32.max]
     }
 }()
+*/
 
 final class StorageKeepSizeComponent: Component {
     let theme: PresentationTheme

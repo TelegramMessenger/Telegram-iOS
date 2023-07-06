@@ -695,7 +695,7 @@ public final class AppLockContextImpl: AppLockContext {
                 return updatePtgSecretPasscodes(strongSelf.accountManager, { current in
                     return PtgSecretPasscodes(secretPasscodes: current.secretPasscodes.map { sp in
                         return sp.withUpdated(active: sp.active && !f(sp))
-                    })
+                    }, dbCoveringAccounts: current.dbCoveringAccounts, cacheCoveringAccounts: current.cacheCoveringAccounts)
                 })
             } else {
                 return .complete()

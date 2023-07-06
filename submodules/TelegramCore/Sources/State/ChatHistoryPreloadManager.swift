@@ -376,11 +376,13 @@ final class ChatHistoryPreloadManager {
             guard let strongSelf = self else {
                 return
             }
+            /* preload history in DEBUG too, otherwise loading is visible when entering the chat
             #if DEBUG
             if "".isEmpty {
                 return
             }
             #endif
+            */
             
             var indices: [(ChatHistoryPreloadIndex, Bool, Bool)] = []
             for item in loadItems {
