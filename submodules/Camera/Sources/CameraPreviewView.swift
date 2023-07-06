@@ -77,7 +77,7 @@ public class CameraSimplePreviewView: UIView {
         
         self.videoPreviewLayer.videoGravity = main ? .resizeAspectFill : .resizeAspect
         
-        self.placeholderView.contentMode = .scaleAspectFill
+        self.placeholderView.contentMode =  main ? .scaleAspectFill : .scaleAspectFit
         self.addSubview(self.placeholderView)
         
         if main {

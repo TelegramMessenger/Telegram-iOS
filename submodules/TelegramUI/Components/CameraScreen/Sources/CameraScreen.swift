@@ -826,9 +826,9 @@ private final class CameraScreenComponent: CombinedComponent {
                 if isTablet {
                     timePosition = CGPoint(x: availableSize.width - panelWidth / 2.0, y: availableSize.height / 2.0 - 97.0)
                 } else {
-                    timePosition = CGPoint(x: availableSize.width / 2.0, y: environment.safeInsets.top + 40.0)
+                    timePosition = CGPoint(x: availableSize.width / 2.0, y:  max(environment.statusBarHeight + 5.0 + 20.0, environment.safeInsets.top + topControlInset + 20.0))
                 }
-                
+                                
                 if state.cameraState.recording != .none {
                     let timeBackground = timeBackground.update(
                         component: RoundedRectangle(color: videoRedColor, cornerRadius: 4.0),
@@ -1172,7 +1172,6 @@ public class CameraScreen: ViewController {
                 if let self {
                     if modeChange != .none {
                         if case .dualCamera = modeChange, self.cameraPosition == .front {
-                            
                         } else {
                             if let snapshot = self.mainPreviewView.snapshotView(afterScreenUpdates: false) {
                                 self.mainPreviewView.addSubview(snapshot)
@@ -1283,7 +1282,13 @@ public class CameraScreen: ViewController {
                                 self.mainPreviewContainerView.addSubview(cloneView)
                             }
                         } else {
+                            if let cloneView = self.mainPreviewView.snapshotView(afterScreenUpdates: false) {
+                                cloneView.frame = self.mainPreviewView.frame
+                                self.additionalPreviewSnapshotView = cloneView
+                                self.additionalPreviewContainerView.addSubview(cloneView)
+                            }
                             if let cloneView = self.additionalPreviewView.snapshotView(afterScreenUpdates: false) {
+                                cloneView.frame = self.additionalPreviewView.frame
                                 self.mainPreviewSnapshotView = cloneView
                                 self.mainPreviewContainerView.addSubview(cloneView)
                             }

@@ -34,7 +34,7 @@ private final class VideoRecorderImpl {
     private var videoInput: AVAssetWriterInput?
     private var audioInput: AVAssetWriterInput?
     
-    private let imageContext: CIContext
+    private let imageContext = CIContext()
     private var transitionImage: UIImage?
     private var savedTransitionImage = false
     
@@ -66,7 +66,6 @@ private final class VideoRecorderImpl {
         self.configuration = configuration
         self.videoTransform = videoTransform
         self.url = fileUrl
-        self.imageContext = CIContext()
         
         try? FileManager.default.removeItem(at: url)
         guard let assetWriter = try? AVAssetWriter(url: url, fileType: .mp4) else {
@@ -162,10 +161,16 @@ private final class VideoRecorderImpl {
                 }
                 
                 if let videoInput = self.videoInput, videoInput.isReadyForMoreMediaData {
+                    if videoInput.append(sampleBuffer) {
+                        self.lastVideoSampleTime = presentationTime
+                        let startTime = self.recordingStartSampleTime
+                        let duration = presentationTime - startTime
+                        self._duration = duration
+                    }
+                    
                     if !self.savedTransitionImage, let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
                         self.savedTransitionImage = true
-                        
-                        Queue.concurrentDefaultQueue().async {
+                        Queue.concurrentBackgroundQueue().async {
                             let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
                             if let cgImage = self.imageContext.createCGImage(ciImage, from: ciImage.extent) {
                                 self.transitionImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .right)
@@ -175,14 +180,6 @@ private final class VideoRecorderImpl {
                         }
                     }
                     
-                    if videoInput.append(sampleBuffer) {
-                        self.lastVideoSampleTime = presentationTime
-                        let startTime = self.recordingStartSampleTime
-                        let duration = presentationTime - startTime
-                        self._duration = duration
-                    } else {
-                        print("error")
-                    }
                     if !self.tryAppendingPendingAudioBuffers() {
                         self.transitionToFailedStatus(error: .generic)
                     }

@@ -118,7 +118,11 @@ final class CameraOutput: NSObject {
     
     func configure(for session: CameraSession, device: CameraDevice, input: CameraInput, previewView: CameraSimplePreviewView?, audio: Bool, photo: Bool, metadata: Bool) {
         if session.session.canAddOutput(self.videoOutput) {
-            session.session.addOutputWithNoConnections(self.videoOutput)
+            if session.hasMultiCam {
+                session.session.addOutputWithNoConnections(self.videoOutput)
+            } else {
+                session.session.addOutput(self.videoOutput)
+            }
             self.videoOutput.setSampleBufferDelegate(self, queue: self.queue)
         }
         if audio, session.session.canAddOutput(self.audioOutput) {
@@ -126,7 +130,11 @@ final class CameraOutput: NSObject {
             self.audioOutput.setSampleBufferDelegate(self, queue: self.queue)
         }
         if photo, session.session.canAddOutput(self.photoOutput) {
-            session.session.addOutputWithNoConnections(self.photoOutput)
+            if session.hasMultiCam {
+                session.session.addOutputWithNoConnections(self.photoOutput)
+            } else {
+                session.session.addOutput(self.photoOutput)
+            }
         }
         if metadata, session.session.canAddOutput(self.metadataOutput) {
             session.session.addOutput(self.metadataOutput)
@@ -137,7 +145,7 @@ final class CameraOutput: NSObject {
             }
         }
         
-        if #available(iOS 13.0, *) {
+        if #available(iOS 13.0, *), session.hasMultiCam {
             if let device = device.videoDevice, let ports = input.videoInput?.ports(for: AVMediaType.video, sourceDeviceType: device.deviceType, sourceDevicePosition: device.position) {
                 if let previewView {
                     let previewConnection = AVCaptureConnection(inputPort: ports.first!, videoPreviewLayer: previewView.videoPreviewLayer)
@@ -163,57 +171,7 @@ final class CameraOutput: NSObject {
             }
         }
     }
-    
-    func reconfigure(for session: CameraSession, device: CameraDevice, input: CameraInput, otherPreviewView: CameraSimplePreviewView?, otherOutput: CameraOutput) {
-        if #available(iOS 13.0, *) {
-            if let previewConnection = self.previewConnection {
-                if session.session.connections.contains(where: { $0 === previewConnection }) {
-                    session.session.removeConnection(previewConnection)
-                }
-                self.previewConnection = nil
-            }
-            if let videoConnection = self.videoConnection {
-                if session.session.connections.contains(where: { $0 === videoConnection }) {
-                    session.session.removeConnection(videoConnection)
-                }
-                self.videoConnection = nil
-            }
-            if let photoConnection = self.photoConnection {
-                if session.session.connections.contains(where: { $0 === photoConnection }) {
-                    session.session.removeConnection(photoConnection)
-                }
-                self.photoConnection = nil
-            }
-            
-            if let device = device.videoDevice, let ports = input.videoInput?.ports(for: AVMediaType.video, sourceDeviceType: device.deviceType, sourceDevicePosition: device.position) {
-                if let otherPreviewView {
-                    let previewConnection = AVCaptureConnection(inputPort: ports.first!, videoPreviewLayer: otherPreviewView.videoPreviewLayer)
-                    if session.session.canAddConnection(previewConnection) {
-                        session.session.addConnection(previewConnection)
-                        self.previewConnection = previewConnection
-                    }
-                }
-                
-                let videoConnection = AVCaptureConnection(inputPorts: ports, output: otherOutput.videoOutput)
-                if session.session.canAddConnection(videoConnection) {
-                    session.session.addConnection(videoConnection)
-                    self.videoConnection = videoConnection
-                }
-                
-                
-                let photoConnection = AVCaptureConnection(inputPorts: ports, output: otherOutput.photoOutput)
-                if session.session.canAddConnection(photoConnection) {
-                    session.session.addConnection(photoConnection)
-                    self.photoConnection = photoConnection
-                }
-            }
-        }
-    }
-    
-    func toggleConnection() {
         
-    }
-    
     func invalidate(for session: CameraSession) {
         if #available(iOS 13.0, *) {
             if let previewConnection = self.previewConnection {
@@ -312,6 +270,10 @@ final class CameraOutput: NSObject {
         |> afterDisposed { [weak self] in
             self?.photoCaptureRequests.removeValue(forKey: uniqueId)
         }
+    }
+    
+    var isRecording: Bool {
+        return self.videoRecorder != nil
     }
     
     private var recordingCompletionPipe = ValuePipe<VideoCaptureResult>()
