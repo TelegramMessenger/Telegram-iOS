@@ -453,6 +453,7 @@ private final class FetchImpl {
                     let reuploadSignal = self.network.multiplexedRequestManager.request(
                         to: .main(state.cdnData.sourceDatacenterId),
                         consumerId: self.consumerId,
+                        resourceId: self.resource.id.stringRepresentation,
                         data: Api.functions.upload.reuploadCdnFile(
                             fileToken: Buffer(data: state.cdnData.fileToken),
                             requestToken: Buffer(data: state.refreshToken)
@@ -565,6 +566,7 @@ private final class FetchImpl {
                 filePartRequest = self.network.multiplexedRequestManager.request(
                     to: .cdn(cdnData.id),
                     consumerId: self.consumerId,
+                    resourceId: self.resource.id.stringRepresentation,
                     data: Api.functions.upload.getCdnFile(
                         fileToken: Buffer(data: cdnData.fileToken),
                         offset: requestedOffset,
@@ -608,6 +610,7 @@ private final class FetchImpl {
                         filePartRequest = self.network.multiplexedRequestManager.request(
                             to: .main(sourceDatacenterId),
                             consumerId: self.consumerId,
+                            resourceId: self.resource.id.stringRepresentation,
                             data: Api.functions.upload.getFile(
                                 flags: 0,
                                 location: inputLocation,

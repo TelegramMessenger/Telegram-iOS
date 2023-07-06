@@ -227,16 +227,33 @@ public final class StoryItemSetContainerComponent: Component {
     struct ItemLayout {
         var containerSize: CGSize
         var contentFrame: CGRect
-        var contentVisualScale: CGFloat
+        var contentMinScale: CGFloat
+        var contentScaleFraction: CGFloat
+        
+        var itemSpacing: CGFloat
+        var centralVisibleItemWidth: CGFloat
+        var sideVisibleItemWidth: CGFloat
+        var fullItemScrollDistance: CGFloat
+        var sideVisibleItemScale: CGFloat
+        var halfItemScrollDistance: CGFloat
         
         init(
             containerSize: CGSize,
             contentFrame: CGRect,
-            contentVisualScale: CGFloat
+            contentMinScale: CGFloat,
+            contentScaleFraction: CGFloat
         ) {
             self.containerSize = containerSize
             self.contentFrame = contentFrame
-            self.contentVisualScale = contentVisualScale
+            self.contentMinScale = contentMinScale
+            self.contentScaleFraction = contentScaleFraction
+            
+            self.itemSpacing = 12.0
+            self.centralVisibleItemWidth = self.contentFrame.width * self.contentMinScale
+            self.sideVisibleItemWidth = self.centralVisibleItemWidth - 30.0
+            self.fullItemScrollDistance = self.centralVisibleItemWidth * 0.5 + self.itemSpacing + self.sideVisibleItemWidth * 0.5
+            self.sideVisibleItemScale = self.contentMinScale * (self.sideVisibleItemWidth / self.centralVisibleItemWidth)
+            self.halfItemScrollDistance = self.sideVisibleItemWidth * 0.5 + self.itemSpacing + self.sideVisibleItemWidth * 0.5
         }
     }
     
@@ -351,8 +368,6 @@ public final class StoryItemSetContainerComponent: Component {
         
         var visibleItems: [Int32: VisibleItem] = [:]
         var trulyValidIds: [Int32] = []
-        var scrollingOffsetX: CGFloat = 0.0
-        var scrollingCenterX: CGFloat = 0.0
         
         var reactionContextNode: ReactionContextNode?
         weak var disappearingReactionContextNode: ReactionContextNode?
@@ -392,7 +407,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.scroller.alwaysBounceHorizontal = true
             self.scroller.showsVerticalScrollIndicator = false
             self.scroller.showsHorizontalScrollIndicator = false
-            self.scroller.decelerationRate = .fast
+            self.scroller.decelerationRate = .normal
             self.scroller.delaysContentTouches = false
             
             self.controlsContainerView = SparseContainerView()
@@ -803,14 +818,33 @@ public final class StoryItemSetContainerComponent: Component {
         
         public func scrollViewDidScroll(_ scrollView: UIScrollView) {
             if !self.ignoreScrolling {
-                self.scrollingOffsetX = scrollView.contentOffset.x
-                
-                self.adjustScroller()
                 self.updateScrolling(transition: .immediate)
+                
+                if let component = self.component, let itemLayout = self.itemLayout, itemLayout.contentScaleFraction >= 1.0 - 0.0001 {
+                    var index = Int(round(scrollView.contentOffset.x / itemLayout.fullItemScrollDistance))
+                    index = max(0, min(index, component.slice.allItems.count - 1))
+                    
+                    if let currentIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
+                        if index != currentIndex {
+                            let nextId = component.slice.allItems[index].storyItem.id
+                            self.awaitingSwitchToId = (component.slice.allItems[currentIndex].storyItem.id, nextId)
+                            component.navigate(.id(nextId))
+                        }
+                    }
+                }
             }
         }
         
         public func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
+            guard let itemLayout = self.itemLayout else {
+                return
+            }
+            if targetContentOffset.pointee.x <= 0.0 || targetContentOffset.pointee.x >= scrollView.contentSize.width - scrollView.bounds.width {
+                return
+            }
+            
+            let closestIndex = Int(round(targetContentOffset.pointee.x / itemLayout.fullItemScrollDistance))
+            targetContentOffset.pointee.x = CGFloat(closestIndex) * itemLayout.fullItemScrollDistance
         }
         
         public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
@@ -824,86 +858,16 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         private func snapScrolling() {
-            self.scroller.setContentOffset(CGPoint(x: self.scrollingCenterX, y: 0.0), animated: true)
-        }
-        
-        private func adjustScroller() {
-            guard let component = self.component, let itemLayout = self.itemLayout else {
+            guard let itemLayout = self.itemLayout else {
+                return
+            }
+            let contentOffset = self.scroller.contentOffset
+            if contentOffset.x <= 0.0 || contentOffset.x >= self.scroller.contentSize.width - self.scroller.bounds.width {
                 return
             }
             
-            self.ignoreScrolling = true
-            
-            self.scroller.isScrollEnabled = self.displayViewList
-            
-            let itemSpacing: CGFloat = 12.0
-            let centralVisibleItemWidth = itemLayout.contentFrame.width * itemLayout.contentVisualScale
-            let sideVisibleItemWidth = centralVisibleItemWidth - 30.0
-            let fullItemScrollDistance = centralVisibleItemWidth * 0.5 + itemSpacing + sideVisibleItemWidth * 0.5
-            
-            var additionalInitializationDistance: CGFloat = 0.0
-            if let (switchFromId, switchToId) = self.awaitingSwitchToId {
-                if component.slice.item.storyItem.id == switchToId {
-                    self.awaitingSwitchToId = nil
-                    
-                    if let previousIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == switchFromId }), let centralIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == switchToId }) {
-                        let fractionDistance = CGFloat(previousIndex - centralIndex)
-                        
-                        let currentOffset = self.scrollingCenterX - self.scrollingOffsetX
-                        additionalInitializationDistance = -(currentOffset - fractionDistance * fullItemScrollDistance)
-                    }
-                    
-                    self.initializedOffset = false
-                } else {
-                    self.ignoreScrolling = false
-                    return
-                }
-            }
-            
-            if let centralIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
-                var leftWidth: CGFloat = 0.0
-                var rightWidth: CGFloat = 0.0
-                if centralIndex != 0 {
-                    leftWidth = 600.0
-                }
-                if centralIndex != component.slice.allItems.count - 1 {
-                    rightWidth = 600.0
-                }
-                
-                self.scrollingCenterX = leftWidth
-                self.scroller.contentSize = CGSize(width: leftWidth + itemLayout.containerSize.width + rightWidth, height: 1.0)
-                
-                if !self.initializedOffset {
-                    self.initializedOffset = true
-                    self.scrollingOffsetX = leftWidth + additionalInitializationDistance
-                    self.scroller.contentOffset = CGPoint(x: self.scrollingOffsetX, y: 0.0)
-                }
-                
-                var lowestFraction: (Int, CGFloat)?
-                
-                for index in 0 ..< component.slice.allItems.count {
-                    let offsetFraction: CGFloat = (self.scrollingCenterX - self.scrollingOffsetX) / fullItemScrollDistance
-                    let centerFraction: CGFloat = CGFloat(index - centralIndex)
-                    
-                    let combinedFraction = abs(offsetFraction + centerFraction)
-                    
-                    if let (_, lowestValue) = lowestFraction {
-                        if combinedFraction < lowestValue {
-                            lowestFraction = (index, combinedFraction)
-                        }
-                    } else {
-                        lowestFraction = (index, combinedFraction)
-                    }
-                }
-                
-                if let (index, _) = lowestFraction, index != centralIndex {
-                    let fixedId = component.slice.allItems[index].storyItem.id
-                    component.navigate(.id(fixedId))
-                    self.awaitingSwitchToId = (component.slice.item.storyItem.id, fixedId)
-                }
-            }
-            
-            self.ignoreScrolling = false
+            let closestIndex = Int(round(contentOffset.x / itemLayout.fullItemScrollDistance))
+            self.scroller.setContentOffset(CGPoint(x: CGFloat(closestIndex) * itemLayout.fullItemScrollDistance, y: 0.0), animated: true)
         }
         
         private func isProgressPaused() -> Bool {
@@ -957,43 +921,50 @@ public final class StoryItemSetContainerComponent: Component {
             var validIds: [Int32] = []
             var trulyValidIds: [Int32] = []
             
-            let centralItemFrame = itemLayout.contentFrame.center.offsetBy(dx: 0.0, dy: 0.0)
+            let centralItemX = itemLayout.contentFrame.center.x
             
-            let centralVisibleItemWidth = itemLayout.contentFrame.width * itemLayout.contentVisualScale
-            let sideVisibleItemWidth = centralVisibleItemWidth - 30.0
-            let sideVisibleItemScale = itemLayout.contentVisualScale * (sideVisibleItemWidth / centralVisibleItemWidth)
-            
-            let itemSpacing: CGFloat = 12.0
-            
-            let fullItemScrollDistance = centralVisibleItemWidth * 0.5 + itemSpacing + sideVisibleItemWidth * 0.5
-            let halfItemScrollDistance = sideVisibleItemWidth * 0.5 + itemSpacing + sideVisibleItemWidth * 0.5
+            let currentContentScale = itemLayout.contentMinScale * itemLayout.contentScaleFraction + 1.0 * (1.0 - itemLayout.contentScaleFraction)
+            let scaledCentralVisibleItemWidth = itemLayout.contentFrame.width * currentContentScale
+            let scaledSideVisibleItemWidth = scaledCentralVisibleItemWidth - 30.0 * itemLayout.contentScaleFraction
+            let scaledFullItemScrollDistance = scaledCentralVisibleItemWidth * 0.5 + itemLayout.itemSpacing + scaledSideVisibleItemWidth * 0.5
+            let scaledHalfItemScrollDistance = scaledSideVisibleItemWidth * 0.5 + itemLayout.itemSpacing + scaledSideVisibleItemWidth * 0.5
             
             if let centralIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
+                let centralItemOffset: CGFloat = itemLayout.fullItemScrollDistance * CGFloat(centralIndex)
+                let effectiveScrollingOffsetX = self.scroller.contentOffset.x * itemLayout.contentScaleFraction + centralItemOffset * (1.0 - itemLayout.contentScaleFraction)
+                
                 for index in 0 ..< component.slice.allItems.count {
                     let item = component.slice.allItems[index]
                     
-                    var offsetFraction: CGFloat = (self.scrollingCenterX - self.scrollingOffsetX) / fullItemScrollDistance
+                    var offsetFraction: CGFloat = -effectiveScrollingOffsetX / itemLayout.fullItemScrollDistance
                     if let viewListPanState = self.viewListPanState {
                         offsetFraction += viewListPanState.fraction
                     }
                     
-                    let centerIndexOffset = index - centralIndex
-                    let centerFraction: CGFloat = CGFloat(centerIndexOffset)
+                    let zeroIndexOffset = index
+                    let centerFraction: CGFloat = CGFloat(zeroIndexOffset)
                     
                     let combinedFraction = offsetFraction + centerFraction
                     let combinedFractionSign: CGFloat = combinedFraction < 0.0 ? -1.0 : 1.0
                     
                     let fractionDistanceToCenter: CGFloat = min(1.0, abs(combinedFraction))
                     
-                    var itemPosition = centralItemFrame
-                    itemPosition.x += min(1.0, abs(combinedFraction)) * combinedFractionSign * fullItemScrollDistance
-                    itemPosition.x += max(0.0, abs(combinedFraction) - 1.0) * combinedFractionSign * halfItemScrollDistance
+                    var itemPositionX = centralItemX
+                    itemPositionX += min(1.0, abs(combinedFraction)) * combinedFractionSign * scaledFullItemScrollDistance
+                    itemPositionX += max(0.0, abs(combinedFraction) - 1.0) * combinedFractionSign * scaledHalfItemScrollDistance
                     
-                    var itemVisible = true
-                    if abs(centerIndexOffset) > 2 {
-                        itemVisible = false
+                    var logicalItemPositionX = centralItemX
+                    logicalItemPositionX += min(1.0, abs(combinedFraction)) * combinedFractionSign * itemLayout.fullItemScrollDistance
+                    logicalItemPositionX += max(0.0, abs(combinedFraction) - 1.0) * combinedFractionSign * itemLayout.halfItemScrollDistance
+                    
+                    var itemVisible = false
+                    let itemLeftEdge = logicalItemPositionX - itemLayout.fullItemScrollDistance * 0.5
+                    let itemRightEdge = logicalItemPositionX + itemLayout.fullItemScrollDistance * 0.5
+                    if itemRightEdge >= -itemLayout.containerSize.width && itemLeftEdge < itemLayout.containerSize.width * 2.0 {
+                        itemVisible = true
                     }
-                    if itemLayout.contentVisualScale >= 1.0 - 0.001 && !self.preparingToDisplayViewList {
+                    
+                    if itemLayout.contentScaleFraction <= 0.0001 && !self.preparingToDisplayViewList {
                         if index != centralIndex {
                             itemVisible = false
                         }
@@ -1012,7 +983,9 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                     
                     let scaleFraction: CGFloat = abs(max(-1.0, min(1.0, combinedFraction)))
-                    let itemScale = itemLayout.contentVisualScale * (1.0 - scaleFraction) + sideVisibleItemScale * scaleFraction
+                    
+                    let minItemScale = itemLayout.contentMinScale * (1.0 - scaleFraction) + itemLayout.sideVisibleItemScale * scaleFraction
+                    let itemScale: CGFloat = itemLayout.contentScaleFraction * minItemScale + (1.0 - itemLayout.contentScaleFraction) * 1.0
                     
                     validIds.append(item.storyItem.id)
                     if itemVisible {
@@ -1063,7 +1036,7 @@ public final class StoryItemSetContainerComponent: Component {
                     )
                     let _ = visibleItem.view.update(
                         transition: itemTransition.withUserData(StoryItemContentComponent.Hint(
-                            synchronousLoad: index == centralIndex
+                            synchronousLoad: index == centralIndex && itemLayout.contentScaleFraction <= 0.0001
                         )),
                         component: AnyComponent(StoryItemContentComponent(
                             context: component.context,
@@ -1086,7 +1059,7 @@ public final class StoryItemSetContainerComponent: Component {
                         itemTransition.setBounds(view: view, bounds: CGRect(origin: CGPoint(), size: itemLayout.contentFrame.size))
                         
                         let itemId = item.storyItem.id
-                        itemTransition.setPosition(view: visibleItem.contentContainerView, position: itemPosition, completion: { [weak self] _ in
+                        itemTransition.setPosition(view: visibleItem.contentContainerView, position: CGPoint(x: itemPositionX, y: itemLayout.contentFrame.center.y), completion: { [weak self] _ in
                             guard reevaluateVisibilityOnCompletion, let self else {
                                 return
                             }
@@ -1618,10 +1591,12 @@ public final class StoryItemSetContainerComponent: Component {
                 self.initializedOffset = false
             }
             var itemsTransition = transition
+            var resetScrollingOffsetWithItemTransition = false
             if let animateNextNavigationId = self.animateNextNavigationId, animateNextNavigationId == component.slice.item.storyItem.id {
                 self.animateNextNavigationId = nil
                 self.viewListPanState = nil
                 itemsTransition = transition.withAnimation(.curve(duration: 0.3, curve: .spring))
+                resetScrollingOffsetWithItemTransition = true
             }
             
             if self.topContentGradientLayer.colors == nil {
@@ -1912,6 +1887,10 @@ public final class StoryItemSetContainerComponent: Component {
                 inputPanelIsOverlay = true
             }
             
+            var minimizedBottomContentHeight: CGFloat = 0.0
+            var maximizedBottomContentHeight: CGFloat = 0.0
+            var minimizedBottomContentFraction: CGFloat = 0.0
+            
             var validViewListIds: [Int32] = []
             if component.slice.peer.id == component.context.account.peerId, let currentIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
                 var visibleViewListIds: [Int32] = [component.slice.item.storyItem.id]
@@ -1985,6 +1964,7 @@ public final class StoryItemSetContainerComponent: Component {
                             peerId: component.slice.peer.id,
                             safeInsets: component.safeInsets,
                             storyItem: item.storyItem,
+                            minimizedContentHeight: 325.0,
                             outerExpansionFraction: outerExpansionFraction,
                             outerExpansionDirection: outerExpansionDirection,
                             close: { [weak self] in
@@ -2084,8 +2064,11 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                     }
                     if id == component.slice.item.storyItem.id {
-                        viewListInset = viewList.externalState.effectiveHeight
+                        viewListInset = viewList.externalState.minimizedHeight * viewList.externalState.minimizationFraction + viewList.externalState.defaultHeight * (1.0 - viewList.externalState.minimizationFraction)
                         inputPanelBottomInset = viewListInset
+                        minimizedBottomContentHeight = viewList.externalState.minimizedHeight
+                        maximizedBottomContentHeight = viewList.externalState.defaultHeight
+                        minimizedBottomContentFraction = viewList.externalState.minimizationFraction
                     }
                 }
                 
@@ -2123,22 +2106,41 @@ public final class StoryItemSetContainerComponent: Component {
             
             let itemSize = CGSize(width: availableSize.width, height: ceil(availableSize.width * 1.77778))
             let contentDefaultBottomInset: CGFloat = bottomContentInset
-            let contentSize = itemSize
             
             let contentVisualBottomInset: CGFloat = max(contentDefaultBottomInset, viewListInset)
+            let contentVisualMaxBottomInset: CGFloat = max(contentDefaultBottomInset, maximizedBottomContentHeight)
+            let contentVisualMinBottomInset: CGFloat = max(contentDefaultBottomInset, minimizedBottomContentHeight)
             
-            var contentVisualHeight = min(contentSize.height, availableSize.height - component.containerInsets.top - contentVisualBottomInset)
-            if contentVisualHeight < contentSize.height && contentVisualHeight >= contentSize.height - 5 {
-                contentVisualHeight = contentSize.height
-            }
+            let contentVisualMaxHeight = min(itemSize.height, availableSize.height - component.containerInsets.top - contentVisualMaxBottomInset)
+            let contentSize = CGSize(width: itemSize.width, height: contentVisualMaxHeight)
+            let contentVisualMinHeight = min(contentSize.height, availableSize.height - component.containerInsets.top - contentVisualMinBottomInset)
+            
+            let contentVisualHeight = min(contentSize.height, availableSize.height - component.containerInsets.top - contentVisualBottomInset)
+            
+            //contentScaleFraction = 1.0 -> contentVisualScale = contentMinScale
+            //contentScaleFraction = 0.0 -> contentVisualScale = 1.0
+            
             let contentVisualScale = min(1.0, contentVisualHeight / contentSize.height)
+            
+            let contentMaxScale = min(1.0, contentVisualMaxHeight / contentSize.height)
+            let contentMinScale = min(1.0, contentVisualMinHeight / contentSize.height)
+            
+            let contentScaleFraction: CGFloat
+            if abs(contentMaxScale - contentMinScale) < CGFloat.ulpOfOne {
+                contentScaleFraction = 0.0
+            } else {
+                contentScaleFraction = 1.0 - (contentVisualScale - contentMinScale) / (contentMaxScale - contentMinScale)
+            }
+            let _ = minimizedBottomContentFraction
+            //print("contentScaleFraction: \(contentScaleFraction), minimizedBottomContentFraction: \(minimizedBottomContentFraction)")
             
             let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: component.containerInsets.top - (contentSize.height - contentVisualHeight) * 0.5), size: contentSize)
             
             let itemLayout = ItemLayout(
                 containerSize: availableSize,
                 contentFrame: contentFrame,
-                contentVisualScale: contentVisualScale
+                contentMinScale: contentMinScale,
+                contentScaleFraction: contentScaleFraction
             )
             self.itemLayout = itemLayout
             
@@ -2899,10 +2901,28 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             self.ignoreScrolling = true
+            
             transition.setFrame(view: self.scroller, frame: CGRect(origin: CGPoint(), size: availableSize))
+            self.scroller.contentSize = CGSize(width: itemLayout.fullItemScrollDistance * CGFloat(max(0, component.slice.allItems.count - 1)) + availableSize.width, height: availableSize.height)
+            self.scroller.isScrollEnabled = itemLayout.contentScaleFraction >= 1.0 - 0.0001
+            
+            if let centralIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
+                let centralX = itemLayout.fullItemScrollDistance * CGFloat(centralIndex)
+                if itemLayout.contentScaleFraction <= 0.0001 {
+                    if abs(self.scroller.contentOffset.x - centralX) > CGFloat.ulpOfOne {
+                        self.scroller.contentOffset = CGPoint(x: centralX, y: 0.0)
+                    }
+                } else if resetScrollingOffsetWithItemTransition {
+                    let deltaX = centralX - self.scroller.contentOffset.x
+                    if abs(deltaX) > CGFloat.ulpOfOne {
+                        self.scroller.contentOffset = CGPoint(x: centralX, y: 0.0)
+                        //itemsTransition.animateBoundsOrigin(view: self.itemsContainerView, from: CGPoint(x: deltaX, y: 0.0), to: CGPoint(), additive: true)
+                    }
+                }
+            }
+            
             self.ignoreScrolling = false
             
-            self.adjustScroller()
             self.updateScrolling(transition: itemsTransition)
             
             if let focusedItem, let visibleItem = self.visibleItems[focusedItem.storyItem.id], let index = focusedItem.position {

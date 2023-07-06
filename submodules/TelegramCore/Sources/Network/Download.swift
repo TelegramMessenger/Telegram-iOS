@@ -117,7 +117,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             saveFilePart = Api.functions.upload.saveFilePart(fileId: fileId, filePart: Int32(index), bytes: Buffer(data: data))
         }
         
-        return multiplexedManager.request(to: .main(datacenterId), consumerId: consumerId, data: wrapMethodBody(saveFilePart, useCompression: useCompression), tag: tag, continueInBackground: true)
+        return multiplexedManager.request(to: .main(datacenterId), consumerId: consumerId, resourceId: nil, data: wrapMethodBody(saveFilePart, useCompression: useCompression), tag: tag, continueInBackground: true)
         |> mapError { error -> UploadPartError in
             if error.errorCode == 400 {
                 return .invalidMedia

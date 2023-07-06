@@ -58,6 +58,7 @@ final class StoryItemContentComponent: Component {
         
         private var currentMessageMedia: EngineMedia?
         private var fetchDisposable: Disposable?
+        private var priorityDisposable: Disposable?
         
         private var component: StoryItemContentComponent?
         private weak var state: EmptyComponentState?
@@ -105,6 +106,7 @@ final class StoryItemContentComponent: Component {
         
         deinit {
             self.fetchDisposable?.dispose()
+            self.priorityDisposable?.dispose()
             self.currentProgressTimer?.invalidate()
             self.videoProgressDisposable?.dispose()
         }
@@ -433,11 +435,18 @@ final class StoryItemContentComponent: Component {
             }
             
             if reloadMedia, let messageMedia, let peerReference {
+                self.priorityDisposable?.dispose()
+                self.priorityDisposable = nil
+                
                 var fetchSignal: Signal<Never, NoError>?
                 switch messageMedia {
-                case .image:
-                    break
+                case let .image(image):
+                    if let representation = largestImageRepresentation(image.representations) {
+                        self.priorityDisposable = component.context.engine.resources.pushPriorityDownload(resourceId: representation.resource.id.stringRepresentation)
+                    }
                 case let .file(file):
+                    self.priorityDisposable = component.context.engine.resources.pushPriorityDownload(resourceId: file.resource.id.stringRepresentation)
+                    
                     fetchSignal = fetchedMediaResource(
                         mediaBox: component.context.account.postbox.mediaBox,
                         userLocation: .other,

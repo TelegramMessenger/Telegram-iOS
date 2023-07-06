@@ -42,12 +42,20 @@ final class StoryItemImageView: UIView {
     
     func update(context: AccountContext, peer: EnginePeer, storyId: Int32, media: EngineMedia, size: CGSize, isCaptureProtected: Bool, attemptSynchronous: Bool, transition: Transition) {
         var dimensions: CGSize?
+        
+        let isMediaUpdated: Bool
+        if let currentMedia = self.currentMedia {
+            isMediaUpdated = !currentMedia._asMedia().isSemanticallyEqual(to: media._asMedia())
+        } else {
+            isMediaUpdated = true
+        }
+        
         switch media {
         case let .image(image):
             if let representation = largestImageRepresentation(image.representations) {
                 dimensions = representation.dimensions.cgSize
                 
-                if self.currentMedia != media {
+                if isMediaUpdated {
                     if attemptSynchronous, let path = context.account.postbox.mediaBox.completedResourcePath(id: representation.resource.id, pathExtension: nil) {
                         if #available(iOS 15.0, *) {
                             if let image = UIImage(contentsOfFile: path)?.preparingForDisplay() {
@@ -104,7 +112,7 @@ final class StoryItemImageView: UIView {
         case let .file(file):
             dimensions = file.dimensions?.cgSize
             
-            if self.currentMedia != media {
+            if isMediaUpdated {
                 let cachedPath = context.account.postbox.mediaBox.cachedRepresentationCompletePath(file.resource.id, representation: CachedVideoFirstFrameRepresentation())
                 
                 if attemptSynchronous, FileManager.default.fileExists(atPath: cachedPath) {

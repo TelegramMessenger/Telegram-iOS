@@ -14,6 +14,7 @@ import SwiftSignalKit
 public final class StoryFooterPanelComponent: Component {
     public let context: AccountContext
     public let storyItem: EngineStoryItem?
+    public let externalViews: EngineStoryItem.Views?
     public let expandFraction: CGFloat
     public let expandViewStats: () -> Void
     public let deleteAction: () -> Void
@@ -22,6 +23,7 @@ public final class StoryFooterPanelComponent: Component {
     public init(
         context: AccountContext,
         storyItem: EngineStoryItem?,
+        externalViews: EngineStoryItem.Views?,
         expandFraction: CGFloat,
         expandViewStats: @escaping () -> Void,
         deleteAction: @escaping () -> Void,
@@ -29,6 +31,7 @@ public final class StoryFooterPanelComponent: Component {
     ) {
         self.context = context
         self.storyItem = storyItem
+        self.externalViews = externalViews
         self.expandViewStats = expandViewStats
         self.expandFraction = expandFraction
         self.deleteAction = deleteAction
@@ -40,6 +43,9 @@ public final class StoryFooterPanelComponent: Component {
             return false
         }
         if lhs.storyItem != rhs.storyItem {
+            return false
+        }
+        if lhs.externalViews != rhs.externalViews {
             return false
         }
         if lhs.expandFraction != rhs.expandFraction {
@@ -233,7 +239,7 @@ public final class StoryFooterPanelComponent: Component {
             }
             
             var peers: [EnginePeer] = []
-            if let seenPeers = component.storyItem?.views?.seenPeers {
+            if let seenPeers = component.externalViews?.seenPeers ?? component.storyItem?.views?.seenPeers {
                 peers = Array(seenPeers.prefix(3))
             }
             let avatarsContent = self.avatarsContext.update(peers: peers, animated: false)
@@ -248,7 +254,7 @@ public final class StoryFooterPanelComponent: Component {
             }
             
             var viewCount = 0
-            if let views = component.storyItem?.views, views.seenCount != 0 {
+            if let views = component.externalViews ?? component.storyItem?.views, views.seenCount != 0 {
                 viewCount = views.seenCount
             }
             

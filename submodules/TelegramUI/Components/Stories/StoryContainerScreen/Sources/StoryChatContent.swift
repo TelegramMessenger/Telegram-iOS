@@ -1153,13 +1153,15 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                 let item = state.items[focusedIndex]
                 self.focusedId = item.id
                 
-                let allItems = state.items.map { stateItem -> StoryContentItem in
-                    return StoryContentItem(
-                        position: nil,
+                var allItems: [StoryContentItem] = []
+                for i in 0 ..< state.items.count {
+                    let stateItem = state.items[i]
+                    allItems.append(StoryContentItem(
+                        position: i,
                         peerId: peer.id,
                         storyItem: stateItem,
                         entityFiles: extractItemEntityFiles(item: stateItem, allEntityFiles: state.allEntityFiles)
-                    )
+                    ))
                 }
                 
                 stateValue = StoryContentContextState(
@@ -1167,7 +1169,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                         peer: peer,
                         additionalPeerData: additionalPeerData,
                         item: StoryContentItem(
-                            position: nil,
+                            position: focusedIndex,
                             peerId: peer.id,
                             storyItem: item,
                             entityFiles: extractItemEntityFiles(item: item, allEntityFiles: state.allEntityFiles)
