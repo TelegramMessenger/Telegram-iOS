@@ -2322,6 +2322,7 @@ public final class EmojiPagerContentComponent: Component {
         public let hideBackground: Bool
         public let scrollingStickersGridPromise = ValuePromise<Bool>(false)
         public let stateContext: StateContext?
+        public let addImage: (() -> Void)?
         
         public init(
             performItemAction: @escaping (AnyHashable, Item, UIView, CGRect, CALayer, Bool) -> Void,
@@ -2347,7 +2348,8 @@ public final class EmojiPagerContentComponent: Component {
             externalExpansionView: UIView?,
             useOpaqueTheme: Bool,
             hideBackground: Bool,
-            stateContext: StateContext?
+            stateContext: StateContext?,
+            addImage: (() -> Void)?
         ) {
             self.performItemAction = performItemAction
             self.deleteBackwards = deleteBackwards
@@ -2373,6 +2375,7 @@ public final class EmojiPagerContentComponent: Component {
             self.useOpaqueTheme = useOpaqueTheme
             self.hideBackground = hideBackground
             self.stateContext = stateContext
+            self.addImage = addImage
         }
     }
     

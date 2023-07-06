@@ -297,9 +297,8 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         
         if let shape = entity as? DrawingSimpleShapeEntity {
             shape.position = center
-            shape.rotation = rotation
-            
             if setup {
+                shape.rotation = rotation
                 let size = self.newEntitySize()
                 shape.referenceDrawingSize = self.size
                 if shape.shapeType == .star {
@@ -319,15 +318,15 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             }
         } else if let sticker = entity as? DrawingStickerEntity {
             sticker.position = center
-            sticker.rotation = rotation
             if setup {
+                sticker.rotation = rotation
                 sticker.referenceDrawingSize = self.size
                 sticker.scale = zoomScale
             }
         } else if let bubble = entity as? DrawingBubbleEntity {
             bubble.position = center
-            bubble.rotation = rotation
             if setup {
+                bubble.rotation = rotation
                 let size = self.newEntitySize()
                 bubble.referenceDrawingSize = self.size
                 bubble.size = CGSize(width: size.width, height: round(size.height * 0.7))
@@ -335,8 +334,8 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             }
         } else if let text = entity as? DrawingTextEntity {
             text.position = center
-            text.rotation = rotation
             if setup {
+                text.rotation = rotation
                 text.referenceDrawingSize = self.size
                 text.width = floor(self.size.width * 0.9)
                 text.fontSize = 0.08

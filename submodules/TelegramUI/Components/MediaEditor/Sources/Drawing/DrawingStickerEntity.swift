@@ -85,7 +85,21 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     
     public var baseSize: CGSize {
         let size = max(10.0, min(self.referenceDrawingSize.width, self.referenceDrawingSize.height) * 0.25)
-        return CGSize(width: size, height: size)
+        
+        let dimensions: CGSize
+        switch self.content {
+        case let .image(image, _):
+            dimensions = image.size
+        case let .file(file):
+            dimensions = file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
+        case let .video(_, image, _):
+            dimensions = image?.size ?? CGSize(width: 512.0, height: 512.0)
+        case .dualVideoReference:
+            dimensions = CGSize(width: 512.0, height: 512.0)
+        }
+        
+        let boundingSize = CGSize(width: size, height: size)
+        return dimensions.fitted(boundingSize)
     }
     
     public var isAnimated: Bool {

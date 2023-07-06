@@ -8067,7 +8067,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             case .proxy:
                 self.controller?.push(proxySettingsController(context: self.context))
             case .stories:
-                self.controller?.push(PeerInfoStoryGridScreen(context: self.context, peerId: self.context.account.peerId, scope: .saved))
+                push(PeerInfoStoryGridScreen(context: self.context, peerId: self.context.account.peerId, scope: .saved))
             case .savedMessages:
                 let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
                 |> deliverOnMainQueue).start(next: { [weak self] peer in
@@ -8247,7 +8247,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             case .emojiStatus:
                 self.headerNode.invokeDisplayPremiumIntro()
             case .powerSaving:
-                self.controller?.push(energySavingSettingsScreen(context: self.context))
+                push(energySavingSettingsScreen(context: self.context))
         }
     }
     

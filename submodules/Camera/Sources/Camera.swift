@@ -161,7 +161,6 @@ private final class CameraContext {
         }
     }
         
-    private var videoOrientation: AVCaptureVideoOrientation?
     init(queue: Queue, session: CameraSession, configuration: Camera.Configuration, metrics: Camera.Metrics, previewView: CameraSimplePreviewView?, secondaryPreviewView: CameraSimplePreviewView?) {
         self.queue = queue
         self.session = session
@@ -450,7 +449,7 @@ private final class CameraContext {
     }
     
     func takePhoto() -> Signal<PhotoCaptureResult, NoError> {
-        let orientation = self.videoOrientation ?? .portrait
+        let orientation = self.simplePreviewView?.videoPreviewLayer.connection?.videoOrientation ?? .portrait
         if let additionalDeviceContext = self.additionalDeviceContext {
             let dualPosition = self.positionValue
             return combineLatest(

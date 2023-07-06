@@ -62,6 +62,8 @@ final class ModeComponent: Component {
             init() {
                 super.init(frame: .zero)
                 
+                self.isExclusiveTouch = true
+                
                 self.addTarget(self, action: #selector(self.buttonPressed), for: .touchUpInside)
             }
             

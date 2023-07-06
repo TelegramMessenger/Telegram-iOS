@@ -930,10 +930,10 @@ final class MediaEditorScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width - scrubberInset * 2.0, height: availableSize.height)
+                    containerSize: CGSize(width: previewSize.width - scrubberInset * 2.0, height: availableSize.height)
                 )
                 
-                let scrubberFrame = CGRect(origin: CGPoint(x: scrubberInset, y: availableSize.height - environment.safeInsets.bottom - scrubberSize.height - 8.0 + controlsBottomInset), size: scrubberSize)
+                let scrubberFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - scrubberSize.width) / 2.0), y: availableSize.height - environment.safeInsets.bottom - scrubberSize.height - 8.0 + controlsBottomInset), size: scrubberSize)
                 if let scrubberView = self.scrubber.view {
                     if scrubberView.superview == nil {
                         if let inputPanelBackgroundView = self.inputPanelBackground.view, inputPanelBackgroundView.superview != nil {
