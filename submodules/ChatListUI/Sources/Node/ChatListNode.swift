@@ -1859,7 +1859,7 @@ public final class ChatListNode: ListView {
             self.statePromise.get(),
             contacts
         )
-        |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, storageInfo, suggestedChatListNotice, savedMessagesPeer, updateAndFilter, chatFolderUpdates, state, contacts) -> Signal<ChatListNodeListViewTransition, NoError> in
+        |> mapToQueue { [weak self] (hideArchivedFolderByDefault, displayArchiveIntro, storageInfo, suggestedChatListNotice, savedMessagesPeer, updateAndFilter, chatFolderUpdates, state, contacts) -> Signal<ChatListNodeListViewTransition, NoError> in
             let (update, filter) = updateAndFilter
             
             let previousHideArchivedFolderByDefaultValue = previousHideArchivedFolderByDefault.swap(hideArchivedFolderByDefault)
@@ -2132,8 +2132,8 @@ public final class ChatListNode: ListView {
             }
             if isEmpty {
                 entries = [.HeaderEntry]
-                if case .peers = mode {
-                    entries.append(.EmptyChatSelectionList(presentationData: self.currentState.presentationData))
+                if case .peers = mode, let strongSelf = self {
+                    entries.append(.EmptyChatSelectionList(presentationData: strongSelf.currentState.presentationData))
                 }
             }
             

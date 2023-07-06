@@ -226,9 +226,9 @@ public func performAppGroupUpgrades(appGroupPath: String, rootPath: String) {
                 }
             }
         }
+        
+        excludePathFromBackup(rootPath)
     }
-    
-    excludePathFromBackup(rootPath)
 }
 
 public func excludePathFromBackup(_ path: String) {

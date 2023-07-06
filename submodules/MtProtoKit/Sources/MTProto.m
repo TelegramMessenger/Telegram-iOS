@@ -130,6 +130,8 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     
     bool _isConnectionThrottled;
     MTTimer *_unthrottleConnectionTimer;
+    
+    MTContextBlockChangeListener *_changeListener;
 }
 
 @end
@@ -166,35 +168,35 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         _authTokenMasterDatacenterId = authTokenMasterDatacenterId;
         
         __weak MTProto *weakSelf = self;
-        MTContextBlockChangeListener *changeListener = [[MTContextBlockChangeListener alloc] init];
+        _changeListener = [[MTContextBlockChangeListener alloc] init];
         
-        changeListener.contextDatacenterAuthInfoUpdated = ^(MTContext * _Nonnull context, NSInteger datacenterId, MTDatacenterAuthInfo * _Nonnull authInfo, MTDatacenterAuthInfoSelector selector)
+        _changeListener.contextDatacenterAuthInfoUpdated = ^(MTContext * _Nonnull context, NSInteger datacenterId, MTDatacenterAuthInfo * _Nonnull authInfo, MTDatacenterAuthInfoSelector selector)
         {
             __strong MTProto *strongSelf = weakSelf;
             [strongSelf contextDatacenterAuthInfoUpdated:context datacenterId:datacenterId authInfo:authInfo selector:selector];
         };
-        changeListener.contextDatacenterAuthTokenUpdated = ^(MTContext * _Nonnull context, NSInteger datacenterId, id _Nullable authToken)
+        _changeListener.contextDatacenterAuthTokenUpdated = ^(MTContext * _Nonnull context, NSInteger datacenterId, id _Nullable authToken)
         {
             __strong MTProto *strongSelf = weakSelf;
             [strongSelf contextDatacenterAuthTokenUpdated:context datacenterId:datacenterId authToken:authToken];
         };
-        changeListener.contextDatacenterTransportSchemesUpdated = ^(MTContext * _Nonnull context, NSInteger datacenterId, bool shouldReset)
+        _changeListener.contextDatacenterTransportSchemesUpdated = ^(MTContext * _Nonnull context, NSInteger datacenterId, bool shouldReset)
         {
             __strong MTProto *strongSelf = weakSelf;
             [strongSelf contextDatacenterTransportSchemesUpdated:context datacenterId:datacenterId shouldReset:shouldReset];
         };
-        changeListener.contextDatacenterPublicKeysUpdated = ^(MTContext * _Nonnull context, NSInteger datacenterId, NSArray<NSDictionary *> * _Nonnull publicKeys)
+        _changeListener.contextDatacenterPublicKeysUpdated = ^(MTContext * _Nonnull context, NSInteger datacenterId, NSArray<NSDictionary *> * _Nonnull publicKeys)
         {
             __strong MTProto *strongSelf = weakSelf;
             [strongSelf contextDatacenterPublicKeysUpdated:context datacenterId:datacenterId publicKeys:publicKeys];
         };
-        changeListener.contextApiEnvironmentUpdated = ^(MTContext * _Nonnull context, MTApiEnvironment * _Nonnull apiEnvironment)
+        _changeListener.contextApiEnvironmentUpdated = ^(MTContext * _Nonnull context, MTApiEnvironment * _Nonnull apiEnvironment)
         {
             __strong MTProto *strongSelf = weakSelf;
             [strongSelf contextApiEnvironmentUpdated:context apiEnvironment:apiEnvironment];
         };
         
-        [_context addChangeListener:changeListener];
+        [_context addChangeListener:_changeListener];
         
         _messageServices = [[NSMutableArray alloc] init];
         
@@ -275,7 +277,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if ((_mtState & MTProtoStateStopped) == 0)
         {
             [self setMtState:_mtState | MTProtoStateStopped];
-            [_context removeChangeListener:self];
+            [_context removeChangeListener:_changeListener];
             if (_transport != nil)
             {
                 _transport.delegate = nil;
