@@ -17433,7 +17433,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, joinVoiceChat: { [weak self] peerId, invite, call in
             self?.joinGroupCall(peerId: peerId, invite: invite, activeCall: EngineGroupCallDescription(call))
         }, present: { [weak self] c, a in
-            self?.present(c, in: .window(.root), with: a)
+            if c is UndoOverlayController {
+                self?.present(c, in: .current)
+            } else {
+                self?.present(c, in: .window(.root), with: a)
+            }
         }, dismissInput: { [weak self] in
             self?.chatDisplayNode.dismissInput()
         }, contentContext: nil)
