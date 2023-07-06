@@ -106,14 +106,16 @@ final class CameraDevice {
             
             if let bestFormat = candidates.last {
                 device.activeFormat = bestFormat
-                
-                Logger.shared.log("Camera", "Available formats:")
-                for format in device.formats {
-                    Logger.shared.log("Camera", format.description)
-                }
-                
+                    
                 Logger.shared.log("Camera", "Selected format:")
                 Logger.shared.log("Camera", bestFormat.description)
+            } else {
+                Logger.shared.log("Camera", "No format selected")
+            }
+            
+            Logger.shared.log("Camera", "Available formats:")
+            for format in device.formats {
+                Logger.shared.log("Camera", format.description)
             }
             
             if let targetFPS = device.actualFPS(maxFramerate) {

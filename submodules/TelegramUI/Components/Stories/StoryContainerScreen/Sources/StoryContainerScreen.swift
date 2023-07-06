@@ -799,9 +799,10 @@ private final class StoryContainerScreenComponent: Component {
                 if currentItemView.hasActiveDeactivateableInput() {
                     currentItemView.deactivateInput()
                 } else {
-                    if location.x < currentItemView.frame.minX {
+                    let itemViewFrame = currentItemView.convert(currentItemView.bounds, to: self)
+                    if location.x < itemViewFrame.minX {
                         self.navigate(direction: .previous)
-                    } else if location.x > currentItemView.frame.maxX {
+                    } else if location.x > itemViewFrame.maxX {
                         self.navigate(direction: .next)
                     }
                 }

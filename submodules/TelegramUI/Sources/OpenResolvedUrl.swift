@@ -834,7 +834,11 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     })
                 } else {
                     //TODO:localize
-                    present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "story_expired", scale: 0.066, colors: [:], title: nil, text: "This story does not exist", customUndoText: nil, timeout: nil), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
+                    var elevatedLayout = true
+                    if case .chat = urlContext {
+                        elevatedLayout = false
+                    }
+                    present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "story_expired", scale: 0.066, colors: [:], title: nil, text: "This story does not exist", customUndoText: nil, timeout: nil), elevatedLayout: elevatedLayout, animateInAsReplacement: false, action: { _ in
                         return true
                     }), nil)
                 }
