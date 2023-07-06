@@ -62,6 +62,7 @@ private func pollMessages(entries: [MessageHistoryEntry]) -> (Set<MessageId>, [M
 }
 
 private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void, NoError> {
+    let accountPeerId = account.peerId
     return account.postbox.loadedPeerWithId(messageId.peerId)
     |> take(1)
     |> mapToSignal { peer in
@@ -105,19 +106,7 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                 }
                 
                 return account.postbox.transaction { transaction -> Void in
-                    var peers: [Peer] = []
-                    var peerPresences: [PeerId: Api.User] = [:]
-                    for chat in chats {
-                        if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
-                            peers.append(groupOrChannel)
-                        }
-                    }
-                    for apiUser in users {
-                        if let user = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) {
-                            peers.append(user)
-                            peerPresences[user.id] = apiUser
-                        }
-                    }
+                    let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                     
                     for message in messages {
                         if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: peer.isForum, namespace: isScheduledMessage ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
@@ -145,11 +134,7 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                         }
                     }
                     
-                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                        return updated
-                    })
-                    
-                    updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                 }
             }
         } else {
@@ -688,6 +673,7 @@ public final class AccountViewTracker {
                     self.nextUpdatedViewCountDisposableId += 1
                     
                     if let account = self.account {
+                        let accountPeerId = account.peerId
                         let signal: Signal<[MessageId: ViewCountContextState], NoError> = (account.postbox.transaction { transaction -> Signal<[MessageId: ViewCountContextState], NoError> in
                             guard let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) else {
                                 return .complete()
@@ -703,28 +689,11 @@ public final class AccountViewTracker {
                                 }
                                 
                                 return account.postbox.transaction { transaction -> [MessageId: ViewCountContextState] in
-                                    var peers: [Peer] = []
-                                    var peerPresences: [PeerId: Api.User] = [:]
-                                    
                                     var resultStates: [MessageId: ViewCountContextState] = [:]
                                     
-                                    for apiUser in users {
-                                        if let user = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) {
-                                            peers.append(user)
-                                            peerPresences[user.id] = apiUser
-                                        }
-                                    }
-                                    for chat in chats {
-                                        if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
-                                            peers.append(groupOrChannel)
-                                        }
-                                    }
+                                    let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                                     
-                                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                                        return updated
-                                    })
-                                    
-                                    updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                                     
                                     for i in 0 ..< messageIds.count {
                                         if i < viewCounts.count {
@@ -1046,6 +1015,7 @@ public final class AccountViewTracker {
                     self.nextUpdatedUnsupportedMediaDisposableId += 1
                     
                     if let account = self.account {
+                        let accountPeerId = account.peerId
                         let signal = account.postbox.transaction { transaction -> Peer? in
                             if let peer = transaction.getPeer(peerId) {
                                 return peer
@@ -1091,26 +1061,8 @@ public final class AccountViewTracker {
                             }
                             |> mapToSignal { topPeer, messages, chats, users -> Signal<Void, NoError> in
                                 return account.postbox.transaction { transaction -> Void in
-                                    var peers: [Peer] = []
-                                    var peerPresences: [PeerId: Api.User] = [:]
-                                    
-                                    for chat in chats {
-                                        if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
-                                            peers.append(groupOrChannel)
-                                        }
-                                    }
-                                    for apiUser in users {
-                                        if let user = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) {
-                                            peers.append(user)
-                                            peerPresences[user.id] = apiUser
-                                        }
-                                    }
-                                    
-                                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                                        return updated
-                                    })
-                                    
-                                    updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                                    let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                                     
                                     for message in messages {
                                         guard let storeMessage = StoreMessage(apiMessage: message, peerIsForum: topPeer.isForum) else {

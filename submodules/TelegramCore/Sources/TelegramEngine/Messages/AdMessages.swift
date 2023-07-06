@@ -442,6 +442,8 @@ private class AdMessagesHistoryContextImpl {
         self.queue = queue
         self.account = account
         self.peerId = peerId
+        
+        let accountPeerId = account.peerId
 
         self.stateValue = State(interPostInterval: nil, messages: [])
 
@@ -478,25 +480,8 @@ private class AdMessagesHistoryContextImpl {
                 return account.postbox.transaction { transaction -> (interPostInterval: Int32?, messages: [Message]) in
                     switch result {
                     case let .sponsoredMessages(_, postsBetween, messages, chats, users):
-                        var peers: [Peer] = []
-                        var peerPresences: [PeerId: Api.User] = [:]
-
-                        for chat in chats {
-                            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                peers.append(groupOrChannel)
-                            }
-                        }
-                        for user in users {
-                            let telegramUser = TelegramUser(user: user)
-                            peers.append(telegramUser)
-                            peerPresences[telegramUser.id] = user
-                        }
-
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                            return updated
-                        })
-
-                        updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                        let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
 
                         var parsedMessages: [CachedMessage] = []
 

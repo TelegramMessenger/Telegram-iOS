@@ -18,7 +18,7 @@ public final class NotificationExceptionsList: Equatable {
     }
 }
 
-func _internal_notificationExceptionsList(postbox: Postbox, network: Network) -> Signal<NotificationExceptionsList, NoError> {
+func _internal_notificationExceptionsList(accountPeerId: PeerId, postbox: Postbox, network: Network) -> Signal<NotificationExceptionsList, NoError> {
     var flags: Int32 = 0
     flags |= 1 << 1
     flags |= 1 << 2
@@ -29,20 +29,17 @@ func _internal_notificationExceptionsList(postbox: Postbox, network: Network) ->
         return postbox.transaction { transaction -> NotificationExceptionsList in
             switch result {
             case let .updates(updates, users, chats, _, _):
-                var peers: [PeerId: Peer] = [:]
                 var settings: [PeerId: TelegramPeerNotificationSettings] = [:]
                 
-                for user in users {
-                    let peer = TelegramUser(user: user)
-                    peers[peer.id] = peer
-                }
-                for chat in chats {
-                    if let peer = parseTelegramGroupOrChannel(chat: chat) {
+                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                updatePeers(transaction: transaction,  accountPeerId: accountPeerId,peers: parsedPeers)
+                
+                var peers: [PeerId: Peer] = [:]
+                for id in parsedPeers.allIds {
+                    if let peer = transaction.getPeer(id) {
                         peers[peer.id] = peer
                     }
                 }
-                
-                updatePeers(transaction: transaction, peers: Array(peers.values), update: { _, updated in updated })
                 
                 for update in updates {
                     switch update {

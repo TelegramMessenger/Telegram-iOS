@@ -233,7 +233,10 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             return self.contentScrollingEnded(listView: listView)
         }
         
-        self.storySubscriptionsDisposable = (self.context.engine.messages.storySubscriptions(isHidden: true)
+        self.contactListNode.storySubscriptions.set(.single(nil))
+        self.storiesReady.set(.single(true))
+        
+        /*self.storySubscriptionsDisposable = (self.context.engine.messages.storySubscriptions(isHidden: true)
         |> deliverOnMainQueue).start(next: { [weak self] storySubscriptions in
             guard let self else {
                 return
@@ -243,7 +246,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             self.contactListNode.storySubscriptions.set(.single(storySubscriptions))
             
             self.storiesReady.set(.single(true))
-        })
+        })*/
 
         self.contactListNode.openStories = { [weak self] peer, sourceNode in
             guard let self else {

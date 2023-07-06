@@ -27,7 +27,7 @@ public func _internal_updateCloseFriends(account: Account, peerIds: [EnginePeer.
                     }
                 }
             }
-            updatePeers(transaction: transaction, peers: updatedPeers, update: { _, updated in
+            updatePeersCustom(transaction: transaction, peers: updatedPeers, update: { _, updated in
                 return updated
             })
         }

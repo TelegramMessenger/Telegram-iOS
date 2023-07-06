@@ -14,7 +14,7 @@ func _internal_setSecretChatMessageAutoremoveTimeoutInteractively(transaction: T
             let updatedPeer = peer.withUpdatedMessageAutoremoveTimeout(timeout)
             let updatedState = state.withUpdatedMessageAutoremoveTimeout(timeout)
             if !updatedPeer.isEqual(peer) {
-                updatePeers(transaction: transaction, peers: [updatedPeer], update: { $1 })
+                updatePeersCustom(transaction: transaction, peers: [updatedPeer], update: { $1 })
             }
             if updatedState != state {
                 transaction.setPeerChatState(peerId, state: updatedState)

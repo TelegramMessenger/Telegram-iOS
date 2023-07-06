@@ -204,18 +204,8 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
                                 for update in updates {
                                     switch update {
                                     case .updateEditMessage(let message, _, _), .updateNewMessage(let message, _, _), .updateEditChannelMessage(let message, _, _), .updateNewChannelMessage(let message, _, _):
-                                        var peers: [Peer] = []
-                                        for chat in chats {
-                                            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                                peers.append(groupOrChannel)
-                                            }
-                                        }
-                                        for user in users {
-                                            let telegramUser = TelegramUser(user: user)
-                                            peers.append(telegramUser)
-                                        }
-                                        
-                                        updatePeers(transaction: transaction, peers: peers, update: { _, updated in updated })
+                                        let peers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: peers)
                                         
                                         if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum), case let .Id(id) = message.id {
                                             transaction.updateMessage(id, update: { previousMessage in

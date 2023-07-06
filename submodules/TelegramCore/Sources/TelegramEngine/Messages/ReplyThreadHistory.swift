@@ -138,6 +138,8 @@ private class ReplyThreadHistoryContextImpl {
             }
         })
         
+        let accountPeerId = account.peerId
+        
         let updateInitialState: Signal<DiscussionMessage, FetchChannelReplyThreadMessageError> = account.postbox.transaction { transaction -> Peer? in
             return transaction.getPeer(data.messageId.peerId)
         }
@@ -176,27 +178,11 @@ private class ReplyThreadHistoryContextImpl {
                             }
                         }
                         
-                        var peers: [Peer] = []
-                        var peerPresences: [PeerId: Api.User] = [:]
-                        
-                        for chat in chats {
-                            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                peers.append(groupOrChannel)
-                            }
-                        }
-                        for user in users {
-                            let telegramUser = TelegramUser(user: user)
-                            peers.append(telegramUser)
-                            peerPresences[telegramUser.id] = user
-                        }
+                        let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                         
                         let _ = transaction.addMessages(parsedMessages, location: .Random)
                         
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                            return updated
-                        })
-                        
-                        updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                         
                         let resolvedMaxMessage: MessageId?
                         if let maxId = maxId {
@@ -608,6 +594,8 @@ public enum FetchChannelReplyThreadMessageError {
 }
 
 func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: MessageId, atMessageId: MessageId?) -> Signal<ChatReplyThreadMessage, FetchChannelReplyThreadMessageError> {
+    let accountPeerId = account.peerId
+    
     return account.postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(messageId.peerId)
     }
@@ -653,27 +641,11 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                         }
                     }
                     
-                    var peers: [Peer] = []
-                    var peerPresences: [PeerId: Api.User] = [:]
-                    
-                    for chat in chats {
-                        if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                            peers.append(groupOrChannel)
-                        }
-                    }
-                    for user in users {
-                        let telegramUser = TelegramUser(user: user)
-                        peers.append(telegramUser)
-                        peerPresences[telegramUser.id] = user
-                    }
+                    let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                     
                     let _ = transaction.addMessages(parsedMessages, location: .Random)
                     
-                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                        return updated
-                    })
-                    
-                    updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                     
                     let resolvedMaxMessage: MessageId?
                     if let maxId = maxId {

@@ -12,16 +12,6 @@ import TelegramPresentationData
 import StoryContainerScreen
 import EmojiStatusComponent
 
-public func shouldDisplayStoriesInChatListHeader(storySubscriptions: EngineStorySubscriptions) -> Bool {
-    if !storySubscriptions.items.isEmpty {
-        return true
-    }
-    if let accountItem = storySubscriptions.accountItem, (accountItem.hasUnseen || accountItem.hasPending) {
-        return true
-    }
-    return false
-}
-
 private func solveParabolicMotion(from sourcePoint: CGPoint, to targetPosition: CGPoint, progress: CGFloat) -> CGPoint {
     if sourcePoint.y == targetPosition.y {
         return sourcePoint.interpolate(to: targetPosition, amount: progress)
@@ -858,9 +848,6 @@ public final class StoryPeerListComponent: Component {
                     self.visibleItems[itemSet.peer.id] = visibleItem
                 }
                 
-                var hasUnseen = false
-                hasUnseen = itemSet.hasUnseen
-                
                 var hasUnseenCloseFriendsItems = itemSet.hasUnseenCloseFriends
                 
                 var hasItems = true
@@ -921,6 +908,16 @@ public final class StoryPeerListComponent: Component {
                     rightNeighborDistance = CGPoint(x: abs(rightItemFrame.midX - measuredItem.itemFrame.midX), y: rightItemFrame.minY - measuredItem.itemFrame.minY)
                 }
                 
+                let totalCount: Int
+                let unseenCount: Int
+                if peer.id == component.context.account.peerId {
+                    totalCount = 1
+                    unseenCount = itemSet.unseenCount != 0 ? 1 : 0
+                } else {
+                    totalCount = itemSet.storyCount
+                    unseenCount = itemSet.unseenCount
+                }
+                
                 let _ = visibleItem.view.update(
                     transition: itemTransition,
                     component: AnyComponent(StoryPeerListItemComponent(
@@ -928,7 +925,8 @@ public final class StoryPeerListComponent: Component {
                         theme: component.theme,
                         strings: component.strings,
                         peer: peer,
-                        hasUnseen: hasUnseen,
+                        totalCount: totalCount,
+                        unseenCount: unseenCount,
                         hasUnseenCloseFriendsItems: hasUnseenCloseFriendsItems,
                         hasItems: hasItems,
                         ringAnimation: itemRingAnimation,
@@ -1001,9 +999,6 @@ public final class StoryPeerListComponent: Component {
                     self.visibleCollapsableItems[itemSet.peer.id] = visibleItem
                 }
                 
-                var hasUnseen = false
-                hasUnseen = itemSet.hasUnseen
-                
                 var hasUnseenCloseFriendsItems = itemSet.hasUnseenCloseFriends
                 
                 var hasItems = true
@@ -1063,7 +1058,8 @@ public final class StoryPeerListComponent: Component {
                         theme: component.theme,
                         strings: component.strings,
                         peer: peer,
-                        hasUnseen: hasUnseen,
+                        totalCount: 1,
+                        unseenCount: itemSet.unseenCount != 0 ? 1 : 0,
                         hasUnseenCloseFriendsItems: hasUnseenCloseFriendsItems,
                         hasItems: hasItems,
                         ringAnimation: itemRingAnimation,
@@ -1141,7 +1137,13 @@ public final class StoryPeerListComponent: Component {
             let collapsedTitleOffset = targetCollapsedTitleOffset - defaultCollapsedTitleOffset
             
             let titleMinContentOffset: CGFloat = collapsedTitleOffset.interpolate(to: collapsedTitleOffset + 12.0, amount: collapsedState.minFraction * (1.0 - collapsedState.activityFraction))
-            var titleContentOffset: CGFloat = titleMinContentOffset.interpolate(to: ((itemLayout.containerSize.width - collapsedState.titleWidth) * 0.5) as CGFloat, amount: collapsedState.maxFraction * (1.0 - collapsedState.activityFraction))
+            
+            var titleContentOffset: CGFloat
+            if self.sortedItems.isEmpty {
+                titleContentOffset = collapsedTitleOffset
+            } else {
+                titleContentOffset = titleMinContentOffset.interpolate(to: ((itemLayout.containerSize.width - collapsedState.titleWidth) * 0.5) as CGFloat, amount: collapsedState.maxFraction * (1.0 - collapsedState.activityFraction))
+            }
             
             var titleIndicatorSize: CGSize?
             if collapsedState.activityFraction != 0.0 {

@@ -100,7 +100,7 @@ public final class ChatListNodeInteraction {
     let openPremiumIntro: () -> Void
     let openChatFolderUpdates: () -> Void
     let hideChatFolderUpdates: () -> Void
-    let openStories: (EnginePeer.Id, ASDisplayNode?) -> Void
+    let openStories: (ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void
     
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
@@ -148,7 +148,7 @@ public final class ChatListNodeInteraction {
         openPremiumIntro: @escaping () -> Void,
         openChatFolderUpdates: @escaping () -> Void,
         hideChatFolderUpdates: @escaping () -> Void,
-        openStories: @escaping (EnginePeer.Id, ASDisplayNode?) -> Void
+        openStories: @escaping (ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void
     ) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
@@ -219,11 +219,11 @@ private func areFoundPeerArraysEqual(_ lhs: [(EnginePeer, EnginePeer?)], _ rhs: 
 
 public struct ChatListNodeState: Equatable {
     public struct StoryState: Equatable {
-        public var hasUnseen: Bool
+        public var stats: EngineChatList.StoryStats
         public var hasUnseenCloseFriends: Bool
         
-        public init(hasUnseen: Bool, hasUnseenCloseFriends: Bool) {
-            self.hasUnseen = hasUnseen
+        public init(stats: EngineChatList.StoryStats, hasUnseenCloseFriends: Bool) {
+            self.stats = stats
             self.hasUnseenCloseFriends = hasUnseenCloseFriends
         }
     }
@@ -251,7 +251,7 @@ public struct ChatListNodeState: Equatable {
     public var foundPeers: [(EnginePeer, EnginePeer?)]
     public var selectedPeerMap: [EnginePeer.Id: EnginePeer]
     public var selectedThreadIds: Set<Int64>
-    public var peerStoryMapping: [EnginePeer.Id: ChatListNodeState.StoryState]
+    public var hasUnseenArchiveStories: Bool?
     
     public init(
         presentationData: ChatListPresentationData,
@@ -267,7 +267,7 @@ public struct ChatListNodeState: Equatable {
         hiddenItemShouldBeTemporaryRevealed: Bool,
         hiddenPsaPeerId: EnginePeer.Id?,
         selectedThreadIds: Set<Int64>,
-        peerStoryMapping: [EnginePeer.Id: ChatListNodeState.StoryState]
+        hasUnseenArchiveStories: Bool?
     ) {
         self.presentationData = presentationData
         self.editing = editing
@@ -282,7 +282,7 @@ public struct ChatListNodeState: Equatable {
         self.hiddenItemShouldBeTemporaryRevealed = hiddenItemShouldBeTemporaryRevealed
         self.hiddenPsaPeerId = hiddenPsaPeerId
         self.selectedThreadIds = selectedThreadIds
-        self.peerStoryMapping = peerStoryMapping
+        self.hasUnseenArchiveStories = hasUnseenArchiveStories
     }
     
     public static func ==(lhs: ChatListNodeState, rhs: ChatListNodeState) -> Bool {
@@ -325,7 +325,7 @@ public struct ChatListNodeState: Equatable {
         if lhs.selectedThreadIds != rhs.selectedThreadIds {
             return false
         }
-        if lhs.peerStoryMapping != rhs.peerStoryMapping {
+        if lhs.hasUnseenArchiveStories != rhs.hasUnseenArchiveStories {
             return false
         }
         return true
@@ -408,7 +408,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                                 autoremoveTimeout: peerEntry.autoremoveTimeout,
                                 storyState: peerEntry.storyState.flatMap { storyState in
                                     return ChatListItemContent.StoryState(
-                                        hasUnseen: storyState.hasUnseen,
+                                        stats: storyState.stats,
                                         hasUnseenCloseFriends: storyState.hasUnseenCloseFriends
                                     )
                                 }
@@ -623,26 +623,32 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                 }
             case let .HoleEntry(_, theme):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
-            case let .GroupReferenceEntry(index, presentationData, groupId, peers, message, editing, unreadCount, revealed, hiddenByDefault):
+            case let .GroupReferenceEntry(groupReferenceEntry):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(
-                    presentationData: presentationData,
+                    presentationData: groupReferenceEntry.presentationData,
                     context: context,
                     chatListLocation: location,
                     filterData: filterData,
-                    index: index,
-                    content: .groupReference(
-                        groupId: groupId,
-                        peers: peers,
-                        message: message,
-                        unreadCount: unreadCount,
-                        hiddenByDefault: hiddenByDefault
-                    ),
-                    editing: editing,
+                    index: groupReferenceEntry.index,
+                    content: .groupReference(ChatListItemContent.GroupReferenceData(
+                        groupId: groupReferenceEntry.groupId,
+                        peers: groupReferenceEntry.peers,
+                        message: groupReferenceEntry.message,
+                        unreadCount: groupReferenceEntry.unreadCount,
+                        hiddenByDefault: groupReferenceEntry.hiddenByDefault,
+                        storyState: groupReferenceEntry.storyState.flatMap { storyState in
+                            return ChatListItemContent.StoryState(
+                                stats: storyState.stats,
+                                hasUnseenCloseFriends: storyState.hasUnseenCloseFriends
+                            )
+                        }
+                    )),
+                    editing: groupReferenceEntry.editing,
                     hasActiveRevealControls: false,
                     selected: false,
                     header: nil,
                     enableContextActions: true,
-                    hiddenOffset: hiddenByDefault && !revealed,
+                    hiddenOffset: groupReferenceEntry.hiddenByDefault && !groupReferenceEntry.revealed,
                     interaction: nodeInteraction
                 ), directionHint: entry.directionHint)
             case let .ContactEntry(contactEntry):
@@ -759,7 +765,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                                 autoremoveTimeout: peerEntry.autoremoveTimeout,
                                 storyState: peerEntry.storyState.flatMap { storyState in
                                     return ChatListItemContent.StoryState(
-                                        hasUnseen: storyState.hasUnseen,
+                                        stats: storyState.stats,
                                         hasUnseenCloseFriends: storyState.hasUnseenCloseFriends
                                     )
                                 }
@@ -928,26 +934,32 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                 }
             case let .HoleEntry(_, theme):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
-            case let .GroupReferenceEntry(index, presentationData, groupId, peers, message, editing, unreadCount, revealed, hiddenByDefault):
+            case let .GroupReferenceEntry(groupReferenceEntry):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(
-                        presentationData: presentationData,
+                        presentationData: groupReferenceEntry.presentationData,
                         context: context,
                         chatListLocation: location,
                         filterData: filterData,
-                        index: index,
-                        content: .groupReference(
-                            groupId: groupId,
-                            peers: peers,
-                            message: message,
-                            unreadCount: unreadCount,
-                            hiddenByDefault: hiddenByDefault
-                        ),
-                        editing: editing,
+                        index: groupReferenceEntry.index,
+                        content: .groupReference(ChatListItemContent.GroupReferenceData(
+                            groupId: groupReferenceEntry.groupId,
+                            peers: groupReferenceEntry.peers,
+                            message: groupReferenceEntry.message,
+                            unreadCount: groupReferenceEntry.unreadCount,
+                            hiddenByDefault: groupReferenceEntry.hiddenByDefault,
+                            storyState: groupReferenceEntry.storyState.flatMap { storyState in
+                                return ChatListItemContent.StoryState(
+                                    stats: storyState.stats,
+                                    hasUnseenCloseFriends: storyState.hasUnseenCloseFriends
+                                )
+                            }
+                        )),
+                        editing: groupReferenceEntry.editing,
                         hasActiveRevealControls: false,
                         selected: false,
                         header: nil,
                         enableContextActions: true,
-                        hiddenOffset: hiddenByDefault && !revealed,
+                        hiddenOffset: groupReferenceEntry.hiddenByDefault && !groupReferenceEntry.revealed,
                         interaction: nodeInteraction
                 ), directionHint: entry.directionHint)
             case let .ContactEntry(contactEntry):
@@ -1069,6 +1081,11 @@ public enum ChatListNodeEmptyState: Equatable {
 }
 
 public final class ChatListNode: ListView {
+    public enum OpenStoriesSubject {
+        case peer(EnginePeer.Id)
+        case archive
+    }
+    
     private let fillPreloadItems: Bool
     private let context: AccountContext
     private let location: ChatListControllerLocation
@@ -1106,7 +1123,7 @@ public final class ChatListNode: ListView {
     public var toggleArchivedFolderHiddenByDefault: (() -> Void)?
     public var hidePsa: ((EnginePeer.Id) -> Void)?
     public var activateChatPreview: ((ChatListItem, Int64?, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
-    public var openStories: ((EnginePeer.Id, ASDisplayNode?) -> Void)?
+    public var openStories: ((ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void)?
     
     private var theme: PresentationTheme
     
@@ -1234,7 +1251,7 @@ public final class ChatListNode: ListView {
             isSelecting = true
         }
         
-        self.currentState = ChatListNodeState(presentationData: ChatListPresentationData(theme: theme, fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations), editing: isSelecting, peerIdWithRevealedOptions: nil, selectedPeerIds: Set(), foundPeers: [], selectedPeerMap: [:], selectedAdditionalCategoryIds: Set(), peerInputActivities: nil, pendingRemovalItemIds: Set(), pendingClearHistoryPeerIds: Set(), hiddenItemShouldBeTemporaryRevealed: false, hiddenPsaPeerId: nil, selectedThreadIds: Set(), peerStoryMapping: [:])
+        self.currentState = ChatListNodeState(presentationData: ChatListPresentationData(theme: theme, fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations), editing: isSelecting, peerIdWithRevealedOptions: nil, selectedPeerIds: Set(), foundPeers: [], selectedPeerMap: [:], selectedAdditionalCategoryIds: Set(), peerInputActivities: nil, pendingRemovalItemIds: Set(), pendingClearHistoryPeerIds: Set(), hiddenItemShouldBeTemporaryRevealed: false, hiddenPsaPeerId: nil, selectedThreadIds: Set(), hasUnseenArchiveStories: nil)
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
         
         self.theme = theme
@@ -1573,11 +1590,11 @@ public final class ChatListNode: ListView {
                     let _ = self.context.engine.peers.hideChatFolderUpdates(folderId: localFilterId).start()
                 }
             })
-        }, openStories: { [weak self] peerId, itemNode in
+        }, openStories: { [weak self] subject, itemNode in
             guard let self else {
                 return
             }
-            self.openStories?(peerId, itemNode)
+            self.openStories?(subject, itemNode)
         })
         nodeInteraction.isInlineMode = isInlineMode
         
@@ -1889,6 +1906,8 @@ public final class ChatListNode: ListView {
             contacts = .single([])
         }
         
+        let accountPeerId = context.account.peerId
+        
         let chatListNodeViewTransition = combineLatest(
             queue: viewProcessingQueue,
             hideArchivedFolderByDefault,
@@ -1914,7 +1933,7 @@ public final class ChatListNode: ListView {
                 notice = nil
             }
             
-            let (rawEntries, isLoading) = chatListNodeEntriesForView(update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, notice: notice, mode: mode, chatListLocation: location, contacts: contacts)
+            let (rawEntries, isLoading) = chatListNodeEntriesForView(view: update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, notice: notice, mode: mode, chatListLocation: location, contacts: contacts, accountPeerId: accountPeerId)
             var isEmpty = true
             var entries = rawEntries.filter { entry in
                 switch entry {
@@ -2260,8 +2279,8 @@ public final class ChatListNode: ListView {
                                     didIncludeRemovingPeerId = true
                                 }
                             }
-                        } else if case let .GroupReferenceEntry(_, _, _, _, _, _, _, _, hiddenByDefault) = entry {
-                            didIncludeHiddenByDefaultArchive = hiddenByDefault
+                        } else if case let .GroupReferenceEntry(groupReferenceEntry) = entry {
+                            didIncludeHiddenByDefaultArchive = groupReferenceEntry.hiddenByDefault
                         } else if case .Notice = entry {
                             didIncludeNotice = true
                         }
@@ -2296,9 +2315,9 @@ public final class ChatListNode: ListView {
                                 doesIncludeRemovingPeerId = true
                             }
                         }
-                    } else if case let .GroupReferenceEntry(_, _, _, _, _, _, _, _, hiddenByDefault) = entry {
+                    } else if case let .GroupReferenceEntry(groupReferenceEntry) = entry {
                         doesIncludeArchive = true
-                        doesIncludeHiddenByDefaultArchive = hiddenByDefault
+                        doesIncludeHiddenByDefaultArchive = groupReferenceEntry.hiddenByDefault
                     } else if case .Notice = entry {
                         doesIncludeNotice = true
                     }
@@ -2836,8 +2855,8 @@ public final class ChatListNode: ListView {
                                 isHiddenItemVisible = true
                             }
                         }
-                        if case let .groupReference(_, _, _, _, hiddenByDefault) = item.content {
-                            if hiddenByDefault {
+                        if case let .groupReference(groupReference) = item.content {
+                            if groupReference.hiddenByDefault {
                                 isHiddenItemVisible = true
                             }
                         }

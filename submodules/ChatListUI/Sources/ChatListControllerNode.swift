@@ -925,10 +925,10 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                 return
             }
             
-            if itemNode.listNode.isTracking && !self.currentItemNode.startedScrollingAtUpperBound && self.tempTopInset == 0.0 {
+            if !self.isInlineMode, itemNode.listNode.isTracking && !self.currentItemNode.startedScrollingAtUpperBound && self.tempTopInset == 0.0 {
                 if case let .known(value) = offset {
                     if value < -1.0 {
-                        if let storySubscriptions = self.controller?.orderedStorySubscriptions, (shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions) || true) {
+                        if let controller = self.controller, let storySubscriptions = controller.orderedStorySubscriptions, shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions, isHidden: controller.location == .chatList(groupId: .archive)) {
                             self.currentItemNode.startedScrollingAtUpperBound = true
                             self.tempTopInset = ChatListNavigationBar.storiesScrollHeight
                         }
@@ -939,7 +939,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             self.contentOffset = offset
             self.contentOffsetChanged?(offset)
             
-            if self.currentItemNode.startedScrollingAtUpperBound && self.tempTopInset != 0.0 {
+            if !self.isInlineMode, self.currentItemNode.startedScrollingAtUpperBound && self.tempTopInset != 0.0 {
                 if case let .known(value) = offset {
                     if value > 4.0 {
                         self.currentItemNode.startedScrollingAtUpperBound = false
@@ -954,12 +954,12 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             }
         }
         itemNode.listNode.didBeginInteractiveDragging = { [weak self] _ in
-            guard let self else {
+            guard let self, !self.isInlineMode else {
                 return
             }
             let tempTopInset: CGFloat
             if self.currentItemNode.startedScrollingAtUpperBound && !self.isInlineMode {
-                if let storySubscriptions = self.controller?.orderedStorySubscriptions, (shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions) || true) {
+                if let controller = self.controller, let storySubscriptions = controller.orderedStorySubscriptions, shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions, isHidden: controller.location == .chatList(groupId: .archive)) {
                     tempTopInset = ChatListNavigationBar.storiesScrollHeight
                 } else {
                     tempTopInset = 0.0
@@ -1001,8 +1001,8 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
         itemNode.listNode.activateChatPreview = { [weak self] item, threadId, sourceNode, gesture, location in
             self?.activateChatPreview?(item, threadId, sourceNode, gesture, location)
         }
-        itemNode.listNode.openStories = { [weak self] peerId, itemNode in
-            self?.openStories?(peerId, itemNode)
+        itemNode.listNode.openStories = { [weak self] subject, itemNode in
+            self?.openStories?(subject, itemNode)
         }
         itemNode.listNode.addedVisibleChatsWithPeerIds = { [weak self] ids in
             self?.addedVisibleChatsWithPeerIds?(ids)
@@ -1076,7 +1076,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
     var endedInteractiveDragging: ((ListView) -> Void)?
     var shouldStopScrolling: ((ListView, CGFloat) -> Bool)?
     var activateChatPreview: ((ChatListItem, Int64?, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
-    var openStories: ((EnginePeer.Id, ASDisplayNode?) -> Void)?
+    var openStories: ((ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void)?
     var addedVisibleChatsWithPeerIds: (([EnginePeer.Id]) -> Void)?
     var didBeginSelectingChats: (() -> Void)?
     var canExpandHiddenItems: (() -> Bool)?
@@ -1802,7 +1802,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 return false
             }
             
-            if let storySubscriptions = controller.orderedStorySubscriptions, (shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions) || true) {
+            if let storySubscriptions = controller.orderedStorySubscriptions, shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions, isHidden: controller.location == .chatList(groupId: .archive)) {
                 if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
                     if navigationBarComponentView.storiesUnlocked {
                         return true
@@ -1946,7 +1946,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 secondaryContent: headerContent?.secondaryContent,
                 secondaryTransition: self.inlineStackContainerTransitionFraction,
                 storySubscriptions: self.controller?.orderedStorySubscriptions,
-                storiesIncludeHidden: false,
+                storiesIncludeHidden: self.location == .chatList(groupId: .archive),
                 uploadProgress: self.controller?.storyUploadProgress,
                 tabsNode: tabsNode,
                 tabsNodeIsSearch: tabsNodeIsSearch,
@@ -2534,4 +2534,20 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             self.mainContainerNode.scrollToTop(animated: true, adjustForTempInset: false)
         }
     }
+    
+    func scrollToTopIfStoriesAreExpanded() {
+        if let contentOffset = self.mainContainerNode.contentOffset, case let .known(offset) = contentOffset, offset < 0.0 {
+            self.mainContainerNode.scrollToTop(animated: true, adjustForTempInset: false)
+        }
+    }
+}
+
+func shouldDisplayStoriesInChatListHeader(storySubscriptions: EngineStorySubscriptions, isHidden: Bool) -> Bool {
+    if !storySubscriptions.items.isEmpty {
+        return true
+    }
+    if !isHidden, let accountItem = storySubscriptions.accountItem, (accountItem.hasUnseen || accountItem.hasPending) {
+        return true
+    }
+    return false
 }

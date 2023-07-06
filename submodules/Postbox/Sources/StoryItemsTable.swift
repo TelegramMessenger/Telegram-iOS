@@ -32,6 +32,75 @@ public final class StoryItemsTableEntry: Equatable {
     }
 }
 
+final class StoryTopItemsTable: Table {
+    struct Entry {
+        var id: Int32
+        var isExact: Bool
+    }
+    
+    enum Event {
+        case replace(peerId: PeerId)
+    }
+    
+    private struct Key: Hashable {
+        var peerId: PeerId
+    }
+    
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: false)
+    }
+    
+    private let sharedKey = ValueBoxKey(length: 8 + 4)
+    
+    private func key(_ key: Key) -> ValueBoxKey {
+        self.sharedKey.setInt64(0, value: key.peerId.toInt64())
+        return self.sharedKey
+    }
+    
+    public func get(peerId: PeerId) -> Entry? {
+        if let value = self.valueBox.get(self.table, key: self.key(Key(peerId: peerId))) {
+            let buffer = ReadBuffer(memoryBufferNoCopy: value)
+            var version: UInt8 = 0
+            buffer.read(&version, offset: 0, length: 1)
+            if version != 100 {
+                return nil
+            }
+            var maxId: Int32 = 0
+            buffer.read(&maxId, offset: 0, length: 4)
+            var isExact: Int8 = 0
+            buffer.read(&isExact, offset: 0, length: 1)
+            
+            return Entry(id: maxId, isExact: isExact != 0)
+        } else {
+            return nil
+        }
+    }
+    
+    public func set(peerId: PeerId, entry: Entry?, events: inout [Event]) {
+        if let entry = entry {
+            let buffer = WriteBuffer()
+            
+            var version: UInt8 = 100
+            buffer.write(&version, length: 1)
+            var maxId = entry.id
+            buffer.write(&maxId, length: 4)
+            var isExact: Int8 = entry.isExact ? 1 : 0
+            buffer.write(&isExact, length: 1)
+            
+            self.valueBox.set(self.table, key: self.key(Key(peerId: peerId)), value: buffer.readBufferNoCopy())
+        } else {
+            self.valueBox.remove(self.table, key: self.key(Key(peerId: peerId)), secure: true)
+        }
+    }
+    
+    override func clearMemoryCache() {
+    }
+    
+    override func beforeCommit() {
+    }
+}
+
+
 final class StoryItemsTable: Table {
     enum Event {
         case replace(peerId: PeerId)
@@ -64,6 +133,24 @@ final class StoryItemsTable: Table {
         let key = ValueBoxKey(length: 8)
         key.setInt64(0, value: peerId.toInt64())
         return key.successor
+    }
+    
+    public func getStats(peerId: PeerId, maxSeenId: Int32) -> (total: Int, unseen: Int) {
+        var total = 0
+        var unseen = 0
+        
+        self.valueBox.range(self.table, start: self.lowerBound(peerId: peerId), end: self.upperBound(peerId: peerId), keys: { key in
+            let id = key.getInt32(8)
+            
+            total += 1
+            if id > maxSeenId {
+                unseen += 1
+            }
+            
+            return true
+        }, limit: 10000)
+        
+        return (total, unseen)
     }
     
     public func get(peerId: PeerId) -> [StoryItemsTableEntry] {
@@ -177,7 +264,7 @@ final class StoryItemsTable: Table {
         return minValue
     }
     
-    public func replace(peerId: PeerId, entries: [StoryItemsTableEntry], events: inout [Event]) {
+    public func replace(peerId: PeerId, entries: [StoryItemsTableEntry], topItemTable: StoryTopItemsTable, events: inout [Event], topItemEvents: inout [StoryTopItemsTable.Event]) {
         var previousKeys: [ValueBoxKey] = []
         self.valueBox.range(self.table, start: self.lowerBound(peerId: peerId), end: self.upperBound(peerId: peerId), keys: { key in
             previousKeys.append(key)
@@ -208,6 +295,8 @@ final class StoryItemsTable: Table {
         }
         
         events.append(.replace(peerId: peerId))
+        
+        topItemTable.set(peerId: peerId, entry: StoryTopItemsTable.Entry(id: entries.last?.id ?? 0, isExact: true), events: &topItemEvents)
     }
     
     override func clearMemoryCache() {

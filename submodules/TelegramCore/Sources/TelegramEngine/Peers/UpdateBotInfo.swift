@@ -29,7 +29,7 @@ func _internal_updateBotName(account: Account, peerId: PeerId, name: String) -> 
                                 return current
                             }
                         })
-                        updatePeers(transaction: transaction, peers: [peer]) { _, peer in
+                        updatePeersCustom(transaction: transaction, peers: [peer]) { _, peer in
                             var updatedPeer = peer
                             if let user = peer as? TelegramUser, user.firstName == previousBotName {
                                 updatedPeer = user.withUpdatedNames(firstName: name, lastName: nil)

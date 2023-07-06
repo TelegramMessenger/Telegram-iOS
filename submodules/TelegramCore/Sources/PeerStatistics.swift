@@ -666,7 +666,7 @@ public struct GroupStatsContextState: Equatable {
     public var stats: GroupStats?
 }
 
-private func requestGroupStats(postbox: Postbox, network: Network, datacenterId: Int32, peerId: PeerId, dark: Bool = false) -> Signal<GroupStats?, NoError> {
+private func requestGroupStats(accountPeerId: PeerId, postbox: Postbox, network: Network, datacenterId: Int32, peerId: PeerId, dark: Bool = false) -> Signal<GroupStats?, NoError> {
     return postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(peerId)
     } |> mapToSignal { peer -> Signal<GroupStats?, NoError> in
@@ -694,13 +694,7 @@ private func requestGroupStats(postbox: Postbox, network: Network, datacenterId:
         |> mapToSignal { result -> Signal<GroupStats?, MTRpcError> in
             return postbox.transaction { transaction -> GroupStats? in
                 if case let .megagroupStats(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, users) = result {
-                    var parsedUsers: [Peer] = []
-                    for user in users {
-                        parsedUsers.append(TelegramUser(user: user))
-                    }
-                    updatePeers(transaction: transaction, peers: parsedUsers, update: { existing, updated in
-                        return existing ?? updated
-                    })
+                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
                 }
                 return GroupStats(apiMegagroupStats: result)
             }
@@ -713,6 +707,7 @@ private func requestGroupStats(postbox: Postbox, network: Network, datacenterId:
 private final class GroupStatsContextImpl {
     private let postbox: Postbox
     private let network: Network
+    private let accountPeerId: PeerId
     private let datacenterId: Int32
     private let peerId: PeerId
     
@@ -731,11 +726,12 @@ private final class GroupStatsContextImpl {
     private let disposable = MetaDisposable()
     private let disposables = DisposableDict<String>()
     
-    init(postbox: Postbox, network: Network, datacenterId: Int32, peerId: PeerId) {
+    init(postbox: Postbox, network: Network, accountPeerId: PeerId, datacenterId: Int32, peerId: PeerId) {
         assert(Queue.mainQueue().isCurrent())
         
         self.postbox = postbox
         self.network = network
+        self.accountPeerId = accountPeerId
         self.datacenterId = datacenterId
         self.peerId = peerId
         self._state = GroupStatsContextState(stats: nil)
@@ -753,7 +749,7 @@ private final class GroupStatsContextImpl {
     private func load() {
         assert(Queue.mainQueue().isCurrent())
         
-        self.disposable.set((requestGroupStats(postbox: self.postbox, network: self.network, datacenterId: self.datacenterId, peerId: self.peerId)
+        self.disposable.set((requestGroupStats(accountPeerId: self.accountPeerId, postbox: self.postbox, network: self.network, datacenterId: self.datacenterId, peerId: self.peerId)
         |> deliverOnMainQueue).start(next: { [weak self] stats in
             if let strongSelf = self {
                 strongSelf._state = GroupStatsContextState(stats: stats)
@@ -906,9 +902,9 @@ public final class GroupStatsContext {
         }
     }
     
-    public init(postbox: Postbox, network: Network, datacenterId: Int32, peerId: PeerId) {
+    public init(postbox: Postbox, network: Network, accountPeerId: PeerId, datacenterId: Int32, peerId: PeerId) {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
-            return GroupStatsContextImpl(postbox: postbox, network: network, datacenterId: datacenterId, peerId: peerId)
+            return GroupStatsContextImpl(postbox: postbox, network: network, accountPeerId: accountPeerId, datacenterId: datacenterId, peerId: peerId)
         })
     }
         

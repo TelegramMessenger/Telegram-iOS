@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 
-
 func updatePeerChatInclusionWithMinTimestamp(transaction: Transaction, id: PeerId, minTimestamp: Int32, forceRootGroupIfNotExists: Bool) {
     let currentInclusion = transaction.getPeerChatListInclusion(id)
     var updatedInclusion: PeerChatListInclusion?
@@ -39,7 +38,31 @@ func minTimestampForPeerInclusion(_ peer: Peer) -> Int32? {
     }
 }
 
-public func updatePeers(transaction: Transaction, peers: [Peer], update: (Peer?, Peer) -> Peer?) {
+func updatePeers(transaction: Transaction, accountPeerId: PeerId, peers: AccumulatedPeers) {
+    var parsedPeers: [Peer] = []
+    for (_, user) in peers.users {
+        if let telegramUser = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
+            parsedPeers.append(telegramUser)
+            
+            switch user {
+            case let .user(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, storiesMaxId):
+                if let storiesMaxId = storiesMaxId {
+                    transaction.setStoryItemsInexactMaxId(peerId: user.peerId, id: storiesMaxId)
+                }
+            case .userEmpty:
+                break
+            }
+        }
+    }
+    for (_, peer) in peers.peers {
+        parsedPeers.append(peer)
+    }
+    updatePeersCustom(transaction: transaction, peers: parsedPeers, update: { _, updated in updated })
+    
+    updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peers.users)
+}
+
+public func updatePeersCustom(transaction: Transaction, peers: [Peer], update: (Peer?, Peer) -> Peer?) {
     transaction.updatePeersInternal(peers, update: { previous, updated in
         let peerId = updated.id
         

@@ -128,169 +128,153 @@ private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, 
     return network.request(Api.functions.messages.getPinnedDialogs(folderId: groupId.rawValue))
     |> retryRequest
     |> mapToSignal { dialogs -> Signal<Void, NoError> in
-        var storeMessages: [StoreMessage] = []
-        var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
-        var channelStates: [PeerId: Int32] = [:]
-        var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
-        var ttlPeriods: [PeerId: CachedPeerAutoremoveTimeout] = [:]
-        
-        var remoteItemIds: [PinnedItemId] = []
-        
-        var peers: [Peer] = []
-        var peerPresences: [PeerId: Api.User] = [:]
-        
-        switch dialogs {
-            case let .peerDialogs(dialogs, messages, chats, users, _):
-                for chat in chats {
-                    if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                        peers.append(groupOrChannel)
-                    }
-                }
-                for user in users {
-                    let telegramUser = TelegramUser(user: user)
-                    peers.append(telegramUser)
-                    peerPresences[telegramUser.id] = user
-                }
+        return postbox.transaction { transaction -> Signal<Void, NoError> in
+            var storeMessages: [StoreMessage] = []
+            var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
+            var channelStates: [PeerId: Int32] = [:]
+            var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
+            var ttlPeriods: [PeerId: CachedPeerAutoremoveTimeout] = [:]
             
-                var peerMap: [PeerId: Peer] = [:]
-                for peer in peers {
-                    peerMap[peer.id] = peer
+            var remoteItemIds: [PinnedItemId] = []
+            
+            let parsedPeers: AccumulatedPeers
+            
+            switch dialogs {
+            case let .peerDialogs(dialogs, messages, chats, users, _):
+                parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                
+            loop: for dialog in dialogs {
+                let apiPeer: Api.Peer
+                let apiReadInboxMaxId: Int32
+                let apiReadOutboxMaxId: Int32
+                let apiTopMessage: Int32
+                let apiUnreadCount: Int32
+                let apiMarkedUnread: Bool
+                var apiChannelPts: Int32?
+                let apiTtlPeriod: Int32?
+                let apiNotificationSettings: Api.PeerNotifySettings
+                switch dialog {
+                case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _, peerNotificationSettings, pts, _, _, ttlPeriod):
+                    apiPeer = peer
+                    apiTopMessage = topMessage
+                    apiReadInboxMaxId = readInboxMaxId
+                    apiReadOutboxMaxId = readOutboxMaxId
+                    apiUnreadCount = unreadCount
+                    apiMarkedUnread = (flags & (1 << 3)) != 0
+                    apiNotificationSettings = peerNotificationSettings
+                    apiChannelPts = pts
+                    apiTtlPeriod = ttlPeriod
+                case .dialogFolder:
+                    //assertionFailure()
+                    continue loop
                 }
                 
-                loop: for dialog in dialogs {
-                    let apiPeer: Api.Peer
-                    let apiReadInboxMaxId: Int32
-                    let apiReadOutboxMaxId: Int32
-                    let apiTopMessage: Int32
-                    let apiUnreadCount: Int32
-                    let apiMarkedUnread: Bool
-                    var apiChannelPts: Int32?
-                    let apiTtlPeriod: Int32?
-                    let apiNotificationSettings: Api.PeerNotifySettings
-                    switch dialog {
-                        case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _, peerNotificationSettings, pts, _, _, ttlPeriod):
-                            apiPeer = peer
-                            apiTopMessage = topMessage
-                            apiReadInboxMaxId = readInboxMaxId
-                            apiReadOutboxMaxId = readOutboxMaxId
-                            apiUnreadCount = unreadCount
-                            apiMarkedUnread = (flags & (1 << 3)) != 0
-                            apiNotificationSettings = peerNotificationSettings
-                            apiChannelPts = pts
-                            apiTtlPeriod = ttlPeriod
-                        case .dialogFolder:
-                            //assertionFailure()
-                            continue loop
-                    }
-                    
-                    let peerId: PeerId = apiPeer.peerId
-                    
-                    remoteItemIds.append(.peer(peerId))
-                    
-                    if readStates[peerId] == nil {
-                        readStates[peerId] = [:]
-                    }
-                    readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount, markedUnread: apiMarkedUnread)
-                    
-                    if let apiChannelPts = apiChannelPts {
-                        channelStates[peerId] = apiChannelPts
-                    }
-                    
-                    notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
-                    
-                    ttlPeriods[peerId] = .known(apiTtlPeriod.flatMap(CachedPeerAutoremoveTimeout.Value.init(peerValue:)))
+                let peerId: PeerId = apiPeer.peerId
+                
+                remoteItemIds.append(.peer(peerId))
+                
+                if readStates[peerId] == nil {
+                    readStates[peerId] = [:]
                 }
+                readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount, markedUnread: apiMarkedUnread)
+                
+                if let apiChannelPts = apiChannelPts {
+                    channelStates[peerId] = apiChannelPts
+                }
+                
+                notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
+                
+                ttlPeriods[peerId] = .known(apiTtlPeriod.flatMap(CachedPeerAutoremoveTimeout.Value.init(peerValue:)))
+            }
                 
                 for message in messages {
                     var peerIsForum = false
-                    if let peerId = message.peerId, let peer = peerMap[peerId], peer.isForum {
+                    if let peerId = message.peerId, let peer = parsedPeers.get(peerId), peer.isForum {
                         peerIsForum = true
                     }
                     if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
                         storeMessages.append(storeMessage)
                     }
                 }
-        }
-        
-        var resultingItemIds: [PinnedItemId]
-        if initialRemoteItemIds == localItemIds {
-            resultingItemIds = remoteItemIds
-        } else {
-            let locallyRemovedFromRemoteItemIds = Set(initialRemoteItemIdsWithoutSecretChats).subtracting(Set(localItemIdsWithoutSecretChats))
-            let remotelyRemovedItemIds = Set(initialRemoteItemIdsWithoutSecretChats).subtracting(Set(remoteItemIds))
-            
-            resultingItemIds = localItemIds.filter { !remotelyRemovedItemIds.contains($0) }
-            resultingItemIds.append(contentsOf: remoteItemIds.filter { !locallyRemovedFromRemoteItemIds.contains($0) && !resultingItemIds.contains($0) })
-        }
-        
-        return postbox.transaction { transaction -> Signal<Void, NoError> in
-            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                return updated
-            })
-            
-            transaction.setPinnedItemIds(groupId: groupId, itemIds: resultingItemIds)
-            
-            updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
-            
-            transaction.updateCurrentPeerNotificationSettings(notificationSettings)
-            
-            for (peerId, autoremoveValue) in ttlPeriods {
-                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                    if peerId.namespace == Namespaces.Peer.CloudUser {
-                        let current = (current as? CachedUserData) ?? CachedUserData()
-                        return current.withUpdatedAutoremoveTimeout(autoremoveValue)
-                    } else if peerId.namespace == Namespaces.Peer.CloudChannel {
-                        let current = (current as? CachedChannelData) ?? CachedChannelData()
-                        return current.withUpdatedAutoremoveTimeout(autoremoveValue)
-                    } else if peerId.namespace == Namespaces.Peer.CloudGroup {
-                        let current = (current as? CachedGroupData) ?? CachedGroupData()
-                        return current.withUpdatedAutoremoveTimeout(autoremoveValue)
-                    } else {
-                        return current
-                    }
-                })
             }
             
-            var allPeersWithMessages = Set<PeerId>()
-            for message in storeMessages {
-                if !allPeersWithMessages.contains(message.id.peerId) {
-                    allPeersWithMessages.insert(message.id.peerId)
-                }
-            }
-            let _ = transaction.addMessages(storeMessages, location: .UpperHistoryBlock)
-            
-            transaction.resetIncomingReadStates(readStates)
-            
-            for (peerId, pts) in channelStates {
-                if let _ = transaction.getPeerChatState(peerId) as? ChannelState {
-                    // skip changing state
-                } else {
-                    transaction.setPeerChatState(peerId, state: ChannelState(pts: pts, invalidatedPts: nil, synchronizedUntilMessageId: nil))
-                }
-            }
-            
-            if remoteItemIds == resultingItemIds {
-                return .complete()
+            var resultingItemIds: [PinnedItemId]
+            if initialRemoteItemIds == localItemIds {
+                resultingItemIds = remoteItemIds
             } else {
-                var inputDialogPeers: [Api.InputDialogPeer] = []
-                for itemId in resultingItemIds {
-                    switch itemId {
-                        case let .peer(peerId):
-                            if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-                                inputDialogPeers.append(Api.InputDialogPeer.inputDialogPeer(peer: inputPeer))
-                            }
+                let locallyRemovedFromRemoteItemIds = Set(initialRemoteItemIdsWithoutSecretChats).subtracting(Set(localItemIdsWithoutSecretChats))
+                let remotelyRemovedItemIds = Set(initialRemoteItemIdsWithoutSecretChats).subtracting(Set(remoteItemIds))
+                
+                resultingItemIds = localItemIds.filter { !remotelyRemovedItemIds.contains($0) }
+                resultingItemIds.append(contentsOf: remoteItemIds.filter { !locallyRemovedFromRemoteItemIds.contains($0) && !resultingItemIds.contains($0) })
+            }
+            
+            return postbox.transaction { transaction -> Signal<Void, NoError> in
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                
+                transaction.setPinnedItemIds(groupId: groupId, itemIds: resultingItemIds)
+                
+                transaction.updateCurrentPeerNotificationSettings(notificationSettings)
+                
+                for (peerId, autoremoveValue) in ttlPeriods {
+                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                        if peerId.namespace == Namespaces.Peer.CloudUser {
+                            let current = (current as? CachedUserData) ?? CachedUserData()
+                            return current.withUpdatedAutoremoveTimeout(autoremoveValue)
+                        } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                            let current = (current as? CachedChannelData) ?? CachedChannelData()
+                            return current.withUpdatedAutoremoveTimeout(autoremoveValue)
+                        } else if peerId.namespace == Namespaces.Peer.CloudGroup {
+                            let current = (current as? CachedGroupData) ?? CachedGroupData()
+                            return current.withUpdatedAutoremoveTimeout(autoremoveValue)
+                        } else {
+                            return current
+                        }
+                    })
+                }
+                
+                var allPeersWithMessages = Set<PeerId>()
+                for message in storeMessages {
+                    if !allPeersWithMessages.contains(message.id.peerId) {
+                        allPeersWithMessages.insert(message.id.peerId)
+                    }
+                }
+                let _ = transaction.addMessages(storeMessages, location: .UpperHistoryBlock)
+                
+                transaction.resetIncomingReadStates(readStates)
+                
+                for (peerId, pts) in channelStates {
+                    if let _ = transaction.getPeerChatState(peerId) as? ChannelState {
+                        // skip changing state
+                    } else {
+                        transaction.setPeerChatState(peerId, state: ChannelState(pts: pts, invalidatedPts: nil, synchronizedUntilMessageId: nil))
                     }
                 }
                 
-                return network.request(Api.functions.messages.reorderPinnedDialogs(flags: 1 << 0, folderId: groupId.rawValue, order: inputDialogPeers))
-                |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                    return .single(Api.Bool.boolFalse)
-                }
-                |> mapToSignal { result -> Signal<Void, NoError> in
-                    return postbox.transaction { transaction -> Void in
+                if remoteItemIds == resultingItemIds {
+                    return .complete()
+                } else {
+                    var inputDialogPeers: [Api.InputDialogPeer] = []
+                    for itemId in resultingItemIds {
+                        switch itemId {
+                            case let .peer(peerId):
+                                if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+                                    inputDialogPeers.append(Api.InputDialogPeer.inputDialogPeer(peer: inputPeer))
+                                }
+                        }
+                    }
+                    
+                    return network.request(Api.functions.messages.reorderPinnedDialogs(flags: 1 << 0, folderId: groupId.rawValue, order: inputDialogPeers))
+                    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                        return .single(Api.Bool.boolFalse)
+                    }
+                    |> mapToSignal { result -> Signal<Void, NoError> in
+                        return postbox.transaction { transaction -> Void in
+                        }
                     }
                 }
             }
+            |> switchToLatest
         }
         |> switchToLatest
     }

@@ -192,7 +192,7 @@ private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: 
                     updatedState = updatedState.withUpdatedEmbeddedState(.terminated)
                     transaction.setPeerChatState(peerId, state: updatedState)
                     if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
-                        updatePeers(transaction: transaction, peers: [peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
+                        updatePeersCustom(transaction: transaction, peers: [peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
                             return updated
                         })
                     }
@@ -266,7 +266,7 @@ private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: 
                     }
                     transaction.setPeerChatState(peerId, state: updatedState)
                     if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
-                        updatePeers(transaction: transaction, peers: [peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
+                        updatePeersCustom(transaction: transaction, peers: [peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
                             return updated
                         })
                     }

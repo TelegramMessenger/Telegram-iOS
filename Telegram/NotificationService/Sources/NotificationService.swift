@@ -1645,7 +1645,7 @@ private final class NotificationServiceHandler {
                                         }
                                         |> then(
                                             stateManager.postbox.transaction { transaction -> (MediaResourceReference, Int64?)? in
-                                                guard let state = transaction.getPeerStoryState(peerId: peerId)?.get(Stories.PeerState.self) else {
+                                                guard let state = transaction.getPeerStoryState(peerId: peerId)?.entry.get(Stories.PeerState.self) else {
                                                     return nil
                                                 }
                                                 let firstUnseenItem = transaction.getStoryItems(peerId: peerId).first(where: { entry in

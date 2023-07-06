@@ -89,6 +89,7 @@ func _internal_joinChatInteractively(with hash: String, account: Account) -> Sig
 }
 
 func _internal_joinLinkInformation(_ hash: String, account: Account) -> Signal<ExternalJoiningChatState, JoinLinkInfoError> {
+    let accountPeerId = account.peerId
     return account.network.request(Api.functions.messages.checkChatInvite(hash: hash), automaticFloodWait: false)
     |> map(Optional.init)
     |> `catch` { error -> Signal<Api.ChatInvite?, JoinLinkInfoError> in
@@ -108,10 +109,8 @@ func _internal_joinLinkInformation(_ hash: String, account: Account) -> Signal<E
                 case let .chatInviteAlready(chat):
                     if let peer = parseTelegramGroupOrChannel(chat: chat) {
                         return account.postbox.transaction({ (transaction) -> ExternalJoiningChatState in
-                            updatePeers(transaction: transaction, peers: [peer], update: { (previous, updated) -> Peer? in
-                                return updated
-                            })
-                            
+                            let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [chat], users: [])
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                             return .alreadyJoined(EnginePeer(peer))
                         })
                         |> castError(JoinLinkInfoError.self)
@@ -120,9 +119,8 @@ func _internal_joinLinkInformation(_ hash: String, account: Account) -> Signal<E
                 case let .chatInvitePeek(chat, expires):
                     if let peer = parseTelegramGroupOrChannel(chat: chat) {
                         return account.postbox.transaction({ (transaction) -> ExternalJoiningChatState in
-                            updatePeers(transaction: transaction, peers: [peer], update: { (previous, updated) -> Peer? in
-                                return updated
-                            })
+                            let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [chat], users: [])
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                             
                             return .peek(EnginePeer(peer), expires)
                         })

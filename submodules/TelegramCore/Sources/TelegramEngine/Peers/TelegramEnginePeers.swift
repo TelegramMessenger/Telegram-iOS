@@ -93,7 +93,7 @@ public extension TelegramEngine {
         }
 
         public func findChannelById(channelId: Int64) -> Signal<EnginePeer?, NoError> {
-            return _internal_findChannelById(postbox: self.account.postbox, network: self.account.network, channelId: channelId)
+            return _internal_findChannelById(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, channelId: channelId)
             |> map { peer in
                 return peer.flatMap(EnginePeer.init)
             }
@@ -132,7 +132,7 @@ public extension TelegramEngine {
         }
 
         public func updatedRemotePeer(peer: PeerReference) -> Signal<Peer, UpdatedRemotePeerError> {
-            return _internal_updatedRemotePeer(postbox: self.account.postbox, network: self.account.network, peer: peer)
+            return _internal_updatedRemotePeer(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, peer: peer)
         }
 
         public func chatOnlineMembers(peerId: PeerId) -> Signal<Int32, NoError> {
@@ -327,7 +327,7 @@ public extension TelegramEngine {
         }
 
         public func channelAdminEventLog(peerId: PeerId) -> ChannelAdminEventLogContext {
-            return ChannelAdminEventLogContext(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
+            return ChannelAdminEventLogContext(postbox: self.account.postbox, network: self.account.network, peerId: peerId, accountPeerId: self.account.peerId)
         }
 
         public func updateChannelMemberBannedRights(peerId: PeerId, memberId: PeerId, rights: TelegramChatBannedRights?) -> Signal<(ChannelParticipant?, RenderedChannelParticipant?, Bool), NoError> {
@@ -415,7 +415,7 @@ public extension TelegramEngine {
         }
 
         public func availableGroupsForChannelDiscussion() -> Signal<[EnginePeer], AvailableChannelDiscussionGroupError> {
-            return _internal_availableGroupsForChannelDiscussion(postbox: self.account.postbox, network: self.account.network)
+            return _internal_availableGroupsForChannelDiscussion(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network)
             |> map { peers -> [EnginePeer] in
                 return peers.map(EnginePeer.init)
             }
@@ -637,7 +637,7 @@ public extension TelegramEngine {
         }
 
         public func notificationExceptionsList() -> Signal<NotificationExceptionsList, NoError> {
-            return _internal_notificationExceptionsList(postbox: self.account.postbox, network: self.account.network)
+            return _internal_notificationExceptionsList(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network)
         }
 
         public func fetchAndUpdateCachedPeerData(peerId: PeerId) -> Signal<Bool, NoError> {

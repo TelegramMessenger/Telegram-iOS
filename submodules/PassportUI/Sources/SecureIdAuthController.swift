@@ -214,7 +214,7 @@ public final class SecureIdAuthController: ViewController, StandalonePresentable
         
         switch self.mode {
             case let .form(peerId, scope, publicKey, callbackUrl, _, _):
-                self.formDisposable = (combineLatest(requestSecureIdForm(postbox: context.account.postbox, network: context.account.network, peerId: peerId, scope: scope, publicKey: publicKey), secureIdConfiguration(postbox: context.account.postbox, network: context.account.network) |> castError(RequestSecureIdFormError.self))
+                self.formDisposable = (combineLatest(requestSecureIdForm(accountPeerId: context.account.peerId, postbox: context.account.postbox, network: context.account.network, peerId: peerId, scope: scope, publicKey: publicKey), secureIdConfiguration(postbox: context.account.postbox, network: context.account.network) |> castError(RequestSecureIdFormError.self))
                 |> mapToSignal { form, configuration -> Signal<SecureIdEncryptedFormData, RequestSecureIdFormError> in
                     return context.engine.data.get(
                         TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),

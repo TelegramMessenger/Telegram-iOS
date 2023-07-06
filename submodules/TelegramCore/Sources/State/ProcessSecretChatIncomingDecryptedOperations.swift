@@ -384,7 +384,7 @@ func processSecretChatIncomingDecryptedOperations(encryptionProvider: Encryption
             updatedPeer = updatedPeer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)
         }
         if !peer.isEqual(updatedPeer) {
-            updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
+            updatePeersCustom(transaction: transaction, peers: [updatedPeer], update: { _, updated in
                 return updated
             })
         }

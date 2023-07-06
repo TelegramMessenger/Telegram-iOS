@@ -1872,7 +1872,7 @@ func resolveForumThreads(postbox: Postbox, network: Network, state: AccountMutab
     }
 }
 
-func resolveForumThreads(postbox: Postbox, network: Network, ids: [MessageId]) -> Signal<Void, NoError> {
+func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, network: Network, ids: [MessageId]) -> Signal<Void, NoError> {
     let forumThreadIds = Set(ids)
     
     if forumThreadIds.isEmpty {
@@ -1965,20 +1965,8 @@ func resolveForumThreads(postbox: Postbox, network: Network, ids: [MessageId]) -
                             }
                         }
                         
-                        var peers: [Peer] = []
-                        for user in users {
-                            if let telegramUser = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
-                                peers.append(telegramUser)
-                            }
-                        }
-                        for chat in chats {
-                            if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
-                                peers.append(groupOrChannel)
-                            }
-                        }
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                            return updated
-                        })
+                        let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                         
                         let _ = transaction.addMessages(storeMessages, location: .Random)
                     }
@@ -1994,7 +1982,7 @@ func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: Fe
     
     for message in fetchedChatList.storeMessages {
         if let threadId = message.threadId {
-            if let channel = fetchedChatList.peers.first(where: { $0.id == message.id.peerId }) as? TelegramChannel, case .group = channel.info, channel.flags.contains(.isForum) {
+            if let channel = fetchedChatList.peers.peers.first(where: { $0.key == message.id.peerId })?.value as? TelegramChannel, case .group = channel.info, channel.flags.contains(.isForum) {
                 forumThreadIds.insert(MessageId(peerId: message.id.peerId, namespace: message.id.namespace, id: Int32(clamping: threadId)))
             }
         }
@@ -2017,7 +2005,7 @@ func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: Fe
             } else {
                 var signals: [Signal<(Peer, Api.messages.ForumTopics)?, NoError>] = []
                 for (peerId, threadIds) in missingForumThreadIds {
-                    guard let peer = fetchedChatList.peers.first(where: { $0.id == peerId }), let inputChannel = apiInputChannel(peer) else {
+                    guard let peer = fetchedChatList.peers.get(peerId), let inputChannel = apiInputChannel(peer) else {
                         Logger.shared.log("resolveForumThreads", "can't fetch thread infos \(threadIds) for peer \(peerId): can't create inputChannel")
                         continue
                     }
@@ -2042,12 +2030,7 @@ func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: Fe
                             
                             switch result {
                             case let .forumTopics(_, _, topics, messages, chats, users, _):
-                                fetchedChatList.peers.append(contentsOf: chats.compactMap { chat in
-                                    return parseTelegramGroupOrChannel(chat: chat)
-                                })
-                                fetchedChatList.peers.append(contentsOf: users.compactMap { user in
-                                    return TelegramUser(user: user)
-                                })
+                                fetchedChatList.peers = fetchedChatList.peers.union(with: AccumulatedPeers(chats: chats, users: users))
                                 
                                 for message in messages {
                                     if let message = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
@@ -2098,7 +2081,7 @@ func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: Fe
     }
 }
 
-func resolveStories<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, accountPeerId: PeerId, storyIds: Set<StoryId>, additionalPeers: [PeerId: Peer], result: T) -> Signal<T, NoError> {
+func resolveStories<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, accountPeerId: PeerId, storyIds: Set<StoryId>, additionalPeers: AccumulatedPeers, result: T) -> Signal<T, NoError> {
     var storyBuckets: [PeerId: [Int32]] = [:]
     for id in storyIds {
         if storyBuckets[id.peerId] == nil {
@@ -2113,7 +2096,7 @@ func resolveStories<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, 
         while idOffset < allIds.count {
             let bucketLength = min(100, allIds.count - idOffset)
             let ids = Array(allIds[idOffset ..< (idOffset + bucketLength)])
-            signals.append(_internal_getStoriesById(accountPeerId: accountPeerId, postbox: postbox, source: source, peerId: peerId, peerReference: additionalPeers[peerId].flatMap(PeerReference.init), ids: ids)
+            signals.append(_internal_getStoriesById(accountPeerId: accountPeerId, postbox: postbox, source: source, peerId: peerId, peerReference: additionalPeers.get(peerId).flatMap(PeerReference.init), ids: ids)
             |> mapToSignal { result -> Signal<Never, NoError> in
                 return postbox.transaction { transaction -> Void in
                     for id in ids {
@@ -2168,7 +2151,7 @@ func resolveAssociatedStories(postbox: Postbox, network: Network, accountPeerId:
         }
         
         if !missingStoryIds.isEmpty {
-            return resolveStories(postbox: postbox, source: .network(network), accountPeerId: accountPeerId, storyIds: missingStoryIds, additionalPeers: state.insertedPeers, result: state)
+            return resolveStories(postbox: postbox, source: .network(network), accountPeerId: accountPeerId, storyIds: missingStoryIds, additionalPeers: AccumulatedPeers(peers: Array(state.insertedPeers.values)), result: state)
         } else {
             return .single(state)
         }
@@ -2176,7 +2159,7 @@ func resolveAssociatedStories(postbox: Postbox, network: Network, accountPeerId:
     |> switchToLatest
 }
 
-func resolveAssociatedStories<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, accountPeerId: PeerId, messages: [StoreMessage], additionalPeers: [PeerId: Peer], result: T) -> Signal<T, NoError> {
+func resolveAssociatedStories<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, accountPeerId: PeerId, messages: [StoreMessage], additionalPeers: AccumulatedPeers, result: T) -> Signal<T, NoError> {
     return postbox.transaction { transaction -> Signal<T, NoError> in
         var missingStoryIds = Set<StoryId>()
         
@@ -4041,32 +4024,17 @@ func replayFinalState(
                         transaction.globalNotificationSettingsUpdated()
                 }
             case let .MergeApiChats(chats):
-                var peers: [Peer] = []
-                for chat in chats {
-                    if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
-                        peers.append(groupOrChannel)
-                    }
-                }
-                updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                    return updated
-                })
+                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: [])
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
             case let .MergeApiUsers(users):
-                var peers: [Peer] = []
-                for user in users {
-                    if let telegramUser = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
-                        peers.append(telegramUser)
-                    }
-                }
-            
-                if let updatedAccountPeer = peers.first(where: { $0.id == accountPeerId }) as? TelegramUser, let previousAccountPeer = transaction.getPeer(accountPeerId) as? TelegramUser {
+                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [], users: users)
+                if let updatedAccountPeer = parsedPeers.get(accountPeerId) as? TelegramUser, let previousAccountPeer = transaction.getPeer(accountPeerId) as? TelegramUser {
                     if updatedAccountPeer.isPremium != previousAccountPeer.isPremium {
                         isPremiumUpdated = true
                     }
                 }
             
-                updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                    return updated
-                })
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                 updateContacts(transaction: transaction, apiUsers: users)
             case let .UpdatePeer(id, f):
                 if let peer = f(transaction.getPeer(id)) {
@@ -4076,7 +4044,7 @@ func replayFinalState(
                         }
                     }
                     
-                    updatePeers(transaction: transaction, peers: [peer], update: { _, updated in
+                    updatePeersCustom(transaction: transaction, peers: [peer], update: { _, updated in
                         return updated
                     })
                 }
@@ -4530,7 +4498,7 @@ func replayFinalState(
                 }
                 
                 var appliedMaxReadId: Int32?
-                if let currentState = transaction.getPeerStoryState(peerId: peerId)?.get(Stories.PeerState.self) {
+                if let currentState = transaction.getPeerStoryState(peerId: peerId)?.entry.get(Stories.PeerState.self) {
                     if let appliedMaxReadIdValue = appliedMaxReadId {
                         appliedMaxReadId = max(appliedMaxReadIdValue, currentState.maxReadId)
                     } else {
@@ -4539,9 +4507,9 @@ func replayFinalState(
                 }
                 
                 transaction.setStoryItems(peerId: peerId, items: updatedPeerEntries)
-                transaction.setPeerStoryState(peerId: peerId, state: CodableEntry(Stories.PeerState(
+                transaction.setPeerStoryState(peerId: peerId, state: Stories.PeerState(
                     maxReadId: appliedMaxReadId ?? 0
-                )))
+                ).postboxRepresentation)
                 
                 if let parsedItem = Stories.StoredItem(apiStoryItem: story, peerId: peerId, transaction: transaction) {
                     storyUpdates.append(InternalStoryUpdate.added(peerId: peerId, item: parsedItem))
@@ -4550,13 +4518,13 @@ func replayFinalState(
                 }
             case let .UpdateReadStories(peerId, maxId):
                 var appliedMaxReadId = maxId
-                if let currentState = transaction.getPeerStoryState(peerId: peerId)?.get(Stories.PeerState.self) {
+                if let currentState = transaction.getPeerStoryState(peerId: peerId)?.entry.get(Stories.PeerState.self) {
                     appliedMaxReadId = max(appliedMaxReadId, currentState.maxReadId)
                 }
                 
-                transaction.setPeerStoryState(peerId: peerId, state: CodableEntry(Stories.PeerState(
+                transaction.setPeerStoryState(peerId: peerId, state: Stories.PeerState(
                     maxReadId: appliedMaxReadId
-                )))
+                ).postboxRepresentation)
             
                 storyUpdates.append(InternalStoryUpdate.read(peerId: peerId, maxId: maxId))
         }

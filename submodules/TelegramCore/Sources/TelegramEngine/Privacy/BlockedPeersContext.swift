@@ -57,53 +57,38 @@ public final class BlockedPeersContext {
         }
         self._state = BlockedPeersContextState(isLoadingMore: true, canLoadMore: self._state.canLoadMore, totalCount: self._state.totalCount, peers: self._state.peers)
         let postbox = self.account.postbox
+        let accountPeerId = self.account.peerId
         self.disposable.set((self.account.network.request(Api.functions.contacts.getBlocked(offset: Int32(self._state.peers.count), limit: 64))
         |> retryRequest
         |> mapToSignal { result -> Signal<(peers: [RenderedPeer], canLoadMore: Bool, totalCount: Int?), NoError> in
             return postbox.transaction { transaction -> (peers: [RenderedPeer], canLoadMore: Bool, totalCount: Int?) in
                 switch result {
                     case let .blocked(blocked, chats, users):
-                        var peers: [Peer] = []
-                        for chat in chats {
-                            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                peers.append(groupOrChannel)
-                            }
-                        }
-                        for user in users {
-                            peers.append(TelegramUser(user: user))
-                        }
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated in updated })
-                        
+                        let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                            
                         var renderedPeers: [RenderedPeer] = []
                         for blockedPeer in blocked {
                             switch blockedPeer {
-                                case let .peerBlocked(peerId, _):
-                                    if let peer = transaction.getPeer(peerId.peerId) {
-                                        renderedPeers.append(RenderedPeer(peer: peer))
-                                    }
+                            case let .peerBlocked(peerId, _):
+                                if let peer = transaction.getPeer(peerId.peerId) {
+                                    renderedPeers.append(RenderedPeer(peer: peer))
+                                }
                             }
                         }
                         
                         return (renderedPeers, false, nil)
                     case let .blockedSlice(count, blocked, chats, users):
-                        var peers: [Peer] = []
-                        for chat in chats {
-                            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                peers.append(groupOrChannel)
-                            }
-                        }
-                        for user in users {
-                            peers.append(TelegramUser(user: user))
-                        }
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated in updated })
+                        let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                         
                         var renderedPeers: [RenderedPeer] = []
                         for blockedPeer in blocked {
                             switch blockedPeer {
-                                case let .peerBlocked(peerId, _):
-                                    if let peer = transaction.getPeer(peerId.peerId) {
-                                        renderedPeers.append(RenderedPeer(peer: peer))
-                                    }
+                            case let .peerBlocked(peerId, _):
+                                if let peer = transaction.getPeer(peerId.peerId) {
+                                    renderedPeers.append(RenderedPeer(peer: peer))
+                                }
                             }
                         }
                         

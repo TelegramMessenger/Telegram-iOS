@@ -283,7 +283,7 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                                         }
                                         return postbox.transaction { transaction -> (UpdatePeerPhotoStatus, MediaResource?, MediaResource?) in
                                             if let peer = transaction.getPeer(peer.id) {
-                                                updatePeers(transaction: transaction, peers: [peer], update: { (_, peer) -> Peer? in
+                                                updatePeersCustom(transaction: transaction, peers: [peer], update: { (_, peer) -> Peer? in
                                                     if let peer = peer as? TelegramUser {
                                                         if customPeerPhotoMode == .suggest || fallback {
                                                             return peer
@@ -369,7 +369,7 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                                             }
 
                                             return postbox.transaction { transaction -> (UpdatePeerPhotoStatus, MediaResource?, MediaResource?) in
-                                                updatePeers(transaction: transaction, peers: [groupOrChannel], update: { _, updated in
+                                                updatePeersCustom(transaction: transaction, peers: [groupOrChannel], update: { _, updated in
                                                     return updated
                                                 })
                                                 return (.complete(groupOrChannel.profileImageRepresentations), photoResult.resource, videoResult?.resource)
@@ -471,7 +471,7 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                         }
                         return postbox.transaction { transaction -> UpdatePeerPhotoStatus in
                             if let peer = transaction.getPeer(peer.id) {
-                                updatePeers(transaction: transaction, peers: [peer], update: { (_, peer) -> Peer? in
+                                updatePeersCustom(transaction: transaction, peers: [peer], update: { (_, peer) -> Peer? in
                                     if let peer = peer as? TelegramUser {
                                         if customPeerPhotoMode == .suggest || fallback {
                                             return peer
@@ -499,7 +499,7 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                             updatedUsers = apiUsers.map { TelegramUser(user: $0) }
                         }
                         return postbox.transaction { transaction -> UpdatePeerPhotoStatus in
-                            updatePeers(transaction: transaction, peers: updatedUsers, update: { (_, updatedPeer) -> Peer? in
+                            updatePeersCustom(transaction: transaction, peers: updatedUsers, update: { (_, updatedPeer) -> Peer? in
                                 return updatedPeer
                             })
                             if fallback {
@@ -542,7 +542,7 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                         if chat.peerId == peer.id {
                             if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                                 return postbox.transaction { transaction -> UpdatePeerPhotoStatus in
-                                    updatePeers(transaction: transaction, peers: [groupOrChannel], update: { _, updated in
+                                    updatePeersCustom(transaction: transaction, peers: [groupOrChannel], update: { _, updated in
                                         return updated
                                     })
                                     

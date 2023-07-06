@@ -247,7 +247,7 @@ func _internal_fetchBotPaymentInvoice(postbox: Postbox, network: Network, source
     }
 }
 
-func _internal_fetchBotPaymentForm(postbox: Postbox, network: Network, source: BotPaymentInvoiceSource, themeParams: [String: Any]?) -> Signal<BotPaymentForm, BotPaymentFormRequestError> {
+func _internal_fetchBotPaymentForm(accountPeerId: PeerId, postbox: Postbox, network: Network, source: BotPaymentInvoiceSource, themeParams: [String: Any]?) -> Signal<BotPaymentForm, BotPaymentFormRequestError> {
     return postbox.transaction { transaction -> Api.InputInvoice? in
         switch source {
         case let .message(messageId):
@@ -286,14 +286,8 @@ func _internal_fetchBotPaymentForm(postbox: Postbox, network: Network, source: B
                         let _ = description
                         let _ = photo
                         
-                        var peers: [Peer] = []
-                        for user in apiUsers {
-                            let parsed = TelegramUser(user: user)
-                            peers.append(parsed)
-                        }
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                            return updated
-                        })
+                        let parsedPeers = AccumulatedPeers(users: apiUsers)
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
 
                         let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
                         var parsedNativeProvider: BotPaymentNativeProvider?
@@ -577,6 +571,7 @@ public enum RequestBotPaymentReceiptError {
 }
 
 func _internal_requestBotPaymentReceipt(account: Account, messageId: MessageId) -> Signal<BotPaymentReceipt, RequestBotPaymentReceiptError> {
+    let accountPeerId = account.peerId
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
     }
@@ -594,11 +589,8 @@ func _internal_requestBotPaymentReceipt(account: Account, messageId: MessageId) 
             return account.postbox.transaction { transaction -> BotPaymentReceipt in
                 switch result {
                 case let .paymentReceipt(_, _, botId, _, title, description, photo, invoice, info, shipping, tipAmount, currency, totalAmount, credentialsTitle, users):
-                    var peers: [Peer] = []
-                    for user in users {
-                        peers.append(TelegramUser(user: user))
-                    }
-                    updatePeers(transaction: transaction, peers: peers, update: { _, updated in return updated })
+                    let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [], users: users)
+                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
 
                     let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
                     let parsedInfo = info.flatMap(BotPaymentRequestedInfo.init)

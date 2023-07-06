@@ -89,7 +89,7 @@ public extension TelegramEngine {
                 }
                 
                 if let peer = transaction.getPeer(peerId) as? TelegramUser {
-                    updatePeers(transaction: transaction, peers: [peer.withUpdatedEmojiStatus(file.flatMap({ PeerEmojiStatus(fileId: $0.fileId.id, expirationDate: expirationDate) }))], update: { _, updated in
+                    updatePeersCustom(transaction: transaction, peers: [peer.withUpdatedEmojiStatus(file.flatMap({ PeerEmojiStatus(fileId: $0.fileId.id, expirationDate: expirationDate) }))], update: { _, updated in
                         updated
                     })
                 }

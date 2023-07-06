@@ -317,14 +317,7 @@ public final class StorySubscriptionsContext {
                     case let .allStories(flags, _, state, userStories, users):
                         //TODO:count
                         
-                        var peers: [Peer] = []
-                        var peerPresences: [PeerId: Api.User] = [:]
-                        
-                        for user in users {
-                            let telegramUser = TelegramUser(user: user)
-                            peers.append(telegramUser)
-                            peerPresences[telegramUser.id] = user
-                        }
+                        let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [], users: users)
                         
                         let hasMore: Bool = (flags & (1 << 0)) != 0
                         
@@ -354,9 +347,9 @@ public final class StorySubscriptionsContext {
                                 peerEntries.append(peerId)
                                 
                                 transaction.setStoryItems(peerId: peerId, items: updatedPeerEntries)
-                                transaction.setPeerStoryState(peerId: peerId, state: CodableEntry(Stories.PeerState(
+                                transaction.setPeerStoryState(peerId: peerId, state: Stories.PeerState(
                                     maxReadId: maxReadId ?? 0
-                                )))
+                                ).postboxRepresentation)
                             }
                         }
                         
@@ -379,10 +372,7 @@ public final class StorySubscriptionsContext {
                             hasMore: hasMore
                         )), peerIds: peerEntries)
                         
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                            return updated
-                        })
-                        updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                     }
                 }
                 |> deliverOn(self.queue)).start(completed: { [weak self] in
@@ -549,6 +539,7 @@ public final class PeerStoryListContext {
             
             let peerId = self.peerId
             let account = self.account
+            let accountPeerId = account.peerId
             let isArchived = self.isArchived
             self.requestDisposable = (self.account.postbox.transaction { transaction -> Api.InputUser? in
                 return transaction.getPeer(peerId).flatMap(apiInputUser)
@@ -565,7 +556,9 @@ public final class PeerStoryListContext {
                     signal = account.network.request(Api.functions.stories.getPinnedStories(userId: inputUser, offsetId: Int32(loadMoreToken), limit: 100))
                 }
                 return signal
-                |> map(Optional.init)
+                |> map { result -> Api.stories.Stories? in
+                    return result
+                }
                 |> `catch` { _ -> Signal<Api.stories.Stories?, NoError> in
                     return .single(nil)
                 }
@@ -582,19 +575,7 @@ public final class PeerStoryListContext {
                         case let .stories(count, stories, users):
                             totalCount = Int(count)
                             
-                            var peers: [Peer] = []
-                            var peerPresences: [PeerId: Api.User] = [:]
-                            
-                            for user in users {
-                                let telegramUser = TelegramUser(user: user)
-                                peers.append(telegramUser)
-                                peerPresences[telegramUser.id] = user
-                            }
-                            
-                            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                                return updated
-                            })
-                            updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
                             
                             for story in stories {
                                 if let storedItem = Stories.StoredItem(apiStoryItem: story, peerId: peerId, transaction: transaction) {
@@ -897,16 +878,21 @@ public final class PeerExpiringStoryListContext {
             return self.statePromise.get()
         }
         
+        private let polledOnce = ValuePromise<Bool>(false, ignoreRepeated: true)
+        
         init(queue: Queue, account: Account, peerId: EnginePeer.Id) {
             self.queue = queue
             self.account = account
             self.peerId = peerId
             
-            self.listDisposable = (account.postbox.combinedView(keys: [
-                PostboxViewKey.storiesState(key: .peer(peerId)),
-                PostboxViewKey.storyItems(peerId: peerId)
-            ])
-            |> deliverOn(self.queue)).start(next: { [weak self] views in
+            self.listDisposable = (combineLatest(queue: self.queue,
+                account.postbox.combinedView(keys: [
+                    PostboxViewKey.storiesState(key: .peer(peerId)),
+                    PostboxViewKey.storyItems(peerId: peerId)
+                ]),
+                self.polledOnce.get()
+            )
+            |> deliverOn(self.queue)).start(next: { [weak self] views, polledOnce in
                 guard let `self` = self else {
                     return
                 }
@@ -961,7 +947,8 @@ public final class PeerExpiringStoryListContext {
                     return State(
                         items: items,
                         isCached: false,
-                        maxReadId: state?.maxReadId ?? 0
+                        maxReadId: state?.maxReadId ?? 0,
+                        isLoading: items.isEmpty && !polledOnce
                     )
                 }
                 |> deliverOn(self.queue)).start(next: { [weak self] state in
@@ -987,6 +974,7 @@ public final class PeerExpiringStoryListContext {
             self.pollDisposable?.dispose()
             
             let account = self.account
+            let accountPeerId = account.peerId
             let peerId = self.peerId
             self.pollDisposable = (self.account.postbox.transaction { transaction -> Api.InputUser? in
                 return transaction.getPeer(peerId).flatMap(apiInputUser)
@@ -1006,14 +994,7 @@ public final class PeerExpiringStoryListContext {
                         updatedPeerEntries.removeAll()
                         
                         if let result = result, case let .userStories(stories, users) = result {
-                            var peers: [Peer] = []
-                            var peerPresences: [PeerId: Api.User] = [:]
-                            
-                            for user in users {
-                                let telegramUser = TelegramUser(user: user)
-                                peers.append(telegramUser)
-                                peerPresences[telegramUser.id] = user
-                            }
+                            let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [], users: users)
                             
                             switch stories {
                             case let .userStories(_, userId, maxReadId, stories):
@@ -1033,15 +1014,12 @@ public final class PeerExpiringStoryListContext {
                                     }
                                 }
                                 
-                                transaction.setPeerStoryState(peerId: peerId, state: CodableEntry(Stories.PeerState(
+                                transaction.setPeerStoryState(peerId: peerId, state: Stories.PeerState(
                                     maxReadId: maxReadId ?? 0
-                                )))
+                                ).postboxRepresentation)
                             }
                             
-                            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                                return updated
-                            })
-                            updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                         }
                         
                         transaction.setStoryItems(peerId: peerId, items: updatedPeerEntries)
@@ -1052,6 +1030,9 @@ public final class PeerExpiringStoryListContext {
                 guard let `self` = self else {
                     return
                 }
+                
+                self.polledOnce.set(true)
+                
                 self.pollDisposable = (Signal<Never, NoError>.complete() |> suspendAwareDelay(60.0, queue: self.queue) |> deliverOn(self.queue)).start(completed: { [weak self] in
                     guard let `self` = self else {
                         return
@@ -1098,6 +1079,7 @@ public final class PeerExpiringStoryListContext {
         public let items: [Item]
         public let isCached: Bool
         public let maxReadId: Int32
+        public let isLoading: Bool
         
         public var hasUnseen: Bool {
             return self.items.contains(where: { $0.id > self.maxReadId })
@@ -1117,10 +1099,11 @@ public final class PeerExpiringStoryListContext {
             return self.items.contains(where: { $0.id > self.maxReadId && $0.isCloseFriends })
         }
         
-        public init(items: [Item], isCached: Bool, maxReadId: Int32) {
+        public init(items: [Item], isCached: Bool, maxReadId: Int32, isLoading: Bool) {
             self.items = items
             self.isCached = isCached
             self.maxReadId = maxReadId
+            self.isLoading = isLoading
         }
         
         public static func ==(lhs: State, rhs: State) -> Bool {
@@ -1131,6 +1114,9 @@ public final class PeerExpiringStoryListContext {
                 return false
             }
             if lhs.maxReadId != rhs.maxReadId {
+                return false
+            }
+            if lhs.isLoading != rhs.isLoading {
                 return false
             }
             return true
@@ -1174,14 +1160,7 @@ public func _internal_pollPeerStories(postbox: Postbox, network: Network, accoun
                 updatedPeerEntries.removeAll()
                 
                 if let result = result, case let .userStories(stories, users) = result {
-                    var peers: [Peer] = []
-                    var peerPresences: [PeerId: Api.User] = [:]
-                    
-                    for user in users {
-                        let telegramUser = TelegramUser(user: user)
-                        peers.append(telegramUser)
-                        peerPresences[telegramUser.id] = user
-                    }
+                    let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [], users: users)
                     
                     switch stories {
                     case let .userStories(_, userId, maxReadId, stories):
@@ -1201,15 +1180,12 @@ public func _internal_pollPeerStories(postbox: Postbox, network: Network, accoun
                             }
                         }
                         
-                        transaction.setPeerStoryState(peerId: peerId, state: CodableEntry(Stories.PeerState(
+                        transaction.setPeerStoryState(peerId: peerId, state: Stories.PeerState(
                             maxReadId: maxReadId ?? 0
-                        )))
+                        ).postboxRepresentation)
                     }
                     
-                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                        return updated
-                    })
-                    updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
+                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                 }
                 
                 transaction.setStoryItems(peerId: peerId, items: updatedPeerEntries)

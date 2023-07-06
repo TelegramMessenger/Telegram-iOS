@@ -10,6 +10,7 @@ public enum UpdatePeerTitleError {
 }
 
 func _internal_updatePeerTitle(account: Account, peerId: PeerId, title: String) -> Signal<Void, UpdatePeerTitleError> {
+    let accountPeerId = account.peerId
     return account.postbox.transaction { transaction -> Signal<Void, UpdatePeerTitleError> in
         if let peer = transaction.getPeer(peerId) {
             if let peer = peer as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
@@ -21,10 +22,9 @@ func _internal_updatePeerTitle(account: Account, peerId: PeerId, title: String) 
                         account.stateManager.addUpdates(result)
                         
                         return account.postbox.transaction { transaction -> Void in
-                            if let apiChat = apiUpdatesGroups(result).first, let updatedPeer = parseTelegramGroupOrChannel(chat: apiChat) {
-                                updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
-                                    return updated
-                                })
+                            if let apiChat = apiUpdatesGroups(result).first {
+                                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [apiChat], users: [])
+                                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                             }
                         } |> mapError { _ -> UpdatePeerTitleError in }
                     }
@@ -37,10 +37,9 @@ func _internal_updatePeerTitle(account: Account, peerId: PeerId, title: String) 
                         account.stateManager.addUpdates(result)
                         
                         return account.postbox.transaction { transaction -> Void in
-                            if let apiChat = apiUpdatesGroups(result).first, let updatedPeer = parseTelegramGroupOrChannel(chat: apiChat) {
-                                updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
-                                    return updated
-                                })
+                            if let apiChat = apiUpdatesGroups(result).first {
+                                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [apiChat], users: [])
+                                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                             }
                         } |> mapError { _ -> UpdatePeerTitleError in }
                     }

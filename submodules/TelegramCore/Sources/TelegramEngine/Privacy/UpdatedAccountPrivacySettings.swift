@@ -160,7 +160,7 @@ func _internal_requestAccountPrivacySettings(account: Account) -> Signal<Account
         }
         
         return account.postbox.transaction { transaction -> AccountPrivacySettings in
-            updatePeers(transaction: transaction, peers: peers.map { $0.peer }, update: { _, updated in
+            updatePeersCustom(transaction: transaction, peers: peers.map { $0.peer }, update: { _, updated in
                 return updated
             })
             

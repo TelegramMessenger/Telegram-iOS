@@ -498,15 +498,15 @@ public extension TelegramEngine {
         }
                 
         public func addBotToAttachMenu(botId: PeerId, allowWrite: Bool) -> Signal<Bool, AddBotToAttachMenuError> {
-            return _internal_addBotToAttachMenu(postbox: self.account.postbox, network: self.account.network, botId: botId, allowWrite: allowWrite)
+            return _internal_addBotToAttachMenu(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, botId: botId, allowWrite: allowWrite)
         }
         
         public func removeBotFromAttachMenu(botId: PeerId) -> Signal<Bool, NoError> {
-            return _internal_removeBotFromAttachMenu(postbox: self.account.postbox, network: self.account.network, botId: botId)
+            return _internal_removeBotFromAttachMenu(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, botId: botId)
         }
         
         public func getAttachMenuBot(botId: PeerId, cached: Bool = false) -> Signal<AttachMenuBot, GetAttachMenuBotError> {
-            return _internal_getAttachMenuBot(postbox: self.account.postbox, network: self.account.network, botId: botId, cached: cached)
+            return _internal_getAttachMenuBot(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, botId: botId, cached: cached)
         }
         
         public func attachMenuBots() -> Signal<[AttachMenuBot], NoError> {

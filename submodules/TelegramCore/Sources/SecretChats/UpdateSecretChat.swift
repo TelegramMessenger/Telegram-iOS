@@ -58,7 +58,7 @@ func updateSecretChat(encryptionProvider: EncryptionProvider, accountPeerId: Pee
                     updatedState = secretChatAddReportCurrentLayerSupportOperationAndUpdateRequestedLayer(transaction: transaction, peerId: currentPeer.id, state: updatedState)
                     
                     transaction.setPeerChatState(currentPeer.id, state: updatedState)
-                    updatePeers(transaction: transaction, peers: [currentPeer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
+                    updatePeersCustom(transaction: transaction, peers: [currentPeer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
                         return updated
                     })
                 } else {
@@ -73,7 +73,7 @@ func updateSecretChat(encryptionProvider: EncryptionProvider, accountPeerId: Pee
                 
                 let state = currentState.withUpdatedEmbeddedState(.terminated)
                 let peer = currentPeer.withUpdatedEmbeddedState(state.embeddedState.peerState)
-                updatePeers(transaction: transaction, peers: [peer], update: { _, updated in return updated })
+                updatePeersCustom(transaction: transaction, peers: [peer], update: { _, updated in return updated })
                 transaction.setPeerChatState(peer.id, state: state)
                 transaction.operationLogRemoveAllEntries(peerId: peer.id, tag: OperationLogTags.SecretOutgoing)
                 
@@ -101,7 +101,7 @@ func updateSecretChat(encryptionProvider: EncryptionProvider, accountPeerId: Pee
                         transaction.setPeerChatState(chat.peerId, state: updatedState)
                         
                         let peer = TelegramSecretChat(id: chat.peerId, creationDate: date, regularPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(adminId)), accessHash: accessHash, role: updatedState.role, embeddedState: updatedState.embeddedState.peerState, messageAutoremoveTimeout: nil)
-                        updatePeers(transaction: transaction, peers: [peer], update: { _, updated in return updated })
+                        updatePeersCustom(transaction: transaction, peers: [peer], update: { _, updated in return updated })
                         if folderId != nil {
                             transaction.updatePeerChatListInclusion(peer.id, inclusion: .ifHasMessagesOrOneOf(groupId: Namespaces.PeerGroup.archive, pinningIndex: nil, minTimestamp: date))
                         }
@@ -126,7 +126,7 @@ func updateSecretChat(encryptionProvider: EncryptionProvider, accountPeerId: Pee
             if let requestData = requestData, currentPeer == nil && adminId == accountPeerId.id._internalGetInt64Value() {
                 let state = SecretChatState(role: .creator, embeddedState: .handshake(.requested(g: requestData.g, p: requestData.p, a: requestData.a)), keychain: SecretChatKeychain(keys: []), keyFingerprint: nil, messageAutoremoveTimeout: nil)
                 let peer = TelegramSecretChat(id: chat.peerId, creationDate: date, regularPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(participantId)), accessHash: accessHash, role: state.role, embeddedState: state.embeddedState.peerState, messageAutoremoveTimeout: nil)
-                updatePeers(transaction: transaction, peers: [peer], update: { _, updated in return updated })
+                updatePeersCustom(transaction: transaction, peers: [peer], update: { _, updated in return updated })
                 transaction.setPeerChatState(peer.id, state: state)
                 transaction.resetIncomingReadStates([peer.id: [
                     Namespaces.Message.SecretIncoming: .indexBased(maxIncomingReadIndex: MessageIndex.lowerBound(peerId: peer.id), maxOutgoingReadIndex: MessageIndex.lowerBound(peerId: peer.id), count: 0, markedUnread: false),

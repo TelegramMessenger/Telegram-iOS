@@ -6,54 +6,60 @@ public enum PostboxStoryStatesKey: Hashable {
     case peer(PeerId)
 }
 
-private extension PostboxStoryStatesKey {
-    init(tableKey: StoryStatesTable.Key) {
-        switch tableKey {
-        case .local:
-            self = .local
-        case let .subscriptions(key):
-            self = .subscriptions(key)
-        case let .peer(peerId):
-            self = .peer(peerId)
-        }
-    }
-    
-    var tableKey: StoryStatesTable.Key {
-        switch self {
-        case .local:
-            return .local
-        case let .subscriptions(key):
-            return .subscriptions(key)
-        case let .peer(peerId):
-            return .peer(peerId)
-        }
-    }
-}
-
 final class MutableStoryStatesView: MutablePostboxView {
     let key: PostboxStoryStatesKey
     var value: CodableEntry?
 
     init(postbox: PostboxImpl, key: PostboxStoryStatesKey) {
         self.key = key
-        self.value = postbox.storyStatesTable.get(key: key.tableKey)
+        
+        let _ = self.refreshDueToExternalTransaction(postbox: postbox)
     }
     
     func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
-        if !transaction.storyStatesEvents.isEmpty {
-            let tableKey = self.key.tableKey
-            loop: for event in transaction.storyStatesEvents {
-                switch event {
-                case .set(tableKey):
-                    let value = postbox.storyStatesTable.get(key: self.key.tableKey)
-                    if value != self.value {
-                        self.value = value
-                        updated = true
+        switch self.key {
+        case .local, .subscriptions:
+            let storyGeneralKey: StoryGeneralStatesTable.Key
+            switch self.key {
+            case .local:
+                storyGeneralKey = .local
+            case let .subscriptions(value):
+                storyGeneralKey = .subscriptions(value)
+            case .peer:
+                assertionFailure()
+                return false
+            }
+            if !transaction.storyGeneralStatesEvents.isEmpty {
+                loop: for event in transaction.storyGeneralStatesEvents {
+                    switch event {
+                    case .set(storyGeneralKey):
+                        let value = postbox.storyGeneralStatesTable.get(key: storyGeneralKey)
+                        if value != self.value {
+                            self.value = value
+                            updated = true
+                        }
+                        break loop
+                    default:
+                        break
                     }
-                    break loop
-                default:
-                    break
+                }
+            }
+        case let .peer(peerId):
+            let storyPeerKey: StoryPeerStatesTable.Key = .peer(peerId)
+            if !transaction.storyPeerStatesEvents.isEmpty {
+                loop: for event in transaction.storyPeerStatesEvents {
+                    switch event {
+                    case .set(storyPeerKey):
+                        let value = postbox.storyPeerStatesTable.get(key: storyPeerKey)?.entry
+                        if value != self.value {
+                            self.value = value
+                            updated = true
+                        }
+                        break loop
+                    default:
+                        break
+                    }
                 }
             }
         }
@@ -62,7 +68,16 @@ final class MutableStoryStatesView: MutablePostboxView {
     }
 
     func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
-        let value = postbox.storyStatesTable.get(key: self.key.tableKey)
+        let value: CodableEntry?
+        switch self.key {
+        case .local:
+            value = postbox.storyGeneralStatesTable.get(key: .local)
+        case let .subscriptions(valueKey):
+            value = postbox.storyGeneralStatesTable.get(key: .subscriptions(valueKey))
+        case let .peer(peerId):
+            value = postbox.storyPeerStatesTable.get(key: .peer(peerId))?.entry
+        }
+        
         if value != self.value {
             self.value = value
             return true

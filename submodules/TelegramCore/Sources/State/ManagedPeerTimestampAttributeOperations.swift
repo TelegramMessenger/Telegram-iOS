@@ -87,7 +87,7 @@ func managedPeerTimestampAttributeOperations(network: Network, postbox: Postbox)
                 |> then(postbox.transaction { transaction -> Void in
                     if let peer = transaction.getPeer(entry.peerId) {
                         if let user = peer as? TelegramUser {
-                            updatePeers(transaction: transaction, peers: [user.withUpdatedEmojiStatus(nil)], update: { _, updated in updated })
+                            updatePeersCustom(transaction: transaction, peers: [user.withUpdatedEmojiStatus(nil)], update: { _, updated in updated })
                         }
                     }
                     //failsafe

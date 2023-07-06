@@ -66,14 +66,14 @@ public enum ChatListItemContent {
     }
     
     public struct StoryState: Equatable {
-        public var hasUnseen: Bool
+        public var stats: EngineChatList.StoryStats
         public var hasUnseenCloseFriends: Bool
         
         public init(
-            hasUnseen: Bool,
+            stats: EngineChatList.StoryStats,
             hasUnseenCloseFriends: Bool
         ) {
-            self.hasUnseen = hasUnseen
+            self.stats = stats
             self.hasUnseenCloseFriends = hasUnseenCloseFriends
         }
     }
@@ -138,9 +138,34 @@ public enum ChatListItemContent {
             self.storyState = storyState
         }
     }
+    
+    public struct GroupReferenceData {
+        public var groupId: EngineChatList.Group
+        public var peers: [EngineChatList.GroupItem.Item]
+        public var message: EngineMessage?
+        public var unreadCount: Int
+        public var hiddenByDefault: Bool
+        public var storyState: StoryState?
+        
+        public init(
+            groupId: EngineChatList.Group,
+            peers: [EngineChatList.GroupItem.Item],
+            message: EngineMessage?,
+            unreadCount: Int,
+            hiddenByDefault: Bool,
+            storyState: StoryState?
+        ) {
+            self.groupId = groupId
+            self.peers = peers
+            self.message = message
+            self.unreadCount = unreadCount
+            self.hiddenByDefault = hiddenByDefault
+            self.storyState = storyState
+        }
+    }
 
     case peer(PeerData)
-    case groupReference(groupId: EngineChatList.Group, peers: [EngineChatList.GroupItem.Item], message: EngineMessage?, unreadCount: Int, hiddenByDefault: Bool)
+    case groupReference(GroupReferenceData)
     
     public var chatLocation: ChatLocation? {
         switch self {
@@ -267,8 +292,8 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
             } else if let peer = peerData.peer.peers[peerData.peer.peerId] {
                 self.interaction.peerSelected(peer, nil, nil, peerData.promoInfo)
             }
-        case let .groupReference(groupId, _, _, _, _):
-            self.interaction.groupSelected(groupId)
+        case let .groupReference(groupReferenceData):
+            self.interaction.groupSelected(groupReferenceData.groupId)
         }
     }
         
@@ -1005,9 +1030,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 return nil
             }
             switch item.content {
-                case let .groupReference(_, _, _, unreadCount, _):
+                case let .groupReference(groupReferenceData):
                     var result = item.presentationData.strings.ChatList_ArchivedChatsTitle
-                    let allCount = unreadCount
+                let allCount = groupReferenceData.unreadCount
                     if allCount > 0 {
                         result += "\n\(item.presentationData.strings.VoiceOver_Chat_UnreadMessages(Int32(allCount)))"
                     }
@@ -1037,7 +1062,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 return nil
             }
             switch item.content {
-                case let .groupReference(_, peers, messageValue, _, _):
+                case let .groupReference(groupReferenceData):
+                    let peers = groupReferenceData.peers
+                    let messageValue = groupReferenceData.message
                     if let message = messageValue, let peer = peers.first?.peer {
                         let messages = [message]
                         var result = ""
@@ -1314,12 +1341,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 if peerData.peer.peerId.namespace == Namespaces.Peer.SecretChat {
                     enablePreview = false
                 }
-            case let .groupReference(_, _, _, _, hiddenByDefault):
-                if let previousItem = previousItem, case let .groupReference(_, _, _, _, previousHiddenByDefault) = previousItem.content, hiddenByDefault != previousHiddenByDefault {
+            case let .groupReference(groupReferenceData):
+                if let previousItem = previousItem, case let .groupReference(previousGroupReferenceData) = previousItem.content, groupReferenceData.hiddenByDefault != previousGroupReferenceData.hiddenByDefault {
                     UIView.transition(with: self.avatarNode.view, duration: 0.3, options: [.transitionCrossDissolve], animations: {
                     }, completion: nil)
                 }
-                self.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: .archivedChatsIcon(hiddenByDefault: hiddenByDefault), emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
+                self.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: .archivedChatsIcon(hiddenByDefault: groupReferenceData.hiddenByDefault), emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
         }
         
         if let peer = peer {
@@ -1628,7 +1655,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     promoInfo = promoInfoValue
                     displayAsMessage = displayAsMessageValue
                     hasFailedMessages = messagesValue.last?.flags.contains(.Failed) ?? false // hasFailedMessagesValue
-                case let .groupReference(_, peers, messageValue, unreadCountValue, hiddenByDefault):
+                case let .groupReference(groupReferenceData):
+                    let peers = groupReferenceData.peers
+                    let messageValue = groupReferenceData.message
+                    let unreadCountValue = groupReferenceData.unreadCount
+                    let hiddenByDefault = groupReferenceData.hiddenByDefault
+                
                     if let _ = messageValue, !peers.isEmpty {
                         contentPeer = .chat(peers[0].peer)
                     } else {
@@ -2150,8 +2182,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let dateText: String
             var topIndex: MessageIndex?
             switch item.content {
-            case let .groupReference(_, _, message, _, _):
-                topIndex = message?.index
+            case let .groupReference(groupReferenceData):
+                topIndex = groupReferenceData.message?.index
             case let .peer(peerData):
                 topIndex = peerData.messages.first?.index
             }
@@ -2763,6 +2795,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     var storyState: ChatListItemContent.StoryState?
                     if case let .peer(peerData) = item.content {
                         storyState = peerData.storyState
+                    } else if case let .groupReference(groupReference) = item.content {
+                        storyState = groupReference.storyState
                     }
                     
                     let avatarFrame = CGRect(origin: CGPoint(x: leftInset - avatarLeftInset + editingOffset + 10.0 + revealOffset, y: floor((itemHeight - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter))
@@ -2805,12 +2839,15 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         let _ = avatarStoryIndicator.update(
                             transition: indicatorTransition,
                             component: AnyComponent(AvatarStoryIndicatorComponent(
-                                hasUnseen: storyState.hasUnseen,
+                                hasUnseen: storyState.stats.unseenCount != 0,
                                 hasUnseenCloseFriendsItems: storyState.hasUnseenCloseFriends,
                                 theme: item.presentationData.theme,
                                 activeLineWidth: 2.0,
                                 inactiveLineWidth: 1.0 + UIScreenPixel,
-                                counters: nil
+                                counters: AvatarStoryIndicatorComponent.Counters(
+                                    totalCount: storyState.stats.totalCount,
+                                    unseenCount: storyState.stats.unseenCount
+                                )
                             )),
                             environment: {},
                             containerSize: indicatorFrame.size
@@ -3504,7 +3541,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     let separatorInset: CGFloat
-                    if case let .groupReference(_, _, _, _, hiddenByDefault) = item.content, hiddenByDefault {
+                    if case let .groupReference(groupReferenceData) = item.content, groupReferenceData.hiddenByDefault {
                         separatorInset = 0.0
                     } else if (!nextIsPinned && isPinned) || last {
                             separatorInset = 0.0
@@ -3526,7 +3563,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         backgroundColor = theme.itemSelectedBackgroundColor
                         highlightedBackgroundColor = theme.itemHighlightedBackgroundColor
                     } else if isPinned {
-                        if case let .groupReference(_, _, _, _, hiddenByDefault) = item.content, hiddenByDefault {
+                        if case let .groupReference(groupReferenceData) = item.content, groupReferenceData.hiddenByDefault {
                             backgroundColor = theme.itemBackgroundColor
                             highlightedBackgroundColor = theme.itemHighlightedBackgroundColor
                         } else {
@@ -3873,10 +3910,16 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     
     @objc private func avatarStoryTapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            guard let item = self.item, case let .peer(peerData) = item.content else {
+            guard let item = self.item else {
                 return
             }
-            item.interaction.openStories(peerData.peer.peerId, self)
+            switch item.content {
+            case let .peer(peerData):
+                item.interaction.openStories(.peer(peerData.peer.peerId), self)
+            case .groupReference:
+                item.interaction.openStories(.archive, self)
+            }
+            
         }
     }
 }

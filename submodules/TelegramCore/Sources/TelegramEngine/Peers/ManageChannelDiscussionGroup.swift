@@ -8,7 +8,7 @@ public enum AvailableChannelDiscussionGroupError {
     case generic
 }
 
-func _internal_availableGroupsForChannelDiscussion(postbox: Postbox, network: Network) -> Signal<[Peer], AvailableChannelDiscussionGroupError> {
+func _internal_availableGroupsForChannelDiscussion(accountPeerId: PeerId, postbox: Postbox, network: Network) -> Signal<[Peer], AvailableChannelDiscussionGroupError> {
     return network.request(Api.functions.channels.getGroupsForDiscussion())
     |> mapError { error in
         return .generic
@@ -16,15 +16,17 @@ func _internal_availableGroupsForChannelDiscussion(postbox: Postbox, network: Ne
     |> mapToSignal { result -> Signal<[Peer], AvailableChannelDiscussionGroupError> in
         let chats: [Api.Chat]
         switch result {
-            case let .chats(c):
-                chats = c
-            case let .chatsSlice(_, c):
-                chats = c
+        case let .chats(c):
+            chats = c
+        case let .chatsSlice(_, c):
+            chats = c
         }
         
-        let peers = chats.compactMap(parseTelegramGroupOrChannel)
-        return postbox.transaction { transation -> [Peer] in
-            updatePeers(transaction: transation, peers: peers, update: { _, updated in updated })
+        return postbox.transaction { transaction -> [Peer] in
+            let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: [])
+            let peers = chats.compactMap(parseTelegramGroupOrChannel)
+            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+            
             return peers
         }
         |> castError(AvailableChannelDiscussionGroupError.self)

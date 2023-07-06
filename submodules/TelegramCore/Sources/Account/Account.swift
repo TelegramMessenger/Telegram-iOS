@@ -1002,7 +1002,7 @@ public class Account {
             self.hiddenStorySubscriptionsContext = nil
         }
         
-        self.callSessionManager = CallSessionManager(postbox: postbox, network: network, maxLayer: networkArguments.voipMaxLayer, versions: networkArguments.voipVersions, addUpdates: { [weak self] updates in
+        self.callSessionManager = CallSessionManager(postbox: postbox, network: network, accountPeerId: peerId, maxLayer: networkArguments.voipMaxLayer, versions: networkArguments.voipVersions, addUpdates: { [weak self] updates in
             self?.stateManager?.addUpdates(updates)
         })
         

@@ -438,12 +438,17 @@ public final class StoryContentContextImpl: StoryContentContext {
             }
             let singlePeerListContext = PeerExpiringStoryListContext(account: context.account, peerId: focusedPeerId)
             self.singlePeerListContext = singlePeerListContext
+            
             self.storySubscriptionsDisposable = (combineLatest(
                 context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: focusedPeerId)),
                 singlePeerListContext.state
             )
             |> deliverOnMainQueue).start(next: { [weak self] peer, state in
                 guard let self, let peer else {
+                    return
+                }
+                
+                if state.isLoading {
                     return
                 }
                 
@@ -579,7 +584,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                 }
                 
                 var sortedItems: [EngineStorySubscriptions.Item] = []
-                if let accountItem = storySubscriptions.accountItem {
+                if !isHidden, let accountItem = storySubscriptions.accountItem {
                     if self.fixedSubscriptionOrder.contains(context.account.peerId) {
                         sortedItems.append(accountItem)
                     } else {

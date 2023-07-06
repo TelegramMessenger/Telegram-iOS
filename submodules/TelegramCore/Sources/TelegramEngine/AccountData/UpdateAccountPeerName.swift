@@ -6,6 +6,7 @@ import MtProtoKit
 
 
 func _internal_updateAccountPeerName(account: Account, firstName: String, lastName: String) -> Signal<Void, NoError> {
+    let accountPeerId = account.peerId
     return account.network.request(Api.functions.account.updateProfile(flags: (1 << 0) | (1 << 1), firstName: firstName, lastName: lastName, about: nil))
         |> map { result -> Api.User? in
             return result
@@ -16,9 +17,7 @@ func _internal_updateAccountPeerName(account: Account, firstName: String, lastNa
         |> mapToSignal { result -> Signal<Void, NoError> in
             return account.postbox.transaction { transaction -> Void in
                 if let result = result {
-                    if let peer = TelegramUser.merge(transaction.getPeer(result.peerId) as? TelegramUser, rhs: result) {
-                        updatePeers(transaction: transaction, peers: [peer], update: { $1 })
-                    }
+                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(transaction: transaction, chats: [], users: [result]))
                 }
             }
         }

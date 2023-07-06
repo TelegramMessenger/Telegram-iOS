@@ -3244,8 +3244,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             switch item.content {
                 case let .peer(peerData):
                     return (selectedItemNode.view, bounds, peerData.messages.last?.id ?? peerData.peer.peerId)
-                case let .groupReference(groupId, _, _, _, _):
-                    return (selectedItemNode.view, bounds, groupId)
+                case let .groupReference(groupReference):
+                    return (selectedItemNode.view, bounds, groupReference.groupId)
             }
         }
         return nil

@@ -727,7 +727,7 @@ public func groupStatsController(context: AccountContext, updatedPresentationDat
     
     actionsDisposable.add(context.account.viewTracker.peerView(peerId, updateData: true).start())
         
-    let statsContext = GroupStatsContext(postbox: context.account.postbox, network: context.account.network, datacenterId: datacenterId, peerId: peerId)
+    let statsContext = GroupStatsContext(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, datacenterId: datacenterId, peerId: peerId)
     let dataSignal: Signal<GroupStats?, NoError> = statsContext.state
     |> map { state in
         return state.stats

@@ -410,8 +410,8 @@ public enum Stories {
     }
     
     public final class PeerState: Equatable, Codable {
-        private enum CodingKeys: CodingKey {
-            case maxReadId
+        private enum CodingKeys: String, CodingKey {
+            case maxReadId = "rid"
         }
         
         public let maxReadId: Int32
@@ -573,6 +573,12 @@ public final class EngineStorySubscriptions: Equatable {
             return false
         }
         return true
+    }
+}
+
+extension Stories.PeerState {
+    var postboxRepresentation: StoredStoryPeerState {
+        return StoredStoryPeerState(entry: CodableEntry(self)!, maxSeenId: self.maxReadId)
     }
 }
 
@@ -1121,7 +1127,7 @@ func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32, asPi
                 return .complete()
             }
             
-            #if DEBUG && false
+            #if DEBUG && true
             if "".isEmpty {
                 return .complete()
             }
@@ -1135,10 +1141,10 @@ func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32, asPi
         }
     } else {
         return account.postbox.transaction { transaction -> Api.InputUser? in
-            if let peerStoryState = transaction.getPeerStoryState(peerId: peerId)?.get(Stories.PeerState.self) {
-                transaction.setPeerStoryState(peerId: peerId, state: CodableEntry(Stories.PeerState(
+            if let peerStoryState = transaction.getPeerStoryState(peerId: peerId)?.entry.get(Stories.PeerState.self) {
+                transaction.setPeerStoryState(peerId: peerId, state: Stories.PeerState(
                     maxReadId: max(peerStoryState.maxReadId, id)
-                )))
+                ).postboxRepresentation)
             }
             
             return transaction.getPeer(peerId).flatMap(apiInputUser)
@@ -1352,19 +1358,7 @@ func _internal_getStoriesById(accountPeerId: PeerId, postbox: Postbox, network: 
         return postbox.transaction { transaction -> [Stories.StoredItem] in
             switch result {
             case let .stories(_, stories, users):
-                var peers: [Peer] = []
-                var peerPresences: [PeerId: Api.User] = [:]
-                
-                for user in users {
-                    let telegramUser = TelegramUser(user: user)
-                    peers.append(telegramUser)
-                    peerPresences[telegramUser.id] = user
-                }
-                
-                updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                    return updated
-                })
-                updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
                 
                 return stories.compactMap { apiStoryItem -> Stories.StoredItem? in
                     return Stories.StoredItem(apiStoryItem: apiStoryItem, peerId: peer.id, transaction: transaction)
@@ -1395,19 +1389,7 @@ func _internal_getStoriesById(accountPeerId: PeerId, postbox: Postbox, source: F
             return postbox.transaction { transaction -> [Stories.StoredItem] in
                 switch result {
                 case let .stories(_, stories, users):
-                    var peers: [Peer] = []
-                    var peerPresences: [PeerId: Api.User] = [:]
-                    
-                    for user in users {
-                        let telegramUser = TelegramUser(user: user)
-                        peers.append(telegramUser)
-                        peerPresences[telegramUser.id] = user
-                    }
-                    
-                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                        return updated
-                    })
-                    updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
+                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
                     
                     return stories.compactMap { apiStoryItem -> Stories.StoredItem? in
                         return Stories.StoredItem(apiStoryItem: apiStoryItem, peerId: peerId, transaction: transaction)
@@ -1439,6 +1421,7 @@ public final class StoryViewList {
 }
 
 func _internal_getStoryViewList(account: Account, id: Int32, offsetTimestamp: Int32?, offsetPeerId: PeerId?, limit: Int) -> Signal<StoryViewList?, NoError> {
+    let accountPeerId = account.peerId
     return account.network.request(Api.functions.stories.getStoryViewsList(id: id, offsetDate: offsetTimestamp ?? 0, offsetId: offsetPeerId?.id._internalGetInt64Value() ?? 0, limit: Int32(limit)))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.stories.StoryViewsList?, NoError> in
@@ -1451,19 +1434,7 @@ func _internal_getStoryViewList(account: Account, id: Int32, offsetTimestamp: In
         return account.postbox.transaction { transaction -> StoryViewList? in
             switch result {
             case let .storyViewsList(count, views, users):
-                var peers: [Peer] = []
-                var peerPresences: [PeerId: Api.User] = [:]
-                
-                for user in users {
-                    let telegramUser = TelegramUser(user: user)
-                    peers.append(telegramUser)
-                    peerPresences[telegramUser.id] = user
-                }
-                
-                updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                    return updated
-                })
-                updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
                 
                 var items: [StoryViewList.Item] = []
                 for view in views {
@@ -1482,6 +1453,7 @@ func _internal_getStoryViewList(account: Account, id: Int32, offsetTimestamp: In
 }
 
 func _internal_getStoryViews(account: Account, ids: [Int32]) -> Signal<[Int32: Stories.Item.Views], NoError> {
+    let accountPeerId = account.peerId
     return account.network.request(Api.functions.stories.getStoriesViews(id: ids))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.stories.StoryViews?, NoError> in
@@ -1495,19 +1467,7 @@ func _internal_getStoryViews(account: Account, ids: [Int32]) -> Signal<[Int32: S
             var parsedViews: [Int32: Stories.Item.Views] = [:]
             switch result {
             case let .storyViews(views, users):
-                var peers: [Peer] = []
-                var peerPresences: [PeerId: Api.User] = [:]
-                
-                for user in users {
-                    let telegramUser = TelegramUser(user: user)
-                    peers.append(telegramUser)
-                    peerPresences[telegramUser.id] = user
-                }
-                
-                updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                    return updated
-                })
-                updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
                 
                 for i in 0 ..< views.count {
                     if i < ids.count {
@@ -1621,6 +1581,7 @@ public final class EngineStoryViewListContext {
             self.isLoadingMore = true
             
             let account = self.account
+            let accountPeerId = account.peerId
             let storyId = self.storyId
             let currentOffset = self.state.nextOffset
             let limit = self.state.items.isEmpty ? 50 : 100
@@ -1636,19 +1597,7 @@ public final class EngineStoryViewListContext {
                     return account.postbox.transaction { transaction -> InternalState in
                         switch result {
                         case let .storyViewsList(count, views, users):
-                            var peers: [Peer] = []
-                            var peerPresences: [PeerId: Api.User] = [:]
-                            
-                            for user in users {
-                                let telegramUser = TelegramUser(user: user)
-                                peers.append(telegramUser)
-                                peerPresences[telegramUser.id] = user
-                            }
-                            
-                            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                                return updated
-                            })
-                            updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
                             
                             var items: [Item] = []
                             var nextOffset: NextOffset?
@@ -1803,7 +1752,7 @@ func _internal_updatePeerStoriesHidden(account: Account, id: PeerId, isHidden: B
         guard let user = peer as? TelegramUser else {
             return nil
         }
-        updatePeers(transaction: transaction, peers: [user.withUpdatedStoriesHidden(isHidden)], update: { _, updated in
+        updatePeersCustom(transaction: transaction, peers: [user.withUpdatedStoriesHidden(isHidden)], update: { _, updated in
             return updated
         })
         return apiInputUser(peer)
@@ -1873,6 +1822,39 @@ func _internal_refreshStories(account: Account, peerId: PeerId, ids: [Int32]) ->
                 }
                 if current != updated {
                     transaction.setStory(id: StoryId(peerId: peerId, id: id), value: updated ?? CodableEntry(data: Data()))
+                }
+            }
+        }
+        |> ignoreValues
+    }
+}
+
+func _internal_refreshSeenStories(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
+    return network.request(Api.functions.stories.getAllReadUserStories())
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+        return .single(nil)
+    }
+    |> mapToSignal { updates -> Signal<Never, NoError> in
+        guard let updates = updates else {
+            return .complete()
+        }
+        return postbox.transaction { transaction -> Void in
+            for update in updates.allUpdates {
+                switch update {
+                case let .updateReadStories(userId, maxId):
+                    let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                    var update = false
+                    if let value = transaction.getPeerStoryState(peerId: peerId) {
+                        update = value.maxSeenId < maxId
+                    } else {
+                        update = true
+                    }
+                    if update {
+                        transaction.setPeerStoryState(peerId: peerId, state: Stories.PeerState(maxReadId: maxId).postboxRepresentation)
+                    }
+                default:
+                    break
                 }
             }
         }

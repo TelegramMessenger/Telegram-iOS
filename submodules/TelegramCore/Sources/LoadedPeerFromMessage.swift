@@ -5,6 +5,7 @@ import SwiftSignalKit
 
 
 public func loadedPeerFromMessage(account: Account, peerId: PeerId, messageId: MessageId) -> Signal<Peer?, NoError> {
+    let accountPeerId = account.peerId
     return account.postbox.transaction { transaction -> Signal<Peer?, NoError> in
         if let peer = transaction.getPeer(peerId) {
             if let user = peer as? TelegramUser {
@@ -34,27 +35,21 @@ public func loadedPeerFromMessage(account: Account, peerId: PeerId, messageId: M
                                 if let result = result {
                                     let apiUsers: [Api.User]
                                     switch result {
-                                        case let .messages(_, _, users):
-                                            apiUsers = users
-                                        case let .messagesSlice(_, _, _, _, _, _, users):
-                                            apiUsers = users
-                                        case let .channelMessages(_, _, _, _, _, _, _, users):
-                                            apiUsers = users
-                                        case .messagesNotModified:
-                                            apiUsers = []
+                                    case let .messages(_, _, users):
+                                        apiUsers = users
+                                    case let .messagesSlice(_, _, _, _, _, _, users):
+                                        apiUsers = users
+                                    case let .channelMessages(_, _, _, _, _, _, _, users):
+                                        apiUsers = users
+                                    case .messagesNotModified:
+                                        apiUsers = []
                                     }
                                     
-                                    for user in apiUsers {
-                                        let telegramUser = TelegramUser(user: user)
-                                        if telegramUser.id == peerId, let accessHash =  telegramUser.accessHash, accessHash.value != 0 {
-                                            updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: [telegramUser.id: user])
-                                            
-                                            updatePeers(transaction: transaction, peers: [telegramUser], update: { _, updated -> Peer in
-                                                return updated
-                                            })
-                                            
-                                            return telegramUser
-                                        }
+                                    let parsedPeers = AccumulatedPeers(users: apiUsers)
+                                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                                    
+                                    if let peer = transaction.getPeer(peerId) {
+                                        return peer
                                     }
                                 }
                                 return nil

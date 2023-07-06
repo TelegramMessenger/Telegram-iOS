@@ -145,11 +145,11 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
         self.joinNode.addTarget(self, action: #selector(self.joinPressed), forControlEvents: .touchUpInside)
         
         let account = self.context.account
-        let context = self.context
-        let signal: Signal<EnginePeer, NoError> = actualizedPeer(postbox: account.postbox, network: account.network, peer: initialPeer._asPeer())
+        let engine = context.engine
+        let signal: Signal<EnginePeer, NoError> = actualizedPeer(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, peer: initialPeer._asPeer())
         |> mapToSignal({ peer -> Signal<EnginePeer, NoError> in
             if let peer = peer as? TelegramChannel, let username = peer.addressName, peer.accessHash == nil {
-                return .single(.channel(peer)) |> then(context.engine.peers.resolvePeerByName(name: username)
+                return .single(.channel(peer)) |> then(engine.peers.resolvePeerByName(name: username)
                 |> mapToSignal({ updatedPeer -> Signal<EnginePeer, NoError> in
                     if let updatedPeer = updatedPeer {
                         return .single(updatedPeer)

@@ -470,6 +470,7 @@ public final class EngineMessageReactionListContext {
             self.isLoadingMore = true
             
             let account = self.account
+            let accountPeerId = account.peerId
             let message = self.message
             let reaction = self.reaction
             let currentOffset = self.state.nextOffset
@@ -500,24 +501,9 @@ public final class EngineMessageReactionListContext {
                     return account.postbox.transaction { transaction -> InternalState in
                         switch result {
                         case let .messageReactionsList(_, count, reactions, chats, users, nextOffset):
-                            var peers: [Peer] = []
-                            var peerPresences: [PeerId: Api.User] = [:]
+                            let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                             
-                            for user in users {
-                                let telegramUser = TelegramUser(user: user)
-                                peers.append(telegramUser)
-                                peerPresences[telegramUser.id] = user
-                            }
-                            for chat in chats {
-                                if let peer = parseTelegramGroupOrChannel(chat: chat) {
-                                    peers.append(peer)
-                                }
-                            }
-                            
-                            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                                return updated
-                            })
-                            updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                             
                             var items: [EngineMessageReactionListContext.Item] = []
                             for reaction in reactions {

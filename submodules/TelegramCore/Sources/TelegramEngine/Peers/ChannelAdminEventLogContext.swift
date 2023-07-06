@@ -81,6 +81,7 @@ public final class ChannelAdminEventLogContext {
     
     private let postbox: Postbox
     private let network: Network
+    private let accountPeerId: PeerId
     private let peerId: PeerId
     
     private var filter: ChannelAdminEventLogFilter = ChannelAdminEventLogFilter()
@@ -98,10 +99,11 @@ public final class ChannelAdminEventLogContext {
     
     private let loadMoreDisposable = MetaDisposable()
     
-    init(postbox: Postbox, network: Network, peerId: PeerId) {
+    init(postbox: Postbox, network: Network, peerId: PeerId, accountPeerId: PeerId) {
         self.postbox = postbox
         self.network = network
         self.peerId = peerId
+        self.accountPeerId = accountPeerId
     }
     
     deinit {
@@ -166,7 +168,7 @@ public final class ChannelAdminEventLogContext {
         }
         
         self.loadingMoreEarlier = true
-        self.loadMoreDisposable.set((channelAdminLogEvents(postbox: self.postbox, network: self.network, peerId: self.peerId, maxId: maxId, minId: AdminLogEventId.min, limit: 100, query: self.filter.query, filter: self.filter.events, admins: self.filter.adminPeerIds)
+        self.loadMoreDisposable.set((channelAdminLogEvents(accountPeerId: self.accountPeerId, postbox: self.postbox, network: self.network, peerId: self.peerId, maxId: maxId, minId: AdminLogEventId.min, limit: 100, query: self.filter.query, filter: self.filter.events, admins: self.filter.adminPeerIds)
         |> deliverOn(self.queue)).start(next: { [weak self] result in
             if let strongSelf = self {
                 var events = result.events.sorted()
