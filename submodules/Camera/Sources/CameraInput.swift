@@ -27,7 +27,11 @@ class CameraInput {
         if let videoInput = try? AVCaptureDeviceInput(device: device) {
             self.videoInput = videoInput
             if session.session.canAddInput(videoInput) {
-                session.session.addInputWithNoConnections(videoInput)
+                if session.hasMultiCam {
+                    session.session.addInputWithNoConnections(videoInput)
+                } else {
+                    session.session.addInput(videoInput)
+                }
             }
         }
     }

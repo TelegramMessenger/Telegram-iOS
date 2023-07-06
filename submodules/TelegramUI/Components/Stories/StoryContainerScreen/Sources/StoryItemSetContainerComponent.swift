@@ -663,25 +663,30 @@ public final class StoryItemSetContainerComponent: Component {
             return false
         }
         
-        private func deactivateInput() {
-            
+        func hasActiveDeactivateableInput() -> Bool {
+            if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
+                if view.canDeactivateInput() && (hasFirstResponder(self) || self.sendMessageContext.currentInputMode == .media) {
+                    return true
+                }
+            }
+            return false
+        }
+        
+        func deactivateInput() {
+            if let view = self.inputPanel.view as? MessageInputPanelComponent.View, view.canDeactivateInput() {
+                self.sendMessageContext.currentInputMode = .text
+                if hasFirstResponder(self) {
+                    view.deactivateInput()
+                } else {
+                    self.state?.updated(transition: .spring(duration: 0.4).withUserData(TextFieldComponent.AnimationHint(kind: .textFocusChanged)))
+                }
+            }
         }
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state, let component = self.component, let itemLayout = self.itemLayout {
                 if hasFirstResponder(self) || self.sendMessageContext.currentInputMode == .media {
-                    if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
-                        if view.canDeactivateInput() {
-                            self.sendMessageContext.currentInputMode = .text
-                            if hasFirstResponder(self) {
-                                view.deactivateInput()
-                            } else {
-                                self.state?.updated(transition: .spring(duration: 0.4).withUserData(TextFieldComponent.AnimationHint(kind: .textFocusChanged)))
-                            }
-                        } else {
-                            view.animateError()
-                        }
-                    }
+                    self.deactivateInput()
                 } else if self.displayViewList {
                     let point = recognizer.location(in: self)
                     
@@ -2273,7 +2278,7 @@ public final class StoryItemSetContainerComponent: Component {
                             let tooltipScreen = TooltipScreen(
                                 account: component.context.account,
                                 sharedContext: component.context.sharedContext,
-                                text: .plain(text: "This video has no sound"), style: .default, location: TooltipScreen.Location.point(soundButtonView.convert(soundButtonView.bounds, to: self).offsetBy(dx: 1.0, dy: -10.0), .top), displayDuration: .infinite, shouldDismissOnTouch: { _, _ in
+                                text: .plain(text: "This video has no sound"), style: .default, location: TooltipScreen.Location.point(soundButtonView.convert(soundButtonView.bounds, to: nil).offsetBy(dx: 1.0, dy: -10.0), .top), displayDuration: .infinite, shouldDismissOnTouch: { _, _ in
                                     return .dismiss(consume: true)
                                 }
                             )
@@ -3174,9 +3179,6 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             let subject: Signal<MediaEditorScreen.Subject?, NoError>
-//            if let source {
-//                subject = .single(.draft(source, Int64(id)))
-//            } else {
             
             var duration: Double?
             let media = item.media._asMedia()

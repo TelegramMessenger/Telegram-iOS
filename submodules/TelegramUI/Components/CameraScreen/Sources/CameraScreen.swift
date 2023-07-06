@@ -377,6 +377,9 @@ private final class CameraScreenComponent: CombinedComponent {
             if let lastFlipTimestamp = self.lastFlipTimestamp, currentTimestamp - lastFlipTimestamp < 1.0 {
                 return
             }
+            if let lastDualCameraTimestamp = self.lastDualCameraTimestamp, currentTimestamp - lastDualCameraTimestamp < 1.5 {
+                return
+            }
             self.lastFlipTimestamp = currentTimestamp
             
             self.camera.togglePosition()
@@ -389,6 +392,9 @@ private final class CameraScreenComponent: CombinedComponent {
         func toggleDualCamera() {
             let currentTimestamp = CACurrentMediaTime()
             if let lastDualCameraTimestamp = self.lastDualCameraTimestamp, currentTimestamp - lastDualCameraTimestamp < 1.5 {
+                return
+            }
+            if let lastFlipTimestamp = self.lastFlipTimestamp, currentTimestamp - lastFlipTimestamp < 1.0 {
                 return
             }
             self.lastDualCameraTimestamp = currentTimestamp
@@ -531,123 +537,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     controlsBottomInset = -48.0
                 }
             }
-            
-            let topControlInset: CGFloat = 20.0
-            if case .none = state.cameraState.recording, !state.isTransitioning {
-                let cancelButton = cancelButton.update(
-                    component: CameraButton(
-                        content: AnyComponentWithIdentity(
-                            id: "cancel",
-                            component: AnyComponent(
-                                Image(
-                                    image: state.image(.cancel),
-                                    size: CGSize(width: 40.0, height: 40.0)
-                                )
-                            )
-                        ),
-                        action: {
-                            guard let controller = controller() as? CameraScreen else {
-                                return
-                            }
-                            controller.requestDismiss(animated: true)
-                        }
-                    ).tagged(cancelButtonTag),
-                    availableSize: CGSize(width: 40.0, height: 40.0),
-                    transition: .immediate
-                )
-                context.add(cancelButton
-                    .position(CGPoint(x: isTablet ? smallPanelWidth / 2.0 : topControlInset + cancelButton.size.width / 2.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + cancelButton.size.height / 2.0))
-                    .appear(.default(scale: true))
-                    .disappear(.default(scale: true))
-                )
                         
-                let flashContentComponent: AnyComponentWithIdentity<Empty>
-                if component.hasAppeared {
-                    let flashIconName: String
-                    switch state.cameraState.flashMode {
-                    case .off:
-                        flashIconName = "flash_off"
-                    case .on:
-                        flashIconName = "flash_on"
-                    case .auto:
-                        flashIconName = "flash_auto"
-                    @unknown default:
-                        flashIconName = "flash_off"
-                    }
-                    
-                    flashContentComponent = AnyComponentWithIdentity(
-                        id: "animatedIcon",
-                        component: AnyComponent(
-                            LottieAnimationComponent(
-                                animation: LottieAnimationComponent.AnimationItem(
-                                    name: flashIconName,
-                                    mode: !state.cameraState.flashModeDidChange ? .still(position: .end) : .animating(loop: false),
-                                    range: nil,
-                                    waitForCompletion: false
-                                ),
-                                colors: [:],
-                                size: CGSize(width: 40.0, height: 40.0)
-                            )
-                        )
-                    )
-                } else {
-                    flashContentComponent = AnyComponentWithIdentity(
-                        id: "staticIcon",
-                        component: AnyComponent(
-                            BundleIconComponent(
-                                name: "Camera/FlashOffIcon",
-                                tintColor: nil
-                            )
-                        )
-                    )
-                }
-                                        
-                let flashButton = flashButton.update(
-                    component: CameraButton(
-                        content: flashContentComponent,
-                        action: { [weak state] in
-                            guard let state else {
-                                return
-                            }
-                            state.toggleFlashMode()
-                        }
-                    ).tagged(flashButtonTag),
-                    availableSize: CGSize(width: 40.0, height: 40.0),
-                    transition: .immediate
-                )
-                context.add(flashButton
-                    .position(CGPoint(x: isTablet ? availableSize.width - smallPanelWidth / 2.0 : availableSize.width - topControlInset - flashButton.size.width / 2.0 - 5.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + flashButton.size.height / 2.0))
-                    .appear(.default(scale: true))
-                    .disappear(.default(scale: true))
-                )
-                
-                if !isTablet && Camera.isDualCamSupported {
-                    let dualButton = dualButton.update(
-                        component: CameraButton(
-                            content: AnyComponentWithIdentity(
-                                id: "dual",
-                                component: AnyComponent(
-                                    DualIconComponent(isSelected: state.cameraState.isDualCamEnabled)
-                                )
-                            ),
-                            action: { [weak state] in
-                                guard let state else {
-                                    return
-                                }
-                                state.toggleDualCamera()
-                            }
-                        ).tagged(dualButtonTag),
-                        availableSize: CGSize(width: 40.0, height: 40.0),
-                        transition: .immediate
-                    )
-                    context.add(dualButton
-                        .position(CGPoint(x: availableSize.width - topControlInset - flashButton.size.width / 2.0 - 52.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + dualButton.size.height / 2.0 + 1.0))
-                        .appear(.default(scale: true))
-                        .disappear(.default(scale: true))
-                    )
-                }
-            }
-            
             if case .holding = state.cameraState.recording {
                 
             } else {
@@ -771,6 +661,122 @@ private final class CameraScreenComponent: CombinedComponent {
                 .position(captureControlsPosition)
             )
             
+            let topControlInset: CGFloat = 20.0
+            if case .none = state.cameraState.recording, !state.isTransitioning {
+                let cancelButton = cancelButton.update(
+                    component: CameraButton(
+                        content: AnyComponentWithIdentity(
+                            id: "cancel",
+                            component: AnyComponent(
+                                Image(
+                                    image: state.image(.cancel),
+                                    size: CGSize(width: 40.0, height: 40.0)
+                                )
+                            )
+                        ),
+                        action: {
+                            guard let controller = controller() as? CameraScreen else {
+                                return
+                            }
+                            controller.requestDismiss(animated: true)
+                        }
+                    ).tagged(cancelButtonTag),
+                    availableSize: CGSize(width: 40.0, height: 40.0),
+                    transition: .immediate
+                )
+                context.add(cancelButton
+                    .position(CGPoint(x: isTablet ? smallPanelWidth / 2.0 : topControlInset + cancelButton.size.width / 2.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + cancelButton.size.height / 2.0))
+                    .appear(.default(scale: true))
+                    .disappear(.default(scale: true))
+                )
+                
+                let flashContentComponent: AnyComponentWithIdentity<Empty>
+                if component.hasAppeared {
+                    let flashIconName: String
+                    switch state.cameraState.flashMode {
+                    case .off:
+                        flashIconName = "flash_off"
+                    case .on:
+                        flashIconName = "flash_on"
+                    case .auto:
+                        flashIconName = "flash_auto"
+                    @unknown default:
+                        flashIconName = "flash_off"
+                    }
+                    
+                    flashContentComponent = AnyComponentWithIdentity(
+                        id: "animatedIcon",
+                        component: AnyComponent(
+                            LottieAnimationComponent(
+                                animation: LottieAnimationComponent.AnimationItem(
+                                    name: flashIconName,
+                                    mode: !state.cameraState.flashModeDidChange ? .still(position: .end) : .animating(loop: false),
+                                    range: nil,
+                                    waitForCompletion: false
+                                ),
+                                colors: [:],
+                                size: CGSize(width: 40.0, height: 40.0)
+                            )
+                        )
+                    )
+                } else {
+                    flashContentComponent = AnyComponentWithIdentity(
+                        id: "staticIcon",
+                        component: AnyComponent(
+                            BundleIconComponent(
+                                name: "Camera/FlashOffIcon",
+                                tintColor: nil
+                            )
+                        )
+                    )
+                }
+                
+                let flashButton = flashButton.update(
+                    component: CameraButton(
+                        content: flashContentComponent,
+                        action: { [weak state] in
+                            guard let state else {
+                                return
+                            }
+                            state.toggleFlashMode()
+                        }
+                    ).tagged(flashButtonTag),
+                    availableSize: CGSize(width: 40.0, height: 40.0),
+                    transition: .immediate
+                )
+                context.add(flashButton
+                    .position(CGPoint(x: isTablet ? availableSize.width - smallPanelWidth / 2.0 : availableSize.width - topControlInset - flashButton.size.width / 2.0 - 5.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + flashButton.size.height / 2.0))
+                    .appear(.default(scale: true))
+                    .disappear(.default(scale: true))
+                )
+
+                if !isTablet && Camera.isDualCamSupported {
+                    let dualButton = dualButton.update(
+                        component: CameraButton(
+                            content: AnyComponentWithIdentity(
+                                id: "dual",
+                                component: AnyComponent(
+                                    DualIconComponent(isSelected: state.cameraState.isDualCamEnabled)
+                                )
+                            ),
+                            action: { [weak state] in
+                                guard let state else {
+                                    return
+                                }
+                                state.toggleDualCamera()
+                            }
+                        ).tagged(dualButtonTag),
+                        availableSize: CGSize(width: 40.0, height: 40.0),
+                        transition: .immediate
+                    )
+                    context.add(dualButton
+                        .position(CGPoint(x: availableSize.width - topControlInset - flashButton.size.width / 2.0 - 52.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + dualButton.size.height / 2.0 + 1.0))
+                        .appear(.default(scale: true))
+                        .disappear(.default(scale: true))
+                    )
+                }
+            }
+            
             if isTablet {
                 let flipButton = flipButton.update(
                     component: CameraButton(
@@ -820,9 +826,9 @@ private final class CameraScreenComponent: CombinedComponent {
                 if isTablet {
                     timePosition = CGPoint(x: availableSize.width - panelWidth / 2.0, y: availableSize.height / 2.0 - 97.0)
                 } else {
-                    timePosition = CGPoint(x: availableSize.width / 2.0, y: environment.safeInsets.top + 40.0)
+                    timePosition = CGPoint(x: availableSize.width / 2.0, y:  max(environment.statusBarHeight + 5.0 + 20.0, environment.safeInsets.top + topControlInset + 20.0))
                 }
-                
+                                
                 if state.cameraState.recording != .none {
                     let timeBackground = timeBackground.update(
                         component: RoundedRectangle(color: videoRedColor, cornerRadius: 4.0),
@@ -1037,7 +1043,7 @@ public class CameraScreen: ViewController {
         }
     }
 
-    fileprivate final class Node: ViewControllerTracingNode {
+    fileprivate final class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
         private weak var controller: CameraScreen?
         private let context: AccountContext
         private let updateState: ActionSlot<CameraState>
@@ -1166,7 +1172,6 @@ public class CameraScreen: ViewController {
                 if let self {
                     if modeChange != .none {
                         if case .dualCamera = modeChange, self.cameraPosition == .front {
-                            
                         } else {
                             if let snapshot = self.mainPreviewView.snapshotView(afterScreenUpdates: false) {
                                 self.mainPreviewView.addSubview(snapshot)
@@ -1277,7 +1282,13 @@ public class CameraScreen: ViewController {
                                 self.mainPreviewContainerView.addSubview(cloneView)
                             }
                         } else {
+                            if let cloneView = self.mainPreviewView.snapshotView(afterScreenUpdates: false) {
+                                cloneView.frame = self.mainPreviewView.frame
+                                self.additionalPreviewSnapshotView = cloneView
+                                self.additionalPreviewContainerView.addSubview(cloneView)
+                            }
                             if let cloneView = self.additionalPreviewView.snapshotView(afterScreenUpdates: false) {
+                                cloneView.frame = self.additionalPreviewView.frame
                                 self.mainPreviewSnapshotView = cloneView
                                 self.mainPreviewContainerView.addSubview(cloneView)
                             }
@@ -1297,6 +1308,7 @@ public class CameraScreen: ViewController {
             self.changingPositionDisposable?.dispose()
         }
         
+        private var pipPanGestureRecognizer: UIPanGestureRecognizer?
         override func didLoad() {
             super.didLoad()
             
@@ -1304,24 +1316,45 @@ public class CameraScreen: ViewController {
             self.view.disablesInteractiveKeyboardGestureRecognizer = true
             
             let pinchGestureRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(self.handlePinch(_:)))
-            self.mainPreviewContainerView.addGestureRecognizer(pinchGestureRecognizer)
+            self.previewContainerView.addGestureRecognizer(pinchGestureRecognizer)
             
             let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
+            panGestureRecognizer.delegate = self
             panGestureRecognizer.maximumNumberOfTouches = 1
-            self.mainPreviewContainerView.addGestureRecognizer(panGestureRecognizer)
+            self.previewContainerView.addGestureRecognizer(panGestureRecognizer)
             
             let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
-            self.mainPreviewContainerView.addGestureRecognizer(tapGestureRecognizer)
+            self.previewContainerView.addGestureRecognizer(tapGestureRecognizer)
             
             let doubleGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleDoubleTap(_:)))
             doubleGestureRecognizer.numberOfTapsRequired = 2
-            self.mainPreviewContainerView.addGestureRecognizer(doubleGestureRecognizer)
+            self.previewContainerView.addGestureRecognizer(doubleGestureRecognizer)
             
             let pipPanGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePipPan(_:)))
-            self.additionalPreviewContainerView.addGestureRecognizer(pipPanGestureRecognizer)
+            pipPanGestureRecognizer.delegate = self
+            self.previewContainerView.addGestureRecognizer(pipPanGestureRecognizer)
+            self.pipPanGestureRecognizer = pipPanGestureRecognizer
             
             self.camera.focus(at: CGPoint(x: 0.5, y: 0.5), autoFocus: true)
             self.camera.startCapture()
+        }
+        
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            if gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer is UIPanGestureRecognizer {
+                return false
+            }
+            return true
+        }
+        
+        override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            let location = gestureRecognizer.location(in: gestureRecognizer.view)
+            if gestureRecognizer === self.pipPanGestureRecognizer {
+                if !self.isDualCamEnabled {
+                    return false
+                }
+                return self.additionalPreviewContainerView.frame.contains(location)
+            }
+            return self.hasAppeared
         }
         
         @objc private func handlePinch(_ gestureRecognizer: UIPinchGestureRecognizer) {
@@ -1334,7 +1367,7 @@ public class CameraScreen: ViewController {
                 break
             }
         }
-        
+
         private var isDismissing = false
         @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
             guard let controller = self.controller else {
@@ -1469,7 +1502,9 @@ public class CameraScreen: ViewController {
                 let sourceLocalFrame = sourceView.convert(transitionIn.sourceRect, to: self.view)
 
                 let sourceScale = sourceLocalFrame.width / self.previewContainerView.frame.width
-                self.previewContainerView.layer.animatePosition(from: sourceLocalFrame.center, to: self.previewContainerView.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                self.previewContainerView.layer.animatePosition(from: sourceLocalFrame.center, to: self.previewContainerView.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+                    self.requestUpdateLayout(hasAppeared: true, transition: .immediate)
+                })
                 self.previewContainerView.layer.animateScale(from: sourceScale, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                 
                 let minSide = min(self.previewContainerView.bounds.width, self.previewContainerView.bounds.height)
@@ -1977,7 +2012,7 @@ public class CameraScreen: ViewController {
                 additionalPreviewView = self.additionalPreviewView
             }
             
-            let mainPreviewInnerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((previewSize.width - mainPreviewInnerSize.width) / 2.0), y: floorToScreenPixels((previewSize.height - mainPreviewInnerSize.height) / 2.0)), size: mainPreviewInnerSize)
+            let mainPreviewInnerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((previewFrame.width - mainPreviewInnerSize.width) / 2.0), y: floorToScreenPixels((previewFrame.height - mainPreviewInnerSize.height) / 2.0)), size: mainPreviewInnerSize)
             let additionalPreviewInnerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((circleSide - additionalPreviewInnerSize.width) / 2.0), y: floorToScreenPixels((circleSide - additionalPreviewInnerSize.height) / 2.0)), size: additionalPreviewInnerSize)
             
             if mainPreviewView.superview != self.mainPreviewContainerView {

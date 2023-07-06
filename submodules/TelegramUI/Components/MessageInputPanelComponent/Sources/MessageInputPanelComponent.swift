@@ -928,6 +928,7 @@ public final class MessageInputPanelComponent: Component {
                         }
                         
                         self.currentMediaInputIsVoice = !self.currentMediaInputIsVoice
+                        self.hapticFeedback.impact(.medium)
                         self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                     },
                     updateMediaCancelFraction: { [weak self] mediaCancelFraction in

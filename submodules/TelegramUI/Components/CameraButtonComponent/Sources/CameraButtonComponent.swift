@@ -81,6 +81,8 @@ public final class CameraButton: Component {
             
             super.init(frame: frame)
             
+            self.isExclusiveTouch = true
+            
             self.addSubview(self.contentView)
             
             self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)

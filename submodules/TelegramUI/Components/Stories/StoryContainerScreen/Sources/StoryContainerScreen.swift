@@ -139,6 +139,105 @@ private final class StoryLongPressRecognizer: UILongPressGestureRecognizer {
     }
 }
 
+private final class StoryPinchGesture: UIPinchGestureRecognizer {
+    private final class Target {
+        var updated: (() -> Void)?
+
+        @objc func onGesture(_ gesture: UIPinchGestureRecognizer) {
+            self.updated?()
+        }
+    }
+
+    private let target: Target
+
+    private(set) var currentTransform: (CGFloat, CGPoint, CGPoint)?
+
+    var began: (() -> Void)?
+    var updated: ((CGFloat, CGPoint, CGPoint) -> Void)?
+    var ended: (() -> Void)?
+
+    private var initialLocation: CGPoint?
+    private var pinchLocation = CGPoint()
+    private var currentOffset = CGPoint()
+
+    private var currentNumberOfTouches = 0
+
+    init() {
+        self.target = Target()
+
+        super.init(target: self.target, action: #selector(self.target.onGesture(_:)))
+
+        self.target.updated = { [weak self] in
+            self?.gestureUpdated()
+        }
+    }
+
+    override func reset() {
+        super.reset()
+
+        self.currentNumberOfTouches = 0
+        self.initialLocation = nil
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesBegan(touches, with: event)
+
+        //self.currentTouches.formUnion(touches)
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesEnded(touches, with: event)
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesCancelled(touches, with: event)
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesMoved(touches, with: event)
+    }
+
+    private func gestureUpdated() {
+        switch self.state {
+        case .began:
+            self.currentOffset = CGPoint()
+
+            let pinchLocation = self.location(in: self.view)
+            self.pinchLocation = pinchLocation
+            self.initialLocation = pinchLocation
+            let scale = max(1.0, self.scale)
+            self.currentTransform = (scale, self.pinchLocation, self.currentOffset)
+
+            self.currentNumberOfTouches = self.numberOfTouches
+
+            self.began?()
+        case .changed:
+            let locationSum = self.location(in: self.view)
+
+            if self.numberOfTouches < 2 && self.currentNumberOfTouches >= 2 {
+                self.initialLocation = CGPoint(x: locationSum.x - self.currentOffset.x, y: locationSum.y - self.currentOffset.y)
+            }
+            self.currentNumberOfTouches = self.numberOfTouches
+
+            if let initialLocation = self.initialLocation {
+                self.currentOffset = CGPoint(x: locationSum.x - initialLocation.x, y: locationSum.y - initialLocation.y)
+            }
+            if let (scale, pinchLocation, _) = self.currentTransform {
+                self.currentTransform = (scale, pinchLocation, self.currentOffset)
+                self.updated?(scale, pinchLocation, self.currentOffset)
+            }
+
+            let scale = max(1.0, self.scale)
+            self.currentTransform = (scale, self.pinchLocation, self.currentOffset)
+            self.updated?(scale, self.pinchLocation, self.currentOffset)
+        case .ended, .cancelled:
+            self.ended?()
+        default:
+            break
+        }
+    }
+}
+
 private final class StoryContainerScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
@@ -351,7 +450,28 @@ private final class StoryContainerScreenComponent: Component {
             self.longPressRecognizer = longPressRecognizer
             self.addGestureRecognizer(longPressRecognizer)
             
-            let pinchRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(self.pinchGesture(_:)))
+            let pinchRecognizer = StoryPinchGesture()
+            pinchRecognizer.delegate = self
+            pinchRecognizer.updated = { [weak self] scale, pinchLocation, offset in
+                guard let self else {
+                    return
+                }
+                var pinchLocation = pinchLocation
+                if let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id] {
+                    if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                        pinchLocation = self.convert(pinchLocation, to: itemSetComponentView)
+                    }
+                }
+                self.itemSetPinchState = StoryItemSetContainerComponent.PinchState(scale: scale, location: pinchLocation, offset: offset)
+                self.state?.updated(transition: .immediate)
+            }
+            pinchRecognizer.ended = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.itemSetPinchState = nil
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+            }
             self.addGestureRecognizer(pinchRecognizer)
             
             let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
@@ -429,6 +549,13 @@ private final class StoryContainerScreenComponent: Component {
         deinit {
             self.contentUpdatedDisposable?.dispose()
             self.volumeButtonsListenerShouldBeActiveDisposable?.dispose()
+        }
+        
+        override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            if gestureRecognizer is StoryPinchGesture {
+                return !hasFirstResponder(self)
+            }
+            return true
         }
         
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
@@ -581,10 +708,21 @@ private final class StoryContainerScreenComponent: Component {
         @objc private func dismissPanGesture(_ recognizer: UIPanGestureRecognizer) {
             switch recognizer.state {
             case .began:
+                self.dismissAllTooltips()
+                
+                if let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id] {
+                    if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                        if itemSetComponentView.hasActiveDeactivateableInput() {
+                            itemSetComponentView.deactivateInput()
+                            recognizer.isEnabled = false
+                            recognizer.isEnabled = true
+                            return
+                        }
+                    }
+                }
+                
                 self.verticalPanState = ItemSetPanState(fraction: 0.0, didBegin: true)
                 self.state?.updated(transition: .immediate)
-                
-                self.dismissAllTooltips()
             case .changed:
                 let translation = recognizer.translation(in: self)
                 self.verticalPanState = ItemSetPanState(fraction: max(-1.0, min(1.0, translation.y / self.bounds.height)), didBegin: true)
@@ -656,34 +794,17 @@ private final class StoryContainerScreenComponent: Component {
             guard case .recognized = recognizer.state else {
                 return
             }
-        
             let location = recognizer.location(in: recognizer.view)
-            if let currentItemView = self.visibleItemSetViews.first?.value {
-                if location.x < currentItemView.frame.minX {
-                    self.navigate(direction: .previous)
-                } else if location.x > currentItemView.frame.maxX {
-                    self.navigate(direction: .next)
-                }
-            }
-        }
-        
-        @objc private func pinchGesture(_ recognizer: UIPinchGestureRecognizer) {
-            switch recognizer.state {
-            case .began, .changed:
-                let location = recognizer.location(in: self)
-                let scale = max(1.0, recognizer.scale)
-                if let itemSetPinchState = self.itemSetPinchState {
-                    let offset = CGPoint(x: location.x - itemSetPinchState.location.x , y: location.y - itemSetPinchState.location.y)
-                    self.itemSetPinchState = StoryItemSetContainerComponent.PinchState(scale: scale, location: itemSetPinchState.location, offset: offset)
+            if let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let currentItemView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                if currentItemView.hasActiveDeactivateableInput() {
+                    currentItemView.deactivateInput()
                 } else {
-                    self.itemSetPinchState = StoryItemSetContainerComponent.PinchState(scale: scale, location: location, offset: .zero)
+                    if location.x < currentItemView.frame.minX {
+                        self.navigate(direction: .previous)
+                    } else if location.x > currentItemView.frame.maxX {
+                        self.navigate(direction: .next)
+                    }
                 }
-                self.state?.updated(transition: .immediate)
-            case .cancelled, .ended:
-                self.itemSetPinchState = nil
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
-            default:
-                break
             }
         }
         
@@ -996,6 +1117,7 @@ private final class StoryContainerScreenComponent: Component {
                 }
             }
             
+            var presentationContextInsets = UIEdgeInsets()
             if !currentSlices.isEmpty, let focusedIndex {
                 for i in max(0, focusedIndex - 1) ... min(focusedIndex + 1, currentSlices.count - 1) {
                     var isItemVisible = false
@@ -1053,6 +1175,10 @@ private final class StoryContainerScreenComponent: Component {
                             itemSetContainerInsets.top = 0.0
                             itemSetContainerInsets.bottom = floorToScreenPixels((availableSize.height - itemSetContainerSize.height) / 2.0)
                             itemSetContainerSafeInsets.bottom = 0.0
+                            
+                            presentationContextInsets.left =  floorToScreenPixels((availableSize.width - itemSetContainerSize.width) / 2.0)
+                            presentationContextInsets.right = presentationContextInsets.left
+                            presentationContextInsets.bottom = itemSetContainerInsets.bottom
                         }
                         
                         let _ = itemSetView.view.update(
@@ -1327,8 +1453,8 @@ private final class StoryContainerScreenComponent: Component {
                     size: availableSize,
                     metrics: environment.metrics,
                     deviceMetrics: environment.deviceMetrics,
-                    intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: contentDerivedBottomInset, right: 0.0),
-                    safeInsets: UIEdgeInsets(),
+                    intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: contentDerivedBottomInset + presentationContextInsets.bottom, right: 0.0),
+                    safeInsets: UIEdgeInsets(top: 0.0, left: presentationContextInsets.left, bottom: 0.0, right: presentationContextInsets.right),
                     additionalInsets: UIEdgeInsets(),
                     statusBarHeight: nil,
                     inputHeight: nil,

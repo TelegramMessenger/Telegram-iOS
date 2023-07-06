@@ -126,6 +126,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
         
         switch content {
         case let .file(file):
+            let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
             if file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm" {
                 self.isAnimated = true
                 self.isVideoSticker = file.isVideoSticker || file.mimeType == "video/webm"
@@ -133,7 +134,6 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                 self.source = AnimatedStickerResourceSource(account: account, resource: file.resource, isVideo: isVideoSticker)
                 let pathPrefix = account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
                 if let source = self.source {
-                    let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fitToSize: CGSize
                     if self.isStatic {
                         fitToSize = CGSize(width: 768, height: 768)
@@ -333,6 +333,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                             let ioSurfaceProperties = NSMutableDictionary()
                             let options = NSMutableDictionary()
                             options.setObject(ioSurfaceProperties, forKey: kCVPixelBufferIOSurfacePropertiesKey as NSString)
+                            
                             
                             var pixelBuffer: CVPixelBuffer?
                             CVPixelBufferCreate(

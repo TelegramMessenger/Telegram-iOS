@@ -8,13 +8,17 @@ final class CameraSession {
     private let singleSession: AVCaptureSession?
     private let multiSession: Any?
     
+    let hasMultiCam: Bool
+    
     init() {
         if #available(iOS 13.0, *), AVCaptureMultiCamSession.isMultiCamSupported {
             self.multiSession = AVCaptureMultiCamSession()
             self.singleSession = nil
+            self.hasMultiCam = true
         } else {
             self.singleSession = AVCaptureSession()
             self.multiSession = nil
+            self.hasMultiCam = false
         }
     }
     
@@ -119,23 +123,9 @@ private final class CameraContext {
         }
     }
     
-    var previewView: CameraPreviewView? {
-        didSet {
-            
-        }
-    }
+    var previewView: CameraPreviewView?
     
-    var simplePreviewView: CameraSimplePreviewView? {
-        didSet {
-            if let oldValue {
-                Queue.mainQueue().async {
-                    oldValue.invalidate()
-                    self.simplePreviewView?.setSession(self.session.session, autoConnect: true)
-                }
-            }
-        }
-    }
-    
+    var simplePreviewView: CameraSimplePreviewView?
     var secondaryPreviewView: CameraSimplePreviewView?
     
     private var lastSnapshotTimestamp: Double = CACurrentMediaTime()
@@ -161,7 +151,6 @@ private final class CameraContext {
         }
     }
         
-    private var videoOrientation: AVCaptureVideoOrientation?
     init(queue: Queue, session: CameraSession, configuration: Camera.Configuration, metrics: Camera.Metrics, previewView: CameraSimplePreviewView?, secondaryPreviewView: CameraSimplePreviewView?) {
         self.queue = queue
         self.session = session
@@ -371,7 +360,7 @@ private final class CameraContext {
                 self.previewNode?.enqueue(sampleBuffer)
                 
                 let timestamp = CACurrentMediaTime()
-                if timestamp > self.lastSnapshotTimestamp + 2.5 {
+                if timestamp > self.lastSnapshotTimestamp + 2.5, !self.mainDeviceContext.output.isRecording {
                     var mirror = false
                     if #available(iOS 13.0, *) {
                         mirror = connection.inputPorts.first?.sourceDevicePosition == .front
@@ -450,7 +439,7 @@ private final class CameraContext {
     }
     
     func takePhoto() -> Signal<PhotoCaptureResult, NoError> {
-        let orientation = self.videoOrientation ?? .portrait
+        let orientation = self.simplePreviewView?.videoPreviewLayer.connection?.videoOrientation ?? .portrait
         if let additionalDeviceContext = self.additionalDeviceContext {
             let dualPosition = self.positionValue
             return combineLatest(
@@ -565,9 +554,9 @@ public final class Camera {
         session.session.automaticallyConfiguresApplicationAudioSession = false
         session.session.automaticallyConfiguresCaptureDeviceForWideColor = false
         if let previewView {
-            previewView.setSession(session.session, autoConnect: false)
+            previewView.setSession(session.session, autoConnect: !session.hasMultiCam)
         }
-        if let secondaryPreviewView {
+        if let secondaryPreviewView, session.hasMultiCam {
             secondaryPreviewView.setSession(session.session, autoConnect: false)
         }
         

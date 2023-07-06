@@ -911,7 +911,8 @@ public class StickerPickerScreen: ViewController {
                 externalExpansionView: nil,
                 useOpaqueTheme: false,
                 hideBackground: true,
-                stateContext: nil
+                stateContext: nil,
+                addImage: nil
             )
             
             var stickerPeekBehavior: EmojiContentPeekBehaviorImpl?
@@ -1168,7 +1169,10 @@ public class StickerPickerScreen: ViewController {
                 externalExpansionView: nil,
                 useOpaqueTheme: false,
                 hideBackground: true,
-                stateContext: nil
+                stateContext: nil,
+                addImage: {
+                    
+                }
             )
             
             if let (layout, navigationHeight) = self.currentLayout {

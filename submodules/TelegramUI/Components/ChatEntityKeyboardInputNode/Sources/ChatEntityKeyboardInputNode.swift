@@ -1311,7 +1311,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             externalExpansionView: nil,
             useOpaqueTheme: false,
             hideBackground: false,
-            stateContext: self.stateContext?.emojiState
+            stateContext: self.stateContext?.emojiState,
+            addImage: nil
         )
         
         self.stickerInputInteraction = EmojiPagerContentComponent.InputInteraction(
@@ -1609,7 +1610,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             externalExpansionView: nil,
             useOpaqueTheme: false,
             hideBackground: false,
-            stateContext: nil
+            stateContext: nil,
+            addImage: nil
         )
                 
         
@@ -2499,7 +2501,8 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
             externalExpansionView: nil,
             useOpaqueTheme: false,
             hideBackground: hideBackground,
-            stateContext: nil
+            stateContext: nil,
+            addImage: nil
         )
         
         let semaphore = DispatchSemaphore(value: 0)

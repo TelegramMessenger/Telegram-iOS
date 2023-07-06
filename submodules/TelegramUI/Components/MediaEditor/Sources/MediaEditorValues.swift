@@ -383,6 +383,9 @@ public final class MediaEditorValues: Codable, Equatable {
         if self.videoTrimRange != nil {
             return true
         }
+        if self.drawing != nil {
+            return true
+        }
         if !self.entities.isEmpty {
             return true
         }

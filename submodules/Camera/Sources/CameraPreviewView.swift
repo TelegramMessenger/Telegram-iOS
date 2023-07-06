@@ -32,8 +32,7 @@ public class CameraSimplePreviewView: UIView {
         } else {
             statusBarOrientation = UIApplication.shared.statusBarOrientation
         }
-        let videoOrientation: AVCaptureVideoOrientation = statusBarOrientation.videoOrientation
-//        videoPreviewLayer.frame = view.layer.bounds
+        let videoOrientation = statusBarOrientation.videoOrientation
         self.videoPreviewLayer.connection?.videoOrientation = videoOrientation
         self.videoPreviewLayer.removeAllAnimations()
     }
@@ -78,7 +77,7 @@ public class CameraSimplePreviewView: UIView {
         
         self.videoPreviewLayer.videoGravity = main ? .resizeAspectFill : .resizeAspect
         
-        self.placeholderView.contentMode = .scaleAspectFill
+        self.placeholderView.contentMode =  main ? .scaleAspectFill : .scaleAspectFit
         self.addSubview(self.placeholderView)
         
         if main {
