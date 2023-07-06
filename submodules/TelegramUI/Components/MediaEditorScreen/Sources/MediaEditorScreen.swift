@@ -1897,12 +1897,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if let self, let controller = self.controller, values.gradientColors != nil, controller.previousSavedValues != values {
                     if !isSavingAvailable && controller.previousSavedValues == nil {
                         controller.previousSavedValues = values
+                        controller.isSavingAvailable = false
                     } else {
                         self.hasAnyChanges = true
-                        
                         controller.isSavingAvailable = true
-                        controller.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
                     }
+                    controller.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
                 }
             }
             
@@ -2154,7 +2154,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         }
         
-        private var enhanceGestureOffset: CGFloat?
+        private var enhanceInitialTranslation: Float?
         
         @objc func handleDismissPan(_ gestureRecognizer: UIPanGestureRecognizer) {
             guard let controller = self.controller, let layout = self.validLayout, (layout.inputHeight ?? 0.0).isZero else {
@@ -2180,7 +2180,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         self.isDismissBySwipeSuppressed = controller.isEligibleForDraft()
                         controller.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
                     }
-                } else if abs(translation.x) > 10.0 && !self.isDismissing {
+                } else if abs(translation.x) > 10.0 && !self.isDismissing && !self.isEnhancing {
                     self.isEnhancing = true
                     controller.requestLayout(transition: .animated(duration: 0.3, curve: .easeInOut))
                 }
@@ -2197,14 +2197,27 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 } else if self.isEnhancing {
                     if let mediaEditor = self.mediaEditor {
                         let value = mediaEditor.getToolValue(.enhance) as? Float ?? 0.0
+                        
+                        if self.enhanceInitialTranslation == nil && value != 0.0 {
+                            self.enhanceInitialTranslation = value
+                        }
+                        
                         let delta = Float((translation.x / self.frame.width) * 1.5)
-                        let updatedValue = max(-1.0, min(1.0, value + delta))
+                        var updatedValue = max(-1.0, min(1.0, value + delta))
+                        if let enhanceInitialTranslation = self.enhanceInitialTranslation {
+                            if enhanceInitialTranslation > 0.0 {
+                                updatedValue = max(0.0, updatedValue)
+                            } else {
+                                updatedValue = min(0.0, updatedValue)
+                            }
+                        }
                         mediaEditor.setToolValue(.enhance, value: updatedValue)
                     }
                     self.requestUpdate()
                     gestureRecognizer.setTranslation(.zero, in: self.view)
                 }
             case .ended, .cancelled:
+                self.enhanceInitialTranslation = nil
                 if self.isDismissing {
                     if abs(translation.y) > self.view.frame.height * 0.33 || abs(velocity.y) > 1000.0, !controller.isEligibleForDraft() {
                         controller.requestDismiss(saveDraft: false, animated: true)
@@ -3799,7 +3812,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             })
         
             if case let .draft(draft, id) = subject, id == nil {
-                removeStoryDraft(engine: self.context.engine, path: draft.path, delete: true)
+                removeStoryDraft(engine: self.context.engine, path: draft.path, delete: !draft.isVideo)
             }
         } else {
             if let image = mediaEditor.resultImage {
@@ -4329,7 +4342,11 @@ private final class ToolValueComponent: Component {
             }
             
             if let previousValue, component.value != previousValue, self.alpha > 0.0 {
-                self.hapticFeedback.impact(.click05)
+                if component.value == "100" || component.value == "0" {
+                    self.hapticFeedback.impact(.medium)
+                } else {
+                    self.hapticFeedback.impact(.click05)
+                }
             }
            
             return availableSize

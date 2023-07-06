@@ -40,18 +40,21 @@ final class CameraDevice {
                 selectedDevice = device
             } else if let device = AVCaptureDevice.default(.builtInDualWideCamera, for: .video, position: position) {
                 selectedDevice = device
-            } else {
-                selectedDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera, .builtInWideAngleCamera, .builtInTelephotoCamera], mediaType: .video, position: position).devices.first
+            } else if let device = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInWideAngleCamera, .builtInTelephotoCamera], mediaType: .video, position: position).devices.first {
+                selectedDevice = device
             }
         } else {
-            if #available(iOS 11.1, *), dual, case .front = position {
-                if let trueDepthDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInTrueDepthCamera], mediaType: .video, position: position).devices.first {
-                    selectedDevice = trueDepthDevice
-                }
+            if #available(iOS 11.1, *), dual, case .front = position, let trueDepthDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInTrueDepthCamera], mediaType: .video, position: position).devices.first {
+                selectedDevice = trueDepthDevice
             }
             if selectedDevice == nil {
                 selectedDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera, .builtInWideAngleCamera, .builtInTelephotoCamera], mediaType: .video, position: position).devices.first
             }
+        }
+        
+        if selectedDevice == nil, #available(iOS 13.0, *) {
+            let allDevices = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera, .builtInTripleCamera, .builtInTelephotoCamera, .builtInDualWideCamera, .builtInTrueDepthCamera, .builtInWideAngleCamera, .builtInUltraWideCamera], mediaType: .video, position: position).devices
+            Logger.shared.log("Camera", "No device selected, availabled devices: \(allDevices)")
         }
         
         self.videoDevice = selectedDevice
@@ -234,12 +237,34 @@ final class CameraDevice {
         }
     }
     
+    func setTorchMode(_ flashMode: AVCaptureDevice.FlashMode) {
+        guard let device = self.videoDevice else {
+            return
+        }
+        self.transaction(device) { device in
+            let torchMode: AVCaptureDevice.TorchMode
+            switch flashMode {
+            case .on:
+                torchMode = .on
+            case .off:
+                torchMode = .off
+            case .auto:
+                torchMode = .auto
+            @unknown default:
+                torchMode = .off
+            }
+            if device.isTorchModeSupported(torchMode) {
+                device.torchMode = torchMode
+            }
+        }
+    }
+    
     func setZoomLevel(_ zoomLevel: CGFloat) {
         guard let device = self.videoDevice else {
             return
         }
         self.transaction(device) { device in
-            device.videoZoomFactor = max(1.0, min(10.0, zoomLevel))
+            device.videoZoomFactor = max(device.neutralZoomFactor, min(10.0, device.neutralZoomFactor + zoomLevel))
         }
     }
     

@@ -101,6 +101,7 @@ private final class CameraScreenComponent: CombinedComponent {
     let panelWidth: CGFloat
     let animateFlipAction: ActionSlot<Void>
     let animateShutter: () -> Void
+    let toggleCameraPositionAction: ActionSlot<Void>
     let dismissAllTooltips: () -> Void
     let present: (ViewController) -> Void
     let push: (ViewController) -> Void
@@ -116,6 +117,7 @@ private final class CameraScreenComponent: CombinedComponent {
         panelWidth: CGFloat,
         animateFlipAction: ActionSlot<Void>,
         animateShutter: @escaping () -> Void,
+        toggleCameraPositionAction: ActionSlot<Void>,
         dismissAllTooltips: @escaping () -> Void,
         present: @escaping (ViewController) -> Void,
         push: @escaping (ViewController) -> Void,
@@ -130,6 +132,7 @@ private final class CameraScreenComponent: CombinedComponent {
         self.panelWidth = panelWidth
         self.animateFlipAction = animateFlipAction
         self.animateShutter = animateShutter
+        self.toggleCameraPositionAction = toggleCameraPositionAction
         self.dismissAllTooltips = dismissAllTooltips
         self.present = present
         self.push = push
@@ -183,8 +186,10 @@ private final class CameraScreenComponent: CombinedComponent {
         private let present: (ViewController) -> Void
         private let completion: ActionSlot<Signal<CameraScreen.Result, NoError>>
         private let updateState: ActionSlot<CameraState>
+        private let toggleCameraPositionAction: ActionSlot<Void>
         
         private let animateShutter: () -> Void
+        private let animateFlipAction: ActionSlot<Void>
         private let dismissAllTooltips: () -> Void
         
         private var cameraStateDisposable: Disposable?
@@ -214,6 +219,8 @@ private final class CameraScreenComponent: CombinedComponent {
             completion: ActionSlot<Signal<CameraScreen.Result, NoError>>,
             updateState: ActionSlot<CameraState>,
             animateShutter: @escaping () -> Void = {},
+            animateFlipAction: ActionSlot<Void>,
+            toggleCameraPositionAction: ActionSlot<Void>,
             dismissAllTooltips: @escaping () -> Void = {}
         ) {
             self.context = context
@@ -222,6 +229,8 @@ private final class CameraScreenComponent: CombinedComponent {
             self.completion = completion
             self.updateState = updateState
             self.animateShutter = animateShutter
+            self.animateFlipAction = animateFlipAction
+            self.toggleCameraPositionAction = toggleCameraPositionAction
             self.dismissAllTooltips = dismissAllTooltips
             
             super.init()
@@ -245,6 +254,12 @@ private final class CameraScreenComponent: CombinedComponent {
             }
             
             self.setupVolumeButtonsHandler()
+            
+            self.toggleCameraPositionAction.connect({ [weak self] in
+                if let self {
+                    self.togglePosition(self.animateFlipAction)
+                }
+            })
         }
         
         deinit {
@@ -472,7 +487,7 @@ private final class CameraScreenComponent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, camera: self.camera, present: self.present, completion: self.completion, updateState: self.updateState, animateShutter: self.animateShutter, dismissAllTooltips: self.dismissAllTooltips)
+        return State(context: self.context, camera: self.camera, present: self.present, completion: self.completion, updateState: self.updateState, animateShutter: self.animateShutter, animateFlipAction: self.animateFlipAction, toggleCameraPositionAction: self.toggleCameraPositionAction, dismissAllTooltips: self.dismissAllTooltips)
     }
     
     static var body: Body {
@@ -1026,7 +1041,8 @@ public class CameraScreen: ViewController {
         private weak var controller: CameraScreen?
         private let context: AccountContext
         private let updateState: ActionSlot<CameraState>
-
+        private let toggleCameraPositionAction: ActionSlot<Void>
+        
         fileprivate let backgroundView: UIView
         fileprivate let containerView: UIView
         private let componentExternalState = CameraScreenComponent.ExternalState()
@@ -1070,6 +1086,7 @@ public class CameraScreen: ViewController {
             self.controller = controller
             self.context = controller.context
             self.updateState = ActionSlot<CameraState>()
+            self.toggleCameraPositionAction = ActionSlot<Void>()
 
             self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
 
@@ -1296,6 +1313,10 @@ public class CameraScreen: ViewController {
             let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
             self.mainPreviewContainerView.addGestureRecognizer(tapGestureRecognizer)
             
+            let doubleGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleDoubleTap(_:)))
+            doubleGestureRecognizer.numberOfTapsRequired = 2
+            self.mainPreviewContainerView.addGestureRecognizer(doubleGestureRecognizer)
+            
             let pipPanGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePipPan(_:)))
             self.additionalPreviewContainerView.addGestureRecognizer(pipPanGestureRecognizer)
             
@@ -1354,6 +1375,10 @@ public class CameraScreen: ViewController {
             self.camera.focus(at: point, autoFocus: false)
         }
 
+        @objc private func handleDoubleTap(_ gestureRecognizer: UITapGestureRecognizer) {
+            self.toggleCameraPositionAction.invoke(Void())
+        }
+        
         private var pipTranslation: CGPoint?
         @objc private func handlePipPan(_ gestureRecognizer: UIPanGestureRecognizer) {
             guard let layout = self.validLayout else {
@@ -1829,6 +1854,7 @@ public class CameraScreen: ViewController {
                         animateShutter: { [weak self] in
                             self?.mainPreviewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                         },
+                        toggleCameraPositionAction: self.toggleCameraPositionAction,
                         dismissAllTooltips: { [weak self] in
                             self?.dismissAllTooltips()
                         },
@@ -1872,10 +1898,17 @@ public class CameraScreen: ViewController {
             
             transition.setFrame(view: self.transitionDimView, frame: CGRect(origin: .zero, size: layout.size))
             
-            transition.setFrame(view: self.previewContainerView, frame: previewFrame)
-            transition.setFrame(view: self.mainPreviewContainerView, frame: CGRect(origin: .zero, size: previewFrame.size))
+            let previewContainerFrame: CGRect
+            if isTablet {
+                previewContainerFrame = CGRect(origin: .zero, size: layout.size)
+            } else {
+                previewContainerFrame = previewFrame
+            }
             
-            transition.setFrame(view: self.previewBlurView, frame: CGRect(origin: .zero, size: previewFrame.size))
+            transition.setFrame(view: self.previewContainerView, frame: previewContainerFrame)
+            transition.setFrame(view: self.mainPreviewContainerView, frame: CGRect(origin: .zero, size: previewContainerFrame.size))
+            
+            transition.setFrame(view: self.previewBlurView, frame: CGRect(origin: .zero, size: previewContainerFrame.size))
             
             let dualCamUpdated = self.appliedDualCam != self.isDualCamEnabled
             self.appliedDualCam = self.isDualCamEnabled

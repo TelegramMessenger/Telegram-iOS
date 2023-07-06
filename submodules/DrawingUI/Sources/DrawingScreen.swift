@@ -1140,14 +1140,19 @@ private final class DrawingScreenComponent: CombinedComponent {
             if state.drawingViewState.isDrawing || component.isInteractingWithEntities {
                 controlsAreVisible = false
             }
-                 
+                             
+            var controlsBottomInset: CGFloat = 0.0
             let previewSize: CGSize
-            let previewTopInset: CGFloat = environment.statusBarHeight + 5.0
+            var previewTopInset: CGFloat = environment.statusBarHeight + 5.0
             if case .regular = environment.metrics.widthClass {
                 let previewHeight = context.availableSize.height - previewTopInset - 75.0
                 previewSize = CGSize(width: floorToScreenPixels(previewHeight / 1.77778), height: previewHeight)
             } else {
                 previewSize = CGSize(width: context.availableSize.width, height: floorToScreenPixels(context.availableSize.width * 1.77778))
+                if context.availableSize.height < previewSize.height + 30.0 {
+                    previewTopInset = 0.0
+                    controlsBottomInset = -50.0
+                }
             }
             let previewBottomInset = context.availableSize.height - previewSize.height - previewTopInset
             
@@ -1155,6 +1160,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             if component.sourceHint == .storyEditor {
                 topInset = previewTopInset + 31.0
             }
+
             let bottomInset: CGFloat = environment.inputHeight > 0.0 ? environment.inputHeight : 145.0
             
             var leftEdge: CGFloat = environment.safeInsets.left
@@ -1985,7 +1991,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 if case .regular = environment.metrics.widthClass {
                     doneButtonPosition.x -= 20.0
                 }
-                doneButtonPosition.y = floorToScreenPixels(context.availableSize.height - previewBottomInset + 3.0 + doneButton.size.height / 2.0)
+                doneButtonPosition.y = floorToScreenPixels(context.availableSize.height - previewBottomInset + 3.0 + doneButton.size.height / 2.0) + controlsBottomInset
             }
             context.add(doneButton
                 .position(doneButtonPosition)
@@ -2063,7 +2069,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             )
             var modeAndSizePosition = CGPoint(x: context.availableSize.width / 2.0 - (modeRightInset - 57.0) / 2.0, y: context.availableSize.height - environment.safeInsets.bottom - modeAndSize.size.height / 2.0 - 9.0)
             if component.sourceHint == .storyEditor {
-                modeAndSizePosition.y = floorToScreenPixels(context.availableSize.height - previewBottomInset + 8.0 + modeAndSize.size.height / 2.0)
+                modeAndSizePosition.y = floorToScreenPixels(context.availableSize.height - previewBottomInset + 8.0 + modeAndSize.size.height / 2.0) + controlsBottomInset
             }
             context.add(modeAndSize
                 .position(modeAndSizePosition)
@@ -2108,7 +2114,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     if case .regular = environment.metrics.widthClass {
                         backButtonPosition.x += 20.0
                     }
-                    backButtonPosition.y = floorToScreenPixels(context.availableSize.height - previewBottomInset + 3.0 + backButton.size.height / 2.0)
+                    backButtonPosition.y = floorToScreenPixels(context.availableSize.height - previewBottomInset + 3.0 + backButton.size.height / 2.0) + controlsBottomInset
                 }
                 context.add(backButton
                     .position(backButtonPosition)

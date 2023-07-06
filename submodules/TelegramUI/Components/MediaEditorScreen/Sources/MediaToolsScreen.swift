@@ -214,6 +214,7 @@ private final class MediaToolsScreenComponent: Component {
     
     public final class View: UIView {
         private let buttonsContainerView = UIView()
+        private let buttonsBackgroundView = UIView()
         private let cancelButton = ComponentView<Empty>()
         private let adjustmentsButton = ComponentView<Empty>()
         private let tintButton = ComponentView<Empty>()
@@ -244,10 +245,11 @@ private final class MediaToolsScreenComponent: Component {
             
             self.backgroundColor = .clear
 
-            self.addSubview(self.buttonsContainerView)
             self.addSubview(self.previewContainerView)
+            self.addSubview(self.buttonsContainerView)
             self.previewContainerView.addSubview(self.optionsContainerView)
             self.optionsContainerView.addSubview(self.optionsBackgroundView)
+            self.buttonsContainerView.addSubview(self.buttonsBackgroundView)
         }
         
         required init?(coder: NSCoder) {
@@ -276,6 +278,8 @@ private final class MediaToolsScreenComponent: Component {
                 view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
             }
+            
+            self.buttonsBackgroundView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             
             self.optionsContainerView.layer.animatePosition(from: CGPoint(x: 0.0, y: self.optionsContainerView.frame.height), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
         }
@@ -312,6 +316,8 @@ private final class MediaToolsScreenComponent: Component {
                 view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
             }
             
+            self.buttonsBackgroundView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            
             self.optionsContainerView.layer.animatePosition(from: .zero, to:  CGPoint(x: 0.0, y: self.optionsContainerView.frame.height), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
             
             self.state?.updated()
@@ -335,11 +341,12 @@ private final class MediaToolsScreenComponent: Component {
             let mediaEditor = (environment.controller() as? MediaToolsScreen)?.mediaEditor
             
             let sectionUpdated = component.sectionUpdated
-                
+            
             let buttonSideInset: CGFloat
             let buttonBottomInset: CGFloat = 8.0
+            var controlsBottomInset: CGFloat = 0.0
             let previewSize: CGSize
-            let topInset: CGFloat = environment.statusBarHeight + 5.0
+            var topInset: CGFloat = environment.statusBarHeight + 5.0
             if isTablet {
                 let previewHeight = availableSize.height - topInset - 75.0
                 previewSize = CGSize(width: floorToScreenPixels(previewHeight / 1.77778), height: previewHeight)
@@ -347,10 +354,17 @@ private final class MediaToolsScreenComponent: Component {
             } else {
                 previewSize = CGSize(width: availableSize.width, height: floorToScreenPixels(availableSize.width * 1.77778))
                 buttonSideInset = 10.0
+                if availableSize.height < previewSize.height + 30.0 {
+                    topInset = 0.0
+                    controlsBottomInset = -75.0
+//                    self.buttonsBackgroundView.backgroundColor = .black
+                } else {
+                    self.buttonsBackgroundView.backgroundColor = .clear
+                }
             }
             
-            let previewContainerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - previewSize.width) / 2.0), y: environment.safeInsets.top), size: CGSize(width: previewSize.width, height: availableSize.height - environment.safeInsets.top - environment.safeInsets.bottom))
-            let buttonsContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - environment.safeInsets.bottom), size: CGSize(width: availableSize.width, height: environment.safeInsets.bottom))
+            var previewContainerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - previewSize.width) / 2.0), y: environment.safeInsets.top), size: CGSize(width: previewSize.width, height: availableSize.height - environment.safeInsets.top - environment.safeInsets.bottom + controlsBottomInset))
+            let buttonsContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - environment.safeInsets.bottom + controlsBottomInset), size: CGSize(width: availableSize.width, height: environment.safeInsets.bottom - controlsBottomInset))
                                     
             let cancelButtonSize = self.cancelButton.update(
                 transition: transition,
@@ -873,6 +887,7 @@ private final class MediaToolsScreenComponent: Component {
             let optionsFrame = CGRect(origin: .zero, size: optionsSize)
             if let optionsView = self.toolOptions.view {
                 if optionsView.superview == nil {
+                    optionsView.clipsToBounds = true
                     self.optionsContainerView.addSubview(optionsView)
                 }
                 optionsTransition.setFrame(view: optionsView, frame: optionsFrame)
@@ -885,9 +900,11 @@ private final class MediaToolsScreenComponent: Component {
                 }
             }
             
+            previewContainerFrame.size.height -= controlsBottomInset
+            
             let optionsBackgroundFrame = CGRect(
-                origin: CGPoint(x: 0.0, y: previewContainerFrame.height - optionsSize.height),
-                size: optionsSize
+                origin: CGPoint(x: 0.0, y: previewContainerFrame.height - optionsSize.height + controlsBottomInset),
+                size: CGSize(width: optionsSize.width, height: optionsSize.height - controlsBottomInset)
             )
             transition.setFrame(view: self.optionsContainerView, frame: optionsBackgroundFrame)
             transition.setFrame(view: self.optionsBackgroundView, frame: CGRect(origin: .zero, size: optionsBackgroundFrame.size))
@@ -906,6 +923,7 @@ private final class MediaToolsScreenComponent: Component {
             
             transition.setFrame(view: self.previewContainerView, frame: previewContainerFrame)
             transition.setFrame(view: self.buttonsContainerView, frame: buttonsContainerFrame)
+            transition.setFrame(view: self.buttonsBackgroundView, frame: CGRect(origin: .zero, size: buttonsContainerFrame.size))
             
             return availableSize
         }

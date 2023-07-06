@@ -77,7 +77,7 @@ func verticesDataForRotation(_ rotation: TextureRotation, rect: CGRect = CGRect(
 
 func textureDimensionsForRotation(texture: MTLTexture, rotation: TextureRotation) -> (width: Int, height: Int) {
     switch rotation {
-    case .rotate90Degrees, .rotate270Degrees:
+    case .rotate90Degrees, .rotate90DegreesMirrored, .rotate270Degrees:
         return (texture.height, texture.width)
     default:
         return (texture.width, texture.height)

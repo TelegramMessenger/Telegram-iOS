@@ -109,23 +109,26 @@ final class StoryItemSetContainerSendMessage {
         
         self.inputMediaInteraction = ChatEntityKeyboardInputNode.Interaction(
             sendSticker: { [weak self] fileReference, _, _, _, _, _, _, _, _ in
-                if let view = self?.view {
-                    self?.performSendStickerAction(view: view, fileReference: fileReference)
+                if let self, let view = self.view {
+                    self.performSendStickerAction(view: view, fileReference: fileReference)
                 }
                 return false
             },
-            sendEmoji: { [weak self] text, attribute, bool1 in
+            sendEmoji: { [weak self] text, attribute, _ in
                 if let self {
                     let _ = self
                 }
             },
             sendGif: { [weak self] fileReference, _, _, _, _ in
-                if let view = self?.view {
-                    self?.performSendGifAction(view: view, fileReference: fileReference)
+                if let self, let view = self.view {
+                    self.performSendStickerAction(view: view, fileReference: fileReference)
                 }
                 return false
             },
-            sendBotContextResultAsGif: { _, _, _, _, _, _ in
+            sendBotContextResultAsGif: { [weak self] results, result, _, _, _, _ in
+                if let self, let view = self.view {
+                    self.performSendContextResultAction(view: view, results: results, result: result)
+                }
                 return false
             },
             updateChoosingSticker: { _ in },
@@ -323,113 +326,6 @@ final class StoryItemSetContainerSendMessage {
         }
     }
     
-    func performSendStickerAction(view: StoryItemSetContainerComponent.View, fileReference: FileMediaReference) {
-        guard let component = view.component else {
-            return
-        }
-        let focusedItem = component.slice.item
-        guard let peerId = focusedItem.peerId else {
-            return
-        }
-        let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
-        let peer = component.slice.peer
-        
-        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-        let controller = component.controller() as? StoryContainerScreen
-        
-        if let navigationController = controller?.navigationController as? NavigationController {
-            var controllers = navigationController.viewControllers
-            for controller in controllers.reversed() {
-                if !(controller is StoryContainerScreen) {
-                    controllers.removeLast()
-                } else {
-                    break
-                }
-            }
-            navigationController.setViewControllers(controllers, animated: true)
-            
-            controller?.window?.forEachController({ controller in
-                if let controller = controller as? StickerPackScreenImpl {
-                    controller.dismiss()
-                }
-            })
-        }
-        
-        let _ = (component.context.engine.messages.enqueueOutgoingMessage(
-            to: peerId,
-            replyTo: nil,
-            storyId: focusedStoryId,
-            content: .file(fileReference)
-        ) |> deliverOnMainQueue).start(next: { [weak controller, weak view] messageIds in
-            if let controller {
-                Queue.mainQueue().after(0.3) {
-                    controller.present(UndoOverlayController(
-                        presentationData: presentationData,
-                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat", destructive: false),
-                        elevatedLayout: false,
-                        animateInAsReplacement: false,
-                        action: { [weak view] action in
-                            if case .undo = action, let messageId = messageIds.first {
-                                view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
-                            }
-                            return false
-                        }
-                    ), in: .current)
-                }
-            }
-        })
-        
-        self.currentInputMode = .text
-        if hasFirstResponder(view) {
-            view.endEditing(true)
-        } else {
-            view.state?.updated(transition: .spring(duration: 0.3))
-            controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
-        }
-    }
-    
-    func performSendGifAction(view: StoryItemSetContainerComponent.View, fileReference: FileMediaReference) {
-        guard let component = view.component else {
-            return
-        }
-        let focusedItem = component.slice.item
-        guard let peerId = focusedItem.peerId else {
-            return
-        }
-        let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
-        let peer = component.slice.peer
-        
-        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-        let controller = component.controller()
-        
-        let _ = (component.context.engine.messages.enqueueOutgoingMessage(
-            to: peerId,
-            replyTo: nil,
-            storyId: focusedStoryId,
-            content: .file(fileReference)
-        ) |> deliverOnMainQueue).start(next: { [weak controller, weak view] messageIds in
-            if let controller {
-                Queue.mainQueue().after(0.3) {
-                    controller.present(UndoOverlayController(
-                        presentationData: presentationData,
-                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat", destructive: false),
-                        elevatedLayout: false,
-                        animateInAsReplacement: false,
-                        action: { [weak view] action in
-                            if case .undo = action, let messageId = messageIds.first {
-                                view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
-                            }
-                            return false
-                        }
-                    ), in: .current)
-                }
-            }
-        })
-        
-        self.currentInputMode = .text
-        view.endEditing(true)
-    }
-    
     func performSendMessageAction(
         view: StoryItemSetContainerComponent.View
     ) {
@@ -497,6 +393,136 @@ final class StoryItemSetContainerSendMessage {
                     view.endEditing(true)
                 }
             }
+        }
+    }
+    
+    func performSendStickerAction(view: StoryItemSetContainerComponent.View, fileReference: FileMediaReference) {
+        guard let component = view.component else {
+            return
+        }
+        let focusedItem = component.slice.item
+        guard let peerId = focusedItem.peerId else {
+            return
+        }
+        let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
+        let peer = component.slice.peer
+        
+        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+        let controller = component.controller() as? StoryContainerScreen
+        
+        if let navigationController = controller?.navigationController as? NavigationController {
+            var controllers = navigationController.viewControllers
+            for controller in controllers.reversed() {
+                if !(controller is StoryContainerScreen) {
+                    controllers.removeLast()
+                } else {
+                    break
+                }
+            }
+            navigationController.setViewControllers(controllers, animated: true)
+            
+            controller?.window?.forEachController({ controller in
+                if let controller = controller as? StickerPackScreenImpl {
+                    controller.dismiss()
+                }
+            })
+        }
+        
+        let _ = (component.context.engine.messages.enqueueOutgoingMessage(
+            to: peerId,
+            replyTo: nil,
+            storyId: focusedStoryId,
+            content: .file(fileReference)
+        ) |> deliverOnMainQueue).start(next: { [weak controller, weak view] messageIds in
+            if let controller {
+                Queue.mainQueue().after(0.3) {
+                    controller.present(UndoOverlayController(
+                        presentationData: presentationData,
+                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat", destructive: false),
+                        elevatedLayout: false,
+                        animateInAsReplacement: false,
+                        action: { [weak view] action in
+                            if case .undo = action, let messageId = messageIds.first {
+                                view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
+                            }
+                            return false
+                        }
+                    ), in: .current)
+                }
+            }
+        })
+        
+        self.currentInputMode = .text
+        if hasFirstResponder(view) {
+            view.endEditing(true)
+        } else {
+            view.state?.updated(transition: .spring(duration: 0.3))
+            controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
+        }
+    }
+    
+    func performSendContextResultAction(view: StoryItemSetContainerComponent.View, results: ChatContextResultCollection, result: ChatContextResult) {
+        guard let component = view.component else {
+            return
+        }
+        let focusedItem = component.slice.item
+        guard let peerId = focusedItem.peerId else {
+            return
+        }
+        let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
+        let peer = component.slice.peer
+        
+        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+        let controller = component.controller() as? StoryContainerScreen
+        
+        if let navigationController = controller?.navigationController as? NavigationController {
+            var controllers = navigationController.viewControllers
+            for controller in controllers.reversed() {
+                if !(controller is StoryContainerScreen) {
+                    controllers.removeLast()
+                } else {
+                    break
+                }
+            }
+            navigationController.setViewControllers(controllers, animated: true)
+            
+            controller?.window?.forEachController({ controller in
+                if let controller = controller as? StickerPackScreenImpl {
+                    controller.dismiss()
+                }
+            })
+        }
+        
+        let _ = (component.context.engine.messages.enqueueOutgoingMessage(
+            to: peerId,
+            replyTo: nil,
+            storyId: focusedStoryId,
+            content: .contextResult(results, result)
+        ) |> deliverOnMainQueue).start(next: { [weak controller, weak view] messageIds in
+            if let controller {
+                Queue.mainQueue().after(0.3) {
+                    controller.present(UndoOverlayController(
+                        presentationData: presentationData,
+                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat", destructive: false),
+                        elevatedLayout: false,
+                        animateInAsReplacement: false,
+                        action: { [weak view] action in
+                            if case .undo = action, let messageId = messageIds.first {
+                                view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
+                            }
+                            return false
+                        }
+                    ), in: .current)
+                }
+            }
+        })
+        
+        self.currentInputMode = .text
+        if hasFirstResponder(view) {
+            view.endEditing(true)
+        } else {
+            view.state?.updated(transition: .spring(duration: 0.3))
+            controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
         }
     }
     
@@ -1449,7 +1475,7 @@ final class StoryItemSetContainerSendMessage {
             guard let self, let view, let controller else {
                 return
             }
-            self.presentWebSearch(view: view, editingMessage: false, attachment: true, activateOnDisplay: activateOnDisplay, present: { [weak controller] c, a in
+            self.presentWebSearch(view: view, activateOnDisplay: activateOnDisplay, present: { [weak controller] c, a in
                 controller?.present(c, in: .current)
                 if let webSearchController = c as? WebSearchController {
                     webSearchController.searchingUpdated = { [weak mediaGroups] searching in
@@ -1767,118 +1793,41 @@ final class StoryItemSetContainerSendMessage {
         sendMessage(nil)
     }
     
-    private func presentWebSearch(view: StoryItemSetContainerComponent.View, editingMessage: Bool, attachment: Bool, activateOnDisplay: Bool = true, present: @escaping (ViewController, Any?) -> Void) {
-        /*guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
+    private func presentWebSearch(view: StoryItemSetContainerComponent.View, activateOnDisplay: Bool = true, present: @escaping (ViewController, Any?) -> Void) {
+        guard let component = view.component else {
             return
         }
+        let context = component.context
+        let peer = component.slice.peer
+        let storyId = component.slice.item.storyItem.id
         
-        let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.SearchBots())
-        |> deliverOnMainQueue).start(next: { [weak self] configuration in
-            if let strongSelf = self {
-                let controller = WebSearchController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: EnginePeer(peer), chatLocation: strongSelf.chatLocation, configuration: configuration, mode: .media(attachment: attachment, completion: { [weak self] results, selectionState, editingState, silentPosting in
-                    self?.attachmentController?.dismiss(animated: true, completion: nil)
-                    legacyEnqueueWebSearchMessages(selectionState, editingState, enqueueChatContextResult: { [weak self] result in
-                        if let strongSelf = self {
-                            strongSelf.enqueueChatContextResult(results, result, hideVia: true)
+        let theme = component.theme
+        let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
+         
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.SearchBots())
+        |> deliverOnMainQueue).start(next: { [weak self, weak view] configuration in
+            if let self {
+                let controller = WebSearchController(context: context, updatedPresentationData: updatedPresentationData, peer: peer, chatLocation: .peer(id: peer.id), configuration: configuration, mode: .media(attachment: true, completion: { [weak self] results, selectionState, editingState, silentPosting in
+                    legacyEnqueueWebSearchMessages(selectionState, editingState, enqueueChatContextResult: { [weak self, weak view] result in
+                        if let self, let view {
+                            self.performSendContextResultAction(view: view, results: results, result: result)
                         }
-                    }, enqueueMediaMessages: { [weak self] signals in
-                        if let strongSelf = self, !signals.isEmpty {
-                            if editingMessage {
-                                strongSelf.editMessageMediaWithLegacySignals(signals)
-                            } else {
-                                strongSelf.enqueueMediaMessages(signals: signals, silentPosting: silentPosting)
-                            }
+                    }, enqueueMediaMessages: { [weak self, weak view] signals in
+                        if let self, let view, !signals.isEmpty {
+                            self.enqueueMediaMessages(view: view, peer: peer, replyToMessageId: nil, replyToStoryId: StoryId(peerId: peer.id, id: storyId), signals: signals, silentPosting: false)
                         }
                     })
                 }), activateOnDisplay: activateOnDisplay)
-                controller.attemptItemSelection = { [weak strongSelf] item in
-                    guard let strongSelf, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
-                        return false
+                controller.getCaptionPanelView = { [weak self, weak view] in
+                    if let view {
+                        return self?.getCaptionPanelView(view: view, peer: peer)
+                    } else {
+                        return nil
                     }
-                    
-                    enum ItemType {
-                        case gif
-                        case image
-                        case video
-                    }
-                    
-                    var itemType: ItemType?
-                    switch item {
-                    case let .internalReference(reference):
-                        if reference.type == "gif" {
-                            itemType = .gif
-                        } else if reference.type == "photo" {
-                            itemType = .image
-                        } else if reference.type == "video" {
-                            itemType = .video
-                        }
-                    case let .externalReference(reference):
-                        if reference.type == "gif" {
-                            itemType = .gif
-                        } else if reference.type == "photo" {
-                            itemType = .image
-                        } else if reference.type == "video" {
-                            itemType = .video
-                        }
-                    }
-                    
-                    var bannedSendPhotos: (Int32, Bool)?
-                    var bannedSendVideos: (Int32, Bool)?
-                    var bannedSendGifs: (Int32, Bool)?
-                    
-                    if let channel = peer as? TelegramChannel {
-                        if let value = channel.hasBannedPermission(.banSendPhotos) {
-                            bannedSendPhotos = value
-                        }
-                        if let value = channel.hasBannedPermission(.banSendVideos) {
-                            bannedSendVideos = value
-                        }
-                        if let value = channel.hasBannedPermission(.banSendGifs) {
-                            bannedSendGifs = value
-                        }
-                    } else if let group = peer as? TelegramGroup {
-                        if group.hasBannedPermission(.banSendPhotos) {
-                            bannedSendPhotos = (Int32.max, false)
-                        }
-                        if group.hasBannedPermission(.banSendVideos) {
-                            bannedSendVideos = (Int32.max, false)
-                        }
-                        if group.hasBannedPermission(.banSendGifs) {
-                            bannedSendGifs = (Int32.max, false)
-                        }
-                    }
-                    
-                    if let itemType {
-                        switch itemType {
-                        case .image:
-                            if bannedSendPhotos != nil {
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.restrictedSendingContentsText(), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                                
-                                return false
-                            }
-                        case .video:
-                            if bannedSendVideos != nil {
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.restrictedSendingContentsText(), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                                
-                                return false
-                            }
-                        case .gif:
-                            if bannedSendGifs != nil {
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.restrictedSendingContentsText(), actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                                
-                                return false
-                            }
-                        }
-                    }
-                    
-                    return true
-                }
-                controller.getCaptionPanelView = { [weak strongSelf] in
-                    return strongSelf?.getCaptionPanelView()
                 }
                 present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
-        })*/
+        })
     }
     
     private func getCaptionPanelView(view: StoryItemSetContainerComponent.View, peer: EnginePeer) -> TGCaptionPanelView? {

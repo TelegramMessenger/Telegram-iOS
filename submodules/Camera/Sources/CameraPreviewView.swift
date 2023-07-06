@@ -9,7 +9,35 @@ import CoreMedia
 import Vision
 import ImageBlur
 
+private extension UIInterfaceOrientation {
+   var videoOrientation: AVCaptureVideoOrientation {
+       switch self {
+       case .portraitUpsideDown: return .portraitUpsideDown
+       case .landscapeRight: return .landscapeRight
+       case .landscapeLeft: return .landscapeLeft
+       case .portrait: return .portrait
+       default: return .portrait
+       }
+   }
+}
+
 public class CameraSimplePreviewView: UIView {
+    func updateOrientation() {
+        guard self.videoPreviewLayer.connection?.isVideoOrientationSupported == true else {
+            return
+        }
+        let statusBarOrientation: UIInterfaceOrientation
+        if #available(iOS 13.0, *) {
+            statusBarOrientation = UIApplication.shared.windows.first?.windowScene?.interfaceOrientation ?? .portrait
+        } else {
+            statusBarOrientation = UIApplication.shared.statusBarOrientation
+        }
+        let videoOrientation: AVCaptureVideoOrientation = statusBarOrientation.videoOrientation
+//        videoPreviewLayer.frame = view.layer.bounds
+        self.videoPreviewLayer.connection?.videoOrientation = videoOrientation
+        self.videoPreviewLayer.removeAllAnimations()
+    }
+    
     static func lastBackImage() -> UIImage {
         let imagePath = NSTemporaryDirectory() + "backCameraImage.jpg"
         if let data = try? Data(contentsOf: URL(fileURLWithPath: imagePath)), let image = UIImage(data: data) {
@@ -80,6 +108,7 @@ public class CameraSimplePreviewView: UIView {
     public override func layoutSubviews() {
         super.layoutSubviews()
         
+        self.updateOrientation()
         self.placeholderView.frame = self.bounds.insetBy(dx: -1.0, dy: -1.0)
     }
     
