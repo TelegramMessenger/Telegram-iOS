@@ -816,8 +816,6 @@ public final class StoryPeerListItemComponent: Component {
                 titleTransition.setAlpha(view: titleView, alpha: component.expandedAlphaFraction)
             }
             
-            self.indicatorColorSeenLayer.isHidden = component.ringAnimation != nil
-            
             if let ringAnimation = component.ringAnimation {
                 var progressTransition = transition
                 let progressLayer: StoryProgressLayer

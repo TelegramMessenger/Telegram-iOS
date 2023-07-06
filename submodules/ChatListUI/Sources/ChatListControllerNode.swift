@@ -2546,7 +2546,7 @@ func shouldDisplayStoriesInChatListHeader(storySubscriptions: EngineStorySubscri
     if !storySubscriptions.items.isEmpty {
         return true
     }
-    if !isHidden, let accountItem = storySubscriptions.accountItem, (accountItem.hasUnseen || accountItem.hasPending) {
+    if !isHidden, let _ = storySubscriptions.accountItem {
         return true
     }
     return false
