@@ -90,24 +90,25 @@
 "SecretPasscodeSettings.Title" = "Секретный код-пароль";
 "SecretPasscodeSettings.EnterPasscode" = "Введите секретный код-пароль";
 "SecretPasscodeSettings.EnterNewPasscode" = "Введите новый секретный код-пароль";
-"SecretPasscodeSettings.RepeatNewPasscode" = "Повторите секретный код-пароль";
+"SecretPasscodeSettings.RepeatNewPasscode" = "Повторите новый секретный код-пароль";
 "SecretPasscodeSettings.AutoHide" = "Авто-скрытие";
 "SecretPasscodeSettings.AccountsHeader" = "Скрываемые аккаунты";
 "SecretPasscodeSettings.AddAccount" = "Добавить аккаунт";
 "SecretPasscodeSettings.SecretChatsHeader" = "Скрываемые секретные чаты";
 "SecretPasscodeSettings.AddSecretChats" = "Добавить секретные чаты";
 "SecretPasscodeSettings.DeleteSecretPasscode" = "Удалить секретный код-пароль";
-"SecretPasscodeSettings.DeleteSecretPasscodeNotice" = "⚠️ Все указанные здесь аккаунты и секретные чаты останутся и станут видимы все время.";
-"SecretPasscodeSettings.AtLeastOneAccountMustRemainUnhidden" = "По крайней мере один аккаунт должен оставаться нескрытым.";
+"SecretPasscodeSettings.DeleteSecretPasscodeNotice" = "⚠️ Все указанные здесь аккаунты и секретные чаты станут видимыми все время.";
+"SecretPasscodeSettings.AtLeastOneAccountMustRemainUnhidden" = "Хотя бы один аккаунт должен оставаться видимым все время.";
+"SecretPasscodeSettings.Intro" = "Укажите **секреты**: аккаунты и секретные чаты, которые будут скрыты, пока вы не введете этот секретный код-пароль.";
 "Settings.EnterSecretPasscode" = "Ввести секретный код-пароль";
 "Settings.ManageSecretPasscodes" = "Управлять секретными код-паролями";
 "SecretPasscodeMenu.Add" = "Добавить секретный код-пароль";
-"SecretPasscodeMenu.Edit" = "Изменить секретный код-пароль";
+"SecretPasscodeMenu.Edit" = "Редактировать секретный код-пароль";
 "SecretPasscodeMenu.HideAllSecrets" = "Скрыть все секреты";
 "SecretPasscodeStatus.SomeRevealed" = "Некоторые секреты открыты.";
 "SecretPasscodeStatus.AllHidden" = "Все секреты скрыты.";
-"SecretPasscodeStatus.Revealed" = "👁️ Текущее состояние: секреты открыты.";
-"SecretPasscodeStatus.Hidden" = "🔒 Текущее состояние: секреты скрыты.";
+"SecretPasscodeStatus.Revealed" = "👁️ Секреты открыты.";
+"SecretPasscodeStatus.Hidden" = "🔒 Секреты скрыты.";
 "SecretPasscode.SecretChatsSelectionTitle" = "Секретные чаты";
 "SecretPasscode.SecretChatDeleted" = "Удален";
 "SecretPasscode.AccountListTitle" = "Аккаунты";
@@ -115,7 +116,7 @@
 "SecretPasscode.SomeWidgetContainsChatsFromJustAddedAccount" = "Внимание! По крайней мере в одном из ваших виджетов есть чат(ы) из только что добавленного аккаунта. Для защиты этого аккаунта удалите все эти чаты из конфигурации виджетов.";
 
 "FunctionalityUnavailableForHidableAccounts" = "Эта функция недоступна для скрываемых аккаунтов.";
-"ContactsSyncHelpForHidableAccounts" = "В скрытых аккаунтах контакты не синхронизируются.";
+"ContactsSyncHelpForHidableAccounts" = "Контакты не синхронизируются в скрываемых аккаунтах.";
 
 "PasscodeAttempts.TryAgainIn" = "Защита от перебора код-паролей. Попробуйте снова через %@.";
 

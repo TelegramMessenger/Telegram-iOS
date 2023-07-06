@@ -63,8 +63,9 @@
 "SecretPasscodeSettings.SecretChatsHeader" = "Hiding Secret Chats";
 "SecretPasscodeSettings.AddSecretChats" = "Add Secret Chats";
 "SecretPasscodeSettings.DeleteSecretPasscode" = "Delete Secret Passcode";
-"SecretPasscodeSettings.DeleteSecretPasscodeNotice" = "⚠️ All specified here accounts and secret chats will remain and become visible at all times.";
-"SecretPasscodeSettings.AtLeastOneAccountMustRemainUnhidden" = "At least one account must remain unhidden.";
+"SecretPasscodeSettings.DeleteSecretPasscodeNotice" = "⚠️ All accounts and secret chats specified here will become visible at all times.";
+"SecretPasscodeSettings.AtLeastOneAccountMustRemainUnhidden" = "At least one account must remain visible at all times.";
+"SecretPasscodeSettings.Intro" = "Specify **secrets**: accounts and secret chats that will be hidden until you enter this secret passcode.";
 "Settings.EnterSecretPasscode" = "Enter Secret Passcode";
 "Settings.ManageSecretPasscodes" = "Manage Secret Passcodes";
 "SecretPasscodeMenu.Add" = "Add Secret Passcode";
@@ -72,8 +73,8 @@
 "SecretPasscodeMenu.HideAllSecrets" = "Hide All Secrets";
 "SecretPasscodeStatus.SomeRevealed" = "Some secrets are revealed.";
 "SecretPasscodeStatus.AllHidden" = "All secrets are hidden.";
-"SecretPasscodeStatus.Revealed" = "👁️ Current state: secrets are revealed.";
-"SecretPasscodeStatus.Hidden" = "🔒 Current state: secrets are hidden.";
+"SecretPasscodeStatus.Revealed" = "👁️ Secrets are revealed.";
+"SecretPasscodeStatus.Hidden" = "🔒 Secrets are hidden.";
 "SecretPasscode.SecretChatsSelectionTitle" = "Secret Chats";
 "SecretPasscode.SecretChatDeleted" = "Deleted";
 "SecretPasscode.AccountListTitle" = "Accounts";

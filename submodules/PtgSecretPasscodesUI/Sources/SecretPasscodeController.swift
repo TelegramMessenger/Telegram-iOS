@@ -42,6 +42,7 @@ private final class SecretPasscodeControllerArguments {
 }
 
 private enum SecretPasscodeControllerSection: Int32 {
+    case intro
     case state
     case timeout
     case accounts
@@ -51,6 +52,7 @@ private enum SecretPasscodeControllerSection: Int32 {
 }
 
 private enum SecretPasscodeControllerEntry: ItemListNodeEntry {
+    case intro(String)
     case state(String)
     case timeout(String, String)
     case accountsHeader(String)
@@ -64,6 +66,8 @@ private enum SecretPasscodeControllerEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
+        case .intro:
+            return SecretPasscodeControllerSection.intro.rawValue
         case .state:
             return SecretPasscodeControllerSection.state.rawValue
         case .timeout:
@@ -80,6 +84,7 @@ private enum SecretPasscodeControllerEntry: ItemListNodeEntry {
     }
     
     enum StableId: Hashable {
+        case intro
         case state
         case timeout
         case accountsHeader
@@ -94,6 +99,8 @@ private enum SecretPasscodeControllerEntry: ItemListNodeEntry {
     
     var stableId: StableId {
         switch self {
+        case .intro:
+            return .intro
         case .state:
             return .state
         case .timeout:
@@ -151,6 +158,8 @@ private enum SecretPasscodeControllerEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! SecretPasscodeControllerArguments
         switch self {
+        case let .intro(text):
+            return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
         case let .state(text):
             return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
         case let .timeout(title, value):
@@ -197,6 +206,8 @@ private struct SecretPasscodeControllerState: Equatable {
 
 private func secretPasscodeControllerEntries(presentationData: PresentationData, state: SecretPasscodeControllerState, accountEntries: [AccountEntry], secretChatEntries: [SecretChatEntry]) -> [SecretPasscodeControllerEntry] {
     var entries: [SecretPasscodeControllerEntry] = []
+    
+    entries.append(.intro(presentationData.strings.SecretPasscodeSettings_Intro))
     
     entries.append(.state(state.settings.active ? presentationData.strings.SecretPasscodeStatus_Revealed : presentationData.strings.SecretPasscodeStatus_Hidden))
     

@@ -90,15 +90,16 @@
 "SecretPasscodeSettings.Title" = "Сакрэтны код доступу";
 "SecretPasscodeSettings.EnterPasscode" = "Увядзіце сакрэтны код доступу";
 "SecretPasscodeSettings.EnterNewPasscode" = "Увядзіце новы сакрэтны код доступу";
-"SecretPasscodeSettings.RepeatNewPasscode" = "Увядзіце сакрэтны код доступу яшчэ раз";
+"SecretPasscodeSettings.RepeatNewPasscode" = "Увядзіце новы сакрэтны код доступу яшчэ раз";
 "SecretPasscodeSettings.AutoHide" = "Аўта-схаванне";
-"SecretPasscodeSettings.AccountsHeader" = "Хаваныя акаўнты";
+"SecretPasscodeSettings.AccountsHeader" = "Акаўнты якія хаваюцца";
 "SecretPasscodeSettings.AddAccount" = "Дадаць акаўнт";
-"SecretPasscodeSettings.SecretChatsHeader" = "Хаваныя сакрэтныя чаты";
+"SecretPasscodeSettings.SecretChatsHeader" = "Сакрэтныя чаты якія хаваюцца";
 "SecretPasscodeSettings.AddSecretChats" = "Дадаць сакрэтныя чаты";
 "SecretPasscodeSettings.DeleteSecretPasscode" = "Выдаліць сакрэтны код доступу";
-"SecretPasscodeSettings.DeleteSecretPasscodeNotice" = "⚠️ Усе ўказаныя тут акаўнты і сакрэтныя чаты застануцца і стануць бачныя ўвесь час.";
-"SecretPasscodeSettings.AtLeastOneAccountMustRemainUnhidden" = "Прынамсі адзін акаўнт павінен заставацца непрыхаваным.";
+"SecretPasscodeSettings.DeleteSecretPasscodeNotice" = "⚠️ Усе ўказаныя тут акаўнты і сакрэтныя чаты стануць бачнымі ўвесь час.";
+"SecretPasscodeSettings.AtLeastOneAccountMustRemainUnhidden" = "Прынамсі адзін акаўнт павінен заставацца бачным увесь час.";
+"SecretPasscodeSettings.Intro" = "Укажыце **сакрэты**: акаўнты і сакрэтныя чаты, якія будуць схаваны, пакуль вы не ўвядзеце гэты сакрэтны код доступу.";
 "Settings.EnterSecretPasscode" = "Увесці сакрэтны код доступу";
 "Settings.ManageSecretPasscodes" = "Кіраваць сакрэтнымі кадамі доступу";
 "SecretPasscodeMenu.Add" = "Дадаць сакрэтны код доступу";
@@ -106,16 +107,16 @@
 "SecretPasscodeMenu.HideAllSecrets" = "Схаваць усе сакрэты";
 "SecretPasscodeStatus.SomeRevealed" = "Некаторыя сакрэты адкрыты.";
 "SecretPasscodeStatus.AllHidden" = "Усе сакрэты схаваны.";
-"SecretPasscodeStatus.Revealed" = "👁️ Цяперашні стан: сакрэты адкрыты.";
-"SecretPasscodeStatus.Hidden" = "🔒 Цяперашні стан: сакрэты схаваны.";
+"SecretPasscodeStatus.Revealed" = "👁️ Сакрэты адкрыты.";
+"SecretPasscodeStatus.Hidden" = "🔒 Сакрэты схаваны.";
 "SecretPasscode.SecretChatsSelectionTitle" = "Сакрэтныя чаты";
 "SecretPasscode.SecretChatDeleted" = "Выдален";
 "SecretPasscode.AccountListTitle" = "Акаўнты";
 "SecretPasscode.AccountSelectionTitle" = "Абярыце акаўнт";
 "SecretPasscode.SomeWidgetContainsChatsFromJustAddedAccount" = "Увага! Прынамсі ў адным з вашых віджэтаў ёсць чат(ы) з толькі што дададзенага акаўнта. Для абароны гэтага акаўнта выдаліце ўсе гэтыя чаты з канфігурацыі віджэтаў.";
 
-"FunctionalityUnavailableForHidableAccounts" = "Гэта функцыя недаступная для хаваных акаўнтаў.";
-"ContactsSyncHelpForHidableAccounts" = "У хаваных акаўнтах кантакты не сінхранізуюцца.";
+"FunctionalityUnavailableForHidableAccounts" = "Гэта функцыя недаступная для акаўнтаў якія хаваюцца.";
+"ContactsSyncHelpForHidableAccounts" = "Кантакты не сінхранізуюцца ў акаўнтах якія хаваюцца.";
 
 "PasscodeAttempts.TryAgainIn" = "Абарона ад атак грубай сілай. Паспрабуйце зноў праз %@.";
 
