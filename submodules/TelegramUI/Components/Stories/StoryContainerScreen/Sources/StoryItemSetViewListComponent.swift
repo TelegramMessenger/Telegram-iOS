@@ -26,7 +26,8 @@ final class StoryItemSetViewListComponent: Component {
     
     final class ExternalState {
         fileprivate(set) var minimizedHeight: CGFloat = 0.0
-        fileprivate(set) var effectiveHeight: CGFloat = 0.0
+        fileprivate(set) var defaultHeight: CGFloat = 0.0
+        fileprivate(set) var minimizationFraction: CGFloat = 0.0
         
         init() {
         }
@@ -47,6 +48,7 @@ final class StoryItemSetViewListComponent: Component {
     let peerId: EnginePeer.Id
     let safeInsets: UIEdgeInsets
     let storyItem: EngineStoryItem
+    let minimizedContentHeight: CGFloat
     let outerExpansionFraction: CGFloat
     let outerExpansionDirection: Bool
     let close: () -> Void
@@ -64,6 +66,7 @@ final class StoryItemSetViewListComponent: Component {
         peerId: EnginePeer.Id,
         safeInsets: UIEdgeInsets,
         storyItem: EngineStoryItem,
+        minimizedContentHeight: CGFloat,
         outerExpansionFraction: CGFloat,
         outerExpansionDirection: Bool,
         close: @escaping () -> Void,
@@ -80,6 +83,7 @@ final class StoryItemSetViewListComponent: Component {
         self.peerId = peerId
         self.safeInsets = safeInsets
         self.storyItem = storyItem
+        self.minimizedContentHeight = minimizedContentHeight
         self.outerExpansionFraction = outerExpansionFraction
         self.outerExpansionDirection = outerExpansionDirection
         self.close = close
@@ -103,6 +107,9 @@ final class StoryItemSetViewListComponent: Component {
             return false
         }
         if lhs.storyItem != rhs.storyItem {
+            return false
+        }
+        if lhs.minimizedContentHeight != rhs.minimizedContentHeight {
             return false
         }
         if lhs.outerExpansionFraction != rhs.outerExpansionFraction {
@@ -559,7 +566,7 @@ final class StoryItemSetViewListComponent: Component {
                 synchronous = animationHint.synchronous
             }
             
-            let minimizedHeight = max(100.0, availableSize.height - (325.0 + 12.0))
+            let minimizedHeight = max(100.0, availableSize.height - (component.minimizedContentHeight + 12.0))
             
             if themeUpdated {
                 self.backgroundView.backgroundColor = component.theme.rootController.navigationBar.blurredBackgroundColor
@@ -655,11 +662,17 @@ final class StoryItemSetViewListComponent: Component {
             
             let dismissFraction: CGFloat = 1.0 - max(0.0, min(1.0, -dismissOffsetY / expansionOffset))
             
+            var externalViews: EngineStoryItem.Views? = component.storyItem.views
+            if let viewListState = self.viewListState, !viewListState.items.isEmpty {
+                externalViews = EngineStoryItem.Views(seenCount: viewListState.totalCount, seenPeers: viewListState.items.prefix(3).map(\.peer))
+            }
+            
             let navigationPanelSize = self.navigationPanel.update(
                 transition: transition,
                 component: AnyComponent(StoryFooterPanelComponent(
                     context: component.context,
                     storyItem: component.storyItem,
+                    externalViews: externalViews,
                     expandFraction: dismissFraction,
                     expandViewStats: { [weak self] in
                         guard let self, let component = self.component else {
@@ -853,9 +866,11 @@ final class StoryItemSetViewListComponent: Component {
             transition.setBoundsOrigin(view: self, origin: CGPoint(x: 0.0, y: dismissOffsetY))
             
             component.externalState.minimizedHeight = minimizedHeight
+            component.externalState.defaultHeight = 60.0 + component.safeInsets.bottom + 1.0
             
-            let effectiveHeight: CGFloat = minimizedHeight * dismissFraction + (1.0 - dismissFraction) * (60.0 + component.safeInsets.bottom + 1.0)
-            component.externalState.effectiveHeight = min(minimizedHeight, max(0.0, effectiveHeight))
+            //let effectiveHeight: CGFloat = minimizedHeight * dismissFraction + (1.0 - dismissFraction) * (60.0 + component.safeInsets.bottom + 1.0)
+            //component.externalState.effectiveHeight = min(minimizedHeight, max(0.0, effectiveHeight))
+            component.externalState.minimizationFraction = dismissFraction
             
             return availableSize
         }

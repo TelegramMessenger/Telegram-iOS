@@ -398,5 +398,9 @@ public extension TelegramEngine {
         public func cancelAllFetches(id: String) {
             preconditionFailure()
         }
+        
+        public func pushPriorityDownload(resourceId: String) -> Disposable {
+            return self.account.network.multiplexedRequestManager.pushPriority(resourceId: resourceId)
+        }
     }
 }

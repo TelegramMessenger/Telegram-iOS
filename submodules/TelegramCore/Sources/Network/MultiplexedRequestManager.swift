@@ -26,6 +26,7 @@ private struct MultiplexedRequestTargetKey: Equatable, Hashable {
 private final class RequestData {
     let id: Int32
     let consumerId: Int64
+    let resourceId: String?
     let target: MultiplexedRequestTarget
     let functionDescription: FunctionDescription
     let payload: Buffer
@@ -36,9 +37,10 @@ private final class RequestData {
     let completed: (Any, NetworkResponseInfo) -> Void
     let error: (MTRpcError, Double) -> Void
     
-    init(id: Int32, consumerId: Int64, target: MultiplexedRequestTarget, functionDescription: FunctionDescription, payload: Buffer, tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool, deserializeResponse: @escaping (Buffer) -> Any?, completed: @escaping (Any, NetworkResponseInfo) -> Void, error: @escaping (MTRpcError, Double) -> Void) {
+    init(id: Int32, consumerId: Int64, resourceId: String?, target: MultiplexedRequestTarget, functionDescription: FunctionDescription, payload: Buffer, tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool, deserializeResponse: @escaping (Buffer) -> Any?, completed: @escaping (Any, NetworkResponseInfo) -> Void, error: @escaping (MTRpcError, Double) -> Void) {
         self.id = id
         self.consumerId = consumerId
+        self.resourceId = resourceId
         self.target = target
         self.functionDescription = functionDescription
         self.tag = tag
@@ -86,11 +88,11 @@ struct NetworkResponseInfo {
     var networkDuration: Double
 }
 
-final class RequestManagerPriorityContext {
-    
-}
-
 private final class MultiplexedRequestManagerContext {
+    final class RequestManagerPriorityContext {
+        var resourceCounters: [String: Int] = [:]
+    }
+    
     private let queue: Queue
     private let takeWorker: (MultiplexedRequestTarget, MediaResourceFetchTag?, Bool) -> Download?
     
@@ -119,12 +121,29 @@ private final class MultiplexedRequestManagerContext {
         }
     }
     
-    func request(to target: MultiplexedRequestTarget, consumerId: Int64, data: (FunctionDescription, Buffer, (Buffer) -> Any?), tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool, completed: @escaping (Any, NetworkResponseInfo) -> Void, error: @escaping (MTRpcError, Double) -> Void) -> Disposable {
+    func pushPriority(resourceId: String) -> Disposable {
+        let queue = self.queue
+        
+        let value = self.priorityContext.resourceCounters[resourceId] ?? 0
+        self.priorityContext.resourceCounters[resourceId] = value + 1
+        
+        return ActionDisposable { [weak self] in
+            queue.async {
+                guard let `self` = self else {
+                    return
+                }
+                let value = self.priorityContext.resourceCounters[resourceId] ?? 0
+                self.priorityContext.resourceCounters[resourceId] = max(0, value - 1)
+            }
+        }
+    }
+    
+    func request(to target: MultiplexedRequestTarget, consumerId: Int64, resourceId: String?, data: (FunctionDescription, Buffer, (Buffer) -> Any?), tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool, completed: @escaping (Any, NetworkResponseInfo) -> Void, error: @escaping (MTRpcError, Double) -> Void) -> Disposable {
         let targetKey = MultiplexedRequestTargetKey(target: target, continueInBackground: continueInBackground)
         
         let requestId = self.nextId
         self.nextId += 1
-        self.queuedRequests.append(RequestData(id: requestId, consumerId: consumerId, target: target, functionDescription: data.0, payload: data.1, tag: tag, continueInBackground: continueInBackground, automaticFloodWait: automaticFloodWait, deserializeResponse: { buffer in
+        self.queuedRequests.append(RequestData(id: requestId, consumerId: consumerId, resourceId: resourceId, target: target, functionDescription: data.0, payload: data.1, tag: tag, continueInBackground: continueInBackground, automaticFloodWait: automaticFloodWait, deserializeResponse: { buffer in
             return data.2(buffer)
         }, completed: { result, info in
             completed(result, info)
@@ -169,6 +188,29 @@ private final class MultiplexedRequestManagerContext {
         let maxWorkersPerTarget = 4
         
         for request in self.queuedRequests.sorted(by: { lhs, rhs in
+            let lhsPriority = lhs.resourceId.flatMap { id in
+                if let counters = self.priorityContext.resourceCounters[id], counters > 0 {
+                    return true
+                } else {
+                    return false
+                }
+            } ?? false
+            let rhsPriority = rhs.resourceId.flatMap { id in
+                if let counters = self.priorityContext.resourceCounters[id], counters > 0 {
+                    return true
+                } else {
+                    return false
+                }
+            } ?? false
+            
+            if lhsPriority != rhsPriority {
+                if lhsPriority {
+                    return true
+                } else {
+                    return false
+                }
+            }
+            
             return lhs.id < rhs.id
         }) {
             let targetKey = MultiplexedRequestTargetKey(target: request.target, continueInBackground: request.continueInBackground)
@@ -291,11 +333,19 @@ final class MultiplexedRequestManager {
         })
     }
     
-    func request<T>(to target: MultiplexedRequestTarget, consumerId: Int64, data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {
+    func pushPriority(resourceId: String) -> Disposable {
+        let disposable = MetaDisposable()
+        self.context.with { context in
+            disposable.set(context.pushPriority(resourceId: resourceId))
+        }
+        return disposable
+    }
+    
+    func request<T>(to target: MultiplexedRequestTarget, consumerId: Int64, resourceId: String?, data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.context.with { context in
-                disposable.set(context.request(to: target, consumerId: consumerId, data: (data.0, data.1, { buffer in
+                disposable.set(context.request(to: target, consumerId: consumerId, resourceId: resourceId, data: (data.0, data.1, { buffer in
                     return data.2.parse(buffer)
                 }), tag: tag, continueInBackground: continueInBackground, automaticFloodWait: automaticFloodWait, completed: { result, _ in
                     if let result = result as? T {
@@ -312,11 +362,11 @@ final class MultiplexedRequestManager {
         }
     }
     
-    func requestWithAdditionalInfo<T>(to target: MultiplexedRequestTarget, consumerId: Int64, data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool = true) -> Signal<(T, NetworkResponseInfo), (MTRpcError, Double)> {
+    func requestWithAdditionalInfo<T>(to target: MultiplexedRequestTarget, consumerId: Int64, resourceId: String?, data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool = true) -> Signal<(T, NetworkResponseInfo), (MTRpcError, Double)> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.context.with { context in
-                disposable.set(context.request(to: target, consumerId: consumerId, data: (data.0, data.1, { buffer in
+                disposable.set(context.request(to: target, consumerId: consumerId, resourceId: resourceId, data: (data.0, data.1, { buffer in
                     return data.2.parse(buffer)
                 }), tag: tag, continueInBackground: continueInBackground, automaticFloodWait: automaticFloodWait, completed: { result, info in
                     if let result = result as? T {

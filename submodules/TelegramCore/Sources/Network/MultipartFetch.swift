@@ -81,10 +81,27 @@ private enum MultipartFetchMasterLocation {
 
 private struct DownloadWrapper {
     let consumerId: Int64
+    let resourceId: String?
     let datacenterId: Int32
     let isCdn: Bool
     let network: Network
     let useMainConnection: Bool
+    
+    init(
+        consumerId: Int64,
+        resourceId: String?,
+        datacenterId: Int32,
+        isCdn: Bool,
+        network: Network,
+        useMainConnection: Bool
+    ) {
+        self.consumerId = consumerId
+        self.resourceId = resourceId
+        self.datacenterId = datacenterId
+        self.isCdn = isCdn
+        self.network = network
+        self.useMainConnection = useMainConnection
+    }
     
     func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: MediaResourceFetchTag?, continueInBackground: Bool) -> Signal<(T, NetworkResponseInfo), MTRpcError> {
         let target: MultiplexedRequestTarget
@@ -93,7 +110,7 @@ private struct DownloadWrapper {
         } else {
             target = .main(Int(self.datacenterId))
         }
-        return network.multiplexedRequestManager.requestWithAdditionalInfo(to: target, consumerId: self.consumerId, data: data, tag: tag, continueInBackground: continueInBackground)
+        return network.multiplexedRequestManager.requestWithAdditionalInfo(to: target, consumerId: self.consumerId, resourceId: self.resourceId, data: data, tag: tag, continueInBackground: continueInBackground)
         |> mapError { error, _ -> MTRpcError in
             return error
         }
@@ -581,7 +598,7 @@ private final class MultipartFetchManager {
         self.network = network
         self.networkStatsContext = networkStatsContext
         self.revalidationContext = revalidationContext
-        self.source = .master(location: location, download: DownloadWrapper(consumerId: self.consumerId, datacenterId: location.datacenterId, isCdn: false, network: network, useMainConnection: self.useMainConnection))
+        self.source = .master(location: location, download: DownloadWrapper(consumerId: self.consumerId, resourceId: self.resource.id.stringRepresentation, datacenterId: location.datacenterId, isCdn: false, network: network, useMainConnection: self.useMainConnection))
         self.partReady = partReady
         self.reportCompleteSize = reportCompleteSize
         self.finishWithError = finishWithError
@@ -884,7 +901,7 @@ private final class MultipartFetchManager {
                         switch strongSelf.source {
                             case let .master(location, download):
                                 strongSelf.partAlignment = dataHashLength
-                            strongSelf.source = .cdn(masterDatacenterId: location.datacenterId, cdnDatacenterId: id, fileToken: token, key: key, iv: iv, download: DownloadWrapper(consumerId: strongSelf.consumerId, datacenterId: id, isCdn: true, network: strongSelf.network, useMainConnection: strongSelf.useMainConnection), masterDownload: download, hashSource: MultipartCdnHashSource(queue: strongSelf.queue, fileToken: token, hashes: partHashes, masterDownload: download, continueInBackground: strongSelf.continueInBackground))
+                            strongSelf.source = .cdn(masterDatacenterId: location.datacenterId, cdnDatacenterId: id, fileToken: token, key: key, iv: iv, download: DownloadWrapper(consumerId: strongSelf.consumerId, resourceId: strongSelf.resource.id.stringRepresentation, datacenterId: id, isCdn: true, network: strongSelf.network, useMainConnection: strongSelf.useMainConnection), masterDownload: download, hashSource: MultipartCdnHashSource(queue: strongSelf.queue, fileToken: token, hashes: partHashes, masterDownload: download, continueInBackground: strongSelf.continueInBackground))
                                 strongSelf.checkState()
                             case .cdn, .none:
                                 break
