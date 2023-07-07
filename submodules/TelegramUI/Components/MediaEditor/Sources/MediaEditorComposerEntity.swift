@@ -28,14 +28,14 @@ func composerEntitiesForDrawingEntity(account: Account, entity: DrawingEntity, c
         return [MediaEditorComposerStickerEntity(account: account, content: content, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: entity.mirrored, colorSpace: colorSpace, isStatic: entity.isExplicitlyStatic)]
     } else if let renderImage = entity.renderImage, let image = CIImage(image: renderImage, options: [.colorSpace: colorSpace]) {
         if let entity = entity as? DrawingBubbleEntity {
-            return [MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: 1.0, rotation: entity.rotation, baseSize: entity.size, mirrored: false)]
+            return [MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: 1.0, rotation: entity.rotation, baseSize: entity.size, baseScale: nil, mirrored: false)]
         } else if let entity = entity as? DrawingSimpleShapeEntity {
-            return [MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: 1.0, rotation: entity.rotation, baseSize: entity.size, mirrored: false)]
+            return [MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: 1.0, rotation: entity.rotation, baseSize: entity.size, baseScale: nil, mirrored: false)]
         } else if let entity = entity as? DrawingVectorEntity {
-            return [MediaEditorComposerStaticEntity(image: image, position: CGPoint(x: entity.drawingSize.width * 0.5, y: entity.drawingSize.height * 0.5), scale: 1.0, rotation: 0.0, baseSize: entity.drawingSize, mirrored: false)]
+            return [MediaEditorComposerStaticEntity(image: image, position: CGPoint(x: entity.drawingSize.width * 0.5, y: entity.drawingSize.height * 0.5), scale: 1.0, rotation: 0.0, baseSize: entity.drawingSize, baseScale: nil, mirrored: false)]
         } else if let entity = entity as? DrawingTextEntity {
             var entities: [MediaEditorComposerEntity] = []
-            entities.append(MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: nil, mirrored: false))
+            entities.append(MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: nil, baseScale: 0.333, mirrored: false))
             if let renderSubEntities = entity.renderSubEntities {
                 for subEntity in renderSubEntities {
                     entities.append(contentsOf: composerEntitiesForDrawingEntity(account: account, entity: subEntity, colorSpace: colorSpace))
@@ -53,14 +53,16 @@ private class MediaEditorComposerStaticEntity: MediaEditorComposerEntity {
     let scale: CGFloat
     let rotation: CGFloat
     let baseSize: CGSize?
+    let baseScale: CGFloat?
     let mirrored: Bool
     
-    init(image: CIImage, position: CGPoint, scale: CGFloat, rotation: CGFloat, baseSize: CGSize?, mirrored: Bool) {
+    init(image: CIImage, position: CGPoint, scale: CGFloat, rotation: CGFloat, baseSize: CGSize?, baseScale: CGFloat?, mirrored: Bool) {
         self.image = image
         self.position = position
         self.scale = scale
         self.rotation = rotation
         self.baseSize = baseSize
+        self.baseScale = baseScale
         self.mirrored = mirrored
     }
     
@@ -88,6 +90,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
     let scale: CGFloat
     let rotation: CGFloat
     let baseSize: CGSize?
+    let baseScale: CGFloat? = nil
     let mirrored: Bool
     let colorSpace: CGColorSpace
     let isStatic: Bool
@@ -433,6 +436,7 @@ protocol MediaEditorComposerEntity {
     var scale: CGFloat { get }
     var rotation: CGFloat { get }
     var baseSize: CGSize? { get }
+    var baseScale: CGFloat? { get }
     var mirrored: Bool { get }
     
     func image(for time: CMTime, frameRate: Float, context: CIContext, completion: @escaping (CIImage?) -> Void)

@@ -3638,7 +3638,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let codableEntities = DrawingEntitiesView.encodeEntities(entities, entitiesView: self.node.entitiesView)
         mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
         
-        let caption = self.getCaption()
+        var caption = self.getCaption()
+        caption = convertMarkdownToAttributes(caption)
+        
         let randomId: Int64
         if case let .draft(_, id) = subject, let id {
             randomId = id
