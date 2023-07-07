@@ -588,6 +588,18 @@ public final class EntityKeyboardComponent: Component {
                         }
                     ).minSize(CGSize(width: 38.0, height: 38.0)))))
                 }
+                if let addImage = component.stickerContent?.inputInteractionHolder.inputInteraction?.addImage {
+                    contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(Button(
+                        content: AnyComponent(BundleIconComponent(
+                            name: "Media Editor/AddImage",
+                            tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
+                            maxSize: nil
+                        )),
+                        action: {
+                            addImage()
+                        }
+                    ).minSize(CGSize(width: 38.0, height: 38.0)))))
+                }
             }
             
             let deleteBackwards = component.emojiContent?.inputInteractionHolder.inputInteraction?.deleteBackwards
@@ -689,9 +701,8 @@ public final class EntityKeyboardComponent: Component {
                             component.switchToTextInput()
                         }
                     ).minSize(CGSize(width: 38.0, height: 38.0)))))
-                }
-                if let addImage = component.stickerContent?.inputInteractionHolder.inputInteraction?.addImage {
-                    contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "image", component: AnyComponent(Button(
+                } else if let addImage = component.emojiContent?.inputInteractionHolder.inputInteraction?.addImage {
+                    contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "emoji", component: AnyComponent(Button(
                         content: AnyComponent(BundleIconComponent(
                             name: "Media Editor/AddImage",
                             tintColor: component.theme.chat.inputMediaPanel.panelIconColor,

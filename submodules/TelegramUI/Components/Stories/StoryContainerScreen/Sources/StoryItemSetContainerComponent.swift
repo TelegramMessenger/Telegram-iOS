@@ -2220,6 +2220,7 @@ public final class StoryItemSetContainerComponent: Component {
                     self.controlsContainerView.addSubview(moreButtonView)
                 }
                 transition.setFrame(view: moreButtonView, frame: CGRect(origin: CGPoint(x: headerRightOffset - moreButtonSize.width, y: 2.0), size: moreButtonSize))
+                transition.setAlpha(view: moreButtonView, alpha: component.slice.item.storyItem.isPending ? 0.0 : 1.0)
                 headerRightOffset -= moreButtonSize.width + 15.0
             }
             

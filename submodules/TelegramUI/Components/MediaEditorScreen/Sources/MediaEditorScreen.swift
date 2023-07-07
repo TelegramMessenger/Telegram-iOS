@@ -1843,6 +1843,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             switch subject {
             case .image, .video:
                 isSavingAvailable = !controller.isEditingStory
+            case .draft:
+                isSavingAvailable = true
             default:
                 isSavingAvailable = false
             }
@@ -1973,7 +1975,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             
                         } else {
                             self.previewContainerView.alpha = 1.0
-                            if CACurrentMediaTime() - self.initializationTimestamp > 0.2 {
+                            if CACurrentMediaTime() - self.initializationTimestamp > 0.2, case .image = subject {
                                 self.previewContainerView.layer.allowsGroupOpacity = true
                                 self.previewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
                                     self.previewContainerView.layer.allowsGroupOpacity = false
@@ -2330,6 +2332,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
                         view.animateIn(from: .camera, completion: completion)
                     }
+                    
                     if let subject = self.subject, case let .video(_, mainTransitionImage, _, _, additionalTransitionImage, _, _, positionChangeTimestamps, pipPosition) = subject, let mainTransitionImage {
                         var transitionImage = mainTransitionImage
                         if let additionalTransitionImage {
@@ -2703,34 +2706,27 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 self.saveTooltip = tooltipController
             }
         }
-        
-        private weak var storyArchiveTooltip: ViewController?
-        func presentStoryArchiveTooltip(sourceView: UIView) {
+                
+        func presentGallery() {
             guard let controller = self.controller else {
                 return
             }
-            
-            if let storyArchiveTooltip = self.storyArchiveTooltip {
-                storyArchiveTooltip.dismiss(animated: true)
-                self.storyArchiveTooltip = nil
-            }
-            
-            let parentFrame = self.view.convert(self.bounds, to: nil)
-            let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
-            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 5.0), size: CGSize())
-            
-            let text: String
-            if controller.state.privacy.pin {
-                text = "Story will be kept on your page."
-            } else {
-                text = "Story will disappear in 24 hours."
-            }
-            
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: text), location: .point(location, .bottom), displayDuration: .default, inset: 7.0, cornerRadius: 9.0, shouldDismissOnTouch: { _, _ in
-                return .ignore
+            let galleryController = self.context.sharedContext.makeMediaPickerScreen(context: self.context, completion: { [weak self] result in
+                guard let self, let asset = result as? PHAsset else {
+                    return
+                }
+                
+                let options = PHImageRequestOptions()
+                options.deliveryMode = .highQualityFormat
+                PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { [weak self] image, _ in
+                    if let self, let image {
+                        Queue.mainQueue().async {
+                            self.interaction?.insertEntity(DrawingStickerEntity(content: .image(image, true)), scale: 2.5)
+                        }
+                    }
+                }
             })
-            self.storyArchiveTooltip = tooltipController
-            self.controller?.present(tooltipController, in: .current)
+            controller.push(galleryController)
         }
         
         func updateModalTransitionFactor(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -2883,6 +2879,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         if let self, let controller {
                                             let transitionFactor = controller.modalStyleOverlayTransitionFactor
                                             self.updateModalTransitionFactor(transitionFactor, transition: transition)
+                                        }
+                                    }
+                                    controller.presentGallery = { [weak self] in
+                                        if let self {
+                                            self.presentGallery()
                                         }
                                     }
                                     self.stickerScreen = controller

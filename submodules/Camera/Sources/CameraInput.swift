@@ -1,4 +1,5 @@
 import AVFoundation
+import TelegramCore
 
 class CameraInput {
     var videoInput: AVCaptureDeviceInput?
@@ -32,6 +33,8 @@ class CameraInput {
                 } else {
                     session.session.addInput(videoInput)
                 }
+            } else {
+                Logger.shared.log("Camera", "Can't add video input")
             }
         }
     }
@@ -45,6 +48,8 @@ class CameraInput {
             self.audioInput = audioInput
             if session.session.canAddInput(audioInput) {
                 session.session.addInput(audioInput)
+            } else {
+                Logger.shared.log("Camera", "Can't add audio input")
             }
         }
     }

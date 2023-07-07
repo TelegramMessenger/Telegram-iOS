@@ -5,6 +5,7 @@ import SwiftSignalKit
 import CoreImage
 import Vision
 import VideoToolbox
+import TelegramCore
 
 public enum VideoCaptureResult: Equatable {
     case finished((String, UIImage, Bool), (String, UIImage, Bool)?, Double, [(Bool, Double)], Double)
@@ -124,6 +125,8 @@ final class CameraOutput: NSObject {
                 session.session.addOutput(self.videoOutput)
             }
             self.videoOutput.setSampleBufferDelegate(self, queue: self.queue)
+        } else {
+            Logger.shared.log("Camera", "Can't add video output")
         }
         if audio, session.session.canAddOutput(self.audioOutput) {
             session.session.addOutput(self.audioOutput)
@@ -135,6 +138,8 @@ final class CameraOutput: NSObject {
             } else {
                 session.session.addOutput(self.photoOutput)
             }
+        } else {
+            Logger.shared.log("Camera", "Can't add photo output")
         }
         if metadata, session.session.canAddOutput(self.metadataOutput) {
             session.session.addOutput(self.metadataOutput)
@@ -152,6 +157,8 @@ final class CameraOutput: NSObject {
                     if session.session.canAddConnection(previewConnection) {
                         session.session.addConnection(previewConnection)
                         self.previewConnection = previewConnection
+                    } else {
+                        Logger.shared.log("Camera", "Can't add preview connection")
                     }
                 }
                 
@@ -159,6 +166,8 @@ final class CameraOutput: NSObject {
                 if session.session.canAddConnection(videoConnection) {
                     session.session.addConnection(videoConnection)
                     self.videoConnection = videoConnection
+                } else {
+                    Logger.shared.log("Camera", "Can't add video connection")
                 }
                 
                 if photo {
@@ -168,6 +177,8 @@ final class CameraOutput: NSObject {
                         self.photoConnection = photoConnection
                     }
                 }
+            } else {
+                Logger.shared.log("Camera", "Can't get video port")
             }
         }
     }

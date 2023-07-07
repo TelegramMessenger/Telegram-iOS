@@ -3172,39 +3172,41 @@ public final class DrawingToolsInteraction {
     }
     
     func presentEyedropper(retryLaterForVideo: Bool = true, dismissed: @escaping () -> Void) {
-//        self.entitiesView.pause()
-//
-//        if self.isVideo && retryLaterForVideo {
-//            self.updateVideoPlayback(false)
-//            Queue.mainQueue().after(0.1) {
-//                self.presentEyedropper(retryLaterForVideo: false, dismissed: dismissed)
-//            }
-//            return
-//        }
-//
-//        guard let currentImage = self.getCurrentImage() else {
-//            self.entitiesView.play()
-//            self.updateVideoPlayback(true)
-//            return
-//        }
-//
-//        let sourceImage = generateImage(self.drawingView.imageSize, contextGenerator: { size, context in
-//            let bounds = CGRect(origin: .zero, size: size)
-//            if let cgImage = currentImage.cgImage {
-//                context.draw(cgImage, in: bounds)
-//            }
-//            if let cgImage = self.drawingView.drawingImage?.cgImage {
-//                context.draw(cgImage, in: bounds)
-//            }
-//            context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
-//            context.scaleBy(x: 1.0, y: -1.0)
-//            context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
-//            self.entitiesView.layer.render(in: context)
-//        }, opaque: true, scale: 1.0)
-//        guard let sourceImage = sourceImage else {
-//            return
-//        }
-//
+        self.entitiesView.pause()
+        
+        if self.isVideo && retryLaterForVideo {
+            self.updateVideoPlayback(false)
+            Queue.mainQueue().after(0.1) {
+                self.presentEyedropper(retryLaterForVideo: false, dismissed: dismissed)
+            }
+            return
+        }
+
+        guard let currentImage = self.getCurrentImage() else {
+            self.entitiesView.play()
+            self.updateVideoPlayback(true)
+            return
+        }
+
+        let sourceImage = generateImage(self.drawingView.imageSize, contextGenerator: { size, context in
+            let bounds = CGRect(origin: .zero, size: size)
+            if let cgImage = currentImage.cgImage {
+                context.draw(cgImage, in: bounds)
+            }
+            if let cgImage = self.drawingView.drawingImage?.cgImage {
+                context.draw(cgImage, in: bounds)
+            }
+            context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+            context.scaleBy(x: 1.0, y: -1.0)
+            context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+            self.entitiesView.layer.render(in: context)
+        }, opaque: true, scale: 1.0)
+        guard let sourceImage = sourceImage else {
+            return
+        }
+        
+        let _ = sourceImage
+
 //        let eyedropperView = EyedropperView(containerSize: controller.contentWrapperView.frame.size, drawingView: self.drawingView, sourceImage: sourceImage)
 //        eyedropperView.completed = { [weak self] color in
 //            if let self {

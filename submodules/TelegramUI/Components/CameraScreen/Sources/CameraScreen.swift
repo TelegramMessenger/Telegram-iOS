@@ -1370,7 +1370,7 @@ public class CameraScreen: ViewController {
 
         private var isDismissing = false
         @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
-            guard let controller = self.controller else {
+            guard let controller = self.controller, let layout = self.validLayout else {
                 return
             }
             let translation = gestureRecognizer.translation(in: gestureRecognizer.view)
@@ -1380,7 +1380,7 @@ public class CameraScreen: ViewController {
             case .changed:
                 if self.componentExternalState.isRecording {
                     
-                } else {
+                } else if case .compact = layout.metrics.widthClass {
                     if translation.x < -10.0 || self.isDismissing {
                         self.isDismissing = true
                         let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
@@ -2179,7 +2179,7 @@ public class CameraScreen: ViewController {
         if let current = self.galleryController {
             controller = current
         } else {
-            controller = self.context.sharedContext.makeMediaPickerScreen(context: self.context, getSourceRect: { [weak self] in
+            controller = self.context.sharedContext.makeStoryMediaPickerScreen(context: self.context, getSourceRect: { [weak self] in
                 if let self {
                     if let galleryButton = self.node.componentHost.findTaggedView(tag: galleryButtonTag) {
                         return galleryButton.convert(galleryButton.bounds, to: self.view).offsetBy(dx: 0.0, dy: -15.0)

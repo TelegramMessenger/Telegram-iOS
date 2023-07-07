@@ -3,6 +3,7 @@ import UIKit
 import SwiftSignalKit
 import AVFoundation
 import CoreImage
+import TelegramCore
 
 final class CameraSession {
     private let singleSession: AVCaptureSession?
@@ -82,6 +83,8 @@ final class CameraDeviceContext {
     
     private var preferredMaxDimensions: CMVideoDimensions {
         if self.additional {
+            //if case .iPhoneXS = DeviceModel.current {
+//                return CMVideoDimensions(width: 1440, height: 1080)
             return CMVideoDimensions(width: 1920, height: 1440)
         } else {
             return CMVideoDimensions(width: 1920, height: 1080)
@@ -194,13 +197,22 @@ private final class CameraContext {
         self.mainDeviceContext.output.processCodes = { [weak self] codes in
             self?.detectedCodesPipe.putNext(codes)
         }
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(self.sessionRuntimeError),
+            name: .AVCaptureSessionRuntimeError,
+            object: self.session.session
+        )
     }
         
+    private var isSessionRunning = false
     func startCapture() {
         guard !self.session.session.isRunning else {
             return
         }
         self.session.session.startRunning()
+        self.isSessionRunning = self.session.session.isRunning
     }
     
     func stopCapture(invalidate: Bool = false) {
@@ -511,6 +523,27 @@ private final class CameraContext {
     
     var detectedCodes: Signal<[CameraCode], NoError> {
         return self.detectedCodesPipe.signal()
+    }
+    
+    @objc private func sessionInterruptionEnded(notification: NSNotification) {
+    }
+    
+    @objc private func sessionRuntimeError(notification: NSNotification) {
+        guard let errorValue = notification.userInfo?[AVCaptureSessionErrorKey] as? NSError else {
+            return
+        }
+        
+        let error = AVError(_nsError: errorValue)
+        Logger.shared.log("Camera", "Runtime error: \(error)")
+    
+        if error.code == .mediaServicesWereReset {
+            self.queue.async {
+                if self.isSessionRunning {
+                    self.session.session.startRunning()
+                    self.isSessionRunning = self.session.session.isRunning
+                }
+            }
+        }
     }
 }
 

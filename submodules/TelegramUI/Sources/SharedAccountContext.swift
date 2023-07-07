@@ -1843,7 +1843,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: mainStickerPack, stickerPacks: stickerPacks, loadedStickerPacks: loadedStickerPacks, parentNavigationController: parentNavigationController, sendSticker: sendSticker)
     }
     
-    public func makeMediaPickerScreen(context: AccountContext, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, dismissed: @escaping () -> Void) -> ViewController {
+    public func makeMediaPickerScreen(context: AccountContext, completion: @escaping (Any) -> Void) -> ViewController {
+        return mediaPickerController(context: context, completion: completion)
+    }
+    
+    public func makeStoryMediaPickerScreen(context: AccountContext, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, dismissed: @escaping () -> Void) -> ViewController {
         return storyMediaPickerController(context: context, getSourceRect: getSourceRect, completion: completion, dismissed: dismissed)
     }
         
