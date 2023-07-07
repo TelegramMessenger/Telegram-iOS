@@ -625,12 +625,12 @@ public final class StoryPeerListItemComponent: Component {
             transition.setFrame(view: avatarNode.view, frame: CGRect(origin: CGPoint(), size: avatarFrame.size))
             transition.setFrame(view: self.avatarBackgroundView, frame: CGRect(origin: CGPoint(), size: avatarFrame.size).insetBy(dx: -3.0 - UIScreenPixel * 2.0, dy: -3.0 - UIScreenPixel * 2.0))
             
-            let indicatorFrame = avatarFrame.insetBy(dx: -6.0, dy: -6.0)
+            let indicatorFrame = avatarFrame.insetBy(dx: -8.0, dy: -8.0)
             
             let baseLineUnseenWidth: CGFloat = 2.0
             let baseLineSeenWidth: CGFloat = 1.0 + UIScreenPixel
             
-            let minimizedLineWidth: CGFloat = 3.0
+            let minimizedLineWidth: CGFloat = 4.3
             
             let indicatorLineSeenWidth: CGFloat = baseLineSeenWidth * component.scale + minimizedLineWidth * (1.0 - component.scale)
             let indicatorLineUnseenWidth: CGFloat = baseLineUnseenWidth * component.scale + minimizedLineWidth * (1.0 - component.scale)
@@ -706,7 +706,7 @@ public final class StoryPeerListItemComponent: Component {
             self.avatarBackgroundView.isHidden = component.ringAnimation != nil || self.indicatorColorSeenLayer.isHidden
             
             let baseRadius: CGFloat = 30.0
-            let collapsedRadius: CGFloat = 32.0
+            let collapsedRadius: CGFloat = 35.0
             let indicatorRadius: CGFloat = baseRadius * component.scale + collapsedRadius * (1.0 - component.scale)
             
             self.indicatorShapeSeenLayer.lineWidth = indicatorLineSeenWidth
@@ -763,7 +763,7 @@ public final class StoryPeerListItemComponent: Component {
                 let cutoutSize: CGFloat = 18.0 + UIScreenPixel * 2.0
                 avatarPath.addEllipse(in: CGRect(origin: CGPoint(x: avatarSize.width - cutoutSize + UIScreenPixel, y: avatarSize.height - 1.0 - cutoutSize + UIScreenPixel), size: CGSize(width: cutoutSize, height: cutoutSize)))
             } else if let mappedLeftCenter {
-                avatarPath.addEllipse(in: CGRect(origin: CGPoint(), size: avatarSize).insetBy(dx: -indicatorLineSeenWidth, dy: -indicatorLineSeenWidth).offsetBy(dx: -abs(indicatorCenter.x - mappedLeftCenter.x), dy: -abs(indicatorCenter.y - mappedLeftCenter.y)))
+                avatarPath.addEllipse(in: CGRect(origin: CGPoint(), size: avatarSize).insetBy(dx: -indicatorLineSeenWidth * 1.4, dy: -indicatorLineSeenWidth * 1.4).offsetBy(dx: -abs(indicatorCenter.x - mappedLeftCenter.x), dy: -abs(indicatorCenter.y - mappedLeftCenter.y)))
             }
             Transition.immediate.setShapeLayerPath(layer: self.avatarShapeLayer, path: avatarPath)
             
