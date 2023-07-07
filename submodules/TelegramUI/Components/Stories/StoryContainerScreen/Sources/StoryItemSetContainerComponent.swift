@@ -3548,12 +3548,12 @@ public final class StoryItemSetContainerComponent: Component {
             
             var tip: ContextController.Tip?
             var tipSignal: Signal<ContextController.Tip?, NoError>?
-            if hasLinkedStickers {
+            if hasLinkedStickers, let peerReference = PeerReference(component.slice.peer._asPeer()) {
                 let context = component.context
                 tip = .animatedEmoji(text: nil, arguments: nil, file: nil, action: nil)
                 
                 let packsPromise = Promise<[StickerPackReference]>()
-                packsPromise.set(context.engine.stickers.stickerPacksAttachedToMedia(media: .standalone(media: media)))
+                packsPromise.set(context.engine.stickers.stickerPacksAttachedToMedia(media: .story(peer: peerReference, id: component.slice.item.storyItem.id, media: media)))
                 
                 let action: () -> Void = { [weak self] in
                     if let self {

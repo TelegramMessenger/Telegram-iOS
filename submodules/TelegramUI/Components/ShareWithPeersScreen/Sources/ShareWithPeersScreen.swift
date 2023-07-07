@@ -1335,7 +1335,7 @@ final class ShareWithPeersScreenComponent: Component {
                     sideInset: sideInset,
                     title: "Name",
                     peer: nil,
-                    subtitle: nil,
+                    subtitle: "sub",
                     subtitleAccessory: .none,
                     presence: nil,
                     selectionState: .editing(isSelected: false, isTinted: false),
