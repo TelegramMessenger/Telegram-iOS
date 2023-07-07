@@ -1156,7 +1156,7 @@ func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32, asPi
             
             account.stateManager.injectStoryUpdates(updates: [.read(peerId: peerId, maxId: id)])
             
-            #if DEBUG && true
+            #if DEBUG && false
             if "".isEmpty {
                 return .complete()
             }
