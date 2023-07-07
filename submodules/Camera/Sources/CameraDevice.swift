@@ -108,7 +108,7 @@ final class CameraDevice {
                 var bestFormat: AVCaptureDevice.Format?
          outer: for format in candidates {
                     for range in format.videoSupportedFrameRateRanges {
-                        if range.maxFrameRate > 60 {
+                        if range.maxFrameRate > maxFramerate {
                             continue outer
                         }
                         bestFormat = format

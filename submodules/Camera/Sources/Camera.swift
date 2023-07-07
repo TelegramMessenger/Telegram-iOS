@@ -82,11 +82,11 @@ final class CameraDeviceContext {
     
     private var preferredMaxDimensions: CMVideoDimensions {
         if self.additional {
-            if case .iPhoneXS = DeviceModel.current {
+            //if case .iPhoneXS = DeviceModel.current {
                 return CMVideoDimensions(width: 1440, height: 1080)
-            } else {
-                return CMVideoDimensions(width: 1920, height: 1440)
-            }
+            //} else {
+            //    return CMVideoDimensions(width: 1920, height: 1440)
+            //}
         } else {
             return CMVideoDimensions(width: 1920, height: 1080)
         }
