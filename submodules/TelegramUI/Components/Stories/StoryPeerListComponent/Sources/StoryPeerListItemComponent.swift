@@ -112,7 +112,7 @@ private func calculateMergingCircleShape(center: CGPoint, leftCenter: CGPoint?, 
                 }
                 
                 var startAngle = segmentSpacingAngle * 0.5 - CGFloat.pi * 0.5 + CGFloat(i) * (segmentSpacingAngle + segmentAngle)
-                startAngle += (1.0 - segmentFraction) * CGFloat.pi * 2.0 * 0.25
+                startAngle += (1.0 - segmentFraction) * CGFloat.pi * 2.0 * (-0.25)
                 
                 let endAngle = startAngle + segmentAngle
                 path.move(to: CGPoint(x: center.x + cos(startAngle) * radius, y: center.y + sin(startAngle) * radius))

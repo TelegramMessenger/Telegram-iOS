@@ -8,9 +8,11 @@ import ComponentFlow
 import TinyThumbnail
 import ImageBlur
 import MediaResources
+import Display
 
 final class StoryItemImageView: UIView {
     private let contentView: UIImageView
+    private var captureProtectedContentLayer: CaptureProtectedContentLayer?
     
     private var currentMedia: EngineMedia?
     private var disposable: Disposable?
@@ -18,6 +20,8 @@ final class StoryItemImageView: UIView {
     
     private(set) var isContentLoaded: Bool = false
     var didLoadContents: (() -> Void)?
+    
+    private var isCaptureProtected: Bool = false
     
     override init(frame: CGRect) {
         self.contentView = UIImageView()
@@ -37,10 +41,34 @@ final class StoryItemImageView: UIView {
     }
     
     private func updateImage(image: UIImage) {
-        self.contentView.image = image
+        if self.isCaptureProtected {
+            let captureProtectedContentLayer: CaptureProtectedContentLayer
+            if let current = self.captureProtectedContentLayer {
+                captureProtectedContentLayer = current
+            } else {
+                captureProtectedContentLayer = CaptureProtectedContentLayer()
+                
+                captureProtectedContentLayer.videoGravity = .resizeAspectFill
+                if #available(iOS 13.0, *) {
+                    captureProtectedContentLayer.preventsCapture = true
+                    captureProtectedContentLayer.preventsDisplaySleepDuringVideoPlayback = false
+                }
+                
+                captureProtectedContentLayer.frame = self.contentView.frame
+                self.captureProtectedContentLayer = captureProtectedContentLayer
+                self.layer.addSublayer(captureProtectedContentLayer)
+            }
+            if let cmSampleBuffer = image.cmSampleBuffer {
+                captureProtectedContentLayer.enqueue(cmSampleBuffer)
+            }
+        } else {
+            self.contentView.image = image
+        }
     }
     
     func update(context: AccountContext, peer: EnginePeer, storyId: Int32, media: EngineMedia, size: CGSize, isCaptureProtected: Bool, attemptSynchronous: Bool, transition: Transition) {
+        self.isCaptureProtected = isCaptureProtected
+        
         var dimensions: CGSize?
         
         let isMediaUpdated: Bool
@@ -173,6 +201,10 @@ final class StoryItemImageView: UIView {
             let filledSize = dimensions.aspectFilled(size)
             let contentFrame = CGRect(origin: CGPoint(x: floor((size.width - filledSize.width) * 0.5), y: floor((size.height - filledSize.height) * 0.5)), size: filledSize)
             transition.setFrame(view: self.contentView, frame: contentFrame)
+            
+            if let captureProtectedContentLayer = self.captureProtectedContentLayer {
+                transition.setFrame(layer: captureProtectedContentLayer, frame: contentFrame)
+            }
         }
     }
 }
