@@ -1973,7 +1973,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             
                         } else {
                             self.previewContainerView.alpha = 1.0
-                            if CACurrentMediaTime() - self.initializationTimestamp > 0.2 {
+                            if CACurrentMediaTime() - self.initializationTimestamp > 0.2, case .image = subject {
                                 self.previewContainerView.layer.allowsGroupOpacity = true
                                 self.previewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
                                     self.previewContainerView.layer.allowsGroupOpacity = false
@@ -2330,6 +2330,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
                         view.animateIn(from: .camera, completion: completion)
                     }
+                    
                     if let subject = self.subject, case let .video(_, mainTransitionImage, _, _, additionalTransitionImage, _, _, positionChangeTimestamps, pipPosition) = subject, let mainTransitionImage {
                         var transitionImage = mainTransitionImage
                         if let additionalTransitionImage {

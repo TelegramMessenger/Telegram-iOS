@@ -86,7 +86,7 @@ final class CameraDevice {
                     let subtype = CMFormatDescriptionGetMediaSubType(format.formatDescription)
                     if subtype == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange {
                         for range in format.videoSupportedFrameRateRanges {
-                            if range.maxFrameRate > maxFramerate {
+                            if range.maxFrameRate > 60 {
                                 continue outer
                             }
                         }
@@ -104,11 +104,23 @@ final class CameraDevice {
                 }
             }
             
-            if let bestFormat = candidates.last {
-                device.activeFormat = bestFormat
+            if !candidates.isEmpty {
+                var bestFormat: AVCaptureDevice.Format?
+         outer: for format in candidates {
+                    for range in format.videoSupportedFrameRateRanges {
+                        if range.maxFrameRate > 60 {
+                            continue outer
+                        }
+                        bestFormat = format
+                    }
+                }
+                if bestFormat == nil {
+                    bestFormat = candidates.last
+                }
+                device.activeFormat = bestFormat!
                     
                 Logger.shared.log("Camera", "Selected format:")
-                Logger.shared.log("Camera", bestFormat.description)
+                Logger.shared.log("Camera", bestFormat!.description)
             } else {
                 Logger.shared.log("Camera", "No format selected")
             }

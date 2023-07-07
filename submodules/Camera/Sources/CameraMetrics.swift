@@ -47,7 +47,7 @@ public extension Camera {
     }
 }
 
-enum DeviceModel: CaseIterable {
+enum DeviceModel: CaseIterable, Equatable {
     static var allCases: [DeviceModel] {
         return [
             .iPodTouch1,
@@ -72,6 +72,9 @@ enum DeviceModel: CaseIterable {
     case iPodTouch6
     case iPodTouch7
     
+    case iPhoneX
+    case iPhoneXS
+    
     case iPhone12
     case iPhone12Mini
     case iPhone12Pro
@@ -89,48 +92,52 @@ enum DeviceModel: CaseIterable {
     
     case unknown(String)
     
-    var modelId: String? {
+    var modelId: [String] {
         switch self {
         case .iPodTouch1:
-            return "iPod1,1"
+            return ["iPod1,1"]
         case .iPodTouch2:
-            return "iPod2,1"
+            return ["iPod2,1"]
         case .iPodTouch3:
-            return "iPod3,1"
+            return ["iPod3,1"]
         case .iPodTouch4:
-            return "iPod4,1"
+            return ["iPod4,1"]
         case .iPodTouch5:
-            return "iPod5,1"
+            return ["iPod5,1"]
         case .iPodTouch6:
-            return "iPod7,1"
+            return ["iPod7,1"]
         case .iPodTouch7:
-            return "iPod9,1"
+            return ["iPod9,1"]
+        case .iPhoneX:
+            return ["iPhone11,2"]
+        case .iPhoneXS:
+            return ["iPhone11,4", "iPhone11,6"]
         case .iPhone12:
-            return "iPhone13,2"
+            return ["iPhone13,2"]
         case .iPhone12Mini:
-            return "iPhone13,1"
+            return ["iPhone13,1"]
         case .iPhone12Pro:
-            return "iPhone13,3"
+            return ["iPhone13,3"]
         case .iPhone12ProMax:
-            return "iPhone13,4"
+            return ["iPhone13,4"]
         case .iPhone13:
-            return "iPhone14,5"
+            return ["iPhone14,5"]
         case .iPhone13Mini:
-            return "iPhone14,4"
+            return ["iPhone14,4"]
         case .iPhone13Pro:
-            return "iPhone14,2"
+            return ["iPhone14,2"]
         case .iPhone13ProMax:
-            return "iPhone14,3"
+            return ["iPhone14,3"]
         case .iPhone14:
-            return "iPhone14,7"
+            return ["iPhone14,7"]
         case .iPhone14Plus:
-            return "iPhone14,8"
+            return ["iPhone14,8"]
         case .iPhone14Pro:
-            return "iPhone15,2"
+            return ["iPhone15,2"]
         case .iPhone14ProMax:
-            return "iPhone15,3"
+            return ["iPhone15,3"]
         case let .unknown(modelId):
-            return modelId
+            return [modelId]
         }
     }
     
@@ -150,6 +157,10 @@ enum DeviceModel: CaseIterable {
             return "iPod touch 6G"
         case .iPodTouch7:
             return "iPod touch 7G"
+        case .iPhoneX:
+            return "iPhone X"
+        case .iPhoneXS:
+            return "iPhone XS"
         case .iPhone12:
             return "iPhone 12"
         case .iPhone12Mini:
@@ -200,7 +211,7 @@ enum DeviceModel: CaseIterable {
         var result: DeviceModel?
         if let modelCode {
             for model in DeviceModel.allCases {
-                if model.modelId == modelCode {
+                if model.modelId.contains(modelCode) {
                     result = model
                     break
                 }
