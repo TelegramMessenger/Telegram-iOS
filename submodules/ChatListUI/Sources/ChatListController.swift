@@ -1967,17 +1967,29 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     self.rawStoryArchiveSubscriptions = rawStoryArchiveSubscriptions
                     
-                    let hasUnseenArchive: Bool?
+                    let archiveStoryState: ChatListNodeState.StoryState?
                     if rawStoryArchiveSubscriptions.items.isEmpty {
-                        hasUnseenArchive = nil
+                        archiveStoryState = nil
                     } else {
-                        hasUnseenArchive = rawStoryArchiveSubscriptions.items.contains(where: { $0.hasUnseen })
+                        var unseenCount = 0
+                        for item in rawStoryArchiveSubscriptions.items {
+                            if item.hasUnseen {
+                                unseenCount += 1
+                            }
+                        }
+                        archiveStoryState = ChatListNodeState.StoryState(
+                            stats: EngineChatList.StoryStats(
+                                totalCount: rawStoryArchiveSubscriptions.items.count,
+                                unseenCount: unseenCount
+                            ),
+                            hasUnseenCloseFriends: rawStoryArchiveSubscriptions.items.contains(where: { $0.hasUnseenCloseFriends })
+                        )
                     }
                     
                     self.chatListDisplayNode.mainContainerNode.currentItemNode.updateState { chatListState in
                         var chatListState = chatListState
                         
-                        chatListState.hasUnseenArchiveStories = hasUnseenArchive
+                        chatListState.archiveStoryState = archiveStoryState
                         
                         return chatListState
                     }
