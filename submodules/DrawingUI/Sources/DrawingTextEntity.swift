@@ -635,7 +635,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
     
     func getRenderImage() -> UIImage? {
         let rect = self.bounds
-        UIGraphicsBeginImageContextWithOptions(rect.size, false, 3.0)
+        UIGraphicsBeginImageContextWithOptions(rect.size, false, 2.0)
         self.textView.drawHierarchy(in: rect, afterScreenUpdates: true)
         let image = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
