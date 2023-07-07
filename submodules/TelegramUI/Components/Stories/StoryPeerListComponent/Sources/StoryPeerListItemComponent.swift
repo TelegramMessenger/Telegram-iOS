@@ -627,8 +627,8 @@ public final class StoryPeerListItemComponent: Component {
             
             let indicatorFrame = avatarFrame.insetBy(dx: -8.0, dy: -8.0)
             
-            let baseLineUnseenWidth: CGFloat = 2.0
-            let baseLineSeenWidth: CGFloat = 1.0 + UIScreenPixel
+            let baseLineUnseenWidth: CGFloat = 2.33
+            let baseLineSeenWidth: CGFloat = 1.33
             
             let minimizedLineWidth: CGFloat = 4.3
             
@@ -651,7 +651,7 @@ public final class StoryPeerListItemComponent: Component {
             transition.setPosition(view: self.avatarBackgroundContainer, position: avatarFrame.center)
             transition.setBounds(view: self.avatarBackgroundContainer, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
             
-            let scaledAvatarSize = effectiveScale * (avatarSize.width + 4.0 - 2.0 * 2.0)
+            let scaledAvatarSize = effectiveScale * avatarSize.width
             
             transition.setScale(view: self.avatarContainer, scale: scaledAvatarSize / avatarSize.width)
             transition.setScale(view: self.avatarBackgroundContainer, scale: scaledAvatarSize / avatarSize.width)
@@ -705,7 +705,7 @@ public final class StoryPeerListItemComponent: Component {
             
             self.avatarBackgroundView.isHidden = component.ringAnimation != nil || self.indicatorColorSeenLayer.isHidden
             
-            let baseRadius: CGFloat = 30.0
+            let baseRadius: CGFloat = 30.66
             let collapsedRadius: CGFloat = 35.0
             let indicatorRadius: CGFloat = baseRadius * component.scale + collapsedRadius * (1.0 - component.scale)
             
@@ -800,8 +800,8 @@ public final class StoryPeerListItemComponent: Component {
                     self?.avatarContent.layer.animateScale(from: 1.08, to: 1.0, duration: 0.15)
                 })
                 
-                let initialLineWidth: CGFloat = 2.0
-                let targetLineWidth: CGFloat = 3.0
+                let initialLineWidth: CGFloat = baseLineUnseenWidth
+                let targetLineWidth: CGFloat = baseLineUnseenWidth * 1.5
                 self.indicatorShapeSeenLayer.lineWidth = targetLineWidth
                 self.indicatorShapeSeenLayer.animateShapeLineWidth(from: initialLineWidth, to: targetLineWidth, duration: 0.2, completion: { [weak self] _ in
                     self?.indicatorShapeSeenLayer.lineWidth = initialLineWidth

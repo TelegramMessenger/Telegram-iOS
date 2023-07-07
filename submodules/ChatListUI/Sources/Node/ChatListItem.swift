@@ -2842,8 +2842,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 hasUnseen: storyState.stats.unseenCount != 0,
                                 hasUnseenCloseFriendsItems: storyState.hasUnseenCloseFriends,
                                 theme: item.presentationData.theme,
-                                activeLineWidth: 2.0,
-                                inactiveLineWidth: 1.0 + UIScreenPixel,
+                                activeLineWidth: 2.33,
+                                inactiveLineWidth: 1.33,
                                 counters: AvatarStoryIndicatorComponent.Counters(
                                     totalCount: storyState.stats.totalCount,
                                     unseenCount: storyState.stats.unseenCount
