@@ -62,6 +62,22 @@ private func calculateMergingCircleShape(center: CGPoint, leftCenter: CGPoint?, 
     
     let path = CGMutablePath()
     
+    let segmentCount = max(totalCount, 1)
+    
+    if segmentCount == 1 {
+        if isSeen {
+            if unseenCount == 0 {
+            } else {
+                return path
+            }
+        } else {
+            if unseenCount != 0 {
+            } else {
+                return path
+            }
+        }
+    }
+    
     if let leftAngles, let rightAngles {
         path.addArc(center: center, radius: radius, startAngle: leftAngles.point1Angle, endAngle: rightAngles.point2Angle, clockwise: true)
         
@@ -70,14 +86,13 @@ private func calculateMergingCircleShape(center: CGPoint, leftCenter: CGPoint?, 
     } else if let angles = leftAngles ?? rightAngles {
         path.addArc(center: center, radius: radius, startAngle: angles.point1Angle, endAngle: angles.point2Angle, clockwise: true)
     } else {
-        let segmentCount = max(totalCount, 1)
         if segmentCount == 1 {
-            if unseenCount != 0 {
-                if !isSeen {
+            if isSeen {
+                if unseenCount == 0 {
                     path.addEllipse(in: CGRect(origin: CGPoint(x: center.x - radius, y: center.y - radius), size: CGSize(width: radius * 2.0, height: radius * 2.0)))
                 }
             } else {
-                if isSeen {
+                if unseenCount != 0 {
                     path.addEllipse(in: CGRect(origin: CGPoint(x: center.x - radius, y: center.y - radius), size: CGSize(width: radius * 2.0, height: radius * 2.0)))
                 }
             }
