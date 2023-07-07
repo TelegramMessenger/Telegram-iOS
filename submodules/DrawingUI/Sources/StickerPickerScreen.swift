@@ -912,7 +912,13 @@ public class StickerPickerScreen: ViewController {
                 useOpaqueTheme: false,
                 hideBackground: true,
                 stateContext: nil,
-                addImage: nil
+                addImage: { [weak self] in
+                    if let self {
+                        self.controller?.completion(nil)
+                        self.controller?.dismiss(animated: true)
+                        self.controller?.presentGallery()
+                    }
+                }
             )
             
             var stickerPeekBehavior: EmojiContentPeekBehaviorImpl?
@@ -1170,8 +1176,12 @@ public class StickerPickerScreen: ViewController {
                 useOpaqueTheme: false,
                 hideBackground: true,
                 stateContext: nil,
-                addImage: {
-                    
+                addImage: { [weak self] in
+                    if let self {
+                        self.controller?.completion(nil)
+                        self.controller?.dismiss(animated: true)
+                        self.controller?.presentGallery()
+                    }
                 }
             )
             
@@ -1626,6 +1636,8 @@ public class StickerPickerScreen: ViewController {
     public var presentController: (ViewController) -> Void = { _ in }
     
     public var completion: (DrawingStickerEntity.Content?) -> Void = { _ in }
+    
+    public var presentGallery: () -> Void = { }
     
     public init(context: AccountContext, inputData: Signal<StickerPickerInputData, NoError>) {
         self.context = context

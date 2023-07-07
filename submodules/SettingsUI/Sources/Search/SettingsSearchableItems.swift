@@ -21,6 +21,7 @@ import NotificationPeerExceptionController
 import QrCodeUI
 import PremiumUI
 import StorageUsageScreen
+import PeerInfoStoryGridScreen
 
 enum SettingsSearchableItemIcon {
     case profile
@@ -41,6 +42,7 @@ enum SettingsSearchableItemIcon {
     case deleteAccount
     case devices
     case premium
+    case stories
 }
 
 public enum SettingsSearchableItemId: Hashable {
@@ -62,6 +64,7 @@ public enum SettingsSearchableItemId: Hashable {
     case deleteAccount(Int32)
     case devices(Int32)
     case premium(Int32)
+    case stories(Int32)
     
     private var namespace: Int32 {
         switch self {
@@ -101,6 +104,8 @@ public enum SettingsSearchableItemId: Hashable {
             return 18
         case .premium:
             return 19
+        case .stories:
+            return 20
         }
     }
     
@@ -123,7 +128,8 @@ public enum SettingsSearchableItemId: Hashable {
                  let .chatFolders(id),
                  let .deleteAccount(id),
                  let .devices(id),
-                 let .premium(id):
+                 let .premium(id),
+                 let .stories(id):
                 return id
         }
     }
@@ -172,6 +178,8 @@ public enum SettingsSearchableItemId: Hashable {
             self = .devices(id)
         case 19:
             self = .premium(id)
+        case 20:
+            self = .stories(id)
         default:
             return nil
         }
@@ -339,6 +347,25 @@ private func premiumSearchableItems(context: AccountContext) -> [SettingsSearcha
     
     return result
 }
+
+private func storiesSearchableItems(context: AccountContext) -> [SettingsSearchableItem] {
+    let icon: SettingsSearchableItemIcon = .stories
+    let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
+    
+    var result: [SettingsSearchableItem] = []
+        
+    //TODO:localize
+    result.append(SettingsSearchableItem(id: .stories(0), title: "My Stories", alternate: synonyms(strings.SettingsSearch_Synonyms_Premium), icon: icon, breadcrumbs: [], present: { context, _, present in
+        present(.push, PeerInfoStoryGridScreen(context: context, peerId: context.account.peerId, scope: .saved))
+    }))
+    
+    result.append(SettingsSearchableItem(id: .stories(1), title: "Stories Archive", alternate: synonyms(strings.SettingsSearch_Synonyms_Premium), icon: icon, breadcrumbs: [], present: { context, _, present in
+        present(.push, PeerInfoStoryGridScreen(context: context, peerId: context.account.peerId, scope: .archive))
+    }))
+   
+    return result
+}
+
 
 private func callSearchableItems(context: AccountContext) -> [SettingsSearchableItem] {
     let icon: SettingsSearchableItemIcon = .calls
@@ -1008,6 +1035,9 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         
         let premiumItems = premiumSearchableItems(context: context)
         allItems.append(contentsOf: premiumItems)
+
+        let storiesItems = storiesSearchableItems(context: context)
+        allItems.append(contentsOf: storiesItems)
         
         if watchAppInstalled {
             let watch = SettingsSearchableItem(id: .watch(0), title: strings.Settings_AppleWatch, alternate: synonyms(strings.SettingsSearch_Synonyms_Watch), icon: .watch, breadcrumbs: [], present: { context, _, present in

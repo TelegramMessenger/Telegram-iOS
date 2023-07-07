@@ -137,6 +137,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             case `default`
             case wallpaper
             case story
+            case addImage
         }
         
         case assets(PHAssetCollection?, AssetsMode)
@@ -250,7 +251,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.presentationData = controller.presentationData
             
             var assetType: PHAssetMediaType?
-            if case let .assets(_, mode) = controller.subject, case .wallpaper = mode {
+            if case let .assets(_, mode) = controller.subject, [.wallpaper, .addImage].contains(mode) {
                 assetType = .image
             }
             let mediaAssetsContext = MediaAssetsContext(assetType: assetType)
@@ -404,7 +405,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.gridNode.scrollView.alwaysBounceVertical = true
             self.gridNode.scrollView.showsVerticalScrollIndicator = false
             
-            if case let .assets(_, mode) = controller.subject, [.wallpaper, .story].contains(mode) {
+            if case let .assets(_, mode) = controller.subject, [.wallpaper .addImage, .story].contains(mode) {
                 
             } else {
                 let selectionGesture = MediaPickerGridSelectionGesture<TGMediaSelectableItem>()
@@ -1379,6 +1380,9 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     self.titleView.title = presentationData.strings.Attachment_Gallery
                 case .wallpaper:
                     self.titleView.title = presentationData.strings.Conversation_Theme_ChooseWallpaperTitle
+                case .addImage:
+                    //TODO:localize
+                    self.titleView.title = "Add Image"
                 }
             }
         } else {
@@ -2180,6 +2184,28 @@ public func wallpaperMediaPickerController(
         mediaPickerController.customSelection = completion
         present(mediaPickerController, mediaPickerController.mediaPickerContext)
     }
+    controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+    return controller
+}
+
+public func mediaPickerController(
+    context: AccountContext,
+    completion: @escaping (Any) -> Void
+) -> ViewController {
+    let presentationData = context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
+    let updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) = (presentationData, .single(presentationData))
+    let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: nil, buttons: [.standalone], initialButton: .standalone, fromMenu: false, hasTextInput: false, makeEntityInputView: {
+        return nil
+    })
+    controller.requestController = { _, present in
+        let mediaPickerController = MediaPickerScreen(context: context, updatedPresentationData: updatedPresentationData, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .addImage), mainButtonState: nil, mainButtonAction: nil)
+        mediaPickerController.customSelection = { controller, result in
+            completion(result)
+            controller.dismiss(animated: true)
+        }
+        present(mediaPickerController, mediaPickerController.mediaPickerContext)
+    }
+    controller.navigationPresentation = .flatModal
     controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     return controller
 }

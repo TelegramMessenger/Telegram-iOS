@@ -1476,7 +1476,7 @@ final class ShareWithPeersScreenComponent: Component {
                 let inset: CGFloat
                 if case let .stories(editing) = component.stateContext.subject {
                     if editing {
-                        inset = 430.0
+                        inset = 446.0
                     } else {
                         inset = 605.0
                     }
