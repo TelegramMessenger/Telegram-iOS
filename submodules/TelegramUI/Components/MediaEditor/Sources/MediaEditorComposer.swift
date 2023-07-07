@@ -267,7 +267,9 @@ private func makeEditorImageFrameComposition(context: CIContext, inputImage: CII
                 image = image.transformed(by: resetTransform)
                 
                 var baseScale: CGFloat = 1.0
-                if let baseSize = entity.baseSize {
+                if let entityBaseScale = entity.baseScale {
+                    baseScale = entityBaseScale
+                } else if let baseSize = entity.baseSize {
                     baseScale = baseSize.width / image.extent.width
                     if baseSize.width != baseSize.height {
                         baseScale *= min(baseSize.width, baseSize.height) / max(baseSize.width, baseSize.height)

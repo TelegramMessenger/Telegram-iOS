@@ -414,6 +414,18 @@ public final class ChatListNavigationBar: Component {
                     self.addSubview(headerContentView)
                 }
                 transition.setFrameWithAdditivePosition(view: headerContentView, frame: headerContentFrame)
+                
+                if component.isSearchActive != (headerContentView.alpha == 0.0) {
+                    headerContentView.alpha = component.isSearchActive ? 0.0 : 1.0
+                    
+                    if !transition.animation.isImmediate {
+                        if component.isSearchActive {
+                            headerContentView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.14)
+                        } else {
+                            headerContentView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                        }
+                    }
+                }
             }
             
             if component.tabsNode !== self.tabsNode {
