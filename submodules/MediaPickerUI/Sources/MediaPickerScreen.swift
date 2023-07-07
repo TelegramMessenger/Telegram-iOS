@@ -405,7 +405,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.gridNode.scrollView.alwaysBounceVertical = true
             self.gridNode.scrollView.showsVerticalScrollIndicator = false
             
-            if case let .assets(_, mode) = controller.subject, [.wallpaper .addImage, .story].contains(mode) {
+            if case let .assets(_, mode) = controller.subject, [.wallpaper, .story, .addImage].contains(mode) {
                 
             } else {
                 let selectionGesture = MediaPickerGridSelectionGesture<TGMediaSelectableItem>()
