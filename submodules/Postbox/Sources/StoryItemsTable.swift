@@ -50,11 +50,10 @@ final class StoryTopItemsTable: Table {
         return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: false)
     }
     
-    private let sharedKey = ValueBoxKey(length: 8 + 4)
-    
     private func key(_ key: Key) -> ValueBoxKey {
-        self.sharedKey.setInt64(0, value: key.peerId.toInt64())
-        return self.sharedKey
+        let keyValue = ValueBoxKey(length: 8)
+        keyValue.setInt64(0, value: key.peerId.toInt64())
+        return keyValue
     }
     
     public func get(peerId: PeerId) -> Entry? {
@@ -115,12 +114,11 @@ final class StoryItemsTable: Table {
         return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: false)
     }
     
-    private let sharedKey = ValueBoxKey(length: 8 + 4)
-    
     private func key(_ key: Key) -> ValueBoxKey {
-        self.sharedKey.setInt64(0, value: key.peerId.toInt64())
-        self.sharedKey.setInt32(8, value: key.id)
-        return self.sharedKey
+        let keyValue = ValueBoxKey(length: 8 + 4)
+        keyValue.setInt64(0, value: key.peerId.toInt64())
+        keyValue.setInt32(8, value: key.id)
+        return keyValue
     }
     
     private func lowerBound(peerId: PeerId) -> ValueBoxKey {
@@ -158,6 +156,8 @@ final class StoryItemsTable: Table {
 
         self.valueBox.range(self.table, start: self.lowerBound(peerId: peerId), end: self.upperBound(peerId: peerId), values: { key, value in
             let id = key.getInt32(8)
+            
+            assert(peerId.toInt64() == key.getInt64(0))
             
             let entry: CodableEntry
             var expirationTimestamp: Int32?

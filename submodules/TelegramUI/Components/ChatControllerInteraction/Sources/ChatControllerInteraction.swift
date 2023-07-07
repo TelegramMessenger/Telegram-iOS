@@ -79,7 +79,7 @@ public final class ChatControllerInteraction {
     public enum OpenPeerSource {
         case `default`
         case reaction
-        case groupParticipant
+        case groupParticipant(storyStats: PeerStoryStats?, avatarHeaderNode: ASDisplayNode?)
     }
     
     public let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool

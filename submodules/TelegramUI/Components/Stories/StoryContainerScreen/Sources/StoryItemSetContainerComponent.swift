@@ -1426,7 +1426,8 @@ public final class StoryItemSetContainerComponent: Component {
                                 transitionViewImpl.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
                             }
                             
-                            leftInfoView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                            contentContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+                            self.controlsContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
                             
                             for transitionViewImpl in transitionViewsImpl {
                                 transition.setFrame(view: transitionViewImpl, frame: sourceLocalFrame)
