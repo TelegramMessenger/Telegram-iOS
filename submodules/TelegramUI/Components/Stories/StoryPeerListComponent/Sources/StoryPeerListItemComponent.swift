@@ -65,7 +65,7 @@ private func calculateMergingCircleShape(center: CGPoint, leftCenter: CGPoint?, 
     let segmentCount = max(totalCount, 1)
     
     if isSeen {
-        if unseenCount == 0 {
+        if unseenCount < totalCount {
         } else {
             return path
         }
