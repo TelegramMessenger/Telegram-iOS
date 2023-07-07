@@ -889,7 +889,7 @@ public final class StoryPeerListComponent: Component {
                         rightItemFrame = calculateItem(i + 1).itemFrame
                     }
                     
-                    itemAlpha = collapsedState.sideAlphaFraction * 1.0 + (1.0 - collapsedState.sideAlphaFraction) * (1.0 - collapsedState.activityFraction)
+                    itemAlpha = (collapsedState.sideAlphaFraction * 1.0 + (1.0 - collapsedState.sideAlphaFraction) * (1.0 - collapsedState.activityFraction)) * collapsedState.sideAlphaFraction
                 } else {
                     if itemLayout.itemCount == 1 {
                         itemAlpha = min(1.0, (collapsedState.minFraction + collapsedState.maxFraction) * 4.0)

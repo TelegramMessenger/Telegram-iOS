@@ -834,13 +834,8 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
             for groupReference in view.groupItems {
                 let messageIndex = EngineMessage.Index(id: EngineMessage.Id(peerId: EnginePeer.Id(0), namespace: 0, id: 0), timestamp: 1)
                 var mappedStoryState: ChatListNodeState.StoryState?
-                if let hasUnseenArchiveStories = state.hasUnseenArchiveStories {
-                    mappedStoryState = ChatListNodeState.StoryState(
-                        stats: EngineChatList.StoryStats(
-                            totalCount: 1, unseenCount: hasUnseenArchiveStories ? 1 : 0
-                        ),
-                        hasUnseenCloseFriends: false
-                    )
+                if let archiveStoryState = state.archiveStoryState {
+                    mappedStoryState = archiveStoryState
                 }
                 result.append(.GroupReferenceEntry(ChatListNodeEntry.GroupReferenceEntryData(
                     index: .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: pinningIndex, messageIndex: messageIndex)),
