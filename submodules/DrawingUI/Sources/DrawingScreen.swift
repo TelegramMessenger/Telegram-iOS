@@ -2342,10 +2342,10 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
             return self._selectionContainerView!
         }
         
-        private var _contentWrapperView: PortalSourceView?
-        var contentWrapperView: PortalSourceView {
+        private var _contentWrapperView: UIView?
+        var contentWrapperView: UIView {
             if self._contentWrapperView == nil {
-                self._contentWrapperView = PortalSourceView()
+                self._contentWrapperView = UIView()
             }
             return self._contentWrapperView!
         }
@@ -2423,6 +2423,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                 context: self.context,
                 drawingView: self.drawingView,
                 entitiesView: self.entitiesView,
+                contentWrapperView: self.contentWrapperView,
                 selectionContainerView: self.selectionContainerView,
                 isVideo: controller.isVideo,
                 updateSelectedEntity: { [weak self] entity in
@@ -2786,7 +2787,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
         return self.node.selectionContainerView
     }
     
-    public var contentWrapperView: PortalSourceView {
+    public var contentWrapperView: UIView {
         return self.node.contentWrapperView
     }
     
@@ -2954,6 +2955,7 @@ public final class DrawingToolsInteraction {
     private let context: AccountContext
     private let drawingView: DrawingView
     private let entitiesView: DrawingEntitiesView
+    private weak var contentWrapperView: UIView?
     private let selectionContainerView: DrawingSelectionContainerView
     private let isVideo: Bool
     private let updateSelectedEntity: (DrawingEntity?) -> Void
@@ -2983,6 +2985,7 @@ public final class DrawingToolsInteraction {
         context: AccountContext,
         drawingView: DrawingView,
         entitiesView: DrawingEntitiesView,
+        contentWrapperView: UIView,
         selectionContainerView: DrawingSelectionContainerView,
         isVideo: Bool,
         updateSelectedEntity: @escaping (DrawingEntity?) -> Void,
@@ -2998,6 +3001,7 @@ public final class DrawingToolsInteraction {
         self.context = context
         self.drawingView = drawingView
         self.entitiesView = entitiesView
+        self.contentWrapperView = contentWrapperView
         self.selectionContainerView = selectionContainerView
         self.isVideo = isVideo
         self.updateSelectedEntity = updateSelectedEntity
@@ -3182,50 +3186,51 @@ public final class DrawingToolsInteraction {
             return
         }
 
-        guard let currentImage = self.getCurrentImage() else {
-            self.entitiesView.play()
-            self.updateVideoPlayback(true)
-            return
-        }
-
+        let currentImage = self.getCurrentImage()
+        
         let sourceImage = generateImage(self.drawingView.imageSize, contextGenerator: { size, context in
             let bounds = CGRect(origin: .zero, size: size)
-            if let cgImage = currentImage.cgImage {
+            if let cgImage = currentImage?.cgImage {
                 context.draw(cgImage, in: bounds)
             }
-            if let cgImage = self.drawingView.drawingImage?.cgImage {
-                context.draw(cgImage, in: bounds)
+            if self.drawingView.superview !== self.entitiesView {
+                if let cgImage = self.drawingView.drawingImage?.cgImage {
+                    context.draw(cgImage, in: bounds)
+                }
             }
             context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
             context.scaleBy(x: 1.0, y: -1.0)
             context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
             self.entitiesView.layer.render(in: context)
         }, opaque: true, scale: 1.0)
-        guard let sourceImage = sourceImage else {
+        
+        guard let sourceImage, var contentWrapperView = self.contentWrapperView, let controllerView = self.getControllerNode()?.view else {
             return
         }
         
-        let _ = sourceImage
+        if contentWrapperView.frame.width.isZero {
+            contentWrapperView = self.entitiesView.superview!
+        }
+        
+        let eyedropperView = EyedropperView(containerSize: contentWrapperView.frame.size, drawingView: self.drawingView, sourceImage: sourceImage)
+        eyedropperView.completed = { [weak self] color in
+            if let self {
+                self.updateColor(color)
+                self.entitiesView.play()
+                self.updateVideoPlayback(true)
 
-//        let eyedropperView = EyedropperView(containerSize: controller.contentWrapperView.frame.size, drawingView: self.drawingView, sourceImage: sourceImage)
-//        eyedropperView.completed = { [weak self] color in
-//            if let self {
-//                self.updateColor(color)
-//                self.entitiesView.play()
-//                self.updateVideoPlayback(true)
-//
-//                dismissed()
-//            }
-//        }
-//        eyedropperView.dismissed = { [weak self] in
-//            if let self {
-//                self.entitiesView.play()
-//                self.updateVideoPlayback(true)
-//            }
-//        }
-//        eyedropperView.frame = controller.contentWrapperView.convert(controller.contentWrapperView.bounds, to: controller.view)
-//        self.addSubview(eyedropperView)
-//        self.currentEyedropperView = eyedropperView
+                dismissed()
+            }
+        }
+        eyedropperView.dismissed = { [weak self] in
+            if let self {
+                self.entitiesView.play()
+                self.updateVideoPlayback(true)
+            }
+        }
+        eyedropperView.frame = contentWrapperView.convert(contentWrapperView.bounds, to: controllerView)
+        self.addSubview(eyedropperView)
+        self.currentEyedropperView = eyedropperView
     }
     
     func dismissCurrentEyedropper() {

@@ -56,7 +56,7 @@ public final class EyedropperView: UIView {
     
     var completed: (DrawingColor) -> Void = { _ in }
     var dismissed: () -> Void = { }
-    
+        
     init(containerSize: CGSize, drawingView: DrawingView, sourceImage: UIImage) {
         self.drawingView = drawingView
         
