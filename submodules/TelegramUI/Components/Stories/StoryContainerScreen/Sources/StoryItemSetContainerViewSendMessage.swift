@@ -326,6 +326,35 @@ final class StoryItemSetContainerSendMessage {
         }
     }
     
+    private func presentMessageSentTooltip(view: StoryItemSetContainerComponent.View, peer: EnginePeer, messageId: EngineMessage.Id?) {
+        guard let component = view.component, let controller = component.controller() as? StoryContainerScreen else {
+            return
+        }
+        
+        if let tooltipScreen = self.tooltipScreen {
+            tooltipScreen.dismiss(animated: true)
+        }
+        
+        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+        let tooltipScreen = UndoOverlayController(
+            presentationData: presentationData,
+            content: .actionSucceeded(title: "", text: "Message Sent", cancel: messageId != nil ? "View in Chat" : "", destructive: false),
+            elevatedLayout: false,
+            animateInAsReplacement: false,
+            action: { [weak view, weak self] action in
+                if case .undo = action, let messageId {
+                    view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
+                }
+                self?.tooltipScreen = nil
+                view?.updateIsProgressPaused()
+                return false
+            }
+        )
+        controller.present(tooltipScreen, in: .current)
+        self.tooltipScreen = tooltipScreen
+        view.updateIsProgressPaused()
+    }
+    
     func performSendMessageAction(
         view: StoryItemSetContainerComponent.View
     ) {
@@ -342,8 +371,7 @@ final class StoryItemSetContainerSendMessage {
         }
         let peer = component.slice.peer
         
-        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-        let controller = component.controller()
+        let controller = component.controller() as? StoryContainerScreen
         
         if let recordedAudioPreview = self.recordedAudioPreview {
             self.recordedAudioPreview = nil
@@ -370,27 +398,22 @@ final class StoryItemSetContainerSendMessage {
                         replyTo: nil,
                         storyId: focusedStoryId,
                         content: .text(text.string, entities)
-                    ) |> deliverOnMainQueue).start(next: { [weak controller, weak view] messageIds in
-                        if let controller {
-                            Queue.mainQueue().after(0.3) {
-                                controller.present(UndoOverlayController(
-                                    presentationData: presentationData,
-                                    content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat", destructive: false),
-                                    elevatedLayout: false,
-                                    animateInAsReplacement: false,
-                                    action: { [weak view] action in
-                                        if case .undo = action, let messageId = messageIds.first {
-                                            view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
-                                        }
-                                        return false
-                                    }
-                                ), in: .current)
+                    ) |> deliverOnMainQueue).start(next: { [weak self, weak view] messageIds in
+                        Queue.mainQueue().after(0.3) {
+                            if let self, let view {
+                                self.presentMessageSentTooltip(view: view, peer: peer, messageId: messageIds.first.flatMap { $0 })
                             }
                         }
                     })
                     inputPanelView.clearSendMessageInput()
+                    
                     self.currentInputMode = .text
-                    view.endEditing(true)
+                    if hasFirstResponder(view) {
+                        view.endEditing(true)
+                    } else {
+                        view.state?.updated(transition: .spring(duration: 0.3))
+                    }
+                    controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
                 }
             }
         }
@@ -407,7 +430,6 @@ final class StoryItemSetContainerSendMessage {
         let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
         let peer = component.slice.peer
         
-        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
         let controller = component.controller() as? StoryContainerScreen
         
         if let navigationController = controller?.navigationController as? NavigationController {
@@ -433,21 +455,10 @@ final class StoryItemSetContainerSendMessage {
             replyTo: nil,
             storyId: focusedStoryId,
             content: .file(fileReference)
-        ) |> deliverOnMainQueue).start(next: { [weak controller, weak view] messageIds in
-            if let controller {
-                Queue.mainQueue().after(0.3) {
-                    controller.present(UndoOverlayController(
-                        presentationData: presentationData,
-                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat", destructive: false),
-                        elevatedLayout: false,
-                        animateInAsReplacement: false,
-                        action: { [weak view] action in
-                            if case .undo = action, let messageId = messageIds.first {
-                                view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
-                            }
-                            return false
-                        }
-                    ), in: .current)
+        ) |> deliverOnMainQueue).start(next: { [weak self, weak view] messageIds in
+            Queue.mainQueue().after(0.3) {
+                if let self, let view {
+                    self.presentMessageSentTooltip(view: view, peer: peer, messageId: messageIds.first.flatMap { $0 })
                 }
             }
         })
@@ -457,8 +468,8 @@ final class StoryItemSetContainerSendMessage {
             view.endEditing(true)
         } else {
             view.state?.updated(transition: .spring(duration: 0.3))
-            controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
         }
+        controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
     }
     
     func performSendContextResultAction(view: StoryItemSetContainerComponent.View, results: ChatContextResultCollection, result: ChatContextResult) {
@@ -472,7 +483,6 @@ final class StoryItemSetContainerSendMessage {
         let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
         let peer = component.slice.peer
         
-        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
         let controller = component.controller() as? StoryContainerScreen
         
         if let navigationController = controller?.navigationController as? NavigationController {
@@ -498,21 +508,10 @@ final class StoryItemSetContainerSendMessage {
             replyTo: nil,
             storyId: focusedStoryId,
             content: .contextResult(results, result)
-        ) |> deliverOnMainQueue).start(next: { [weak controller, weak view] messageIds in
-            if let controller {
-                Queue.mainQueue().after(0.3) {
-                    controller.present(UndoOverlayController(
-                        presentationData: presentationData,
-                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat", destructive: false),
-                        elevatedLayout: false,
-                        animateInAsReplacement: false,
-                        action: { [weak view] action in
-                            if case .undo = action, let messageId = messageIds.first {
-                                view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
-                            }
-                            return false
-                        }
-                    ), in: .current)
+        ) |> deliverOnMainQueue).start(next: { [weak self, weak view] messageIds in
+            Queue.mainQueue().after(0.3) {
+                if let self, let view {
+                    self.presentMessageSentTooltip(view: view, peer: peer, messageId: messageIds.first.flatMap { $0 })
                 }
             }
         })
@@ -522,8 +521,8 @@ final class StoryItemSetContainerSendMessage {
             view.endEditing(true)
         } else {
             view.state?.updated(transition: .spring(duration: 0.3))
-            controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
         }
+        controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
     }
     
     func setMediaRecordingActive(
@@ -1160,18 +1159,13 @@ final class StoryItemSetContainerSendMessage {
                             }
                             let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: mediaReference, replyToMessageId: nil, replyToStoryId: focusedStoryId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
                             let _ = (enqueueMessages(account: component.context.account, peerId: peer.id, messages: [message.withUpdatedReplyToMessageId(nil)])
-                            |> deliverOnMainQueue).start()
-                            
-                            if let controller = component.controller() {
-                                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                controller.present(UndoOverlayController(
-                                    presentationData: presentationData,
-                                    content: .succeed(text: "Message Sent"),
-                                    elevatedLayout: false,
-                                    animateInAsReplacement: false,
-                                    action: { _ in return false }
-                                ), in: .current)
-                            }
+                            |> deliverOnMainQueue).start(next: { [weak self, weak view] messageIds in
+                                if let self, let view {
+                                    Queue.mainQueue().after(0.3) {
+                                        self.presentMessageSentTooltip(view: view, peer: peer, messageId: messageIds.first.flatMap { $0 })
+                                    }
+                                }
+                            })
                         })
                         let _ = currentFilesController.swap(controller)
                         if let controller = controller as? AttachmentContainable, let mediaPickerContext = controller.mediaPickerContext {
@@ -1357,10 +1351,6 @@ final class StoryItemSetContainerSendMessage {
                                 }))
                             }
                         }))
-                    case .poll:
-                        let controller = self.configurePollCreation(view: view, peer: peer, targetMessageId: nil)
-                        completion(controller, controller?.mediaPickerContext)
-                        self.controllerNavigationDisposable.set(nil)
                     case .gift:
                         /*let premiumGiftOptions = strongSelf.presentationInterfaceState.premiumGiftOptions
                         if !premiumGiftOptions.isEmpty {
@@ -2002,56 +1992,6 @@ final class StoryItemSetContainerSendMessage {
         component.controller()?.present(controller, in: .window(.root))
     }
     
-    private func configurePollCreation(view: StoryItemSetContainerComponent.View, peer: EnginePeer, targetMessageId: EngineMessage.Id?, isQuiz: Bool? = nil) -> CreatePollControllerImpl? {
-        guard let component = view.component else {
-            return nil
-        }
-        let focusedItem = component.slice.item
-        guard let peerId = focusedItem.peerId else {
-            return nil
-        }
-        let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
-        
-        let theme = component.theme
-        return createPollController(context: component.context, updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) }), peer: peer, isQuiz: isQuiz, completion: { [weak self, weak view] poll in
-            guard let self, let view else {
-                return
-            }
-            let replyMessageId = targetMessageId
-            /*strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
-                if let strongSelf = self {
-                    strongSelf.chatDisplayNode.collapseInput()
-                    
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
-                    })
-                }
-            }, nil)*/
-            let message: EnqueueMessage = .message(
-                text: "",
-                attributes: [],
-                inlineStickers: [:],
-                mediaReference: .standalone(media: TelegramMediaPoll(
-                    pollId: EngineMedia.Id(namespace: Namespaces.Media.LocalPoll, id: Int64.random(in: Int64.min ... Int64.max)),
-                    publicity: poll.publicity,
-                    kind: poll.kind,
-                    text: poll.text,
-                    options: poll.options,
-                    correctAnswers: poll.correctAnswers,
-                    results: poll.results,
-                    isClosed: false,
-                    deadlineTimeout: poll.deadlineTimeout
-                )),
-                replyToMessageId: nil,
-                replyToStoryId: focusedStoryId,
-                localGroupingKey: nil,
-                correlationId: nil,
-                bubbleUpEmojiOrStickersets: []
-            )
-            self.sendMessages(view: view, peer: peer, messages: [message.withUpdatedReplyToMessageId(replyMessageId)])
-        })
-    }
-    
     private func transformEnqueueMessages(view: StoryItemSetContainerComponent.View, messages: [EnqueueMessage], silentPosting: Bool, scheduleTime: Int32? = nil) -> [EnqueueMessage] {
         var focusedStoryId: StoryId?
         if let component = view.component, let peerId = component.slice.item.peerId {
@@ -2095,27 +2035,14 @@ final class StoryItemSetContainerSendMessage {
     }
     
     private func sendMessages(view: StoryItemSetContainerComponent.View, peer: EnginePeer, messages: [EnqueueMessage], media: Bool = false, commit: Bool = false) {
-        guard let component = view.component, let controller = component.controller() else {
+        guard let component = view.component else {
             return
         }
-        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-        
         let _ = (enqueueMessages(account: component.context.account, peerId: peer.id, messages: self.transformEnqueueMessages(view: view, messages: messages, silentPosting: false))
-        |> deliverOnMainQueue).start(next: { [weak controller] messageIds in
-            if let controller {
-                Queue.mainQueue().after(0.3) {
-                    controller.present(UndoOverlayController(
-                        presentationData: presentationData,
-                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat", destructive: false),
-                        elevatedLayout: false,
-                        animateInAsReplacement: false,
-                        action: { [weak view] action in
-                            if case .undo = action, let messageId = messageIds.first {
-                                view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
-                            }
-                            return false
-                        }
-                    ), in: .current)
+        |> deliverOnMainQueue).start(next: { [weak self, weak view] messageIds in
+            Queue.mainQueue().after(0.3) {
+                if let view {
+                    self?.presentMessageSentTooltip(view: view, peer: peer, messageId: messageIds.first.flatMap { $0 })
                 }
             }
         })

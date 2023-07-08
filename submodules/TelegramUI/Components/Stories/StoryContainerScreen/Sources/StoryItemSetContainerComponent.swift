@@ -583,6 +583,12 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
+            if let inputMediaView = self.sendMessageContext.inputMediaNode {
+                if inputMediaView.frame.contains(point) {
+                    return false
+                }
+            }
+            
             if let centerInfoItemView = self.centerInfoItem?.view.view {
                 if centerInfoItemView.convert(centerInfoItemView.bounds, to: self).contains(point) {
                     return false
@@ -2804,7 +2810,24 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                     
                     reactionContextNode.premiumReactionsSelected = { [weak self] file in
-                        guard let self, let file, let component = self.component else {
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        
+                        guard let file else {
+                            let context = component.context
+                            var replaceImpl: ((ViewController) -> Void)?
+                            let controller = PremiumDemoScreen(context: context, subject: .uniqueReactions, action: {
+                                let controller = PremiumIntroScreen(context: context, source: .reactions)
+                                replaceImpl?(controller)
+                            })
+                            controller.disposed = { [weak self] in
+                                self?.updateIsProgressPaused()
+                            }
+                            replaceImpl = { [weak controller] c in
+                                controller?.replace(with: c)
+                            }
+                            component.controller()?.push(controller)
                             return
                         }
                         
@@ -2820,6 +2843,9 @@ public final class StoryItemSetContainerComponent: Component {
                                 let controller = PremiumIntroScreen(context: context, source: .reactions)
                                 replaceImpl?(controller)
                             })
+                            controller.disposed = { [weak self] in
+                                self?.updateIsProgressPaused()
+                            }
                             replaceImpl = { [weak controller] c in
                                 controller?.replace(with: c)
                             }

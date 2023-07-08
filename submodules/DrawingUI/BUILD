@@ -96,6 +96,7 @@ swift_library(
         "//submodules/TelegramUI/Components/MediaEditor",
         "//submodules/ChatPresentationInterfaceState:ChatPresentationInterfaceState",
         "//submodules/StickerPackPreviewUI:StickerPackPreviewUI",
+        "//submodules/TelegramUI/Components/LottieComponent",
     ],
     visibility = [
         "//visibility:public",
