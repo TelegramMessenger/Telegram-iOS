@@ -38,6 +38,8 @@ import TextFieldComponent
 import StickerPackPreviewUI
 import OpenInExternalAppUI
 import SafariServices
+import MediaPasteboardUI
+import WebPBinding
 
 final class StoryItemSetContainerSendMessage {
     enum InputMode {
@@ -523,6 +525,75 @@ final class StoryItemSetContainerSendMessage {
             view.state?.updated(transition: .spring(duration: 0.3))
         }
         controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
+    }
+    
+    func enqueueGifData(view: StoryItemSetContainerComponent.View, data: Data) {
+        guard let component = view.component else {
+            return
+        }
+        let peer = component.slice.peer
+        let _ = (legacyEnqueueGifMessage(account: component.context.account, data: data) |> deliverOnMainQueue).start(next: { [weak self, weak view] message in
+            if let self, let view {
+                let messages = self.transformEnqueueMessages(view: view, messages: [message], silentPosting: false)
+                self.sendMessages(view: view, peer: peer, messages: messages)
+            }
+        })
+    }
+    
+    func enqueueStickerImage(view: StoryItemSetContainerComponent.View, image: UIImage, isMemoji: Bool) {
+        guard let component = view.component else {
+            return
+        }
+        let peer = component.slice.peer
+        
+        let size = image.size.aspectFitted(CGSize(width: 512.0, height: 512.0))
+        
+        func scaleImage(_ image: UIImage, size: CGSize, boundiingSize: CGSize) -> UIImage? {
+            if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+                let format = UIGraphicsImageRendererFormat()
+                format.scale = 1.0
+                let renderer = UIGraphicsImageRenderer(size: size, format: format)
+                return renderer.image { _ in
+                    image.draw(in: CGRect(origin: .zero, size: size))
+                }
+            } else {
+                return TGScaleImageToPixelSize(image, size)
+            }
+        }
+
+        func convertToWebP(image: UIImage, targetSize: CGSize?, targetBoundingSize: CGSize?, quality: CGFloat) -> Signal<Data, NoError> {
+            var image = image
+            if let targetSize = targetSize, let scaledImage = scaleImage(image, size: targetSize, boundiingSize: targetSize) {
+                image = scaledImage
+            }
+            
+            return Signal { subscriber in
+                if let data = try? WebP.convert(toWebP: image, quality: quality * 100.0) {
+                    subscriber.putNext(data)
+                }
+                subscriber.putCompletion()
+                
+                return EmptyDisposable
+            } |> runOn(Queue.concurrentDefaultQueue())
+        }
+
+        let _ = (convertToWebP(image: image, targetSize: size, targetBoundingSize: size, quality: 0.9) |> deliverOnMainQueue).start(next: { [weak self, weak view] data in
+            if let self, let view, !data.isEmpty {
+                let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+                component.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                
+                var fileAttributes: [TelegramMediaFileAttribute] = []
+                fileAttributes.append(.FileName(fileName: "sticker.webp"))
+                fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
+                fileAttributes.append(.ImageSize(size: PixelDimensions(size)))
+                
+                let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "image/webp", size: Int64(data.count), attributes: fileAttributes)
+                let message = EnqueueMessage.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+                
+                let messages = self.transformEnqueueMessages(view: view, messages: [message], silentPosting: false)
+                self.sendMessages(view: view, peer: peer, messages: messages)
+            }
+        })
     }
     
     func setMediaRecordingActive(
@@ -1761,6 +1832,69 @@ final class StoryItemSetContainerSendMessage {
                 }
             }), in: .window(.root))
         })
+    }
+    
+    func presentMediaPasteboard(view: StoryItemSetContainerComponent.View, subjects: [MediaPickerScreen.Subject.Media]) {
+        guard let component = view.component else {
+            return
+        }
+        let focusedItem = component.slice.item
+        guard let peerId = focusedItem.peerId else {
+            return
+        }
+        let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
+        guard let inputPanelView = view.inputPanel.view as? MessageInputPanelComponent.View else {
+            return
+        }
+        
+        var inputText = NSAttributedString(string: "")
+        switch inputPanelView.getSendMessageInput() {
+        case let .text(text):
+            inputText = text
+        }
+        
+        let peer = component.slice.peer
+        let theme = defaultDarkPresentationTheme
+        let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
+        let controller = mediaPasteboardScreen(
+            context: component.context,
+            updatedPresentationData: updatedPresentationData,
+            peer: peer,
+            subjects: subjects,
+            presentMediaPicker: { [weak self] subject, saveEditedPhotos, bannedSendPhotos, bannedSendVideos, present in
+                if let self {
+                    self.presentMediaPicker(
+                        view: view,
+                        peer: peer,
+                        replyToMessageId: nil,
+                        replyToStoryId: focusedStoryId,
+                        subject: subject,
+                        saveEditedPhotos: saveEditedPhotos,
+                        bannedSendPhotos: bannedSendPhotos,
+                        bannedSendVideos: bannedSendVideos,
+                        present: { controller, mediaPickerContext in
+                            if !inputText.string.isEmpty {
+                                mediaPickerContext?.setCaption(inputText)
+                            }
+                            present(controller, mediaPickerContext)
+                        },
+                        updateMediaPickerContext: { _ in },
+                        completion: { [weak self, weak view] signals, silentPosting, scheduleTime, getAnimatedTransitionSource, completion in
+                            guard let self, let view else {
+                                return
+                            }
+                            if !inputText.string.isEmpty {
+                                self.clearInputText(view: view)
+                            }
+                            self.enqueueMediaMessages(view: view, peer: peer, replyToMessageId: nil, replyToStoryId: focusedStoryId, signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+                        }
+                    )
+                }
+            },
+            getSourceRect: nil
+        )
+        controller.navigationPresentation = .flatModal
+        component.controller()?.push(controller)
     }
     
     private func enqueueChatContextResult(view: StoryItemSetContainerComponent.View, peer: EnginePeer, replyMessageId: EngineMessage.Id?, storyId: StoryId?, results: ChatContextResultCollection, result: ChatContextResult, hideVia: Bool = false, closeMediaInput: Bool = false, silentPosting: Bool = false, resetTextInputState: Bool = true) {

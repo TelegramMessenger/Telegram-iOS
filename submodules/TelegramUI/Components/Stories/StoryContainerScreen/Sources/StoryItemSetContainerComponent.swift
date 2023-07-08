@@ -1803,7 +1803,23 @@ public final class StoryItemSetContainerComponent: Component {
                         self.voiceMessagesRestrictedTooltipController = controller
                         self.state?.updated(transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)))
                     },
-                    paste: { _ in
+                    paste: { [weak self] data in
+                        guard let self else {
+                            return
+                        }
+                        switch data {
+                        case let .images(images):
+                            self.sendMessageContext.presentMediaPasteboard(view: self, subjects: images.map { .image($0) })
+                        case let .video(data):
+                            let tempFilePath = NSTemporaryDirectory() + "\(Int64.random(in: 0...Int64.max)).mp4"
+                            let url = NSURL(fileURLWithPath: tempFilePath) as URL
+                            try? data.write(to: url)
+                            self.sendMessageContext.presentMediaPasteboard(view: self, subjects: [.video(url)])
+                        case let .gif(data):
+                            self.sendMessageContext.enqueueGifData(view: self, data: data)
+                        case let .sticker(image, isMemoji):
+                            self.sendMessageContext.enqueueStickerImage(view: self, image: image, isMemoji: isMemoji)
+                        }
                     },
                     audioRecorder: self.sendMessageContext.audioRecorderValue,
                     videoRecordingStatus: !self.sendMessageContext.hasRecordedVideoPreview ? self.sendMessageContext.videoRecorderValue?.audioStatus : nil,

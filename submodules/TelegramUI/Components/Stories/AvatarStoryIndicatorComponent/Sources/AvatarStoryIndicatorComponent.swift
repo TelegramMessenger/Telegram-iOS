@@ -21,7 +21,6 @@ public final class AvatarStoryIndicatorComponent: Component {
     public let activeLineWidth: CGFloat
     public let inactiveLineWidth: CGFloat
     public let isGlassBackground: Bool
-    public let backgroundColor: UIColor?
     public let counters: Counters?
     
     public init(
@@ -31,7 +30,6 @@ public final class AvatarStoryIndicatorComponent: Component {
         activeLineWidth: CGFloat,
         inactiveLineWidth: CGFloat,
         isGlassBackground: Bool = false,
-        backgroundColor: UIColor? = nil,
         counters: Counters?
     ) {
         self.hasUnseen = hasUnseen
@@ -40,7 +38,6 @@ public final class AvatarStoryIndicatorComponent: Component {
         self.activeLineWidth = activeLineWidth
         self.inactiveLineWidth = inactiveLineWidth
         self.isGlassBackground = isGlassBackground
-        self.backgroundColor = backgroundColor
         self.counters = counters
     }
     
@@ -61,9 +58,6 @@ public final class AvatarStoryIndicatorComponent: Component {
             return false
         }
         if lhs.isGlassBackground != rhs.isGlassBackground {
-            return false
-        }
-        if lhs.backgroundColor != rhs.backgroundColor {
             return false
         }
         if lhs.counters != rhs.counters {
@@ -119,14 +113,6 @@ public final class AvatarStoryIndicatorComponent: Component {
                 }
                 
                 var locations: [CGFloat] = [0.0, 1.0]
-                
-                if let backgroundColor = component.backgroundColor {
-                    context.setLineWidth(lineWidth)
-                    context.setStrokeColor(backgroundColor.cgColor)
-                    context.strokeEllipse(in: CGRect(origin: CGPoint(x: size.width * 0.5 - diameter * 0.5, y: size.height * 0.5 - diameter * 0.5), size: size).insetBy(dx: lineWidth * 0.5, dy: lineWidth * 0.5).insetBy(dx: lineWidth, dy: lineWidth))
-                }
-                
-                context.setLineWidth(lineWidth)
                 
                 if let counters = component.counters, counters.totalCount > 1 {
                     let center = CGPoint(x: size.width * 0.5, y: size.height * 0.5)
