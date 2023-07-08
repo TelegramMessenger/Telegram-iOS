@@ -188,6 +188,10 @@ final class DrawingVectorEntititySelectionView: DrawingEntitySelectionView {
             }
             self.currentHandle = self.layer
         case .changed:
+            if self.currentHandle == nil {
+                self.currentHandle = self.layer
+            }
+            
             if gestureRecognizer.numberOfTouches > 1 {
                 return
             }

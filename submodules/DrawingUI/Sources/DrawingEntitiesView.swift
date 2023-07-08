@@ -2,8 +2,11 @@ import Foundation
 import UIKit
 import Display
 import LegacyComponents
+import SwiftSignalKit
 import AccountContext
 import MediaEditor
+import ComponentFlow
+import LottieAnimationComponent
 
 public func decodeDrawingEntities(data: Data) -> [DrawingEntity] {
     if let codableEntities = try? JSONDecoder().decode([CodableDrawingEntity].self, from: data) {
@@ -75,6 +78,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     private let xAxisView = UIView()
     private let yAxisView = UIView()
     private let angleLayer = SimpleShapeLayer()
+    private let bin = ComponentView<Empty>()
     
     public var onInteractionUpdated: (Bool) -> Void = { _ in }
     public var edgePreviewUpdated: (Bool) -> Void = { _ in }
@@ -582,17 +586,19 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     
     @objc private func handleTap(_ gestureRecognzier: UITapGestureRecognizer) {
         let location = gestureRecognzier.location(in: self)
-        
+        if let entityView = self.entity(at: location) {
+            self.selectEntity(entityView.entity)
+        }
+    }
+    
+    private func entity(at location: CGPoint) -> DrawingEntityView? {
         var intersectedViews: [DrawingEntityView] = []
         for case let view as DrawingEntityView in self.subviews {
             if view.precisePoint(inside: self.convert(location, to: view)) {
                 intersectedViews.append(view)
             }
         }
-        
-        if let entityView = intersectedViews.last {
-            self.selectEntity(entityView.entity)
-        }
+        return intersectedViews.last
     }
     
     public func selectEntity(_ entity: DrawingEntity?) {
@@ -622,8 +628,9 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             
             if let selectionView = entityView.makeSelectionView() {
                 selectionView.tapped = { [weak self, weak entityView] in
-                    if let strongSelf = self, let entityView = entityView {
-                        strongSelf.requestedMenuForEntityView(entityView, strongSelf.subviews.last === entityView)
+                    if let self, let entityView = entityView {
+                        let entityViews = self.subviews.filter { $0 is DrawingEntityView }
+                        self.requestedMenuForEntityView(entityView, entityViews.last === entityView)
                     }
                 }
                 entityView.selectionView = selectionView
@@ -679,10 +686,74 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             return false
         }
     }
-    
+        
     public func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+        let location = gestureRecognizer.location(in: self)
         if let selectedEntityView = self.selectedEntityView, let selectionView = selectedEntityView.selectionView {
-            selectionView.handlePan(gestureRecognizer)
+            var isTrappedInBin = false
+            let scale = 100.0 / selectedEntityView.bounds.size.width
+            switch gestureRecognizer.state {
+            case .changed:
+                if self.updateBin(location: location) {
+                    isTrappedInBin = true
+                }
+            case .ended, .cancelled:
+                let _ = self.updateBin(location: nil)
+                if selectedEntityView.isTrappedInBin {
+                    selectedEntityView.layer.animateScale(from: scale, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                    selectedEntityView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                        self.remove(uuid: selectedEntityView.entity.uuid)
+                    })
+                    self.selectEntity(nil)
+                    
+                    Queue.mainQueue().after(0.3, {
+                        self.onInteractionUpdated(false)
+                    })
+                    return
+                }
+            default:
+                break
+            }
+            
+            let transition = Transition.easeInOut(duration: 0.2)
+            if isTrappedInBin, let binView = self.bin.view {
+                if !selectedEntityView.isTrappedInBin {
+                    let refs = [
+                        self.xAxisView,
+                        self.yAxisView,
+                        self.topEdgeView,
+                        self.leftEdgeView,
+                        self.rightEdgeView,
+                        self.bottomEdgeView
+                    ]
+                    for ref in refs {
+                        transition.setAlpha(view: ref, alpha: 0.0)
+                    }
+                    self.edgePreviewUpdated(false)
+                    
+                    selectedEntityView.isTrappedInBin = true
+                    transition.setAlpha(view: selectionView, alpha: 0.0)
+                    transition.animatePosition(view: selectionView, from: selectionView.center, to: self.convert(binView.center, to: selectionView.superview))
+                    transition.animateScale(view: selectionView, from: 0.0, to: -0.5, additive: true)
+                    
+                    transition.setPosition(view: selectedEntityView, position: binView.center)
+                    
+                    let rotation = selectedEntityView.layer.transform.decompose().rotation
+                    var transform = CATransform3DMakeScale(scale, scale, 1.0)
+                    transform = CATransform3DRotate(transform, CGFloat(rotation.z), 0.0, 0.0, 1.0)
+                    
+                    transition.setTransform(view: selectedEntityView, transform: transform)
+                }
+            } else {
+                if selectedEntityView.isTrappedInBin {
+                    selectedEntityView.isTrappedInBin = false
+                    transition.setAlpha(view: selectionView, alpha: 1.0)
+                    selectedEntityView.layer.animateScale(from: scale, to: selectedEntityView.entity.scale, duration: 0.13)
+                }
+                selectionView.handlePan(gestureRecognizer)
+            }
+        } else if gestureRecognizer.numberOfTouches == 1, let viewToSelect = self.entity(at: location) {
+            self.selectEntity(viewToSelect.entity)
         } else if gestureRecognizer.numberOfTouches == 2, let mediaEntityView = self.subviews.first(where: { $0 is DrawingEntityMediaView }) as? DrawingEntityMediaView {
             mediaEntityView.handlePan(gestureRecognizer)
         }
@@ -703,6 +774,40 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             selectionView.handleRotate(gestureRecognizer)
         }
     }
+    
+    private var binWasOpened = false
+    private func updateBin(location: CGPoint?) -> Bool {
+        let binSize = CGSize(width: 180.0, height: 180.0)
+        let binFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.bounds.width - binSize.width) / 2.0), y: self.bounds.height - binSize.height - 20.0), size: binSize)
+        
+        let wasOpened = self.binWasOpened
+        var isOpened = false
+        if let location {
+            isOpened = binFrame.insetBy(dx: 20.0, dy: 20.0).contains(location)
+        }
+        self.binWasOpened = isOpened
+        
+        if wasOpened != isOpened {
+            self.hapticFeedback.impact(.medium)
+        }
+        
+        let _ = self.bin.update(
+            transition: .immediate,
+            component: AnyComponent(EntityBinComponent(isOpened: isOpened)),
+            environment: {},
+            containerSize: binSize
+        )
+        if let binView = self.bin.view {
+            if binView.superview == nil {
+                self.addSubview(binView)
+            } else if self.subviews.last !== binView {
+                self.bringSubviewToFront(binView)
+            }
+            binView.frame = binFrame
+            Transition.easeInOut(duration: 0.2).setAlpha(view: binView, alpha: location != nil ? 1.0 : 0.0, delay: location == nil && wasOpened ? 0.4 : 0.0)
+        }
+        return isOpened
+    }
 }
 
 protocol DrawingEntityMediaView: DrawingEntityView {
@@ -715,6 +820,8 @@ public class DrawingEntityView: UIView {
     let context: AccountContext
     public let entity: DrawingEntity
     var isTracking = false
+    
+    var isTrappedInBin = false
     
     public weak var selectionView: DrawingEntitySelectionView?
     weak var containerView: DrawingEntitiesView?
@@ -876,5 +983,99 @@ public class DrawingSelectionContainerView: UIView {
             }
         }
         return result
+    }
+}
+
+private final class EntityBinComponent: Component {
+    typealias EnvironmentType = Empty
+    
+    let isOpened: Bool
+    
+    init(
+        isOpened: Bool
+    ) {
+        self.isOpened = isOpened
+    }
+    
+    static func ==(lhs: EntityBinComponent, rhs: EntityBinComponent) -> Bool {
+        if lhs.isOpened != rhs.isOpened {
+            return false
+        }
+        return true
+    }
+    
+    public final class View: UIView {
+        private let circle = SimpleShapeLayer()
+        private let animation = ComponentView<Empty>()
+        
+        private var component: EntityBinComponent?
+        private weak var state: EmptyComponentState?
+        
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            
+            self.backgroundColor = .clear
+            
+            self.circle.strokeColor = UIColor.white.cgColor
+            self.circle.fillColor = UIColor.clear.cgColor
+            self.circle.lineWidth = 5.0
+            
+            self.layer.addSublayer(self.circle)
+            
+            self.circle.path = CGPath(ellipseIn: CGRect(origin: .zero, size: CGSize(width: 160.0, height: 160.0)).insetBy(dx: 3.0, dy: 3.0), transform: nil)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        private var wasOpened = false
+        func update(component: EntityBinComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            self.component = component
+            self.state = state
+            
+            if !self.wasOpened {
+                self.wasOpened = component.isOpened
+            }
+                                    
+            let animationSize = self.animation.update(
+                transition: transition,
+                component: AnyComponent(LottieAnimationComponent(
+                    animation: LottieAnimationComponent.AnimationItem(
+                        name: "anim_entitybin",
+                        mode: component.isOpened ? .animating(loop: false) : (self.wasOpened ? .animating(loop: false) : .still(position: .end)),
+                        range: component.isOpened ? (0.0, 0.5) : (0.5, 1.0)
+                    ),
+                    colors: [:],
+                    size: CGSize(width: 140.0, height: 140.0)
+                )),
+                environment: {},
+                containerSize: CGSize(width: 140.0, height: 140.0)
+            )
+            let animationFrame = CGRect(
+                origin: CGPoint(x: 20.0, y: 20.0),
+                size: animationSize
+            )
+            if let animationView = self.animation.view {
+                if animationView.superview == nil {
+                    self.addSubview(animationView)
+                }
+                transition.setPosition(view: animationView, position: animationFrame.center)
+                transition.setBounds(view: animationView, bounds: CGRect(origin: .zero, size: animationFrame.size))
+            }
+            
+            let circleSize = CGSize(width: 160.0, height: 160.0)
+            self.circle.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - circleSize.width) / 2.0), y: floorToScreenPixels((availableSize.height - circleSize.height) / 2.0)), size: CGSize(width: 100.0, height: 100.0))
+          
+            return availableSize
+        }
+    }
+    
+    func makeView() -> View {
+        return View()
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

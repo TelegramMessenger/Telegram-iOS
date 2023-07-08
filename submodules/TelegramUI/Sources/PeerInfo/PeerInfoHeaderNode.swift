@@ -454,7 +454,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
         self.playbackStartDisposable.dispose()
     }
     
-    func updateStoryView(transition: ContainedViewLayoutTransition, theme: PresentationTheme) {
+    func updateStoryView(transition: ContainedViewLayoutTransition, theme: PresentationTheme, avatarMaskValue: CGFloat) {
         if let storyData = self.storyData {
             let avatarStoryView: ComponentView<Empty>
             if let current = self.avatarStoryView {
@@ -464,6 +464,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 self.avatarStoryView = avatarStoryView
             }
             
+            let inset: CGFloat = storyData.hasUnseen ? 3.0 ? 2.0
+            let avatarFrame = self.avatarNode.frame.insetBy(dx: inset, dy: inset)
             let _ = avatarStoryView.update(
                 transition: Transition(transition),
                 component: AnyComponent(AvatarStoryIndicatorComponent(
@@ -472,16 +474,23 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                     theme: theme,
                     activeLineWidth: 3.0,
                     inactiveLineWidth: 2.0,
+                    backgroundColor: theme.list.blocksBackgroundColor,
                     counters: nil
                 )),
                 environment: {},
-                containerSize: self.avatarNode.bounds.size
+                containerSize: avatarFrame.size
             )
             if let avatarStoryComponentView = avatarStoryView.view {
                 if avatarStoryComponentView.superview == nil {
-                    self.containerNode.view.insertSubview(avatarStoryComponentView, at: 0)
+                    self.containerNode.view.addSubview(avatarStoryComponentView)
                 }
-                avatarStoryComponentView.frame = self.avatarNode.frame
+                avatarStoryComponentView.bounds = CGRect(origin: .zero, size: avatarFrame.size)
+                
+                let scaleValue = avatarMaskValue * 0.15
+                let scale = 1.0 - scaleValue
+                let offset = min(1.5, avatarMaskValue * 2.5)
+                avatarStoryComponentView.transform = CGAffineTransformMakeScale(scale, scale)
+                avatarStoryComponentView.center = avatarFrame.center.offsetBy(dx: 0.0, dy: offset)
             }
         } else {
             if let avatarStoryView = self.avatarStoryView {
@@ -529,11 +538,16 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     }
         
     var removedPhotoResourceIds = Set<String>()
-    func update(peer: Peer?, threadId: Int64?, threadInfo: EngineMessageHistoryThread.Info?, item: PeerInfoAvatarListItem?, theme: PresentationTheme, avatarSize: CGFloat, isExpanded: Bool, isSettings: Bool) {
+    func update(peer: Peer?, threadId: Int64?, threadInfo: EngineMessageHistoryThread.Info?, item: PeerInfoAvatarListItem?, theme: PresentationTheme, avatarSize: CGFloat, isExpanded: Bool, avatarMaskValue: CGFloat, isSettings: Bool) {
         if let peer = peer {
             let previousItem = self.item
             var item = item
             self.item = item
+            
+            var avatarSize = avatarSize
+            if self.storyData != nil {
+                avatarSize = avatarSize - 6.0
+            }
             
             var overrideImage: AvatarNodeImageOverride?
             if peer.isDeleted {
@@ -788,7 +802,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             }
         }
         
-        self.updateStoryView(transition: .immediate, theme: theme)
+        self.updateStoryView(transition: .immediate, theme: theme, avatarMaskValue: avatarMaskValue)
     }
 }
 
@@ -1162,7 +1176,7 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
     
     let isReady = Promise<Bool>()
    
-    var arguments: (Peer?, Int64?, EngineMessageHistoryThread.Info?, PresentationTheme, CGFloat, Bool)?
+    var arguments: (Peer?, Int64?, EngineMessageHistoryThread.Info?, PresentationTheme, CGFloat, Bool, CGFloat)?
     var item: PeerInfoAvatarListItem?
     
     var itemsUpdated: (([PeerInfoAvatarListItem]) -> Void)?
@@ -1233,14 +1247,14 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
             if let strongSelf = self {
                 strongSelf.item = items.first
                 strongSelf.itemsUpdated?(items)
-                if let (peer, threadId, threadInfo, theme, avatarSize, isExpanded) = strongSelf.arguments {
-                    strongSelf.avatarContainerNode.update(peer: peer, threadId: threadId, threadInfo: threadInfo, item: strongSelf.item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded, isSettings: strongSelf.isSettings)
+                if let (peer, threadId, threadInfo, theme, avatarSize, isExpanded, avatarMaskValue) = strongSelf.arguments {
+                    strongSelf.avatarContainerNode.update(peer: peer, threadId: threadId, threadInfo: threadInfo, item: strongSelf.item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded, avatarMaskValue: avatarMaskValue, isSettings: strongSelf.isSettings)
                 }
             }
         }
 
         self.pinchSourceNode.activate = { [weak self] sourceNode in
-            guard let strongSelf = self, let (_, _, _, _, _, isExpanded) = strongSelf.arguments, isExpanded else {
+            guard let strongSelf = self, let (_, _, _, _, _, isExpanded, _) = strongSelf.arguments, isExpanded else {
                 return
             }
             let pinchController = PinchController(sourceNode: sourceNode, getContentAreaInScreenSpace: {
@@ -1266,13 +1280,13 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
         }
     }
     
-    func update(size: CGSize, avatarSize: CGFloat, isExpanded: Bool, peer: Peer?, isForum: Bool, threadId: Int64?, threadInfo: EngineMessageHistoryThread.Info?, theme: PresentationTheme, transition: ContainedViewLayoutTransition) {
-        self.arguments = (peer, threadId, threadInfo, theme, avatarSize, isExpanded)
+    func update(size: CGSize, avatarSize: CGFloat, isExpanded: Bool, peer: Peer?, isForum: Bool, threadId: Int64?, threadInfo: EngineMessageHistoryThread.Info?, theme: PresentationTheme, avatarMaskValue: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.arguments = (peer, threadId, threadInfo, theme, avatarSize, isExpanded, avatarMaskValue)
         self.maskNode.isForum = isForum
         self.pinchSourceNode.update(size: size, transition: transition)
         self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
         self.pinchSourceNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.avatarContainerNode.update(peer: peer, threadId: threadId, threadInfo: threadInfo, item: self.item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded, isSettings: self.isSettings)
+        self.avatarContainerNode.update(peer: peer, threadId: threadId, threadInfo: threadInfo, item: self.item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded, avatarMaskValue: avatarMaskValue, isSettings: self.isSettings)
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -3420,7 +3434,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             })
         }
         
-        self.avatarListNode.update(size: CGSize(), avatarSize: avatarSize, isExpanded: self.isAvatarExpanded, peer: peer, isForum: isForum, threadId: self.forumTopicThreadId, threadInfo: threadData?.info, theme: presentationData.theme, transition: transition)
+        let avatarMaskValue = max(0.0, min(1.0, contentOffset / 120.0))
+        self.avatarListNode.update(size: CGSize(), avatarSize: avatarSize, isExpanded: self.isAvatarExpanded, peer: peer, isForum: isForum, threadId: self.forumTopicThreadId, threadInfo: threadData?.info, theme: presentationData.theme, avatarMaskValue: avatarMaskValue, transition: transition)
         self.editingContentNode.avatarNode.update(peer: peer, threadData: threadData, chatLocation: self.chatLocation, item: self.avatarListNode.item, updatingAvatar: state.updatingAvatar, uploadProgress: state.avatarUploadProgress, theme: presentationData.theme, avatarSize: avatarSize, isEditing: state.isEditing)
         self.avatarOverlayNode.update(peer: peer, threadData: threadData, chatLocation: self.chatLocation, item: self.avatarListNode.item, updatingAvatar: state.updatingAvatar, uploadProgress: state.avatarUploadProgress, theme: presentationData.theme, avatarSize: avatarSize, isEditing: state.isEditing)
         if additive {
@@ -3499,9 +3514,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         if deviceMetrics.hasDynamicIsland && self.forumTopicThreadId == nil && self.navigationTransition == nil && !isLandscape {
-            let maskValue = max(0.0, min(1.0, contentOffset / 120.0))
             self.avatarListNode.containerNode.view.mask = self.avatarListNode.maskNode.view
-            if maskValue > 0.03 {
+            if avatarMaskValue > 0.03 {
                 self.avatarListNode.bottomCoverNode.isHidden = false
                 self.avatarListNode.topCoverNode.isHidden = false
                 self.avatarListNode.maskNode.backgroundColor = .clear
@@ -3510,8 +3524,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 self.avatarListNode.topCoverNode.isHidden = true
                 self.avatarListNode.maskNode.backgroundColor = .white
             }
-            self.avatarListNode.topCoverNode.update(maskValue)
-            self.avatarListNode.maskNode.update(maskValue)
+            self.avatarListNode.topCoverNode.update(avatarMaskValue)
+            self.avatarListNode.maskNode.update(avatarMaskValue)
             
             self.avatarListNode.listContainerNode.topShadowNode.isHidden = !self.isAvatarExpanded
             

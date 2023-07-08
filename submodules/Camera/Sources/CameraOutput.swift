@@ -169,7 +169,7 @@ final class CameraOutput: NSObject {
                 } else {
                     Logger.shared.log("Camera", "Can't add video connection")
                 }
-                
+
                 if photo {
                     let photoConnection = AVCaptureConnection(inputPorts: ports, output: self.photoOutput)
                     if session.session.canAddConnection(photoConnection) {

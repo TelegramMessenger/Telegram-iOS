@@ -267,9 +267,13 @@ private final class MediaToolsScreenComponent: Component {
             var delay: Double = 0.0
             for button in buttons {
                 if let view = button.view {
-                    view.layer.animatePosition(from: CGPoint(x: 0.0, y: 64.0), to: .zero, duration: 0.3, delay: delay, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                    view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: delay)
-                    view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, delay: delay)
+                    view.alpha = 0.0
+                    Queue.mainQueue().after(delay, {
+                        view.alpha = 1.0
+                        view.layer.animatePosition(from: CGPoint(x: 0.0, y: 64.0), to: .zero, duration: 0.3, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                        view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.0)
+                        view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, delay: 0.0)
+                    })
                     delay += 0.03
                 }
             }
