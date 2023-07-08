@@ -327,6 +327,8 @@ final class MutableMessageHistoryView {
     
     private var userId: Int64?
     
+    fileprivate var peerStoryStats: [PeerId: PeerStoryStats] = [:]
+    
     init(
         postbox: PostboxImpl,
         orderStatistics: MessageHistoryViewOrderStatistics,
@@ -388,6 +390,7 @@ final class MutableMessageHistoryView {
         self.sampledState = self.state.sample(postbox: postbox, clipHoles: self.clipHoles)
         
         self.render(postbox: postbox)
+        let _ = self.updateStoryStats(postbox: postbox)
     }
     
     private func reset(postbox: PostboxImpl) {
@@ -411,6 +414,8 @@ final class MutableMessageHistoryView {
             }
         }
         self.sampledState = self.state.sample(postbox: postbox, clipHoles: self.clipHoles)
+        
+        let _ = self.updateStoryStats(postbox: postbox)
     }
     
     func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
@@ -907,6 +912,11 @@ final class MutableMessageHistoryView {
         if hasChanges {
             self.render(postbox: postbox)
         }
+        if hasChanges || !transaction.currentStoryTopItemEvents.isEmpty || !transaction.storyPeerStatesEvents.isEmpty {
+            if self.updateStoryStats(postbox: postbox) {
+                hasChanges = true
+            }
+        }
         
         return hasChanges
     }
@@ -917,6 +927,26 @@ final class MutableMessageHistoryView {
                 let item: MessageHistoryTopTaggedMessage? = .message(postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable, threadIndexTable: postbox.messageHistoryThreadIndexTable, storyTable: postbox.storyTable))
                 self.topTaggedMessages[namespace] = item
             }
+        }
+    }
+    
+    private func updateStoryStats(postbox: PostboxImpl) -> Bool {
+        //TODO:optimize refresh
+        var peerStoryStats: [PeerId: PeerStoryStats] = [:]
+        if case let .loaded(state) = self.sampledState {
+            for entry in state.entries {
+                if let author = entry.message.author {
+                    if let value = fetchPeerStoryStats(postbox: postbox, peerId: author.id) {
+                        peerStoryStats[author.id] = value
+                    }
+                }
+            }
+        }
+        if self.peerStoryStats != peerStoryStats {
+            self.peerStoryStats = peerStoryStats
+            return true
+        } else {
+            return false
         }
     }
     
@@ -965,6 +995,7 @@ public final class MessageHistoryView {
     public let isLoading: Bool
     public let isLoadingEarlier: Bool
     public let isAddedToChatList: Bool
+    public let peerStoryStats: [PeerId: PeerStoryStats]
     
     public init(tagMask: MessageTags?, namespaces: MessageIdNamespaces, entries: [MessageHistoryEntry], holeEarlier: Bool, holeLater: Bool, isLoading: Bool) {
         self.tagMask = tagMask
@@ -983,6 +1014,7 @@ public final class MessageHistoryView {
         self.isLoading = isLoading
         self.isLoadingEarlier = true
         self.isAddedToChatList = false
+        self.peerStoryStats = [:]
     }
     
     init(_ mutableView: MutableMessageHistoryView) {
@@ -1207,6 +1239,7 @@ public final class MessageHistoryView {
         }
         
         self.entries = entries
+        self.peerStoryStats = mutableView.peerStoryStats
     }
     
     public init(base: MessageHistoryView, fixed combinedReadStates: MessageHistoryViewReadState?, transient transientReadStates: MessageHistoryViewReadState?) {
@@ -1225,6 +1258,7 @@ public final class MessageHistoryView {
         self.isLoading = base.isLoading
         self.isLoadingEarlier = base.isLoadingEarlier
         self.isAddedToChatList = base.isAddedToChatList
+        self.peerStoryStats = base.peerStoryStats
         
         if let combinedReadStates = combinedReadStates {
             switch combinedReadStates {

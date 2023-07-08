@@ -864,6 +864,7 @@ public final class StoryPeerListComponent: Component {
                     
                     hasUnseenCloseFriendsItems = false
                 }
+                //itemRingAnimation = .loading
                 
                 let measuredItem = calculateItem(i)
                 
@@ -1444,9 +1445,9 @@ public final class StoryPeerListComponent: Component {
             
             let itemLayout = ItemLayout(
                 containerSize: availableSize,
-                containerInsets: UIEdgeInsets(top: 4.0, left: component.sideInset - 6.0, bottom: 0.0, right: component.sideInset - 6.0),
+                containerInsets: UIEdgeInsets(top: 4.0, left: component.sideInset - 4.0, bottom: 0.0, right: component.sideInset - 4.0),
                 itemSize: CGSize(width: 60.0, height: 77.0),
-                itemSpacing: 24.0,
+                itemSpacing: 14.0,
                 itemCount: self.sortedItems.count
             )
             self.itemLayout = itemLayout

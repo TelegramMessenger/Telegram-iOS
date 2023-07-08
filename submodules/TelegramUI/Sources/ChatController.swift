@@ -1162,7 +1162,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             ))
         }, openPeer: { [weak self] peer, navigation, fromMessage, source in
-            self?.openPeer(peer: peer, navigation: navigation, fromMessage: fromMessage, fromReactionMessageId: source == .reaction ? fromMessage?.id : nil, expandAvatar: source == .groupParticipant)
+            var expandAvatar = false
+            if case let .groupParticipant(storyStats, avatarHeaderNode) = source {
+                if let storyStats, storyStats.totalCount != 0, let avatarHeaderNode = avatarHeaderNode as? ChatMessageAvatarHeaderNode {
+                    self?.openStories(peerId: peer.id, avatarHeaderNode: avatarHeaderNode)
+                    return
+                } else {
+                    expandAvatar = true
+                }
+            }
+            var fromReactionMessageId: MessageId?
+            if case .reaction = source {
+                fromReactionMessageId = fromMessage?.id
+            }
+            self?.openPeer(peer: peer, navigation: navigation, fromMessage: fromMessage, fromReactionMessageId: fromReactionMessageId, expandAvatar: expandAvatar)
         }, openPeerMention: { [weak self] name in
             self?.openPeerMention(name)
         }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, anyRecognizer, location in
@@ -16995,6 +17008,72 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
             }
+        })
+    }
+    
+    private func openStories(peerId: EnginePeer.Id, avatarHeaderNode: ChatMessageAvatarHeaderNode) {
+        let storyContent = StoryContentContextImpl(context: self.context, isHidden: false, focusedPeerId: peerId, singlePeer: true)
+        let _ = (storyContent.state
+        |> filter { $0.slice != nil }
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self, weak avatarHeaderNode] _ in
+            guard let self else {
+                return
+            }
+            
+            var transitionIn: StoryContainerScreen.TransitionIn?
+            if let avatarHeaderNode {
+                transitionIn = StoryContainerScreen.TransitionIn(
+                    sourceView: avatarHeaderNode.avatarNode.view,
+                    sourceRect: avatarHeaderNode.avatarNode.view.bounds,
+                    sourceCornerRadius: avatarHeaderNode.avatarNode.view.bounds.width * 0.5,
+                    sourceIsAvatar: false
+                )
+                avatarHeaderNode.avatarNode.isHidden = true
+            }
+            
+            let storyContainerScreen = StoryContainerScreen(
+                context: self.context,
+                content: storyContent,
+                transitionIn: transitionIn,
+                transitionOut: { peerId, _ in
+                    guard let avatarHeaderNode else {
+                        return nil
+                    }
+                    let destinationView = avatarHeaderNode.avatarNode.view
+                    return StoryContainerScreen.TransitionOut(
+                        destinationView: destinationView,
+                        transitionView: StoryContainerScreen.TransitionView(
+                            makeView: { [weak destinationView] in
+                                let parentView = UIView()
+                                if let copyView = destinationView?.snapshotContentTree(unhide: true) {
+                                    parentView.addSubview(copyView)
+                                }
+                                return parentView
+                            },
+                            updateView: { copyView, state, transition in
+                                guard let view = copyView.subviews.first else {
+                                    return
+                                }
+                                let size = state.sourceSize.interpolate(to: state.destinationSize, amount: state.progress)
+                                transition.setPosition(view: view, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
+                                transition.setScale(view: view, scale: size.width / state.destinationSize.width)
+                            },
+                            insertCloneTransitionView: nil
+                        ),
+                        destinationRect: destinationView.bounds,
+                        destinationCornerRadius: destinationView.bounds.width * 0.5,
+                        destinationIsAvatar: false,
+                        completed: { [weak avatarHeaderNode] in
+                            guard let avatarHeaderNode else {
+                                return
+                            }
+                            avatarHeaderNode.avatarNode.isHidden = false
+                        }
+                    )
+                }
+            )
+            self.push(storyContainerScreen)
         })
     }
     

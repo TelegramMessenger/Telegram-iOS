@@ -374,8 +374,9 @@ final class ChatMessageAvatarHeader: ListViewItemHeader {
     let presentationData: ChatPresentationData
     let context: AccountContext
     let controllerInteraction: ChatControllerInteraction
+    let storyStats: PeerStoryStats?
 
-    init(timestamp: Int32, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, message: Message, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction) {
+    init(timestamp: Int32, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, message: Message, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction, storyStats: PeerStoryStats?) {
         self.peerId = peerId
         self.peer = peer
         self.messageReference = messageReference
@@ -395,6 +396,7 @@ final class ChatMessageAvatarHeader: ListViewItemHeader {
         self.context = context
         self.controllerInteraction = controllerInteraction
         self.id = ListViewItemNode.HeaderId(space: 1, id: Id(peerId: peerId, timestampId: dateHeaderTimestampId(timestamp: timestamp)))
+        self.storyStats = storyStats
     }
     
     let stickDirection: ListViewItemHeaderStickDirection = .top
@@ -414,14 +416,15 @@ final class ChatMessageAvatarHeader: ListViewItemHeader {
     }
 
     func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
-        return ChatMessageAvatarHeaderNode(peerId: self.peerId, peer: self.peer, messageReference: self.messageReference, adMessageId: self.adMessageId, presentationData: self.presentationData, context: self.context, controllerInteraction: self.controllerInteraction, synchronousLoad: synchronousLoad)
+        return ChatMessageAvatarHeaderNode(peerId: self.peerId, peer: self.peer, messageReference: self.messageReference, adMessageId: self.adMessageId, presentationData: self.presentationData, context: self.context, controllerInteraction: self.controllerInteraction, storyStats: self.storyStats, synchronousLoad: synchronousLoad)
     }
 
     func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
-        guard let node = node as? ChatMessageAvatarHeaderNode, let next = next as? ChatMessageAvatarHeader else {
+        guard let node = node as? ChatMessageAvatarHeaderNode else {
             return
         }
-        node.updatePresentationData(next.presentationData, context: next.context)
+        node.updatePresentationData(self.presentationData, context: self.context)
+        node.updateStoryStats(storyStats: self.storyStats, theme: self.presentationData.theme.theme, force: false)
     }
 }
 
@@ -433,6 +436,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
     private let context: AccountContext
     private var presentationData: ChatPresentationData
     private let controllerInteraction: ChatControllerInteraction
+    private var storyStats: PeerStoryStats?
     
     private let peerId: PeerId
     private let messageReference: MessageReference?
@@ -440,7 +444,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
     private let adMessageId: EngineMessage.Id?
 
     private let containerNode: ContextControllerSourceNode
-    private let avatarNode: AvatarNode
+    let avatarNode: AvatarNode
     private var avatarVideoNode: AvatarVideoNode?
         
     private var cachedDataDisposable = MetaDisposable()
@@ -459,7 +463,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
         }
     }
     
-    init(peerId: PeerId, peer: Peer?, messageReference: MessageReference?, adMessageId: EngineMessage.Id?, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction, synchronousLoad: Bool) {
+    init(peerId: PeerId, peer: Peer?, messageReference: MessageReference?, adMessageId: EngineMessage.Id?, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction, storyStats: PeerStoryStats?, synchronousLoad: Bool) {
         self.peerId = peerId
         self.peer = peer
         self.messageReference = messageReference
@@ -467,6 +471,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
         self.presentationData = presentationData
         self.context = context
         self.controllerInteraction = controllerInteraction
+        self.storyStats = storyStats
 
         self.containerNode = ContextControllerSourceNode()
 
@@ -481,6 +486,10 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
 
         if let peer = peer {
             self.setPeer(context: context, theme: presentationData.theme.theme, synchronousLoad: synchronousLoad, peer: peer, authorOfMessage: messageReference, emptyColor: .black)
+        }
+        
+        if let storyStats {
+            self.updateStoryStats(storyStats: storyStats, theme: presentationData.theme.theme, force: true)
         }
 
         self.containerNode.activated = { [weak self] gesture, _ in
@@ -595,6 +604,18 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
             self.hierarchyTrackingLayer = nil
         }
     }
+    
+    func updateStoryStats(storyStats: PeerStoryStats?, theme: PresentationTheme, force: Bool) {
+        if self.storyStats != storyStats || self.presentationData.theme.theme !== theme || force {
+            self.avatarNode.setStoryStats(storyStats: storyStats.flatMap { storyStats in
+                return AvatarNode.StoryStats(
+                    totalCount: storyStats.totalCount,
+                    unseenCount: storyStats.unseenCount,
+                    hasUnseenCloseFriendsItems: false
+                )
+            }, theme: theme, transition: .immediate)
+        }
+    }
 
     override func didLoad() {
         super.didLoad()
@@ -603,9 +624,10 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
     }
 
     func updatePresentationData(_ presentationData: ChatPresentationData, context: AccountContext) {
-        self.presentationData = presentationData
-
-        self.setNeedsLayout()
+        if self.presentationData !== presentationData {
+            self.presentationData = presentationData
+            self.setNeedsLayout()
+        }
     }
 
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
@@ -663,7 +685,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                         self.controllerInteraction.openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: nil, peekData: nil), self.messageReference, .default)
                     } else {
-                        self.controllerInteraction.openPeer(EnginePeer(peer), .info, self.messageReference, .groupParticipant)
+                        self.controllerInteraction.openPeer(EnginePeer(peer), .info, self.messageReference, .groupParticipant(storyStats: self.storyStats, avatarHeaderNode: self))
                     }
                 }
             }

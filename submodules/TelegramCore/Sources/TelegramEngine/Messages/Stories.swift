@@ -1127,7 +1127,7 @@ func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32, asPi
                 return .complete()
             }
             
-            #if DEBUG && true
+            #if DEBUG && false
             if "".isEmpty {
                 return .complete()
             }

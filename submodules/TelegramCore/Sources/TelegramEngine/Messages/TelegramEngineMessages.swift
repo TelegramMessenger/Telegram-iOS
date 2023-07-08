@@ -257,7 +257,7 @@ public extension TelegramEngine {
                 )
             }
             
-            guard let message else {
+            guard let message = message else {
                 return .complete()
             }
          

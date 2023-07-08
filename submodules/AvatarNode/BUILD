@@ -20,6 +20,8 @@ swift_library(
         "//submodules/Emoji:Emoji",
         "//submodules/TinyThumbnail:TinyThumbnail",
         "//submodules/FastBlur:FastBlur",
+        "//submodules/ComponentFlow",
+        "//submodules/TelegramUI/Components/Stories/AvatarStoryIndicatorComponent",
     ],
     visibility = [
         "//visibility:public",

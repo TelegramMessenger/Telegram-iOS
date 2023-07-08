@@ -56,7 +56,7 @@ private func calculateCircleIntersection(center: CGPoint, otherCenter: CGPoint, 
     return (point1Angle, point2Angle)
 }
 
-private func calculateMergingCircleShape(center: CGPoint, leftCenter: CGPoint?, rightCenter: CGPoint?, radius: CGFloat, totalCount: Int, unseenCount: Int, isSeen: Bool) -> CGPath {
+private func calculateMergingCircleShape(center: CGPoint, leftCenter: CGPoint?, rightCenter: CGPoint?, radius: CGFloat, totalCount: Int, unseenCount: Int, isSeen: Bool, segmentFraction: CGFloat) -> CGPath {
     let leftAngles = leftCenter.flatMap { calculateCircleIntersection(center: center, otherCenter: $0, radius: radius) }
     let rightAngles = rightCenter.flatMap { calculateCircleIntersection(center: center, otherCenter: $0, radius: radius) }
     
@@ -95,7 +95,7 @@ private func calculateMergingCircleShape(center: CGPoint, leftCenter: CGPoint?, 
                 }
             }
         } else {
-            let segmentSpacing: CGFloat = 4.0
+            let segmentSpacing: CGFloat = 4.0 * segmentFraction
             let segmentSpacingAngle: CGFloat = segmentSpacing / radius
             let segmentAngle = (2.0 * CGFloat.pi - segmentSpacingAngle * CGFloat(segmentCount)) / CGFloat(segmentCount)
             for i in 0 ..< segmentCount {
@@ -111,7 +111,9 @@ private func calculateMergingCircleShape(center: CGPoint, leftCenter: CGPoint?, 
                     }
                 }
                 
-                let startAngle = segmentSpacingAngle * 0.5 - CGFloat.pi * 0.5 + CGFloat(i) * (segmentSpacingAngle + segmentAngle)
+                var startAngle = segmentSpacingAngle * 0.5 - CGFloat.pi * 0.5 + CGFloat(i) * (segmentSpacingAngle + segmentAngle)
+                startAngle += (1.0 - segmentFraction) * CGFloat.pi * 2.0 * (-0.25)
+                
                 let endAngle = startAngle + segmentAngle
                 path.move(to: CGPoint(x: center.x + cos(startAngle) * radius, y: center.y + sin(startAngle) * radius))
                 path.addArc(center: center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: false)
@@ -625,8 +627,8 @@ public final class StoryPeerListItemComponent: Component {
             
             let indicatorFrame = avatarFrame.insetBy(dx: -8.0, dy: -8.0)
             
-            let baseLineUnseenWidth: CGFloat = 2.0
-            let baseLineSeenWidth: CGFloat = 1.0 + UIScreenPixel
+            let baseLineUnseenWidth: CGFloat = 2.33
+            let baseLineSeenWidth: CGFloat = 1.33
             
             let minimizedLineWidth: CGFloat = 4.3
             
@@ -649,7 +651,7 @@ public final class StoryPeerListItemComponent: Component {
             transition.setPosition(view: self.avatarBackgroundContainer, position: avatarFrame.center)
             transition.setBounds(view: self.avatarBackgroundContainer, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
             
-            let scaledAvatarSize = effectiveScale * (avatarSize.width + 4.0 - 2.0 * 2.0)
+            let scaledAvatarSize = effectiveScale * avatarSize.width
             
             transition.setScale(view: self.avatarContainer, scale: scaledAvatarSize / avatarSize.width)
             transition.setScale(view: self.avatarBackgroundContainer, scale: scaledAvatarSize / avatarSize.width)
@@ -703,7 +705,7 @@ public final class StoryPeerListItemComponent: Component {
             
             self.avatarBackgroundView.isHidden = component.ringAnimation != nil || self.indicatorColorSeenLayer.isHidden
             
-            let baseRadius: CGFloat = 30.0
+            let baseRadius: CGFloat = 30.66
             let collapsedRadius: CGFloat = 35.0
             let indicatorRadius: CGFloat = baseRadius * component.scale + collapsedRadius * (1.0 - component.scale)
             
@@ -765,8 +767,8 @@ public final class StoryPeerListItemComponent: Component {
             }
             Transition.immediate.setShapeLayerPath(layer: self.avatarShapeLayer, path: avatarPath)
             
-            Transition.immediate.setShapeLayerPath(layer: self.indicatorShapeSeenLayer, path: calculateMergingCircleShape(center: indicatorCenter, leftCenter: mappedLeftCenter, rightCenter: mappedRightCenter, radius: indicatorRadius - indicatorLineUnseenWidth * 0.5, totalCount: component.totalCount, unseenCount: component.unseenCount, isSeen: true))
-            Transition.immediate.setShapeLayerPath(layer: self.indicatorShapeUnseenLayer, path: calculateMergingCircleShape(center: indicatorCenter, leftCenter: mappedLeftCenter, rightCenter: mappedRightCenter, radius: indicatorRadius - indicatorLineUnseenWidth * 0.5, totalCount: component.totalCount, unseenCount: component.unseenCount, isSeen: false))
+            Transition.immediate.setShapeLayerPath(layer: self.indicatorShapeSeenLayer, path: calculateMergingCircleShape(center: indicatorCenter, leftCenter: mappedLeftCenter, rightCenter: mappedRightCenter, radius: indicatorRadius - indicatorLineUnseenWidth * 0.5, totalCount: component.totalCount, unseenCount: component.unseenCount, isSeen: true, segmentFraction: component.expandedAlphaFraction))
+            Transition.immediate.setShapeLayerPath(layer: self.indicatorShapeUnseenLayer, path: calculateMergingCircleShape(center: indicatorCenter, leftCenter: mappedLeftCenter, rightCenter: mappedRightCenter, radius: indicatorRadius - indicatorLineUnseenWidth * 0.5, totalCount: component.totalCount, unseenCount: component.unseenCount, isSeen: false, segmentFraction: component.expandedAlphaFraction))
             
             //TODO:localize
             let titleString: String
@@ -798,8 +800,8 @@ public final class StoryPeerListItemComponent: Component {
                     self?.avatarContent.layer.animateScale(from: 1.08, to: 1.0, duration: 0.15)
                 })
                 
-                let initialLineWidth: CGFloat = 2.0
-                let targetLineWidth: CGFloat = 3.0
+                let initialLineWidth: CGFloat = baseLineUnseenWidth
+                let targetLineWidth: CGFloat = baseLineUnseenWidth * 1.5
                 self.indicatorShapeSeenLayer.lineWidth = targetLineWidth
                 self.indicatorShapeSeenLayer.animateShapeLineWidth(from: initialLineWidth, to: targetLineWidth, duration: 0.2, completion: { [weak self] _ in
                     self?.indicatorShapeSeenLayer.lineWidth = initialLineWidth
@@ -810,7 +812,7 @@ public final class StoryPeerListItemComponent: Component {
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: titleString, font: Font.regular(11.0), textColor: component.theme.list.itemPrimaryTextColor)),
+                    text: .plain(NSAttributedString(string: titleString, font: Font.regular(11.0), textColor: (component.unseenCount != 0 || component.peer.id == component.context.account.peerId) ? component.theme.list.itemPrimaryTextColor : component.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.5))),
                     maximumNumberOfLines: 1
                 )),
                 environment: {},
@@ -840,7 +842,7 @@ public final class StoryPeerListItemComponent: Component {
                     self.progressLayer = progressLayer
                     self.indicatorMaskUnseenLayer.addSublayer(progressLayer)
                 }
-                let progressFrame = CGRect(origin: CGPoint(), size: indicatorFrame.size).insetBy(dx: 2.0, dy: 2.0)
+                let progressFrame = CGRect(origin: CGPoint(), size: indicatorFrame.size).insetBy(dx: 4.0, dy: 4.0)
                 progressTransition.setFrame(layer: progressLayer, frame: progressFrame)
                 
                 switch ringAnimation {
@@ -851,9 +853,9 @@ public final class StoryPeerListItemComponent: Component {
                     } else {
                         progressTransition = .easeInOut(duration: 0.3)
                     }
-                    progressLayer.update(size: progressFrame.size, lineWidth: 4.0, value: .progress(progress), transition: progressTransition)
+                    progressLayer.update(size: progressFrame.size, lineWidth: indicatorLineUnseenWidth, value: .progress(progress), transition: progressTransition)
                 case .loading:
-                    progressLayer.update(size: progressFrame.size, lineWidth: 4.0, value: .indefinite, transition: transition)
+                    progressLayer.update(size: progressFrame.size, lineWidth: indicatorLineUnseenWidth, value: .indefinite, transition: transition)
                 }
                 self.indicatorShapeSeenLayer.opacity = 0.0
                 self.indicatorShapeUnseenLayer.opacity = 0.0

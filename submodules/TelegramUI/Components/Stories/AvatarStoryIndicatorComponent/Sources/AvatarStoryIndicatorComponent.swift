@@ -94,15 +94,9 @@ public final class AvatarStoryIndicatorComponent: Component {
             self.component = component
             self.state = state
             
-            let lineWidth: CGFloat
             let diameter: CGFloat
             
-            if component.hasUnseen {
-                lineWidth = component.activeLineWidth
-            } else {
-                lineWidth = component.inactiveLineWidth
-            }
-            let maxOuterInset = component.activeLineWidth + lineWidth
+            let maxOuterInset = component.activeLineWidth * 2.0
             diameter = availableSize.width + maxOuterInset * 2.0
             let imageDiameter = availableSize.width + ceilToScreenPixels(maxOuterInset) * 2.0
             
@@ -136,7 +130,7 @@ public final class AvatarStoryIndicatorComponent: Component {
                 
                 if let counters = component.counters, counters.totalCount > 1 {
                     let center = CGPoint(x: size.width * 0.5, y: size.height * 0.5)
-                    let radius = (diameter - lineWidth) * 0.5
+                    let radius = (diameter - component.activeLineWidth) * 0.5
                     let spacing: CGFloat = 2.0
                     let angularSpacing: CGFloat = spacing / radius
                     let circleLength = CGFloat.pi * 2.0 * radius
@@ -145,6 +139,12 @@ public final class AvatarStoryIndicatorComponent: Component {
                     
                     for pass in 0 ..< 2 {
                         context.resetClip()
+                        
+                        if pass == 0 {
+                            context.setLineWidth(component.inactiveLineWidth)
+                        } else {
+                            context.setLineWidth(component.activeLineWidth)
+                        }
                         
                         let startIndex: Int
                         let endIndex: Int
@@ -179,6 +179,8 @@ public final class AvatarStoryIndicatorComponent: Component {
                         }
                     }
                 } else {
+                    let lineWidth: CGFloat = component.hasUnseen ? component.activeLineWidth : component.inactiveLineWidth
+                    context.setLineWidth(lineWidth)
                     context.addEllipse(in: CGRect(origin: CGPoint(x: size.width * 0.5 - diameter * 0.5, y: size.height * 0.5 - diameter * 0.5), size: size).insetBy(dx: lineWidth * 0.5, dy: lineWidth * 0.5))
                     
                     context.replacePathWithStrokedPath()

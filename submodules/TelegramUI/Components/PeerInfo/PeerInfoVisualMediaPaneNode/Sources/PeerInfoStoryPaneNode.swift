@@ -631,7 +631,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
             }
             
             if let selectedMedia = selectedMedia {
-                if let result = directMediaImageCache.getImage(peer: item.peer, story: story, media: selectedMedia, width: imageWidthSpec, aspectRatio: 0.72, possibleWidths: SparseItemGridBindingImpl.widthSpecs.1, includeBlurred: hasSpoiler || displayItem.blurLayer != nil, synchronous: synchronous == .full) {
+                if let result = directMediaImageCache.getImage(peer: item.peer, story: story, media: selectedMedia, width: imageWidthSpec, aspectRatio: 0.81, possibleWidths: SparseItemGridBindingImpl.widthSpecs.1, includeBlurred: hasSpoiler || displayItem.blurLayer != nil, synchronous: synchronous == .full) {
                     if let image = result.image {
                         layer.setContents(image)
                         switch synchronous {
@@ -1960,7 +1960,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 fixedItemHeight = nil
             }
             
-            let fixedItemAspect: CGFloat? = 0.72
+            let fixedItemAspect: CGFloat? = 0.81
             
             let gridTopInset = topInset
          
