@@ -1242,7 +1242,7 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case other
     }
     
-    var disposed: () -> Void = {}
+    public var disposed: () -> Void = {}
     
     private var didSetReady = false
     private let _ready = Promise<Bool>()

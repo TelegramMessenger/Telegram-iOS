@@ -1080,7 +1080,17 @@ public class CameraScreen: ViewController {
         fileprivate var previewBlurPromise = ValuePromise<Bool>(false)
         private let animateFlipAction = ActionSlot<Void>()
         
-        fileprivate var cameraIsActive = true
+        private let idleTimerExtensionDisposable = MetaDisposable()
+        
+        fileprivate var cameraIsActive = true {
+            didSet {
+                if self.cameraIsActive {
+                    self.idleTimerExtensionDisposable.set(self.context.sharedContext.applicationBindings.pushIdleTimerExtension())
+                } else {
+                    self.idleTimerExtensionDisposable.set(nil)
+                }
+            }
+        }
         fileprivate var hasGallery = false
         
         private var presentationData: PresentationData
@@ -1302,10 +1312,13 @@ public class CameraScreen: ViewController {
                     }
                 }
             }
+            
+            self.idleTimerExtensionDisposable.set(self.context.sharedContext.applicationBindings.pushIdleTimerExtension())
         }
         
         deinit {
             self.changingPositionDisposable?.dispose()
+            self.idleTimerExtensionDisposable.dispose()
         }
         
         private var pipPanGestureRecognizer: UIPanGestureRecognizer?
@@ -1731,7 +1744,7 @@ public class CameraScreen: ViewController {
             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY + 3.0), size: CGSize())
             
             let accountManager = self.context.sharedContext.accountManager
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Take photos or videos to share with all\nyour contacts or close friends at once."), textAlignment: .center, location: .point(location, .bottom), displayDuration: .custom(3.0), inset: 16.0, shouldDismissOnTouch: { point, containerFrame in
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Take photos or videos to share with all\nyour contacts or close friends at once."), textAlignment: .center, location: .point(location, .bottom), displayDuration: .custom(4.5), inset: 16.0, shouldDismissOnTouch: { point, containerFrame in
                 if containerFrame.contains(point) {
                     let _ = ApplicationSpecificNotice.incrementStoriesCameraTip(accountManager: accountManager).start()
                     return .dismiss(consume: true)
@@ -2224,6 +2237,8 @@ public class CameraScreen: ViewController {
             }
         }
         self.push(controller)
+        
+        self.requestLayout(transition: .immediate)
     }
     
     public func presentDraftTooltip() {

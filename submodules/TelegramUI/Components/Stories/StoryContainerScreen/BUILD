@@ -74,6 +74,8 @@ swift_library(
         "//submodules/StickerPackPreviewUI",
         "//submodules/Components/AnimatedStickerComponent",
         "//submodules/OpenInExternalAppUI",
+        "//submodules/MediaPasteboardUI",
+        "//submodules/WebPBinding",
     ],
     visibility = [
         "//visibility:public",

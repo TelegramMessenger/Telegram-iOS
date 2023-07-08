@@ -2093,6 +2093,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             }
                         }
                         self.isInteractingWithEntities = isInteracting
+                        if !isInteracting {
+                            self.controller?.isSavingAvailable = true
+                        }
                         self.requestUpdate(transition: .easeInOut(duration: 0.2))
                     }
                 },
@@ -3853,11 +3856,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let entities = self.node.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }
         let codableEntities = DrawingEntitiesView.encodeEntities(entities, entitiesView: self.node.entitiesView)
         mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
-        
-        if let previousSavedValues = self.previousSavedValues, mediaEditor.values == previousSavedValues {
-            return
-        }
-        
+                
         self.hapticFeedback.impact(.light)
         
         self.previousSavedValues = mediaEditor.values

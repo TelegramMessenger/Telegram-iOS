@@ -44,11 +44,8 @@ final class CameraDevice {
                 selectedDevice = device
             }
         } else {
-            if #available(iOS 11.1, *), dual, case .front = position, let trueDepthDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInTrueDepthCamera], mediaType: .video, position: position).devices.first {
-                selectedDevice = trueDepthDevice
-            }
             if selectedDevice == nil {
-                selectedDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera, .builtInWideAngleCamera, .builtInTelephotoCamera], mediaType: .video, position: position).devices.first
+                selectedDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInWideAngleCamera, .builtInTelephotoCamera], mediaType: .video, position: position).devices.first
             }
         }
         

@@ -785,6 +785,10 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView {
             self.currentHandle = self.layer
             entityView.onInteractionUpdated(true)
         case .changed:
+            if self.currentHandle == nil {
+                self.currentHandle = self.layer
+            }
+            
             let delta = gestureRecognizer.translation(in: entityView.superview)
             let parentLocation = gestureRecognizer.location(in: self.superview)
             let velocity = gestureRecognizer.velocity(in: entityView.superview)

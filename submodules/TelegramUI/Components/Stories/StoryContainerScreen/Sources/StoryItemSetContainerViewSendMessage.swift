@@ -38,6 +38,8 @@ import TextFieldComponent
 import StickerPackPreviewUI
 import OpenInExternalAppUI
 import SafariServices
+import MediaPasteboardUI
+import WebPBinding
 
 final class StoryItemSetContainerSendMessage {
     enum InputMode {
@@ -252,9 +254,12 @@ final class StoryItemSetContainerSendMessage {
             
             let heightAndOverflow = inputMediaNode.updateLayout(width: availableSize.width, leftInset: 0.0, rightInset: 0.0, bottomInset: bottomInset, standardInputHeight: deviceMetrics.standardInputHeight(inLandscape: false), inputHeight: inputHeight, maximumHeight: availableSize.height, inputPanelHeight: 0.0, transition: .immediate, interfaceState: presentationInterfaceState, layoutMetrics: metrics, deviceMetrics: deviceMetrics, isVisible: true, isExpanded: false)
             let inputNodeHeight = heightAndOverflow.0
-            var inputNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - inputNodeHeight), size: CGSize(width: availableSize.width, height: inputNodeHeight))
+            let inputNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - inputNodeHeight), size: CGSize(width: availableSize.width, height: inputNodeHeight))
+            
             if self.needsInputActivation {
-                inputNodeFrame = inputNodeFrame.offsetBy(dx: 0.0, dy: inputNodeHeight)
+                let inputNodeFrame = inputNodeFrame.offsetBy(dx: 0.0, dy: inputNodeHeight)
+                Transition.immediate.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
+                Transition.immediate.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeFrame)
             }
             transition.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
             transition.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeFrame)
@@ -326,6 +331,35 @@ final class StoryItemSetContainerSendMessage {
         }
     }
     
+    private func presentMessageSentTooltip(view: StoryItemSetContainerComponent.View, peer: EnginePeer, messageId: EngineMessage.Id?) {
+        guard let component = view.component, let controller = component.controller() as? StoryContainerScreen else {
+            return
+        }
+        
+        if let tooltipScreen = self.tooltipScreen {
+            tooltipScreen.dismiss(animated: true)
+        }
+        
+        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+        let tooltipScreen = UndoOverlayController(
+            presentationData: presentationData,
+            content: .actionSucceeded(title: "", text: "Message Sent", cancel: messageId != nil ? "View in Chat" : "", destructive: false),
+            elevatedLayout: false,
+            animateInAsReplacement: false,
+            action: { [weak view, weak self] action in
+                if case .undo = action, let messageId {
+                    view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
+                }
+                self?.tooltipScreen = nil
+                view?.updateIsProgressPaused()
+                return false
+            }
+        )
+        controller.present(tooltipScreen, in: .current)
+        self.tooltipScreen = tooltipScreen
+        view.updateIsProgressPaused()
+    }
+    
     func performSendMessageAction(
         view: StoryItemSetContainerComponent.View
     ) {
@@ -342,8 +376,7 @@ final class StoryItemSetContainerSendMessage {
         }
         let peer = component.slice.peer
         
-        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-        let controller = component.controller()
+        let controller = component.controller() as? StoryContainerScreen
         
         if let recordedAudioPreview = self.recordedAudioPreview {
             self.recordedAudioPreview = nil
@@ -370,27 +403,22 @@ final class StoryItemSetContainerSendMessage {
                         replyTo: nil,
                         storyId: focusedStoryId,
                         content: .text(text.string, entities)
-                    ) |> deliverOnMainQueue).start(next: { [weak controller, weak view] messageIds in
-                        if let controller {
-                            Queue.mainQueue().after(0.3) {
-                                controller.present(UndoOverlayController(
-                                    presentationData: presentationData,
-                                    content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat", destructive: false),
-                                    elevatedLayout: false,
-                                    animateInAsReplacement: false,
-                                    action: { [weak view] action in
-                                        if case .undo = action, let messageId = messageIds.first {
-                                            view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
-                                        }
-                                        return false
-                                    }
-                                ), in: .current)
+                    ) |> deliverOnMainQueue).start(next: { [weak self, weak view] messageIds in
+                        Queue.mainQueue().after(0.3) {
+                            if let self, let view {
+                                self.presentMessageSentTooltip(view: view, peer: peer, messageId: messageIds.first.flatMap { $0 })
                             }
                         }
                     })
                     inputPanelView.clearSendMessageInput()
+                    
                     self.currentInputMode = .text
-                    view.endEditing(true)
+                    if hasFirstResponder(view) {
+                        view.endEditing(true)
+                    } else {
+                        view.state?.updated(transition: .spring(duration: 0.3))
+                    }
+                    controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
                 }
             }
         }
@@ -407,7 +435,6 @@ final class StoryItemSetContainerSendMessage {
         let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
         let peer = component.slice.peer
         
-        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
         let controller = component.controller() as? StoryContainerScreen
         
         if let navigationController = controller?.navigationController as? NavigationController {
@@ -433,21 +460,10 @@ final class StoryItemSetContainerSendMessage {
             replyTo: nil,
             storyId: focusedStoryId,
             content: .file(fileReference)
-        ) |> deliverOnMainQueue).start(next: { [weak controller, weak view] messageIds in
-            if let controller {
-                Queue.mainQueue().after(0.3) {
-                    controller.present(UndoOverlayController(
-                        presentationData: presentationData,
-                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat", destructive: false),
-                        elevatedLayout: false,
-                        animateInAsReplacement: false,
-                        action: { [weak view] action in
-                            if case .undo = action, let messageId = messageIds.first {
-                                view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
-                            }
-                            return false
-                        }
-                    ), in: .current)
+        ) |> deliverOnMainQueue).start(next: { [weak self, weak view] messageIds in
+            Queue.mainQueue().after(0.3) {
+                if let self, let view {
+                    self.presentMessageSentTooltip(view: view, peer: peer, messageId: messageIds.first.flatMap { $0 })
                 }
             }
         })
@@ -457,8 +473,8 @@ final class StoryItemSetContainerSendMessage {
             view.endEditing(true)
         } else {
             view.state?.updated(transition: .spring(duration: 0.3))
-            controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
         }
+        controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
     }
     
     func performSendContextResultAction(view: StoryItemSetContainerComponent.View, results: ChatContextResultCollection, result: ChatContextResult) {
@@ -472,7 +488,6 @@ final class StoryItemSetContainerSendMessage {
         let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
         let peer = component.slice.peer
         
-        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
         let controller = component.controller() as? StoryContainerScreen
         
         if let navigationController = controller?.navigationController as? NavigationController {
@@ -498,21 +513,10 @@ final class StoryItemSetContainerSendMessage {
             replyTo: nil,
             storyId: focusedStoryId,
             content: .contextResult(results, result)
-        ) |> deliverOnMainQueue).start(next: { [weak controller, weak view] messageIds in
-            if let controller {
-                Queue.mainQueue().after(0.3) {
-                    controller.present(UndoOverlayController(
-                        presentationData: presentationData,
-                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat", destructive: false),
-                        elevatedLayout: false,
-                        animateInAsReplacement: false,
-                        action: { [weak view] action in
-                            if case .undo = action, let messageId = messageIds.first {
-                                view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
-                            }
-                            return false
-                        }
-                    ), in: .current)
+        ) |> deliverOnMainQueue).start(next: { [weak self, weak view] messageIds in
+            Queue.mainQueue().after(0.3) {
+                if let self, let view {
+                    self.presentMessageSentTooltip(view: view, peer: peer, messageId: messageIds.first.flatMap { $0 })
                 }
             }
         })
@@ -522,8 +526,75 @@ final class StoryItemSetContainerSendMessage {
             view.endEditing(true)
         } else {
             view.state?.updated(transition: .spring(duration: 0.3))
-            controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
         }
+        controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
+    }
+    
+    func enqueueGifData(view: StoryItemSetContainerComponent.View, data: Data) {
+        guard let component = view.component else {
+            return
+        }
+        let peer = component.slice.peer
+        let _ = (legacyEnqueueGifMessage(account: component.context.account, data: data) |> deliverOnMainQueue).start(next: { [weak self, weak view] message in
+            if let self, let view {
+                self.sendMessages(view: view, peer: peer, messages: [message])
+            }
+        })
+    }
+    
+    func enqueueStickerImage(view: StoryItemSetContainerComponent.View, image: UIImage, isMemoji: Bool) {
+        guard let component = view.component else {
+            return
+        }
+        let peer = component.slice.peer
+        
+        let size = image.size.aspectFitted(CGSize(width: 512.0, height: 512.0))
+        
+        func scaleImage(_ image: UIImage, size: CGSize, boundiingSize: CGSize) -> UIImage? {
+            if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+                let format = UIGraphicsImageRendererFormat()
+                format.scale = 1.0
+                let renderer = UIGraphicsImageRenderer(size: size, format: format)
+                return renderer.image { _ in
+                    image.draw(in: CGRect(origin: .zero, size: size))
+                }
+            } else {
+                return TGScaleImageToPixelSize(image, size)
+            }
+        }
+
+        func convertToWebP(image: UIImage, targetSize: CGSize?, targetBoundingSize: CGSize?, quality: CGFloat) -> Signal<Data, NoError> {
+            var image = image
+            if let targetSize = targetSize, let scaledImage = scaleImage(image, size: targetSize, boundiingSize: targetSize) {
+                image = scaledImage
+            }
+            
+            return Signal { subscriber in
+                if let data = try? WebP.convert(toWebP: image, quality: quality * 100.0) {
+                    subscriber.putNext(data)
+                }
+                subscriber.putCompletion()
+                
+                return EmptyDisposable
+            } |> runOn(Queue.concurrentDefaultQueue())
+        }
+
+        let _ = (convertToWebP(image: image, targetSize: size, targetBoundingSize: size, quality: 0.9) |> deliverOnMainQueue).start(next: { [weak self, weak view] data in
+            if let self, let view, !data.isEmpty {
+                let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+                component.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                
+                var fileAttributes: [TelegramMediaFileAttribute] = []
+                fileAttributes.append(.FileName(fileName: "sticker.webp"))
+                fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
+                fileAttributes.append(.ImageSize(size: PixelDimensions(size)))
+                
+                let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "image/webp", size: Int64(data.count), attributes: fileAttributes)
+                let message = EnqueueMessage.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+                
+                self.sendMessages(view: view, peer: peer, messages: [message], silentPosting: false)
+            }
+        })
     }
     
     func setMediaRecordingActive(
@@ -1160,18 +1231,13 @@ final class StoryItemSetContainerSendMessage {
                             }
                             let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: mediaReference, replyToMessageId: nil, replyToStoryId: focusedStoryId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
                             let _ = (enqueueMessages(account: component.context.account, peerId: peer.id, messages: [message.withUpdatedReplyToMessageId(nil)])
-                            |> deliverOnMainQueue).start()
-                            
-                            if let controller = component.controller() {
-                                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                controller.present(UndoOverlayController(
-                                    presentationData: presentationData,
-                                    content: .succeed(text: "Message Sent"),
-                                    elevatedLayout: false,
-                                    animateInAsReplacement: false,
-                                    action: { _ in return false }
-                                ), in: .current)
-                            }
+                            |> deliverOnMainQueue).start(next: { [weak self, weak view] messageIds in
+                                if let self, let view {
+                                    Queue.mainQueue().after(0.3) {
+                                        self.presentMessageSentTooltip(view: view, peer: peer, messageId: messageIds.first.flatMap { $0 })
+                                    }
+                                }
+                            })
                         })
                         let _ = currentFilesController.swap(controller)
                         if let controller = controller as? AttachmentContainable, let mediaPickerContext = controller.mediaPickerContext {
@@ -1275,7 +1341,7 @@ final class StoryItemSetContainerSendMessage {
                                     }
                                 }
                                 
-                                self.sendMessages(view: view, peer: peer, messages: self.transformEnqueueMessages(view: view, messages: enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime))
+                                self.sendMessages(view: view, peer: peer, messages: enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime)
                             } else if let peer = peers.first {
                                 let dataSignal: Signal<(EnginePeer?, DeviceContactExtendedData?), NoError>
                                 switch peer {
@@ -1330,7 +1396,7 @@ final class StoryItemSetContainerSendMessage {
                                         }
                                         enqueueMessages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, replyToStoryId: focusedStoryId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                                         
-                                        self.sendMessages(view: view, peer: targetPeer, messages: self.transformEnqueueMessages(view: view, messages: enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime))
+                                        self.sendMessages(view: view, peer: targetPeer, messages: enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime)
                                     } else {
                                         let contactController = component.context.sharedContext.makeDeviceContactInfoController(context: component.context, subject: .filter(peer: peerAndContactData.0?._asPeer(), contactId: nil, contactData: contactData, completion: { [weak self, weak view] peer, contactData in
                                             guard let self, let view else {
@@ -1349,7 +1415,7 @@ final class StoryItemSetContainerSendMessage {
                                                 }
                                                 enqueueMessages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, replyToStoryId: focusedStoryId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                                                 
-                                                self.sendMessages(view: view, peer: targetPeer, messages: self.transformEnqueueMessages(view: view, messages: enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime))
+                                                self.sendMessages(view: view, peer: targetPeer, messages: enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime)
                                             }
                                         }), completed: nil, cancelled: nil)
                                         component.controller()?.push(contactController)
@@ -1357,10 +1423,6 @@ final class StoryItemSetContainerSendMessage {
                                 }))
                             }
                         }))
-                    case .poll:
-                        let controller = self.configurePollCreation(view: view, peer: peer, targetMessageId: nil)
-                        completion(controller, controller?.mediaPickerContext)
-                        self.controllerNavigationDisposable.set(nil)
                     case .gift:
                         /*let premiumGiftOptions = strongSelf.presentationInterfaceState.premiumGiftOptions
                         if !premiumGiftOptions.isEmpty {
@@ -1773,6 +1835,69 @@ final class StoryItemSetContainerSendMessage {
         })
     }
     
+    func presentMediaPasteboard(view: StoryItemSetContainerComponent.View, subjects: [MediaPickerScreen.Subject.Media]) {
+        guard let component = view.component else {
+            return
+        }
+        let focusedItem = component.slice.item
+        guard let peerId = focusedItem.peerId else {
+            return
+        }
+        let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
+        guard let inputPanelView = view.inputPanel.view as? MessageInputPanelComponent.View else {
+            return
+        }
+        
+        var inputText = NSAttributedString(string: "")
+        switch inputPanelView.getSendMessageInput() {
+        case let .text(text):
+            inputText = text
+        }
+        
+        let peer = component.slice.peer
+        let theme = defaultDarkPresentationTheme
+        let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
+        let controller = mediaPasteboardScreen(
+            context: component.context,
+            updatedPresentationData: updatedPresentationData,
+            peer: peer,
+            subjects: subjects,
+            presentMediaPicker: { [weak self] subject, saveEditedPhotos, bannedSendPhotos, bannedSendVideos, present in
+                if let self {
+                    self.presentMediaPicker(
+                        view: view,
+                        peer: peer,
+                        replyToMessageId: nil,
+                        replyToStoryId: focusedStoryId,
+                        subject: subject,
+                        saveEditedPhotos: saveEditedPhotos,
+                        bannedSendPhotos: bannedSendPhotos,
+                        bannedSendVideos: bannedSendVideos,
+                        present: { controller, mediaPickerContext in
+                            if !inputText.string.isEmpty {
+                                mediaPickerContext?.setCaption(inputText)
+                            }
+                            present(controller, mediaPickerContext)
+                        },
+                        updateMediaPickerContext: { _ in },
+                        completion: { [weak self, weak view] signals, silentPosting, scheduleTime, getAnimatedTransitionSource, completion in
+                            guard let self, let view else {
+                                return
+                            }
+                            if !inputText.string.isEmpty {
+                                self.clearInputText(view: view)
+                            }
+                            self.enqueueMediaMessages(view: view, peer: peer, replyToMessageId: nil, replyToStoryId: focusedStoryId, signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+                        }
+                    )
+                }
+            },
+            getSourceRect: nil
+        )
+        controller.navigationPresentation = .flatModal
+        component.controller()?.push(controller)
+    }
+    
     private func enqueueChatContextResult(view: StoryItemSetContainerComponent.View, peer: EnginePeer, replyMessageId: EngineMessage.Id?, storyId: StoryId?, results: ChatContextResultCollection, result: ChatContextResult, hideVia: Bool = false, closeMediaInput: Bool = false, silentPosting: Bool = false, resetTextInputState: Bool = true) {
         if !canSendMessagesToPeer(peer._asPeer()) {
             return
@@ -2002,56 +2127,6 @@ final class StoryItemSetContainerSendMessage {
         component.controller()?.present(controller, in: .window(.root))
     }
     
-    private func configurePollCreation(view: StoryItemSetContainerComponent.View, peer: EnginePeer, targetMessageId: EngineMessage.Id?, isQuiz: Bool? = nil) -> CreatePollControllerImpl? {
-        guard let component = view.component else {
-            return nil
-        }
-        let focusedItem = component.slice.item
-        guard let peerId = focusedItem.peerId else {
-            return nil
-        }
-        let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
-        
-        let theme = component.theme
-        return createPollController(context: component.context, updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) }), peer: peer, isQuiz: isQuiz, completion: { [weak self, weak view] poll in
-            guard let self, let view else {
-                return
-            }
-            let replyMessageId = targetMessageId
-            /*strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
-                if let strongSelf = self {
-                    strongSelf.chatDisplayNode.collapseInput()
-                    
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
-                    })
-                }
-            }, nil)*/
-            let message: EnqueueMessage = .message(
-                text: "",
-                attributes: [],
-                inlineStickers: [:],
-                mediaReference: .standalone(media: TelegramMediaPoll(
-                    pollId: EngineMedia.Id(namespace: Namespaces.Media.LocalPoll, id: Int64.random(in: Int64.min ... Int64.max)),
-                    publicity: poll.publicity,
-                    kind: poll.kind,
-                    text: poll.text,
-                    options: poll.options,
-                    correctAnswers: poll.correctAnswers,
-                    results: poll.results,
-                    isClosed: false,
-                    deadlineTimeout: poll.deadlineTimeout
-                )),
-                replyToMessageId: nil,
-                replyToStoryId: focusedStoryId,
-                localGroupingKey: nil,
-                correlationId: nil,
-                bubbleUpEmojiOrStickersets: []
-            )
-            self.sendMessages(view: view, peer: peer, messages: [message.withUpdatedReplyToMessageId(replyMessageId)])
-        })
-    }
-    
     private func transformEnqueueMessages(view: StoryItemSetContainerComponent.View, messages: [EnqueueMessage], silentPosting: Bool, scheduleTime: Int32? = nil) -> [EnqueueMessage] {
         var focusedStoryId: StoryId?
         if let component = view.component, let peerId = component.slice.item.peerId {
@@ -2094,28 +2169,15 @@ final class StoryItemSetContainerSendMessage {
         }
     }
     
-    private func sendMessages(view: StoryItemSetContainerComponent.View, peer: EnginePeer, messages: [EnqueueMessage], media: Bool = false, commit: Bool = false) {
-        guard let component = view.component, let controller = component.controller() else {
+    private func sendMessages(view: StoryItemSetContainerComponent.View, peer: EnginePeer, messages: [EnqueueMessage], silentPosting: Bool = false, scheduleTime: Int32? = nil) {
+        guard let component = view.component else {
             return
         }
-        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-        
-        let _ = (enqueueMessages(account: component.context.account, peerId: peer.id, messages: self.transformEnqueueMessages(view: view, messages: messages, silentPosting: false))
-        |> deliverOnMainQueue).start(next: { [weak controller] messageIds in
-            if let controller {
-                Queue.mainQueue().after(0.3) {
-                    controller.present(UndoOverlayController(
-                        presentationData: presentationData,
-                        content: .actionSucceeded(title: "", text: "Message Sent", cancel: "View in Chat", destructive: false),
-                        elevatedLayout: false,
-                        animateInAsReplacement: false,
-                        action: { [weak view] action in
-                            if case .undo = action, let messageId = messageIds.first {
-                                view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
-                            }
-                            return false
-                        }
-                    ), in: .current)
+        let _ = (enqueueMessages(account: component.context.account, peerId: peer.id, messages: self.transformEnqueueMessages(view: view, messages: messages, silentPosting: silentPosting, scheduleTime: scheduleTime))
+        |> deliverOnMainQueue).start(next: { [weak self, weak view] messageIds in
+            Queue.mainQueue().after(0.3) {
+                if let view {
+                    self?.presentMessageSentTooltip(view: view, peer: peer, messageId: messageIds.first.flatMap { $0 })
                 }
             }
         })
@@ -2180,10 +2242,8 @@ final class StoryItemSetContainerSendMessage {
                     }
                     mappedMessages.append(message)
                 }
-                                                    
-                let messages = strongSelf.transformEnqueueMessages(view: view, messages: mappedMessages, silentPosting: silentPosting, scheduleTime: scheduleTime)
 
-                strongSelf.sendMessages(view: view, peer: peer, messages: messages.map { $0.withUpdatedReplyToMessageId(replyToMessageId).withUpdatedReplyToStoryId(replyToStoryId) }, media: true)
+                strongSelf.sendMessages(view: view, peer: peer, messages: mappedMessages.map { $0.withUpdatedReplyToMessageId(replyToMessageId).withUpdatedReplyToStoryId(replyToStoryId) }, silentPosting: silentPosting, scheduleTime: scheduleTime)
                 
                 completion()
             }

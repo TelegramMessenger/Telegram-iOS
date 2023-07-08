@@ -583,6 +583,12 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
+            if let inputMediaView = self.sendMessageContext.inputMediaNode {
+                if inputMediaView.frame.contains(point) {
+                    return false
+                }
+            }
+            
             if let centerInfoItemView = self.centerInfoItem?.view.view {
                 if centerInfoItemView.convert(centerInfoItemView.bounds, to: self).contains(point) {
                     return false
@@ -1579,11 +1585,7 @@ public final class StoryItemSetContainerComponent: Component {
         
         func update(component: StoryItemSetContainerComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let isFirstTime = self.component == nil
-            
-//            if let hint = transition.userData(TextFieldComponent.AnimationHint.self), case .textFocusChanged = hint.kind, !hasFirstResponder(self) {
-//                self.sendMessageContext.currentInputMode = .text
-//            }
-            
+                        
             if self.component == nil {
                 self.sendMessageContext.setup(context: component.context, view: self, inputPanelExternalState: self.inputPanelExternalState, keyboardInputData: component.keyboardInputData)
             }
@@ -1759,7 +1761,11 @@ public final class StoryItemSetContainerComponent: Component {
                             return
                         }
                         self.sendMessageContext.toggleInputMode()
-                        self.state?.updated(transition: .immediate)
+                        if !hasFirstResponder(self) {
+                            self.state?.updated(transition: .spring(duration: 0.4))
+                        } else {
+                            self.state?.updated(transition: .immediate)
+                        }
                     },
                     timeoutAction: nil,
                     forwardAction: component.slice.item.storyItem.isPublic ? { [weak self] in
@@ -1797,7 +1803,23 @@ public final class StoryItemSetContainerComponent: Component {
                         self.voiceMessagesRestrictedTooltipController = controller
                         self.state?.updated(transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)))
                     },
-                    paste: { _ in
+                    paste: { [weak self] data in
+                        guard let self else {
+                            return
+                        }
+                        switch data {
+                        case let .images(images):
+                            self.sendMessageContext.presentMediaPasteboard(view: self, subjects: images.map { .image($0) })
+                        case let .video(data):
+                            let tempFilePath = NSTemporaryDirectory() + "\(Int64.random(in: 0...Int64.max)).mp4"
+                            let url = NSURL(fileURLWithPath: tempFilePath) as URL
+                            try? data.write(to: url)
+                            self.sendMessageContext.presentMediaPasteboard(view: self, subjects: [.video(url)])
+                        case let .gif(data):
+                            self.sendMessageContext.enqueueGifData(view: self, data: data)
+                        case let .sticker(image, isMemoji):
+                            self.sendMessageContext.enqueueStickerImage(view: self, image: image, isMemoji: isMemoji)
+                        }
                     },
                     audioRecorder: self.sendMessageContext.audioRecorderValue,
                     videoRecordingStatus: !self.sendMessageContext.hasRecordedVideoPreview ? self.sendMessageContext.videoRecorderValue?.audioStatus : nil,
@@ -2226,8 +2248,9 @@ public final class StoryItemSetContainerComponent: Component {
                 if moreButtonView.superview == nil {
                     self.controlsContainerView.addSubview(moreButtonView)
                 }
+                moreButtonView.isUserInteractionEnabled = !component.slice.item.storyItem.isPending
                 transition.setFrame(view: moreButtonView, frame: CGRect(origin: CGPoint(x: headerRightOffset - moreButtonSize.width, y: 2.0), size: moreButtonSize))
-                transition.setAlpha(view: moreButtonView, alpha: component.slice.item.storyItem.isPending ? 0.0 : 1.0)
+                transition.setAlpha(view: moreButtonView, alpha: component.slice.item.storyItem.isPending ? 0.5 : 1.0)
                 headerRightOffset -= moreButtonSize.width + 15.0
             }
             
@@ -2811,7 +2834,24 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                     
                     reactionContextNode.premiumReactionsSelected = { [weak self] file in
-                        guard let self, let file, let component = self.component else {
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        
+                        guard let file else {
+                            let context = component.context
+                            var replaceImpl: ((ViewController) -> Void)?
+                            let controller = PremiumDemoScreen(context: context, subject: .uniqueReactions, action: {
+                                let controller = PremiumIntroScreen(context: context, source: .reactions)
+                                replaceImpl?(controller)
+                            })
+                            controller.disposed = { [weak self] in
+                                self?.updateIsProgressPaused()
+                            }
+                            replaceImpl = { [weak controller] c in
+                                controller?.replace(with: c)
+                            }
+                            component.controller()?.push(controller)
                             return
                         }
                         
@@ -2827,6 +2867,9 @@ public final class StoryItemSetContainerComponent: Component {
                                 let controller = PremiumIntroScreen(context: context, source: .reactions)
                                 replaceImpl?(controller)
                             })
+                            controller.disposed = { [weak self] in
+                                self?.updateIsProgressPaused()
+                            }
                             replaceImpl = { [weak controller] c in
                                 controller?.replace(with: c)
                             }
@@ -2878,7 +2921,7 @@ public final class StoryItemSetContainerComponent: Component {
             if let reactionContextNode = self.disappearingReactionContextNode {
                 if !reactionContextNode.isAnimatingOutToReaction {
                     transition.setFrame(view: reactionContextNode.view, frame: CGRect(origin: CGPoint(), size: availableSize))
-                    reactionContextNode.updateLayout(size: availableSize, insets: UIEdgeInsets(), anchorRect: reactionsAnchorRect, isCoveredByInput: false, isAnimatingOut: false, transition: transition.containedViewLayoutTransition)
+                    reactionContextNode.updateLayout(size: availableSize, insets: UIEdgeInsets(), anchorRect: reactionsAnchorRect, centerAligned: true, isCoveredByInput: false, isAnimatingOut: false, transition: transition.containedViewLayoutTransition)
                 }
             }
             

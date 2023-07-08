@@ -68,10 +68,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     private let stringsPromise = Promise<PresentationStrings>()
-    
-    private var isStoryPostingAvailable = false
-    private var storiesPostingAvailabilityDisposable: Disposable?
-    
+        
     weak var controller: ContactsController?
     
     private var initialScrollingOffset: CGFloat?
@@ -254,80 +251,11 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             }
             self.openStories?(peer, sourceNode)
         }
-
-        let storiesPostingAvailability = self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
-        |> map { view -> AppConfiguration in
-            let appConfiguration: AppConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
-            return appConfiguration
-        }
-        |> distinctUntilChanged
-        |> map { appConfiguration -> StoriesConfiguration.PostingAvailability in
-            let storiesConfiguration = StoriesConfiguration.with(appConfiguration: appConfiguration)
-            return storiesConfiguration.posting
-        }
-        
-        self.storiesPostingAvailabilityDisposable = combineLatest(queue: Queue.mainQueue(),
-            storiesPostingAvailability,
-            self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
-            |> map { peer -> Bool in
-                if case let .user(user) = peer, user.isPremium {
-                    return true
-                } else {
-                    return false
-                }
-            }
-            |> distinctUntilChanged
-        ).start(next: { [weak self] postingAvailability, isPremium in
-            if let self {
-                let isStoryPostingAvailable: Bool
-                switch postingAvailability {
-                case .enabled:
-                    isStoryPostingAvailable = true
-                case .premium:
-                    isStoryPostingAvailable = isPremium
-                case .disabled:
-                    isStoryPostingAvailable = false
-                }
-                self.isStoryPostingAvailable = isStoryPostingAvailable
-            }
-        })
     }
     
     deinit {
         self.presentationDataDisposable?.dispose()
         self.storySubscriptionsDisposable?.dispose()
-        self.storiesPostingAvailabilityDisposable?.dispose()
-    }
-    
-    override func didLoad() {
-        super.didLoad()
-        
-        let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { _ in
-            return [.rightCenter, .rightEdge]
-        }, edgeWidth: .widthMultiplier(factor: 1.0 / 6.0, min: 22.0, max: 80.0))
-        panRecognizer.delegate = self
-        panRecognizer.delaysTouchesBegan = false
-        panRecognizer.cancelsTouchesInView = true
-        self.panRecognizer = panRecognizer
-        self.view.addGestureRecognizer(panRecognizer)
-    }
-    
-    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        return false
-    }
-    
-    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        if let _ = otherGestureRecognizer as? InteractiveTransitionGestureRecognizer {
-            return false
-        }
-        if let _ = otherGestureRecognizer as? UIPanGestureRecognizer {
-            return true
-        }
-        return false
-    }
-    
-    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        return self.isStoryPostingAvailable
     }
     
     private func updateThemeAndStrings() {
@@ -592,38 +520,6 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             self.searchDisplayController = nil
             
             placeholderNode.frame = previousFrame
-        }
-    }
-    
-    @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
-        guard let (layout, _) = self.containerLayout else {
-            return
-        }
-        switch recognizer.state {
-        case .began:
-            break
-        case .changed:
-            let translation = recognizer.translation(in: self.view)
-            if case .compact = layout.metrics.widthClass {
-                let cameraIsAlreadyOpened = self.controller?.hasStoryCameraTransition ?? false
-                if translation.x > 0.0 {
-                    self.controller?.storyCameraPanGestureChanged(transitionFraction: translation.x / layout.size.width)
-                } else if translation.x <= 0.0 && cameraIsAlreadyOpened {
-                    self.controller?.storyCameraPanGestureChanged(transitionFraction: 0.0)
-                }
-                if cameraIsAlreadyOpened {
-                    return
-                }
-            }
-        case .cancelled, .ended:
-            let translation = recognizer.translation(in: self.view)
-            let velocity = recognizer.velocity(in: self.view)
-            let hasStoryCameraTransition = self.controller?.hasStoryCameraTransition ?? false
-            if hasStoryCameraTransition {
-                self.controller?.storyCameraPanGestureEnded(transitionFraction: translation.x / layout.size.width, velocity: velocity.x)
-            }
-        default:
-            break
         }
     }
 }

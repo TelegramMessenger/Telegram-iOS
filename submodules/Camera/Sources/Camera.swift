@@ -10,7 +10,7 @@ final class CameraSession {
     private let multiSession: Any?
     
     let hasMultiCam: Bool
-    
+        
     init() {
         if #available(iOS 13.0, *), AVCaptureMultiCamSession.isMultiCamSupported {
             self.multiSession = AVCaptureMultiCamSession()
@@ -21,6 +21,7 @@ final class CameraSession {
             self.multiSession = nil
             self.hasMultiCam = false
         }
+        self.session.sessionPreset = .inputPriority
     }
     
     var session: AVCaptureSession {
@@ -64,10 +65,10 @@ final class CameraDeviceContext {
         self.previewView = previewView
         
         self.device.configure(for: session, position: position, dual: !exclusive || additional)
+        self.device.configureDeviceFormat(maxDimensions: self.preferredMaxDimensions, maxFramerate: self.preferredMaxFrameRate)
         self.input.configure(for: session, device: self.device, audio: audio)
         self.output.configure(for: session, device: self.device, input: self.input, previewView: previewView, audio: audio, photo: photo, metadata: metadata)
-            
-        self.device.configureDeviceFormat(maxDimensions: self.preferredMaxDimensions, maxFramerate: self.preferredMaxFrameRate)
+        
         self.output.configureVideoStabilization()
         
         self.device.resetZoom(neutral: self.exclusive || !self.additional)
@@ -83,8 +84,6 @@ final class CameraDeviceContext {
     
     private var preferredMaxDimensions: CMVideoDimensions {
         if self.additional {
-            //if case .iPhoneXS = DeviceModel.current {
-//                return CMVideoDimensions(width: 1440, height: 1080)
             return CMVideoDimensions(width: 1920, height: 1440)
         } else {
             return CMVideoDimensions(width: 1920, height: 1080)
