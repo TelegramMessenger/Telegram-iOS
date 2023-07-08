@@ -1585,11 +1585,7 @@ public final class StoryItemSetContainerComponent: Component {
         
         func update(component: StoryItemSetContainerComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let isFirstTime = self.component == nil
-            
-//            if let hint = transition.userData(TextFieldComponent.AnimationHint.self), case .textFocusChanged = hint.kind, !hasFirstResponder(self) {
-//                self.sendMessageContext.currentInputMode = .text
-//            }
-            
+                        
             if self.component == nil {
                 self.sendMessageContext.setup(context: component.context, view: self, inputPanelExternalState: self.inputPanelExternalState, keyboardInputData: component.keyboardInputData)
             }
@@ -1765,7 +1761,11 @@ public final class StoryItemSetContainerComponent: Component {
                             return
                         }
                         self.sendMessageContext.toggleInputMode()
-                        self.state?.updated(transition: .immediate)
+                        if !hasFirstResponder(self) {
+                            self.state?.updated(transition: .spring(duration: 0.4))
+                        } else {
+                            self.state?.updated(transition: .immediate)
+                        }
                     },
                     timeoutAction: nil,
                     forwardAction: component.slice.item.storyItem.isPublic ? { [weak self] in
@@ -2242,8 +2242,9 @@ public final class StoryItemSetContainerComponent: Component {
                 if moreButtonView.superview == nil {
                     self.controlsContainerView.addSubview(moreButtonView)
                 }
+                moreButtonView.isUserInteractionEnabled = !component.slice.item.storyItem.isPending
                 transition.setFrame(view: moreButtonView, frame: CGRect(origin: CGPoint(x: headerRightOffset - moreButtonSize.width, y: 2.0), size: moreButtonSize))
-                transition.setAlpha(view: moreButtonView, alpha: component.slice.item.storyItem.isPending ? 0.0 : 1.0)
+                transition.setAlpha(view: moreButtonView, alpha: component.slice.item.storyItem.isPending ? 0.5 : 1.0)
                 headerRightOffset -= moreButtonSize.width + 15.0
             }
             
@@ -2914,7 +2915,7 @@ public final class StoryItemSetContainerComponent: Component {
             if let reactionContextNode = self.disappearingReactionContextNode {
                 if !reactionContextNode.isAnimatingOutToReaction {
                     transition.setFrame(view: reactionContextNode.view, frame: CGRect(origin: CGPoint(), size: availableSize))
-                    reactionContextNode.updateLayout(size: availableSize, insets: UIEdgeInsets(), anchorRect: reactionsAnchorRect, isCoveredByInput: false, isAnimatingOut: false, transition: transition.containedViewLayoutTransition)
+                    reactionContextNode.updateLayout(size: availableSize, insets: UIEdgeInsets(), anchorRect: reactionsAnchorRect, centerAligned: true, isCoveredByInput: false, isAnimatingOut: false, transition: transition.containedViewLayoutTransition)
                 }
             }
             

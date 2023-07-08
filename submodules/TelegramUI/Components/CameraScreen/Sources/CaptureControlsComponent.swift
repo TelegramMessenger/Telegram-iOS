@@ -1102,12 +1102,23 @@ final class CaptureControlsComponent: Component {
                     lockMaskFrame = lockMaskFrame.offsetBy(dx: 8.0, dy: 0.0)
                 }
             }
-
+            
             let _ = self.lockView.update(
-                transition: transition,
+                transition: .immediate,
                 component: AnyComponent(
-                    LockContentComponent(
-                        maskFrame: lockMaskFrame
+                    CameraButton(
+                        content: AnyComponentWithIdentity(
+                            id: "lock",
+                            component: AnyComponent(
+                                LockContentComponent(
+                                    maskFrame: lockMaskFrame
+                                )
+                            )
+                        ),
+                        minSize: hintIconSize,
+                        action: {
+                            component.flipTapped()
+                        }
                     )
                 ),
                 environment: {},
@@ -1123,7 +1134,7 @@ final class CaptureControlsComponent: Component {
                 transition.setScale(view: lockView, scale: isHolding ? 1.0 : 0.1)
                 transition.setAlpha(view: lockView, alpha: isHolding ? 1.0 : 0.0)
                 
-                if let lockMaskView = lockView as? LockContentComponent.View {
+                if let buttonView = lockView as? CameraButton.View, let lockMaskView = buttonView.contentView.componentView as? LockContentComponent.View {
                     transition.setAlpha(view: lockMaskView.maskContainerView, alpha: isHolding ? 1.0 : 0.0)
                     transition.setSublayerTransform(layer: lockMaskView.maskContainerView.layer, transform: isHolding ? CATransform3DIdentity : CATransform3DMakeScale(0.1, 0.1, 1.0))
                 }
@@ -1155,11 +1166,11 @@ final class CaptureControlsComponent: Component {
                 contentView.maskContainerView.frame = contentView.convert(contentView.bounds, to: self)
             }
             
-            if let lockView = self.lockView.view as? LockContentComponent.View {
-                if lockView.maskContainerView.superview == nil {
-                    self.addSubview(lockView.maskContainerView)
+            if let buttonView = self.lockView.view as? CameraButton.View, let contentView = buttonView.contentView.componentView as? LockContentComponent.View {
+                if contentView.maskContainerView.superview == nil {
+                    self.addSubview(contentView.maskContainerView)
                 }
-                lockView.maskContainerView.center = lockView.center
+                contentView.maskContainerView.center = buttonView.center
             }
             
             return size

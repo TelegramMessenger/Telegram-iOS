@@ -173,7 +173,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                             isExpired: false,
                             isPublic: false,
                             isPending: true,
-                            isCloseFriends: false,
+                            isCloseFriends: item.privacy.base == .closeFriends,
                             isForwardingDisabled: false,
                             isEdited: false
                         ))

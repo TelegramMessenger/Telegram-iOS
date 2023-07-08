@@ -254,9 +254,12 @@ final class StoryItemSetContainerSendMessage {
             
             let heightAndOverflow = inputMediaNode.updateLayout(width: availableSize.width, leftInset: 0.0, rightInset: 0.0, bottomInset: bottomInset, standardInputHeight: deviceMetrics.standardInputHeight(inLandscape: false), inputHeight: inputHeight, maximumHeight: availableSize.height, inputPanelHeight: 0.0, transition: .immediate, interfaceState: presentationInterfaceState, layoutMetrics: metrics, deviceMetrics: deviceMetrics, isVisible: true, isExpanded: false)
             let inputNodeHeight = heightAndOverflow.0
-            var inputNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - inputNodeHeight), size: CGSize(width: availableSize.width, height: inputNodeHeight))
+            let inputNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - inputNodeHeight), size: CGSize(width: availableSize.width, height: inputNodeHeight))
+            
             if self.needsInputActivation {
-                inputNodeFrame = inputNodeFrame.offsetBy(dx: 0.0, dy: inputNodeHeight)
+                let inputNodeFrame = inputNodeFrame.offsetBy(dx: 0.0, dy: inputNodeHeight)
+                Transition.immediate.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
+                Transition.immediate.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeFrame)
             }
             transition.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
             transition.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeFrame)
@@ -534,8 +537,7 @@ final class StoryItemSetContainerSendMessage {
         let peer = component.slice.peer
         let _ = (legacyEnqueueGifMessage(account: component.context.account, data: data) |> deliverOnMainQueue).start(next: { [weak self, weak view] message in
             if let self, let view {
-                let messages = self.transformEnqueueMessages(view: view, messages: [message], silentPosting: false)
-                self.sendMessages(view: view, peer: peer, messages: messages)
+                self.sendMessages(view: view, peer: peer, messages: [message])
             }
         })
     }
@@ -590,8 +592,7 @@ final class StoryItemSetContainerSendMessage {
                 let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "image/webp", size: Int64(data.count), attributes: fileAttributes)
                 let message = EnqueueMessage.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
                 
-                let messages = self.transformEnqueueMessages(view: view, messages: [message], silentPosting: false)
-                self.sendMessages(view: view, peer: peer, messages: messages)
+                self.sendMessages(view: view, peer: peer, messages: [message], silentPosting: false)
             }
         })
     }
@@ -1340,7 +1341,7 @@ final class StoryItemSetContainerSendMessage {
                                     }
                                 }
                                 
-                                self.sendMessages(view: view, peer: peer, messages: self.transformEnqueueMessages(view: view, messages: enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime))
+                                self.sendMessages(view: view, peer: peer, messages: enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime)
                             } else if let peer = peers.first {
                                 let dataSignal: Signal<(EnginePeer?, DeviceContactExtendedData?), NoError>
                                 switch peer {
@@ -1395,7 +1396,7 @@ final class StoryItemSetContainerSendMessage {
                                         }
                                         enqueueMessages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, replyToStoryId: focusedStoryId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                                         
-                                        self.sendMessages(view: view, peer: targetPeer, messages: self.transformEnqueueMessages(view: view, messages: enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime))
+                                        self.sendMessages(view: view, peer: targetPeer, messages: enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime)
                                     } else {
                                         let contactController = component.context.sharedContext.makeDeviceContactInfoController(context: component.context, subject: .filter(peer: peerAndContactData.0?._asPeer(), contactId: nil, contactData: contactData, completion: { [weak self, weak view] peer, contactData in
                                             guard let self, let view else {
@@ -1414,7 +1415,7 @@ final class StoryItemSetContainerSendMessage {
                                                 }
                                                 enqueueMessages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, replyToStoryId: focusedStoryId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                                                 
-                                                self.sendMessages(view: view, peer: targetPeer, messages: self.transformEnqueueMessages(view: view, messages: enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime))
+                                                self.sendMessages(view: view, peer: targetPeer, messages: enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime)
                                             }
                                         }), completed: nil, cancelled: nil)
                                         component.controller()?.push(contactController)
@@ -2168,11 +2169,11 @@ final class StoryItemSetContainerSendMessage {
         }
     }
     
-    private func sendMessages(view: StoryItemSetContainerComponent.View, peer: EnginePeer, messages: [EnqueueMessage], media: Bool = false, commit: Bool = false) {
+    private func sendMessages(view: StoryItemSetContainerComponent.View, peer: EnginePeer, messages: [EnqueueMessage], silentPosting: Bool = false, scheduleTime: Int32? = nil) {
         guard let component = view.component else {
             return
         }
-        let _ = (enqueueMessages(account: component.context.account, peerId: peer.id, messages: self.transformEnqueueMessages(view: view, messages: messages, silentPosting: false))
+        let _ = (enqueueMessages(account: component.context.account, peerId: peer.id, messages: self.transformEnqueueMessages(view: view, messages: messages, silentPosting: silentPosting, scheduleTime: scheduleTime))
         |> deliverOnMainQueue).start(next: { [weak self, weak view] messageIds in
             Queue.mainQueue().after(0.3) {
                 if let view {
@@ -2241,10 +2242,8 @@ final class StoryItemSetContainerSendMessage {
                     }
                     mappedMessages.append(message)
                 }
-                                                    
-                let messages = strongSelf.transformEnqueueMessages(view: view, messages: mappedMessages, silentPosting: silentPosting, scheduleTime: scheduleTime)
 
-                strongSelf.sendMessages(view: view, peer: peer, messages: messages.map { $0.withUpdatedReplyToMessageId(replyToMessageId).withUpdatedReplyToStoryId(replyToStoryId) }, media: true)
+                strongSelf.sendMessages(view: view, peer: peer, messages: mappedMessages.map { $0.withUpdatedReplyToMessageId(replyToMessageId).withUpdatedReplyToStoryId(replyToStoryId) }, silentPosting: silentPosting, scheduleTime: scheduleTime)
                 
                 completion()
             }
