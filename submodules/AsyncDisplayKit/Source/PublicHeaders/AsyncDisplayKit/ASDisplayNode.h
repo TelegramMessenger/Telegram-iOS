@@ -567,6 +567,8 @@ AS_EXTERN NSInteger const ASDefaultDrawingPriority;
  */
 @property BOOL automaticallyRelayoutOnLayoutMarginsChanges;
 
+@property (nonatomic) bool disableClearContentsOnHide;
+
 @end
 
 /**

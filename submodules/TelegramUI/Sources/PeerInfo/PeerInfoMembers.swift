@@ -12,15 +12,15 @@ enum PeerInfoMemberRole {
 }
 
 enum PeerInfoMember: Equatable {
-    case channelMember(RenderedChannelParticipant)
-    case legacyGroupMember(peer: RenderedPeer, role: PeerInfoMemberRole, invitedBy: PeerId?, presence: TelegramUserPresence?)
+    case channelMember(participant: RenderedChannelParticipant, storyStats: PeerStoryStats?)
+    case legacyGroupMember(peer: RenderedPeer, role: PeerInfoMemberRole, invitedBy: PeerId?, presence: TelegramUserPresence?, storyStats: PeerStoryStats?)
     case account(peer: RenderedPeer)
     
     var id: PeerId {
         switch self {
-        case let .channelMember(channelMember):
-            return channelMember.peer.id
-        case let .legacyGroupMember(peer, _, _, _):
+        case let .channelMember(participant, _):
+            return participant.peer.id
+        case let .legacyGroupMember(peer, _, _, _, _):
             return peer.peerId
         case let .account(peer):
             return peer.peerId
@@ -29,9 +29,9 @@ enum PeerInfoMember: Equatable {
     
     var peer: Peer {
         switch self {
-        case let .channelMember(channelMember):
-            return channelMember.peer
-        case let .legacyGroupMember(peer, _, _, _):
+        case let .channelMember(participant, _):
+            return participant.peer
+        case let .legacyGroupMember(peer, _, _, _, _):
             return peer.peers[peer.peerId]!
         case let .account(peer):
             return peer.peers[peer.peerId]!
@@ -40,9 +40,9 @@ enum PeerInfoMember: Equatable {
     
     var presence: TelegramUserPresence? {
         switch self {
-        case let .channelMember(channelMember):
-            return channelMember.presences[channelMember.peer.id] as? TelegramUserPresence
-        case let .legacyGroupMember(_, _, _, presence):
+        case let .channelMember(participant, _):
+            return participant.presences[participant.peer.id] as? TelegramUserPresence
+        case let .legacyGroupMember(_, _, _, presence, _):
             return presence
         case .account:
             return nil
@@ -51,8 +51,8 @@ enum PeerInfoMember: Equatable {
     
     var role: PeerInfoMemberRole {
         switch self {
-        case let .channelMember(channelMember):
-            switch channelMember.participant {
+        case let .channelMember(participant, _):
+            switch participant.participant {
             case .creator:
                 return .creator
             case let .member(_, _, adminInfo, _, _):
@@ -62,7 +62,7 @@ enum PeerInfoMember: Equatable {
                     return .member
                 }
             }
-        case let .legacyGroupMember(_, role, _, _):
+        case let .legacyGroupMember(_, role, _, _, _):
             return role
         case .account:
             return .member
@@ -71,8 +71,8 @@ enum PeerInfoMember: Equatable {
     
     var rank: String? {
         switch self {
-            case let .channelMember(channelMember):
-                switch channelMember.participant {
+            case let .channelMember(participant, _):
+                switch participant.participant {
                 case let .creator(_, _, rank):
                     return rank
                 case let .member(_, _, _, _, rank):
@@ -82,6 +82,17 @@ enum PeerInfoMember: Equatable {
                 return nil
             case .account:
                 return nil
+        }
+    }
+    
+    var storyStats: PeerStoryStats? {
+        switch self {
+        case let .channelMember(_, value):
+            return value
+        case let .legacyGroupMember(_, _, _, _, value):
+            return value
+        case .account:
+            return nil
         }
     }
 }
@@ -154,7 +165,9 @@ private final class PeerInfoMembersContextImpl {
                     guard let strongSelf = self else {
                         return
                     }
-                    let unsortedMembers = state.list.map(PeerInfoMember.channelMember)
+                    let unsortedMembers = state.list.map { item -> PeerInfoMember in
+                        return .channelMember(participant: item, storyStats: state.peerStoryStats[item.peer.id])
+                    }
                     let members: [PeerInfoMember]
                     if unsortedMembers.count <= 50 {
                         members = membersSortedByPresence(unsortedMembers, accountPeerId: strongSelf.context.account.peerId)
@@ -230,7 +243,7 @@ private final class PeerInfoMembersContextImpl {
                             role = .member
                             invitedBy = invitedByValue
                         }
-                        unsortedMembers.append(.legacyGroupMember(peer: RenderedPeer(peer: peer), role: role, invitedBy: invitedBy, presence: view.peerPresences[participant.peerId] as? TelegramUserPresence))
+                        unsortedMembers.append(.legacyGroupMember(peer: RenderedPeer(peer: peer), role: role, invitedBy: invitedBy, presence: view.peerPresences[participant.peerId] as? TelegramUserPresence, storyStats: view.memberStoryStats[participant.peerId]))
                     }
                 }
                 

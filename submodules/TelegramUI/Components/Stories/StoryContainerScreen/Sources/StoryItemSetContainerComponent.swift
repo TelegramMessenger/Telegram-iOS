@@ -2061,6 +2061,12 @@ public final class StoryItemSetContainerComponent: Component {
                                     return
                                 }
                                 self.navigateToPeer(peer: peer, chat: false)
+                            },
+                            openPeerStories: { [weak self] peer, sourceView in
+                                guard let self else {
+                                    return
+                                }
+                                self.openPeerStories(peer: peer, sourceView: sourceView)
                             }
                         )),
                         environment: {},
@@ -3204,6 +3210,77 @@ public final class StoryItemSetContainerComponent: Component {
                     navigationController.setViewControllers(viewControllers, animated: true)
                 }
             }
+        }
+        
+        func openPeerStories(peer: EnginePeer, sourceView: UIView) {
+            guard let component = self.component else {
+                return
+            }
+            
+            let storyContent = StoryContentContextImpl(context: component.context, isHidden: false, focusedPeerId: peer.id, singlePeer: true)
+            let _ = (storyContent.state
+            |> filter { $0.slice != nil }
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self, weak sourceView] _ in
+                guard let self, let component = self.component else {
+                    return
+                }
+                
+                var transitionIn: StoryContainerScreen.TransitionIn?
+                if let sourceView {
+                    transitionIn = StoryContainerScreen.TransitionIn(
+                        sourceView: sourceView,
+                        sourceRect: sourceView.bounds,
+                        sourceCornerRadius: sourceView.bounds.width * 0.5,
+                        sourceIsAvatar: false
+                    )
+                    sourceView.isHidden = true
+                }
+                
+                let storyContainerScreen = StoryContainerScreen(
+                    context: component.context,
+                    content: storyContent,
+                    transitionIn: transitionIn,
+                    transitionOut: { peerId, _ in
+                        if let sourceView {
+                            let destinationView = sourceView
+                            return StoryContainerScreen.TransitionOut(
+                                destinationView: destinationView,
+                                transitionView: StoryContainerScreen.TransitionView(
+                                    makeView: { [weak destinationView] in
+                                        let parentView = UIView()
+                                        if let copyView = destinationView?.snapshotContentTree(unhide: true) {
+                                            parentView.addSubview(copyView)
+                                        }
+                                        return parentView
+                                    },
+                                    updateView: { copyView, state, transition in
+                                        guard let view = copyView.subviews.first else {
+                                            return
+                                        }
+                                        let size = state.sourceSize.interpolate(to: state.destinationSize, amount: state.progress)
+                                        transition.setPosition(view: view, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
+                                        transition.setScale(view: view, scale: size.width / state.destinationSize.width)
+                                    },
+                                    insertCloneTransitionView: nil
+                                ),
+                                destinationRect: destinationView.bounds,
+                                destinationCornerRadius: destinationView.bounds.width * 0.5,
+                                destinationIsAvatar: false,
+                                completed: { [weak sourceView] in
+                                    guard let sourceView else {
+                                        return
+                                    }
+                                    sourceView.isHidden = false
+                                }
+                            )
+                        } else {
+                            return nil
+                        }
+                    }
+                )
+                component.controller()?.push(storyContainerScreen)
+            })
         }
         
         private func openStoryEditing() {

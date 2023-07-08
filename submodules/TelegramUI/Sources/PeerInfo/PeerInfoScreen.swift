@@ -448,6 +448,7 @@ private enum PeerInfoMemberAction {
     case promote
     case restrict
     case remove
+    case openStories(sourceView: UIView)
 }
 
 private enum PeerInfoContextSubject {
@@ -1389,6 +1390,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 case .remove:
                     interaction.performMemberAction(member, .remove)
                 }
+            }, openStories: { sourceView in
+                interaction.performMemberAction(member, .openStories(sourceView: sourceView))
             }))
         }
     }
@@ -3012,6 +3015,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 strongSelf.performMemberAction(member: member, action: .restrict)
             case .remove:
                 strongSelf.performMemberAction(member: member, action: .remove)
+            case let .openStories(sourceView):
+                strongSelf.performMemberAction(member: member, action: .openStories(sourceView: sourceView))
             }
         }
         
@@ -7099,7 +7104,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
         switch action {
         case .promote:
-            if case let .channelMember(channelMember) = member {
+            if case let .channelMember(channelMember, _) = member {
                 var upgradedToSupergroupImpl: (() -> Void)?
                 let controller = channelAdminController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, adminId: member.id, initialParticipant: channelMember.participant, updated: { _ in
                 }, upgradedToSupergroup: { _, f in
@@ -7116,7 +7121,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 }
             }
         case .restrict:
-            if case let .channelMember(channelMember) = member {
+            if case let .channelMember(channelMember, _) = member {
                 var upgradedToSupergroupImpl: (() -> Void)?
                 
                 let controller = channelBannedMemberController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, memberId: member.id, initialParticipant: channelMember.participant, updated: { _ in
@@ -7135,6 +7140,71 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
         case .remove:
             data.members?.membersContext.removeMember(memberId: member.id)
+        case let .openStories(sourceView):
+            let storyContent = StoryContentContextImpl(context: self.context, isHidden: false, focusedPeerId: member.id, singlePeer: true)
+            let _ = (storyContent.state
+            |> filter { $0.slice != nil }
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self, weak sourceView] _ in
+                guard let self else {
+                    return
+                }
+                
+                var transitionIn: StoryContainerScreen.TransitionIn?
+                if let sourceView {
+                    transitionIn = StoryContainerScreen.TransitionIn(
+                        sourceView: sourceView,
+                        sourceRect: sourceView.bounds,
+                        sourceCornerRadius: sourceView.bounds.width * 0.5,
+                        sourceIsAvatar: false
+                    )
+                    sourceView.isHidden = true
+                }
+                
+                let storyContainerScreen = StoryContainerScreen(
+                    context: self.context,
+                    content: storyContent,
+                    transitionIn: transitionIn,
+                    transitionOut: { peerId, _ in
+                        if let sourceView {
+                            let destinationView = sourceView
+                            return StoryContainerScreen.TransitionOut(
+                                destinationView: destinationView,
+                                transitionView: StoryContainerScreen.TransitionView(
+                                    makeView: { [weak destinationView] in
+                                        let parentView = UIView()
+                                        if let copyView = destinationView?.snapshotContentTree(unhide: true) {
+                                            parentView.addSubview(copyView)
+                                        }
+                                        return parentView
+                                    },
+                                    updateView: { copyView, state, transition in
+                                        guard let view = copyView.subviews.first else {
+                                            return
+                                        }
+                                        let size = state.sourceSize.interpolate(to: state.destinationSize, amount: state.progress)
+                                        transition.setPosition(view: view, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
+                                        transition.setScale(view: view, scale: size.width / state.destinationSize.width)
+                                    },
+                                    insertCloneTransitionView: nil
+                                ),
+                                destinationRect: destinationView.bounds,
+                                destinationCornerRadius: destinationView.bounds.width * 0.5,
+                                destinationIsAvatar: false,
+                                completed: { [weak sourceView] in
+                                    guard let sourceView else {
+                                        return
+                                    }
+                                    sourceView.isHidden = false
+                                }
+                            )
+                        } else {
+                            return nil
+                        }
+                    }
+                )
+                self.controller?.push(storyContainerScreen)
+            })
         }
     }
     
@@ -10503,6 +10573,8 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
     private var previousTitleNode: (ASDisplayNode, PortalView)?
     private var previousStatusNode: (ASDisplayNode, ASDisplayNode)?
     
+    private var previousAvatarView: UIView?
+    
     private var didSetup: Bool = false
     
     init(screenNode: PeerInfoScreenNode, presentationData: PresentationData, headerNode: PeerInfoHeaderNode) {
@@ -10576,7 +10648,9 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
                     self.view.layer.addSublayer(previousRightButton)
                 }
             } else {
-                if let _ = bottomNavigationBar.rightButtonNode.singleCustomNode as? ChatAvatarNavigationNode {
+                if let avatarNavigationNode = bottomNavigationBar.rightButtonNode.singleCustomNode as? ChatAvatarNavigationNode, let previousAvatarView = avatarNavigationNode.view.snapshotContentTree() {
+                    self.previousAvatarView = previousAvatarView
+                    self.view.addSubview(previousAvatarView)
                 } else if let previousRightButton = bottomNavigationBar.rightButtonNode.view.layer.snapshotContentTree() {
                     self.previousRightButton = previousRightButton
                     self.view.layer.addSublayer(previousRightButton)
@@ -10706,7 +10780,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             let previousTitleFrame = previousTitleView.titleContainerView.convert(previousTitleView.titleContainerView.bounds, to: bottomNavigationBar.view)
             let previousStatusFrame = previousTitleView.activityNode.view.convert(previousTitleView.activityNode.bounds, to: bottomNavigationBar.view)
             
-            self.headerNode.navigationTransition = PeerInfoHeaderNavigationTransition(sourceNavigationBar: bottomNavigationBar, sourceTitleView: previousTitleView, sourceTitleFrame: previousTitleFrame, sourceSubtitleFrame: previousStatusFrame, fraction: fraction)
+            self.headerNode.navigationTransition = PeerInfoHeaderNavigationTransition(sourceNavigationBar: bottomNavigationBar, sourceTitleView: previousTitleView, sourceTitleFrame: previousTitleFrame, sourceSubtitleFrame: previousStatusFrame, previousAvatarView: self.previousAvatarView, fraction: fraction)
             var topHeight = topNavigationBar.backgroundNode.bounds.height
             
             if let iconView = previousTitleView.titleCredibilityIconView.componentView {

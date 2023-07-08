@@ -48,16 +48,9 @@ public extension ChannelParticipant {
 }
 
 public struct ChannelMemberListState {
-    public let list: [RenderedChannelParticipant]
-    public let loadingState: ChannelMemberListLoadingState
-
-    public func withUpdatedList(_ list: [RenderedChannelParticipant]) -> ChannelMemberListState {
-        return ChannelMemberListState(list: list, loadingState: self.loadingState)
-    }
-    
-    public func withUpdatedLoadingState(_ loadingState: ChannelMemberListLoadingState) -> ChannelMemberListState {
-        return ChannelMemberListState(list: self.list, loadingState: loadingState)
-    }
+    public var list: [RenderedChannelParticipant]
+    public var peerStoryStats: [EnginePeer.Id: PeerStoryStats]
+    public var loadingState: ChannelMemberListLoadingState
 }
 
 enum ChannelMemberListCategory {
@@ -72,7 +65,7 @@ enum ChannelMemberListCategory {
 }
 
 private protocol ChannelMemberCategoryListContext {
-    var listStateValue: ChannelMemberListState { get }
+    //var listStateValue: ChannelMemberListState { get }
     var listState: Signal<ChannelMemberListState, NoError> { get }
     func loadMore()
     func reset(_ force: Bool)
@@ -139,7 +132,20 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
     }
     private var listStatePromise: Promise<ChannelMemberListState>
     var listState: Signal<ChannelMemberListState, NoError> {
+        let postbox = self.postbox
         return self.listStatePromise.get()
+        |> mapToSignal { state -> Signal<ChannelMemberListState, NoError> in
+            let key: PostboxViewKey = .peerStoryStats(peerIds: Set(state.list.map(\.peer.id)))
+            return postbox.combinedView(keys: [key])
+            |> map { views -> ChannelMemberListState in
+                var state = state
+                if let view = views.views[key] as? PeerStoryStatsView {
+                    state.peerStoryStats = view.storyStats
+                }
+                
+                return state
+            }
+        }
     }
     
     private let loadingDisposable = MetaDisposable()
@@ -155,7 +161,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
         self.peerId = peerId
         self.category = category
         
-        self.listStateValue = ChannelMemberListState(list: [], loadingState: .ready(hasMore: true))
+        self.listStateValue = ChannelMemberListState(list: [], peerStoryStats: [:], loadingState: .ready(hasMore: true))
         self.listStatePromise = Promise(self.listStateValue)
         self.loadMoreInternal(initial: true)
     }
@@ -182,7 +188,7 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
             loadCount = requestBatchSize
         }
         
-        self.listStateValue = self.listStateValue.withUpdatedLoadingState(.loading(initial: initial))
+        self.listStateValue.loadingState = .loading(initial: initial)
         
         self.loadingDisposable.set((self.loadMoreSignal(count: loadCount)
         |> deliverOnMainQueue).start(next: { [weak self] members in
@@ -201,7 +207,10 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
             }
             
             self.loadingDisposable.set(nil)
-            self.listStateValue = self.listStateValue.withUpdatedLoadingState(loadingState).withUpdatedList(list)
+            var listState = self.listStateValue
+            listState.loadingState = loadingState
+            listState.list = list
+            self.listStateValue = listState
         }
     }
     
@@ -264,7 +273,11 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
                 }
             }
             self.loadingDisposable.set(nil)
-            self.listStateValue = self.listStateValue.withUpdatedList(list)
+            
+            var listState = self.listStateValue
+            listState.list = list
+            self.listStateValue = listState
+            
             if case .loading = self.listStateValue.loadingState {
                 self.loadMore()
             }
@@ -290,7 +303,12 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
                 list.append(member)
             }
         }
-        self.listStateValue = self.listStateValue.withUpdatedList(list).withUpdatedLoadingState(.ready(hasMore: members.count >= requestBatchSize))
+        
+        var listState = self.listStateValue
+        listState.loadingState = .ready(hasMore: members.count >= requestBatchSize)
+        listState.list = list
+        self.listStateValue = listState
+        
         if firstLoad {
             self.checkUpdateHead()
         }
@@ -534,7 +552,9 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
             }
         }
         if updatedList {
-            self.listStateValue = self.listStateValue.withUpdatedList(list)
+            var listState = self.listStateValue
+            listState.list = list
+            self.listStateValue = listState
         }
     }
 }
@@ -542,9 +562,9 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
 private final class ChannelMemberMultiCategoryListContext: ChannelMemberCategoryListContext {
     private var contexts: [ChannelMemberSingleCategoryListContext] = []
     
-    var listStateValue: ChannelMemberListState {
+    /*var listStateValue: ChannelMemberListState {
         return ChannelMemberMultiCategoryListContext.reduceListStates(self.contexts.map { $0.listStateValue })
-    }
+    }*/
     
     private static func reduceListStates(_ listStates: [ChannelMemberListState]) -> ChannelMemberListState {
         var allReady = true
@@ -555,12 +575,13 @@ private final class ChannelMemberMultiCategoryListContext: ChannelMemberCategory
             }
         }
         if !allReady {
-            return ChannelMemberListState(list: [], loadingState: .loading(initial: true))
+            return ChannelMemberListState(list: [], peerStoryStats: [:], loadingState: .loading(initial: true))
         }
         
         var list: [RenderedChannelParticipant] = []
         var existingIds = Set<PeerId>()
         var loadingState: ChannelMemberListLoadingState = .ready(hasMore: false)
+        var peerStoryStats: [PeerId: PeerStoryStats] = [:]
         loop: for i in 0 ..< listStates.count {
             for item in listStates[i].list {
                 if !existingIds.contains(item.peer.id) {
@@ -568,18 +589,21 @@ private final class ChannelMemberMultiCategoryListContext: ChannelMemberCategory
                     list.append(item)
                 }
             }
+            for (id, value) in listStates[i].peerStoryStats {
+                peerStoryStats[id] = value
+            }
             switch listStates[i].loadingState {
-                case let .loading(initial):
-                    loadingState = .loading(initial: initial)
+            case let .loading(initial):
+                loadingState = .loading(initial: initial)
+                break loop
+            case let .ready(hasMore):
+                if hasMore {
+                    loadingState = .ready(hasMore: true)
                     break loop
-                case let .ready(hasMore):
-                    if hasMore {
-                        loadingState = .ready(hasMore: true)
-                        break loop
-                    }
+                }
             }
         }
-        return ChannelMemberListState(list: list, loadingState: loadingState)
+        return ChannelMemberListState(list: list, peerStoryStats: peerStoryStats, loadingState: loadingState)
     }
     
     var listState: Signal<ChannelMemberListState, NoError> {
@@ -639,6 +663,7 @@ private final class PeerChannelMemberContextWithSubscribers {
     private let subscribers = Bag<(ChannelMemberListState) -> Void>()
     private let disposable = MetaDisposable()
     private let becameEmpty: () -> Void
+    private var currentValue: ChannelMemberListState?
     
     private var emptyTimer: SwiftSignalKit.Timer?
     
@@ -649,6 +674,7 @@ private final class PeerChannelMemberContextWithSubscribers {
         self.disposable.set((context.listState
         |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self {
+                strongSelf.currentValue = value
                 for f in strongSelf.subscribers.copyItems() {
                     f(value)
                 }
@@ -678,7 +704,9 @@ private final class PeerChannelMemberContextWithSubscribers {
     func subscribe(requestUpdate: Bool, updated: @escaping (ChannelMemberListState) -> Void) -> Disposable {
         let wasEmpty = self.subscribers.isEmpty
         let index = self.subscribers.add(updated)
-        updated(self.context.listStateValue)
+        if let currentValue = self.currentValue {
+            updated(currentValue)
+        }
         if wasEmpty {
             self.emptyTimer?.invalidate()
             if requestUpdate {

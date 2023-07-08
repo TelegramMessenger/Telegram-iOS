@@ -1106,7 +1106,7 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
                 result.insert(.promote)
             } else {
                 switch member {
-                case let .channelMember(channelMember):
+                case let .channelMember(channelMember, _):
                     switch channelMember.participant {
                     case .creator:
                         break
@@ -1142,7 +1142,7 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
                 result.insert(.promote)
             case .admin:
                 switch member {
-                case let .legacyGroupMember(_, _, invitedBy, _):
+                case let .legacyGroupMember(_, _, invitedBy, _, _):
                     result.insert(.restrict)
                     if invitedBy == accountPeerId {
                         result.insert(.promote)
@@ -1154,7 +1154,7 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
                 }
             case .member:
                 switch member {
-                case let .legacyGroupMember(_, _, invitedBy, _):
+                case let .legacyGroupMember(_, _, invitedBy, _, _):
                     if invitedBy == accountPeerId {
                         result.insert(.restrict)
                     }

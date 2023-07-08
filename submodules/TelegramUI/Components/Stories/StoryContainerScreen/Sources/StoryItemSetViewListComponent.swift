@@ -56,6 +56,7 @@ final class StoryItemSetViewListComponent: Component {
     let deleteAction: () -> Void
     let moreAction: (UIView, ContextGesture?) -> Void
     let openPeer: (EnginePeer) -> Void
+    let openPeerStories: (EnginePeer, UIView) -> Void
     
     init(
         externalState: ExternalState,
@@ -73,7 +74,8 @@ final class StoryItemSetViewListComponent: Component {
         expandViewStats: @escaping () -> Void,
         deleteAction: @escaping () -> Void,
         moreAction: @escaping (UIView, ContextGesture?) -> Void,
-        openPeer: @escaping (EnginePeer) -> Void
+        openPeer: @escaping (EnginePeer) -> Void,
+        openPeerStories: @escaping (EnginePeer, UIView) -> Void
     ) {
         self.externalState = externalState
         self.context = context
@@ -91,6 +93,7 @@ final class StoryItemSetViewListComponent: Component {
         self.deleteAction = deleteAction
         self.moreAction = moreAction
         self.openPeer = openPeer
+        self.openPeerStories = openPeerStories
     }
 
     static func ==(lhs: StoryItemSetViewListComponent, rhs: StoryItemSetViewListComponent) -> Bool {
@@ -484,6 +487,7 @@ final class StoryItemSetViewListComponent: Component {
                             sideInset: 0.0,
                             title: item.peer.displayTitle(strings: component.strings, displayOrder: .firstLast),
                             peer: item.peer,
+                            storyStats: item.storyStats,
                             subtitle: dateText,
                             subtitleAccessory: .checks,
                             presence: nil,
@@ -494,6 +498,12 @@ final class StoryItemSetViewListComponent: Component {
                                     return
                                 }
                                 component.openPeer(peer)
+                            },
+                            openStories: { [weak self] peer, sourceView in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                component.openPeerStories(peer, sourceView)
                             }
                         )),
                         environment: {},

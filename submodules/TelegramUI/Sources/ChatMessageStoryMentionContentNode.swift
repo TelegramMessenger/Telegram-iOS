@@ -278,15 +278,16 @@ class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
                                 }
                                 
                                 let indicatorFrame = imageFrame
+                                var storyColors = AvatarStoryIndicatorComponent.Colors(theme: item.presentationData.theme.theme)
+                                storyColors.seenColors = [UIColor(white: 1.0, alpha: 0.2), UIColor(white: 1.0, alpha: 0.2)]
                                 let _ = strongSelf.storyIndicator.update(
                                     transition: .immediate,
                                     component: AnyComponent(AvatarStoryIndicatorComponent(
                                         hasUnseen: hasUnseen,
                                         hasUnseenCloseFriendsItems: hasUnseen && (story?.isCloseFriends ?? false),
-                                        theme: item.presentationData.theme.theme,
+                                        colors: storyColors,
                                         activeLineWidth: 3.0,
                                         inactiveLineWidth: 1.0 + UIScreenPixel,
-                                        isGlassBackground: true,
                                         counters: nil
                                     )),
                                     environment: {},

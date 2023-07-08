@@ -6,6 +6,7 @@ import ComponentFlow
 import SwiftSignalKit
 import AccountContext
 import TelegramCore
+import Postbox
 import MultilineTextComponent
 import AvatarNode
 import TelegramPresentationData
@@ -49,12 +50,14 @@ public final class PeerListItemComponent: Component {
     let sideInset: CGFloat
     let title: String
     let peer: EnginePeer?
+    let storyStats: PeerStoryStats?
     let subtitle: String?
     let subtitleAccessory: SubtitleAccessory
     let presence: EnginePeer.Presence?
     let selectionState: SelectionState
     let hasNext: Bool
     let action: (EnginePeer) -> Void
+    let openStories: ((EnginePeer, UIView) -> Void)?
     
     public init(
         context: AccountContext,
@@ -64,12 +67,14 @@ public final class PeerListItemComponent: Component {
         sideInset: CGFloat,
         title: String,
         peer: EnginePeer?,
+        storyStats: PeerStoryStats? = nil,
         subtitle: String?,
         subtitleAccessory: SubtitleAccessory,
         presence: EnginePeer.Presence?,
         selectionState: SelectionState,
         hasNext: Bool,
-        action: @escaping (EnginePeer) -> Void
+        action: @escaping (EnginePeer) -> Void,
+        openStories: ((EnginePeer, UIView) -> Void)? = nil
     ) {
         self.context = context
         self.theme = theme
@@ -78,12 +83,14 @@ public final class PeerListItemComponent: Component {
         self.sideInset = sideInset
         self.title = title
         self.peer = peer
+        self.storyStats = storyStats
         self.subtitle = subtitle
         self.subtitleAccessory = subtitleAccessory
         self.presence = presence
         self.selectionState = selectionState
         self.hasNext = hasNext
         self.action = action
+        self.openStories = openStories
     }
     
     public static func ==(lhs: PeerListItemComponent, rhs: PeerListItemComponent) -> Bool {
@@ -106,6 +113,9 @@ public final class PeerListItemComponent: Component {
             return false
         }
         if lhs.peer != rhs.peer {
+            return false
+        }
+        if lhs.storyStats != rhs.storyStats {
             return false
         }
         if lhs.subtitle != rhs.subtitle {
@@ -133,6 +143,7 @@ public final class PeerListItemComponent: Component {
         private let label = ComponentView<Empty>()
         private let separatorLayer: SimpleLayer
         private let avatarNode: AvatarNode
+        private let avatarButtonView: HighlightTrackingButton
         private var avatarIcon: ComponentView<Empty>?
         
         private var iconView: UIImageView?
@@ -168,7 +179,9 @@ public final class PeerListItemComponent: Component {
             self.containerButton = HighlightTrackingButton()
             
             self.avatarNode = AvatarNode(font: avatarFont)
-            self.avatarNode.isLayerBacked = true
+            self.avatarNode.isLayerBacked = false
+            
+            self.avatarButtonView = HighlightTrackingButton()
             
             super.init(frame: frame)
             
@@ -177,6 +190,9 @@ public final class PeerListItemComponent: Component {
             self.containerButton.layer.addSublayer(self.avatarNode.layer)
             
             self.containerButton.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+            
+            self.addSubview(self.avatarButtonView)
+            self.avatarButtonView.addTarget(self, action: #selector(self.avatarButtonPressed), for: .touchUpInside)
         }
         
         required init?(coder: NSCoder) {
@@ -188,6 +204,13 @@ public final class PeerListItemComponent: Component {
                 return
             }
             component.action(peer)
+        }
+        
+        @objc private func avatarButtonPressed() {
+            guard let component = self.component, let peer = component.peer else {
+                return
+            }
+            component.openStories?(peer, self.avatarNode.view)
         }
         
         func update(component: PeerListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
@@ -233,6 +256,8 @@ public final class PeerListItemComponent: Component {
             
             self.component = component
             self.state = state
+            
+            self.avatarButtonView.isUserInteractionEnabled = component.storyStats != nil
             
             let labelData: (String, Bool)
             if let presence = component.presence {
@@ -319,6 +344,8 @@ public final class PeerListItemComponent: Component {
                 transition.setFrame(layer: self.avatarNode.layer, frame: avatarFrame)
             }
             
+            transition.setFrame(view: self.avatarButtonView, frame: avatarFrame)
+            
             var statusIcon: EmojiStatusComponent.Content?
             if let peer = component.peer {
                 let clipStyle: AvatarNodeClipStyle
@@ -328,6 +355,17 @@ public final class PeerListItemComponent: Component {
                     clipStyle = .round
                 }
                 self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, clipStyle: clipStyle, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
+                self.avatarNode.setStoryStats(storyStats: component.storyStats.flatMap { storyStats -> AvatarNode.StoryStats in
+                    return AvatarNode.StoryStats(
+                        totalCount: storyStats.totalCount == 0 ? 0 : 1,
+                        unseenCount: storyStats.unseenCount == 0 ? 0 : 1,
+                        hasUnseenCloseFriendsItems: false
+                    )
+                }, presentationParams: AvatarNode.StoryPresentationParams(
+                    colors: AvatarNode.Colors(theme: component.theme),
+                    lineWidth: 1.33,
+                    inactiveLineWidth: 1.33
+                ), transition: transition)
                 
                 if peer.isScam {
                     statusIcon = .text(color: component.theme.chat.message.incoming.scamColor, string: component.strings.Message_ScamAccount.uppercased())

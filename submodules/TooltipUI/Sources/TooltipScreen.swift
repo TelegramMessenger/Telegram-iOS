@@ -707,7 +707,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                     component: AnyComponent(AvatarStoryIndicatorComponent(
                         hasUnseen: true,
                         hasUnseenCloseFriendsItems: false,
-                        theme: defaultDarkPresentationTheme,
+                        colors: AvatarStoryIndicatorComponent.Colors(theme: defaultDarkPresentationTheme),
                         activeLineWidth: 1.0 + UIScreenPixel,
                         inactiveLineWidth: 1.0 + UIScreenPixel,
                         counters: nil

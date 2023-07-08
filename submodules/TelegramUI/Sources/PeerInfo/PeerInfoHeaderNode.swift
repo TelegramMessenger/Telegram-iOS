@@ -379,13 +379,15 @@ final class PeerInfoHeaderNavigationTransition {
     let sourceTitleView: ChatTitleView
     let sourceTitleFrame: CGRect
     let sourceSubtitleFrame: CGRect
+    let previousAvatarView: UIView?
     let fraction: CGFloat
     
-    init(sourceNavigationBar: NavigationBar, sourceTitleView: ChatTitleView, sourceTitleFrame: CGRect, sourceSubtitleFrame: CGRect, fraction: CGFloat) {
+    init(sourceNavigationBar: NavigationBar, sourceTitleView: ChatTitleView, sourceTitleFrame: CGRect, sourceSubtitleFrame: CGRect, previousAvatarView: UIView?, fraction: CGFloat) {
         self.sourceNavigationBar = sourceNavigationBar
         self.sourceTitleView = sourceTitleView
         self.sourceTitleFrame = sourceTitleFrame
         self.sourceSubtitleFrame = sourceSubtitleFrame
+        self.previousAvatarView = previousAvatarView
         self.fraction = fraction
     }
 }
@@ -455,40 +457,22 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     }
     
     func updateStoryView(transition: ContainedViewLayoutTransition, theme: PresentationTheme) {
-        if let storyData = self.storyData {
-            let avatarStoryView: ComponentView<Empty>
-            if let current = self.avatarStoryView {
-                avatarStoryView = current
-            } else {
-                avatarStoryView = ComponentView()
-                self.avatarStoryView = avatarStoryView
-            }
-            
-            let _ = avatarStoryView.update(
-                transition: Transition(transition),
-                component: AnyComponent(AvatarStoryIndicatorComponent(
-                    hasUnseen: storyData.hasUnseen,
-                    hasUnseenCloseFriendsItems: storyData.hasUnseenCloseFriends,
-                    theme: theme,
-                    activeLineWidth: 3.0,
-                    inactiveLineWidth: 2.0,
-                    counters: nil
-                )),
-                environment: {},
-                containerSize: self.avatarNode.bounds.size
+        var colors = AvatarNode.Colors(theme: theme)
+        colors.seenColors = [
+            theme.list.controlSecondaryColor,
+            theme.list.controlSecondaryColor
+        ]
+        self.avatarNode.setStoryStats(storyStats: self.storyData.flatMap { storyData in
+            return AvatarNode.StoryStats(
+                totalCount: 1,
+                unseenCount: storyData.hasUnseen ? 1 : 0,
+                hasUnseenCloseFriendsItems: storyData.hasUnseenCloseFriends
             )
-            if let avatarStoryComponentView = avatarStoryView.view {
-                if avatarStoryComponentView.superview == nil {
-                    self.containerNode.view.insertSubview(avatarStoryComponentView, at: 0)
-                }
-                avatarStoryComponentView.frame = self.avatarNode.frame
-            }
-        } else {
-            if let avatarStoryView = self.avatarStoryView {
-                self.avatarStoryView = nil
-                avatarStoryView.view?.removeFromSuperview()
-            }
-        }
+        }, presentationParams: AvatarNode.StoryPresentationParams(
+            colors: colors,
+            lineWidth: 3.0,
+            inactiveLineWidth: 1.5
+        ), transition: Transition(transition))
     }
     
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -610,11 +594,11 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 avatarCornerRadius = avatarSize / 2.0
             }
             if self.avatarNode.layer.cornerRadius != 0.0 {
-                ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut).updateCornerRadius(layer: self.avatarNode.layer, cornerRadius: avatarCornerRadius)
+                ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut).updateCornerRadius(layer: self.avatarNode.contentNode.layer, cornerRadius: avatarCornerRadius)
             } else {
-                self.avatarNode.layer.cornerRadius = avatarCornerRadius
+                self.avatarNode.contentNode.layer.cornerRadius = avatarCornerRadius
             }
-            self.avatarNode.layer.masksToBounds = true
+            self.avatarNode.contentNode.layer.masksToBounds = true
             
             self.isFirstAvatarLoading = false
             
@@ -1175,7 +1159,6 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
         self.containerNode = ASDisplayNode()
 
         self.bottomCoverNode = ASDisplayNode()
-        self.bottomCoverNode.backgroundColor = .black
         
         self.maskNode = DynamicIslandMaskNode()
         self.pinchSourceNode = PinchSourceContainerNode()
@@ -2918,6 +2901,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 } else {
                     transitionSourceAvatarFrame = avatarNavigationNode.avatarNode.view.convert(avatarNavigationNode.avatarNode.view.bounds, to: navigationTransition.sourceNavigationBar.view)
                 }
+                transition.updateAlpha(node: self.avatarListNode.avatarContainerNode.avatarNode, alpha: 1.0 - transitionFraction)
             } else {
                 if deviceMetrics.hasDynamicIsland && !isLandscape {
                     transitionSourceAvatarFrame = CGRect(origin: CGPoint(x: avatarFrame.minX, y: -20.0), size: avatarFrame.size).insetBy(dx: avatarSize * 0.4, dy: avatarSize * 0.4)
@@ -3370,7 +3354,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let avatarOffset: CGFloat
         if self.navigationTransition != nil {
             if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
-                avatarScale = ((1.0 - transitionFraction) * avatarFrame.width + transitionFraction * transitionSourceAvatarFrame.width) / avatarFrame.width
+                var trueAvatarSize = transitionSourceAvatarFrame.size
+                if self.avatarListNode.avatarContainerNode.avatarNode.storyStats != nil {
+                    trueAvatarSize.width -= 1.33 * 4.0
+                    trueAvatarSize.height -= 1.33 * 4.0
+                }
+                
+                avatarScale = ((1.0 - transitionFraction) * avatarFrame.width + transitionFraction * trueAvatarSize.width) / avatarFrame.width
             } else {
                 avatarScale = 1.0
             }
@@ -3378,6 +3368,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         } else {
             avatarScale = 1.0 * (1.0 - titleCollapseFraction) + avatarMinScale * titleCollapseFraction
             avatarOffset = apparentTitleLockOffset + 0.0 * (1.0 - titleCollapseFraction) + 10.0 * titleCollapseFraction
+        }
+        
+        if let previousAvatarView = self.navigationTransition?.previousAvatarView, let transitionSourceAvatarFrame {
+            let previousScale = ((1.0 - transitionFraction) * avatarFrame.width + transitionFraction * transitionSourceAvatarFrame.width) / transitionSourceAvatarFrame.width
+            
+            transition.updateAlpha(layer: previousAvatarView.layer, alpha: transitionFraction)
+            transition.updateTransformScale(layer: previousAvatarView.layer, scale: previousScale)
+            transition.updatePosition(layer: previousAvatarView.layer, position: self.view.convert(CGPoint(x: avatarCenter.x - (27.0 * (1.0 - transitionFraction) + 10 * transitionFraction), y: avatarCenter.y - (2.66 * (1.0 - transitionFraction) + 1.0 * transitionFraction)), to: previousAvatarView.superview))
         }
         
         if subtitleIsButton {
@@ -3398,8 +3396,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if self.isAvatarExpanded {
             self.avatarListNode.listContainerNode.isHidden = false
             if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
-                transition.updateCornerRadius(node: self.avatarListNode.listContainerNode, cornerRadius: transitionFraction * transitionSourceAvatarFrame.width / 2.0)
-                transition.updateCornerRadius(node: self.avatarListNode.listContainerNode.controlsClippingNode, cornerRadius: transitionFraction * transitionSourceAvatarFrame.width / 2.0)
+                var trueAvatarSize = transitionSourceAvatarFrame.size
+                if self.avatarListNode.avatarContainerNode.avatarNode.storyStats != nil {
+                    trueAvatarSize.width -= 1.33 * 4.0
+                    trueAvatarSize.height -= 1.33 * 4.0
+                }
+                
+                transition.updateCornerRadius(node: self.avatarListNode.listContainerNode, cornerRadius: transitionFraction * trueAvatarSize.width / 2.0)
+                transition.updateCornerRadius(node: self.avatarListNode.listContainerNode.controlsClippingNode, cornerRadius: transitionFraction * trueAvatarSize.width / 2.0)
             } else {
                 transition.updateCornerRadius(node: self.avatarListNode.listContainerNode, cornerRadius: 0.0)
                 transition.updateCornerRadius(node: self.avatarListNode.listContainerNode.controlsClippingNode, cornerRadius: 0.0)
@@ -3420,7 +3424,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             })
         }
         
-        let avatarMaskValue = max(0.0, min(1.0, contentOffset / 120.0))
         self.avatarListNode.update(size: CGSize(), avatarSize: avatarSize, isExpanded: self.isAvatarExpanded, peer: peer, isForum: isForum, threadId: self.forumTopicThreadId, threadInfo: threadData?.info, theme: presentationData.theme, transition: transition)
         self.editingContentNode.avatarNode.update(peer: peer, threadData: threadData, chatLocation: self.chatLocation, item: self.avatarListNode.item, updatingAvatar: state.updatingAvatar, uploadProgress: state.avatarUploadProgress, theme: presentationData.theme, avatarSize: avatarSize, isEditing: state.isEditing)
         self.avatarOverlayNode.update(peer: peer, threadData: threadData, chatLocation: self.chatLocation, item: self.avatarListNode.item, updatingAvatar: state.updatingAvatar, uploadProgress: state.avatarUploadProgress, theme: presentationData.theme, avatarSize: avatarSize, isEditing: state.isEditing)
@@ -3436,19 +3439,31 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             transition.updateAlpha(layer: avatarStoryView.layer, alpha: 1.0 - transitionFraction)
         }
         
-        let apparentAvatarFrame: CGRect
+        var apparentAvatarFrame: CGRect
         let controlsClippingFrame: CGRect
         if self.isAvatarExpanded {
             let expandedAvatarCenter = CGPoint(x: expandedAvatarListSize.width / 2.0, y: expandedAvatarListSize.height / 2.0 - contentOffset / 2.0)
             apparentAvatarFrame = CGRect(origin: CGPoint(x: expandedAvatarCenter.x * (1.0 - transitionFraction) + transitionFraction * avatarCenter.x, y: expandedAvatarCenter.y * (1.0 - transitionFraction) + transitionFraction * avatarCenter.y), size: CGSize())
             if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
+                var trueAvatarSize = transitionSourceAvatarFrame.size
+                if self.avatarListNode.avatarContainerNode.avatarNode.storyStats != nil {
+                    trueAvatarSize.width -= 1.33 * 4.0
+                    trueAvatarSize.height -= 1.33 * 4.0
+                }
+                let trueAvatarFrame = trueAvatarSize.centered(around: transitionSourceAvatarFrame.center)
+                
                 let expandedFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: expandedAvatarListSize)
-                controlsClippingFrame = CGRect(origin: CGPoint(x: transitionFraction * transitionSourceAvatarFrame.minX + (1.0 - transitionFraction) * expandedFrame.minX, y: transitionFraction * transitionSourceAvatarFrame.minY + (1.0 - transitionFraction) * expandedFrame.minY), size: CGSize(width: transitionFraction * transitionSourceAvatarFrame.width + (1.0 - transitionFraction) * expandedFrame.width, height: transitionFraction * transitionSourceAvatarFrame.height + (1.0 - transitionFraction) * expandedFrame.height))
+                controlsClippingFrame = CGRect(origin: CGPoint(x: transitionFraction * trueAvatarFrame.minX + (1.0 - transitionFraction) * expandedFrame.minX, y: transitionFraction * trueAvatarFrame.minY + (1.0 - transitionFraction) * expandedFrame.minY), size: CGSize(width: transitionFraction * trueAvatarFrame.width + (1.0 - transitionFraction) * expandedFrame.width, height: transitionFraction * trueAvatarFrame.height + (1.0 - transitionFraction) * expandedFrame.height))
             } else {
                 controlsClippingFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: expandedAvatarListSize)
             }
         } else {
-            apparentAvatarFrame = CGRect(origin: CGPoint(x: avatarCenter.x - avatarFrame.width / 2.0, y: -contentOffset + avatarOffset + avatarCenter.y - avatarFrame.height / 2.0), size: avatarFrame.size)
+            var trueAvatarSize = avatarFrame.size
+            if self.avatarListNode.avatarContainerNode.avatarNode.storyStats != nil {
+                trueAvatarSize.width -= 3.0 * 4.0
+                trueAvatarSize.height -= 3.0 * 4.0
+            }
+            apparentAvatarFrame = CGRect(origin: CGPoint(x: avatarCenter.x - trueAvatarSize.width / 2.0, y: -contentOffset + avatarOffset + avatarCenter.y - trueAvatarSize.height / 2.0), size: trueAvatarSize)
             controlsClippingFrame = apparentAvatarFrame
         }
         
@@ -3467,7 +3482,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if self.isAvatarExpanded {
             if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
                 let neutralAvatarListContainerSize = expandedAvatarListSize
-                let avatarListContainerSize = CGSize(width: neutralAvatarListContainerSize.width * (1.0 - transitionFraction) + transitionSourceAvatarFrame.width * transitionFraction, height: neutralAvatarListContainerSize.height * (1.0 - transitionFraction) + transitionSourceAvatarFrame.height * transitionFraction)
+                var avatarListContainerSize = CGSize(width: neutralAvatarListContainerSize.width * (1.0 - transitionFraction) + transitionSourceAvatarFrame.width * transitionFraction, height: neutralAvatarListContainerSize.height * (1.0 - transitionFraction) + transitionSourceAvatarFrame.height * transitionFraction)
+                
+                if self.avatarListNode.avatarContainerNode.avatarNode.storyStats != nil {
+                    avatarListContainerSize.width -= 1.33 * 5.0
+                    avatarListContainerSize.height -= 1.33 * 5.0
+                }
+                
                 avatarListContainerFrame = CGRect(origin: CGPoint(x: -avatarListContainerSize.width / 2.0, y: -avatarListContainerSize.height / 2.0), size: avatarListContainerSize)
             } else {
                 avatarListContainerFrame = CGRect(origin: CGPoint(x: -expandedAvatarListSize.width / 2.0, y: -expandedAvatarListSize.height / 2.0), size: expandedAvatarListSize)
@@ -3500,8 +3521,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         if deviceMetrics.hasDynamicIsland && self.forumTopicThreadId == nil && self.navigationTransition == nil && !isLandscape {
+            let maskValue = max(0.0, min(1.0, contentOffset / 120.0))
             self.avatarListNode.containerNode.view.mask = self.avatarListNode.maskNode.view
-            if avatarMaskValue > 0.03 {
+            if maskValue > 0.03 {
                 self.avatarListNode.bottomCoverNode.isHidden = false
                 self.avatarListNode.topCoverNode.isHidden = false
                 self.avatarListNode.maskNode.backgroundColor = .clear
@@ -3510,8 +3532,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 self.avatarListNode.topCoverNode.isHidden = true
                 self.avatarListNode.maskNode.backgroundColor = .white
             }
-            self.avatarListNode.topCoverNode.update(avatarMaskValue)
-            self.avatarListNode.maskNode.update(avatarMaskValue)
+            self.avatarListNode.topCoverNode.update(maskValue)
+            self.avatarListNode.maskNode.update(maskValue)
+            self.avatarListNode.bottomCoverNode.backgroundColor = UIColor(white: 0.0, alpha: maskValue)
             
             self.avatarListNode.listContainerNode.topShadowNode.isHidden = !self.isAvatarExpanded
             
@@ -3520,7 +3543,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 avatarMaskOffset -= contentOffset
             }
             
-            self.avatarListNode.maskNode.position = CGPoint(x: 0.0, y: -self.avatarListNode.frame.minY + 48.0 + 85.5 + avatarMaskOffset)
+            self.avatarListNode.maskNode.position = CGPoint(x: 0.0, y: -self.avatarListNode.frame.minY + 48.0 + 85.0 + avatarMaskOffset)
             self.avatarListNode.maskNode.bounds = CGRect(origin: .zero, size: CGSize(width: 171.0, height: 171.0))
             
             self.avatarListNode.bottomCoverNode.position = self.avatarListNode.maskNode.position
