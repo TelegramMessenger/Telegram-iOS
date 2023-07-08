@@ -44,6 +44,7 @@ public enum PostboxViewKey: Hashable {
     case storiesState(key: PostboxStoryStatesKey)
     case storyItems(peerId: PeerId)
     case storyExpirationTimeItems
+    case peerStoryStats(peerIds: Set<PeerId>)
 
     public func hash(into hasher: inout Hasher) {
         switch self {
@@ -147,6 +148,8 @@ public enum PostboxViewKey: Hashable {
             hasher.combine(peerId)
         case .storyExpirationTimeItems:
             hasher.combine(19)
+        case let .peerStoryStats(peerIds):
+            hasher.combine(peerIds)
         }
     }
     
@@ -410,6 +413,12 @@ public enum PostboxViewKey: Hashable {
             } else {
                 return false
             }
+        case let .peerStoryStats(peerIds):
+            if case .peerStoryStats(peerIds) = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }
@@ -502,5 +511,7 @@ func postboxViewForKey(postbox: PostboxImpl, key: PostboxViewKey) -> MutablePost
         return MutableStoryItemsView(postbox: postbox, peerId: peerId)
     case .storyExpirationTimeItems:
         return MutableStoryExpirationTimeItemsView(postbox: postbox)
+    case let .peerStoryStats(peerIds):
+        return MutablePeerStoryStatsView(postbox: postbox, peerIds: peerIds)
     }
 }

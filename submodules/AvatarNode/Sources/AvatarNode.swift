@@ -665,8 +665,8 @@ public final class AvatarNode: ASDisplayNode {
     }
     
     public let contentNode: ContentNode
-    private var storyIndicatorTheme: PresentationTheme?
     private var storyIndicator: ComponentView<Empty>?
+    public private(set) var storyPresentationParams: StoryPresentationParams?
     
     public struct StoryStats: Equatable {
         public var totalCount: Int
@@ -735,9 +735,7 @@ public final class AvatarNode: ASDisplayNode {
             guard let self else {
                 return
             }
-            if let storyIndicatorTheme = self.storyIndicatorTheme {
-                self.updateStoryIndicator(theme: storyIndicatorTheme, transition: .immediate)
-            }
+            self.updateStoryIndicator(transition: .immediate)
         }
         
         self.addSubnode(self.contentNode)
@@ -766,9 +764,7 @@ public final class AvatarNode: ASDisplayNode {
         
         self.contentNode.updateSize(size: size)
         
-        if let storyIndicatorTheme = self.storyIndicatorTheme {
-            self.updateStoryIndicator(theme: storyIndicatorTheme, transition: .immediate)
-        }
+        self.updateStoryIndicator(transition: .immediate)
     }
     
     public func playArchiveAnimation() {
@@ -807,51 +803,71 @@ public final class AvatarNode: ASDisplayNode {
         self.contentNode.setCustomLetters(letters, explicitColor: explicitColor, icon: icon)
     }
     
-    public func setStoryStats(storyStats: StoryStats?, theme: PresentationTheme, transition: Transition) {
-        if self.storyStats != storyStats || self.storyIndicatorTheme !== theme {
+    public func setStoryStats(storyStats: StoryStats?, presentationParams: StoryPresentationParams, transition: Transition) {
+        if self.storyStats != storyStats || self.storyPresentationParams != presentationParams {
             self.storyStats = storyStats
-            self.storyIndicatorTheme = theme
+            self.storyPresentationParams = presentationParams
             
-            self.updateStoryIndicator(theme: theme, transition: transition)
+            self.updateStoryIndicator(transition: transition)
         }
     }
     
-    private struct StoryIndicatorParams {
-        let lineWidth: CGFloat
-        let indicatorSize: CGSize
-        let avatarScale: CGFloat
+    public struct Colors: Equatable {
+        public var unseenColors: [UIColor]
+        public var unseenCloseFriendsColors: [UIColor]
+        public var seenColors: [UIColor]
         
-        init(lineWidth: CGFloat, indicatorSize: CGSize, avatarScale: CGFloat) {
+        public init(
+            unseenColors: [UIColor],
+            unseenCloseFriendsColors: [UIColor],
+            seenColors: [UIColor]
+        ) {
+            self.unseenColors = unseenColors
+            self.unseenCloseFriendsColors = unseenCloseFriendsColors
+            self.seenColors = seenColors
+        }
+        
+        public init(theme: PresentationTheme) {
+            self.unseenColors = [theme.chatList.storyUnseenColors.topColor, theme.chatList.storyUnseenColors.bottomColor]
+            self.unseenCloseFriendsColors = [theme.chatList.storyUnseenPrivateColors.topColor, theme.chatList.storyUnseenPrivateColors.bottomColor]
+            self.seenColors = [theme.chatList.storySeenColors.topColor, theme.chatList.storySeenColors.bottomColor]
+        }
+    }
+    
+    public struct StoryPresentationParams: Equatable {
+        public var colors: Colors
+        public var lineWidth: CGFloat
+        public var inactiveLineWidth: CGFloat
+        
+        public init(
+            colors: Colors,
+            lineWidth: CGFloat,
+            inactiveLineWidth: CGFloat
+        ) {
+            self.colors = colors
             self.lineWidth = lineWidth
-            self.indicatorSize = indicatorSize
-            self.avatarScale = avatarScale
+            self.inactiveLineWidth = inactiveLineWidth
         }
     }
     
-    private func storyIndicatorParams(size: CGSize) -> StoryIndicatorParams {
-        let lineWidth: CGFloat = 2.0
-        
-        return StoryIndicatorParams(
-            lineWidth: lineWidth,
-            indicatorSize: CGSize(width: size.width - lineWidth * 4.0, height: size.height - lineWidth * 4.0),
-            avatarScale: (size.width - lineWidth * 4.0) / size.width
-        )
-    }
-    
-    private func updateStoryIndicator(theme: PresentationTheme, transition: Transition) {
+    private func updateStoryIndicator(transition: Transition) {
         if !self.isNodeLoaded {
             return
         }
         if self.bounds.isEmpty {
             return
         }
-        
-        self.storyIndicatorTheme = theme
+        guard let storyPresentationParams = self.storyPresentationParams else {
+            return
+        }
         
         let size = self.bounds.size
         
         if let storyStats = self.storyStats {
-            let indicatorParams = self.storyIndicatorParams(size: size)
+            let activeLineWidth = storyPresentationParams.lineWidth
+            let inactiveLineWidth = storyPresentationParams.inactiveLineWidth
+            let indicatorSize = CGSize(width: size.width - activeLineWidth * 4.0, height: size.height - activeLineWidth * 4.0)
+            let avatarScale = (size.width - activeLineWidth * 4.0) / size.width
             
             let storyIndicator: ComponentView<Empty>
             var indicatorTransition = transition
@@ -867,25 +883,28 @@ public final class AvatarNode: ASDisplayNode {
                 component: AnyComponent(AvatarStoryIndicatorComponent(
                     hasUnseen: storyStats.unseenCount != 0,
                     hasUnseenCloseFriendsItems: storyStats.hasUnseenCloseFriendsItems,
-                    theme: theme,
-                    activeLineWidth: indicatorParams.lineWidth,
-                    inactiveLineWidth: indicatorParams.lineWidth,
-                    isGlassBackground: false,
+                    colors: AvatarStoryIndicatorComponent.Colors(
+                        unseenColors: storyPresentationParams.colors.unseenColors,
+                        unseenCloseFriendsColors: storyPresentationParams.colors.unseenCloseFriendsColors,
+                        seenColors: storyPresentationParams.colors.seenColors
+                    ),
+                    activeLineWidth: activeLineWidth,
+                    inactiveLineWidth: inactiveLineWidth,
                     counters: AvatarStoryIndicatorComponent.Counters(
                         totalCount: storyStats.totalCount,
                         unseenCount: storyStats.unseenCount
                     )
                 )),
                 environment: {},
-                containerSize: indicatorParams.indicatorSize
+                containerSize: indicatorSize
             )
             if let storyIndicatorView = storyIndicator.view {
                 if storyIndicatorView.superview == nil {
                     self.view.addSubview(storyIndicatorView)
                 }
-                indicatorTransition.setFrame(view: storyIndicatorView, frame: CGRect(origin: CGPoint(x: (size.width - indicatorParams.indicatorSize.width) * 0.5, y: (size.height - indicatorParams.indicatorSize.height) * 0.5), size: indicatorParams.indicatorSize))
+                indicatorTransition.setFrame(view: storyIndicatorView, frame: CGRect(origin: CGPoint(x: (size.width - indicatorSize.width) * 0.5, y: (size.height - indicatorSize.height) * 0.5), size: indicatorSize))
             }
-            transition.setScale(view: self.contentNode.view, scale: indicatorParams.avatarScale)
+            transition.setScale(view: self.contentNode.view, scale: avatarScale)
         } else {
             transition.setScale(view: self.contentNode.view, scale: 1.0)
             if let storyIndicator = self.storyIndicator {

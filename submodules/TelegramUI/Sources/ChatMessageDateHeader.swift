@@ -613,7 +613,11 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                     unseenCount: storyStats.unseenCount,
                     hasUnseenCloseFriendsItems: false
                 )
-            }, theme: theme, transition: .immediate)
+            }, presentationParams: AvatarNode.StoryPresentationParams(
+                colors: AvatarNode.Colors(theme: theme),
+                lineWidth: 2.0,
+                inactiveLineWidth: 2.0
+            ), transition: .immediate)
         }
     }
 

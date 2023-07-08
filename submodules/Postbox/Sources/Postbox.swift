@@ -1327,6 +1327,10 @@ public final class Transaction {
     public func getExpiredStoryIds(belowTimestamp: Int32) -> [StoryId] {
         return self.postbox!.storyItemsTable.getExpiredIds(belowTimestamp: belowTimestamp)
     }
+    
+    public func getPeerStoryStats(peerId: PeerId) -> PeerStoryStats? {
+        return fetchPeerStoryStats(postbox: self.postbox!, peerId: peerId)
+    }
 }
 
 public enum PostboxResult {

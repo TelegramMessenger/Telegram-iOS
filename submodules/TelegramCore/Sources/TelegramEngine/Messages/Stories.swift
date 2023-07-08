@@ -1490,13 +1490,16 @@ public final class EngineStoryViewListContext {
     public final class Item: Equatable {
         public let peer: EnginePeer
         public let timestamp: Int32
+        public let storyStats: PeerStoryStats?
         
         public init(
             peer: EnginePeer,
-            timestamp: Int32
+            timestamp: Int32,
+            storyStats: PeerStoryStats?
         ) {
             self.peer = peer
             self.timestamp = timestamp
+            self.storyStats = storyStats
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -1504,6 +1507,9 @@ public final class EngineStoryViewListContext {
                 return false
             }
             if lhs.timestamp != rhs.timestamp {
+                return false
+            }
+            if lhs.storyStats != rhs.storyStats {
                 return false
             }
             return true
@@ -1545,6 +1551,7 @@ public final class EngineStoryViewListContext {
         let storyId: Int32
         
         let disposable = MetaDisposable()
+        let storyStatsDisposable = MetaDisposable()
         
         var state: InternalState
         let statePromise = Promise<InternalState>()
@@ -1569,6 +1576,7 @@ public final class EngineStoryViewListContext {
             assert(self.queue.isCurrent())
             
             self.disposable.dispose()
+            self.storyStatsDisposable.dispose()
         }
         
         func loadMore() {
@@ -1604,8 +1612,9 @@ public final class EngineStoryViewListContext {
                             for view in views {
                                 switch view {
                                 case let .storyView(userId, date):
-                                    if let peer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))) {
-                                        items.append(Item(peer: EnginePeer(peer), timestamp: date))
+                                    let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                                    if let peer = transaction.getPeer(peerId) {
+                                        items.append(Item(peer: EnginePeer(peer), timestamp: date, storyStats: transaction.getPeerStoryStats(peerId: peerId)))
                                         
                                         nextOffset = NextOffset(id: userId, timestamp: date)
                                     }
@@ -1702,6 +1711,35 @@ public final class EngineStoryViewListContext {
                 
                 strongSelf.isLoadingMore = false
                 strongSelf.statePromise.set(.single(strongSelf.state))
+                
+                let statsKey: PostboxViewKey = .peerStoryStats(peerIds: Set(strongSelf.state.items.map(\.peer.id)))
+                strongSelf.storyStatsDisposable.set((strongSelf.account.postbox.combinedView(keys: [statsKey])
+                |> deliverOn(strongSelf.queue)).start(next: { views in
+                    guard let `self` = self else {
+                        return
+                    }
+                    guard let view = views.views[statsKey] as? PeerStoryStatsView else {
+                        return
+                    }
+                    var updated = false
+                    var items = self.state.items
+                    for i in 0 ..< strongSelf.state.items.count {
+                        let item = items[i]
+                        let value = view.storyStats[item.peer.id]
+                        if item.storyStats != value {
+                            updated = true
+                            items[i] = Item(
+                                peer: item.peer,
+                                timestamp: item.timestamp,
+                                storyStats: value
+                            )
+                        }
+                    }
+                    if updated {
+                        self.state.items = items
+                        self.statePromise.set(.single(self.state))
+                    }
+                }))
             }))
         }
     }

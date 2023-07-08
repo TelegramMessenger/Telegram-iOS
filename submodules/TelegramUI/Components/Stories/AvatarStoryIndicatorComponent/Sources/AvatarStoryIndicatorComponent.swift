@@ -5,6 +5,28 @@ import ComponentFlow
 import TelegramPresentationData
 
 public final class AvatarStoryIndicatorComponent: Component {
+    public struct Colors: Equatable {
+        public var unseenColors: [UIColor]
+        public var unseenCloseFriendsColors: [UIColor]
+        public var seenColors: [UIColor]
+        
+        public init(
+            unseenColors: [UIColor],
+            unseenCloseFriendsColors: [UIColor],
+            seenColors: [UIColor]
+        ) {
+            self.unseenColors = unseenColors
+            self.unseenCloseFriendsColors = unseenCloseFriendsColors
+            self.seenColors = seenColors
+        }
+        
+        public init(theme: PresentationTheme) {
+            self.unseenColors = [theme.chatList.storyUnseenColors.topColor, theme.chatList.storyUnseenColors.bottomColor]
+            self.unseenCloseFriendsColors = [theme.chatList.storyUnseenPrivateColors.topColor, theme.chatList.storyUnseenPrivateColors.bottomColor]
+            self.seenColors = [theme.chatList.storySeenColors.topColor, theme.chatList.storySeenColors.bottomColor]
+        }
+    }
+    
     public struct Counters: Equatable {
         public var totalCount: Int
         public var unseenCount: Int
@@ -17,27 +39,24 @@ public final class AvatarStoryIndicatorComponent: Component {
     
     public let hasUnseen: Bool
     public let hasUnseenCloseFriendsItems: Bool
-    public let theme: PresentationTheme
+    public let colors: Colors
     public let activeLineWidth: CGFloat
     public let inactiveLineWidth: CGFloat
-    public let isGlassBackground: Bool
     public let counters: Counters?
     
     public init(
         hasUnseen: Bool,
         hasUnseenCloseFriendsItems: Bool,
-        theme: PresentationTheme,
+        colors: Colors,
         activeLineWidth: CGFloat,
         inactiveLineWidth: CGFloat,
-        isGlassBackground: Bool = false,
         counters: Counters?
     ) {
         self.hasUnseen = hasUnseen
         self.hasUnseenCloseFriendsItems = hasUnseenCloseFriendsItems
-        self.theme = theme
+        self.colors = colors
         self.activeLineWidth = activeLineWidth
         self.inactiveLineWidth = inactiveLineWidth
-        self.isGlassBackground = isGlassBackground
         self.counters = counters
     }
     
@@ -48,16 +67,13 @@ public final class AvatarStoryIndicatorComponent: Component {
         if lhs.hasUnseenCloseFriendsItems != rhs.hasUnseenCloseFriendsItems {
             return false
         }
-        if lhs.theme !== rhs.theme {
+        if lhs.colors != rhs.colors {
             return false
         }
         if lhs.activeLineWidth != rhs.activeLineWidth {
             return false
         }
         if lhs.inactiveLineWidth != rhs.inactiveLineWidth {
-            return false
-        }
-        if lhs.isGlassBackground != rhs.isGlassBackground {
             return false
         }
         if lhs.counters != rhs.counters {
@@ -101,16 +117,12 @@ public final class AvatarStoryIndicatorComponent: Component {
                 let inactiveColors: [CGColor]
                 
                 if component.hasUnseenCloseFriendsItems {
-                    activeColors = [component.theme.chatList.storyUnseenPrivateColors.topColor.cgColor, component.theme.chatList.storyUnseenPrivateColors.bottomColor.cgColor]
+                    activeColors = component.colors.unseenCloseFriendsColors.map(\.cgColor)
                 } else {
-                    activeColors = [component.theme.chatList.storyUnseenColors.topColor.cgColor, component.theme.chatList.storyUnseenColors.bottomColor.cgColor]
+                    activeColors = component.colors.unseenColors.map(\.cgColor)
                 }
                 
-                if component.isGlassBackground {
-                    inactiveColors = [UIColor(white: 1.0, alpha: 0.2).cgColor, UIColor(white: 1.0, alpha: 0.2).cgColor]
-                } else {
-                    inactiveColors = [component.theme.chatList.storySeenColors.topColor.cgColor, component.theme.chatList.storySeenColors.bottomColor.cgColor]
-                }
+                inactiveColors = component.colors.seenColors.map(\.cgColor)
                 
                 var locations: [CGFloat] = [0.0, 1.0]
                 
