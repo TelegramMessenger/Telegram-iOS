@@ -10,8 +10,6 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
-        "//submodules/BuildConfig:BuildConfig",
-        
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/MtProtoKit:MtProtoKit",
         "//submodules/EncryptionProvider:EncryptionProvider",

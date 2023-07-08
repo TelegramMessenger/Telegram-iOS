@@ -1,5 +1,3 @@
-import BuildConfig
-
 import Foundation
 import CloudKit
 import MtProtoKit
