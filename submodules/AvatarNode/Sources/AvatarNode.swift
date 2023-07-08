@@ -296,6 +296,7 @@ public final class AvatarNode: ASDisplayNode {
             
             self.isOpaque = false
             self.displaysAsynchronously = true
+            self.disableClearContentsOnHide = true
             
             self.imageNode.isLayerBacked = true
             self.addSubnode(self.imageNode)

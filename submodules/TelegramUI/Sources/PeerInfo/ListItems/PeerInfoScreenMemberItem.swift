@@ -275,6 +275,9 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         } else if item.context.account.peerId == item.member.id {
             highlight = false
         }
+        if let point, let itemNode = self.itemNode, let value = itemNode.view.hitTest(self.view.convert(point, to: itemNode.view), with: nil), value is UIControl {
+            highlight = false
+        }
         if highlight {
             self.selectionNode.updateIsHighlighted(true)
         } else {
