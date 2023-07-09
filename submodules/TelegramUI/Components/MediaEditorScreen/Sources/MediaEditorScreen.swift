@@ -2005,23 +2005,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if let self {
                     switch action {
                     case .play:
-                        self.entitiesView.eachView({ view in
-                            if let sticker = view.entity as? DrawingStickerEntity, case .video = sticker.content {
-                                view.play()
-                            }
-                        })
+                        self.entitiesView.play()
                     case .pause:
-                        self.entitiesView.eachView({ view in
-                            if let sticker = view.entity as? DrawingStickerEntity, case .video = sticker.content {
-                                view.pause()
-                            }
-                        })
+                        self.entitiesView.pause()
                     case let .seek(timestamp):
-                        self.entitiesView.eachView({ view in
-                            if let sticker = view.entity as? DrawingStickerEntity, case .video = sticker.content {
-                                view.seek(to: timestamp)
-                            }
-                        })
+                        self.entitiesView.seek(to: timestamp)
                     }
                 }
             }
@@ -2061,6 +2049,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 context: self.context,
                 drawingView: self.drawingView,
                 entitiesView: self.entitiesView,
+                contentWrapperView: self.previewContainerView,
                 selectionContainerView: self.selectionContainerView,
                 isVideo: false,
                 updateSelectedEntity: { [weak self] _ in
@@ -2904,7 +2893,60 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     self.previousDrawingEntities = self.entitiesView.entities
                                     
                                     self.interaction?.deactivate()
-                                    let controller = DrawingScreen(context: self.context, sourceHint: .storyEditor, size: self.previewContainerView.frame.size, originalSize: storyDimensions, isVideo: false, isAvatar: false, drawingView: self.drawingView, entitiesView: self.entitiesView, selectionContainerView: self.selectionContainerView, existingStickerPickerInputData: self.stickerPickerInputData)
+                                    let controller = DrawingScreen(
+                                        context: self.context,
+                                        sourceHint: .storyEditor,
+                                        size: self.previewContainerView.frame.size,
+                                        originalSize: storyDimensions,
+                                        isVideo: self.mediaEditor?.sourceIsVideo ?? false,
+                                        isAvatar: false,
+                                        drawingView: self.drawingView,
+                                        entitiesView: self.entitiesView,
+                                        selectionContainerView: self.selectionContainerView,
+                                        existingStickerPickerInputData: self.stickerPickerInputData
+                                    )
+                                    controller.getCurrentImage = { [weak self] in
+                                        guard let self else {
+                                            return nil
+                                        }
+                                        let colorSpace = CGColorSpaceCreateDeviceRGB()
+                                        let imageSize = CGSize(width: 1080, height: 1920)
+                                        let context = DrawingContext(size: imageSize, scale: 1.0, opaque: true, colorSpace: colorSpace)
+                                        
+                                        context?.withFlippedContext { context in
+                                            if let gradientImage = self.gradientView.image?.cgImage {
+                                                context.draw(gradientImage, in: CGRect(origin: .zero, size: imageSize))
+                                            }
+                                            if let image = self.mediaEditor?.resultImage, let values = self.mediaEditor?.values {
+                                                let initialScale: CGFloat
+                                                if image.size.height > image.size.width {
+                                                    initialScale = max(imageSize.width / image.size.width, imageSize.height / image.size.height)
+                                                } else {
+                                                    initialScale = imageSize.width / image.size.width
+                                                }
+                                                let scale = initialScale * values.cropScale
+                                                context.translateBy(x: imageSize.width / 2.0 + values.cropOffset.x, y: imageSize.height / 2.0 - values.cropOffset.y)
+                                                context.rotate(by: -values.cropRotation)
+                                                context.scaleBy(x: scale, y: scale)
+                                                                                                                                                
+                                                if let cgImage = image.cgImage {
+                                                    context.draw(cgImage, in: CGRect(x: -image.size.width / 2.0, y: -image.size.height / 2.0, width: image.size.width, height: image.size.height))
+                                                }
+                                            }
+                                        }
+                                        
+                                        return context?.generateImage(colorSpace: colorSpace)
+                                    }
+                                    controller.updateVideoPlayback = { [weak self] play in
+                                        guard let self else {
+                                            return
+                                        }
+                                        if play {
+                                            self.mediaEditor?.play()
+                                        } else {
+                                            self.mediaEditor?.stop()
+                                        }
+                                    }
                                     self.drawingScreen = controller
                                     self.drawingView.isUserInteractionEnabled = true
 
