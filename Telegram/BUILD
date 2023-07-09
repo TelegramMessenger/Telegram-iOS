@@ -1408,6 +1408,7 @@ swift_library(
     ],
     deps = [
         "//submodules/PtgSecretPasscodes:PtgSecretPasscodes",
+        "//submodules/PtgForeignAgentNoticeRemoval:PtgForeignAgentNoticeRemoval",
         
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/WidgetItems:WidgetItems_iOS14",
@@ -1418,7 +1419,6 @@ swift_library(
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
         "//Telegram:GeneratedSources",
-        "//submodules/PtgForeignAgentNoticeRemoval:PtgForeignAgentNoticeRemoval",
     ],
 )
 

@@ -1,7 +1,10 @@
 import Foundation
 import Postbox
 import TelegramCore
-import TelegramUIPreferences
+
+extension ApplicationSpecificSharedDataKeys {
+    public static let ptgSettings = applicationSpecificPreferencesKey(102)
+}
 
 public struct PtgSettings: Codable, Equatable {
     public let showPeerId: Bool

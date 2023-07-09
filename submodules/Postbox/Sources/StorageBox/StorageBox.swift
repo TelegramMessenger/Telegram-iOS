@@ -799,7 +799,6 @@ public final class StorageBox {
                     
                     let peerId = key.getInt64(0)
                     let contentType = key.getUInt8(8)
-                    
                     if allStats.peers[PeerId(peerId)] == nil {
                         allStats.peers[PeerId(peerId)] = StorageBox.Stats(contentTypes: [:])
                     }

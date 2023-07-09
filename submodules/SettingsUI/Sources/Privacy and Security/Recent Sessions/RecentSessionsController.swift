@@ -477,7 +477,7 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
         
         var hasAddDevice = false
         if sessionsState.sessions.count > 1 || enableQRLogin {
-        if sessionsState.sessions.count > 1 {
+            if sessionsState.sessions.count > 1 {
                 entries.append(.terminateOtherSessions(SortIndex(section: 1, item: 2), presentationData.strings.AuthSessions_TerminateOtherSessions))
                 entries.append(.currentSessionInfo(SortIndex(section: 1, item: 3), presentationData.strings.AuthSessions_TerminateOtherSessionsHelp))
             } else if enableQRLogin {
@@ -807,7 +807,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         return true
     }
     |> distinctUntilChanged
-
+    
     let signal = combineLatest(context.sharedContext.presentationData, mode.get(), statePromise.get(), activeSessionsContext.state, webSessionsContext.state, enableQRLogin)
     |> deliverOnMainQueue
     |> map { presentationData, mode, state, sessionsState, websitesAndPeers, enableQRLogin -> (ItemListControllerState, (ItemListNodeState, Any)) in

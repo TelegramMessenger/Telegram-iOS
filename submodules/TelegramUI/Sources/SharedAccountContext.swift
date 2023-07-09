@@ -640,8 +640,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
             return true
         })
-        |> deliverOnMainQueue).start(next: { accountRecords in
-            let (primaryId, records, authRecord) = accountRecords
+        |> deliverOnMainQueue).start(next: { primaryId, records, authRecord in
             var addedSignals: [Signal<AddedAccountResult, NoError>] = []
             var addedAuthSignal: Signal<UnauthorizedAccount?, NoError> = .single(nil)
             for (id, attributes) in records {
