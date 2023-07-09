@@ -72,10 +72,10 @@
 "PtgSettings.Title" = "Cloudballon";
 "PtgSettings.ShowPeerId" = "Паказваць ID";
 "PtgSettings.ShowPeerIdHelp" = "Паказваць ID у профілях карыстальнікаў, суполак, каналаў, ботаў.";
-"PtgSettings.ForeignAgentNoticeHeader" = "Маркіроўка замежных агентаў";
+"PtgSettings.ForeignAgentNoticeHeader" = "Маркіроўка замежных агентаў РФ";
 "PtgSettings.SuppressForeignAgentNotice" = "Хаваць у паведамленнях";
 "PtgSettings.EnableForeignAgentNoticeSearchFiltering" = "Фільтраваць вынікі пошуку";
-"PtgSettings.EnableForeignAgentNoticeSearchFilteringHelp" = "Адфільтроўваць з вынікаў пошуку паведамлення, якія былі ўключаны толькі з-за тэксту маркіроўкі замежных агентаў.";
+"PtgSettings.EnableForeignAgentNoticeSearchFilteringHelp" = "Адфільтроўваць з вынікаў пошуку паведамлення, якія былі ўключаны толькі з-за тэксту маркіроўкі замежных агентаў РФ.";
 "PtgSettings.EnableLiveText" = "Распазнанне тэксту";
 "PtgSettings.EnableLiveTextHelp" = "Аўтаматычна выконваць распазнанне тэксту і штрых-кодаў (напрыклад, QR-кода) на кожнай выяве, якую вы праглядаеце ў поўнаэкранным рэжыме. Выключыце, каб зэканоміць зарад батарэі.";
 "PtgSettings.PreferAppleVoiceToText" = "Пераклад голасу ў тэкст ад Apple";

@@ -68,21 +68,21 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
             return 0
         case .showPeerIdInfo:
             return 1
-        case .foreignAgentNoticeHeader:
-            return 2
-        case .suppressForeignAgentNotice:
-            return 3
-        case .enableForeignAgentNoticeSearchFiltering:
-            return 4
-        case .enableForeignAgentNoticeSearchFilteringInfo:
-            return 5
         case .enableLiveText:
-            return 6
+            return 2
         case .enableLiveTextInfo:
-            return 7
+            return 3
         case .preferAppleVoiceToText:
-            return 8
+            return 4
         case .preferAppleVoiceToTextInfo:
+            return 5
+        case .foreignAgentNoticeHeader:
+            return 6
+        case .suppressForeignAgentNotice:
+            return 7
+        case .enableForeignAgentNoticeSearchFiltering:
+            return 8
+        case .enableForeignAgentNoticeSearchFilteringInfo:
             return 9
         }
     }
@@ -136,11 +136,6 @@ private func ptgSettingsControllerEntries(presentationData: PresentationData, se
     entries.append(.showPeerId(presentationData.strings.PtgSettings_ShowPeerId, settings.showPeerId))
     entries.append(.showPeerIdInfo(presentationData.strings.PtgSettings_ShowPeerIdHelp))
     
-    entries.append(.foreignAgentNoticeHeader(presentationData.strings.PtgSettings_ForeignAgentNoticeHeader.uppercased()))
-    entries.append(.suppressForeignAgentNotice(presentationData.strings.PtgSettings_SuppressForeignAgentNotice, settings.suppressForeignAgentNotice))
-    entries.append(.enableForeignAgentNoticeSearchFiltering(presentationData.strings.PtgSettings_EnableForeignAgentNoticeSearchFiltering, settings.enableForeignAgentNoticeSearchFiltering, settings.suppressForeignAgentNotice))
-    entries.append(.enableForeignAgentNoticeSearchFilteringInfo(presentationData.strings.PtgSettings_EnableForeignAgentNoticeSearchFilteringHelp))
-
     entries.append(.enableLiveText(presentationData.strings.PtgSettings_EnableLiveText, !experimentalSettings.disableImageContentAnalysis))
     entries.append(.enableLiveTextInfo(presentationData.strings.PtgSettings_EnableLiveTextHelp))
 
@@ -148,6 +143,11 @@ private func ptgSettingsControllerEntries(presentationData: PresentationData, se
         entries.append(.preferAppleVoiceToText(presentationData.strings.PtgSettings_PreferAppleVoiceToText, settings.preferAppleVoiceToText || !hasPremiumAccounts, hasPremiumAccounts))
         entries.append(.preferAppleVoiceToTextInfo(presentationData.strings.PtgSettings_PreferAppleVoiceToTextHelp))
     }
+    
+    entries.append(.foreignAgentNoticeHeader(presentationData.strings.PtgSettings_ForeignAgentNoticeHeader.uppercased()))
+    entries.append(.suppressForeignAgentNotice(presentationData.strings.PtgSettings_SuppressForeignAgentNotice, settings.suppressForeignAgentNotice))
+    entries.append(.enableForeignAgentNoticeSearchFiltering(presentationData.strings.PtgSettings_EnableForeignAgentNoticeSearchFiltering, settings.enableForeignAgentNoticeSearchFiltering, settings.suppressForeignAgentNotice))
+    entries.append(.enableForeignAgentNoticeSearchFilteringInfo(presentationData.strings.PtgSettings_EnableForeignAgentNoticeSearchFilteringHelp))
     
     return entries
 }

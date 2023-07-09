@@ -38,10 +38,10 @@
 "PtgSettings.Title" = "Cloudballon";
 "PtgSettings.ShowPeerId" = "Show ID";
 "PtgSettings.ShowPeerIdHelp" = "Show ID in user, group, channel, bot profiles.";
-"PtgSettings.ForeignAgentNoticeHeader" = "Foreign agent notice";
+"PtgSettings.ForeignAgentNoticeHeader" = "Russian foreign agent notice";
 "PtgSettings.SuppressForeignAgentNotice" = "Suppress in Messages";
 "PtgSettings.EnableForeignAgentNoticeSearchFiltering" = "Filter Search Results";
-"PtgSettings.EnableForeignAgentNoticeSearchFilteringHelp" = "Filter out search result messages that were included only because of the foreign agent notice.";
+"PtgSettings.EnableForeignAgentNoticeSearchFilteringHelp" = "Filter out search result messages that were included only because of the russian foreign agent notice.";
 "PtgSettings.EnableLiveText" = "Live Text";
 "PtgSettings.EnableLiveTextHelp" = "Automatically perform text recognition and bar code detection (e.g. QR-code) on each image you preview in fullscreen. Turn it off to save battery life.";
 "PtgSettings.PreferAppleVoiceToText" = "Voice-to-Text Conversion by Apple";
