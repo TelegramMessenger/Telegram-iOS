@@ -25,7 +25,7 @@ public struct CacheStorageSettings: Codable, Equatable {
     public static var defaultSettings: CacheStorageSettings {
         return CacheStorageSettings(
             defaultCacheStorageTimeout: Int32(31 * 24 * 60 * 60),
-            defaultCacheStorageLimitGigabytes: maximumCacheSizeValues[0],
+            defaultCacheStorageLimitGigabytes: maximumCacheSizeValues[1],
             categoryStorageTimeout: [
                 .privateChats: Int32(7 * 24 * 60 * 60),
                 .groups: Int32(7 * 24 * 60 * 60),

@@ -1113,8 +1113,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 self?.timeBasedCleanup.setup(cleanedAccounts: cleanedAccounts, general: settings.defaultCacheStorageTimeout, shortLived: 60 * 60, gigabytesLimit: settings.defaultCacheStorageLimitGigabytes)
             })
             
-            self.maintainFillerFileDisposable = self.maintainFillerFile().start()
-            
             self.trackLastNonHidingAccountDisposable = combineLatest(self.activeAccountContexts, self.allHidableAccountIds).start(next: { activeAccountContexts, allHidableAccountIds in
                 if Set(activeAccountContexts.accounts.map({ $0.0 })).subtracting(allHidableAccountIds).isEmpty {
                     // If logged out from last non-hiding account, deactivate all hidable accounts (if any is active) since their use is not secure any more. Otherwise cache size may grow and this can reveal them.
@@ -1122,6 +1120,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             })
         }
+        
+        self.maintainFillerFileDisposable = self.maintainFillerFile().start()
     }
     
     deinit {

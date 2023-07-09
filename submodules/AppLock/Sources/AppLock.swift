@@ -258,21 +258,18 @@ public final class AppLockContextImpl: AppLockContext {
                         strongSelf.passcodeController = passcodeController
                         var nonFullscreenVCToDismiss: UIViewController?
                         if let rootViewController = strongSelf.rootController {
-                            if let _ = rootViewController.presentedViewController as? PKPaymentAuthorizationViewController {
-                            } else {
-                                var vc = rootViewController
-                                while let presentedVC = vc.presentedViewController, !presentedVC.isBeingDismissed {
-                                    if presentedVC.view.bounds != window.hostView.eventView.bounds {
-                                        // can't reliably cover saved non-fullscreen views, just dismiss them
-                                        nonFullscreenVCToDismiss = presentedVC
-                                        break
-                                    }
-                                    vc = presentedVC
+                            var vc = rootViewController
+                            while let presentedVC = vc.presentedViewController, !presentedVC.isBeingDismissed {
+                                if presentedVC.view.bounds != window.hostView.eventView.bounds {
+                                    // can't reliably cover saved non-fullscreen views, just dismiss them
+                                    nonFullscreenVCToDismiss = presentedVC
+                                    break
                                 }
-                                
-                                if let controller = rootViewController.presentedViewController, !controller.isBeingDismissed, controller !== nonFullscreenVCToDismiss {
-                                    strongSelf.savedNativeViewController = controller
-                                }
+                                vc = presentedVC
+                            }
+                            
+                            if let controller = rootViewController.presentedViewController, !controller.isBeingDismissed, controller !== nonFullscreenVCToDismiss {
+                                strongSelf.savedNativeViewController = controller
                             }
                         }
                         UIView.performWithoutAnimation {
