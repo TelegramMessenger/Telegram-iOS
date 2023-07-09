@@ -396,8 +396,17 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                         resource = VideoLibraryMediaResource(localIdentifier: localIdentifier, conversion: .compress(adjustments))
                                     }
                                     let imageData = firstFrameImage.flatMap { compressImageToJPEG($0, quality: 0.6) }
+                                    let firstFrameFile = imageData.flatMap { data -> TempBoxFile? in
+                                        let file = TempBox.shared.tempFile(fileName: "image.jpg")
+                                        if let _ = try? data.write(to: URL(fileURLWithPath: file.path)) {
+                                            return file
+                                        } else {
+                                            return nil
+                                        }
+                                    }
+                                    
                                     let entities = generateChatInputTextEntities(caption)
-                                    self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameImageData: imageData, stickers: stickers), text: caption.string, entities: entities, pin: privacy.pin, privacy: privacy.privacy, isForwardingDisabled: privacy.isForwardingDisabled, period: privacy.timeout, randomId: randomId)
+                                    self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), text: caption.string, entities: entities, pin: privacy.pin, privacy: privacy.privacy, isForwardingDisabled: privacy.isForwardingDisabled, period: privacy.timeout, randomId: randomId)
                                     Queue.mainQueue().justDispatch {
                                         commit({})
                                     }

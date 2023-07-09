@@ -649,7 +649,7 @@ public final class PeerInfoNavigationSourceTag {
 }
 
 public protocol PeerInfoScreen: ViewController {
-    
+    var peerId: PeerId { get }
 }
 
 public protocol ChatController: ViewController {

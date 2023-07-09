@@ -6,6 +6,14 @@ open class HighlightTrackingButton: UIButton {
     public var internalHighligthedChanged: (Bool) -> Void = { _ in }
     public var highligthedChanged: (Bool) -> Void = { _ in }
     
+    override public init(frame: CGRect) {
+        super.init(frame: frame)
+    }
+    
+    required public init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
     open override func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
         if !self.internalHighlighted {
             self.internalHighlighted = true

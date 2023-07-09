@@ -2470,7 +2470,7 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                     })),
                     environment: {},
-                    containerSize: CGSize(width: contentFrame.width, height: 44.0)
+                    containerSize: CGSize(width: max(10.0, contentFrame.width - headerRightOffset), height: 44.0)
                 )
                 if let view = currentCenterInfoItem.view.view {
                     var animateIn = false
@@ -3194,20 +3194,28 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                 }))
             } else {
-                guard let chatController = component.context.sharedContext.makePeerInfoController(context: component.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) else {
-                    return
-                }
-                
-                if "".isEmpty {
-                    navigationController.pushViewController(chatController)
-                } else {
-                    var viewControllers = navigationController.viewControllers
-                    if let index = viewControllers.firstIndex(where: { $0 === controller }) {
-                        viewControllers.insert(chatController, at: index)
-                    } else {
-                        viewControllers.append(chatController)
+                var currentViewControllers = navigationController.viewControllers
+                if let index = currentViewControllers.firstIndex(where: { c in
+                    if let c = c as? PeerInfoScreen, c.peerId == peer.id {
+                        return true
                     }
-                    navigationController.setViewControllers(viewControllers, animated: true)
+                    return false
+                }) {
+                    if let controller = component.controller() as? StoryContainerScreen {
+                        controller.dismiss()
+                    }
+                    for i in (index + 1 ..< currentViewControllers.count).reversed() {
+                        if currentViewControllers[i] !== component.controller() {
+                            currentViewControllers.remove(at: i)
+                        }
+                    }
+                    navigationController.setViewControllers(currentViewControllers, animated: true)
+                } else {
+                    guard let chatController = component.context.sharedContext.makePeerInfoController(context: component.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) else {
+                        return
+                    }
+                    
+                    navigationController.pushViewController(chatController)
                 }
             }
         }
@@ -3402,7 +3410,16 @@ public final class StoryItemSetContainerComponent: Component {
                                 }
                                 
                                 let firstFrameImageData = firstFrameImage.flatMap { compressImageToJPEG($0, quality: 0.6) }
-                                let _ = (context.engine.messages.editStory(id: id, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameImageData: firstFrameImageData, stickers: stickers), text: updatedText, entities: updatedEntities, privacy: updatedPrivacy)
+                                let firstFrameFile = firstFrameImageData.flatMap { data -> TempBoxFile? in
+                                    let file = TempBox.shared.tempFile(fileName: "image.jpg")
+                                    if let _ = try? data.write(to: URL(fileURLWithPath: file.path)) {
+                                        return file
+                                    } else {
+                                        return nil
+                                    }
+                                }
+                                
+                                let _ = (context.engine.messages.editStory(id: id, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), text: updatedText, entities: updatedEntities, privacy: updatedPrivacy)
                                 |> deliverOnMainQueue).start(next: { [weak self] result in
                                     guard let self else {
                                         return

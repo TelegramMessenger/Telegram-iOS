@@ -11,32 +11,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import StoryContainerScreen
 import EmojiStatusComponent
-
-private func solveParabolicMotion(from sourcePoint: CGPoint, to targetPosition: CGPoint, progress: CGFloat) -> CGPoint {
-    if sourcePoint.y == targetPosition.y {
-        return sourcePoint.interpolate(to: targetPosition, amount: progress)
-    }
-    
-    //(x - h)² + (y - k)² = r²
-    //(x1 - h) * (x1 - h) + (y1 - k) * (y1 - k) = r * r
-    //(x2 - h) * (x2 - h) + (y2 - k) * (y2 - k) = r * r
-    
-    let x1 = sourcePoint.y
-    let y1 = sourcePoint.x
-    let x2 = targetPosition.y
-    let y2 = targetPosition.x
-    
-    let b = (x1 * x1 * y2 - x2 * x2 * y1) / (x1 * x1 - x2 * x2)
-    let k = (y1 - y2) / (x1 * x1 - x2 * x2)
-    
-    let x = sourcePoint.y.interpolate(to: targetPosition.y, amount: progress)
-    let y = k * x * x + b
-    return CGPoint(x: y, y: x)
-}
-
-private let modelSpringAnimation: CABasicAnimation = {
-    return makeSpringBounceAnimation("", 0.0, 88.0)
-}()
+import ChatListTitleView
 
 public final class StoryPeerListComponent: Component {
     public enum PeerStatus: Equatable {
@@ -84,6 +59,7 @@ public final class StoryPeerListComponent: Component {
     public let peerAction: (EnginePeer?) -> Void
     public let contextPeerAction: (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void
     public let openStatusSetup: (UIView) -> Void
+    public let lockAction: () -> Void
     
     public init(
         externalState: ExternalState,
@@ -104,7 +80,8 @@ public final class StoryPeerListComponent: Component {
         uploadProgress: Float?,
         peerAction: @escaping (EnginePeer?) -> Void,
         contextPeerAction: @escaping (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void,
-        openStatusSetup: @escaping (UIView) -> Void
+        openStatusSetup: @escaping (UIView) -> Void,
+        lockAction: @escaping () -> Void
     ) {
         self.externalState = externalState
         self.context = context
@@ -125,6 +102,7 @@ public final class StoryPeerListComponent: Component {
         self.peerAction = peerAction
         self.contextPeerAction = contextPeerAction
         self.openStatusSetup = openStatusSetup
+        self.lockAction = lockAction
     }
     
     public static func ==(lhs: StoryPeerListComponent, rhs: StoryPeerListComponent) -> Bool {
@@ -217,14 +195,17 @@ public final class StoryPeerListComponent: Component {
         
         func frame(at index: Int) -> CGRect {
             if self.itemCount <= 1 {
-                return CGRect(origin: CGPoint(x: floor((self.containerSize.width - self.itemSize.width) * 0.5), y: self.containerInsets.top), size: self.itemSize)
+                return CGRect(origin: CGPoint(x: self.containerInsets.left + floor((self.containerSize.width - self.containerInsets.left - containerInsets.right - self.itemSize.width) * 0.5), y: self.containerInsets.top), size: self.itemSize)
             } else if self.contentSize.width < self.containerSize.width {
                 let usableWidth = self.containerSize.width - self.containerInsets.left - self.containerInsets.right
                 let usableSpacingWidth = usableWidth - self.itemSize.width * CGFloat(self.itemCount)
                 
                 var spacing = floor(usableSpacingWidth / CGFloat(self.itemCount + 1))
-                spacing = min(120.0, spacing)
-                return CGRect(origin: CGPoint(x: self.containerInsets.left + spacing + (self.itemSize.width + spacing) * CGFloat(index), y: self.containerInsets.top), size: self.itemSize)
+                spacing = min(100.0, spacing)
+                
+                let contentWidth = self.itemSize.width * CGFloat(self.itemCount) + spacing * CGFloat(max(0, self.itemCount - 1))
+                
+                return CGRect(origin: CGPoint(x: floor((self.containerSize.width - contentWidth) * 0.5) + (self.itemSize.width + spacing) * CGFloat(index), y: self.containerInsets.top), size: self.itemSize)
             } else {
                 return CGRect(origin: CGPoint(x: self.containerInsets.left + (self.itemSize.width + self.itemSpacing) * CGFloat(index), y: self.containerInsets.top), size: self.itemSize)
             }
@@ -338,6 +319,8 @@ public final class StoryPeerListComponent: Component {
         
         private var titleIndicatorView: ComponentView<Empty>?
         
+        private var titleLockView: ChatListTitleLockView?
+        private var titleLockButton: HighlightTrackingButton?
         private let titleView: UIImageView
         private var titleState: TitleState?
         private var titleViewAnimation: TitleAnimationState?
@@ -429,6 +412,15 @@ public final class StoryPeerListComponent: Component {
             component.peerAction(nil)
         }
         
+        @objc private func titleLockButtonPressed() {
+            guard let component = self.component else {
+                return
+            }
+            if component.titleHasLock {
+                component.lockAction()
+            }
+        }
+        
         public func setPreviewedItem(signal: Signal<StoryId?, NoError>) {
             self.previewedItemDisposable?.dispose()
             self.previewedItemDisposable = (signal |> map(\.?.peerId) |> distinctUntilChanged |> deliverOnMainQueue).start(next: { [weak self] itemId in
@@ -458,6 +450,14 @@ public final class StoryPeerListComponent: Component {
         
         public func titleFrame() -> CGRect {
             return self.titleView.frame
+        }
+        
+        public func lockViewFrame() -> CGRect? {
+            if let titleLockView = self.titleLockView {
+                return titleLockView.frame
+            } else {
+                return nil
+            }
         }
         
         public func transitionViewForItem(peerId: EnginePeer.Id) -> (UIView, StoryContainerScreen.TransitionView)? {
@@ -506,6 +506,12 @@ public final class StoryPeerListComponent: Component {
             
             let titleSize = self.titleView.image?.size ?? CGSize()
             realTitleContentWidth += titleSize.width
+            
+            var titleLockOffset: CGFloat = 0.0
+            if component.titleHasLock {
+                titleLockOffset = 20.0
+            }
+            realTitleContentWidth += titleLockOffset
             
             var titleIconSize: CGSize?
             if let peerStatus = component.titlePeerStatus {
@@ -911,13 +917,8 @@ public final class StoryPeerListComponent: Component {
                 
                 let totalCount: Int
                 let unseenCount: Int
-                if peer.id == component.context.account.peerId {
-                    totalCount = 1
-                    unseenCount = itemSet.unseenCount != 0 ? 1 : 0
-                } else {
-                    totalCount = itemSet.storyCount
-                    unseenCount = itemSet.unseenCount
-                }
+                totalCount = itemSet.storyCount
+                unseenCount = itemSet.unseenCount
                 
                 let _ = visibleItem.view.update(
                     transition: itemTransition,
@@ -1192,7 +1193,7 @@ public final class StoryPeerListComponent: Component {
                 titleIndicatorView.alpha = indicatorAlpha
             }
             
-            let titleFrame = CGRect(origin: CGPoint(x: titleContentOffset, y: collapsedItemOffsetY + 2.0 + floor((56.0 - titleSize.height) * 0.5)), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: titleContentOffset + titleLockOffset, y: collapsedItemOffsetY + 2.0 + floor((56.0 - titleSize.height) * 0.5)), size: titleSize)
             if let image = self.titleView.image {
                 self.titleView.center = CGPoint(x: titleFrame.minX, y: titleFrame.midY)
                 self.titleView.bounds = CGRect(origin: CGPoint(), size: image.size)
@@ -1208,6 +1209,38 @@ public final class StoryPeerListComponent: Component {
                 
                 let titleScale: CGFloat = titleFraction * 1.0 + (1.0 - titleFraction) * 0.3
                 self.titleView.layer.transform = CATransform3DMakeScale(titleScale, titleScale, 1.0)
+            }
+            
+            if component.titleHasLock {
+                let titleLockView: ChatListTitleLockView
+                if let current = self.titleLockView {
+                    titleLockView = current
+                } else {
+                    titleLockView = ChatListTitleLockView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 2.0, height: 2.0)))
+                    self.titleLockView = titleLockView
+                    self.addSubview(titleLockView)
+                }
+                titleLockView.updateTheme(component.theme)
+                
+                let lockFrame = CGRect(x: titleFrame.minX - 6.0 - 12.0, y: titleFrame.minY + 3.0, width: 2.0, height: 2.0)
+                titleLockView.frame = lockFrame
+                
+                let titleLockButton: HighlightTrackingButton
+                if let current = self.titleLockButton {
+                    titleLockButton = current
+                } else {
+                    titleLockButton = HighlightTrackingButton()
+                    self.titleLockButton = titleLockButton
+                    self.addSubview(titleLockButton)
+                    titleLockButton.addTarget(self, action: #selector(self.titleLockButtonPressed), for: .touchUpInside)
+                }
+                titleLockButton.frame = CGRect(origin: CGPoint(x: lockFrame.minX - 4.0, y: titleFrame.minY - 4.0), size: CGSize(width: titleFrame.maxX - lockFrame.minX + 4.0, height: titleFrame.height + 8.0))
+            } else if let titleLockView = self.titleLockView {
+                self.titleLockView = nil
+                titleLockView.removeFromSuperview()
+                
+                self.titleLockButton?.removeFromSuperview()
+                self.titleLockButton = nil
             }
             
             for disappearingTitleView in self.disappearingTitleViews {
@@ -1243,6 +1276,8 @@ public final class StoryPeerListComponent: Component {
             }
             
             titleContentOffset += collapsedState.titleWidth
+            
+            self.scrollContainerView.isUserInteractionEnabled = collapsedState.maxFraction >= 1.0 - 0.001
         }
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -1252,6 +1287,12 @@ public final class StoryPeerListComponent: Component {
             
             if let titleIconView = self.titleIconView?.view {
                 if let result = titleIconView.hitTest(self.convert(point, to: titleIconView), with: event) {
+                    return result
+                }
+            }
+            
+            if let titleLockButton = self.titleLockButton {
+                if let result = titleLockButton.hitTest(self.convert(point, to: titleLockButton), with: event) {
                     return result
                 }
             }

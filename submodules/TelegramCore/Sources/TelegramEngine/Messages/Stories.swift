@@ -5,7 +5,7 @@ import TelegramApi
 
 public enum EngineStoryInputMedia {
     case image(dimensions: PixelDimensions, data: Data, stickers: [TelegramMediaFile])
-    case video(dimensions: PixelDimensions, duration: Double, resource: TelegramMediaResource, firstFrameImageData: Data?, stickers: [TelegramMediaFile])
+    case video(dimensions: PixelDimensions, duration: Double, resource: TelegramMediaResource, firstFrameFile: TempBoxFile?, stickers: [TelegramMediaFile])
     
     var embeddedStickers: [TelegramMediaFile] {
         switch self {
@@ -602,11 +602,10 @@ private func prepareUploadStoryContent(account: Account, media: EngineStoryInput
             flags: []
         )
         return imageMedia
-    case let .video(dimensions, duration, resource, firstFrameImageData, _):
+    case let .video(dimensions, duration, resource, firstFrameFile, _):
         var previewRepresentations: [TelegramMediaImageRepresentation] = []
-        if let firstFrameImageData = firstFrameImageData {
-            let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-            account.postbox.mediaBox.storeResourceData(resource.id, data: firstFrameImageData)
+        if let firstFrameFile = firstFrameFile {
+            account.postbox.mediaBox.storeCachedResourceRepresentation(resource.id.stringRepresentation, representationId: "first-frame", keepDuration: .general, tempFile: firstFrameFile)
             
             previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
         }
@@ -1147,26 +1146,20 @@ func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32, asPi
                 ).postboxRepresentation)
             }
             
+            _internal_addSynchronizeViewStoriesOperation(peerId: peerId, storyId: id, transaction: transaction)
+            
             return transaction.getPeer(peerId).flatMap(apiInputUser)
         }
-        |> mapToSignal { inputUser -> Signal<Never, NoError> in
-            guard let inputUser = inputUser else {
-                return .complete()
-            }
-            
+        |> mapToSignal { _ -> Signal<Never, NoError> in
             account.stateManager.injectStoryUpdates(updates: [.read(peerId: peerId, maxId: id)])
             
-            #if DEBUG && false
-            if "".isEmpty {
-                return .complete()
-            }
-            #endif
+            return .complete()
             
-            return account.network.request(Api.functions.stories.readStories(userId: inputUser, maxId: id))
+            /*return account.network.request(Api.functions.stories.readStories(userId: inputUser, maxId: id))
             |> `catch` { _ -> Signal<[Int32], NoError> in
                 return .single([])
             }
-            |> ignoreValues
+            |> ignoreValues*/
         }
     }
 }

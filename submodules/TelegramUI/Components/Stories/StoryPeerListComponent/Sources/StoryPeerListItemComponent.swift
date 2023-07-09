@@ -576,14 +576,6 @@ public final class StoryPeerListItemComponent: Component {
         func update(component: StoryPeerListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let size = availableSize
             
-            transition.setFrame(view: self.button, frame: CGRect(origin: CGPoint(), size: size))
-            transition.setFrame(view: self.extractedBackgroundView, frame: CGRect(origin: CGPoint(), size: size).insetBy(dx: -4.0, dy: -4.0))
-            
-            self.extractedContainerNode.frame = CGRect(origin: CGPoint(), size: size)
-            self.extractedContainerNode.contentNode.frame = CGRect(origin: CGPoint(), size: size)
-            self.extractedContainerNode.contentRect = CGRect(origin: CGPoint(x: self.extractedBackgroundView.frame.minX - 2.0, y: self.extractedBackgroundView.frame.minY), size: CGSize(width: self.extractedBackgroundView.frame.width + 4.0, height: self.extractedBackgroundView.frame.height))
-            self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
-            
             let themeUpdated = self.component?.theme !== component.theme
             
             let previousComponent = self.component
@@ -876,6 +868,15 @@ public final class StoryPeerListItemComponent: Component {
                     }
                 }
             }
+            
+            let extractedBackgroundWidth = max(size.width + 8.0, titleSize.width + 10.0)
+            transition.setFrame(view: self.button, frame: CGRect(origin: CGPoint(), size: size))
+            transition.setFrame(view: self.extractedBackgroundView, frame: CGRect(origin: CGPoint(x: floor((size.width - extractedBackgroundWidth) * 0.5), y: -4.0), size: CGSize(width: extractedBackgroundWidth, height: size.height + 8.0)))
+            
+            self.extractedContainerNode.frame = CGRect(origin: CGPoint(), size: size)
+            self.extractedContainerNode.contentNode.frame = CGRect(origin: CGPoint(), size: size)
+            self.extractedContainerNode.contentRect = CGRect(origin: CGPoint(x: self.extractedBackgroundView.frame.minX - 2.0, y: self.extractedBackgroundView.frame.minY), size: CGSize(width: self.extractedBackgroundView.frame.width + 4.0, height: self.extractedBackgroundView.frame.height))
+            self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
             
             return availableSize
         }

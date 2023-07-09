@@ -135,7 +135,7 @@ final class StoryItemContentComponent: Component {
                         manager: component.context.sharedContext.mediaManager.universalVideoManager,
                         decoration: StoryVideoDecoration(),
                         content: NativeVideoContent(
-                            id: .message(0, file.fileId),
+                            id: .contextResult(0, "\(UInt64.random(in: 0 ... UInt64.max))"),
                             userLocation: .other,
                             fileReference: .story(peer: peerReference, id: component.item.id, media: file),
                             imageReference: nil,

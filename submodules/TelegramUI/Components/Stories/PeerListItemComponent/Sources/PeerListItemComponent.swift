@@ -177,6 +177,7 @@ public final class PeerListItemComponent: Component {
             self.separatorLayer = SimpleLayer()
             
             self.containerButton = HighlightTrackingButton()
+            self.containerButton.isExclusiveTouch = true
             
             self.avatarNode = AvatarNode(font: avatarFont)
             self.avatarNode.isLayerBacked = false

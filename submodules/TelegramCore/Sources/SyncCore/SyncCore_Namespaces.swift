@@ -185,6 +185,7 @@ public struct OperationLogTags {
     public static let SynchronizeMarkAllUnseenReactions = PeerOperationLogTag(value: 21)
     public static let SynchronizeInstalledEmoji = PeerOperationLogTag(value: 22)
     public static let SynchronizeAutosaveItems = PeerOperationLogTag(value: 23)
+    public static let SynchronizeViewStories = PeerOperationLogTag(value: 24)
 }
 
 public struct LegacyPeerSummaryCounterTags: OptionSet, Sequence, Hashable {

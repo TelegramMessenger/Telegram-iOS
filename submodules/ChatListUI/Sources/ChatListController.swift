@@ -2177,7 +2177,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         })
         #endif
 
-        if let lockViewFrame = self.findTitleView()?.lockViewFrame, !self.didShowPasscodeLockTooltipController {
+        if let componentView = self.chatListHeaderView(), let storyPeerListView = componentView.storyPeerListView(), let _ = storyPeerListView.lockViewFrame(), !self.didShowPasscodeLockTooltipController {
             self.passcodeLockTooltipDisposable.set(combineLatest(queue: .mainQueue(), ApplicationSpecificNotice.getPasscodeLockTips(accountManager: self.context.sharedContext.accountManager), self.context.sharedContext.accountManager.accessChallengeData() |> take(1)).start(next: { [weak self] tooltipValue, passcodeView in
                     if let strongSelf = self {
                         if !tooltipValue {
@@ -2187,8 +2187,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 
                                 let tooltipController = TooltipController(content: .text(strongSelf.presentationData.strings.DialogList_PasscodeLockHelp), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize, dismissByTapOutside: true)
                                 strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceViewAndRect: { [weak self] in
-                                    if let strongSelf = self, let titleView = strongSelf.findTitleView() {
-                                        return (titleView, lockViewFrame.offsetBy(dx: 4.0, dy: 14.0))
+                                    if let self, let componentView = self.chatListHeaderView(), let storyPeerListView = componentView.storyPeerListView(), let lockViewFrame = storyPeerListView.lockViewFrame() {
+                                        return (storyPeerListView, lockViewFrame.offsetBy(dx: 4.0, dy: 14.0))
                                     }
                                     return nil
                                 }))
@@ -5087,8 +5087,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     public var lockViewFrame: CGRect? {
-        if let titleView = self.findTitleView(), let lockViewFrame = titleView.lockViewFrame {
-            return titleView.convert(lockViewFrame, to: self.view)
+        if let componentView = self.chatListHeaderView(), let storyPeerListView = componentView.storyPeerListView(), let lockViewFrame = storyPeerListView.lockViewFrame() {
+            return storyPeerListView.convert(lockViewFrame, to: self.view)
         } else {
             return nil
         }
@@ -5465,7 +5465,35 @@ private final class ChatListLocationContext {
         #elseif DEBUG && false
         networkState = .single(AccountNetworkState.connecting(proxy: nil))
         #else
-        networkState = context.account.networkState
+        let realNetworkState = context.account.networkState
+        networkState = Signal { subscriber in
+            let currentValue = Atomic<AccountNetworkState?>(value: nil)
+            let disposable = (realNetworkState
+            |> mapToSignal { value -> Signal<AccountNetworkState, NoError> in
+                let previousValue = currentValue.swap(value)
+                if let previousValue {
+                    switch value {
+                    case .waitingForNetwork, .connecting, .updating:
+                        if case .online = previousValue {
+                            return .single(value) |> delay(0.3, queue: .mainQueue())
+                        } else {
+                            return .single(value)
+                        }
+                    default:
+                        return .single(value)
+                    }
+                } else {
+                    return .single(value)
+                }
+            }
+            |> deliverOnMainQueue).start(next: { value in
+                subscriber.putNext(value)
+            })
+            
+            return ActionDisposable {
+                disposable.dispose()
+            }
+        }
         #endif
         
         switch location {
