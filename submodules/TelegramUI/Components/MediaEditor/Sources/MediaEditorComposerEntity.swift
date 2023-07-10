@@ -12,7 +12,7 @@ import TelegramAnimatedStickerNode
 import YuvConversion
 import StickerResources
 
-func composerEntitiesForDrawingEntity(account: Account, entity: DrawingEntity, colorSpace: CGColorSpace) -> [MediaEditorComposerEntity] {
+func composerEntitiesForDrawingEntity(account: Account, entity: DrawingEntity, colorSpace: CGColorSpace, tintColor: UIColor? = nil) -> [MediaEditorComposerEntity] {
     if let entity = entity as? DrawingStickerEntity {
         let content: MediaEditorComposerStickerEntity.Content
         switch entity.content {
@@ -25,7 +25,7 @@ func composerEntitiesForDrawingEntity(account: Account, entity: DrawingEntity, c
         case .dualVideoReference:
             return []
         }
-        return [MediaEditorComposerStickerEntity(account: account, content: content, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: entity.mirrored, colorSpace: colorSpace, isStatic: entity.isExplicitlyStatic)]
+        return [MediaEditorComposerStickerEntity(account: account, content: content, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: entity.mirrored, colorSpace: colorSpace, tintColor: tintColor, isStatic: entity.isExplicitlyStatic)]
     } else if let renderImage = entity.renderImage, let image = CIImage(image: renderImage, options: [.colorSpace: colorSpace]) {
         if let entity = entity as? DrawingBubbleEntity {
             return [MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: 1.0, rotation: entity.rotation, baseSize: entity.size, baseScale: nil, mirrored: false)]
@@ -38,7 +38,7 @@ func composerEntitiesForDrawingEntity(account: Account, entity: DrawingEntity, c
             entities.append(MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: nil, baseScale: 0.5, mirrored: false))
             if let renderSubEntities = entity.renderSubEntities {
                 for subEntity in renderSubEntities {
-                    entities.append(contentsOf: composerEntitiesForDrawingEntity(account: account, entity: subEntity, colorSpace: colorSpace))
+                    entities.append(contentsOf: composerEntitiesForDrawingEntity(account: account, entity: subEntity, colorSpace: colorSpace, tintColor: entity.color.toUIColor()))
                 }
             }
             return entities
@@ -93,6 +93,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
     let baseScale: CGFloat? = nil
     let mirrored: Bool
     let colorSpace: CGColorSpace
+    let tintColor: UIColor?
     let isStatic: Bool
     
     var isAnimated: Bool
@@ -117,7 +118,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
     var imagePixelBuffer: CVPixelBuffer?
     let imagePromise = Promise<UIImage>()
     
-    init(account: Account, content: Content, position: CGPoint, scale: CGFloat, rotation: CGFloat, baseSize: CGSize, mirrored: Bool, colorSpace: CGColorSpace, isStatic: Bool) {
+    init(account: Account, content: Content, position: CGPoint, scale: CGFloat, rotation: CGFloat, baseSize: CGSize, mirrored: Bool, colorSpace: CGColorSpace, tintColor: UIColor?, isStatic: Bool) {
         self.content = content
         self.position = position
         self.scale = scale
@@ -125,6 +126,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
         self.baseSize = baseSize
         self.mirrored = mirrored
         self.colorSpace = colorSpace
+        self.tintColor = tintColor
         self.isStatic = isStatic
         
         switch content {
@@ -274,7 +276,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
             
             var tintColor: UIColor?
             if let file = self.content.file, file.isCustomTemplateEmoji {
-                tintColor = UIColor(rgb: 0xffffff)
+                tintColor = self.tintColor ?? UIColor(rgb: 0xffffff)
             }
             
             let processFrame: (Double?, Int?, Int?, (Int) -> AnimatedStickerFrame?) -> Void = { [weak self] duration, frameCount, frameRate, takeFrame in
