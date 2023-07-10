@@ -2470,7 +2470,7 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                     })),
                     environment: {},
-                    containerSize: CGSize(width: max(10.0, contentFrame.width - headerRightOffset), height: 44.0)
+                    containerSize: CGSize(width: max(10.0, headerRightOffset), height: 44.0)
                 )
                 if let view = currentCenterInfoItem.view.view {
                     var animateIn = false

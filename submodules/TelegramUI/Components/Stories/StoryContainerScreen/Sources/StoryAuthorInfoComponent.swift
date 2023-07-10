@@ -5,6 +5,7 @@ import ComponentFlow
 import AccountContext
 import TelegramCore
 import TelegramStringFormatting
+import MultilineTextComponent
 
 final class StoryAuthorInfoComponent: Component {
 	let context: AccountContext
@@ -79,13 +80,21 @@ final class StoryAuthorInfoComponent: Component {
             
             let titleSize = self.title.update(
                 transition: .immediate,
-                component: AnyComponent(Text(text: title, font: Font.medium(14.0), color: .white)),
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: title, font: Font.medium(14.0), textColor: .white)),
+                    truncationType: .end,
+                    maximumNumberOfLines: 1
+                )),
                 environment: {},
                 containerSize: availableSize
             )
             let subtitleSize = self.subtitle.update(
                 transition: .immediate,
-                component: AnyComponent(Text(text: subtitle, font: Font.regular(11.0), color: UIColor(white: 1.0, alpha: 0.8))),
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: subtitle, font: Font.regular(11.0), textColor: UIColor(white: 1.0, alpha: 0.8))),
+                    truncationType: .end,
+                    maximumNumberOfLines: 1
+                )),
                 environment: {},
                 containerSize: availableSize
             )
