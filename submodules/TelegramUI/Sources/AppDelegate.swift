@@ -1357,12 +1357,16 @@ extension UserDefaults {
             }).start()
         }))
         
-        self.watchCommunicationManagerPromise.set(watchCommunicationManager(context: self.context.get() |> flatMap { WatchCommunicationManagerContext(context: $0.context) }, allowBackgroundTimeExtension: { timeout in
-            let _ = (self.sharedContextPromise.get()
-            |> take(1)).start(next: { sharedContext in
-                sharedContext.wakeupManager.allowBackgroundTimeExtension(timeout: timeout)
-            })
-        }))
+        if buildConfig.isWatchEnabled {
+            self.watchCommunicationManagerPromise.set(watchCommunicationManager(context: self.context.get() |> flatMap { WatchCommunicationManagerContext(context: $0.context) }, allowBackgroundTimeExtension: { timeout in
+                let _ = (self.sharedContextPromise.get()
+                |> take(1)).start(next: { sharedContext in
+                    sharedContext.wakeupManager.allowBackgroundTimeExtension(timeout: timeout)
+                })
+            }))
+        } else {
+            self.watchCommunicationManagerPromise.set(.single(nil))
+        }
         let _ = self.watchCommunicationManagerPromise.get().start(next: { manager in
             if let manager = manager {
                 watchManagerArgumentsPromise.set(.single(manager.arguments))

@@ -8,9 +8,10 @@
 	"is_appstore_build": "true",
 	"appstore_id": "1603790135",
 	"app_specific_url_scheme": "tg",
-	"premium_iap_product_id": "org.telegram.telegramPremium.monthly",
+	"premium_iap_product_id": "",
 	"enable_siri": true,
 	"enable_icloud": true,
+    "enable_watch": false,
     "is_non_dev_account": false,
     "bundle_name": "Cloudballon",
     "bundle_display_name": "Cloudballon"
