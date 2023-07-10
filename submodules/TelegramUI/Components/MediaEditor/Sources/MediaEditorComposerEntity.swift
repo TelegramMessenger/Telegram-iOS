@@ -462,7 +462,7 @@ extension CIImage {
 }
 
 private func render(context: CIContext, width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType, pixelBuffer: CVPixelBuffer, tintColor: UIColor?) -> CIImage? {
-    //let calculatedBytesPerRow = (4 * Int(width) + 31) & (~31)
+    let calculatedBytesPerRow = (4 * Int(width) + 31) & (~31)
     //assert(bytesPerRow == calculatedBytesPerRow)
     
     
@@ -475,7 +475,7 @@ private func render(context: CIContext, width: Int, height: Int, bytesPerRow: In
                 guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
                     return
                 }
-                decodeYUVAToRGBA(bytes, dest, Int32(width), Int32(height), Int32(width * 4))
+                decodeYUVAToRGBA(bytes, dest, Int32(width), Int32(height), Int32(calculatedBytesPerRow))
             }
         case .argb:
             data.withUnsafeBytes { buffer -> Void in

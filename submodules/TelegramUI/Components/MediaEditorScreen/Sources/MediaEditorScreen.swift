@@ -3760,12 +3760,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 duration = 5.0
                 
                 firstFrame = .single(image)
-            case let .video(path, _, _, _, _, _, _, _, _):
+            case let .video(path, _, _, _, _, _, durationValue, _, _):
                 videoResult = .videoFile(path: path)
                 if let videoTrimRange = mediaEditor.values.videoTrimRange {
                     duration = videoTrimRange.upperBound - videoTrimRange.lowerBound
                 } else {
-                    duration = 5.0
+                    duration = durationValue
                 }
                 
                 firstFrame = Signal<UIImage?, NoError> { subscriber in
@@ -3823,7 +3823,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let videoTrimRange = mediaEditor.values.videoTrimRange {
                         duration = videoTrimRange.upperBound - videoTrimRange.lowerBound
                     } else {
-                        duration = 5.0
+                        duration = draft.duration ?? 5.0
                     }
                     firstFrame = Signal<UIImage?, NoError> { subscriber in
                         let avAsset = AVURLAsset(url: URL(fileURLWithPath: draft.fullPath()))

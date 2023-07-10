@@ -1220,7 +1220,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             
             var itemHeight = itemWidth
             if case let .assets(_, mode) = controller.subject, case .story = mode {
-                itemHeight = 180.0
+                itemHeight = floor(itemWidth * 1.227)
             }
             
             self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: bounds.size, insets: gridInsets, scrollIndicatorInsets: nil, preloadSize: itemHeight * 3.0, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemHeight), fillWidth: true, lineSpacing: itemSpacing, itemSpacing: itemSpacing), cutout: cameraRect), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, updateOpaqueState: nil, synchronousLoads: false), completion: { [weak self] _ in

@@ -259,9 +259,9 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         }
     }
     
-    private func startPosition(relativeTo entity: DrawingEntity?) -> CGPoint {
+    private func startPosition(relativeTo entity: DrawingEntity?, onlyVertical: Bool = false) -> CGPoint {
         let offsetLength = round(self.size.width * 0.1)
-        let offset = CGPoint(x: offsetLength, y: offsetLength)
+        let offset = CGPoint(x: onlyVertical ? 0.0 : offsetLength, y: offsetLength)
         if let entity = entity {
             return entity.center.offsetBy(dx: offset.x, dy: offset.y)
         } else {
@@ -297,7 +297,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     }
     
     public func prepareNewEntity(_ entity: DrawingEntity, setup: Bool = true, relativeTo: DrawingEntity? = nil) {
-        let center = self.startPosition(relativeTo: relativeTo)
+        let center = self.startPosition(relativeTo: relativeTo, onlyVertical: entity is DrawingTextEntity)
         let rotation = self.getEntityInitialRotation()
         let zoomScale = 1.0 / (self.drawingView?.zoomScale ?? 1.0)
         
