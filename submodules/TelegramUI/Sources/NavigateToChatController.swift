@@ -15,6 +15,8 @@ import AttachmentUI
 import ForumCreateTopicScreen
 import LegacyInstantVideoController
 import StoryContainerScreen
+import CameraScreen
+import MediaEditorScreen
 
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
     if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
@@ -264,7 +266,7 @@ private func findOpaqueLayer(rootLayer: CALayer, layer: CALayer) -> Bool {
 }
 
 public func isInlineControllerForChatNotificationOverlayPresentation(_ controller: ViewController) -> Bool {
-    if controller is InstantPageController {
+    if controller is InstantPageController || controller is MediaEditorScreen || controller is CameraScreen {
         return true
     }
     return false

@@ -111,7 +111,7 @@ private final class ShutterButtonContentComponent: Component {
                 self.blobView = ShutterBlobView(test: false)
                 self.addSubview(self.blobView!)
                 
-                Queue.mainQueue().after(0.1) {
+                Queue.mainQueue().after(0.2) {
                     self.innerLayer.removeFromSuperlayer()
                 }
             }

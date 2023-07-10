@@ -8,6 +8,7 @@ import AccountContext
 import TelegramPresentationData
 import ChatPresentationInterfaceState
 import MoreHeaderButton
+import ContextUI
 
 private extension MessageInputActionButtonComponent.Mode {
     var iconName: String? {
@@ -45,6 +46,7 @@ public final class MessageInputActionButtonComponent: Component {
 
     public let mode: Mode
     public let action: (Mode, Action, Bool) -> Void
+    public let longPressAction: () -> Void
     public let switchMediaInputMode: () -> Void
     public let updateMediaCancelFraction: (CGFloat) -> Void
     public let lockMediaRecording: () -> Void
@@ -60,6 +62,7 @@ public final class MessageInputActionButtonComponent: Component {
     public init(
         mode: Mode,
         action: @escaping (Mode, Action, Bool) -> Void,
+        longPressAction: @escaping () -> Void,
         switchMediaInputMode: @escaping () -> Void,
         updateMediaCancelFraction: @escaping (CGFloat) -> Void,
         lockMediaRecording: @escaping () -> Void,
@@ -74,6 +77,7 @@ public final class MessageInputActionButtonComponent: Component {
     ) {
         self.mode = mode
         self.action = action
+        self.longPressAction = longPressAction
         self.switchMediaInputMode = switchMediaInputMode
         self.updateMediaCancelFraction = updateMediaCancelFraction
         self.lockMediaRecording = lockMediaRecording

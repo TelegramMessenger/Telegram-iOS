@@ -760,6 +760,12 @@ public final class ChatListHeaderComponent: Component {
             return self.effectiveContentView?.rightButtonViews.first?.value.view
         }
         
+        public var rightButtonViews: [AnyHashable: UIView] {
+            return self.effectiveContentView?.rightButtonViews.reduce(into: [:], { result, view in
+                result[view.key] = view.value.view
+            }) ?? [:]
+        }
+        
         public var titleContentView: UIView? {
             return self.effectiveContentView?.titleContentView?.view 
         }

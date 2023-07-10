@@ -1111,6 +1111,7 @@ final class MediaEditorScreenComponent: Component {
                         }
                         self.deactivateInput()
                     },
+                    sendMessageOptionsAction: { },
                     sendStickerAction: { _ in },
                     setMediaRecordingActive: nil,
                     lockMediaRecording: nil,
@@ -2225,7 +2226,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             self.enhanceInitialTranslation = value
                         }
                         
-                        let delta = Float((translation.x / self.frame.width) * 1.5)
+                        let delta = Float((translation.x / self.frame.width) * 1.8)
                         var updatedValue = max(-1.0, min(1.0, value + delta))
                         if let enhanceInitialTranslation = self.enhanceInitialTranslation {
                             if enhanceInitialTranslation > 0.0 {
@@ -3760,12 +3761,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 duration = 5.0
                 
                 firstFrame = .single(image)
-            case let .video(path, _, _, _, _, _, _, _, _):
+            case let .video(path, _, _, _, _, _, durationValue, _, _):
                 videoResult = .videoFile(path: path)
                 if let videoTrimRange = mediaEditor.values.videoTrimRange {
                     duration = videoTrimRange.upperBound - videoTrimRange.lowerBound
                 } else {
-                    duration = 5.0
+                    duration = durationValue
                 }
                 
                 firstFrame = Signal<UIImage?, NoError> { subscriber in
@@ -3823,7 +3824,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let videoTrimRange = mediaEditor.values.videoTrimRange {
                         duration = videoTrimRange.upperBound - videoTrimRange.lowerBound
                     } else {
-                        duration = 5.0
+                        duration = draft.duration ?? 5.0
                     }
                     firstFrame = Signal<UIImage?, NoError> { subscriber in
                         let avAsset = AVURLAsset(url: URL(fileURLWithPath: draft.fullPath()))

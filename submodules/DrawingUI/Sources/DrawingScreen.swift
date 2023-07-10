@@ -1295,6 +1295,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                             completion()
                         }
                     }))
+                    .opacity(controlsAreVisible ? 1.0 : 0.0)
                 )
             }
             
@@ -1828,13 +1829,6 @@ private final class DrawingScreenComponent: CombinedComponent {
                 .opacity(isEditingText || !controlsAreVisible ? 0.0 : 1.0)
             )
             
-            let textButtonTopInset: CGFloat
-            if let sourceHint = component.sourceHint, case .storyEditor = sourceHint {
-                textButtonTopInset = environment.statusBarHeight
-            } else {
-                textButtonTopInset = topInset
-            }
-            
             let textCancelButton = textCancelButton.update(
                 component: Button(
                     content: AnyComponent(
@@ -1870,7 +1864,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(textDoneButton
-                .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - textDoneButton.size.width / 2.0 - 13.0, y: textButtonTopInset))
+                .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - textDoneButton.size.width / 2.0 - 13.0, y: topInset))
                 .scale(isEditingText ? 1.0 : 0.01)
                 .opacity(isEditingText ? 1.0 : 0.0)
             )

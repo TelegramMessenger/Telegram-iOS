@@ -2564,7 +2564,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         return nil
     }
     
-    fileprivate func openStoryCamera() {
+    fileprivate func openStoryCamera(fromList: Bool) {
         switch self.storyPostingAvailability {
         case .premium:
             guard self.isPremium else {
@@ -2588,12 +2588,22 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
    
         var cameraTransitionIn: StoryCameraTransitionIn?
         if let componentView = self.chatListHeaderView() {
-            if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
-                cameraTransitionIn = StoryCameraTransitionIn(
-                    sourceView: transitionView,
-                    sourceRect: transitionView.bounds,
-                    sourceCornerRadius: transitionView.bounds.height * 0.5
-                )
+            if fromList {
+                if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
+                    cameraTransitionIn = StoryCameraTransitionIn(
+                        sourceView: transitionView,
+                        sourceRect: transitionView.bounds,
+                        sourceCornerRadius: transitionView.bounds.height * 0.5
+                    )
+                }
+            } else {
+                if let rightButtonView = componentView.rightButtonViews["story"] {
+                    cameraTransitionIn = StoryCameraTransitionIn(
+                        sourceView: rightButtonView,
+                        sourceRect: rightButtonView.bounds,
+                        sourceCornerRadius: rightButtonView.bounds.height * 0.5
+                    )
+                }
             }
         }
         
@@ -2608,6 +2618,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             destinationView: transitionView,
                             destinationRect: transitionView.bounds,
                             destinationCornerRadius: transitionView.bounds.height * 0.5
+                        )
+                    } else if let rightButtonView = componentView.rightButtonViews["story"] {
+                        return StoryCameraTransitionOut(
+                            destinationView: rightButtonView,
+                            destinationRect: rightButtonView.bounds,
+                            destinationCornerRadius: rightButtonView.bounds.height * 0.5
                         )
                     }
                 }
@@ -2651,7 +2667,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         }
                         
                         if openCamera {
-                            self.openStoryCamera()
+                            self.openStoryCamera(fromList: true)
                             return
                         }
                     }
@@ -2686,7 +2702,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     return
                                 }
                                 
-                                self.openStoryCamera()
+                                self.openStoryCamera(fromList: true)
                             })
                         })))
                         
@@ -3552,7 +3568,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             
             if peerId == self.context.account.peerId, storyContentState.slice == nil {
-                self.openStoryCamera()
+                self.openStoryCamera(fromList: true)
                 return
             }
             
@@ -5846,7 +5862,7 @@ private final class ChatListLocationContext {
                             guard let self, let parentController = self.parentController else {
                                 return
                             }
-                            parentController.openStoryCamera()
+                            parentController.openStoryCamera(fromList: false)
                         }
                     )))
                 } else {

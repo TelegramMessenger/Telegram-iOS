@@ -360,6 +360,10 @@ final class StoryItemSetContainerSendMessage {
         view.updateIsProgressPaused()
     }
     
+    func presentSendMessageOptions(view: StoryItemSetContainerComponent.View) {
+        
+    }
+    
     func performSendMessageAction(
         view: StoryItemSetContainerComponent.View
     ) {

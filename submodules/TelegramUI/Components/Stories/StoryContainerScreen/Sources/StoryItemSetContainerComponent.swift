@@ -1718,6 +1718,12 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         self.sendMessageContext.performSendMessageAction(view: self)
                     },
+                    sendMessageOptionsAction: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.sendMessageContext.presentSendMessageOptions(view: self)
+                    },
                     sendStickerAction: { [weak self] sticker in
                         guard let self else {
                             return
@@ -2215,6 +2221,7 @@ public final class StoryItemSetContainerComponent: Component {
                     mode: .more,
                     action: { _, _, _ in
                     },
+                    longPressAction: {},
                     switchMediaInputMode: {
                     },
                     updateMediaCancelFraction: { _ in
