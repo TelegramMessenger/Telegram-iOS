@@ -1247,6 +1247,10 @@ private final class StoryContainerScreenComponent: Component {
                                         } else if slice.previousItemId != nil {
                                             component.content.navigate(navigation: .item(.previous))
                                         } else if let environment = self.environment {
+                                            if let sourceIsAvatar = component.transitionIn?.sourceIsAvatar, sourceIsAvatar {
+                                            } else {
+                                                self.dismissWithoutTransitionOut = true
+                                            }
                                             environment.controller()?.dismiss()
                                         }
                                         

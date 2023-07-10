@@ -1750,7 +1750,7 @@ public final class StoryItemSetContainerComponent: Component {
                         self.sendMessageContext.videoRecorderValue?.dismissVideo()
                         self.sendMessageContext.discardMediaRecordingPreview(view: self)
                     },
-                    attachmentAction: { [weak self] in
+                    attachmentAction: component.slice.peer.isService ? nil : { [weak self] in
                         guard let self else {
                             return
                         }
@@ -3635,7 +3635,7 @@ public final class StoryItemSetContainerComponent: Component {
                 self.requestSave()
             })))
             
-            if component.slice.item.storyItem.isPublic && (component.slice.peer.addressName != nil || !component.slice.peer._asPeer().usernames.isEmpty) {
+            if component.slice.item.storyItem.isPublic && (component.slice.peer.addressName != nil || !component.slice.peer._asPeer().usernames.isEmpty) && component.slice.item.storyItem.expirationTimestamp > Int32(Date().timeIntervalSince1970) {
                 items.append(.action(ContextMenuActionItem(text: "Copy Link", icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, a in
@@ -3772,6 +3772,46 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                 var items: [ContextMenuItem] = []
+                
+                if component.slice.item.storyItem.isPublic && (component.slice.peer.addressName != nil || !component.slice.peer._asPeer().usernames.isEmpty) {
+                    items.append(.action(ContextMenuActionItem(text: "Copy Link", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] _, a in
+                        a(.default)
+                        
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        
+                        let _ = (component.context.engine.messages.exportStoryLink(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id)
+                        |> deliverOnMainQueue).start(next: { [weak self] link in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            if let link {
+                                UIPasteboard.general.string = link
+                                
+                                component.presentController(UndoOverlayController(
+                                    presentationData: presentationData,
+                                    content: .linkCopied(text: "Link copied."),
+                                    elevatedLayout: false,
+                                    animateInAsReplacement: false,
+                                    action: { _ in return false }
+                                ), nil)
+                            }
+                        })
+                    })))
+                    items.append(.action(ContextMenuActionItem(text: "Share", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
+                    }, action: {  [weak self] _, a in
+                        a(.default)
+                        
+                        guard let self else {
+                            return
+                        }
+                        self.sendMessageContext.performShareAction(view: self)
+                    })))
+                }
                                 
                 let isMuted = resolvedAreStoriesMuted(globalSettings: globalSettings._asGlobalNotificationSettings(), peer: component.slice.peer._asPeer(), peerSettings: settings._asNotificationSettings())
                 
@@ -3824,7 +3864,7 @@ public final class StoryItemSetContainerComponent: Component {
                     isHidden = storiesHidden
                 }
                 
-                items.append(.action(ContextMenuActionItem(text: isHidden ? "Unhide \(component.slice.peer.compactDisplayTitle)" : "Hide \(component.slice.peer.compactDisplayTitle)", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: isHidden ? "Unarchive" : "Archive", icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: isHidden ? "Chat/Context Menu/MoveToChats" : "Chat/Context Menu/MoveToContacts"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, a in
                     a(.default)
@@ -3863,6 +3903,25 @@ public final class StoryItemSetContainerComponent: Component {
                     self.updateIsProgressPaused()
                     component.controller()?.present(tooltipScreen, in: .current)
                 })))
+                
+                #if DEBUG
+                let saveText: String
+                if case .file = component.slice.item.storyItem.media {
+                    saveText = "Save Video"
+                } else {
+                    saveText = "Save Image"
+                }
+                items.append(.action(ContextMenuActionItem(text: saveText, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, a in
+                    a(.default)
+                    
+                    guard let self else {
+                        return
+                    }
+                    self.requestSave()
+                })))
+                #endif
                 
                 items.append(.action(ContextMenuActionItem(text: "Report", icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.contextMenu.primaryColor)

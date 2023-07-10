@@ -2353,7 +2353,7 @@ final class StoryItemSetContainerSendMessage {
         })
     }
     
-    func openPeerMention(view: StoryItemSetContainerComponent.View, name: String, navigation: ChatControllerInteractionNavigateToPeer = .default, sourceMessageId: MessageId? = nil) {
+    func openPeerMention(view: StoryItemSetContainerComponent.View, name: String, navigation: ChatControllerInteractionNavigateToPeer = .info, sourceMessageId: MessageId? = nil) {
         guard let component = view.component, let parentController = component.controller() else {
             return
         }

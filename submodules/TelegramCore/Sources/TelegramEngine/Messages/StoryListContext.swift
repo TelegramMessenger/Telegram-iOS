@@ -544,9 +544,9 @@ public final class PeerStoryListContext {
             self.requestDisposable = (self.account.postbox.transaction { transaction -> Api.InputUser? in
                 return transaction.getPeer(peerId).flatMap(apiInputUser)
             }
-            |> mapToSignal { inputUser -> Signal<([EngineStoryItem], Int, PeerReference?), NoError> in
+            |> mapToSignal { inputUser -> Signal<([EngineStoryItem], Int, PeerReference?, Bool), NoError> in
                 guard let inputUser = inputUser else {
-                    return .single(([], 0, nil))
+                    return .single(([], 0, nil, false))
                 }
                 
                 let signal: Signal<Api.stories.Stories, MTRpcError>
@@ -562,18 +562,20 @@ public final class PeerStoryListContext {
                 |> `catch` { _ -> Signal<Api.stories.Stories?, NoError> in
                     return .single(nil)
                 }
-                |> mapToSignal { result -> Signal<([EngineStoryItem], Int, PeerReference?), NoError> in
+                |> mapToSignal { result -> Signal<([EngineStoryItem], Int, PeerReference?, Bool), NoError> in
                     guard let result = result else {
-                        return .single(([], 0, nil))
+                        return .single(([], 0, nil, false))
                     }
                     
-                    return account.postbox.transaction { transaction -> ([EngineStoryItem], Int, PeerReference?) in
+                    return account.postbox.transaction { transaction -> ([EngineStoryItem], Int, PeerReference?, Bool) in
                         var storyItems: [EngineStoryItem] = []
                         var totalCount: Int = 0
+                        var hasMore: Bool = false
                         
                         switch result {
                         case let .stories(count, stories, users):
                             totalCount = Int(count)
+                            hasMore = stories.count >= 100
                             
                             updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
                             
@@ -619,11 +621,11 @@ public final class PeerStoryListContext {
                             }
                         }
                         
-                        return (storyItems, totalCount, transaction.getPeer(peerId).flatMap(PeerReference.init))
+                        return (storyItems, totalCount, transaction.getPeer(peerId).flatMap(PeerReference.init), hasMore)
                     }
                 }
             }
-            |> deliverOn(self.queue)).start(next: { [weak self] storyItems, totalCount, peerReference in
+            |> deliverOn(self.queue)).start(next: { [weak self] storyItems, totalCount, peerReference, hasMore in
                 guard let `self` = self else {
                     return
                 }
@@ -650,7 +652,11 @@ public final class PeerStoryListContext {
                     updatedState.peerReference = peerReference
                 }
                 
-                updatedState.loadMoreToken = (storyItems.last?.id).flatMap(Int.init)
+                if hasMore {
+                    updatedState.loadMoreToken = (storyItems.last?.id).flatMap(Int.init)
+                } else {
+                    updatedState.loadMoreToken = nil
+                }
                 if updatedState.loadMoreToken != nil {
                     updatedState.totalCount = max(totalCount, updatedState.items.count)
                 } else {

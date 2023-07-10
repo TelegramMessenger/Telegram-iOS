@@ -3903,7 +3903,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         case .placeholder:
                             return nil
                         }
-                    }, state.items.count, state.hasUnseen)
+                    }, state.items.count, state.hasUnseen, state.hasUnseenCloseFriends)
                 }
                 
                 self.requestLayout(animated: false)

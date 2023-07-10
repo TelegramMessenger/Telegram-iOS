@@ -14,6 +14,8 @@ import ChatTitleView
 import BottomButtonPanelComponent
 import UndoUI
 import MoreHeaderButton
+import MediaEditorScreen
+import SaveToCameraRoll
 
 final class PeerInfoStoryGridScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -93,11 +95,11 @@ final class PeerInfoStoryGridScreenComponent: Component {
                 }, action: { [weak self] _, a in
                     a(.default)
                     
-                    guard let self, let component = self.component else {
+                    guard let self else {
                         return
                     }
                     
-                    let _ = component
+                    self.saveSelected()
                 })))
                 items.append(.action(ContextMenuActionItem(text: strings.Common_Delete, textColor: .destructive, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
@@ -277,6 +279,72 @@ final class PeerInfoStoryGridScreenComponent: Component {
             }
             self.mediaGalleryContextMenu = contextController
             controller.presentInGlobalOverlay(contextController)
+        }
+        
+        private func saveSelected() {
+            guard let component = self.component else {
+                return
+            }
+            
+            let _ = (component.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: component.peerId))
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                guard let self, let component = self.component, let peer else {
+                    return
+                }
+                guard let peerReference = PeerReference(peer._asPeer()) else {
+                    return
+                }
+                
+                guard let paneNode = self.paneNode, !paneNode.selectedIds.isEmpty else {
+                    return
+                }
+                
+                var signals: [Signal<Float, NoError>] = []
+                let sortedItems = paneNode.selectedItems.sorted(by: { lhs, rhs in return lhs.key < rhs.key })
+                if sortedItems.isEmpty {
+                    return
+                }
+                
+                //TODO:localize
+                let saveScreen = SaveProgressScreen(context: component.context, content: .progress("Saving", 0.0))
+                self.environment?.controller()?.present(saveScreen, in: .current)
+                
+                let valueNorm: Float = 1.0 / Float(sortedItems.count)
+                var progressStart: Float = 0.0
+                for (_, item) in sortedItems {
+                    let itemOffset = progressStart
+                    progressStart += valueNorm
+                    signals.append(saveToCameraRoll(context: component.context, postbox: component.context.account.postbox, userLocation: .other, mediaReference: .story(peer: peerReference, id: item.id, media: item.media._asMedia()))
+                    |> map { progress -> Float in
+                        return itemOffset + progress * valueNorm
+                    })
+                }
+                
+                var allSignal: Signal<Float, NoError> = .single(0.0)
+                for signal in signals {
+                    allSignal = allSignal |> then(signal)
+                }
+                
+                let disposable = (allSignal
+                |> deliverOnMainQueue).start(next: { [weak saveScreen] progress in
+                    guard let saveScreen else {
+                        return
+                    }
+                    saveScreen.content = .progress("Saving", progress)
+                }, completed: { [weak saveScreen] in
+                    guard let saveScreen else {
+                        return
+                    }
+                    saveScreen.content = .completion("Saved")
+                    Queue.mainQueue().after(3.0, { [weak saveScreen] in
+                        saveScreen?.dismiss()
+                    })
+                })
+                
+                saveScreen.cancelled = {
+                    disposable.dispose()
+                }
+            })
         }
         
         func update(component: PeerInfoStoryGridScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {

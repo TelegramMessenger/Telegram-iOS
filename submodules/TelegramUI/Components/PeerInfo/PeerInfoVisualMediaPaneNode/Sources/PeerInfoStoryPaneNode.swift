@@ -1487,29 +1487,13 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     }
 
     public func loadHole(anchor: SparseItemGrid.HoleAnchor, at location: SparseItemGrid.HoleLocation) -> Signal<Never, NoError> {
-        //TODO:load more
-        /*guard let anchor = anchor as? VisualMediaHoleAnchor else {
-            return .never()
-        }
-        let mappedDirection: SparseMessageList.LoadHoleDirection
-        switch location {
-        case .around:
-            mappedDirection = .around
-        case .toLower:
-            mappedDirection = .later
-        case .toUpper:
-            mappedDirection = .earlier
-        }
         let listSource = self.listSource
-        return Signal { subscriber in
-            listSource.loadHole(anchor: anchor.messageId, direction: mappedDirection, completion: {
-                subscriber.putCompletion()
-            })
-
+        return Signal { _ in
+            listSource.loadMore()
+            
             return EmptyDisposable
-        }*/
-        
-        return .never()
+        }
+        |> runOn(.mainQueue())
     }
 
     public func updateContentType(contentType: ContentType) {
@@ -1575,7 +1559,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             let timezoneOffset = Int32(TimeZone.current.secondsFromGMT())
 
             var mappedItems: [SparseItemGrid.Item] = []
-            let mappedHoles: [SparseItemGrid.HoleAnchor] = []
+            var mappedHoles: [SparseItemGrid.HoleAnchor] = []
             var totalCount: Int = 0
             if let peerReference = state.peerReference {
                 for item in state.items {
@@ -1585,6 +1569,9 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         story: item,
                         localMonthTimestamp: Month(localTimestamp: item.timestamp + timezoneOffset).packedValue
                     ))
+                }
+                if mappedItems.count < state.totalCount, let lastItem = state.items.last {
+                    mappedHoles.append(VisualMediaHoleAnchor(index: mappedItems.count, storyId: 1, localMonthTimestamp: Month(localTimestamp: lastItem.timestamp + timezoneOffset).packedValue))
                 }
             }
             totalCount = state.totalCount

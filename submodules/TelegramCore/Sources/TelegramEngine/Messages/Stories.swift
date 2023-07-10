@@ -607,7 +607,11 @@ private func prepareUploadStoryContent(account: Account, media: EngineStoryInput
         if let firstFrameFile = firstFrameFile {
             account.postbox.mediaBox.storeCachedResourceRepresentation(resource.id.stringRepresentation, representationId: "first-frame", keepDuration: .general, tempFile: firstFrameFile)
             
-            previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: firstFrameFile.path), options: .mappedIfSafe) {
+                let localResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max), size: nil, isSecretRelated: false)
+                account.postbox.mediaBox.storeResourceData(localResource.id, data: data)
+                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: dimensions, resource: localResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
+            }
         }
         
         let fileMedia = TelegramMediaFile(
