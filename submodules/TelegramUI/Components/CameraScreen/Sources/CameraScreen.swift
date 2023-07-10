@@ -433,7 +433,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 case .began:
                     return .single(.pendingImage)
                 case let .finished(image, additionalImage, _):
-                    return .single(.image(CameraScreen.Result.Image(image: image, additionalImage: additionalImage, additionalImagePosition: .bottomRight)))
+                    return .single(.image(CameraScreen.Result.Image(image: image, additionalImage: additionalImage, additionalImagePosition: .topRight)))
                 case .failed:
                     return .complete()
                 }
@@ -470,7 +470,7 @@ private final class CameraScreenComponent: CombinedComponent {
             self.resultDisposable.set((self.camera.stopRecording()
             |> deliverOnMainQueue).start(next: { [weak self] result in
                 if let self, case let .finished(mainResult, additionalResult, duration, positionChangeTimestamps, _) = result {
-                    self.completion.invoke(.single(.video(CameraScreen.Result.Video(videoPath: mainResult.0, coverImage: mainResult.1, mirror: mainResult.2, additionalVideoPath: additionalResult?.0, additionalCoverImage: additionalResult?.1, dimensions: PixelDimensions(width: 1080, height: 1920), duration: duration, positionChangeTimestamps: positionChangeTimestamps, additionalVideoPosition: .bottomRight))))
+                    self.completion.invoke(.single(.video(CameraScreen.Result.Video(videoPath: mainResult.0, coverImage: mainResult.1, mirror: mainResult.2, additionalVideoPath: additionalResult?.0, additionalCoverImage: additionalResult?.1, dimensions: PixelDimensions(width: 1080, height: 1920), duration: duration, positionChangeTimestamps: positionChangeTimestamps, additionalVideoPosition: .topRight))))
                 }
             }))
             self.isTransitioning = true
@@ -1075,7 +1075,7 @@ public class CameraScreen: ViewController {
         private var appliedDualCam = false
         private var cameraPosition: Camera.Position = .back
         
-        private var pipPosition: PIPPosition = .bottomRight
+        private var pipPosition: PIPPosition = .topRight
         
         fileprivate var previewBlurPromise = ValuePromise<Bool>(false)
         private let animateFlipAction = ActionSlot<Void>()
@@ -1941,7 +1941,9 @@ public class CameraScreen: ViewController {
             transition.setPosition(view: self.backgroundView, position: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0))
             transition.setBounds(view: self.backgroundView, bounds: CGRect(origin: .zero, size: layout.size))
             
-            transition.setPosition(view: self.containerView, position: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0))
+            if !self.hasGallery {
+                transition.setPosition(view: self.containerView, position: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0))
+            }
             transition.setBounds(view: self.containerView, bounds: CGRect(origin: .zero, size: layout.size))
             
             transition.setFrame(view: self.transitionDimView, frame: CGRect(origin: .zero, size: layout.size))
@@ -2293,11 +2295,16 @@ public class CameraScreen: ViewController {
         let transitionFraction = max(0.0, min(1.0, transitionFraction))
         let offsetX = floorToScreenPixels((1.0 - transitionFraction) * self.node.frame.width * -1.0)
         transition.updateTransform(layer: self.node.backgroundView.layer, transform: CGAffineTransform(translationX: offsetX, y: 0.0))
-        transition.updateTransform(layer: self.node.containerView.layer, transform: CGAffineTransform(translationX: offsetX, y: 0.0))
+        
         let scale: CGFloat = max(0.8, min(1.0, 0.8 + 0.2 * transitionFraction))
-        transition.updateSublayerTransformScaleAndOffset(layer: self.node.containerView.layer, scale: scale, offset: CGPoint(x: -offsetX * 1.0 / scale * 0.5, y: 0.0), completion: { _ in
+        if !self.node.hasGallery {
+            transition.updateTransform(layer: self.node.containerView.layer, transform: CGAffineTransform(translationX: offsetX, y: 0.0))
+            transition.updateSublayerTransformScaleAndOffset(layer: self.node.containerView.layer, scale: scale, offset: CGPoint(x: -offsetX * 1.0 / scale * 0.5, y: 0.0), completion: { _ in
+                completion()
+            })
+        } else {
             completion()
-        })
+        }
         
         let dimAlpha = 0.6 * (1.0 - transitionFraction)
         transition.updateAlpha(layer: self.node.transitionDimView.layer, alpha: dimAlpha)
@@ -2549,7 +2556,7 @@ private func pipPositionForLocation(layout: ContainerViewLayout, position: CGPoi
         }
     }
     
-    var position: CameraScreen.PIPPosition = .bottomRight
+    var position: CameraScreen.PIPPosition = .topRight
     if result.x == 0.0 && result.y == 0.0 {
         position = .topLeft
     } else if result.x == 1.0 && result.y == 0.0 {

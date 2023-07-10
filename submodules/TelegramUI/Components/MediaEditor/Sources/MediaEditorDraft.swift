@@ -66,6 +66,7 @@ public final class MediaEditorDraft: Codable, Equatable {
         case values
         case caption
         case privacy
+        case timestamp
     }
     
     public let path: String
@@ -76,8 +77,9 @@ public final class MediaEditorDraft: Codable, Equatable {
     public let values: MediaEditorValues
     public let caption: NSAttributedString
     public let privacy: MediaEditorResultPrivacy?
+    public let timestamp: Int32
         
-    public init(path: String, isVideo: Bool, thumbnail: UIImage, dimensions: PixelDimensions, duration: Double?, values: MediaEditorValues, caption: NSAttributedString, privacy: MediaEditorResultPrivacy?) {
+    public init(path: String, isVideo: Bool, thumbnail: UIImage, dimensions: PixelDimensions, duration: Double?, values: MediaEditorValues, caption: NSAttributedString, privacy: MediaEditorResultPrivacy?, timestamp: Int32) {
         self.path = path
         self.isVideo = isVideo
         self.thumbnail = thumbnail
@@ -86,6 +88,7 @@ public final class MediaEditorDraft: Codable, Equatable {
         self.values = values
         self.caption = caption
         self.privacy = privacy
+        self.timestamp = timestamp
     }
     
     public init(from decoder: Decoder) throws {
@@ -117,6 +120,8 @@ public final class MediaEditorDraft: Codable, Equatable {
         } else {
             self.privacy = nil
         }
+        
+        self.timestamp = try container.decodeIfPresent(Int32.self, forKey: .timestamp) ?? 1688909663
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -145,6 +150,7 @@ public final class MediaEditorDraft: Codable, Equatable {
         } else {
             try container.encodeNil(forKey: .privacy)
         }
+        try container.encode(self.timestamp, forKey: .timestamp)
     }
 }
 

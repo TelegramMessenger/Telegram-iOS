@@ -329,7 +329,7 @@ public final class DrawingStickerEntityView: DrawingEntityView {
         if size.width > 0 && self.currentSize != size {
             self.currentSize = size
             
-            let sideSize: CGFloat = size.width
+            let sideSize: CGFloat = max(size.width, size.height)
             let boundingSize = CGSize(width: sideSize, height: sideSize)
             
             let imageSize = self.dimensions.aspectFitted(boundingSize)
@@ -656,7 +656,47 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
         let handleSize = CGSize(width: 9.0 / self.scale, height: 9.0 / self.scale)
         let handlePath = CGPath(ellipseIn: CGRect(origin: CGPoint(x: (bounds.width - handleSize.width) / 2.0, y: (bounds.height - handleSize.height) / 2.0), size: handleSize), transform: nil)
         let lineWidth = (1.0 + UIScreenPixel) / self.scale
-
+                
+        let radius = (self.bounds.width - inset * 2.0) / 2.0
+        let circumference: CGFloat = 2.0 * .pi * radius
+        let relativeDashLength: CGFloat = 0.25
+        
+        self.border.lineWidth = 2.0 / self.scale
+        
+        let actualInset: CGFloat
+        if entity.isRectangle {
+            let aspectRatio = entity.baseSize.width / entity.baseSize.height
+            
+            let width: CGFloat
+            let height: CGFloat
+            
+            if entity.baseSize.width > entity.baseSize.height {
+                width = self.bounds.width - inset * 2.0
+                height = self.bounds.height / aspectRatio - inset * 2.0
+            } else {
+                width = self.bounds.width * aspectRatio - inset * 2.0
+                height = self.bounds.height - inset * 2.0
+            }
+            
+            actualInset = floorToScreenPixels((self.bounds.width - width) / 2.0)
+            
+            let cornerRadius: CGFloat = 12.0 - self.scale
+            let perimeter: CGFloat = 2.0 * (width + height - cornerRadius * (4.0 - .pi))
+            let count = 12
+            let dashLength = perimeter / CGFloat(count)
+            self.border.lineDashPattern = [dashLength * relativeDashLength, dashLength * relativeDashLength] as [NSNumber]
+            
+            self.border.path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: floorToScreenPixels((self.bounds.width - width) / 2.0), y: floorToScreenPixels((self.bounds.height - height) / 2.0)), size: CGSize(width: width, height: height)), cornerRadius: cornerRadius).cgPath
+        } else {
+            actualInset = inset
+            
+            let count = 10
+            let dashLength = circumference / CGFloat(count)
+            self.border.lineDashPattern = [dashLength * relativeDashLength, dashLength * relativeDashLength] as [NSNumber]
+            
+            self.border.path = UIBezierPath(ovalIn: CGRect(origin: CGPoint(x: inset, y: inset), size: CGSize(width: self.bounds.width - inset * 2.0, height: self.bounds.height - inset * 2.0))).cgPath
+        }
+        
         let handles = [
             self.leftHandle,
             self.rightHandle
@@ -668,29 +708,8 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
             handle.lineWidth = lineWidth
         }
         
-        self.leftHandle.position = CGPoint(x: inset, y: self.bounds.midY)
-        self.rightHandle.position = CGPoint(x: self.bounds.maxX - inset, y: self.bounds.midY)
         
-
-        let radius = (self.bounds.width - inset * 2.0) / 2.0
-        let circumference: CGFloat = 2.0 * .pi * radius
-        let count = 10
-        let relativeDashLength: CGFloat = 0.25
-        let dashLength = circumference / CGFloat(count)
-        self.border.lineDashPattern = [dashLength * relativeDashLength, dashLength * relativeDashLength] as [NSNumber]
-        
-        self.border.lineWidth = 2.0 / self.scale
-        
-        if entity.isRectangle {
-            let aspectRatio = entity.baseSize.width / entity.baseSize.height
-            
-            let width: CGFloat = self.bounds.width - inset * 2.0
-            let height: CGFloat = self.bounds.height / aspectRatio - inset * 2.0
-                        
-            let cornerRadius: CGFloat = 12.0 - self.scale
-            self.border.path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: floorToScreenPixels((self.bounds.width - width) / 2.0), y: floorToScreenPixels((self.bounds.height - height) / 2.0)), size: CGSize(width: width, height: height)), cornerRadius: cornerRadius).cgPath
-        } else {
-            self.border.path = UIBezierPath(ovalIn: CGRect(origin: CGPoint(x: inset, y: inset), size: CGSize(width: self.bounds.width - inset * 2.0, height: self.bounds.height - inset * 2.0))).cgPath
-        }
+        self.leftHandle.position = CGPoint(x: actualInset, y: self.bounds.midY)
+        self.rightHandle.position = CGPoint(x: self.bounds.maxX - actualInset, y: self.bounds.midY)
     }
 }

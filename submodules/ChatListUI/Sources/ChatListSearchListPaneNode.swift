@@ -3368,13 +3368,13 @@ private final class ShimmerEffectNode: ASDisplayNode {
     }
 }
 
-private final class ChatListSearchShimmerNode: ASDisplayNode {
+public final class ChatListSearchShimmerNode: ASDisplayNode {
     private let backgroundColorNode: ASDisplayNode
     private let effectNode: ShimmerEffectNode
     private let maskNode: ASImageNode
     private var currentParams: (size: CGSize, presentationData: PresentationData, key: ChatListSearchPaneKey)?
     
-    init(key: ChatListSearchPaneKey) {
+    public init(key: ChatListSearchPaneKey) {
         self.backgroundColorNode = ASDisplayNode()
         self.effectNode = ShimmerEffectNode()
         self.maskNode = ASImageNode()
@@ -3388,7 +3388,7 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
         self.addSubnode(self.maskNode)
     }
     
-    func update(context: AccountContext, size: CGSize, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, key: ChatListSearchPaneKey, hasSelection: Bool, transition: ContainedViewLayoutTransition) {
+    public func update(context: AccountContext, size: CGSize, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, key: ChatListSearchPaneKey, hasSelection: Bool, transition: ContainedViewLayoutTransition) {
         if self.currentParams?.size != size || self.currentParams?.presentationData !== presentationData || self.currentParams?.key != key {
             self.currentParams = (size, presentationData, key)
             

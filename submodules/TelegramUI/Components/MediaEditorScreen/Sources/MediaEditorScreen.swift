@@ -341,7 +341,7 @@ final class MediaEditorScreenComponent: Component {
                         }
                     },
                     dismissTextInput: {
-                        
+
                     },
                     insertText: { [weak self] text in
                         if let self {
@@ -1719,7 +1719,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.gradientView = UIImageView()
             
             self.entitiesContainerView = UIView(frame: CGRect(origin: .zero, size: storyDimensions))
-            self.entitiesView = DrawingEntitiesView(context: controller.context, size: storyDimensions)
+            self.entitiesView = DrawingEntitiesView(context: controller.context, size: storyDimensions, hasBin: true)
             self.entitiesView.getEntityCenterPosition = {
                 return CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0)
             }
@@ -2100,8 +2100,37 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         }).start()
                     }
                 },
-                getCurrentImage: {
-                    return nil
+                getCurrentImage: { [weak self] in
+                    guard let self else {
+                        return nil
+                    }
+                    let colorSpace = CGColorSpaceCreateDeviceRGB()
+                    let imageSize = CGSize(width: 1080, height: 1920)
+                    let context = DrawingContext(size: imageSize, scale: 1.0, opaque: true, colorSpace: colorSpace)
+                    
+                    context?.withFlippedContext { context in
+                        if let gradientImage = self.gradientView.image?.cgImage {
+                            context.draw(gradientImage, in: CGRect(origin: .zero, size: imageSize))
+                        }
+                        if let image = self.mediaEditor?.resultImage, let values = self.mediaEditor?.values {
+                            let initialScale: CGFloat
+                            if image.size.height > image.size.width {
+                                initialScale = max(imageSize.width / image.size.width, imageSize.height / image.size.height)
+                            } else {
+                                initialScale = imageSize.width / image.size.width
+                            }
+                            let scale = initialScale * values.cropScale
+                            context.translateBy(x: imageSize.width / 2.0 + values.cropOffset.x, y: imageSize.height / 2.0 - values.cropOffset.y)
+                            context.rotate(by: -values.cropRotation)
+                            context.scaleBy(x: scale, y: scale)
+                                                                                                                            
+                            if let cgImage = image.cgImage {
+                                context.draw(cgImage, in: CGRect(x: -image.size.width / 2.0, y: -image.size.height / 2.0, width: image.size.width, height: image.size.height))
+                            }
+                        }
+                    }
+                    
+                    return context?.generateImage(colorSpace: colorSpace)
                 },
                 getControllerNode: { [weak self] in
                     return self
@@ -2718,6 +2747,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 }
             })
+            galleryController.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak galleryController] transition in
+                if let self, let galleryController {
+                    let transitionFactor = galleryController.modalStyleOverlayTransitionFactor
+                    self.updateModalTransitionFactor(transitionFactor, transition: transition)
+                }
+            }
             controller.push(galleryController)
         }
         
@@ -2906,36 +2941,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         existingStickerPickerInputData: self.stickerPickerInputData
                                     )
                                     controller.getCurrentImage = { [weak self] in
-                                        guard let self else {
-                                            return nil
-                                        }
-                                        let colorSpace = CGColorSpaceCreateDeviceRGB()
-                                        let imageSize = CGSize(width: 1080, height: 1920)
-                                        let context = DrawingContext(size: imageSize, scale: 1.0, opaque: true, colorSpace: colorSpace)
-                                        
-                                        context?.withFlippedContext { context in
-                                            if let gradientImage = self.gradientView.image?.cgImage {
-                                                context.draw(gradientImage, in: CGRect(origin: .zero, size: imageSize))
-                                            }
-                                            if let image = self.mediaEditor?.resultImage, let values = self.mediaEditor?.values {
-                                                let initialScale: CGFloat
-                                                if image.size.height > image.size.width {
-                                                    initialScale = max(imageSize.width / image.size.width, imageSize.height / image.size.height)
-                                                } else {
-                                                    initialScale = imageSize.width / image.size.width
-                                                }
-                                                let scale = initialScale * values.cropScale
-                                                context.translateBy(x: imageSize.width / 2.0 + values.cropOffset.x, y: imageSize.height / 2.0 - values.cropOffset.y)
-                                                context.rotate(by: -values.cropRotation)
-                                                context.scaleBy(x: scale, y: scale)
-                                                                                                                                                
-                                                if let cgImage = image.cgImage {
-                                                    context.draw(cgImage, in: CGRect(x: -image.size.width / 2.0, y: -image.size.height / 2.0, width: image.size.width, height: image.size.height))
-                                                }
-                                            }
-                                        }
-                                        
-                                        return context?.generateImage(colorSpace: colorSpace)
+                                        return self?.interaction?.getCurrentImage()
                                     }
                                     controller.updateVideoPlayback = { [weak self] play in
                                         guard let self else {
@@ -3592,6 +3598,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let caption = self.getCaption()
         let duration = mediaEditor.duration ?? 0.0
         
+        var timestamp: Int32
+        if case let .draft(draft, _) = subject {
+            timestamp = draft.timestamp
+        } else {
+            timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+        }
+        
         if let resultImage = mediaEditor.resultImage {
             mediaEditor.seek(0.0, andPlay: false)
             makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: resultImage, dimensions: storyDimensions, values: values, time: .zero, completion: { resultImage in
@@ -3604,7 +3617,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
                         let path = "\(Int64.random(in: .min ... .max)).jpg"
                         if let data = image.jpegData(compressionQuality: 0.87) {
-                            let draft = MediaEditorDraft(path: path, isVideo: false, thumbnail: thumbnailImage, dimensions: dimensions, duration: nil, values: values, caption: caption, privacy: privacy)
+                            let draft = MediaEditorDraft(path: path, isVideo: false, thumbnail: thumbnailImage, dimensions: dimensions, duration: nil, values: values, caption: caption, privacy: privacy, timestamp: timestamp)
                             try? data.write(to: URL(fileURLWithPath: draft.fullPath()))
                             if let id {
                                 saveStorySource(engine: self.context.engine, item: draft, id: id)
@@ -3618,7 +3631,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 let saveVideoDraft: (String, PixelDimensions, Double) -> Void = { videoPath, dimensions, duration in
                     if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
                         let path = "\(Int64.random(in: .min ... .max)).mp4"
-                        let draft = MediaEditorDraft(path: path, isVideo: true, thumbnail: thumbnailImage, dimensions: dimensions, duration: duration, values: values, caption: caption, privacy: privacy)
+                        let draft = MediaEditorDraft(path: path, isVideo: true, thumbnail: thumbnailImage, dimensions: dimensions, duration: duration, values: values, caption: caption, privacy: privacy, timestamp: timestamp)
                         try? FileManager.default.moveItem(atPath: videoPath, toPath: draft.fullPath())
                         if let id {
                             saveStorySource(engine: self.context.engine, item: draft, id: id)
@@ -3860,7 +3873,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             })
         
             if case let .draft(draft, id) = subject, id == nil {
-                removeStoryDraft(engine: self.context.engine, path: draft.path, delete: !draft.isVideo)
+                removeStoryDraft(engine: self.context.engine, path: draft.path, delete: false)
             }
         } else {
             if let image = mediaEditor.resultImage {

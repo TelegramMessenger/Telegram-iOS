@@ -271,9 +271,6 @@ private func makeEditorImageFrameComposition(context: CIContext, inputImage: CII
                     baseScale = entityBaseScale
                 } else if let baseSize = entity.baseSize {
                     baseScale = baseSize.width / image.extent.width
-                    if baseSize.width != baseSize.height {
-                        baseScale *= min(baseSize.width, baseSize.height) / max(baseSize.width, baseSize.height)
-                    }
                 }
                 
                 var transform = CGAffineTransform.identity

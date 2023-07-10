@@ -2965,7 +2965,7 @@ public final class DrawingToolsInteraction {
     private let onInteractionUpdated: (Bool) -> Void
     private let onTextEditingEnded: (Bool) -> Void
     
-    private let getCurrentImage: () -> UIImage?
+    public let getCurrentImage: () -> UIImage?
     private let getControllerNode: () -> ASDisplayNode?
     private let present: (ViewController, PresentationContextType, Any?) -> Void
     private let addSubview: (UIView) -> Void

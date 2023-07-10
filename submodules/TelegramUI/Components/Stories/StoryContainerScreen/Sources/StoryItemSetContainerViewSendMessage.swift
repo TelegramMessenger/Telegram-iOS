@@ -2472,7 +2472,7 @@ final class StoryItemSetContainerSendMessage {
                 return
             }
             if !hashtag.isEmpty {
-                let searchController = component.context.sharedContext.makeHashtagSearchController(context: component.context, peer: peer.flatMap(EnginePeer.init), query: hashtag)
+                let searchController = component.context.sharedContext.makeHashtagSearchController(context: component.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, all: true)
                 navigationController.pushViewController(searchController)
             }
         }))

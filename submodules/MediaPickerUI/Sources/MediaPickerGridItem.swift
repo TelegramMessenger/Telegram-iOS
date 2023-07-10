@@ -188,6 +188,10 @@ final class MediaPickerGridItemNode: GridItemNode {
             } else {
                 return nil
             }
+        } else if let (draft, _) = self.currentDraftState {
+            let tag = Month(localTimestamp: draft.timestamp).packedValue
+            self._cachedTag = tag
+            return tag
         } else {
             return nil
         }

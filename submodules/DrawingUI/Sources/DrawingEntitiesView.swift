@@ -52,6 +52,7 @@ private func prepareForRendering(entityView: DrawingEntityView) {
 public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     private let context: AccountContext
     private let size: CGSize
+    private let hasBin: Bool
     
     weak var drawingView: DrawingView?
     public weak var selectionContainerView: DrawingSelectionContainerView?
@@ -85,9 +86,10 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     
     private let hapticFeedback = HapticFeedback()
     
-    public init(context: AccountContext, size: CGSize) {
+    public init(context: AccountContext, size: CGSize, hasBin: Bool = false) {
         self.context = context
         self.size = size
+        self.hasBin = hasBin
                 
         super.init(frame: CGRect(origin: .zero, size: size))
                 
@@ -690,67 +692,71 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     public func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
         let location = gestureRecognizer.location(in: self)
         if let selectedEntityView = self.selectedEntityView, let selectionView = selectedEntityView.selectionView {
-            var isTrappedInBin = false
-            let scale = 100.0 / selectedEntityView.bounds.size.width
-            switch gestureRecognizer.state {
-            case .changed:
-                if self.updateBin(location: location) {
-                    isTrappedInBin = true
-                }
-            case .ended, .cancelled:
-                let _ = self.updateBin(location: nil)
-                if selectedEntityView.isTrappedInBin {
-                    selectedEntityView.layer.animateScale(from: scale, to: 0.01, duration: 0.2, removeOnCompletion: false)
-                    selectedEntityView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
-                        self.remove(uuid: selectedEntityView.entity.uuid)
-                    })
-                    self.selectEntity(nil)
-                    
-                    Queue.mainQueue().after(0.3, {
-                        self.onInteractionUpdated(false)
-                    })
-                    return
-                }
-            default:
-                break
-            }
-            
-            let transition = Transition.easeInOut(duration: 0.2)
-            if isTrappedInBin, let binView = self.bin.view {
-                if !selectedEntityView.isTrappedInBin {
-                    let refs = [
-                        self.xAxisView,
-                        self.yAxisView,
-                        self.topEdgeView,
-                        self.leftEdgeView,
-                        self.rightEdgeView,
-                        self.bottomEdgeView
-                    ]
-                    for ref in refs {
-                        transition.setAlpha(view: ref, alpha: 0.0)
-                    }
-                    self.edgePreviewUpdated(false)
-                    
-                    selectedEntityView.isTrappedInBin = true
-                    transition.setAlpha(view: selectionView, alpha: 0.0)
-                    transition.animatePosition(view: selectionView, from: selectionView.center, to: self.convert(binView.center, to: selectionView.superview))
-                    transition.animateScale(view: selectionView, from: 0.0, to: -0.5, additive: true)
-                    
-                    transition.setPosition(view: selectedEntityView, position: binView.center)
-                    
-                    let rotation = selectedEntityView.layer.transform.decompose().rotation
-                    var transform = CATransform3DMakeScale(scale, scale, 1.0)
-                    transform = CATransform3DRotate(transform, CGFloat(rotation.z), 0.0, 0.0, 1.0)
-                    
-                    transition.setTransform(view: selectedEntityView, transform: transform)
-                }
-            } else {
-                if selectedEntityView.isTrappedInBin {
-                    selectedEntityView.isTrappedInBin = false
-                    transition.setAlpha(view: selectionView, alpha: 1.0)
-                    selectedEntityView.layer.animateScale(from: scale, to: selectedEntityView.entity.scale, duration: 0.13)
-                }
+            if !self.hasBin {
                 selectionView.handlePan(gestureRecognizer)
+            } else {
+                var isTrappedInBin = false
+                let scale = 100.0 / selectedEntityView.bounds.size.width
+                switch gestureRecognizer.state {
+                case .changed:
+                    if self.updateBin(location: location) {
+                        isTrappedInBin = true
+                    }
+                case .ended, .cancelled:
+                    let _ = self.updateBin(location: nil)
+                    if selectedEntityView.isTrappedInBin {
+                        selectedEntityView.layer.animateScale(from: scale, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                        selectedEntityView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                            self.remove(uuid: selectedEntityView.entity.uuid)
+                        })
+                        self.selectEntity(nil)
+                        
+                        Queue.mainQueue().after(0.3, {
+                            self.onInteractionUpdated(false)
+                        })
+                        return
+                    }
+                default:
+                    break
+                }
+                
+                let transition = Transition.easeInOut(duration: 0.2)
+                if isTrappedInBin, let binView = self.bin.view {
+                    if !selectedEntityView.isTrappedInBin {
+                        let refs = [
+                            self.xAxisView,
+                            self.yAxisView,
+                            self.topEdgeView,
+                            self.leftEdgeView,
+                            self.rightEdgeView,
+                            self.bottomEdgeView
+                        ]
+                        for ref in refs {
+                            transition.setAlpha(view: ref, alpha: 0.0)
+                        }
+                        self.edgePreviewUpdated(false)
+                        
+                        selectedEntityView.isTrappedInBin = true
+                        transition.setAlpha(view: selectionView, alpha: 0.0)
+                        transition.animatePosition(view: selectionView, from: selectionView.center, to: self.convert(binView.center, to: selectionView.superview))
+                        transition.animateScale(view: selectionView, from: 0.0, to: -0.5, additive: true)
+                        
+                        transition.setPosition(view: selectedEntityView, position: binView.center)
+                        
+                        let rotation = selectedEntityView.layer.transform.decompose().rotation
+                        var transform = CATransform3DMakeScale(scale, scale, 1.0)
+                        transform = CATransform3DRotate(transform, CGFloat(rotation.z), 0.0, 0.0, 1.0)
+                        
+                        transition.setTransform(view: selectedEntityView, transform: transform)
+                    }
+                } else {
+                    if selectedEntityView.isTrappedInBin {
+                        selectedEntityView.isTrappedInBin = false
+                        transition.setAlpha(view: selectionView, alpha: 1.0)
+                        selectedEntityView.layer.animateScale(from: scale, to: selectedEntityView.entity.scale, duration: 0.13)
+                    }
+                    selectionView.handlePan(gestureRecognizer)
+                }
             }
         } else if gestureRecognizer.numberOfTouches == 1, let viewToSelect = self.entity(at: location) {
             self.selectEntity(viewToSelect.entity)
