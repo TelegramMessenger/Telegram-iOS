@@ -118,6 +118,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private var didAppear = false
     private var dismissSearchOnDisappear = false
+    public var onDidAppear: (() -> Void)?
         
     private var passcodeLockTooltipDisposable = MetaDisposable()
     private var didShowPasscodeLockTooltipController = false
@@ -186,6 +187,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private var fixedStorySubscriptionOrder: [EnginePeer.Id] = []
     private(set) var orderedStorySubscriptions: EngineStorySubscriptions?
     private var displayedStoriesTooltip: Bool = false
+    
+    public var hasStorySubscriptions: Bool {
+        if let rawStorySubscriptions = self.rawStorySubscriptions, !rawStorySubscriptions.items.isEmpty {
+            return true
+        } else {
+            return false
+        }
+    }
     
     private var storyProgressDisposable: Disposable?
     private var storySubscriptionsDisposable: Disposable?
@@ -1059,7 +1068,21 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 if let navigationController = strongSelf.navigationController as? NavigationController {
                     let chatListController = ChatListControllerImpl(context: strongSelf.context, location: .chatList(groupId: groupId), controlsHistoryPreload: false, enableDebugActions: false)
                     chatListController.navigationPresentation = .master
+                    #if DEBUG && false
+                    navigationController.pushViewController(chatListController, animated: false, completion: {})
+                    chatListController.onDidAppear = { [weak chatListController] in
+                        Queue.mainQueue().after(0.1, {
+                            guard let chatListController else {
+                                return
+                            }
+                            if chatListController.hasStorySubscriptions {
+                                chatListController.scrollToStoriesAnimated()
+                            }
+                        })
+                    }
+                    #else
                     navigationController.pushViewController(chatListController)
+                    #endif
                     strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.clearHighlightAnimated(true)
                 }
             }
@@ -1813,12 +1836,18 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             |> filter { $0 }
             |> take(1))
         } else {
-            self.storiesReady.set(.single(true))
+            let signals: [Signal<Bool, NoError>] = [
+                self.primaryInfoReady.get(),
+                self.storiesReady.get()
+            ]
             
-            self.ready.set(combineLatest([
-                self.chatListDisplayNode.mainContainerNode.ready,
-                self.primaryInfoReady.get()
-            ])
+            if case .chatList(.archive) = self.location {
+                //signals.append(self.mainReady.get())
+            } else {
+                self.storiesReady.set(.single(true))
+            }
+            
+            self.ready.set(combineLatest(signals)
             |> map { values -> Bool in
                 return !values.contains(where: { !$0 })
             }
@@ -1919,7 +1948,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 self.requestLayout(transition: transition)
                 self.chatListDisplayNode.temporaryContentOffsetChangeTransition = nil
                 
-                if rawStorySubscriptions.items.isEmpty {
+                if !shouldDisplayStoriesInChatListHeader(storySubscriptions: rawStorySubscriptions, isHidden: self.location == .chatList(groupId: .archive)) {
                     self.chatListDisplayNode.scrollToTopIfStoriesAreExpanded()
                 }
                 
@@ -2162,6 +2191,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         
         guard case .chatList(.root) = self.location else {
+            if !self.didSuggestLocalization {
+                self.didSuggestLocalization = true
+                
+                let _ = (self.chatListDisplayNode.mainContainerNode.ready
+                |> filter { $0 }
+                |> take(1)
+                |> timeout(0.5, queue: .mainQueue(), alternate: .single(true))).start(next: { [weak self] _ in
+                    guard let self else {
+                        return
+                    }
+                    self.onDidAppear?()
+                })
+            }
+            
             return
         }
         
@@ -2362,6 +2405,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     }
                 }
             })
+            
+            self.onDidAppear?()
         }
         
         self.chatListDisplayNode.mainContainerNode.addedVisibleChatsWithPeerIds = { [weak self] peerIds in
@@ -2914,6 +2959,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     public func scrollToStories() {
         self.chatListDisplayNode.scrollToStories(animated: false)
+    }
+    
+    public func scrollToStoriesAnimated() {
+        self.chatListDisplayNode.scrollToStories(animated: true)
     }
     
     private func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
