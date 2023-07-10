@@ -569,6 +569,16 @@ struct ChatListContactPeer {
 }
 
 func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, notice: ChatListNotice?, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation, contacts: [ChatListContactPeer], accountPeerId: EnginePeer.Id) -> (entries: [ChatListNodeEntry], loading: Bool) {
+    var groupItems = view.groupItems
+    if state.archiveStoryState != nil && groupItems.isEmpty {
+        groupItems.append(EngineChatList.GroupItem(
+            id: .archive,
+            topMessage: nil,
+            items: [],
+            unreadCount: 0
+        ))
+    }
+    
     var result: [ChatListNodeEntry] = []
     
     if !view.hasEarlier {
@@ -588,7 +598,7 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
     
     if !view.hasLater, case .chatList = mode {
         var groupEntryCount = 0
-        for _ in view.groupItems {
+        for _ in groupItems {
             groupEntryCount += 1
         }
         pinnedIndexOffset += UInt16(groupEntryCount)
@@ -831,7 +841,7 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
         }
         
         if !view.hasLater, case .chatList = mode {
-            for groupReference in view.groupItems {
+            for groupReference in groupItems {
                 let messageIndex = EngineMessage.Index(id: EngineMessage.Id(peerId: EnginePeer.Id(0), namespace: 0, id: 0), timestamp: 1)
                 var mappedStoryState: ChatListNodeState.StoryState?
                 if let archiveStoryState = state.archiveStoryState {

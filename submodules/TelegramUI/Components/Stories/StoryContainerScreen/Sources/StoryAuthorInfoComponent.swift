@@ -8,15 +8,22 @@ import TelegramStringFormatting
 import MultilineTextComponent
 
 final class StoryAuthorInfoComponent: Component {
+    struct Counters: Equatable {
+        var position: Int
+        var totalCount: Int
+    }
+    
 	let context: AccountContext
 	let peer: EnginePeer?
     let timestamp: Int32
+    let counters: Counters?
     let isEdited: Bool
     
-    init(context: AccountContext, peer: EnginePeer?, timestamp: Int32, isEdited: Bool) {
+    init(context: AccountContext, peer: EnginePeer?, timestamp: Int32, counters: Counters?, isEdited: Bool) {
         self.context = context
         self.peer = peer
         self.timestamp = timestamp
+        self.counters = counters
         self.isEdited = isEdited
     }
 
@@ -30,6 +37,9 @@ final class StoryAuthorInfoComponent: Component {
         if lhs.timestamp != rhs.timestamp {
             return false
         }
+        if lhs.counters != rhs.counters {
+            return false
+        }
         if lhs.isEdited != rhs.isEdited {
             return false
         }
@@ -39,6 +49,7 @@ final class StoryAuthorInfoComponent: Component {
 	final class View: UIView {
 		private let title = ComponentView<Empty>()
 		private let subtitle = ComponentView<Empty>()
+        private var counterLabel: ComponentView<Empty>?
 
         private var component: StoryAuthorInfoComponent?
         private weak var state: EmptyComponentState?
@@ -71,7 +82,7 @@ final class StoryAuthorInfoComponent: Component {
             }
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-            var subtitle = stringForRelativeActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, relativeTimestamp: component.timestamp, relativeTo: timestamp)
+            var subtitle = stringForRelativeActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, preciseTime: true, relativeTimestamp: component.timestamp, relativeTo: timestamp)
             
             if component.isEdited {
                 subtitle.append(" • ")
@@ -116,6 +127,36 @@ final class StoryAuthorInfoComponent: Component {
                     self.addSubview(subtitleView)
                 }
                 transition.setFrame(view: subtitleView, frame: subtitleFrame)
+            }
+            
+            let countersSpacing: CGFloat = 5.0
+            if let counters = component.counters {
+                let counterLabel: ComponentView<Empty>
+                if let current = self.counterLabel {
+                    counterLabel = current
+                } else {
+                    counterLabel = ComponentView()
+                    self.counterLabel = counterLabel
+                }
+                let counterSize = counterLabel.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: "\(counters.position + 1)/\(counters.totalCount)", font: Font.regular(11.0), textColor: UIColor(white: 1.0, alpha: 0.43))),
+                        truncationType: .end,
+                        maximumNumberOfLines: 1
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: max(1.0, availableSize.width - titleSize.width - countersSpacing), height: 100.0)
+                )
+                if let counterLabelView = counterLabel.view {
+                    if counterLabelView.superview == nil {
+                        self.addSubview(counterLabelView)
+                    }
+                    counterLabelView.frame = CGRect(origin: CGPoint(x: titleFrame.maxX + countersSpacing, y: titleFrame.minY + 1.0 + floorToScreenPixels((titleFrame.height - counterSize.height) * 0.5)), size: counterSize)
+                }
+            } else if let counterLabel = self.counterLabel {
+                self.counterLabel = nil
+                counterLabel.view?.removeFromSuperview()
             }
 
             return size

@@ -7090,6 +7090,7 @@ Sorry for the inconvenience.";
 "Time.HoursAgo_many" = "%@ hours ago";
 "Time.HoursAgo_0" = "%@ hours ago";
 "Time.AtDate" = "%@";
+"Time.AtPreciseDate" = "%@ at %@";
 
 "Stickers.ShowMore" = "Show More";
 

@@ -2445,8 +2445,22 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             var currentCenterInfoItem: InfoItem?
-            if focusedItem != nil {
-                let centerInfoComponent = AnyComponent(StoryAuthorInfoComponent(context: component.context, peer: component.slice.peer, timestamp: component.slice.item.storyItem.timestamp, isEdited: component.slice.item.storyItem.isEdited))
+            if let focusedItem {
+                var counters: StoryAuthorInfoComponent.Counters?
+                if focusedItem.dayCounters != nil, let position = focusedItem.position {
+                    counters = StoryAuthorInfoComponent.Counters(
+                        position: position,
+                        totalCount: component.slice.totalCount
+                    )
+                }
+                
+                let centerInfoComponent = AnyComponent(StoryAuthorInfoComponent(
+                    context: component.context,
+                    peer: component.slice.peer,
+                    timestamp: component.slice.item.storyItem.timestamp,
+                    counters: counters,
+                    isEdited: component.slice.item.storyItem.isEdited
+                ))
                 if let centerInfoItem = self.centerInfoItem, centerInfoItem.component == centerInfoComponent {
                     currentCenterInfoItem = centerInfoItem
                 } else {
@@ -2987,11 +3001,18 @@ public final class StoryItemSetContainerComponent: Component {
                 let navigationStripSideInset: CGFloat = 8.0
                 let navigationStripTopInset: CGFloat = 8.0
                 
+                var index = max(0, min(index, component.slice.totalCount - 1))
+                var count = component.slice.totalCount
+                if let dayCounters = focusedItem.dayCounters {
+                    index = dayCounters.position
+                    count = dayCounters.totalCount
+                }
+                
                 let _ = self.navigationStrip.update(
                     transition: transition,
                     component: AnyComponent(MediaNavigationStripComponent(
-                        index: max(0, min(index, component.slice.totalCount - 1)),
-                        count: component.slice.totalCount
+                        index: index,
+                        count: count
                     )),
                     environment: {
                         MediaNavigationStripComponent.EnvironmentType(

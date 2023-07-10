@@ -434,7 +434,11 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                         if case .forum = location {
                             subject = .forum(hasGeneral: hasOnlyGeneralThread)
                         } else {
-                            subject = .chats(hasArchive: hasOnlyArchive)
+                            if case .chatList(groupId: .archive) = location {
+                                subject = .archive
+                            } else {
+                                subject = .chats(hasArchive: hasOnlyArchive)
+                            }
                         }
                     }
                     

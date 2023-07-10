@@ -269,6 +269,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                         let allItems = mappedItems.map { item in
                             return StoryContentItem(
                                 position: nil,
+                                dayCounters: nil,
                                 peerId: peer.id,
                                 storyItem: item,
                                 entityFiles: extractItemEntityFiles(item: item, allEntityFiles: allEntityFiles)
@@ -281,6 +282,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                             additionalPeerData: additionalPeerData,
                             item: StoryContentItem(
                                 position: mappedFocusedIndex ?? focusedIndex,
+                                dayCounters: nil,
                                 peerId: peer.id,
                                 storyItem: mappedItem,
                                 entityFiles: extractItemEntityFiles(item: mappedItem, allEntityFiles: allEntityFiles)
@@ -1011,6 +1013,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 
                 let mainItem = StoryContentItem(
                     position: 0,
+                    dayCounters: nil,
                     peerId: peer.id,
                     storyItem: mappedItem,
                     entityFiles: extractItemEntityFiles(item: mappedItem, allEntityFiles: allEntityFiles)
@@ -1153,20 +1156,58 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                 }
             }
             
+            struct DayIndex: Hashable {
+                var year: Int32
+                var day: Int32
+                
+                init(timestamp: Int32) {
+                    var time: time_t = time_t(timestamp)
+                    var timeinfo: tm = tm()
+                    localtime_r(&time, &timeinfo)
+
+                    self.year = timeinfo.tm_year
+                    self.day = timeinfo.tm_yday
+                }
+            }
+            
             let stateValue: StoryContentContextState
             if let focusedIndex = focusedIndex {
                 let item = state.items[focusedIndex]
                 self.focusedId = item.id
                 
                 var allItems: [StoryContentItem] = []
+                
+                var dayCounts: [DayIndex: Int] = [:]
+                var itemDayIndices: [Int32: (Int, DayIndex)] = [:]
+                
                 for i in 0 ..< state.items.count {
                     let stateItem = state.items[i]
                     allItems.append(StoryContentItem(
                         position: i,
+                        dayCounters: nil,
                         peerId: peer.id,
                         storyItem: stateItem,
                         entityFiles: extractItemEntityFiles(item: stateItem, allEntityFiles: state.allEntityFiles)
                     ))
+                    
+                    let day = DayIndex(timestamp: stateItem.timestamp)
+                    let dayCount: Int
+                    if let current = dayCounts[day] {
+                        dayCount = current + 1
+                        dayCounts[day] = dayCount
+                    } else {
+                        dayCount = 1
+                        dayCounts[day] = dayCount
+                    }
+                    itemDayIndices[stateItem.id] = (dayCount - 1, day)
+                }
+                
+                var dayCounters: StoryContentItem.DayCounters?
+                if let (offset, day) = itemDayIndices[item.id], let dayCount = dayCounts[day] {
+                    dayCounters = StoryContentItem.DayCounters(
+                        position: offset,
+                        totalCount: dayCount
+                    )
                 }
                 
                 stateValue = StoryContentContextState(
@@ -1175,6 +1216,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                         additionalPeerData: additionalPeerData,
                         item: StoryContentItem(
                             position: focusedIndex,
+                            dayCounters: dayCounters,
                             peerId: peer.id,
                             storyItem: item,
                             entityFiles: extractItemEntityFiles(item: item, allEntityFiles: state.allEntityFiles)
