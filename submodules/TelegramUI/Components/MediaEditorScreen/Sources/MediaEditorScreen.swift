@@ -1111,6 +1111,7 @@ final class MediaEditorScreenComponent: Component {
                         }
                         self.deactivateInput()
                     },
+                    sendMessageOptionsAction: { },
                     sendStickerAction: { _ in },
                     setMediaRecordingActive: nil,
                     lockMediaRecording: nil,
@@ -2225,7 +2226,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             self.enhanceInitialTranslation = value
                         }
                         
-                        let delta = Float((translation.x / self.frame.width) * 1.5)
+                        let delta = Float((translation.x / self.frame.width) * 1.8)
                         var updatedValue = max(-1.0, min(1.0, value + delta))
                         if let enhanceInitialTranslation = self.enhanceInitialTranslation {
                             if enhanceInitialTranslation > 0.0 {

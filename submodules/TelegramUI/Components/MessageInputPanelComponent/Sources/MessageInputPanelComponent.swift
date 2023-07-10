@@ -72,6 +72,7 @@ public final class MessageInputPanelComponent: Component {
     public let presentController: (ViewController) -> Void
     public let presentInGlobalOverlay: (ViewController) -> Void
     public let sendMessageAction: () -> Void
+    public let sendMessageOptionsAction: () -> Void
     public let sendStickerAction: (TelegramMediaFile) -> Void
     public let setMediaRecordingActive: ((Bool, Bool, Bool) -> Void)?
     public let lockMediaRecording: (() -> Void)?
@@ -113,6 +114,7 @@ public final class MessageInputPanelComponent: Component {
         presentController: @escaping (ViewController) -> Void,
         presentInGlobalOverlay: @escaping (ViewController) -> Void,
         sendMessageAction: @escaping () -> Void,
+        sendMessageOptionsAction: @escaping () -> Void,
         sendStickerAction: @escaping (TelegramMediaFile) -> Void,
         setMediaRecordingActive: ((Bool, Bool, Bool) -> Void)?,
         lockMediaRecording: (() -> Void)?,
@@ -153,6 +155,7 @@ public final class MessageInputPanelComponent: Component {
         self.presentController = presentController
         self.presentInGlobalOverlay = presentInGlobalOverlay
         self.sendMessageAction = sendMessageAction
+        self.sendMessageOptionsAction = sendMessageOptionsAction
         self.sendStickerAction = sendStickerAction
         self.setMediaRecordingActive = setMediaRecordingActive
         self.lockMediaRecording = lockMediaRecording
@@ -744,6 +747,7 @@ public final class MessageInputPanelComponent: Component {
                                 break
                             }
                         },
+                        longPressAction: {},
                         switchMediaInputMode: {
                         },
                         updateMediaCancelFraction: { _ in
@@ -921,6 +925,12 @@ public final class MessageInputPanelComponent: Component {
                         default:
                             break
                         }
+                    },
+                    longPressAction: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.sendMessageOptionsAction()
                     },
                     switchMediaInputMode: { [weak self] in
                         guard let self else {

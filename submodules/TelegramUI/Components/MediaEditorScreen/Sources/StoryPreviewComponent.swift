@@ -258,6 +258,7 @@ final class StoryPreviewComponent: Component {
                     presentController: { _ in },
                     presentInGlobalOverlay: { _ in },
                     sendMessageAction: { },
+                    sendMessageOptionsAction: { },
                     sendStickerAction: { _ in },
                     setMediaRecordingActive: { _, _, _ in },
                     lockMediaRecording: nil,

@@ -758,9 +758,11 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                     selectionView.handlePan(gestureRecognizer)
                 }
             }
-        } else if gestureRecognizer.numberOfTouches == 1, let viewToSelect = self.entity(at: location) {
-            self.selectEntity(viewToSelect.entity)
-        } else if gestureRecognizer.numberOfTouches == 2, let mediaEntityView = self.subviews.first(where: { $0 is DrawingEntityMediaView }) as? DrawingEntityMediaView {
+        }
+//        else if gestureRecognizer.numberOfTouches == 1, let viewToSelect = self.entity(at: location) {
+//            self.selectEntity(viewToSelect.entity)
+//        }
+        else if gestureRecognizer.numberOfTouches == 2, let mediaEntityView = self.subviews.first(where: { $0 is DrawingEntityMediaView }) as? DrawingEntityMediaView {
             mediaEntityView.handlePan(gestureRecognizer)
         }
     }
