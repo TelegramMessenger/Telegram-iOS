@@ -952,6 +952,12 @@ public final class ChatListHeaderComponent: Component {
                                 return
                             }
                             self.component?.openStatusSetup(sourceView)
+                        },
+                        lockAction: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.component?.toggleIsLocked()
                         }
                     )),
                     environment: {},

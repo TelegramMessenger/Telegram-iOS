@@ -24,6 +24,7 @@ swift_library(
         "//submodules/Components/MultilineTextComponent",
         "//submodules/TelegramUI/Components/EmojiStatusComponent",
         "//submodules/Components/HierarchyTrackingLayer",
+        "//submodules/TelegramUI/Components/ChatListTitleView",
     ],
     visibility = [
         "//visibility:public",

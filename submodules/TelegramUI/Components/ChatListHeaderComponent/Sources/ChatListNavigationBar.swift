@@ -336,7 +336,7 @@ public final class ChatListNavigationBar: Component {
                 storiesUnlocked = false
             }
             
-            if allowAvatarsExpansion && transition.animation.isImmediate {
+            if allowAvatarsExpansion, transition.animation.isImmediate, let storySubscriptions = component.storySubscriptions, !storySubscriptions.items.isEmpty {
                 if self.storiesUnlocked != storiesUnlocked {
                     if storiesUnlocked {
                         HapticFeedback().tap()

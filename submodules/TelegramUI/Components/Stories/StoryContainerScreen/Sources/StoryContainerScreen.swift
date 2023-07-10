@@ -1083,6 +1083,9 @@ private final class StoryContainerScreenComponent: Component {
             if self.isHoldingTouch {
                 isProgressPaused = true
             }
+            if !environment.isVisible {
+                isProgressPaused = true
+            }
             
             var dismissPanOffset: CGFloat = 0.0
             var dismissPanScale: CGFloat = 1.0

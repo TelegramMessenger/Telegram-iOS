@@ -246,7 +246,9 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
                     }
                     
                     if let accessoryComponentContainer = strongSelf.accessoryComponentContainer {
-                        accessoryComponentContainer.frame = CGRect(origin: CGPoint(x: constrainedSize.width - accessoryComponentContainer.bounds.width - 4.0, y: floor((constrainedSize.height - accessoryComponentContainer.bounds.height) / 2.0)), size: accessoryComponentContainer.bounds.size)
+                        accessoryComponentContainer.frame = CGRect(origin: CGPoint(x: constrainedSize.width - accessoryComponentContainer.bounds.width - 4.0, y: floor((constrainedSize.height * expansionProgress - accessoryComponentContainer.bounds.height) / 2.0)), size: accessoryComponentContainer.bounds.size)
+                        transition.updateAlpha(layer: accessoryComponentContainer.layer, alpha: innerAlpha)
+                        
                     }
                 }
             })
