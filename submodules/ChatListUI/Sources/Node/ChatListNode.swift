@@ -2403,6 +2403,7 @@ public final class ChatListNode: ListView {
                     strongSelf.enqueueHistoryPreloadUpdate()
                 }
                 
+                var refreshStoryPeerIds: [PeerId] = []
                 var isHiddenItemVisible = false
                 if let range = range.visibleRange {
                     let entryCount = chatListView.filteredEntries.count
@@ -2418,6 +2419,11 @@ public final class ChatListNode: ListView {
                                 if let threadInfo, threadInfo.isHidden {
                                     isHiddenItemVisible = true
                                 }
+                            
+                                if let peer = peerEntry.peer.chatMainPeer, !peerEntry.isContact, case let .user(user) = peer {
+                                    refreshStoryPeerIds.append(user.id)
+                                }
+                            
                                 break
                             case .GroupReferenceEntry:
                                 isHiddenItemVisible = true
@@ -2432,6 +2438,9 @@ public final class ChatListNode: ListView {
                         state.hiddenItemShouldBeTemporaryRevealed = false
                         return state
                     }
+                }
+                if !refreshStoryPeerIds.isEmpty {
+                    strongSelf.context.account.viewTracker.refreshStoryStatsForPeerIds(peerIds: refreshStoryPeerIds)
                 }
             }
         }

@@ -49,6 +49,9 @@ func updatePeers(transaction: Transaction, accountPeerId: PeerId, peers: Accumul
                 if let storiesMaxId = storiesMaxId {
                     transaction.setStoryItemsInexactMaxId(peerId: user.peerId, id: storiesMaxId)
                 }
+                /*#if DEBUG
+                transaction.setStoryItemsInexactMaxId(peerId: user.peerId, id: 10)
+                #endif*/
             case .userEmpty:
                 break
             }

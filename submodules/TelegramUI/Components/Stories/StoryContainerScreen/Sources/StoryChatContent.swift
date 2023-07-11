@@ -7,6 +7,7 @@ import AccountContext
 import TelegramCore
 import Postbox
 import MediaResources
+import RangeSet
 
 private struct StoryKey: Hashable {
     var peerId: EnginePeer.Id
@@ -746,6 +747,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                     })
                 }
             }
+        } else {
+            self.updateState()
         }
     }
     
@@ -1403,6 +1406,88 @@ public func preloadStoryMedia(context: AccountContext, peer: PeerReference, stor
     }
     
     return combineLatest(signals) |> ignoreValues
+}
+
+public func waitUntilStoryMediaPreloaded(context: AccountContext, peerId: EnginePeer.Id, storyItem: EngineStoryItem) -> Signal<Never, NoError> {
+    return context.engine.data.get(
+        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+    )
+    |> mapToSignal { peerValue -> Signal<Never, NoError> in
+        guard let peerValue else {
+            return .complete()
+        }
+        guard let peer = PeerReference(peerValue._asPeer()) else {
+            return .complete()
+        }
+        
+        var statusSignals: [Signal<Never, NoError>] = []
+        var loadSignals: [Signal<Never, NoError>] = []
+        
+        switch storyItem.media {
+        case let .image(image):
+            if let representation = largestImageRepresentation(image.representations) {
+                statusSignals.append(
+                    context.account.postbox.mediaBox.resourceData(representation.resource)
+                    |> filter { data in
+                        return data.complete
+                    }
+                    |> take(1)
+                    |> ignoreValues
+                )
+                
+                loadSignals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(peer.id), userContentType: .other, reference: .media(media: .story(peer: peer, id: storyItem.id, media: storyItem.media._asMedia()), resource: representation.resource), range: nil)
+                |> ignoreValues
+                |> `catch` { _ -> Signal<Never, NoError> in
+                    return .complete()
+                })
+            }
+        case let .file(file):
+            var fetchRange: (Range<Int64>, MediaBoxFetchPriority)?
+            for attribute in file.attributes {
+                if case let .Video(_, _, _, preloadSize) = attribute {
+                    if let preloadSize {
+                        fetchRange = (0 ..< Int64(preloadSize), .default)
+                    }
+                    break
+                }
+            }
+            
+            statusSignals.append(
+                context.account.postbox.mediaBox.resourceRangesStatus(file.resource)
+                |> filter { ranges in
+                    if let fetchRange {
+                        return ranges.isSuperset(of: RangeSet(fetchRange.0))
+                    } else {
+                        return true
+                    }
+                }
+                |> take(1)
+                |> ignoreValues
+            )
+            
+            loadSignals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(peer.id), userContentType: .other, reference: .media(media: .story(peer: peer, id: storyItem.id, media: storyItem.media._asMedia()), resource: file.resource), range: fetchRange)
+            |> ignoreValues
+            |> `catch` { _ -> Signal<Never, NoError> in
+                return .complete()
+            })
+            loadSignals.append(context.account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedVideoFirstFrameRepresentation(), complete: true, fetch: true, attemptSynchronously: false)
+            |> ignoreValues)
+        default:
+            break
+        }
+        
+        return Signal { subscriber in
+            let statusDisposable = combineLatest(statusSignals).start(completed: {
+                subscriber.putCompletion()
+            })
+            let loadDisposable = combineLatest(loadSignals).start()
+            
+            return ActionDisposable {
+                statusDisposable.dispose()
+                loadDisposable.dispose()
+            }
+        }
+    }
 }
 
 func extractItemEntityFiles(item: EngineStoryItem, allEntityFiles: [MediaId: TelegramMediaFile]) -> [MediaId: TelegramMediaFile] {

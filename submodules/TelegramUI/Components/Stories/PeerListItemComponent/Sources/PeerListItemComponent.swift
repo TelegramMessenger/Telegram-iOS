@@ -57,7 +57,7 @@ public final class PeerListItemComponent: Component {
     let selectionState: SelectionState
     let hasNext: Bool
     let action: (EnginePeer) -> Void
-    let openStories: ((EnginePeer, UIView) -> Void)?
+    let openStories: ((EnginePeer, AvatarNode) -> Void)?
     
     public init(
         context: AccountContext,
@@ -74,7 +74,7 @@ public final class PeerListItemComponent: Component {
         selectionState: SelectionState,
         hasNext: Bool,
         action: @escaping (EnginePeer) -> Void,
-        openStories: ((EnginePeer, UIView) -> Void)? = nil
+        openStories: ((EnginePeer, AvatarNode) -> Void)? = nil
     ) {
         self.context = context
         self.theme = theme
@@ -211,7 +211,7 @@ public final class PeerListItemComponent: Component {
             guard let component = self.component, let peer = component.peer else {
                 return
             }
-            component.openStories?(peer, self.avatarNode.view)
+            component.openStories?(peer, self.avatarNode)
         }
         
         func update(component: PeerListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {

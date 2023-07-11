@@ -669,6 +669,8 @@ public final class AvatarNode: ASDisplayNode {
     private var storyIndicator: ComponentView<Empty>?
     public private(set) var storyPresentationParams: StoryPresentationParams?
     
+    private var loadingStatuses = Bag<Disposable>()
+    
     public struct StoryStats: Equatable {
         public var totalCount: Int
         public var unseenCount: Int
@@ -740,6 +742,10 @@ public final class AvatarNode: ASDisplayNode {
         }
         
         self.addSubnode(self.contentNode)
+    }
+    
+    deinit {
+        self.cancelLoading()
     }
     
     override public var frame: CGRect {
@@ -894,7 +900,8 @@ public final class AvatarNode: ASDisplayNode {
                     counters: AvatarStoryIndicatorComponent.Counters(
                         totalCount: storyStats.totalCount,
                         unseenCount: storyStats.unseenCount
-                    )
+                    ),
+                    displayProgress: !self.loadingStatuses.isEmpty
                 )),
                 environment: {},
                 containerSize: indicatorSize
@@ -915,6 +922,45 @@ public final class AvatarNode: ASDisplayNode {
                         storyIndicatorView?.removeFromSuperview()
                     })
                 }
+            }
+        }
+    }
+    
+    public func cancelLoading() {
+        for disposable in self.loadingStatuses.copyItems() {
+            disposable.dispose()
+        }
+        self.loadingStatuses.removeAll()
+        self.updateStoryIndicator(transition: .immediate)
+    }
+    
+    public func pushLoadingStatus(signal: Signal<Never, NoError>) -> Disposable {
+        let disposable = MetaDisposable()
+        let index = self.loadingStatuses.add(disposable)
+        
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.2, execute: { [weak self] in
+            self?.updateStoryIndicator(transition: .immediate)
+        })
+        
+        disposable.set(signal.start(completed: { [weak self] in
+            Queue.mainQueue().async {
+                guard let self else {
+                    return
+                }
+                self.loadingStatuses.remove(index)
+                if self.loadingStatuses.isEmpty {
+                    self.updateStoryIndicator(transition: .immediate)
+                }
+            }
+        }))
+        
+        return ActionDisposable { [weak self] in
+            guard let self else {
+                return
+            }
+            self.loadingStatuses.remove(index)
+            if self.loadingStatuses.isEmpty {
+                self.updateStoryIndicator(transition: .immediate)
             }
         }
     }
