@@ -1246,6 +1246,8 @@ public final class ChatListNode: ListView {
         self.animationRenderer = animationRenderer
         self.autoSetReady = autoSetReady
         
+        let isMainTab = chatListFilter == nil && location == .chatList(groupId: .root)
+        
         var isSelecting = false
         if case .peers(_, true, _, _, _, _) = mode {
             isSelecting = true
@@ -1933,7 +1935,7 @@ public final class ChatListNode: ListView {
                 notice = nil
             }
             
-            let (rawEntries, isLoading) = chatListNodeEntriesForView(view: update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, notice: notice, mode: mode, chatListLocation: location, contacts: contacts, accountPeerId: accountPeerId)
+            let (rawEntries, isLoading) = chatListNodeEntriesForView(view: update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, notice: notice, mode: mode, chatListLocation: location, contacts: contacts, accountPeerId: accountPeerId, isMainTab: isMainTab)
             var isEmpty = true
             var entries = rawEntries.filter { entry in
                 switch entry {

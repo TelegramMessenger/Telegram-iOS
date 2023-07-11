@@ -148,12 +148,10 @@ private final class StoryProgressLayer: HierarchyTrackingLayer {
         
         self.uploadProgressLayer.fillColor = nil
         self.uploadProgressLayer.strokeColor = UIColor.white.cgColor
-        self.uploadProgressLayer.lineWidth = 2.0
         self.uploadProgressLayer.lineCap = .round
         
         self.indefiniteDashLayer.fillColor = nil
         self.indefiniteDashLayer.strokeColor = UIColor.white.cgColor
-        self.indefiniteDashLayer.lineWidth = 2.0
         self.indefiniteDashLayer.lineCap = .round
         self.indefiniteDashLayer.lineJoin = .round
         self.indefiniteDashLayer.strokeEnd = 0.0333
@@ -244,7 +242,7 @@ private final class StoryProgressLayer: HierarchyTrackingLayer {
         }
     }
     
-    func update(size: CGSize, lineWidth: CGFloat, value: Value, transition: Transition) {
+    func update(size: CGSize, lineWidth: CGFloat, radius: CGFloat, value: Value, transition: Transition) {
         let params = Params(
             size: size,
             lineWidth: lineWidth,
@@ -255,18 +253,20 @@ private final class StoryProgressLayer: HierarchyTrackingLayer {
         }
         self.currentParams = params
         
-        let lineWidth: CGFloat = 2.0
+        self.uploadProgressLayer.lineWidth = lineWidth
+        self.indefiniteDashLayer.lineWidth = lineWidth
+        
         let bounds = CGRect(origin: .zero, size: size)
         if self.uploadProgressLayer.path == nil {
             let path = CGMutablePath()
-            path.addEllipse(in: CGRect(origin: CGPoint(x: lineWidth * 0.5, y: lineWidth * 0.5), size: CGSize(width: size.width - lineWidth, height: size.height - lineWidth)))
+            path.addEllipse(in: CGRect(origin: CGPoint(x: (size.width - radius * 2.0) * 0.5, y: (size.height - radius * 2.0) * 0.5), size: CGSize(width: radius * 2.0, height: radius * 2.0)))
             self.uploadProgressLayer.path = path
             self.uploadProgressLayer.frame = bounds
         }
         
         if self.indefiniteDashLayer.path == nil {
             let path = CGMutablePath()
-            path.addEllipse(in: CGRect(origin: CGPoint(x: lineWidth * 0.5, y: lineWidth * 0.5), size: CGSize(width: size.width - lineWidth, height: size.height - lineWidth)))
+            path.addEllipse(in: CGRect(origin: CGPoint(x: (size.width - radius * 2.0) * 0.5, y: (size.height - radius * 2.0) * 0.5), size: CGSize(width: radius * 2.0, height: radius * 2.0)))
             self.indefiniteDashLayer.path = path
             self.indefiniteReplicatorLayer.frame = bounds
             self.indefiniteDashLayer.frame = bounds
@@ -861,9 +861,9 @@ public final class StoryPeerListItemComponent: Component {
                     } else {
                         progressTransition = .easeInOut(duration: 0.3)
                     }
-                    progressLayer.update(size: progressFrame.size, lineWidth: indicatorLineUnseenWidth, value: .progress(progress), transition: progressTransition)
+                    progressLayer.update(size: progressFrame.size, lineWidth: indicatorLineUnseenWidth, radius: indicatorRadius - indicatorLineUnseenWidth * 0.5, value: .progress(progress), transition: progressTransition)
                 case .loading:
-                    progressLayer.update(size: progressFrame.size, lineWidth: indicatorLineUnseenWidth, value: .indefinite, transition: transition)
+                    progressLayer.update(size: progressFrame.size, lineWidth: indicatorLineUnseenWidth, radius: indicatorRadius - indicatorLineUnseenWidth * 0.5, value: .indefinite, transition: transition)
                 }
                 self.indicatorShapeSeenLayer.opacity = 0.0
                 self.indicatorShapeUnseenLayer.opacity = 0.0
