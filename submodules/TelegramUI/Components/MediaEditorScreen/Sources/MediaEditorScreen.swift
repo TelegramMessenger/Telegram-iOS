@@ -1117,7 +1117,7 @@ final class MediaEditorScreenComponent: Component {
                         }
                         self.deactivateInput()
                     },
-                    sendMessageOptionsAction: { },
+                    sendMessageOptionsAction: nil,
                     sendStickerAction: { _ in },
                     setMediaRecordingActive: nil,
                     lockMediaRecording: nil,
@@ -2797,6 +2797,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         private var drawingScreen: DrawingScreen?
         private var stickerScreen: StickerPickerScreen?
+        private var defaultToEmoji = false
         
         private var previousDrawingData: Data?
         private var previousDrawingEntities: [DrawingEntity]?
@@ -2895,7 +2896,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 }
                                 switch mode {
                                 case .sticker:
-                                    let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get())
+                                    self.mediaEditor?.stop()
+                                    let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get(), defaultToEmoji: self.defaultToEmoji)
                                     controller.completion = { [weak self] content in
                                         if let self {
                                             if let content {
@@ -2905,8 +2907,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                                 self.hasAnyChanges = true
                                                 self.controller?.isSavingAvailable = true
                                                 self.controller?.requestLayout(transition: .immediate)
+                                                
+                                                if case let .file(file) = content {
+                                                    if file.isCustomEmoji {
+                                                        self.defaultToEmoji = true
+                                                    } else {
+                                                        self.defaultToEmoji = false
+                                                    }
+                                                }
                                             }
                                             self.stickerScreen = nil
+                                            self.mediaEditor?.play()
                                         }
                                     }
                                     controller.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak controller] transition in
@@ -3140,7 +3151,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         case bottomRight
         
         func getPosition(_ size: CGSize) -> CGPoint {
-            let offset = CGPoint(x: 224.0, y: 520.0)
+            let offset = CGPoint(x: 224.0, y: 480.0)
             switch self {
             case .topLeft:
                 return CGPoint(x: offset.x, y: offset.y)

@@ -642,7 +642,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     }
                     #endif
                     
-                    if case .notDetermined = cameraAccess, !self.requestedCameraAccess {
+                    if !stories, case .notDetermined = cameraAccess, !self.requestedCameraAccess {
                         self.requestedCameraAccess = true
                         self.mediaAssetsContext.requestCameraAccess()
                     }
@@ -1301,8 +1301,15 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             if let bannedSendPhotos = self.controller?.bannedSendPhotos, let bannedSendVideos = self.controller?.bannedSendVideos {
                 bannedSendMedia = (max(bannedSendPhotos.0, bannedSendVideos.0), bannedSendPhotos.1 || bannedSendVideos.1)
             }
-            
+                        
             if case let .noAccess(cameraAccess) = self.state {
+                var hasCamera = cameraAccess == .authorized
+                if let subject = self.controller?.subject, case .assets(_, .story) = subject {
+                    hasCamera = false
+                    
+                    self.controller?.navigationItem.rightBarButtonItem = nil
+                }
+                
                 var placeholderTransition = transition
                 let placeholderNode: MediaPickerPlaceholderNode
                 if let current = self.placeholderNode {
@@ -1326,7 +1333,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     
                     self.updateNavigation(transition: .immediate)
                 }
-                placeholderNode.update(layout: layout, theme: self.presentationData.theme, strings: self.presentationData.strings, hasCamera: cameraAccess == .authorized, transition: placeholderTransition)
+                placeholderNode.update(layout: layout, theme: self.presentationData.theme, strings: self.presentationData.strings, hasCamera: hasCamera, transition: placeholderTransition)
                 placeholderTransition.updateFrame(node: placeholderNode, frame: innerBounds)
             } else if let placeholderNode = self.placeholderNode, bannedSendMedia == nil {
                 self.placeholderNode = nil

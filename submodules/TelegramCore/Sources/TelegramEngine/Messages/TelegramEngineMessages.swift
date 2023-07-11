@@ -224,13 +224,22 @@ public extension TelegramEngine {
             to peerId: EnginePeer.Id,
             replyTo replyToMessageId: EngineMessage.Id?,
             storyId: StoryId? = nil,
-            content: EngineOutgoingMessageContent
+            content: EngineOutgoingMessageContent,
+            silentPosting: Bool = false,
+            scheduleTime: Int32? = nil
         ) -> Signal<[MessageId?], NoError> {
-            let message: EnqueueMessage?
+            var message: EnqueueMessage?
             if case let .contextResult(results, result) = content {
-                message = self.outgoingMessageWithChatContextResult(to: peerId, threadId: nil, botId: results.botId, result: result, replyToMessageId: replyToMessageId, replyToStoryId: storyId, hideVia: true, silentPosting: false, scheduleTime: nil, correlationId: nil)
+                message = self.outgoingMessageWithChatContextResult(to: peerId, threadId: nil, botId: results.botId, result: result, replyToMessageId: replyToMessageId, replyToStoryId: storyId, hideVia: true, silentPosting: silentPosting, scheduleTime: scheduleTime, correlationId: nil)
             } else {
                 var attributes: [MessageAttribute] = []
+                if silentPosting {
+                    attributes.append(NotificationInfoMessageAttribute(flags: .muted))
+                }
+                if let scheduleTime = scheduleTime {
+                     attributes.append(OutgoingScheduleInfoMessageAttribute(scheduleTime: scheduleTime))
+                }
+                
                 var text: String = ""
                 var mediaReference: AnyMediaReference?
                 switch content {
@@ -256,6 +265,8 @@ public extension TelegramEngine {
                     bubbleUpEmojiOrStickersets: []
                 )
             }
+            
+            
             
             guard let message = message else {
                 return .complete()

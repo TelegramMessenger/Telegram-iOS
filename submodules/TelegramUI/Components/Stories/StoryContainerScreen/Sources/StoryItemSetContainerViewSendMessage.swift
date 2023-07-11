@@ -40,6 +40,8 @@ import OpenInExternalAppUI
 import SafariServices
 import MediaPasteboardUI
 import WebPBinding
+import ContextUI
+import ChatScheduleTimeController
 
 final class StoryItemSetContainerSendMessage {
     enum InputMode {
@@ -331,7 +333,7 @@ final class StoryItemSetContainerSendMessage {
         }
     }
     
-    private func presentMessageSentTooltip(view: StoryItemSetContainerComponent.View, peer: EnginePeer, messageId: EngineMessage.Id?) {
+    private func presentMessageSentTooltip(view: StoryItemSetContainerComponent.View, peer: EnginePeer, messageId: EngineMessage.Id?, isScheduled: Bool = false) {
         guard let component = view.component, let controller = component.controller() as? StoryContainerScreen else {
             return
         }
@@ -341,14 +343,17 @@ final class StoryItemSetContainerSendMessage {
         }
         
         let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+        
+        let text = isScheduled ? "Message Scheduled" : "Message Sent"
+        
         let tooltipScreen = UndoOverlayController(
             presentationData: presentationData,
-            content: .actionSucceeded(title: "", text: "Message Sent", cancel: messageId != nil ? "View in Chat" : "", destructive: false),
+            content: .actionSucceeded(title: "", text: text, cancel: messageId != nil ? "View in Chat" : "", destructive: false),
             elevatedLayout: false,
             animateInAsReplacement: false,
             action: { [weak view, weak self] action in
                 if case .undo = action, let messageId {
-                    view?.navigateToPeer(peer: peer, chat: true, messageId: messageId)
+                    view?.navigateToPeer(peer: peer, chat: true, subject: isScheduled ? .scheduledMessages : .message(id: .id(messageId), highlight: false, timecode: nil))
                 }
                 self?.tooltipScreen = nil
                 view?.updateIsProgressPaused()
@@ -360,12 +365,110 @@ final class StoryItemSetContainerSendMessage {
         view.updateIsProgressPaused()
     }
     
-    func presentSendMessageOptions(view: StoryItemSetContainerComponent.View) {
+    func presentSendMessageOptions(view: StoryItemSetContainerComponent.View, sourceView: UIView, gesture: ContextGesture?) {
+        guard let component = view.component, let controller = component.controller() as? StoryContainerScreen else {
+            return
+        }
         
+        view.dismissAllTooltips()
+        
+        var sendWhenOnlineAvailable = false
+        if let presence = component.slice.additionalPeerData.presence, case .present = presence.status {
+            sendWhenOnlineAvailable = true
+        }
+        
+        let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+        var items: [ContextMenuItem] = []
+        
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_SendSilently, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/SilentIcon"), color: theme.contextMenu.primaryColor)
+        }, action: { [weak self, weak view] _, a in
+            a(.default)
+            
+            guard let self, let view else {
+                return
+            }
+            self.performSendMessageAction(view: view, silentPosting: true)
+        })))
+        
+        if sendWhenOnlineAvailable {
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_SendWhenOnline, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/WhenOnlineIcon"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self, weak view] _, a in
+                a(.default)
+                
+                guard let self, let view else {
+                    return
+                }
+                self.performSendMessageAction(view: view, scheduleTime: scheduleWhenOnlineTimestamp)
+            })))
+        }
+        
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.contextMenu.primaryColor)
+        }, action: { [weak self, weak view] _, a in
+            a(.default)
+            
+            guard let self, let view else {
+                return
+            }
+            self.presentScheduleTimePicker(view: view)
+        })))
+        
+        
+        let contextItems = ContextController.Items(content: .list(items))
+        
+        let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .top)), items: .single(contextItems), gesture: gesture)
+        contextController.dismissed = { [weak view] in
+            guard let view else {
+                return
+            }
+            view.contextController = nil
+            view.updateIsProgressPaused()
+        }
+        view.contextController = contextController
+        view.updateIsProgressPaused()
+        controller.present(contextController, in: .window(.root))
+    }
+    
+    func presentScheduleTimePicker(
+        view: StoryItemSetContainerComponent.View
+    ) {
+        guard let component = view.component else {
+            return
+        }
+        let focusedItem = component.slice.item
+        guard let peerId = focusedItem.peerId else {
+            return
+        }
+        let controller = component.controller() as? StoryContainerScreen
+        
+        var sendWhenOnlineAvailable = false
+        if let presence = component.slice.additionalPeerData.presence, case .present = presence.status {
+            sendWhenOnlineAvailable = true
+        }
+        
+        let timeController = ChatScheduleTimeController(context: component.context, updatedPresentationData: nil, peerId: peerId, mode: .scheduledMessages(sendWhenOnlineAvailable: sendWhenOnlineAvailable), style: .media, currentTime: nil, minimalTime: nil, dismissByTapOutside: true, completion: { [weak self, weak view] time in
+            guard let self, let view else {
+                return
+            }
+            self.performSendMessageAction(view: view, scheduleTime: time)
+        })
+        timeController.dismissed = { [weak self, weak view] in
+            guard let self, let view else {
+                return
+            }
+            self.actionSheet = nil
+            view.updateIsProgressPaused()
+        }
+        view.endEditing(true)
+        controller?.present(timeController, in: .window(.root))
+       
+        self.actionSheet = timeController
+        view.updateIsProgressPaused()
     }
     
     func performSendMessageAction(
-        view: StoryItemSetContainerComponent.View
+        view: StoryItemSetContainerComponent.View,
+        silentPosting: Bool = false,
+        scheduleTime: Int32? = nil
     ) {
         guard let component = view.component else {
             return
@@ -406,11 +509,13 @@ final class StoryItemSetContainerSendMessage {
                         to: peerId,
                         replyTo: nil,
                         storyId: focusedStoryId,
-                        content: .text(text.string, entities)
+                        content: .text(text.string, entities),
+                        silentPosting: silentPosting,
+                        scheduleTime: scheduleTime
                     ) |> deliverOnMainQueue).start(next: { [weak self, weak view] messageIds in
                         Queue.mainQueue().after(0.3) {
                             if let self, let view {
-                                self.presentMessageSentTooltip(view: view, peer: peer, messageId: messageIds.first.flatMap { $0 })
+                                self.presentMessageSentTooltip(view: view, peer: peer, messageId: messageIds.first.flatMap { $0 }, isScheduled: scheduleTime != nil)
                             }
                         }
                     })
@@ -2181,7 +2286,7 @@ final class StoryItemSetContainerSendMessage {
         |> deliverOnMainQueue).start(next: { [weak self, weak view] messageIds in
             Queue.mainQueue().after(0.3) {
                 if let view {
-                    self?.presentMessageSentTooltip(view: view, peer: peer, messageId: messageIds.first.flatMap { $0 })
+                    self?.presentMessageSentTooltip(view: view, peer: peer, messageId: messageIds.first.flatMap { $0 }, isScheduled: scheduleTime != nil)
                 }
             }
         })

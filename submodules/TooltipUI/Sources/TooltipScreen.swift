@@ -542,7 +542,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             animationSpacing = 8.0
         }
         
-        let containerWidth = max(100.0, min(layout.size.width, 614.0) - (sideInset + layout.safeInsets.left) * 2.0)
+        let containerWidth = max(100.0, min(layout.size.width, 614.0) - sideInset * 2.0)
         
         var actionSize: CGSize = .zero
         
@@ -652,11 +652,12 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                 self.arrowNode.frame = arrowBounds
                 self.arrowGradientNode?.frame = CGRect(origin: CGPoint(x: -arrowFrame.minX + backgroundFrame.minX, y: 0.0), size:  backgroundFrame.size)
             case .right:
-                arrowFrame = CGRect(origin: CGPoint(x: backgroundFrame.width + arrowSize.height, y: rect.midY), size: CGSize(width: arrowSize.height, height: arrowSize.width))
+                let arrowCenterY = floorToScreenPixels(rect.midY - arrowSize.height / 2.0)
+                arrowFrame = CGRect(origin: CGPoint(x: backgroundFrame.width + arrowSize.height, y: self.view.convert(CGPoint(x: 0.0, y: arrowCenterY), to: self.arrowContainer.supernode?.view).y), size: CGSize(width: arrowSize.height, height: arrowSize.width))
                 
                 ContainedViewLayoutTransition.immediate.updateTransformRotation(node: self.arrowContainer, angle: -CGFloat.pi / 2.0)
                 
-                transition.updateFrame(node: self.arrowContainer, frame: arrowFrame.offsetBy(dx: 8.0 - UIScreenPixel, dy: 16.0 + -backgroundFrame.minY - floorToScreenPixels((backgroundFrame.height + 20.0 - arrowSize.width) / 2.0)))
+                transition.updateFrame(node: self.arrowContainer, frame: arrowFrame.offsetBy(dx: 8.0 - UIScreenPixel, dy: 0.0))
                 
                 let arrowBounds = CGRect(origin: .zero, size: arrowSize)
                 self.arrowNode.frame = arrowBounds

@@ -1728,11 +1728,11 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         self.sendMessageContext.performSendMessageAction(view: self)
                     },
-                    sendMessageOptionsAction: { [weak self] in
+                    sendMessageOptionsAction: { [weak self] sourceView, gesture in
                         guard let self else {
                             return
                         }
-                        self.sendMessageContext.presentSendMessageOptions(view: self)
+                        self.sendMessageContext.presentSendMessageOptions(view: self, sourceView: sourceView, gesture: gesture)
                     },
                     sendStickerAction: { [weak self] sticker in
                         guard let self else {
@@ -2231,7 +2231,7 @@ public final class StoryItemSetContainerComponent: Component {
                     mode: .more,
                     action: { _, _, _ in
                     },
-                    longPressAction: {},
+                    longPressAction: nil,
                     switchMediaInputMode: {
                     },
                     updateMediaCancelFraction: { _ in
@@ -2838,7 +2838,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         presentationData: presentationData,
                                         content: .sticker(context: context, file: animation, loop: false, title: nil, text: "Reaction Sent.", undoText: "View in Chat", customAction: { [weak self] in
                                             if let messageId = messageIds.first, let self {
-                                                self.navigateToPeer(peer: peer, chat: true, messageId: messageId)
+                                                self.navigateToPeer(peer: peer, chat: true, subject: messageId.flatMap { .message(id: .id($0), highlight: false, timecode: nil) })
                                             }
                                         }),
                                         elevatedLayout: false,
@@ -3179,7 +3179,7 @@ public final class StoryItemSetContainerComponent: Component {
             }
         }
         
-        func navigateToPeer(peer: EnginePeer, chat: Bool, messageId: EngineMessage.Id? = nil) {
+        func navigateToPeer(peer: EnginePeer, chat: Bool, subject: ChatControllerSubject? = nil) {
             guard let component = self.component else {
                 return
             }
@@ -3189,11 +3189,7 @@ public final class StoryItemSetContainerComponent: Component {
             guard let navigationController = controller.navigationController as? NavigationController else {
                 return
             }
-            if messageId != nil || chat {
-                var subject: ChatControllerSubject?
-                if let messageId {
-                    subject = .message(id: .id(messageId), highlight: false, timecode: nil)
-                }
+            if subject != nil || chat {
                 component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peer), subject: subject, keepStack: .always, animated: true, pushController: { [weak controller, weak navigationController] chatController, animated, completion in
                     guard let controller, let navigationController else {
                         return
@@ -3537,12 +3533,12 @@ public final class StoryItemSetContainerComponent: Component {
             }
         }
         
-        private func performMyMoreAction(sourceView: UIView, gesture: ContextGesture?) {
+        func dismissAllTooltips() {
             guard let component = self.component, let controller = component.controller() else {
                 return
             }
             
-            component.controller()?.forEachController { c in
+            controller.forEachController { c in
                 if let c = c as? UndoOverlayController {
                     c.dismiss()
                 } else if let c = c as? TooltipScreen {
@@ -3550,6 +3546,14 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 return true
             }
+        }
+        
+        private func performMyMoreAction(sourceView: UIView, gesture: ContextGesture?) {
+            guard let component = self.component, let controller = component.controller() else {
+                return
+            }
+            
+            self.dismissAllTooltips()
             
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
             var items: [ContextMenuItem] = []
@@ -3753,7 +3757,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             let contextItems = ContextController.Items(content: .list(items), tip: tip, tipSignal: tipSignal)
             
-            let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(contextItems), gesture: gesture)
+            let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .bottom)), items: .single(contextItems), gesture: gesture)
             contextController.dismissed = { [weak self] in
                 guard let self else {
                     return
@@ -3779,12 +3783,7 @@ public final class StoryItemSetContainerComponent: Component {
                     return
                 }
                 
-                component.controller()?.forEachController { c in
-                    if let c = c as? UndoOverlayController {
-                        c.dismiss()
-                    }
-                    return true
-                }
+                self.dismissAllTooltips()
                 
                 let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                 var items: [ContextMenuItem] = []
@@ -3976,7 +3975,7 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 let contextItems = ContextController.Items(content: .list(items), tip: tip, tipSignal: tipSignal)
                                 
-                let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(contextItems), gesture: gesture)
+                let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .bottom)), items: .single(contextItems), gesture: gesture)
                 contextController.dismissed = { [weak self] in
                     guard let self else {
                         return
@@ -4000,20 +3999,22 @@ public final class StoryItemSetContainerComponent: Component {
     }
 }
 
-private final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
+final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
     private let controller: ViewController
     private let sourceView: UIView
+    private let position: ContextControllerReferenceViewInfo.ActionsPosition
     var keepInPlace: Bool {
         return true
     }
 
-    init(controller: ViewController, sourceView: UIView) {
+    init(controller: ViewController, sourceView: UIView, position: ContextControllerReferenceViewInfo.ActionsPosition) {
         self.controller = controller
         self.sourceView = sourceView
+        self.position = position
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, actionsPosition: .bottom)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, actionsPosition: self.position)
     }
 }
 

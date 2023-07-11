@@ -72,7 +72,7 @@ public final class MessageInputPanelComponent: Component {
     public let presentController: (ViewController) -> Void
     public let presentInGlobalOverlay: (ViewController) -> Void
     public let sendMessageAction: () -> Void
-    public let sendMessageOptionsAction: () -> Void
+    public let sendMessageOptionsAction: ((UIView, ContextGesture?) -> Void)?
     public let sendStickerAction: (TelegramMediaFile) -> Void
     public let setMediaRecordingActive: ((Bool, Bool, Bool) -> Void)?
     public let lockMediaRecording: (() -> Void)?
@@ -114,7 +114,7 @@ public final class MessageInputPanelComponent: Component {
         presentController: @escaping (ViewController) -> Void,
         presentInGlobalOverlay: @escaping (ViewController) -> Void,
         sendMessageAction: @escaping () -> Void,
-        sendMessageOptionsAction: @escaping () -> Void,
+        sendMessageOptionsAction: ((UIView, ContextGesture?) -> Void)?,
         sendStickerAction: @escaping (TelegramMediaFile) -> Void,
         setMediaRecordingActive: ((Bool, Bool, Bool) -> Void)?,
         lockMediaRecording: (() -> Void)?,
@@ -747,7 +747,7 @@ public final class MessageInputPanelComponent: Component {
                                 break
                             }
                         },
-                        longPressAction: {},
+                        longPressAction: nil,
                         switchMediaInputMode: {
                         },
                         updateMediaCancelFraction: { _ in
@@ -926,12 +926,7 @@ public final class MessageInputPanelComponent: Component {
                             break
                         }
                     },
-                    longPressAction: { [weak self] in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        component.sendMessageOptionsAction()
-                    },
+                    longPressAction: component.sendMessageOptionsAction,
                     switchMediaInputMode: { [weak self] in
                         guard let self else {
                             return

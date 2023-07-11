@@ -2586,7 +2586,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             context: context,
                             account: context.account,
                             sharedContext: context.sharedContext,
-                            text: .markdown(text: "Posting stories is currently available only to subscribers of [Telegram Premium]()."),
+                            text: .markdown(text: "Posting stories is currently available only\nto subscribers of [Telegram Premium]()."),
                             style: .customBlur(UIColor(rgb: 0x2a2a2a), 2.0),
                             icon: .none,
                             location: .point(location, .top),

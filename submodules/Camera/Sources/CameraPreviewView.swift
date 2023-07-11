@@ -76,24 +76,9 @@ public class CameraSimplePreviewView: UIView {
         super.init(frame: frame)
         
         self.videoPreviewLayer.videoGravity = main ? .resizeAspectFill : .resizeAspect
-        
         self.placeholderView.contentMode =  main ? .scaleAspectFill : .scaleAspectFit
-        self.addSubview(self.placeholderView)
         
-        if main {
-            if #available(iOS 13.0, *) {
-                self.previewingDisposable = (self.isPreviewing
-                |> filter { $0 }
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak self] _ in
-                    self?.removePlaceholder(delay: 0.15)
-                })
-            } else {
-                Queue.mainQueue().after(0.35) {
-                    self.removePlaceholder(delay: 0.15)
-                }
-            }
-        }
+        self.addSubview(self.placeholderView)
     }
     
     required init?(coder: NSCoder) {

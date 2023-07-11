@@ -391,7 +391,7 @@ private final class CameraScreenComponent: CombinedComponent {
             self.lastDualCameraTimestamp = currentTimestamp
             
             controller.node.dismissAllTooltips()
-            let _ = ApplicationSpecificNotice.incrementStoriesDualCameraTip(accountManager: self.context.sharedContext.accountManager).start()
+            let _ = ApplicationSpecificNotice.incrementStoriesDualCameraTip(accountManager: self.context.sharedContext.accountManager, count: 2).start()
             
             let isEnabled = !controller.cameraState.isDualCameraEnabled
             camera.setDualCameraEnabled(isEnabled)
@@ -772,7 +772,7 @@ private final class CameraScreenComponent: CombinedComponent {
                         transition: .immediate
                     )
                     context.add(dualButton
-                        .position(CGPoint(x: availableSize.width - topControlInset - flashButton.size.width / 2.0 - 52.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + dualButton.size.height / 2.0 + 1.0))
+                        .position(CGPoint(x: availableSize.width - topControlInset - flashButton.size.width / 2.0 - 58.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + dualButton.size.height / 2.0 + 2.0))
                         .appear(.default(scale: true))
                         .disappear(.default(scale: true))
                     )
@@ -1133,13 +1133,7 @@ public class CameraScreen: ViewController {
                 } else if dualCamWasEnabled != isDualCameraEnabled {
                     self.requestUpdateLayout(hasAppeared: self.hasAppeared, transition: .spring(duration: 0.4))
                     
-                    updateCameraStoredStateInteractively(engine: self.context.engine) { current in
-                        if let current {
-                            return current.withIsDualCameraEnabled(isDualCameraEnabled)
-                        } else {
-                            return CameraStoredState(isDualCameraEnabled: isDualCameraEnabled, dualCameraPosition: self.pipPosition)
-                        }
-                    }
+                    UserDefaults.standard.set(isDualCameraEnabled as NSNumber, forKey: "TelegramStoryCameraIsDualEnabled")
                 }
             }
         }
@@ -1149,9 +1143,9 @@ public class CameraScreen: ViewController {
             self.context = controller.context
             self.updateState = ActionSlot<CameraState>()
             self.toggleCameraPositionAction = ActionSlot<Void>()
-
+            
             self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-
+            
             self.backgroundView = UIView()
             self.backgroundView.backgroundColor = UIColor(rgb: 0x000000)
             
@@ -1170,6 +1164,22 @@ public class CameraScreen: ViewController {
             self.previewBlurView = BlurView()
             self.previewBlurView.isUserInteractionEnabled = false
             
+            var isDualCameraEnabled = true
+            if let isDualCameraEnabledValue = UserDefaults.standard.object(forKey: "TelegramStoryCameraIsDualEnabled") as? NSNumber {
+                isDualCameraEnabled = isDualCameraEnabledValue.boolValue
+            }
+            
+            var dualCameraPosition: PIPPosition = .topRight
+            if let dualCameraPositionValue = UserDefaults.standard.object(forKey: "TelegramStoryCameraDualPosition") as? NSNumber {
+                dualCameraPosition = PIPPosition(rawValue: dualCameraPositionValue.int32Value) ?? .topRight
+            }
+            self.pipPosition = dualCameraPosition
+        
+            var cameraFrontPosition = false
+            if let cameraFrontPositionValue = UserDefaults.standard.object(forKey: "TelegramStoryCameraUseFrontPosition") as? NSNumber, cameraFrontPositionValue.boolValue {
+                cameraFrontPosition = true
+            }
+            
             self.mainPreviewContainerView = UIView()
             self.mainPreviewContainerView.clipsToBounds = true
             self.mainPreviewView = CameraSimplePreviewView(frame: .zero, main: true)
@@ -1177,12 +1187,13 @@ public class CameraScreen: ViewController {
             self.additionalPreviewContainerView = UIView()
             self.additionalPreviewContainerView.clipsToBounds = true
             self.additionalPreviewView = CameraSimplePreviewView(frame: .zero, main: false)
-
-            var cameraFrontPosition = false
-            if let useCameraFrontPosition = UserDefaults.standard.object(forKey: "TelegramStoryCameraUseFrontPosition") as? NSNumber, useCameraFrontPosition.boolValue {
-                cameraFrontPosition = true
+            
+            if isDualCameraEnabled {
+                self.mainPreviewView.resetPlaceholder(front: false)
+                self.additionalPreviewView.resetPlaceholder(front: true)
+            } else {
+                self.mainPreviewView.resetPlaceholder(front: cameraFrontPosition)
             }
-            self.mainPreviewView.resetPlaceholder(front: cameraFrontPosition)
             
             self.cameraState = CameraState(
                 mode: .photo,
@@ -1191,7 +1202,7 @@ public class CameraScreen: ViewController {
                 flashModeDidChange: false,
                 recording: .none,
                 duration: 0.0,
-                isDualCameraEnabled: false
+                isDualCameraEnabled: isDualCameraEnabled
             )
                         
             self.previewFrameLeftDimView = UIView()
@@ -1265,6 +1276,35 @@ public class CameraScreen: ViewController {
                 }
             }
             
+            if #available(iOS 13.0, *) {
+                if isDualCameraEnabled {
+                    let _ = (combineLatest(
+                        queue: Queue.mainQueue(),
+                        self.mainPreviewView.isPreviewing,
+                        self.additionalPreviewView.isPreviewing
+                    )
+                    |> filter { $0 && $1 }
+                    |> take(1)).start(next: { [weak self] _, _ in
+                        self?.mainPreviewView.removePlaceholder(delay: 0.15)
+                        self?.additionalPreviewView.removePlaceholder(delay: 0.15)
+                    })
+                } else {
+                    let _ = (self.mainPreviewView.isPreviewing
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self] _ in
+                        self?.mainPreviewView.removePlaceholder(delay: 0.15)
+                    })
+                }
+            } else {
+                Queue.mainQueue().after(0.35) {
+                    self.mainPreviewView.removePlaceholder(delay: 0.15)
+                    if isDualCameraEnabled {
+                        self.additionalPreviewView.removePlaceholder(delay: 0.15)
+                    }
+                }
+            }
+            
             self.idleTimerExtensionDisposable.set(self.context.sharedContext.applicationBindings.pushIdleTimerExtension())
         }
         
@@ -1313,6 +1353,7 @@ public class CameraScreen: ViewController {
                 configuration: Camera.Configuration(
                     preset: .hd1920x1080,
                     position: self.cameraState.position,
+                    isDualEnabled: self.cameraState.isDualCameraEnabled,
                     audio: true,
                     photo: true,
                     metadata: false,
@@ -1341,6 +1382,7 @@ public class CameraScreen: ViewController {
                 }
             })
             
+            var isFirstTime = true
             self.changingPositionDisposable = combineLatest(
                 queue: Queue.mainQueue(),
                 camera.modeChange,
@@ -1397,9 +1439,13 @@ public class CameraScreen: ViewController {
                             })
                         }
                         
-                        if self.cameraState.isDualCameraEnabled {
-                            self.mainPreviewView.removePlaceholder()
-                            self.additionalPreviewView.removePlaceholder()
+                        if isFirstTime {
+                            isFirstTime = false
+                        } else {
+                            if self.cameraState.isDualCameraEnabled {
+                                self.mainPreviewView.removePlaceholder()
+                                self.additionalPreviewView.removePlaceholder()
+                            }
                         }
                     }
                 }
@@ -1508,13 +1554,7 @@ public class CameraScreen: ViewController {
                 self.pipPosition = pipPositionForLocation(layout: layout, position: location, velocity: velocity)
                 self.containerLayoutUpdated(layout: layout, transition: .spring(duration: 0.4))
                 
-                updateCameraStoredStateInteractively(engine: self.context.engine) { current in
-                    if let current {
-                        return current.withDualCameraPosition(self.pipPosition)
-                    } else {
-                        return CameraStoredState(isDualCameraEnabled: true, dualCameraPosition: self.pipPosition)
-                    }
-                }
+                UserDefaults.standard.set(self.pipPosition.rawValue as NSNumber, forKey: "TelegramStoryCameraDualPosition")
             default:
                 break
             }
@@ -1797,13 +1837,12 @@ public class CameraScreen: ViewController {
             }
             
             let parentFrame = self.view.convert(self.bounds, to: nil)
-            let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
-            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY + 3.0), size: CGSize())
+            let location = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
             
             let accountManager = self.context.sharedContext.accountManager
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Enable Dual Camera Mode"), location: .point(location, .top), displayDuration: .manual, inset: 16.0, shouldDismissOnTouch: { point, containerFrame in
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Tap here to disable\nthe selfie camera"), textAlignment: .center, location: .point(location, .right), displayDuration: .custom(5.0), inset: 16.0, shouldDismissOnTouch: { point, containerFrame in
                 if containerFrame.contains(point) {
-                    let _ = ApplicationSpecificNotice.incrementStoriesDualCameraTip(accountManager: accountManager).start()
+                    let _ = ApplicationSpecificNotice.incrementStoriesDualCameraTip(accountManager: accountManager, count: 2).start()
                     return .dismiss(consume: true)
                 }
                 return .ignore
@@ -1846,7 +1885,7 @@ public class CameraScreen: ViewController {
                         guard let self else {
                             return
                         }
-                        if count < 1 {
+                        if count < 2 {
                             self.presentDualCameraTooltip()
                         }
                     })
@@ -2040,7 +2079,7 @@ public class CameraScreen: ViewController {
             self.appliedDualCamera = isDualCameraEnabled
             
             let circleSide = floorToScreenPixels(previewSize.width * 160.0 / 430.0)
-            let circleOffset = CGPoint(x: previewSize.width * 224.0 / 1080.0, y: previewSize.width * 520.0 / 1080.0)
+            let circleOffset = CGPoint(x: previewSize.width * 224.0 / 1080.0, y: previewSize.width * 480.0 / 1080.0)
             
             var origin: CGPoint
             switch self.pipPosition {

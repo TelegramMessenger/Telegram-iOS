@@ -1136,17 +1136,19 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, durat
     let compressionProperties: [String: Any]
     let codecType: AVVideoCodecType
     
-    if hasHEVCHardwareEncoder {
-        var bitrate: Int = 3700
-        if image {
+    var bitrate: Int = 3700
+    if image {
+        bitrate = 5000
+    } else {
+        if duration < 10 {
+            bitrate = 5800
+        } else if duration < 20 {
+            bitrate = 5500
+        } else if duration < 30 {
             bitrate = 5000
-        } else {
-            if duration < 10 {
-                bitrate = 5500
-            } else if duration < 25 {
-                bitrate = 4500
-            }
         }
+    }
+    if hasHEVCHardwareEncoder {
         codecType = AVVideoCodecType.hevc
         compressionProperties = [
             AVVideoAverageBitRateKey: bitrate * 1000,
@@ -1155,7 +1157,7 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, durat
     } else {
         codecType = AVVideoCodecType.h264
         compressionProperties = [
-            AVVideoAverageBitRateKey: 3800000,
+            AVVideoAverageBitRateKey: bitrate * 1000,
             AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
             AVVideoH264EntropyModeKey: AVVideoH264EntropyModeCABAC
         ]
