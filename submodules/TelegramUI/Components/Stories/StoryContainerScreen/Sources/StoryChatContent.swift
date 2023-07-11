@@ -7,6 +7,7 @@ import AccountContext
 import TelegramCore
 import Postbox
 import MediaResources
+import RangeSet
 
 private struct StoryKey: Hashable {
     var peerId: EnginePeer.Id
@@ -283,6 +284,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                         let allItems = mappedItems.map { item in
                             return StoryContentItem(
                                 position: nil,
+                                dayCounters: nil,
                                 peerId: peer.id,
                                 storyItem: item,
                                 entityFiles: extractItemEntityFiles(item: item, allEntityFiles: allEntityFiles)
@@ -295,6 +297,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                             additionalPeerData: additionalPeerData,
                             item: StoryContentItem(
                                 position: mappedFocusedIndex ?? focusedIndex,
+                                dayCounters: nil,
                                 peerId: peer.id,
                                 storyItem: mappedItem,
                                 entityFiles: extractItemEntityFiles(item: mappedItem, allEntityFiles: allEntityFiles)
@@ -758,6 +761,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                     })
                 }
             }
+        } else {
+            self.updateState()
         }
     }
     
@@ -1027,6 +1032,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 
                 let mainItem = StoryContentItem(
                     position: 0,
+                    dayCounters: nil,
                     peerId: peer.id,
                     storyItem: mappedItem,
                     entityFiles: extractItemEntityFiles(item: mappedItem, allEntityFiles: allEntityFiles)
@@ -1171,20 +1177,58 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                 }
             }
             
+            struct DayIndex: Hashable {
+                var year: Int32
+                var day: Int32
+                
+                init(timestamp: Int32) {
+                    var time: time_t = time_t(timestamp)
+                    var timeinfo: tm = tm()
+                    localtime_r(&time, &timeinfo)
+
+                    self.year = timeinfo.tm_year
+                    self.day = timeinfo.tm_yday
+                }
+            }
+            
             let stateValue: StoryContentContextState
             if let focusedIndex = focusedIndex {
                 let item = state.items[focusedIndex]
                 self.focusedId = item.id
                 
                 var allItems: [StoryContentItem] = []
+                
+                var dayCounts: [DayIndex: Int] = [:]
+                var itemDayIndices: [Int32: (Int, DayIndex)] = [:]
+                
                 for i in 0 ..< state.items.count {
                     let stateItem = state.items[i]
                     allItems.append(StoryContentItem(
                         position: i,
+                        dayCounters: nil,
                         peerId: peer.id,
                         storyItem: stateItem,
                         entityFiles: extractItemEntityFiles(item: stateItem, allEntityFiles: state.allEntityFiles)
                     ))
+                    
+                    let day = DayIndex(timestamp: stateItem.timestamp)
+                    let dayCount: Int
+                    if let current = dayCounts[day] {
+                        dayCount = current + 1
+                        dayCounts[day] = dayCount
+                    } else {
+                        dayCount = 1
+                        dayCounts[day] = dayCount
+                    }
+                    itemDayIndices[stateItem.id] = (dayCount - 1, day)
+                }
+                
+                var dayCounters: StoryContentItem.DayCounters?
+                if let (offset, day) = itemDayIndices[item.id], let dayCount = dayCounts[day] {
+                    dayCounters = StoryContentItem.DayCounters(
+                        position: offset,
+                        totalCount: dayCount
+                    )
                 }
                 
                 stateValue = StoryContentContextState(
@@ -1193,6 +1237,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                         additionalPeerData: additionalPeerData,
                         item: StoryContentItem(
                             position: focusedIndex,
+                            dayCounters: dayCounters,
                             peerId: peer.id,
                             storyItem: item,
                             entityFiles: extractItemEntityFiles(item: item, allEntityFiles: state.allEntityFiles)
@@ -1379,6 +1424,88 @@ public func preloadStoryMedia(context: AccountContext, peer: PeerReference, stor
     }
     
     return combineLatest(signals) |> ignoreValues
+}
+
+public func waitUntilStoryMediaPreloaded(context: AccountContext, peerId: EnginePeer.Id, storyItem: EngineStoryItem) -> Signal<Never, NoError> {
+    return context.engine.data.get(
+        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+    )
+    |> mapToSignal { peerValue -> Signal<Never, NoError> in
+        guard let peerValue else {
+            return .complete()
+        }
+        guard let peer = PeerReference(peerValue._asPeer()) else {
+            return .complete()
+        }
+        
+        var statusSignals: [Signal<Never, NoError>] = []
+        var loadSignals: [Signal<Never, NoError>] = []
+        
+        switch storyItem.media {
+        case let .image(image):
+            if let representation = largestImageRepresentation(image.representations) {
+                statusSignals.append(
+                    context.account.postbox.mediaBox.resourceData(representation.resource)
+                    |> filter { data in
+                        return data.complete
+                    }
+                    |> take(1)
+                    |> ignoreValues
+                )
+                
+                loadSignals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(peer.id), userContentType: .other, reference: .media(media: .story(peer: peer, id: storyItem.id, media: storyItem.media._asMedia()), resource: representation.resource), range: nil)
+                |> ignoreValues
+                |> `catch` { _ -> Signal<Never, NoError> in
+                    return .complete()
+                })
+            }
+        case let .file(file):
+            var fetchRange: (Range<Int64>, MediaBoxFetchPriority)?
+            for attribute in file.attributes {
+                if case let .Video(_, _, _, preloadSize) = attribute {
+                    if let preloadSize {
+                        fetchRange = (0 ..< Int64(preloadSize), .default)
+                    }
+                    break
+                }
+            }
+            
+            statusSignals.append(
+                context.account.postbox.mediaBox.resourceRangesStatus(file.resource)
+                |> filter { ranges in
+                    if let fetchRange {
+                        return ranges.isSuperset(of: RangeSet(fetchRange.0))
+                    } else {
+                        return true
+                    }
+                }
+                |> take(1)
+                |> ignoreValues
+            )
+            
+            loadSignals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(peer.id), userContentType: .other, reference: .media(media: .story(peer: peer, id: storyItem.id, media: storyItem.media._asMedia()), resource: file.resource), range: fetchRange)
+            |> ignoreValues
+            |> `catch` { _ -> Signal<Never, NoError> in
+                return .complete()
+            })
+            loadSignals.append(context.account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedVideoFirstFrameRepresentation(), complete: true, fetch: true, attemptSynchronously: false)
+            |> ignoreValues)
+        default:
+            break
+        }
+        
+        return Signal { subscriber in
+            let statusDisposable = combineLatest(statusSignals).start(completed: {
+                subscriber.putCompletion()
+            })
+            let loadDisposable = combineLatest(loadSignals).start()
+            
+            return ActionDisposable {
+                statusDisposable.dispose()
+                loadDisposable.dispose()
+            }
+        }
+    }
 }
 
 func extractItemEntityFiles(item: EngineStoryItem, allEntityFiles: [MediaId: TelegramMediaFile]) -> [MediaId: TelegramMediaFile] {

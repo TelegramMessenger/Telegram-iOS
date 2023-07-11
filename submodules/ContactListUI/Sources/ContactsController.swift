@@ -512,52 +512,10 @@ public class ContactsController: ViewController {
             guard let self else {
                 return
             }
-                
-            let storyContent = StoryContentContextImpl(context: self.context, isHidden: true, focusedPeerId: peer.id, singlePeer: true)
-            let _ = (storyContent.state
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self, weak sourceNode] storyContentState in
-                guard let self else {
-                    return
-                }
-                
-                var transitionIn: StoryContainerScreen.TransitionIn?
-                if let itemNode = sourceNode as? ContactsPeerItemNode {
-                    transitionIn = StoryContainerScreen.TransitionIn(
-                        sourceView: itemNode.avatarNode.view,
-                        sourceRect: itemNode.avatarNode.view.bounds,
-                        sourceCornerRadius: itemNode.avatarNode.view.bounds.height * 0.5,
-                        sourceIsAvatar: true
-                    )
-                    itemNode.avatarNode.isHidden = true
-                }
-                
-                let storyContainerScreen = StoryContainerScreen(
-                    context: self.context,
-                    content: storyContent,
-                    transitionIn: transitionIn,
-                    transitionOut: { _, _ in
-                        if let itemNode = sourceNode as? ContactsPeerItemNode {
-                            let rect = itemNode.avatarNode.view.convert(itemNode.avatarNode.view.bounds, to: itemNode.view)
-                            return StoryContainerScreen.TransitionOut(
-                                destinationView: itemNode.view,
-                                transitionView: nil,
-                                destinationRect: rect,
-                                destinationCornerRadius: rect.height * 0.5,
-                                destinationIsAvatar: true,
-                                completed: { [weak itemNode] in
-                                    guard let itemNode else {
-                                        return
-                                    }
-                                    itemNode.avatarNode.isHidden = false
-                                }
-                            )
-                        }
-                        return nil
-                    }
-                )
-                self.push(storyContainerScreen)
-            })
+            
+            if let itemNode = sourceNode as? ContactsPeerItemNode {
+                StoryContainerScreen.openPeerStories(context: self.context, peerId: peer.id, parentController: self, avatarNode: itemNode.avatarNode)
+            }
         }
     }
     

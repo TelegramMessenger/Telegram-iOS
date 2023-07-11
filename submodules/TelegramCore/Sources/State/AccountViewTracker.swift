@@ -296,6 +296,9 @@ public final class AccountViewTracker {
     private var refreshStoriesForMessageIdsAndTimestamps: [MessageId: Int32] = [:]
     private var nextUpdatedUnsupportedMediaDisposableId: Int32 = 0
     private var updatedUnsupportedMediaDisposables = DisposableDict<Int32>()
+    private var refreshStoriesForPeerIdsAndTimestamps: [PeerId: Int32] = [:]
+    private var refreshStoriesForPeerIdsDebounceDisposable: Disposable?
+    private var pendingRefreshStoriesForPeerIds: [PeerId] = []
     
     private var updatedSeenPersonalMessageIds = Set<MessageId>()
     private var updatedReactionsSeenForMessageIds = Set<MessageId>()
@@ -1257,6 +1260,89 @@ public final class AccountViewTracker {
                         }
                         self.updatedUnsupportedMediaDisposables.set(signal.start(), forKey: disposableId)
                     }
+                }
+            }
+        }
+    }
+    
+    public func refreshStoryStatsForPeerIds(peerIds: [PeerId]) {
+        self.queue.async {
+            self.pendingRefreshStoriesForPeerIds.append(contentsOf: peerIds)
+            
+            if self.refreshStoriesForPeerIdsDebounceDisposable == nil {
+                self.refreshStoriesForPeerIdsDebounceDisposable = (Signal<Never, NoError>.complete() |> delay(0.15, queue: self.queue)).start(completed: {
+                    self.refreshStoriesForPeerIdsDebounceDisposable = nil
+                    
+                    let pendingPeerIds = self.pendingRefreshStoriesForPeerIds
+                    self.pendingRefreshStoriesForPeerIds.removeAll()
+                    self.internalRefreshStoryStatsForPeerIds(peerIds: pendingPeerIds)
+                })
+            }
+        }
+    }
+    
+    private func internalRefreshStoryStatsForPeerIds(peerIds: [PeerId]) {
+        self.queue.async {
+            var addedPeerIds: [PeerId] = []
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+            for peerId in peerIds {
+                let messageTimestamp = self.refreshStoriesForPeerIdsAndTimestamps[peerId]
+                var refresh = false
+                if let messageTimestamp = messageTimestamp {
+                    refresh = messageTimestamp < timestamp - 60
+                } else {
+                    refresh = true
+                }
+                
+                if refresh {
+                    self.refreshStoriesForPeerIdsAndTimestamps[peerId] = timestamp
+                    addedPeerIds.append(peerId)
+                }
+            }
+            if !addedPeerIds.isEmpty {
+                let disposableId = self.nextUpdatedUnsupportedMediaDisposableId
+                self.nextUpdatedUnsupportedMediaDisposableId += 1
+                
+                if let account = self.account {
+                    let signal = account.postbox.transaction { transaction -> [Api.InputUser] in
+                        return addedPeerIds.compactMap { transaction.getPeer($0).flatMap(apiInputUser) }
+                    }
+                    |> mapToSignal { inputUsers -> Signal<Never, NoError> in
+                        guard !inputUsers.isEmpty else {
+                            return .complete()
+                        }
+                        
+                        var requests: [Signal<Never, NoError>] = []
+                        
+                        let batchCount = 50
+                        var startIndex = 0
+                        while startIndex < inputUsers.count {
+                            var slice: [Api.InputUser] = []
+                            for i in startIndex ..< min(startIndex + batchCount, inputUsers.count) {
+                                slice.append(inputUsers[i])
+                            }
+                            startIndex += batchCount
+                            requests.append(account.network.request(Api.functions.users.getUsers(id: slice))
+                            |> `catch` { _ -> Signal<[Api.User], NoError> in
+                                return .single([])
+                            }
+                            |> mapToSignal { result -> Signal<Never, NoError> in
+                                return account.postbox.transaction { transaction in
+                                    updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: AccumulatedPeers(users: result))
+                                }
+                                |> ignoreValues
+                            })
+                        }
+                        
+                        return combineLatest(requests)
+                        |> ignoreValues
+                    }
+                    |> afterDisposed { [weak self] in
+                        self?.queue.async {
+                            self?.updatedUnsupportedMediaDisposables.set(nil, forKey: disposableId)
+                        }
+                    }
+                    self.updatedUnsupportedMediaDisposables.set(signal.start(), forKey: disposableId)
                 }
             }
         }

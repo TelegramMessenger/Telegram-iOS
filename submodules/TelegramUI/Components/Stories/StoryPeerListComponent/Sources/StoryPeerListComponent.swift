@@ -338,6 +338,9 @@ public final class StoryPeerListComponent: Component {
         private var previewedItemDisposable: Disposable?
         private var previewedItemId: EnginePeer.Id?
         
+        private var loadingItemDisposable: Disposable?
+        private var loadingItemId: EnginePeer.Id?
+        
         private var animationState: AnimationState?
         private var animator: ConstantDisplayLinkAnimator?
         
@@ -403,6 +406,7 @@ public final class StoryPeerListComponent: Component {
         deinit {
             self.loadMoreDisposable.dispose()
             self.previewedItemDisposable?.dispose()
+            self.loadingItemDisposable?.dispose()
         }
         
         @objc private func collapsedButtonPressed() {
@@ -441,6 +445,22 @@ public final class StoryPeerListComponent: Component {
                         }
                     }
                 }
+            })
+        }
+        
+        public func setLoadingItem(peerId: EnginePeer.Id, signal: Signal<Never, NoError>) {
+            self.loadingItemId = peerId
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.2, execute: { [weak self] in
+                self?.state?.updated(transition: .immediate)
+            })
+            
+            self.loadingItemDisposable?.dispose()
+            self.loadingItemDisposable = (signal |> deliverOnMainQueue).start(completed: { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.loadingItemId = nil
+                self.state?.updated(transition: .immediate)
             })
         }
         
@@ -869,8 +889,9 @@ public final class StoryPeerListComponent: Component {
                     }
                     
                     hasUnseenCloseFriendsItems = false
+                } else if peer.id == self.loadingItemId {
+                    itemRingAnimation = .loading
                 }
-                //itemRingAnimation = .loading
                 
                 let measuredItem = calculateItem(i)
                 

@@ -118,6 +118,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private var didAppear = false
     private var dismissSearchOnDisappear = false
+    public var onDidAppear: (() -> Void)?
         
     private var passcodeLockTooltipDisposable = MetaDisposable()
     private var didShowPasscodeLockTooltipController = false
@@ -186,6 +187,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private var fixedStorySubscriptionOrder: [EnginePeer.Id] = []
     private(set) var orderedStorySubscriptions: EngineStorySubscriptions?
     private var displayedStoriesTooltip: Bool = false
+    
+    public var hasStorySubscriptions: Bool {
+        if let rawStorySubscriptions = self.rawStorySubscriptions, !rawStorySubscriptions.items.isEmpty {
+            return true
+        } else {
+            return false
+        }
+    }
     
     private var storyProgressDisposable: Disposable?
     private var storySubscriptionsDisposable: Disposable?
@@ -1059,7 +1068,21 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 if let navigationController = strongSelf.navigationController as? NavigationController {
                     let chatListController = ChatListControllerImpl(context: strongSelf.context, location: .chatList(groupId: groupId), controlsHistoryPreload: false, enableDebugActions: false)
                     chatListController.navigationPresentation = .master
+                    #if DEBUG && false
+                    navigationController.pushViewController(chatListController, animated: false, completion: {})
+                    chatListController.onDidAppear = { [weak chatListController] in
+                        Queue.mainQueue().after(0.1, {
+                            guard let chatListController else {
+                                return
+                            }
+                            if chatListController.hasStorySubscriptions {
+                                chatListController.scrollToStoriesAnimated()
+                            }
+                        })
+                    }
+                    #else
                     navigationController.pushViewController(chatListController)
+                    #endif
                     strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.clearHighlightAnimated(true)
                 }
             }
@@ -1314,87 +1337,16 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             guard let self else {
                 return
             }
-            
-            let isHidden: Bool
-            let focusedPeerId: EnginePeer.Id?
-            let singlePeer: Bool
-            switch subject {
-            case let .peer(peerId):
-                isHidden = self.location == .chatList(groupId: .archive)
-                focusedPeerId = peerId
-                singlePeer = true
-            case .archive:
-                isHidden = true
-                focusedPeerId = nil
-                singlePeer = false
+            guard let itemNode = itemNode as? ChatListItemNode else {
+                return
             }
             
-            let storyContent = StoryContentContextImpl(context: self.context, isHidden: isHidden, focusedPeerId: focusedPeerId, singlePeer: singlePeer)
-            let _ = (storyContent.state
-            |> filter { $0.slice != nil }
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self, weak itemNode] state in
-                guard let self else {
-                    return
-                }
-                
-                var transitionIn: StoryContainerScreen.TransitionIn?
-                if let itemNode = itemNode as? ChatListItemNode {
-                    transitionIn = StoryContainerScreen.TransitionIn(
-                        sourceView: itemNode.avatarNode.view,
-                        sourceRect: itemNode.avatarNode.view.bounds,
-                        sourceCornerRadius: itemNode.avatarNode.view.bounds.height * 0.5,
-                        sourceIsAvatar: true
-                    )
-                    itemNode.avatarNode.isHidden = true
-                }
-                
-                let storyContainerScreen = StoryContainerScreen(
-                    context: self.context,
-                    content: storyContent,
-                    transitionIn: transitionIn,
-                    transitionOut: { _, _ in
-                        if let itemNode = itemNode as? ChatListItemNode {
-                            let transitionView = itemNode.avatarNode.view
-                            let destinationView = itemNode.view
-                            let rect = transitionView.convert(transitionView.bounds, to: destinationView)
-                            return StoryContainerScreen.TransitionOut(
-                                destinationView: destinationView,
-                                transitionView: StoryContainerScreen.TransitionView(
-                                    makeView: { [weak transitionView] in
-                                        let parentView = UIView()
-                                        if let copyView = transitionView?.snapshotContentTree(unhide: true) {
-                                            parentView.addSubview(copyView)
-                                        }
-                                        return parentView
-                                    },
-                                    updateView: { copyView, state, transition in
-                                        guard let view = copyView.subviews.first else {
-                                            return
-                                        }
-                                        let size = state.sourceSize.interpolate(to: CGSize(width: state.destinationSize.width, height: state.destinationSize.height), amount: state.progress)
-                                        let scaleSize = state.sourceSize.interpolate(to: CGSize(width: state.destinationSize.width - 7.0, height: state.destinationSize.height - 7.0), amount: state.progress)
-                                        transition.setPosition(view: view, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
-                                        transition.setScale(view: view, scale: scaleSize.width / state.destinationSize.width)
-                                    },
-                                    insertCloneTransitionView: nil
-                                ),
-                                destinationRect: rect,
-                                destinationCornerRadius: rect.height * 0.5,
-                                destinationIsAvatar: true,
-                                completed: { [weak itemNode] in
-                                    guard let itemNode else {
-                                        return
-                                    }
-                                    itemNode.avatarNode.isHidden = false
-                                }
-                            )
-                        }
-                        return nil
-                    }
-                )
-                self.push(storyContainerScreen)
-            })
+            switch subject {
+            case .archive:
+                StoryContainerScreen.openArchivedStories(context: self.context, parentController: self, avatarNode: itemNode.avatarNode)
+            case let .peer(peerId):
+                StoryContainerScreen.openPeerStories(context: self.context, peerId: peerId, parentController: self, avatarNode: itemNode.avatarNode)
+            }
         }
         
         self.chatListDisplayNode.peerContextAction = { [weak self] peer, source, node, gesture, location in
@@ -1813,12 +1765,18 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             |> filter { $0 }
             |> take(1))
         } else {
-            self.storiesReady.set(.single(true))
+            let signals: [Signal<Bool, NoError>] = [
+                self.primaryInfoReady.get(),
+                self.storiesReady.get()
+            ]
             
-            self.ready.set(combineLatest([
-                self.chatListDisplayNode.mainContainerNode.ready,
-                self.primaryInfoReady.get()
-            ])
+            if case .chatList(.archive) = self.location {
+                //signals.append(self.mainReady.get())
+            } else {
+                self.storiesReady.set(.single(true))
+            }
+            
+            self.ready.set(combineLatest(signals)
             |> map { values -> Bool in
                 return !values.contains(where: { !$0 })
             }
@@ -1919,7 +1877,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 self.requestLayout(transition: transition)
                 self.chatListDisplayNode.temporaryContentOffsetChangeTransition = nil
                 
-                if rawStorySubscriptions.items.isEmpty {
+                if !shouldDisplayStoriesInChatListHeader(storySubscriptions: rawStorySubscriptions, isHidden: self.location == .chatList(groupId: .archive)) {
                     self.chatListDisplayNode.scrollToTopIfStoriesAreExpanded()
                 }
                 
@@ -2022,7 +1980,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             return
         }
         
-        if let orderedStorySubscriptions = self.orderedStorySubscriptions, !orderedStorySubscriptions.items.isEmpty {
+        if case .chatList(groupId: .root) = self.location, let orderedStorySubscriptions = self.orderedStorySubscriptions, !orderedStorySubscriptions.items.isEmpty {
             let _ = (ApplicationSpecificNotice.displayChatListStoriesTooltip(accountManager: self.context.sharedContext.accountManager)
             |> deliverOnMainQueue).start(next: { [weak self] didDisplay in
                 guard let self else {
@@ -2162,6 +2120,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         
         guard case .chatList(.root) = self.location else {
+            if !self.didSuggestLocalization {
+                self.didSuggestLocalization = true
+                
+                let _ = (self.chatListDisplayNode.mainContainerNode.ready
+                |> filter { $0 }
+                |> take(1)
+                |> timeout(0.5, queue: .mainQueue(), alternate: .single(true))).start(next: { [weak self] _ in
+                    guard let self else {
+                        return
+                    }
+                    self.onDidAppear?()
+                })
+            }
+            
             return
         }
         
@@ -2362,6 +2334,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     }
                 }
             })
+            
+            self.onDidAppear?()
         }
         
         self.chatListDisplayNode.mainContainerNode.addedVisibleChatsWithPeerIds = { [weak self] peerIds in
@@ -2939,6 +2913,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     public func scrollToStories() {
         self.chatListDisplayNode.scrollToStories(animated: false)
+    }
+    
+    public func scrollToStoriesAnimated() {
+        self.chatListDisplayNode.scrollToStories(animated: true)
     }
     
     private func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -3584,6 +3562,88 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 self.shouldFixStorySubscriptionOrder = true
             }
         }
+        
+        if peerId != self.context.account.peerId {
+            if let navigationBarView = self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
+                if navigationBarView.storiesUnlocked {
+                    if let componentView = self.chatListHeaderView(), let storyPeerListView = componentView.storyPeerListView() {
+                        let _ = storyPeerListView
+                        
+                        StoryContainerScreen.openPeerStoriesCustom(
+                            context: self.context,
+                            peerId: peerId,
+                            isHidden: self.location == .chatList(groupId: .archive),
+                            singlePeer: false,
+                            parentController: self,
+                            transitionIn: { [weak self] in
+                                guard let self else {
+                                    return nil
+                                }
+                                var transitionIn: StoryContainerScreen.TransitionIn?
+                                if let navigationBarView = self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
+                                    if navigationBarView.storiesUnlocked {
+                                        if let componentView = self.chatListHeaderView() {
+                                            if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
+                                                transitionIn = StoryContainerScreen.TransitionIn(
+                                                    sourceView: transitionView,
+                                                    sourceRect: transitionView.bounds,
+                                                    sourceCornerRadius: transitionView.bounds.height * 0.5,
+                                                    sourceIsAvatar: true
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                return transitionIn
+                            },
+                            transitionOut: { [weak self] peerId in
+                                guard let self else {
+                                    return nil
+                                }
+                                
+                                if let navigationBarView = self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
+                                    if navigationBarView.storiesUnlocked {
+                                        if let componentView = self.chatListHeaderView() {
+                                            if let (transitionView, transitionContentView) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
+                                                return StoryContainerScreen.TransitionOut(
+                                                    destinationView: transitionView,
+                                                    transitionView: transitionContentView,
+                                                    destinationRect: transitionView.bounds,
+                                                    destinationCornerRadius: transitionView.bounds.height * 0.5,
+                                                    destinationIsAvatar: true,
+                                                    completed: {}
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                return nil
+                            },
+                            setFocusedItem: { [weak self] focusedItem in
+                                guard let self else {
+                                    return
+                                }
+                                if let componentView = self.chatListHeaderView() {
+                                    componentView.storyPeerListView()?.setPreviewedItem(signal: focusedItem)
+                                }
+                            },
+                            setProgress: { [weak self] signal in
+                                guard let self else {
+                                    return
+                                }
+                                if let componentView = self.chatListHeaderView() {
+                                    componentView.storyPeerListView()?.setLoadingItem(peerId: peerId, signal: signal)
+                                }
+                            }
+                        )
+                        
+                        return
+                    }
+                }
+            }
+        }
+        
         let storyContent = StoryContentContextImpl(context: self.context, isHidden: self.location == .chatList(groupId: .archive), focusedPeerId: peerId, singlePeer: false, fixedOrder: self.fixedStorySubscriptionOrder)
         let _ = (storyContent.state
         |> take(1)

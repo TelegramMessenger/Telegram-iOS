@@ -2073,6 +2073,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             var downloadableResourceIds: [(messageId: MessageId, resourceId: String)] = []
             var allVisibleAnchorMessageIds: [(MessageId, Int)] = []
             var visibleAdOpaqueIds: [Data] = []
+            var peerIdsWithRefreshStories: [PeerId] = []
             
             if indexRange.0 <= indexRange.1 {
                 for i in (indexRange.0 ... indexRange.1) {
@@ -2080,6 +2081,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     
                     switch historyView.filteredEntries[i] {
                     case let .MessageEntry(message, _, _, _, _, _):
+                        if let author = message.author as? TelegramUser {
+                            peerIdsWithRefreshStories.append(author.id)
+                        }
+                        
                         var hasUnconsumedMention = false
                         var hasUnconsumedContent = false
                         if message.tags.contains(.unseenPersonalMessage) {
@@ -2187,6 +2192,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             allVisibleAnchorMessageIds.append((message.id, nodeIndex))
                         }
                     case let .MessageGroupEntry(_, messages, _):
+                        if let author = messages.first?.0.author as? TelegramUser {
+                            peerIdsWithRefreshStories.append(author.id)
+                        }
+                        
                         for (message, _, _, _, _) in messages {
                             var hasUnconsumedMention = false
                             var hasUnconsumedContent = false
@@ -2392,6 +2401,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 for opaqueId in visibleAdOpaqueIds {
                     self.markAdAsSeen(opaqueId: opaqueId)
                 }
+            }
+            if !peerIdsWithRefreshStories.isEmpty {
+                self.context.account.viewTracker.refreshStoryStatsForPeerIds(peerIds: peerIdsWithRefreshStories)
             }
             
             self.currentEarlierPrefetchMessages = toEarlierMediaMessages

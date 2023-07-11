@@ -13,6 +13,7 @@ swift_library(
         "//submodules/Display",
         "//submodules/ComponentFlow",
         "//submodules/TelegramPresentationData",
+        "//submodules/Components/HierarchyTrackingLayer",
     ],
     visibility = [
         "//visibility:public",

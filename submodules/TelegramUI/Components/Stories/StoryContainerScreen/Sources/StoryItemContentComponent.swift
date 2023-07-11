@@ -67,7 +67,7 @@ final class StoryItemContentComponent: Component {
         private var unsupportedText: ComponentView<Empty>?
         private var unsupportedButton: ComponentView<Empty>?
         
-        private var isProgressPaused: Bool = true
+        private var progressMode: StoryContentItem.ProgressMode = .pause
         private var currentProgressTimer: SwiftSignalKit.Timer?
         private var currentProgressTimerValue: Double = 0.0
         private var videoProgressDisposable: Disposable?
@@ -96,7 +96,7 @@ final class StoryItemContentComponent: Component {
                 guard let self else {
                     return
                 }
-                self.updateIsProgressPaused(update: true)
+                self.updateProgressMode(update: true)
             }
 		}
         
@@ -119,7 +119,7 @@ final class StoryItemContentComponent: Component {
             if self.videoNode != nil {
                 return
             }
-            if self.isProgressPaused {
+            if case .pause = self.progressMode {
                 return
             }
             
@@ -169,7 +169,17 @@ final class StoryItemContentComponent: Component {
                         guard let self else {
                             return
                         }
-                        self.environment?.presentationProgressUpdated(1.0, false, true)
+                        
+                        if self.progressMode == .blurred {
+                            self.rewind()
+                            if let videoNode = self.videoNode {
+                                if self.contentLoaded {
+                                    videoNode.play()
+                                }
+                            }
+                        } else {
+                            self.environment?.presentationProgressUpdated(1.0, false, true)
+                        }
                     }
                     videoNode.ownsContentNodeUpdated = { [weak self] value in
                         guard let self, let component = self.component else {
@@ -206,10 +216,10 @@ final class StoryItemContentComponent: Component {
             }
         }
         
-        override func setIsProgressPaused(_ isProgressPaused: Bool) {
-            if self.isProgressPaused != isProgressPaused {
-                self.isProgressPaused = isProgressPaused
-                self.updateIsProgressPaused(update: true)
+        override func setProgressMode(_ progressMode: StoryContentItem.ProgressMode) {
+            if self.progressMode != progressMode {
+                self.progressMode = progressMode
+                self.updateProgressMode(update: true)
             }
         }
         
@@ -239,9 +249,9 @@ final class StoryItemContentComponent: Component {
             }
         }
         
-        private func updateIsProgressPaused(update: Bool) {
+        private func updateProgressMode(update: Bool) {
             if let videoNode = self.videoNode {
-                var canPlay = !self.isProgressPaused && self.contentLoaded && self.hierarchyTrackingLayer.isInHierarchy
+                var canPlay = self.progressMode != .pause && self.contentLoaded && self.hierarchyTrackingLayer.isInHierarchy
                 if let component = self.component {
                     if component.item.isPending {
                         canPlay = false
@@ -261,7 +271,7 @@ final class StoryItemContentComponent: Component {
         }
         
         private func updateProgressTimer() {
-            var needsTimer = !self.isProgressPaused && self.contentLoaded && self.hierarchyTrackingLayer.isInHierarchy
+            var needsTimer = self.progressMode != .pause && self.contentLoaded && self.hierarchyTrackingLayer.isInHierarchy
             if let component = self.component {
                 if component.item.isPending {
                     needsTimer = false
@@ -274,7 +284,7 @@ final class StoryItemContentComponent: Component {
                         timeout: 1.0 / 60.0,
                         repeat: true,
                         completion: { [weak self] in
-                            guard let self, !self.isProgressPaused, self.contentLoaded, self.hierarchyTrackingLayer.isInHierarchy else {
+                            guard let self, self.progressMode != .pause, self.contentLoaded, self.hierarchyTrackingLayer.isInHierarchy else {
                                 return
                             }
                             
@@ -286,6 +296,10 @@ final class StoryItemContentComponent: Component {
                                     if let component = self.component {
                                         self.environment?.markAsSeen(StoryId(peerId: component.peer.id, id: component.item.id))
                                     }
+                                }
+                                
+                                if self.progressMode != .play {
+                                    return
                                 }
                                 
                                 #if DEBUG && true
@@ -626,7 +640,7 @@ final class StoryItemContentComponent: Component {
                 self.backgroundColor = UIColor(rgb: 0x181818)
             }
             
-            self.updateIsProgressPaused(update: false)
+            self.updateProgressMode(update: false)
             
             if reloadMedia && synchronousLoad {
                 print("\(CFAbsoluteTimeGetCurrent()) Synchronous: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")

@@ -1074,6 +1074,10 @@ public final class SparseItemGrid: ASDisplayNode {
             }
             for id in removeIds {
                 if let item = self.visibleItems.removeValue(forKey: id) {
+                    if let blurLayer = item.blurLayer {
+                        item.blurLayer = nil
+                        blurLayer.removeFromSuperlayer()
+                    }
                     if let layer = item.layer {
                         items.itemBinding.unbindLayer(layer: layer)
                         layer.removeFromSuperlayer()

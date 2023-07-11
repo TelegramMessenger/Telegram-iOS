@@ -274,14 +274,17 @@ func fetchPeerStoryStats(postbox: PostboxImpl, peerId: PeerId) -> PeerStoryStats
     if topItems.id == 0 {
         return nil
     }
-    guard let state = postbox.storyPeerStatesTable.get(key: .peer(peerId)) else {
-        return nil
+    
+    var maxSeenId: Int32 = 0
+    if let state = postbox.storyPeerStatesTable.get(key: .peer(peerId)) {
+        maxSeenId = state.maxSeenId
     }
+    
     if topItems.isExact {
-        let stats = postbox.storyItemsTable.getStats(peerId: peerId, maxSeenId: state.maxSeenId)
+        let stats = postbox.storyItemsTable.getStats(peerId: peerId, maxSeenId: maxSeenId)
         return PeerStoryStats(totalCount: stats.total, unseenCount: stats.unseen)
     } else {
-        return PeerStoryStats(totalCount: 1, unseenCount: topItems.id > state.maxSeenId ? 1 : 0)
+        return PeerStoryStats(totalCount: 1, unseenCount: topItems.id > maxSeenId ? 1 : 0)
     }
 }
 

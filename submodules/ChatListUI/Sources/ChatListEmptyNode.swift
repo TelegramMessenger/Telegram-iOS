@@ -13,6 +13,7 @@ import AccountContext
 final class ChatListEmptyNode: ASDisplayNode {
     enum Subject {
         case chats(hasArchive: Bool)
+        case archive
         case filter(showEdit: Bool)
         case forum(hasGeneral: Bool)
     }
@@ -132,11 +133,14 @@ final class ChatListEmptyNode: ASDisplayNode {
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         let text: String
         var descriptionText = ""
-        let buttonText: String
+        let buttonText: String?
         switch self.subject {
             case let .chats(hasArchive):
                 text = hasArchive ? strings.ChatList_EmptyChatListWithArchive : strings.ChatList_EmptyChatList
                 buttonText = strings.ChatList_EmptyChatListNewMessage
+            case .archive:
+                text = strings.ChatList_EmptyChatList
+                buttonText = nil
             case .filter:
                 text = strings.ChatList_EmptyChatListFilterTitle
                 descriptionText = strings.ChatList_EmptyChatListFilterText
@@ -152,7 +156,12 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.textNode.attributedText = string
         self.descriptionNode.attributedText = descriptionString
         
-        self.buttonNode.title = buttonText
+        if let buttonText {
+            self.buttonNode.title = buttonText
+            self.buttonNode.isHidden = false
+        } else {
+            self.buttonNode.isHidden = true
+        }
     
         self.activityIndicator.type = .custom(theme.list.itemAccentColor, 22.0, 1.0, false)
         

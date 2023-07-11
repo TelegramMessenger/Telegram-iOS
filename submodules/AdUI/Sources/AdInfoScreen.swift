@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
+import Markdown
 
 public final class AdInfoScreen: ViewController {
     private final class Node: ViewControllerTracingNode {
@@ -84,9 +85,16 @@ public final class AdInfoScreen: ViewController {
                 self.scrollNode.view.contentInsetAdjustmentBehavior = .never
             }
 
-            var openUrl: (() -> Void)?
+            var openUrl: ((String) -> Void)?
 
-            let rawText = self.presentationData.strings.SponsoredMessageInfoScreen_Text
+            #if DEBUG && false
+            let rawText = "First Line\n**Bold Text** [Description](http://google.com) text\n[url]\nabcdee"
+            #else
+            let rawText = self.presentationData.strings.SponsoredMessageInfoScreen_MarkdownText
+            #endif
+            
+            let defaultUrl = self.presentationData.strings.SponsoredMessageInfo_Url
+            
             var items: [Item] = []
             var didAddUrl = false
             for component in rawText.components(separatedBy: "[url]") {
@@ -100,20 +108,40 @@ public final class AdInfoScreen: ViewController {
 
                 let textNode = ImmediateTextNode()
                 textNode.maximumNumberOfLines = 0
-                textNode.attributedText = NSAttributedString(string: itemText, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+                textNode.attributedText = parseMarkdownIntoAttributedString(itemText, attributes: MarkdownAttributes(
+                    body: MarkdownAttributeSet(font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor),
+                    bold: MarkdownAttributeSet(font: Font.semibold(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor),
+                    link: MarkdownAttributeSet(font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemAccentColor),
+                    linkAttribute: { url in
+                        return ("URL", url)
+                    }
+                ))
                 items.append(.text(textNode))
+                textNode.highlightAttributeAction = { attributes in
+                    if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
+                        return NSAttributedString.Key(rawValue: "URL")
+                    } else {
+                        return nil
+                    }
+                }
+                textNode.tapAttributeAction = { attributes, _ in
+                    if let value = attributes[NSAttributedString.Key(rawValue: "URL")] as? String {
+                        openUrl?(value)
+                    }
+                }
+                textNode.linkHighlightColor = self.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.5)
 
                 if !didAddUrl {
                     didAddUrl = true
                     items.append(.link(LinkNode(text: self.presentationData.strings.SponsoredMessageInfo_Url, color: self.presentationData.theme.list.itemAccentColor, action: {
-                        openUrl?()
+                        openUrl?(defaultUrl)
                     })))
                 }
             }
             if !didAddUrl {
                 didAddUrl = true
                 items.append(.link(LinkNode(text: self.presentationData.strings.SponsoredMessageInfo_Url, color: self.presentationData.theme.list.itemAccentColor, action: {
-                    openUrl?()
+                    openUrl?(defaultUrl)
                 })))
             }
             self.items = items
@@ -133,11 +161,11 @@ public final class AdInfoScreen: ViewController {
                 }
             }
 
-            openUrl = { [weak self] in
+            openUrl = { [weak self] url in
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.context.sharedContext.applicationBindings.openUrl(strongSelf.presentationData.strings.SponsoredMessageInfo_Url)
+                strongSelf.context.sharedContext.applicationBindings.openUrl(url)
             }
         }
 

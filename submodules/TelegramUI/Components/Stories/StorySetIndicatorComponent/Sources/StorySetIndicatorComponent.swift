@@ -92,6 +92,7 @@ public final class StorySetIndicatorComponent: Component {
     public let peer: EnginePeer
     public let items: [EngineStoryItem]
     public let hasUnseen: Bool
+    public let hasUnseenPrivate: Bool
     public let totalCount: Int
     public let theme: PresentationTheme
     public let action: () -> Void
@@ -101,6 +102,7 @@ public final class StorySetIndicatorComponent: Component {
         peer: EnginePeer,
         items: [EngineStoryItem],
         hasUnseen: Bool,
+        hasUnseenPrivate: Bool,
         totalCount: Int,
         theme: PresentationTheme,
         action: @escaping () -> Void
@@ -109,6 +111,7 @@ public final class StorySetIndicatorComponent: Component {
         self.peer = peer
         self.items = items
         self.hasUnseen = hasUnseen
+        self.hasUnseenPrivate = hasUnseenPrivate
         self.totalCount = totalCount
         self.theme = theme
         self.action = action
@@ -119,6 +122,9 @@ public final class StorySetIndicatorComponent: Component {
             return false
         }
         if lhs.hasUnseen != rhs.hasUnseen {
+            return false
+        }
+        if lhs.hasUnseenPrivate != rhs.hasUnseenPrivate {
             return false
         }
         if lhs.totalCount != rhs.totalCount {
@@ -349,7 +355,9 @@ public final class StorySetIndicatorComponent: Component {
             
             let borderColors: [UInt32]
             
-            if component.hasUnseen {
+            if component.hasUnseenPrivate {
+                borderColors = [component.theme.chatList.storyUnseenPrivateColors.topColor.argb, component.theme.chatList.storyUnseenPrivateColors.bottomColor.argb]
+            } else if component.hasUnseen {
                 borderColors = [component.theme.chatList.storyUnseenColors.topColor.argb, component.theme.chatList.storyUnseenColors.bottomColor.argb]
             } else {
                 borderColors = [UIColor(white: 1.0, alpha: 0.3).argb, UIColor(white: 1.0, alpha: 0.3).argb]

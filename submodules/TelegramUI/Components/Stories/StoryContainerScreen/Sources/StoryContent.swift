@@ -19,13 +19,29 @@ public final class StoryContentItem: Equatable {
         case off
     }
     
+    public struct DayCounters: Equatable {
+        public var position: Int
+        public var totalCount: Int
+        
+        public init(position: Int, totalCount: Int) {
+            self.position = position
+            self.totalCount = totalCount
+        }
+    }
+    
     public final class SharedState {
         public init() {
         }
     }
     
+    public enum ProgressMode {
+        case play
+        case pause
+        case blurred
+    }
+    
     open class View: UIView {
-        open func setIsProgressPaused(_ isProgressPaused: Bool) {
+        open func setProgressMode(_ progressMode: ProgressMode) {
         }
         
         open func rewind() {
@@ -78,17 +94,20 @@ public final class StoryContentItem: Equatable {
     }
     
     public let position: Int?
+    public let dayCounters: DayCounters?
     public let peerId: EnginePeer.Id?
     public let storyItem: EngineStoryItem
     public let entityFiles: [EngineMedia.Id: TelegramMediaFile]
 
     public init(
         position: Int?,
+        dayCounters: DayCounters?,
         peerId: EnginePeer.Id?,
         storyItem: EngineStoryItem,
         entityFiles: [EngineMedia.Id: TelegramMediaFile]
     ) {
         self.position = position
+        self.dayCounters = dayCounters
         self.peerId = peerId
         self.storyItem = storyItem
         self.entityFiles = entityFiles
@@ -96,6 +115,9 @@ public final class StoryContentItem: Equatable {
     
     public static func ==(lhs: StoryContentItem, rhs: StoryContentItem) -> Bool {
         if lhs.position != rhs.position {
+            return false
+        }
+        if lhs.dayCounters != rhs.dayCounters {
             return false
         }
         if lhs.peerId != rhs.peerId {

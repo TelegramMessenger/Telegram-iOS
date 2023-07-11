@@ -1235,7 +1235,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         
         if let keepMinimalScrollHeightWithTopInset = self.keepMinimalScrollHeightWithTopInset, topItemFound {
             if !self.stackFromBottom {
-                completeHeight = max(completeHeight, self.visibleSize.height + keepMinimalScrollHeightWithTopInset - effectiveInsets.bottom - effectiveInsets.top)
+                if !keepMinimalScrollHeightWithTopInset.isZero {
+                    completeHeight = max(completeHeight, self.visibleSize.height + effectiveInsets.top + effectiveInsets.bottom)
+                }
+                //completeHeight = max(completeHeight, self.visibleSize.height + keepMinimalScrollHeightWithTopInset - effectiveInsets.bottom - effectiveInsets.top)
                 bottomItemEdge = max(bottomItemEdge, topItemEdge + completeHeight)
             } else {
                 effectiveInsets.top = max(effectiveInsets.top, self.visibleSize.height - completeHeight)
@@ -1647,7 +1650,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 
                 if let keepMinimalScrollHeightWithTopInset = self.keepMinimalScrollHeightWithTopInset {
                     if !self.stackFromBottom {
-                        completeHeight = max(completeHeight, self.visibleSize.height + keepMinimalScrollHeightWithTopInset)
+                        if !keepMinimalScrollHeightWithTopInset.isZero {
+                            completeHeight = max(completeHeight, self.visibleSize.height + effectiveInsets.top + effectiveInsets.bottom)
+                        }
+                        //completeHeight = max(completeHeight, self.visibleSize.height + keepMinimalScrollHeightWithTopInset)
                         bottomItemEdge = max(bottomItemEdge, topItemEdge + completeHeight)
                     }
                 }

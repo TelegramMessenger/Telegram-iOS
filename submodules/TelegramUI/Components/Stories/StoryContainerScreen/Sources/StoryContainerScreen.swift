@@ -1022,33 +1022,51 @@ private final class StoryContainerScreenComponent: Component {
                     )
                 }
                 
-                self.contentUpdatedDisposable?.dispose()
                 var update = false
-                self.contentUpdatedDisposable = (component.content.updated
-                |> deliverOnMainQueue).start(next: { [weak self] _ in
-                    guard let self, let component = self.component else {
+                
+                let contentUpdated: (StoryContainerScreenComponent) -> Void = { [weak self] component in
+                    guard let self else {
                         return
                     }
-                    if update {
-                        var focusedItemId: StoryId?
-                        var isVideo = false
-                        if let slice = component.content.stateValue?.slice {
-                            focusedItemId = StoryId(peerId: slice.peer.id, id: slice.item.storyItem.id)
-                            if case .file = slice.item.storyItem.media {
-                                isVideo = true
-                            }
+                    
+                    var focusedItemId: StoryId?
+                    var isVideo = false
+                    if let slice = component.content.stateValue?.slice {
+                        focusedItemId = StoryId(peerId: slice.peer.id, id: slice.item.storyItem.id)
+                        if case .file = slice.item.storyItem.media {
+                            isVideo = true
                         }
-                        self.focusedItem.set(focusedItemId)
-                        
-                        self.contentWantsVolumeButtonMonitoring.set(isVideo)
-                        
+                    }
+                    self.focusedItem.set(focusedItemId)
+                    self.contentWantsVolumeButtonMonitoring.set(isVideo)
+                    
+                    if update {
                         if component.content.stateValue?.slice == nil {
                             self.environment?.controller()?.dismiss()
                         } else {
                             self.state?.updated(transition: .immediate)
                         }
+                    } else {
+                        DispatchQueue.main.async { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.state?.updated(transition: .immediate)
+                        }
                     }
+                }
+                
+                self.contentUpdatedDisposable?.dispose()
+                self.contentUpdatedDisposable = (component.content.updated
+                |> deliverOnMainQueue).start(next: { [weak self] _ in
+                    guard let self, let component = self.component else {
+                        return
+                    }
+                    contentUpdated(component)
                 })
+                if component.content.stateValue?.slice != nil {
+                    contentUpdated(component)
+                }
                 update = true
             }
             
@@ -1247,6 +1265,10 @@ private final class StoryContainerScreenComponent: Component {
                                         } else if slice.previousItemId != nil {
                                             component.content.navigate(navigation: .item(.previous))
                                         } else if let environment = self.environment {
+                                            if let sourceIsAvatar = component.transitionIn?.sourceIsAvatar, sourceIsAvatar {
+                                            } else {
+                                                self.dismissWithoutTransitionOut = true
+                                            }
                                             environment.controller()?.dismiss()
                                         }
                                         
@@ -1562,7 +1584,7 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
     private var didAnimateIn: Bool = false
     private var isDismissed: Bool = false
     
-    private let focusedItemPromise = Promise<StoryId?>(nil)
+    private let focusedItemPromise = Promise<StoryId?>()
     public var focusedItem: Signal<StoryId?, NoError> {
         return self.focusedItemPromise.get()
     }
@@ -1753,4 +1775,3 @@ func allowedStoryReactions(context: AccountContext) -> Signal<[ReactionItem], No
         return result
     }
 }
-

@@ -536,7 +536,11 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         }
         
         if let backgroundNode = self.backgroundNode, backgroundNode.frame.contains(point) {
-            return .openMessage
+            if let item = self.item, item.message.media.contains(where: { $0 is TelegramMediaStory }) {
+                return .none
+            } else {
+                return .openMessage
+            }
         } else {
             return .none
         }

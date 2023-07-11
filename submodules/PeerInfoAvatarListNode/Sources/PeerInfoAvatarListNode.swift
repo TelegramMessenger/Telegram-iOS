@@ -580,7 +580,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     public let topShadowNode: ASImageNode
     public let bottomShadowNode: ASImageNode
     
-    public var storyParams: (peer: EnginePeer, items: [EngineStoryItem], count: Int, hasUnseen: Bool)?
+    public var storyParams: (peer: EnginePeer, items: [EngineStoryItem], count: Int, hasUnseen: Bool, hasUnseenPrivate: Bool)?
     private var expandedStorySetIndicator: ComponentView<Empty>?
     public var expandedStorySetIndicatorTransitionView: (UIView, CGRect)? {
         if let setView = self.expandedStorySetIndicator?.view as? StorySetIndicatorComponent.View {
@@ -1268,6 +1268,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     peer: storyParams.peer,
                     items: storyParams.items,
                     hasUnseen: storyParams.hasUnseen,
+                    hasUnseenPrivate: storyParams.hasUnseenPrivate,
                     totalCount: storyParams.count,
                     theme: defaultDarkPresentationTheme,
                     action: { [weak self] in

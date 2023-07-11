@@ -13,6 +13,7 @@ import ContextUI
 import AsyncDisplayKit
 import StoryContainerScreen
 import MultilineTextComponent
+import HierarchyTrackingLayer
 
 private func calculateCircleIntersection(center: CGPoint, otherCenter: CGPoint, radius: CGFloat) -> (point1Angle: CGFloat, point2Angle: CGFloat)? {
     let distanceVector = CGPoint(x: otherCenter.x - center.x, y: otherCenter.y - center.y)
@@ -124,7 +125,7 @@ private func calculateMergingCircleShape(center: CGPoint, leftCenter: CGPoint?, 
     return path
 }
 
-private final class StoryProgressLayer: SimpleLayer {
+private final class StoryProgressLayer: HierarchyTrackingLayer {
     enum Value: Equatable {
         case indefinite
         case progress(Float)
@@ -147,12 +148,10 @@ private final class StoryProgressLayer: SimpleLayer {
         
         self.uploadProgressLayer.fillColor = nil
         self.uploadProgressLayer.strokeColor = UIColor.white.cgColor
-        self.uploadProgressLayer.lineWidth = 2.0
         self.uploadProgressLayer.lineCap = .round
         
         self.indefiniteDashLayer.fillColor = nil
         self.indefiniteDashLayer.strokeColor = UIColor.white.cgColor
-        self.indefiniteDashLayer.lineWidth = 2.0
         self.indefiniteDashLayer.lineCap = .round
         self.indefiniteDashLayer.lineJoin = .round
         self.indefiniteDashLayer.strokeEnd = 0.0333
@@ -164,6 +163,13 @@ private final class StoryProgressLayer: SimpleLayer {
         self.indefiniteReplicatorLayer.instanceTransform = CATransform3DMakeRotation(CGFloat(angle), 0.0, 0.0, 1.0)
         self.indefiniteReplicatorLayer.transform = CATransform3DMakeRotation(-.pi / 2.0, 0.0, 0.0, 1.0)
         self.indefiniteReplicatorLayer.instanceDelay = 0.025
+        
+        self.didEnterHierarchy = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.updateAnimations(transition: .immediate)
+        }
     }
     
     override init(layer: Any) {
@@ -180,35 +186,12 @@ private final class StoryProgressLayer: SimpleLayer {
         self.uploadProgressLayer.path = nil
     }
     
-    func update(size: CGSize, lineWidth: CGFloat, value: Value, transition: Transition) {
-        let params = Params(
-            size: size,
-            lineWidth: lineWidth,
-            value: value
-        )
-        if self.currentParams == params {
+    func updateAnimations(transition: Transition) {
+        guard let params = self.currentParams else {
             return
         }
-        self.currentParams = params
         
-        let lineWidth: CGFloat = 2.0
-        let bounds = CGRect(origin: .zero, size: size)
-        if self.uploadProgressLayer.path == nil {
-            let path = CGMutablePath()
-            path.addEllipse(in: CGRect(origin: CGPoint(x: lineWidth * 0.5, y: lineWidth * 0.5), size: CGSize(width: size.width - lineWidth, height: size.height - lineWidth)))
-            self.uploadProgressLayer.path = path
-            self.uploadProgressLayer.frame = bounds
-        }
-        
-        if self.indefiniteDashLayer.path == nil {
-            let path = CGMutablePath()
-            path.addEllipse(in: CGRect(origin: CGPoint(x: lineWidth * 0.5, y: lineWidth * 0.5), size: CGSize(width: size.width - lineWidth, height: size.height - lineWidth)))
-            self.indefiniteDashLayer.path = path
-            self.indefiniteReplicatorLayer.frame = bounds
-            self.indefiniteDashLayer.frame = bounds
-        }
-        
-        switch value {
+        switch params.value {
         case let .progress(progress):
             if self.indefiniteReplicatorLayer.superlayer != nil {
                 self.indefiniteReplicatorLayer.removeFromSuperlayer()
@@ -257,6 +240,39 @@ private final class StoryProgressLayer: SimpleLayer {
                 self.indefiniteDashLayer.add(dashAnimation, forKey: "dash")
             }
         }
+    }
+    
+    func update(size: CGSize, lineWidth: CGFloat, radius: CGFloat, value: Value, transition: Transition) {
+        let params = Params(
+            size: size,
+            lineWidth: lineWidth,
+            value: value
+        )
+        if self.currentParams == params {
+            return
+        }
+        self.currentParams = params
+        
+        self.uploadProgressLayer.lineWidth = lineWidth
+        self.indefiniteDashLayer.lineWidth = lineWidth
+        
+        let bounds = CGRect(origin: .zero, size: size)
+        if self.uploadProgressLayer.path == nil {
+            let path = CGMutablePath()
+            path.addEllipse(in: CGRect(origin: CGPoint(x: (size.width - radius * 2.0) * 0.5, y: (size.height - radius * 2.0) * 0.5), size: CGSize(width: radius * 2.0, height: radius * 2.0)))
+            self.uploadProgressLayer.path = path
+            self.uploadProgressLayer.frame = bounds
+        }
+        
+        if self.indefiniteDashLayer.path == nil {
+            let path = CGMutablePath()
+            path.addEllipse(in: CGRect(origin: CGPoint(x: (size.width - radius * 2.0) * 0.5, y: (size.height - radius * 2.0) * 0.5), size: CGSize(width: radius * 2.0, height: radius * 2.0)))
+            self.indefiniteDashLayer.path = path
+            self.indefiniteReplicatorLayer.frame = bounds
+            self.indefiniteDashLayer.frame = bounds
+        }
+        
+        self.updateAnimations(transition: transition)
     }
 }
 
@@ -845,9 +861,9 @@ public final class StoryPeerListItemComponent: Component {
                     } else {
                         progressTransition = .easeInOut(duration: 0.3)
                     }
-                    progressLayer.update(size: progressFrame.size, lineWidth: indicatorLineUnseenWidth, value: .progress(progress), transition: progressTransition)
+                    progressLayer.update(size: progressFrame.size, lineWidth: indicatorLineUnseenWidth, radius: indicatorRadius - indicatorLineUnseenWidth * 0.5, value: .progress(progress), transition: progressTransition)
                 case .loading:
-                    progressLayer.update(size: progressFrame.size, lineWidth: indicatorLineUnseenWidth, value: .indefinite, transition: transition)
+                    progressLayer.update(size: progressFrame.size, lineWidth: indicatorLineUnseenWidth, radius: indicatorRadius - indicatorLineUnseenWidth * 0.5, value: .indefinite, transition: transition)
                 }
                 self.indicatorShapeSeenLayer.opacity = 0.0
                 self.indicatorShapeUnseenLayer.opacity = 0.0

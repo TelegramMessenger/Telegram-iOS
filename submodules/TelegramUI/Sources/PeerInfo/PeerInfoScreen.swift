@@ -3903,7 +3903,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         case .placeholder:
                             return nil
                         }
-                    }, state.items.count, state.hasUnseen)
+                    }, state.items.count, state.hasUnseen, state.hasUnseenCloseFriends)
                 }
                 
                 self.requestLayout(animated: false)
@@ -4107,7 +4107,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func openStories(fromAvatar: Bool) {
+        guard let controller = self.controller else {
+            return
+        }
         if let expiringStoryList = self.expiringStoryList, let expiringStoryListState = self.expiringStoryListState, !expiringStoryListState.items.isEmpty {
+            if fromAvatar {
+                StoryContainerScreen.openPeerStories(context: self.context, peerId: self.peerId, parentController: controller, avatarNode: self.headerNode.avatarListNode.avatarContainerNode.avatarNode)
+                return
+            }
+            
             let _ = expiringStoryList
             let storyContent = StoryContentContextImpl(context: self.context, isHidden: false, focusedPeerId: self.peerId, singlePeer: true)
             let _ = (storyContent.state
@@ -7141,6 +7149,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         case .remove:
             data.members?.membersContext.removeMember(memberId: member.id)
         case let .openStories(sourceView):
+            guard let controller = self.controller else {
+                return
+            }
+            if let avatarNode = sourceView.asyncdisplaykit_node as? AvatarNode {
+                StoryContainerScreen.openPeerStories(context: self.context, peerId: member.id, parentController: controller, avatarNode: avatarNode)
+                return
+            }
             let storyContent = StoryContentContextImpl(context: self.context, isHidden: false, focusedPeerId: member.id, singlePeer: true)
             let _ = (storyContent.state
             |> filter { $0.slice != nil }

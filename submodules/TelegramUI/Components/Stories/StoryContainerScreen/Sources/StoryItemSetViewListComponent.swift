@@ -14,6 +14,7 @@ import ShimmerEffect
 import StoryFooterPanelComponent
 import PeerListItemComponent
 import AnimatedStickerComponent
+import AvatarNode
 
 final class StoryItemSetViewListComponent: Component {
     final class AnimationHint {
@@ -56,7 +57,7 @@ final class StoryItemSetViewListComponent: Component {
     let deleteAction: () -> Void
     let moreAction: (UIView, ContextGesture?) -> Void
     let openPeer: (EnginePeer) -> Void
-    let openPeerStories: (EnginePeer, UIView) -> Void
+    let openPeerStories: (EnginePeer, AvatarNode) -> Void
     
     init(
         externalState: ExternalState,
@@ -75,7 +76,7 @@ final class StoryItemSetViewListComponent: Component {
         deleteAction: @escaping () -> Void,
         moreAction: @escaping (UIView, ContextGesture?) -> Void,
         openPeer: @escaping (EnginePeer) -> Void,
-        openPeerStories: @escaping (EnginePeer, UIView) -> Void
+        openPeerStories: @escaping (EnginePeer, AvatarNode) -> Void
     ) {
         self.externalState = externalState
         self.context = context
@@ -499,11 +500,11 @@ final class StoryItemSetViewListComponent: Component {
                                 }
                                 component.openPeer(peer)
                             },
-                            openStories: { [weak self] peer, sourceView in
+                            openStories: { [weak self] peer, avatarNode in
                                 guard let self, let component = self.component else {
                                     return
                                 }
-                                component.openPeerStories(peer, sourceView)
+                                component.openPeerStories(peer, avatarNode)
                             }
                         )),
                         environment: {},

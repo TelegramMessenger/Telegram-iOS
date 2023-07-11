@@ -76,6 +76,7 @@ swift_library(
         "//submodules/OpenInExternalAppUI",
         "//submodules/MediaPasteboardUI",
         "//submodules/WebPBinding",
+        "//submodules/Utils/RangeSet",
     ],
     visibility = [
         "//visibility:public",

@@ -186,7 +186,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             self.contentOffset = offset
             self.contentOffsetChanged(offset: offset)
             
-            if self.contactListNode.listNode.isTracking {
+            /*if self.contactListNode.listNode.isTracking {
                 if case let .known(value) = offset {
                     if !self.storiesUnlocked {
                         if value < -40.0 {
@@ -220,7 +220,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 default:
                     break
                 }
-            }
+            }*/
         }
         
         self.contactListNode.contentScrollingEnded = { [weak self] listView in
@@ -280,43 +280,18 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     private func contentScrollingEnded(listView: ListView) -> Bool {
-        if "".isEmpty {
-            return false
-        }
-        
-        /*if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
+        if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
             if let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset {
-                if navigationBarComponentView.effectiveStoriesInsetHeight > 0.0 {
-                    if clippedScrollOffset > 0.0 && clippedScrollOffset < navigationBarComponentView.effectiveStoriesInsetHeight {
-                        if clippedScrollOffset < navigationBarComponentView.effectiveStoriesInsetHeight * 0.5 {
-                            let _ = listView.scrollToOffsetFromTop(0.0, animated: true)
-                        } else {
-                            let _ = listView.scrollToOffsetFromTop(navigationBarComponentView.effectiveStoriesInsetHeight, animated: true)
-                        }
-                        return true
+                if clippedScrollOffset > 0.0 && clippedScrollOffset < ChatListNavigationBar.searchScrollHeight {
+                    if clippedScrollOffset < ChatListNavigationBar.searchScrollHeight * 0.5 {
+                        let _ = listView.scrollToOffsetFromTop(0.0, animated: true)
                     } else {
-                        let searchScrollOffset = clippedScrollOffset - navigationBarComponentView.effectiveStoriesInsetHeight
-                        if searchScrollOffset > 0.0 && searchScrollOffset < ChatListNavigationBar.searchScrollHeight {
-                            if searchScrollOffset < ChatListNavigationBar.searchScrollHeight * 0.5 {
-                                let _ = listView.scrollToOffsetFromTop(navigationBarComponentView.effectiveStoriesInsetHeight, animated: true)
-                            } else {
-                                let _ = listView.scrollToOffsetFromTop(navigationBarComponentView.effectiveStoriesInsetHeight + ChatListNavigationBar.searchScrollHeight, animated: true)
-                            }
-                            return true
-                        }
+                        let _ = listView.scrollToOffsetFromTop(ChatListNavigationBar.searchScrollHeight, animated: true)
                     }
-                } else {
-                    if clippedScrollOffset > 0.0 && clippedScrollOffset < ChatListNavigationBar.searchScrollHeight {
-                        if clippedScrollOffset < ChatListNavigationBar.searchScrollHeight * 0.5 {
-                            let _ = listView.scrollToOffsetFromTop(0.0, animated: true)
-                        } else {
-                            let _ = listView.scrollToOffsetFromTop(ChatListNavigationBar.searchScrollHeight, animated: true)
-                        }
-                        return true
-                    }
+                    return true
                 }
             }
-        }*/
+        }
         
         return false
     }

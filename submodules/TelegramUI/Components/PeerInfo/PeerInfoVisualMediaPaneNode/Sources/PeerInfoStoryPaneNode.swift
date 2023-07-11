@@ -1009,11 +1009,13 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 var transitionIn: StoryContainerScreen.TransitionIn?
                 
                 let story = item.story
+                var foundItem: SparseItemGridDisplayItem?
                 var foundItemLayer: SparseItemGridLayer?
                 self.itemGrid.forEachVisibleItem { item in
                     guard let itemLayer = item.layer as? ItemLayer else {
                         return
                     }
+                    foundItem = item
                     if let listItem = itemLayer.item, listItem.story.id == story.id {
                         foundItemLayer = itemLayer
                     }
@@ -1026,6 +1028,11 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         sourceCornerRadius: 0.0,
                         sourceIsAvatar: false
                     )
+                    
+                    if let blurLayer = foundItem?.blurLayer {
+                        let transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
+                        transition.setAlpha(layer: blurLayer, alpha: 0.0)
+                    }
                 }
                 
                 let storyContainerScreen = StoryContainerScreen(
@@ -1037,16 +1044,23 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                             return nil
                         }
                         
+                        var foundItem: SparseItemGridDisplayItem?
                         var foundItemLayer: SparseItemGridLayer?
                         self.itemGrid.forEachVisibleItem { item in
                             guard let itemLayer = item.layer as? ItemLayer else {
                                 return
                             }
+                            foundItem = item
                             if let listItem = itemLayer.item, AnyHashable(listItem.story.id) == itemId {
                                 foundItemLayer = itemLayer
                             }
                         }
                         if let foundItemLayer {
+                            if let blurLayer = foundItem?.blurLayer {
+                                let transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
+                                transition.setAlpha(layer: blurLayer, alpha: 1.0)
+                            }
+                            
                             let itemRect = self.itemGrid.frameForItem(layer: foundItemLayer)
                             return StoryContainerScreen.TransitionOut(
                                 destinationView: self.view,
@@ -1487,29 +1501,13 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     }
 
     public func loadHole(anchor: SparseItemGrid.HoleAnchor, at location: SparseItemGrid.HoleLocation) -> Signal<Never, NoError> {
-        //TODO:load more
-        /*guard let anchor = anchor as? VisualMediaHoleAnchor else {
-            return .never()
-        }
-        let mappedDirection: SparseMessageList.LoadHoleDirection
-        switch location {
-        case .around:
-            mappedDirection = .around
-        case .toLower:
-            mappedDirection = .later
-        case .toUpper:
-            mappedDirection = .earlier
-        }
         let listSource = self.listSource
-        return Signal { subscriber in
-            listSource.loadHole(anchor: anchor.messageId, direction: mappedDirection, completion: {
-                subscriber.putCompletion()
-            })
-
+        return Signal { _ in
+            listSource.loadMore()
+            
             return EmptyDisposable
-        }*/
-        
-        return .never()
+        }
+        |> runOn(.mainQueue())
     }
 
     public func updateContentType(contentType: ContentType) {
@@ -1575,7 +1573,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             let timezoneOffset = Int32(TimeZone.current.secondsFromGMT())
 
             var mappedItems: [SparseItemGrid.Item] = []
-            let mappedHoles: [SparseItemGrid.HoleAnchor] = []
+            var mappedHoles: [SparseItemGrid.HoleAnchor] = []
             var totalCount: Int = 0
             if let peerReference = state.peerReference {
                 for item in state.items {
@@ -1585,6 +1583,9 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         story: item,
                         localMonthTimestamp: Month(localTimestamp: item.timestamp + timezoneOffset).packedValue
                     ))
+                }
+                if mappedItems.count < state.totalCount, let lastItem = state.items.last {
+                    mappedHoles.append(VisualMediaHoleAnchor(index: mappedItems.count, storyId: 1, localMonthTimestamp: Month(localTimestamp: lastItem.timestamp + timezoneOffset).packedValue))
                 }
             }
             totalCount = state.totalCount
@@ -1875,11 +1876,21 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     }
     
     private func updateHiddenItems() {
-        self.itemGrid.forEachVisibleItem { item in
-            guard let itemLayer = item.layer as? ItemLayer, let item = itemLayer.item else {
+        self.itemGrid.forEachVisibleItem { itemValue in
+            guard let itemLayer = itemValue.layer as? ItemLayer, let item = itemLayer.item else {
                 return
             }
-            itemLayer.isHidden = self.itemInteraction.hiddenMedia.contains(item.story.id)
+            let itemHidden = self.itemInteraction.hiddenMedia.contains(item.story.id)
+            itemLayer.isHidden = itemHidden
+            
+            if let blurLayer = itemValue.blurLayer {
+                let transition = Transition.immediate
+                if itemHidden {
+                    transition.setAlpha(layer: blurLayer, alpha: 0.0)
+                } else {
+                    transition.setAlpha(layer: blurLayer, alpha: 1.0)
+                }
+            }
         }
     }
     

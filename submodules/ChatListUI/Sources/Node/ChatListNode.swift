@@ -1246,6 +1246,8 @@ public final class ChatListNode: ListView {
         self.animationRenderer = animationRenderer
         self.autoSetReady = autoSetReady
         
+        let isMainTab = chatListFilter == nil && location == .chatList(groupId: .root)
+        
         var isSelecting = false
         if case .peers(_, true, _, _, _, _) = mode {
             isSelecting = true
@@ -1933,7 +1935,7 @@ public final class ChatListNode: ListView {
                 notice = nil
             }
             
-            let (rawEntries, isLoading) = chatListNodeEntriesForView(view: update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, notice: notice, mode: mode, chatListLocation: location, contacts: contacts, accountPeerId: accountPeerId)
+            let (rawEntries, isLoading) = chatListNodeEntriesForView(view: update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, notice: notice, mode: mode, chatListLocation: location, contacts: contacts, accountPeerId: accountPeerId, isMainTab: isMainTab)
             var isEmpty = true
             var entries = rawEntries.filter { entry in
                 switch entry {
@@ -2403,6 +2405,7 @@ public final class ChatListNode: ListView {
                     strongSelf.enqueueHistoryPreloadUpdate()
                 }
                 
+                var refreshStoryPeerIds: [PeerId] = []
                 var isHiddenItemVisible = false
                 if let range = range.visibleRange {
                     let entryCount = chatListView.filteredEntries.count
@@ -2418,6 +2421,11 @@ public final class ChatListNode: ListView {
                                 if let threadInfo, threadInfo.isHidden {
                                     isHiddenItemVisible = true
                                 }
+                            
+                                if let peer = peerEntry.peer.chatMainPeer, !peerEntry.isContact, case let .user(user) = peer {
+                                    refreshStoryPeerIds.append(user.id)
+                                }
+                            
                                 break
                             case .GroupReferenceEntry:
                                 isHiddenItemVisible = true
@@ -2432,6 +2440,9 @@ public final class ChatListNode: ListView {
                         state.hiddenItemShouldBeTemporaryRevealed = false
                         return state
                     }
+                }
+                if !refreshStoryPeerIds.isEmpty {
+                    strongSelf.context.account.viewTracker.refreshStoryStatsForPeerIds(peerIds: refreshStoryPeerIds)
                 }
             }
         }
