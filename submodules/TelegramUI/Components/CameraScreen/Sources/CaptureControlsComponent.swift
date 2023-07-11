@@ -1117,7 +1117,7 @@ final class CaptureControlsComponent: Component {
                         ),
                         minSize: hintIconSize,
                         action: {
-                            component.flipTapped()
+                            component.lockRecording()
                         }
                     )
                 ),

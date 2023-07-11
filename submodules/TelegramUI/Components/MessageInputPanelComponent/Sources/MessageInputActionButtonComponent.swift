@@ -46,7 +46,7 @@ public final class MessageInputActionButtonComponent: Component {
 
     public let mode: Mode
     public let action: (Mode, Action, Bool) -> Void
-    public let longPressAction: () -> Void
+    public let longPressAction: ((UIView, ContextGesture?) -> Void)?
     public let switchMediaInputMode: () -> Void
     public let updateMediaCancelFraction: (CGFloat) -> Void
     public let lockMediaRecording: () -> Void
@@ -62,7 +62,7 @@ public final class MessageInputActionButtonComponent: Component {
     public init(
         mode: Mode,
         action: @escaping (Mode, Action, Bool) -> Void,
-        longPressAction: @escaping () -> Void,
+        longPressAction: ((UIView, ContextGesture?) -> Void)?,
         switchMediaInputMode: @escaping () -> Void,
         updateMediaCancelFraction: @escaping (CGFloat) -> Void,
         lockMediaRecording: @escaping () -> Void,
@@ -113,9 +113,14 @@ public final class MessageInputActionButtonComponent: Component {
         return true
     }
     
-    public final class View: HighlightTrackingButton {
+    public final class View: UIView {
         private var micButton: ChatTextInputMediaRecordingButton?
+        
+        public let button: HighlightTrackingButtonNode
+        public let referenceNode: ContextReferenceContentNode
+        public let containerNode: ContextControllerSourceNode
         private let sendIconView: UIImageView
+        
         private var moreButton: MoreHeaderButton?
         
         private var component: MessageInputActionButtonComponent?
@@ -124,13 +129,31 @@ public final class MessageInputActionButtonComponent: Component {
         override init(frame: CGRect) {
             self.sendIconView = UIImageView()
             
+            self.button = HighlightTrackingButtonNode()
+            self.referenceNode = ContextReferenceContentNode()
+            self.containerNode = ContextControllerSourceNode()
+            
             super.init(frame: frame)
+                             
+            self.addSubview(self.button.view)
+            self.containerNode.addSubnode(self.referenceNode)
+            self.referenceNode.view.addSubview(self.sendIconView)
+            self.button.addSubnode(self.containerNode)
+
+            self.containerNode.shouldBegin = { [weak self] location in
+                guard let self, let component = self.component, let _ = component.longPressAction else {
+                    return false
+                }
+                return true
+            }
+            self.containerNode.activated = { [weak self] gesture, _ in
+                guard let self, let component = self.component, let longPressAction = component.longPressAction else {
+                    return
+                }
+                longPressAction(self, gesture)
+            }
             
-            self.isMultipleTouchEnabled = false
-            
-            self.addSubview(self.sendIconView)
-            
-            self.highligthedChanged = { [weak self] highlighted in
+            self.button.highligthedChanged = { [weak self] highlighted in
                 guard let self else {
                     return
                 }
@@ -141,8 +164,10 @@ public final class MessageInputActionButtonComponent: Component {
                 transition.setSublayerTransform(view: self, transform: CATransform3DMakeScale(scale, scale, 1.0))
             }
             
-            self.addTarget(self, action: #selector(self.touchDown), for: .touchDown)
-            self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+            self.button.addTarget(self, action: #selector(self.touchDown), forControlEvents: .touchDown)
+            self.button.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
+//            but.addTarget(self, action: #selector(self.touchDown), for: .touchDown)
+//            self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
         }
         
         required init?(coder: NSCoder) {
@@ -162,10 +187,11 @@ public final class MessageInputActionButtonComponent: Component {
             }
             component.action(component.mode, .up, false)
         }
-        
-        override public func continueTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
-            return super.continueTracking(touch, with: event)
-        }
+                
+//        public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+//            let result = super.hitTest(point, with: event)
+//            return result
+//        }
         
         func update(component: MessageInputActionButtonComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let previousComponent = self.component
@@ -173,6 +199,8 @@ public final class MessageInputActionButtonComponent: Component {
             self.componentState = state
             
             let themeUpdated = previousComponent?.theme !== component.theme
+            
+            self.containerNode.isUserInteractionEnabled = component.longPressAction != nil
             
             if self.micButton == nil {
                 let micButton = ChatTextInputMediaRecordingButton(
@@ -240,7 +268,7 @@ public final class MessageInputActionButtonComponent: Component {
                 }
             }
             
-            if self.moreButton == nil {
+            if case .more = component.mode, self.moreButton == nil {
                 let moreButton = MoreHeaderButton(color: .white)
                 self.moreButton = moreButton
                 self.addSubnode(moreButton)
@@ -339,6 +367,10 @@ public final class MessageInputActionButtonComponent: Component {
                     })
                 }
             }
+            
+            transition.setFrame(view: self.button.view, frame: CGRect(origin: .zero, size: availableSize))
+            transition.setFrame(view: self.containerNode.view, frame: CGRect(origin: .zero, size: availableSize))
+            transition.setFrame(view: self.referenceNode.view, frame: CGRect(origin: .zero, size: availableSize))
             
             transition.setAlpha(view: self.sendIconView, alpha: sendAlpha)
             transition.setScale(view: self.sendIconView, scale: sendAlpha == 0.0 ? 0.01 : 1.0)

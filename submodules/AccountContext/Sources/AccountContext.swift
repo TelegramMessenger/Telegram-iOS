@@ -1112,7 +1112,6 @@ public struct StoriesConfiguration {
             default:
                 posting = .disabled
             }
-            posting = .enabled
             return StoriesConfiguration(posting: posting)
         } else {
             return .defaultValue

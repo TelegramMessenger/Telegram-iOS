@@ -135,19 +135,31 @@ public final class StoryContentItem: Equatable {
 
 public final class StoryContentContextState {
     public final class AdditionalPeerData: Equatable {
-        public static func == (lhs: StoryContentContextState.AdditionalPeerData, rhs: StoryContentContextState.AdditionalPeerData) -> Bool {
-            return lhs.isMuted == rhs.isMuted && lhs.areVoiceMessagesAvailable == rhs.areVoiceMessagesAvailable
-        }
-        
         public let isMuted: Bool
         public let areVoiceMessagesAvailable: Bool
+        public let presence: EnginePeer.Presence?
         
         public init(
             isMuted: Bool,
-            areVoiceMessagesAvailable: Bool
+            areVoiceMessagesAvailable: Bool,
+            presence: EnginePeer.Presence?
         ) {
             self.isMuted = isMuted
             self.areVoiceMessagesAvailable = areVoiceMessagesAvailable
+            self.presence = presence
+        }
+        
+        public static func == (lhs: StoryContentContextState.AdditionalPeerData, rhs: StoryContentContextState.AdditionalPeerData) -> Bool {
+            if lhs.isMuted != rhs.isMuted {
+                return false
+            }
+            if lhs.areVoiceMessagesAvailable != rhs.areVoiceMessagesAvailable {
+                return false
+            }
+            if lhs.presence != rhs.presence {
+                return false
+            }
+            return true
         }
     }
     

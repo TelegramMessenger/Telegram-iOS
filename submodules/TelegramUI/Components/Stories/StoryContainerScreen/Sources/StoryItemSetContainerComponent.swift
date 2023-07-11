@@ -359,6 +359,7 @@ public final class StoryItemSetContainerComponent: Component {
         var videoRecordingBackgroundView: UIVisualEffectView?
         let inputPanel = ComponentView<Empty>()
         let inputPanelExternalState = MessageInputPanelComponent.ExternalState()
+        private let inputPanelContainer = UIView()
         private let inputPanelBackground = ComponentView<Empty>()
         
         var preparingToDisplayViewList: Bool = false
@@ -435,6 +436,9 @@ public final class StoryItemSetContainerComponent: Component {
             self.closeButtonIconView = UIImageView()
             
             self.transitionCloneContainerView = UIView()
+            
+            self.inputPanelContainer.isUserInteractionEnabled = false
+            self.inputPanelContainer.layer.cornerRadius = 11.0
             
             super.init(frame: frame)
 
@@ -1252,7 +1256,7 @@ public final class StoryItemSetContainerComponent: Component {
                     centerInfoView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                 }
                 if let moreButtonView = self.moreButton.view {
-                    moreButtonView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                    moreButtonView.layer.animateAlpha(from: 0.0, to: moreButtonView.alpha, duration: 0.25)
                 }
                 if let soundButtonView = self.soundButton.view {
                     soundButtonView.layer.animateAlpha(from: 0.0, to: soundButtonView.alpha, duration: 0.25)
@@ -1378,7 +1382,7 @@ public final class StoryItemSetContainerComponent: Component {
                     centerInfoView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
                 }
                 if let moreButtonView = self.moreButton.view {
-                    moreButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
+                    moreButtonView.layer.animateAlpha(from: moreButtonView.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false)
                 }
                 if let soundButtonView = self.soundButton.view {
                     soundButtonView.layer.animateAlpha(from: soundButtonView.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false)
@@ -1609,6 +1613,16 @@ public final class StoryItemSetContainerComponent: Component {
             
             if self.component?.slice.item.storyItem.id != component.slice.item.storyItem.id {
                 self.initializedOffset = false
+                
+                if let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View {
+                    Queue.mainQueue().justDispatch {
+                        inputPanelView.clearSendMessageInput()
+                    }
+                }
+                
+                if let tooltipScreen = self.sendMessageContext.tooltipScreen {
+                    tooltipScreen.dismiss()
+                }
             }
             var itemsTransition = transition
             var resetScrollingOffsetWithItemTransition = false
@@ -1735,11 +1749,11 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         self.sendMessageContext.performSendMessageAction(view: self)
                     },
-                    sendMessageOptionsAction: { [weak self] in
+                    sendMessageOptionsAction: { [weak self] sourceView, gesture in
                         guard let self else {
                             return
                         }
-                        self.sendMessageContext.presentSendMessageOptions(view: self)
+                        self.sendMessageContext.presentSendMessageOptions(view: self, sourceView: sourceView, gesture: gesture)
                     },
                     sendStickerAction: { [weak self] sticker in
                         guard let self else {
@@ -1869,11 +1883,11 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
                         
-            let inputMediaNodeHeight = self.sendMessageContext.updateInputMediaNode(inputPanel: self.inputPanel, availableSize: availableSize, bottomInset: component.safeInsets.bottom, inputHeight: component.inputHeight, effectiveInputHeight: inputHeight, metrics: component.metrics, deviceMetrics: component.deviceMetrics, transition: transition)
+            let inputMediaNodeHeight = self.sendMessageContext.updateInputMediaNode(inputPanel: self.inputPanel, availableSize: availableSize, bottomInset: component.safeInsets.bottom, bottomContainerInset: component.containerInsets.bottom, inputHeight: component.inputHeight, effectiveInputHeight: inputHeight, metrics: component.metrics, deviceMetrics: component.deviceMetrics, transition: transition)
             if inputMediaNodeHeight > 0.0 {
                 inputHeight = inputMediaNodeHeight
             }
-            keyboardHeight = max(keyboardHeight, inputMediaNodeHeight)
+            keyboardHeight = inputHeight
             
             let hasRecordingBlurBackground = self.sendMessageContext.videoRecorderValue != nil || self.sendMessageContext.hasRecordedVideoPreview
             if hasRecordingBlurBackground {
@@ -1904,11 +1918,12 @@ public final class StoryItemSetContainerComponent: Component {
                 transition: transition,
                 component: AnyComponent(BlurredGradientComponent(position: .bottom, dark: true, tag: nil)),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width, height: keyboardHeight + 100.0)
+                containerSize: CGSize(width: availableSize.width, height: max(0.0, keyboardHeight + 100.0 - component.containerInsets.bottom))
             )
             if let inputPanelBackgroundView = self.inputPanelBackground.view {
                 if inputPanelBackgroundView.superview == nil {
-                    self.addSubview(inputPanelBackgroundView)
+                    self.addSubview(self.inputPanelContainer)
+                    self.inputPanelContainer.addSubview(inputPanelBackgroundView)
                 }
                 let isVisible = inputHeight > 44.0 && !hasRecordingBlurBackground
                 transition.setFrame(view: inputPanelBackgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: isVisible ? availableSize.height - inputPanelBackgroundSize.height : availableSize.height), size: inputPanelBackgroundSize))
@@ -2188,6 +2203,8 @@ public final class StoryItemSetContainerComponent: Component {
             
             let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: component.containerInsets.top - (contentSize.height - contentVisualHeight) * 0.5), size: contentSize)
             
+            transition.setFrame(view: self.inputPanelContainer, frame: contentFrame)
+            
             let itemLayout = ItemLayout(
                 containerSize: availableSize,
                 contentFrame: contentFrame,
@@ -2238,7 +2255,7 @@ public final class StoryItemSetContainerComponent: Component {
                     mode: .more,
                     action: { _, _, _ in
                     },
-                    longPressAction: {},
+                    longPressAction: nil,
                     switchMediaInputMode: {
                     },
                     updateMediaCancelFraction: { _ in
@@ -2855,18 +2872,25 @@ public final class StoryItemSetContainerComponent: Component {
                             
                             let _ = (enqueueMessages(account: context.account, peerId: peer.id, messages: [message])
                             |> deliverOnMainQueue).start(next: { [weak self] messageIds in
-                                if let animation {
-                                    presentController(UndoOverlayController(
+                                if let animation, let self {
+                                    let controller = UndoOverlayController(
                                         presentationData: presentationData,
                                         content: .sticker(context: context, file: animation, loop: false, title: nil, text: "Reaction Sent.", undoText: "View in Chat", customAction: { [weak self] in
                                             if let messageId = messageIds.first, let self {
-                                                self.navigateToPeer(peer: peer, chat: true, messageId: messageId)
+                                                self.navigateToPeer(peer: peer, chat: true, subject: messageId.flatMap { .message(id: .id($0), highlight: false, timecode: nil) })
                                             }
                                         }),
                                         elevatedLayout: false,
                                         animateInAsReplacement: false,
-                                        action: { _ in return false }
-                                    ), nil)
+                                        action: { [weak self] _ in
+                                            self?.sendMessageContext.tooltipScreen = nil
+                                            self?.updateIsProgressPaused()
+                                            return false
+                                        }
+                                    )
+                                    self.sendMessageContext.tooltipScreen = controller
+                                    self.updateIsProgressPaused()
+                                    presentController(controller, nil)
                                 }
                             })
                         })
@@ -3218,7 +3242,7 @@ public final class StoryItemSetContainerComponent: Component {
             }
         }
         
-        func navigateToPeer(peer: EnginePeer, chat: Bool, messageId: EngineMessage.Id? = nil) {
+        func navigateToPeer(peer: EnginePeer, chat: Bool, subject: ChatControllerSubject? = nil) {
             guard let component = self.component else {
                 return
             }
@@ -3228,11 +3252,7 @@ public final class StoryItemSetContainerComponent: Component {
             guard let navigationController = controller.navigationController as? NavigationController else {
                 return
             }
-            if messageId != nil || chat {
-                var subject: ChatControllerSubject?
-                if let messageId {
-                    subject = .message(id: .id(messageId), highlight: false, timecode: nil)
-                }
+            if subject != nil || chat {
                 component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peer), subject: subject, keepStack: .always, animated: true, pushController: { [weak controller, weak navigationController] chatController, animated, completion in
                     guard let controller, let navigationController else {
                         return
@@ -3330,7 +3350,6 @@ public final class StoryItemSetContainerComponent: Component {
                     return .single(nil)
                     |> then(
                         .single(.video(symlinkPath, nil, false, nil, nil, PixelDimensions(width: 720, height: 1280), duration ?? 0.0, [], .bottomRight))
-                        |> delay(0.1, queue: Queue.mainQueue())
                     )
                 }
             }
@@ -3517,12 +3536,12 @@ public final class StoryItemSetContainerComponent: Component {
             }
         }
         
-        private func performMyMoreAction(sourceView: UIView, gesture: ContextGesture?) {
+        func dismissAllTooltips() {
             guard let component = self.component, let controller = component.controller() else {
                 return
             }
             
-            component.controller()?.forEachController { c in
+            controller.forEachController { c in
                 if let c = c as? UndoOverlayController {
                     c.dismiss()
                 } else if let c = c as? TooltipScreen {
@@ -3530,6 +3549,14 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 return true
             }
+        }
+        
+        private func performMyMoreAction(sourceView: UIView, gesture: ContextGesture?) {
+            guard let component = self.component, let controller = component.controller() else {
+                return
+            }
+            
+            self.dismissAllTooltips()
             
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
             var items: [ContextMenuItem] = []
@@ -3733,7 +3760,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             let contextItems = ContextController.Items(content: .list(items), tip: tip, tipSignal: tipSignal)
             
-            let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(contextItems), gesture: gesture)
+            let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .bottom)), items: .single(contextItems), gesture: gesture)
             contextController.dismissed = { [weak self] in
                 guard let self else {
                     return
@@ -3759,12 +3786,7 @@ public final class StoryItemSetContainerComponent: Component {
                     return
                 }
                 
-                component.controller()?.forEachController { c in
-                    if let c = c as? UndoOverlayController {
-                        c.dismiss()
-                    }
-                    return true
-                }
+                self.dismissAllTooltips()
                 
                 let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                 var items: [ContextMenuItem] = []
@@ -3877,7 +3899,7 @@ public final class StoryItemSetContainerComponent: Component {
                         account: component.context.account,
                         sharedContext: component.context.sharedContext,
                         text: .markdown(text: text),
-                        style: .customBlur(UIColor(rgb: 0x1c1c1c)),
+                        style: .customBlur(UIColor(rgb: 0x1c1c1c), 0.0),
                         icon: .peer(peer: component.slice.peer, isStory: true),
                         action: TooltipScreen.Action(
                             title: "Undo",
@@ -4015,7 +4037,7 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 let contextItems = ContextController.Items(content: .list(items), tip: tip, tipSignal: tipSignal)
                                 
-                let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(contextItems), gesture: gesture)
+                let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .bottom)), items: .single(contextItems), gesture: gesture)
                 contextController.dismissed = { [weak self] in
                     guard let self else {
                         return
@@ -4039,20 +4061,22 @@ public final class StoryItemSetContainerComponent: Component {
     }
 }
 
-private final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
+final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
     private let controller: ViewController
     private let sourceView: UIView
+    private let position: ContextControllerReferenceViewInfo.ActionsPosition
     var keepInPlace: Bool {
         return true
     }
 
-    init(controller: ViewController, sourceView: UIView) {
+    init(controller: ViewController, sourceView: UIView, position: ContextControllerReferenceViewInfo.ActionsPosition) {
         self.controller = controller
         self.sourceView = sourceView
+        self.position = position
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, actionsPosition: .bottom)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, actionsPosition: self.position)
     }
 }
 

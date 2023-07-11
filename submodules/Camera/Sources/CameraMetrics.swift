@@ -198,6 +198,10 @@ enum DeviceModel: CaseIterable, Equatable {
         }
     }
     
+    var isIpad: Bool {
+        return self.modelId.first?.hasPrefix("iPad") ?? false
+    }
+    
     static let current = DeviceModel()
     
     private init() {

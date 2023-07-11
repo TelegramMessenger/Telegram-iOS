@@ -53,6 +53,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                 PostboxViewKey.cachedPeerData(peerId: peerId),
                 PostboxViewKey.storiesState(key: .peer(peerId)),
                 PostboxViewKey.storyItems(peerId: peerId),
+                PostboxViewKey.peerPresences(peerIds: Set([peerId]))
             ]
             if peerId == context.account.peerId {
                 inputKeys.append(PostboxViewKey.storiesState(key: .local))
@@ -113,6 +114,11 @@ public final class StoryContentContextImpl: StoryContentContext {
                     return
                 }
                 let additionalPeerData: StoryContentContextState.AdditionalPeerData
+                var peerPresence: PeerPresence?
+                if let presencesView = views.views[PostboxViewKey.peerPresences(peerIds: Set([peerId]))] as? PeerPresencesView {
+                    peerPresence = presencesView.presences[peerId]
+                }
+                
                 if let cachedPeerDataView = views.views[PostboxViewKey.cachedPeerData(peerId: peerId)] as? CachedPeerDataView, let cachedUserData = cachedPeerDataView.cachedPeerData as? CachedUserData {
                     var isMuted = false
                     if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
@@ -120,9 +126,17 @@ public final class StoryContentContextImpl: StoryContentContext {
                     } else {
                         isMuted = resolvedAreStoriesMuted(globalSettings: globalNotificationSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: nil)
                     }
-                    additionalPeerData = StoryContentContextState.AdditionalPeerData(isMuted: isMuted, areVoiceMessagesAvailable: cachedUserData.voiceMessagesAvailable)
+                    additionalPeerData = StoryContentContextState.AdditionalPeerData(
+                        isMuted: isMuted,
+                        areVoiceMessagesAvailable: cachedUserData.voiceMessagesAvailable,
+                        presence: peerPresence.flatMap { EnginePeer.Presence($0) }
+                    )
                 } else {
-                    additionalPeerData = StoryContentContextState.AdditionalPeerData(isMuted: true, areVoiceMessagesAvailable: true)
+                    additionalPeerData = StoryContentContextState.AdditionalPeerData(
+                        isMuted: true,
+                        areVoiceMessagesAvailable: true,
+                        presence: peerPresence.flatMap { EnginePeer.Presence($0) }
+                    )
                 }
                 let state = stateView.value?.get(Stories.PeerState.self)
                 
@@ -928,6 +942,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
         self.storyDisposable = (combineLatest(queue: .mainQueue(),
             context.engine.data.subscribe(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: storyId.peerId),
+                TelegramEngine.EngineData.Item.Peer.Presence(id: storyId.peerId),
                 TelegramEngine.EngineData.Item.Peer.AreVoiceMessagesAvailable(id: storyId.peerId),
                 TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: storyId.peerId),
                 TelegramEngine.EngineData.Item.NotificationSettings.Global()
@@ -965,18 +980,19 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 return
             }
             
-            let (peer, areVoiceMessagesAvailable, notificationSettings, globalNotificationSettings) = data
+            let (peer, presence, areVoiceMessagesAvailable, notificationSettings, globalNotificationSettings) = data
             let (item, peers, allEntityFiles) = itemAndPeers
             
             guard let peer else {
                 return
             }
-            
+
             let isMuted = resolvedAreStoriesMuted(globalSettings: globalNotificationSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: notificationSettings._asNotificationSettings())
             
             let additionalPeerData = StoryContentContextState.AdditionalPeerData(
                 isMuted: isMuted,
-                areVoiceMessagesAvailable: areVoiceMessagesAvailable
+                areVoiceMessagesAvailable: areVoiceMessagesAvailable,
+                presence: presence
             )
             
             if item == nil {
@@ -1104,6 +1120,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
         self.storyDisposable = (combineLatest(queue: .mainQueue(),
             context.engine.data.subscribe(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                TelegramEngine.EngineData.Item.Peer.Presence(id: peerId),
                 TelegramEngine.EngineData.Item.Peer.AreVoiceMessagesAvailable(id: peerId),
                 TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peerId),
                 TelegramEngine.EngineData.Item.NotificationSettings.Global()
@@ -1117,7 +1134,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                 return
             }
             
-            let (peer, areVoiceMessagesAvailable, notificationSettings, globalNotificationSettings) = data
+            let (peer, presence, areVoiceMessagesAvailable, notificationSettings, globalNotificationSettings) = data
             
             guard let peer else {
                 return
@@ -1127,7 +1144,8 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
             
             let additionalPeerData = StoryContentContextState.AdditionalPeerData(
                 isMuted: isMuted,
-                areVoiceMessagesAvailable: areVoiceMessagesAvailable
+                areVoiceMessagesAvailable: areVoiceMessagesAvailable,
+                presence: presence
             )
             
             self.listState = state

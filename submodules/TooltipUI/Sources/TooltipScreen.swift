@@ -240,7 +240,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         if !hasArrow {
             let backgroundColor: UIColor
             var enableSaturation = true
-            if case let .customBlur(color) = style {
+            if case let .customBlur(color, _) = style {
                 backgroundColor = color
                 enableSaturation = false
             } else {
@@ -297,7 +297,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         } else {
             var enableSaturation = true
             let backgroundColor: UIColor
-            if case let .customBlur(color) = style {
+            if case let .customBlur(color, _) = style {
                 backgroundColor = color
                 enableSaturation = false
             } else if case .light = style {
@@ -356,10 +356,11 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             case let .entities(text, entities):
                 attributedText = stringWithAppliedEntities(text, entities: entities, baseColor: textColor, linkColor: textColor, baseFont: baseFont, linkFont: baseFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: fixedFont, blockQuoteFont: baseFont, underlineLinks: true, external: false, message: nil)
             case let .markdown(text):
+                let linkColor = UIColor(rgb: 0x64d2ff)
                 let markdownAttributes = MarkdownAttributes(
                     body: MarkdownAttributeSet(font: baseFont, textColor: textColor),
                     bold: MarkdownAttributeSet(font: boldFont, textColor: textColor),
-                    link: MarkdownAttributeSet(font: baseFont, textColor: textColor),
+                    link: MarkdownAttributeSet(font: boldFont, textColor: linkColor),
                     linkAttribute: { _ in
                         return nil
                     }
@@ -541,7 +542,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             animationSpacing = 8.0
         }
         
-        let containerWidth = max(100.0, min(layout.size.width, 614.0) - (sideInset + layout.safeInsets.left) * 2.0)
+        let containerWidth = max(100.0, min(layout.size.width, 614.0) - sideInset * 2.0)
         
         var actionSize: CGSize = .zero
         
@@ -560,14 +561,16 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         var backgroundHeight: CGFloat
         switch self.tooltipStyle {
-        case .default, .gradient, .customBlur, .wide:
+        case .default, .gradient:
             backgroundHeight = max(animationSize.height, textSize.height) + contentVerticalInset * 2.0
+        case .wide:
+            backgroundHeight = max(animationSize.height, textSize.height) + contentVerticalInset * 2.0 + 4.0
+        case let .customBlur(_, inset):
+            backgroundHeight = max(animationSize.height, textSize.height) + contentVerticalInset * 2.0 + inset * 2.0
         case .light:
             backgroundHeight = max(28.0, max(animationSize.height, textSize.height) + 4.0 * 2.0)
         }
-        if case .wide = self.tooltipStyle {
-            backgroundHeight += 4.0
-        } else if self.actionButtonNode != nil {
+        if self.actionButtonNode != nil {
             backgroundHeight += 4.0
         }
                     
@@ -649,11 +652,12 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                 self.arrowNode.frame = arrowBounds
                 self.arrowGradientNode?.frame = CGRect(origin: CGPoint(x: -arrowFrame.minX + backgroundFrame.minX, y: 0.0), size:  backgroundFrame.size)
             case .right:
-                arrowFrame = CGRect(origin: CGPoint(x: backgroundFrame.width + arrowSize.height, y: rect.midY), size: CGSize(width: arrowSize.height, height: arrowSize.width))
+                let arrowCenterY = floorToScreenPixels(rect.midY - arrowSize.height / 2.0)
+                arrowFrame = CGRect(origin: CGPoint(x: backgroundFrame.width + arrowSize.height, y: self.view.convert(CGPoint(x: 0.0, y: arrowCenterY), to: self.arrowContainer.supernode?.view).y), size: CGSize(width: arrowSize.height, height: arrowSize.width))
                 
                 ContainedViewLayoutTransition.immediate.updateTransformRotation(node: self.arrowContainer, angle: -CGFloat.pi / 2.0)
                 
-                transition.updateFrame(node: self.arrowContainer, frame: arrowFrame.offsetBy(dx: 8.0 - UIScreenPixel, dy: 16.0 + -backgroundFrame.minY - floorToScreenPixels((backgroundFrame.height + 20.0 - arrowSize.width) / 2.0)))
+                transition.updateFrame(node: self.arrowContainer, frame: arrowFrame.offsetBy(dx: 8.0 - UIScreenPixel, dy: 0.0))
                 
                 let arrowBounds = CGRect(origin: .zero, size: arrowSize)
                 self.arrowNode.frame = arrowBounds
@@ -739,6 +743,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         }
     }
     
+    private var didRequestDismiss = false
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let event = event {
             if let _ = self.openActiveTextItem, let result = self.textNode.hitTest(self.view.convert(point, to: self.textNode.view), with: event) {
@@ -753,14 +758,19 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                 if let actionButtonNode = self.actionButtonNode, let result = actionButtonNode.hitTest(self.convert(point, to: actionButtonNode), with: event) {
                     return result
                 }
-                switch self.shouldDismissOnTouch(point, self.containerNode.frame) {
-                case .ignore:
-                    break
-                case let .dismiss(consume):
-                    self.requestDismiss()
-                    if consume {
-                        return self.view
+                if !self.didRequestDismiss {
+                    switch self.shouldDismissOnTouch(point, self.containerNode.frame) {
+                    case .ignore:
+                        break
+                    case let .dismiss(consume):
+                        self.requestDismiss()
+                        if consume {
+                            self.didRequestDismiss = true
+                            return self.view
+                        }
                     }
+                } else {
+                    return self.view
                 }
                 return nil
             }
@@ -915,7 +925,7 @@ public final class TooltipScreen: ViewController {
     public enum Style {
         case `default`
         case light
-        case customBlur(UIColor)
+        case customBlur(UIColor, CGFloat)
         case gradient(UIColor, UIColor)
         case wide
     }

@@ -341,41 +341,54 @@ private func verticesData(
         bottomRight = simd_float2(1.0, 1.0)
     }
     
-    let relativeSize = CGSize(
-        width: size.width / containerSize.width,
-        height: size.height / containerSize.height
-    )
-    let relativeOffset = CGPoint(
-        x: position.x / containerSize.width,
-        y: position.y / containerSize.height
-    )
-    
-    let rect = CGRect(
-        origin: CGPoint(
-            x: relativeOffset.x - relativeSize.width / 2.0,
-            y: relativeOffset.y - relativeSize.height / 2.0
-        ),
-        size: relativeSize
-    )
+    let angle = Float(.pi - rotation)
+    let cosAngle = cos(angle)
+    let sinAngle = sin(angle)
+
+    let centerX = Float(position.x)
+    let centerY = Float(position.y)
+
+    let halfWidth = Float(size.width / 2.0)
+    let halfHeight = Float(size.height / 2.0)
     
     return [
         VertexData(
-            pos: simd_float4(x: Float(rect.minX) * 2.0, y: Float(rect.minY) * 2.0, z: z, w: 1),
+            pos: simd_float4(
+                x: (centerX + (halfWidth * cosAngle) - (halfHeight * sinAngle)) / Float(containerSize.width) * 2.0,
+                y: (centerY + (halfWidth * sinAngle) + (halfHeight * cosAngle)) / Float(containerSize.height) * 2.0,
+                z: z,
+                w: 1
+            ),
             texCoord: topLeft,
             localPos: simd_float2(0.0, 0.0)
         ),
         VertexData(
-            pos: simd_float4(x: Float(rect.maxX) * 2.0, y: Float(rect.minY) * 2.0, z: z, w: 1),
+            pos: simd_float4(
+                x: (centerX - (halfWidth * cosAngle) - (halfHeight * sinAngle)) / Float(containerSize.width) * 2.0,
+                y: (centerY - (halfWidth * sinAngle) + (halfHeight * cosAngle)) / Float(containerSize.height) * 2.0,
+                z: z,
+                w: 1
+            ),
             texCoord: topRight,
             localPos: simd_float2(1.0, 0.0)
         ),
         VertexData(
-            pos: simd_float4(x: Float(rect.minX) * 2.0, y: Float(rect.maxY) * 2.0, z: z, w: 1),
+            pos: simd_float4(
+                x: (centerX + (halfWidth * cosAngle) + (halfHeight * sinAngle)) / Float(containerSize.width) * 2.0,
+                y: (centerY + (halfWidth * sinAngle) - (halfHeight * cosAngle)) / Float(containerSize.height) * 2.0,
+                z: z,
+                w: 1
+            ),
             texCoord: bottomLeft,
             localPos: simd_float2(0.0, 1.0)
         ),
         VertexData(
-            pos: simd_float4(x: Float(rect.maxX) * 2.0, y: Float(rect.maxY) * 2.0, z: z, w: 1),
+            pos: simd_float4(
+                x: (centerX - (halfWidth * cosAngle) + (halfHeight * sinAngle)) / Float(containerSize.width) * 2.0,
+                y: (centerY - (halfWidth * sinAngle) - (halfHeight * cosAngle)) / Float(containerSize.height) * 2.0,
+                z: z,
+                w: 1
+            ),
             texCoord: bottomRight,
             localPos: simd_float2(1.0, 1.0)
         )
@@ -650,13 +663,13 @@ final class VideoInputScalePass: RenderPass {
     }
     
     func process(input: MTLTexture, secondInput: MTLTexture?, timestamp: CMTime, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
-//#if targetEnvironment(simulator)
-//
-//#else
+#if targetEnvironment(simulator)
+
+#else
         guard max(input.width, input.height) > 1920 || secondInput != nil else {
             return input
         }
-//#endif
+#endif
         
         let scaledSize = CGSize(width: input.width, height: input.height).fitted(CGSize(width: 1920.0, height: 1920.0))
         let width: Int
@@ -705,9 +718,9 @@ final class VideoInputScalePass: RenderPass {
         
         renderCommandEncoder.setRenderPipelineState(self.mainPipelineState!)
         
-//#if targetEnvironment(simulator)
-//        let secondInput = input
-//#endif
+#if targetEnvironment(simulator)
+        let secondInput = input
+#endif
         
         let (mainVideoState, additionalVideoState, transitionVideoState) = self.transitionState(for: timestamp, mainInput: input, additionalInput: secondInput)
         

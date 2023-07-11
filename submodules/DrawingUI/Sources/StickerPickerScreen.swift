@@ -219,6 +219,8 @@ private final class StickerSelectionComponent: Component {
             
             let topPanelHeight: CGFloat = 42.0
             
+            let defaultToEmoji = component.getController()?.defaultToEmoji ?? false
+            
             let context = component.context
             let stickerPeekBehavior = EmojiContentPeekBehaviorImpl(
                 context: context,
@@ -247,7 +249,7 @@ private final class StickerSelectionComponent: Component {
                     gifContent: nil,
                     hasRecentGifs: false,
                     availableGifSearchEmojies: [],
-                    defaultToEmojiTab: false,
+                    defaultToEmojiTab: defaultToEmoji,
                     externalTopPanelContainer: self.panelHostView,
                     externalBottomPanelContainer: nil,
                     displayTopPanelBackground: .blur,
@@ -1629,6 +1631,7 @@ public class StickerPickerScreen: ViewController {
     private let context: AccountContext
     private let theme: PresentationTheme
     private let inputData: Signal<StickerPickerInputData, NoError>
+    fileprivate let defaultToEmoji: Bool
     
     private var currentLayout: ContainerViewLayout?
     
@@ -1639,10 +1642,11 @@ public class StickerPickerScreen: ViewController {
     
     public var presentGallery: () -> Void = { }
     
-    public init(context: AccountContext, inputData: Signal<StickerPickerInputData, NoError>) {
+    public init(context: AccountContext, inputData: Signal<StickerPickerInputData, NoError>, defaultToEmoji: Bool = false) {
         self.context = context
         self.theme = defaultDarkColorPresentationTheme
         self.inputData = inputData
+        self.defaultToEmoji = defaultToEmoji
         
         super.init(navigationBarPresentationData: nil)
         

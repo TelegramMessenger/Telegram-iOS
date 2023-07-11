@@ -37,6 +37,8 @@ public final class ChatScheduleTimeController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
+    public var dismissed: () -> Void = {}
+    
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, mode: ChatScheduleTimeControllerMode, style: ChatScheduleTimeControllerStyle, currentTime: Int32? = nil, minimalTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
         self.context = context
         self.peerId = peerId
@@ -105,6 +107,7 @@ public final class ChatScheduleTimeController: ViewController {
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {
+        self.dismissed()
         self.controllerNode.animateOut(completion: completion)
     }
     

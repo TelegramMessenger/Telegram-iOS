@@ -935,7 +935,9 @@ final class MediaEditorScreenComponent: Component {
                 
                 let scrubberFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - scrubberSize.width) / 2.0), y: availableSize.height - environment.safeInsets.bottom - scrubberSize.height - 8.0 + controlsBottomInset), size: scrubberSize)
                 if let scrubberView = self.scrubber.view {
+                    var animateIn = false
                     if scrubberView.superview == nil {
+                        animateIn = true
                         if let inputPanelBackgroundView = self.inputPanelBackground.view, inputPanelBackgroundView.superview != nil {
                             self.insertSubview(scrubberView, belowSubview: inputPanelBackgroundView)
                         } else {
@@ -945,6 +947,10 @@ final class MediaEditorScreenComponent: Component {
                     transition.setFrame(view: scrubberView, frame: scrubberFrame)
                     if !self.animatingButtons {
                         transition.setAlpha(view: scrubberView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
+                    } else if animateIn {
+                        scrubberView.layer.animatePosition(from: CGPoint(x: 0.0, y: 44.0), to: .zero, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                        scrubberView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        scrubberView.layer.animateScale(from: 0.6, to: 1.0, duration: 0.2)
                     }
                 }
                 
@@ -1111,7 +1117,7 @@ final class MediaEditorScreenComponent: Component {
                         }
                         self.deactivateInput()
                     },
-                    sendMessageOptionsAction: { },
+                    sendMessageOptionsAction: nil,
                     sendStickerAction: { _ in },
                     setMediaRecordingActive: nil,
                     lockMediaRecording: nil,
@@ -1225,13 +1231,13 @@ final class MediaEditorScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(BlurredGradientComponent(position: .bottom, tag: nil)),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width, height: keyboardHeight + 100.0)
+                containerSize: CGSize(width: availableSize.width, height: keyboardHeight + 60.0)
             )
             if let inputPanelBackgroundView = self.inputPanelBackground.view {
                 if inputPanelBackgroundView.superview == nil {
                     self.addSubview(inputPanelBackgroundView)
                 }
-                let isVisible = inputHeight > 44.0
+                let isVisible = isEditingCaption && inputHeight > 44.0
                 transition.setFrame(view: inputPanelBackgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: isVisible ? availableSize.height - inputPanelBackgroundSize.height : availableSize.height), size: inputPanelBackgroundSize))
                 if !self.animatingButtons {
                     transition.setAlpha(view: inputPanelBackgroundView, alpha: isVisible ? 1.0 : 0.0, delay: isVisible ? 0.0 : 0.4)
@@ -1922,7 +1928,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 })
                 let imageEntity = DrawingStickerEntity(content: .image(image ?? additionalImage, false))
                 imageEntity.referenceDrawingSize = storyDimensions
-                imageEntity.scale = 1.49
+                imageEntity.scale = 1.625
                 imageEntity.position = position.getPosition(storyDimensions)
                 self.entitiesView.add(imageEntity, announce: false)
             } else if case let .video(_, _, mirror, additionalVideoPath, _, _, _, changes, position) = subject {
@@ -1930,7 +1936,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if let additionalVideoPath {
                     let videoEntity = DrawingStickerEntity(content: .dualVideoReference)
                     videoEntity.referenceDrawingSize = storyDimensions
-                    videoEntity.scale = 1.49
+                    videoEntity.scale = 1.625
                     videoEntity.position = position.getPosition(storyDimensions)
                     self.entitiesView.add(videoEntity, announce: false)
                     
@@ -1949,8 +1955,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if case let .asset(asset) = subject, asset.mediaType == .video {
                 let videoEntity = DrawingStickerEntity(content: .dualVideoReference)
                 videoEntity.referenceDrawingSize = storyDimensions
-                videoEntity.scale = 1.49
-                videoEntity.position = PIPPosition.bottomRight.getPosition(storyDimensions)
+                videoEntity.scale = 1.625
+                videoEntity.position = PIPPosition.topRight.getPosition(storyDimensions)
                 self.entitiesView.add(videoEntity, announce: false)
 
                 mediaEditor.setAdditionalVideo("", positionChanges: [VideoPositionChange(additional: false, timestamp: 0.0), VideoPositionChange(additional: true, timestamp: 3.0)])
@@ -2369,7 +2375,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 backgroundImage.draw(in: CGRect(origin: .zero, size: size))
                                 
                                 let ellipsePosition =  pipPosition.getPosition(storyDimensions)
-                                let ellipseSize = CGSize(width: 401.0, height: 401.0)
+                                let ellipseSize = CGSize(width: 439.0, height: 439.0)
                                 let ellipseRect = CGRect(origin: CGPoint(x: ellipsePosition.x - ellipseSize.width / 2.0, y: ellipsePosition.y - ellipseSize.height / 2.0), size: ellipseSize)
                                 let foregroundSize = foregroundImage.size.aspectFilled(ellipseSize)
                                 let foregroundRect = CGRect(origin: CGPoint(x: ellipseRect.center.x - foregroundSize.width / 2.0, y: ellipseRect.center.y - foregroundSize.height / 2.0), size: foregroundSize)
@@ -2421,10 +2427,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     view.animateIn(from: .camera, completion: completion)
                 }
             }
-            
-            //            Queue.mainQueue().after(0.5) {
-            //                self.presentPrivacyTooltip()
-            //            }
         }
         
         func animateOut(finished: Bool, saveDraft: Bool, completion: @escaping () -> Void) {
@@ -2603,22 +2605,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
             self.requestUpdate(transition: transition)
         }
-        
-        func presentPrivacyTooltip() {
-            guard let sourceView = self.componentHost.findTaggedView(tag: privacyButtonTag) else {
-                return
-            }
-            
-            let parentFrame = self.view.convert(self.bounds, to: nil)
-            let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
-            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY + 3.0), size: CGSize())
-            
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "You can set who can view this story."), location: .point(location, .top), displayDuration: .manual, inset: 16.0, shouldDismissOnTouch: { _, _ in
-                return .ignore
-            })
-            self.controller?.present(tooltipController, in: .current)
-        }
-        
+                
         private weak var muteTooltip: ViewController?
         func presentMutedTooltip() {
             guard let sourceView = self.componentHost.findTaggedView(tag: muteButtonTag) else {
@@ -2791,6 +2778,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         private var drawingScreen: DrawingScreen?
         private var stickerScreen: StickerPickerScreen?
+        private var defaultToEmoji = false
         
         private var previousDrawingData: Data?
         private var previousDrawingEntities: [DrawingEntity]?
@@ -2889,7 +2877,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 }
                                 switch mode {
                                 case .sticker:
-                                    let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get())
+                                    self.mediaEditor?.stop()
+                                    let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get(), defaultToEmoji: self.defaultToEmoji)
                                     controller.completion = { [weak self] content in
                                         if let self {
                                             if let content {
@@ -2899,8 +2888,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                                 self.hasAnyChanges = true
                                                 self.controller?.isSavingAvailable = true
                                                 self.controller?.requestLayout(transition: .immediate)
+                                                
+                                                if case let .file(file) = content {
+                                                    if file.isCustomEmoji {
+                                                        self.defaultToEmoji = true
+                                                    } else {
+                                                        self.defaultToEmoji = false
+                                                    }
+                                                }
                                             }
                                             self.stickerScreen = nil
+                                            self.mediaEditor?.play()
                                         }
                                     }
                                     controller.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak controller] transition in
@@ -3134,15 +3132,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         case bottomRight
         
         func getPosition(_ size: CGSize) -> CGPoint {
+            let topOffset = CGPoint(x: 267.0, y: 438.0)
+            let bottomOffset = CGPoint(x: 267.0, y: 438.0)
             switch self {
             case .topLeft:
-                return CGPoint(x: 224.0, y: 477.0)
+                return CGPoint(x: topOffset.x, y: topOffset.y)
             case .topRight:
-                return CGPoint(x: size.width - 224.0, y: 477.0)
+                return CGPoint(x: size.width - topOffset.x, y: topOffset.y)
             case .bottomLeft:
-                return CGPoint(x: 224.0, y: size.height - 477.0)
+                return CGPoint(x: bottomOffset.x, y: size.height - bottomOffset.y)
             case .bottomRight:
-                return CGPoint(x: size.width - 224.0, y: size.height - 477.0)
+                return CGPoint(x: size.width - bottomOffset.x, y: size.height - bottomOffset.y)
             }
         }
     }
@@ -3374,28 +3374,29 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             guard let self else {
                 return
             }
-            
-            self.push(
-                ShareWithPeersScreen(
-                    context: self.context,
-                    initialPrivacy: privacy,
-                    allowScreenshots: !isForwardingDisabled,
-                    pin: pin,
-                    stateContext: stateContext,
-                    completion: { [weak self] result, isForwardingDisabled, pin in
-                        guard let self else {
-                            return
-                        }
-                        if case .closeFriends = privacy.base {
-                            let _ = self.context.engine.privacy.updateCloseFriends(peerIds: result.additionallyIncludePeers).start()
-                            completion(EngineStoryPrivacy(base: .closeFriends, additionallyIncludePeers: []))
-                        } else {
-                            completion(result)
-                        }
-                    },
-                    editCategory: { _, _, _ in }
-                )
+            let controller = ShareWithPeersScreen(
+                context: self.context,
+                initialPrivacy: privacy,
+                allowScreenshots: !isForwardingDisabled,
+                pin: pin,
+                stateContext: stateContext,
+                completion: { [weak self] result, isForwardingDisabled, pin in
+                    guard let self else {
+                        return
+                    }
+                    if case .closeFriends = privacy.base {
+                        let _ = self.context.engine.privacy.updateCloseFriends(peerIds: result.additionallyIncludePeers).start()
+                        completion(EngineStoryPrivacy(base: .closeFriends, additionallyIncludePeers: []))
+                    } else {
+                        completion(result)
+                    }
+                },
+                editCategory: { _, _, _ in }
             )
+            controller.dismissed = {
+                self.node.mediaEditor?.play()
+            }
+            self.push(controller)
         })
     }
     
@@ -4464,6 +4465,7 @@ public final class BlurredGradientComponent: Component {
         }
         
         private var gradientMask = UIImageView()
+        private var gradientBackground = SimpleLayer()
         private var gradientForeground = SimpleGradientLayer()
         
         public func update(component: BlurredGradientComponent, availableSize: CGSize, transition: Transition) -> CGSize {
@@ -4473,17 +4475,21 @@ public final class BlurredGradientComponent: Component {
             
             self.updateColor(color: UIColor(rgb: 0x000000, alpha: component.position == .top ? 0.15 : 0.25), transition: transition.containedViewLayoutTransition)
            
+            let gradientHeight: CGFloat = 100.0
             if self.mask == nil {
                 self.mask = self.gradientMask
                 self.gradientMask.image = generateGradientImage(
-                    size: CGSize(width: 1.0, height: availableSize.height),
+                    size: CGSize(width: 1.0, height: gradientHeight),
                     colors: [UIColor(rgb: 0xffffff, alpha: 1.0), UIColor(rgb: 0xffffff, alpha: 1.0), UIColor(rgb: 0xffffff, alpha: 0.0)],
                     locations: component.position == .top ? [0.0, 0.8, 1.0] : [1.0, 0.20, 0.0],
                     direction: .vertical
                 )
+                self.gradientMask.layer.addSublayer(self.gradientBackground)
+                
+                self.gradientBackground.backgroundColor = UIColor(rgb: 0xffffff).cgColor
                 
                 if component.dark {
-                    self.gradientForeground.colors = [UIColor(rgb: 0x000000, alpha: 0.6).cgColor, UIColor(rgb: 0x000000, alpha: 0.6).cgColor, UIColor(rgb: 0x000000, alpha: 0.0).cgColor]
+                    self.gradientForeground.colors = [UIColor(rgb: 0x000000, alpha: 0.4).cgColor, UIColor(rgb: 0x000000, alpha: 0.4).cgColor, UIColor(rgb: 0x000000, alpha: 0.0).cgColor]
                     self.gradientForeground.locations = [0.0, 0.8, 1.0]
                 } else {
                     self.gradientForeground.colors = [UIColor(rgb: 0x000000, alpha: 0.35).cgColor, UIColor(rgb: 0x000000, alpha: 0.0).cgColor]
@@ -4494,7 +4500,8 @@ public final class BlurredGradientComponent: Component {
                 self.layer.addSublayer(self.gradientForeground)
             }
             
-            transition.setFrame(view: self.gradientMask, frame: CGRect(origin: .zero, size: availableSize))
+            transition.setFrame(view: self.gradientMask, frame: CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: gradientHeight)))
+            transition.setFrame(layer: self.gradientBackground, frame: CGRect(origin: CGPoint(x: 0.0, y: gradientHeight), size: availableSize))
             transition.setFrame(layer: self.gradientForeground, frame: CGRect(origin: .zero, size: availableSize))
             
             self.update(size: availableSize, transition: transition.containedViewLayoutTransition)
