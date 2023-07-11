@@ -2418,7 +2418,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                 }
                                 
                                 let currentPeerId = strongSelf.peerId
-                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: targetLocation, subject: .message(id: .id(message.id), highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {
+                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: targetLocation, subject: .message(id: .id(message.id), highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: { [weak navigationController] in
+                                    guard let navigationController else { return }
                                     var viewControllers = navigationController.viewControllers
                                     var indexesToRemove = Set<Int>()
                                     var keptCurrentChatController = false
@@ -2580,7 +2581,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                         }
                                         
                                         let currentPeerId = strongSelf.peerId
-                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: targetLocation, subject: .message(id: .id(message.id), highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: targetLocation, subject: .message(id: .id(message.id), highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: { [weak navigationController] in
+                                            guard let navigationController else { return }
                                             var viewControllers = navigationController.viewControllers
                                             var indexesToRemove = Set<Int>()
                                             var keptCurrentChatController = false
