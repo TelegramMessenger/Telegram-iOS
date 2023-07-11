@@ -125,10 +125,10 @@ final class StoryContentCaptionComponent: Component {
         private let scrollFullMaskView: UIView
         private let scrollCenterMaskView: UIView
         private let scrollBottomMaskView: UIImageView
+        private let scrollBottomFullMaskView: UIView
         private let scrollTopMaskView: UIImageView
         
-        private let shadowGradientLayer: SimpleGradientLayer
-        private let shadowPlainLayer: SimpleLayer
+        private let shadowGradientView: UIImageView
 
         private var component: StoryContentCaptionComponent?
         private weak var state: EmptyComponentState?
@@ -140,9 +140,15 @@ final class StoryContentCaptionComponent: Component {
         
         private var isExpanded: Bool = false
         
+        private static let shadowImage: UIImage? = {
+            UIImage(named: "Stories/PanelGradient")
+        }()
+        
         override init(frame: CGRect) {
-            self.shadowGradientLayer = SimpleGradientLayer()
-            self.shadowPlainLayer = SimpleLayer()
+            self.shadowGradientView = UIImageView()
+            if let image = StoryContentCaptionComponent.View.shadowImage {
+                self.shadowGradientView.image = image.stretchableImage(withLeftCapWidth: 0, topCapHeight: Int(image.size.height - 1.0))
+            }
             
             self.scrollViewContainer = UIView()
             
@@ -170,6 +176,10 @@ final class StoryContentCaptionComponent: Component {
             ], locations: [0.0, 1.0]))
             self.scrollMaskContainer.addSubview(self.scrollBottomMaskView)
             
+            self.scrollBottomFullMaskView = UIView()
+            self.scrollBottomFullMaskView.backgroundColor = .white
+            self.scrollMaskContainer.addSubview(self.scrollBottomFullMaskView)
+            
             self.scrollTopMaskView = UIImageView(image: generateGradientImage(size: CGSize(width: 8.0, height: 8.0), colors: [
                 UIColor(white: 1.0, alpha: 0.0),
                 UIColor(white: 1.0, alpha: 1.0)
@@ -181,8 +191,7 @@ final class StoryContentCaptionComponent: Component {
 
             super.init(frame: frame)
             
-            self.layer.addSublayer(self.shadowGradientLayer)
-            self.layer.addSublayer(self.shadowPlainLayer)
+            self.addSubview(self.shadowGradientView)
 
             self.scrollViewContainer.addSubview(self.scrollView)
             self.scrollView.delegate = self
@@ -258,8 +267,7 @@ final class StoryContentCaptionComponent: Component {
             
             let shadowOverflow: CGFloat = 58.0
             let shadowFrame = CGRect(origin: CGPoint(x: 0.0, y:  -self.scrollView.contentOffset.y + itemLayout.containerSize.height - itemLayout.visibleTextHeight - itemLayout.verticalInset - shadowOverflow), size: CGSize(width: itemLayout.containerSize.width, height: itemLayout.visibleTextHeight + itemLayout.verticalInset + shadowOverflow))
-            transition.setFrame(layer: self.shadowGradientLayer, frame: shadowFrame)
-            transition.setFrame(layer: self.shadowPlainLayer, frame: CGRect(origin: CGPoint(x: shadowFrame.minX, y: shadowFrame.maxY), size: CGSize(width: shadowFrame.width, height: self.scrollView.contentSize.height + 1000.0)))
+            transition.setFrame(view: self.shadowGradientView, frame: CGRect(origin: CGPoint(x: shadowFrame.minX, y: shadowFrame.minY), size: CGSize(width: shadowFrame.width, height: self.scrollView.contentSize.height + 1000.0)))
             
             let expandDistance: CGFloat = 50.0
             var expandFraction: CGFloat = self.scrollView.contentOffset.y / expandDistance
@@ -626,7 +634,7 @@ final class StoryContentCaptionComponent: Component {
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: availableSize.height)))
             transition.setFrame(view: self.scrollViewContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: availableSize.height)))
             
-            if self.shadowGradientLayer.colors == nil {
+            /*if self.shadowGradientLayer.colors == nil {
                 var locations: [NSNumber] = []
                 var colors: [CGColor] = []
                 let numStops = 10
@@ -646,7 +654,7 @@ final class StoryContentCaptionComponent: Component {
                 self.shadowGradientLayer.type = .axial
                 
                 self.shadowPlainLayer.backgroundColor = UIColor(white: 0.0, alpha: baseAlpha).cgColor
-            }
+            }*/
             
             self.ignoreScrolling = false
             self.updateScrolling(transition: transition)
@@ -656,6 +664,7 @@ final class StoryContentCaptionComponent: Component {
             transition.setFrame(view: self.scrollFullMaskView, frame: CGRect(origin: CGPoint(x: 0.0, y: gradientEdgeHeight), size: CGSize(width: availableSize.width, height: availableSize.height - gradientEdgeHeight)))
             transition.setFrame(view: self.scrollCenterMaskView, frame: CGRect(origin: CGPoint(x: 0.0, y: gradientEdgeHeight), size: CGSize(width: availableSize.width, height: availableSize.height - gradientEdgeHeight * 2.0)))
             transition.setFrame(view: self.scrollBottomMaskView, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - gradientEdgeHeight), size: CGSize(width: availableSize.width, height: gradientEdgeHeight)))
+            transition.setFrame(view: self.scrollBottomFullMaskView, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - gradientEdgeHeight), size: CGSize(width: availableSize.width, height: gradientEdgeHeight)))
             transition.setFrame(view: self.scrollTopMaskView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: gradientEdgeHeight)))
             
             self.ignoreExternalState = false
@@ -685,8 +694,10 @@ final class StoryContentCaptionComponent: Component {
                 isExpandedTransition.setAlpha(view: dustNode.view, alpha: !self.isExpanded ? 0.0 : 1.0)
             }
             
-            isExpandedTransition.setAlpha(layer: self.shadowPlainLayer, alpha: self.isExpanded ? 0.0 : 1.0)
-            isExpandedTransition.setAlpha(layer: self.shadowGradientLayer, alpha: self.isExpanded ? 0.0 : 1.0)
+            isExpandedTransition.setAlpha(view: self.shadowGradientView, alpha: self.isExpanded ? 0.0 : 1.0)
+            
+            isExpandedTransition.setAlpha(view: self.scrollBottomMaskView, alpha: self.isExpanded ? 1.0 : 0.0)
+            isExpandedTransition.setAlpha(view: self.scrollBottomFullMaskView, alpha: self.isExpanded ? 0.0 : 1.0)
             
             return availableSize
         }
