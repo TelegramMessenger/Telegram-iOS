@@ -1235,7 +1235,7 @@ public final class StoryItemSetContainerComponent: Component {
                     centerInfoView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                 }
                 if let moreButtonView = self.moreButton.view {
-                    moreButtonView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                    moreButtonView.layer.animateAlpha(from: 0.0, to: moreButtonView.alpha, duration: 0.25)
                 }
                 if let soundButtonView = self.soundButton.view {
                     soundButtonView.layer.animateAlpha(from: 0.0, to: soundButtonView.alpha, duration: 0.25)
@@ -1361,7 +1361,7 @@ public final class StoryItemSetContainerComponent: Component {
                     centerInfoView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
                 }
                 if let moreButtonView = self.moreButton.view {
-                    moreButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
+                    moreButtonView.layer.animateAlpha(from: moreButtonView.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false)
                 }
                 if let soundButtonView = self.soundButton.view {
                     soundButtonView.layer.animateAlpha(from: soundButtonView.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false)
@@ -1592,6 +1592,16 @@ public final class StoryItemSetContainerComponent: Component {
             
             if self.component?.slice.item.storyItem.id != component.slice.item.storyItem.id {
                 self.initializedOffset = false
+                
+                if let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View {
+                    Queue.mainQueue().justDispatch {
+                        inputPanelView.clearSendMessageInput()
+                    }
+                }
+                
+                if let tooltipScreen = self.sendMessageContext.tooltipScreen {
+                    tooltipScreen.dismiss()
+                }
             }
             var itemsTransition = transition
             var resetScrollingOffsetWithItemTransition = false
@@ -3341,7 +3351,6 @@ public final class StoryItemSetContainerComponent: Component {
                     return .single(nil)
                     |> then(
                         .single(.video(symlinkPath, nil, false, nil, nil, PixelDimensions(width: 720, height: 1280), duration ?? 0.0, [], .bottomRight))
-                        |> delay(0.1, queue: Queue.mainQueue())
                     )
                 }
             }
@@ -3848,7 +3857,7 @@ public final class StoryItemSetContainerComponent: Component {
                         account: component.context.account,
                         sharedContext: component.context.sharedContext,
                         text: .markdown(text: text),
-                        style: .customBlur(UIColor(rgb: 0x1c1c1c)),
+                        style: .customBlur(UIColor(rgb: 0x1c1c1c), 0.0),
                         icon: .peer(peer: component.slice.peer, isStory: true),
                         action: TooltipScreen.Action(
                             title: "Undo",

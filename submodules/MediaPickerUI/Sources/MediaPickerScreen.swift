@@ -777,6 +777,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         
         private weak var currentGalleryController: TGModernGalleryController?
         
+        private func requestAssetDownload(_ asset: PHAsset) {
+            
+        }
+        
         private var openingMedia = false
         fileprivate func openMedia(fetchResult: PHFetchResult<PHAsset>, index: Int, immediateThumbnail: UIImage?) {
             guard let controller = self.controller, let interaction = controller.interaction, let (layout, _) = self.validLayout, !self.openingMedia else {
@@ -788,7 +792,29 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     
             if let customSelection = controller.customSelection {
                 self.openingMedia = true
-                customSelection(controller, fetchResult[index])
+                
+                let asset = fetchResult[index]
+                customSelection(controller, asset)
+
+//                let isLocallyAvailable = asset.isLocallyAvailable
+//
+//                if let isLocallyAvailable {
+//                    if isLocallyAvailable {
+//                        customSelection(controller, asset)
+//                    } else {
+//                        self.requestAssetDownload(asset)
+//                    }
+//                } else {
+//                    let _ = (checkIfAssetIsLocal(asset)
+//                    |> deliverOnMainQueue).start(next: { [weak self] isLocallyAvailable in
+//                        if isLocallyAvailable {
+//                            customSelection(controller, asset)
+//                        } else {
+//                            self?.requestAssetDownload(asset)
+//                        }
+//                    })
+//                }
+                
                 Queue.mainQueue().after(0.3) {
                     self.openingMedia = false
                 }

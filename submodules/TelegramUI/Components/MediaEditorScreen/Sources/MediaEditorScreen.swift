@@ -935,7 +935,9 @@ final class MediaEditorScreenComponent: Component {
                 
                 let scrubberFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - scrubberSize.width) / 2.0), y: availableSize.height - environment.safeInsets.bottom - scrubberSize.height - 8.0 + controlsBottomInset), size: scrubberSize)
                 if let scrubberView = self.scrubber.view {
+                    var animateIn = false
                     if scrubberView.superview == nil {
+                        animateIn = true
                         if let inputPanelBackgroundView = self.inputPanelBackground.view, inputPanelBackgroundView.superview != nil {
                             self.insertSubview(scrubberView, belowSubview: inputPanelBackgroundView)
                         } else {
@@ -945,6 +947,10 @@ final class MediaEditorScreenComponent: Component {
                     transition.setFrame(view: scrubberView, frame: scrubberFrame)
                     if !self.animatingButtons {
                         transition.setAlpha(view: scrubberView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
+                    } else if animateIn {
+                        scrubberView.layer.animatePosition(from: CGPoint(x: 0.0, y: 44.0), to: .zero, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                        scrubberView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        scrubberView.layer.animateScale(from: 0.6, to: 1.0, duration: 0.2)
                     }
                 }
                 
@@ -3134,15 +3140,16 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         case bottomRight
         
         func getPosition(_ size: CGSize) -> CGPoint {
+            let offset = CGPoint(x: 224.0, y: 520.0)
             switch self {
             case .topLeft:
-                return CGPoint(x: 224.0, y: 477.0)
+                return CGPoint(x: offset.x, y: offset.y)
             case .topRight:
-                return CGPoint(x: size.width - 224.0, y: 477.0)
+                return CGPoint(x: size.width - offset.x, y: offset.y)
             case .bottomLeft:
-                return CGPoint(x: 224.0, y: size.height - 477.0)
+                return CGPoint(x: offset.x, y: size.height - offset.y)
             case .bottomRight:
-                return CGPoint(x: size.width - 224.0, y: size.height - 477.0)
+                return CGPoint(x: size.width - offset.x, y: size.height - offset.y)
             }
         }
     }
@@ -3374,28 +3381,29 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             guard let self else {
                 return
             }
-            
-            self.push(
-                ShareWithPeersScreen(
-                    context: self.context,
-                    initialPrivacy: privacy,
-                    allowScreenshots: !isForwardingDisabled,
-                    pin: pin,
-                    stateContext: stateContext,
-                    completion: { [weak self] result, isForwardingDisabled, pin in
-                        guard let self else {
-                            return
-                        }
-                        if case .closeFriends = privacy.base {
-                            let _ = self.context.engine.privacy.updateCloseFriends(peerIds: result.additionallyIncludePeers).start()
-                            completion(EngineStoryPrivacy(base: .closeFriends, additionallyIncludePeers: []))
-                        } else {
-                            completion(result)
-                        }
-                    },
-                    editCategory: { _, _, _ in }
-                )
+            let controller = ShareWithPeersScreen(
+                context: self.context,
+                initialPrivacy: privacy,
+                allowScreenshots: !isForwardingDisabled,
+                pin: pin,
+                stateContext: stateContext,
+                completion: { [weak self] result, isForwardingDisabled, pin in
+                    guard let self else {
+                        return
+                    }
+                    if case .closeFriends = privacy.base {
+                        let _ = self.context.engine.privacy.updateCloseFriends(peerIds: result.additionallyIncludePeers).start()
+                        completion(EngineStoryPrivacy(base: .closeFriends, additionallyIncludePeers: []))
+                    } else {
+                        completion(result)
+                    }
+                },
+                editCategory: { _, _, _ in }
             )
+            controller.dismissed = {
+                self.node.mediaEditor?.play()
+            }
+            self.push(controller)
         })
     }
     

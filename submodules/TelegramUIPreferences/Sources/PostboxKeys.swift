@@ -78,6 +78,7 @@ private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {
     case translationState = 10
     case storySource = 11
     case mediaEditorState = 12
+    case cameraState = 13
 }
 
 public struct ApplicationSpecificItemCacheCollectionId {
@@ -92,6 +93,7 @@ public struct ApplicationSpecificItemCacheCollectionId {
     public static let translationState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.translationState.rawValue)
     public static let storySource = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.storySource.rawValue)
     public static let mediaEditorState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.mediaEditorState.rawValue)
+    public static let cameraState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.cameraState.rawValue)
 }
 
 private enum ApplicationSpecificOrderedItemListCollectionIdValues: Int32 {

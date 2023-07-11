@@ -161,6 +161,7 @@ private final class CameraContext {
         self.secondaryPreviewView = secondaryPreviewView
         
         self.positionValue = configuration.position
+        self._positionPromise = ValuePromise<Camera.Position>(configuration.position)
         
         self.mainDeviceContext = CameraDeviceContext(session: session, exclusive: true, additional: false)
         self.configure {
@@ -251,14 +252,14 @@ private final class CameraContext {
         }
     }
     
-    private var _positionPromise = ValuePromise<Camera.Position>(.unspecified)
+    private var _positionPromise: ValuePromise<Camera.Position>
     var position: Signal<Camera.Position, NoError> {
         return self._positionPromise.get()
     }
     
     private var positionValue: Camera.Position = .back
     func togglePosition() {
-        if self.isDualCamEnabled {
+        if self.isDualCameraEnabled {
             let targetPosition: Camera.Position
             if case .back = self.positionValue {
                 targetPosition = .front
@@ -308,12 +309,12 @@ private final class CameraContext {
         }
     }
     
-    private var isDualCamEnabled = false
-    public func setDualCamEnabled(_ enabled: Bool) {
-        guard enabled != self.isDualCamEnabled else {
+    private var isDualCameraEnabled = false
+    public func setDualCameraEnabled(_ enabled: Bool) {
+        guard enabled != self.isDualCameraEnabled else {
             return
         }
-        self.isDualCamEnabled = enabled
+        self.isDualCameraEnabled = enabled
         
         self.modeChange = .dualCamera
         if enabled {
@@ -659,10 +660,10 @@ public final class Camera {
         }
     }
     
-    public func setDualCamEnabled(_ enabled: Bool) {
+    public func setDualCameraEnabled(_ enabled: Bool) {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
-                context.setDualCamEnabled(enabled)
+                context.setDualCameraEnabled(enabled)
             }
         }
     }
