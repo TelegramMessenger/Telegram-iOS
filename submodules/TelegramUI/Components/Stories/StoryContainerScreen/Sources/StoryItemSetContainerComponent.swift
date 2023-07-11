@@ -877,46 +877,50 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         private func isProgressPaused() -> Bool {
+            return self.itemProgressMode() == .pause
+        }
+        
+        private func itemProgressMode() -> StoryContentItem.ProgressMode {
             guard let component = self.component else {
-                return false
+                return .pause
             }
             if component.pinchState != nil {
-                return true
+                return .pause
             }
             if self.inputPanelExternalState.isEditing || component.isProgressPaused || self.sendMessageContext.actionSheet != nil || self.sendMessageContext.isViewingAttachedStickers || self.contextController != nil || self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil || self.displayViewList {
-                return true
+                return .pause
             }
             if let reactionContextNode = self.reactionContextNode, reactionContextNode.isReactionSearchActive {
-                return true
+                return .pause
             }
             if self.privacyController != nil {
-                return true
+                return .pause
             }
             if self.isReporting {
-                return true
+                return .pause
             }
             if self.isEditingStory {
-                return true
+                return .pause
             }
             if self.sendMessageContext.attachmentController != nil {
-                return true
+                return .pause
             }
             if self.sendMessageContext.shareController != nil {
-                return true
+                return .pause
             }
             if self.sendMessageContext.tooltipScreen != nil {
-                return true
+                return .pause
             }
             if let navigationController = component.controller()?.navigationController as? NavigationController {
                 let topViewController = navigationController.topViewController
                 if !(topViewController is StoryContainerScreen) && !(topViewController is MediaEditorScreen) && !(topViewController is ShareWithPeersScreen) && !(topViewController is AttachmentController) {
-                    return true
+                    return .pause
                 }
             }
             if let captionItem = self.captionItem, captionItem.externalState.isExpanded {
-                return true
+                return .blurred
             }
-            return false
+            return .play
         }
         
         private func updateScrolling(transition: Transition) {
@@ -1094,13 +1098,13 @@ public final class StoryItemSetContainerComponent: Component {
                         itemTransition.setCornerRadius(layer: visibleItem.contentContainerView.layer, cornerRadius: 12.0 * (1.0 / itemScale))
                         itemTransition.setAlpha(view: visibleItem.contentContainerView, alpha: 1.0 * (1.0 - fractionDistanceToCenter) + 0.75 * fractionDistanceToCenter)
                         
-                        var itemProgressPaused = self.isProgressPaused()
+                        var itemProgressMode = self.itemProgressMode()
                         if index != centralIndex {
-                            itemProgressPaused = true
+                            itemProgressMode = .pause
                         }
 
                         if let view = view as? StoryContentItem.View {
-                            view.setIsProgressPaused(itemProgressPaused)
+                            view.setProgressMode(itemProgressMode)
                         }
                     }
                 }
@@ -1121,7 +1125,7 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         func updateIsProgressPaused() {
-            let isProgressPaused = self.isProgressPaused()
+            let progressMode = self.itemProgressMode()
             var centralId: Int32?
             if let component = self.component {
                 centralId = component.slice.item.storyItem.id
@@ -1130,7 +1134,11 @@ public final class StoryItemSetContainerComponent: Component {
             for (id, visibleItem) in self.visibleItems {
                 if let view = visibleItem.view.view {
                     if let view = view as? StoryContentItem.View {
-                        view.setIsProgressPaused(isProgressPaused || id != centralId)
+                        var itemMode = progressMode
+                        if id != centralId {
+                            itemMode = .pause
+                        }
+                        view.setProgressMode(itemMode)
                     }
                 }
             }
@@ -2645,7 +2653,7 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width, height: contentFrame.height)
+                    containerSize: CGSize(width: availableSize.width, height: contentFrame.height - 60.0)
                 )
                 captionItem.view.parentState = state
                 let captionFrame = CGRect(origin: CGPoint(x: 0.0, y: contentFrame.height - captionSize.height), size: captionSize)

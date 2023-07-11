@@ -34,8 +34,14 @@ public final class StoryContentItem: Equatable {
         }
     }
     
+    public enum ProgressMode {
+        case play
+        case pause
+        case blurred
+    }
+    
     open class View: UIView {
-        open func setIsProgressPaused(_ isProgressPaused: Bool) {
+        open func setProgressMode(_ progressMode: ProgressMode) {
         }
         
         open func rewind() {

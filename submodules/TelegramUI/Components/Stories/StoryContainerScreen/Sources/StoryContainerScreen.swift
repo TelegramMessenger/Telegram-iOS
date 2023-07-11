@@ -1584,7 +1584,7 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
     private var didAnimateIn: Bool = false
     private var isDismissed: Bool = false
     
-    private let focusedItemPromise = Promise<StoryId?>(nil)
+    private let focusedItemPromise = Promise<StoryId?>()
     public var focusedItem: Signal<StoryId?, NoError> {
         return self.focusedItemPromise.get()
     }

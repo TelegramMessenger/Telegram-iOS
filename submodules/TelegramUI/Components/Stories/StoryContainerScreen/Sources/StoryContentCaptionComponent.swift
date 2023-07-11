@@ -99,23 +99,36 @@ final class StoryContentCaptionComponent: Component {
             self.verticalInset = verticalInset
         }
     }
+    
+    private final class ContentItem {
+        var textNode: TextNodeWithEntities?
+        var spoilerTextNode: TextNodeWithEntities?
+        var linkHighlightingNode: LinkHighlightingNode?
+        var dustNode: InvisibleInkDustNode?
+        
+        init() {
+        }
+        
+        func update() {
+            
+        }
+    }
 
     final class View: UIView, UIScrollViewDelegate {
         private let scrollViewContainer: UIView
         private let scrollView: UIScrollView
         
+        private let collapsedText: ContentItem
+        private let expandedText: ContentItem
+        
         private let scrollMaskContainer: UIView
         private let scrollFullMaskView: UIView
         private let scrollCenterMaskView: UIView
         private let scrollBottomMaskView: UIImageView
+        private let scrollTopMaskView: UIImageView
         
         private let shadowGradientLayer: SimpleGradientLayer
         private let shadowPlainLayer: SimpleLayer
-        
-        private var textNode: TextNodeWithEntities?
-        private var spoilerTextNode: TextNodeWithEntities?
-        private var linkHighlightingNode: LinkHighlightingNode?
-        private var dustNode: InvisibleInkDustNode?
 
         private var component: StoryContentCaptionComponent?
         private weak var state: EmptyComponentState?
@@ -124,6 +137,8 @@ final class StoryContentCaptionComponent: Component {
         
         private var ignoreScrolling: Bool = false
         private var ignoreExternalState: Bool = false
+        
+        private var isExpanded: Bool = false
         
         override init(frame: CGRect) {
             self.shadowGradientLayer = SimpleGradientLayer()
@@ -154,6 +169,15 @@ final class StoryContentCaptionComponent: Component {
                 UIColor(white: 1.0, alpha: 0.0)
             ], locations: [0.0, 1.0]))
             self.scrollMaskContainer.addSubview(self.scrollBottomMaskView)
+            
+            self.scrollTopMaskView = UIImageView(image: generateGradientImage(size: CGSize(width: 8.0, height: 8.0), colors: [
+                UIColor(white: 1.0, alpha: 0.0),
+                UIColor(white: 1.0, alpha: 1.0)
+            ], locations: [0.0, 1.0]))
+            self.scrollMaskContainer.addSubview(self.scrollTopMaskView)
+            
+            self.collapsedText = ContentItem()
+            self.expandedText = ContentItem()
 
             super.init(frame: frame)
             
@@ -178,7 +202,8 @@ final class StoryContentCaptionComponent: Component {
             if !self.bounds.contains(point) {
                 return nil
             }
-            if let textView = self.textNode?.textNode.view {
+            
+            if let textView = self.collapsedText.textNode?.textNode.view {
                 let textLocalPoint = self.convert(point, to: textView)
                 if textLocalPoint.y >= -7.0 {
                     return textView
@@ -190,7 +215,11 @@ final class StoryContentCaptionComponent: Component {
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
-                self.expand(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                if self.isExpanded {
+                    self.collapse(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                } else {
+                    self.expand(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                }
             }
         }
         
@@ -238,6 +267,8 @@ final class StoryContentCaptionComponent: Component {
             
             let isExpanded = expandFraction > 0.0
             
+            self.isExpanded = isExpanded
+            
             if component.externalState.isExpanded != isExpanded {
                 component.externalState.isExpanded = isExpanded
                 
@@ -248,16 +279,18 @@ final class StoryContentCaptionComponent: Component {
         }
         
         @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+            let contentItem = self.isExpanded ? self.expandedText : self.collapsedText
+            
             switch recognizer.state {
             case .ended:
-                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation, let component = self.component, let textNode = self.textNode {
+                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation, let component = self.component, let textNode = contentItem.textNode {
                     let titleFrame = textNode.textNode.view.bounds
                     if titleFrame.contains(location) {
                         if let (index, attributes) = textNode.textNode.attributesAtPoint(CGPoint(x: location.x - titleFrame.minX, y: location.y - titleFrame.minY)) {
                             let action: Action?
-                            if case .tap = gesture, let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)], !(self.dustNode?.isRevealed ?? true)  {
-                                let convertedPoint = recognizer.view?.convert(location, to: self.dustNode?.view) ?? location
-                                self.dustNode?.revealAtLocation(convertedPoint)
+                            if case .tap = gesture, let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)], !(contentItem.dustNode?.isRevealed ?? true)  {
+                                let convertedPoint = recognizer.view?.convert(location, to: contentItem.dustNode?.view) ?? location
+                                contentItem.dustNode?.revealAtLocation(convertedPoint)
                                 return
                             } else if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                                 var concealed = true
@@ -278,19 +311,24 @@ final class StoryContentCaptionComponent: Component {
                             } else {
                                 action = nil
                             }
-                            guard let action else {
-                                return
+                            if let action {
+                                switch gesture {
+                                case .tap:
+                                    component.action(action)
+                                case .longTap:
+                                    component.longTapAction(action)
+                                default:
+                                    return
+                                }
+                            } else {
+                                if case .tap = gesture {
+                                    if self.isExpanded {
+                                        self.collapse(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                                    } else {
+                                        self.expand(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                                    }
+                                }
                             }
-                            switch gesture {
-                            case .tap:
-                                component.action(action)
-                            case .longTap:
-                                component.longTapAction(action)
-                            default:
-                                return
-                            }
-                            self.expand(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
-                            return
                         }
                     }
                 }
@@ -300,7 +338,9 @@ final class StoryContentCaptionComponent: Component {
         }
         
         private func updateTouchesAtPoint(_ point: CGPoint?) {
-            guard let textNode = self.textNode else {
+            let contentItem = self.isExpanded ? self.expandedText : self.collapsedText
+            
+            guard let textNode = contentItem.textNode else {
                 return
             }
             var rects: [CGRect]?
@@ -329,20 +369,20 @@ final class StoryContentCaptionComponent: Component {
                 }
             }
             
-            if let spoilerRects = spoilerRects, !spoilerRects.isEmpty, let dustNode = self.dustNode, !dustNode.isRevealed {
+            if let spoilerRects = spoilerRects, !spoilerRects.isEmpty, let dustNode = contentItem.dustNode, !dustNode.isRevealed {
             } else if let rects = rects {
                 let linkHighlightingNode: LinkHighlightingNode
-                if let current = self.linkHighlightingNode {
+                if let current = contentItem.linkHighlightingNode {
                     linkHighlightingNode = current
                 } else {
                     linkHighlightingNode = LinkHighlightingNode(color: UIColor(white: 1.0, alpha: 0.5))
-                    self.linkHighlightingNode = linkHighlightingNode
+                    contentItem.linkHighlightingNode = linkHighlightingNode
                     self.scrollView.insertSubview(linkHighlightingNode.view, belowSubview: textNode.textNode.view)
                 }
                 linkHighlightingNode.frame = textNode.textNode.view.frame
                 linkHighlightingNode.updateRects(rects)
-            } else if let linkHighlightingNode = self.linkHighlightingNode {
-                self.linkHighlightingNode = nil
+            } else if let linkHighlightingNode = contentItem.linkHighlightingNode {
+                contentItem.linkHighlightingNode = nil
                 linkHighlightingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak linkHighlightingNode] _ in
                     linkHighlightingNode?.removeFromSupernode()
                 })
@@ -375,8 +415,21 @@ final class StoryContentCaptionComponent: Component {
                 entityFiles: component.entityFiles
             )
             
-            let makeLayout = TextNodeWithEntities.asyncLayout(self.textNode)
-            let textLayout = makeLayout(TextNodeLayoutArguments(
+            let truncationToken = NSMutableAttributedString()
+            truncationToken.append(NSAttributedString(string: "\u{2026} ", font: Font.regular(16.0), textColor: .white))
+            truncationToken.append(NSAttributedString(string: "Show more", font: Font.semibold(16.0), textColor: .white))
+            
+            //TODO:localize
+            let collapsedTextLayout = TextNodeWithEntities.asyncLayout(self.collapsedText.textNode)(TextNodeLayoutArguments(
+                attributedString: attributedText,
+                maximumNumberOfLines: 3,
+                truncationType: .end,
+                constrainedSize: textContainerSize,
+                textShadowColor: UIColor(white: 0.0, alpha: 0.25),
+                textShadowBlur: 4.0,
+                customTruncationToken: truncationToken
+            ))
+            let expandedTextLayout = TextNodeWithEntities.asyncLayout(self.expandedText.textNode)(TextNodeLayoutArguments(
                 attributedString: attributedText,
                 maximumNumberOfLines: 0,
                 truncationType: .end,
@@ -385,92 +438,177 @@ final class StoryContentCaptionComponent: Component {
                 textShadowBlur: 4.0
             ))
             
-            let makeSpoilerLayout = TextNodeWithEntities.asyncLayout(self.spoilerTextNode)
-            let spoilerTextLayoutAndApply: (TextNodeLayout, (TextNodeWithEntities.Arguments?) -> TextNodeWithEntities)?
-            if !textLayout.0.spoilers.isEmpty {
-                spoilerTextLayoutAndApply = makeSpoilerLayout(TextNodeLayoutArguments(attributedString: attributedText, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textContainerSize, textShadowColor: UIColor(white: 0.0, alpha: 0.25), textShadowBlur: 4.0, displaySpoilers: true, displayEmbeddedItemsUnderSpoilers: true))
+            let collapsedSpoilerTextLayoutAndApply: (TextNodeLayout, (TextNodeWithEntities.Arguments?) -> TextNodeWithEntities)?
+            if !collapsedTextLayout.0.spoilers.isEmpty {
+                collapsedSpoilerTextLayoutAndApply = TextNodeWithEntities.asyncLayout(self.collapsedText.spoilerTextNode)(TextNodeLayoutArguments(attributedString: attributedText, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textContainerSize, textShadowColor: UIColor(white: 0.0, alpha: 0.25), textShadowBlur: 4.0, displaySpoilers: true, displayEmbeddedItemsUnderSpoilers: true))
             } else {
-                spoilerTextLayoutAndApply = nil
+                collapsedSpoilerTextLayoutAndApply = nil
             }
             
-            let maxHeight: CGFloat = 50.0
-            let visibleTextHeight = min(maxHeight, textLayout.0.size.height)
-            let textOverflowHeight: CGFloat = textLayout.0.size.height - visibleTextHeight
+            let expandedSpoilerTextLayoutAndApply: (TextNodeLayout, (TextNodeWithEntities.Arguments?) -> TextNodeWithEntities)?
+            if !expandedTextLayout.0.spoilers.isEmpty {
+                expandedSpoilerTextLayoutAndApply = TextNodeWithEntities.asyncLayout(self.expandedText.spoilerTextNode)(TextNodeLayoutArguments(attributedString: attributedText, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textContainerSize, textShadowColor: UIColor(white: 0.0, alpha: 0.25), textShadowBlur: 4.0, displaySpoilers: true, displayEmbeddedItemsUnderSpoilers: true))
+            } else {
+                expandedSpoilerTextLayoutAndApply = nil
+            }
+            
+            let visibleTextHeight = collapsedTextLayout.0.size.height
+            let textOverflowHeight: CGFloat = expandedTextLayout.0.size.height - visibleTextHeight
             let scrollContentSize = CGSize(width: availableSize.width, height: availableSize.height + textOverflowHeight)
             
-            let textNode = textLayout.1(TextNodeWithEntities.Arguments(
-                context: component.context,
-                cache: component.context.animationCache,
-                renderer: component.context.animationRenderer,
-                placeholderColor: UIColor(white: 0.2, alpha: 1.0),
-                attemptSynchronous: true
-            ))
-            if self.textNode !== textNode {
-                self.textNode?.textNode.view.removeFromSuperview()
-                
-                self.textNode = textNode
-                if textNode.textNode.view.superview == nil  {
-                    self.scrollView.addSubview(textNode.textNode.view)
-                    
-                    let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
-                    recognizer.tapActionAtPoint = { point in
-                        return .waitForSingleTap
-                    }
-                    recognizer.highlight = { [weak self] point in
-                        guard let self else {
-                            return
-                        }
-                        self.updateTouchesAtPoint(point)
-                    }
-                    textNode.textNode.view.addGestureRecognizer(recognizer)
-                }
-                
-                textNode.visibilityRect = CGRect(origin: CGPoint(), size: CGSize(width: 100000.0, height: 100000.0))
-            }
-
-            let textFrame = CGRect(origin: CGPoint(x: sideInset, y: availableSize.height - visibleTextHeight - verticalInset), size: textLayout.0.size)
-            textNode.textNode.frame = textFrame
-            
-            if let (_, spoilerTextApply) = spoilerTextLayoutAndApply {
-                let spoilerTextNode = spoilerTextApply(TextNodeWithEntities.Arguments(
+            do {
+                let collapsedTextNode = collapsedTextLayout.1(TextNodeWithEntities.Arguments(
                     context: component.context,
                     cache: component.context.animationCache,
                     renderer: component.context.animationRenderer,
                     placeholderColor: UIColor(white: 0.2, alpha: 1.0),
                     attemptSynchronous: true
                 ))
-                if self.spoilerTextNode == nil {
-                    spoilerTextNode.textNode.alpha = 0.0
-                    spoilerTextNode.textNode.isUserInteractionEnabled = false
-                    spoilerTextNode.textNode.contentMode = .topLeft
-                    spoilerTextNode.textNode.contentsScale = UIScreenScale
-                    spoilerTextNode.textNode.displaysAsynchronously = false
-                    self.scrollView.insertSubview(spoilerTextNode.textNode.view, belowSubview: textNode.textNode.view)
+                if self.collapsedText.textNode !== collapsedTextNode {
+                    self.collapsedText.textNode?.textNode.view.removeFromSuperview()
                     
-                    spoilerTextNode.visibilityRect = CGRect(origin: CGPoint(), size: CGSize(width: 100000.0, height: 100000.0))
+                    self.collapsedText.textNode = collapsedTextNode
+                    if collapsedTextNode.textNode.view.superview == nil  {
+                        self.scrollView.addSubview(collapsedTextNode.textNode.view)
+                        
+                        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+                        recognizer.tapActionAtPoint = { point in
+                            return .waitForSingleTap
+                        }
+                        recognizer.highlight = { [weak self] point in
+                            guard let self else {
+                                return
+                            }
+                            self.updateTouchesAtPoint(point)
+                        }
+                        collapsedTextNode.textNode.view.addGestureRecognizer(recognizer)
+                    }
                     
-                    self.spoilerTextNode = spoilerTextNode
+                    collapsedTextNode.visibilityRect = CGRect(origin: CGPoint(), size: CGSize(width: 100000.0, height: 100000.0))
                 }
                 
-                self.spoilerTextNode?.textNode.frame = textFrame
+                let collapsedTextFrame = CGRect(origin: CGPoint(x: sideInset, y: availableSize.height - visibleTextHeight - verticalInset), size: collapsedTextLayout.0.size)
+                collapsedTextNode.textNode.frame = collapsedTextFrame
                 
-                let dustNode: InvisibleInkDustNode
-                if let current = self.dustNode {
-                    dustNode = current
-                } else {
-                    dustNode = InvisibleInkDustNode(textNode: spoilerTextNode.textNode, enableAnimations: component.context.sharedContext.energyUsageSettings.fullTranslucency)
-                    self.dustNode = dustNode
-                    self.scrollView.insertSubview(dustNode.view, aboveSubview: spoilerTextNode.textNode.view)
+                if let (_, collapsedSpoilerTextApply) = collapsedSpoilerTextLayoutAndApply {
+                    let collapsedSpoilerTextNode = collapsedSpoilerTextApply(TextNodeWithEntities.Arguments(
+                        context: component.context,
+                        cache: component.context.animationCache,
+                        renderer: component.context.animationRenderer,
+                        placeholderColor: UIColor(white: 0.2, alpha: 1.0),
+                        attemptSynchronous: true
+                    ))
+                    if self.collapsedText.spoilerTextNode == nil {
+                        collapsedSpoilerTextNode.textNode.alpha = 0.0
+                        collapsedSpoilerTextNode.textNode.isUserInteractionEnabled = false
+                        collapsedSpoilerTextNode.textNode.contentMode = .topLeft
+                        collapsedSpoilerTextNode.textNode.contentsScale = UIScreenScale
+                        collapsedSpoilerTextNode.textNode.displaysAsynchronously = false
+                        self.scrollView.insertSubview(collapsedSpoilerTextNode.textNode.view, belowSubview: collapsedTextNode.textNode.view)
+                        
+                        collapsedSpoilerTextNode.visibilityRect = CGRect(origin: CGPoint(), size: CGSize(width: 100000.0, height: 100000.0))
+                        
+                        self.collapsedText.spoilerTextNode = collapsedSpoilerTextNode
+                    }
+                    
+                    self.collapsedText.spoilerTextNode?.textNode.frame = collapsedTextFrame
+                    
+                    let collapsedDustNode: InvisibleInkDustNode
+                    if let current = self.collapsedText.dustNode {
+                        collapsedDustNode = current
+                    } else {
+                        collapsedDustNode = InvisibleInkDustNode(textNode: collapsedSpoilerTextNode.textNode, enableAnimations: component.context.sharedContext.energyUsageSettings.fullTranslucency)
+                        self.collapsedText.dustNode = collapsedDustNode
+                        self.scrollView.insertSubview(collapsedDustNode.view, aboveSubview: collapsedSpoilerTextNode.textNode.view)
+                    }
+                    collapsedDustNode.frame = collapsedTextFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 0.0)
+                    collapsedDustNode.update(size: collapsedDustNode.frame.size, color: .white, textColor: .white, rects: collapsedTextLayout.0.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: collapsedTextLayout.0.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+                } else if let collapsedSpoilerTextNode = self.collapsedText.spoilerTextNode {
+                    self.collapsedText.spoilerTextNode = nil
+                    collapsedSpoilerTextNode.textNode.removeFromSupernode()
+                    
+                    if let collapsedDustNode = self.collapsedText.dustNode {
+                        self.collapsedText.dustNode = nil
+                        collapsedDustNode.view.removeFromSuperview()
+                    }
                 }
-                dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 0.0)
-                dustNode.update(size: dustNode.frame.size, color: .white, textColor: .white, rects: textLayout.0.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.0.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
-            } else if let spoilerTextNode = self.spoilerTextNode {
-                self.spoilerTextNode = nil
-                spoilerTextNode.textNode.removeFromSupernode()
+            }
+            
+            do {
+                let expandedTextNode = expandedTextLayout.1(TextNodeWithEntities.Arguments(
+                    context: component.context,
+                    cache: component.context.animationCache,
+                    renderer: component.context.animationRenderer,
+                    placeholderColor: UIColor(white: 0.2, alpha: 1.0),
+                    attemptSynchronous: true
+                ))
+                if self.expandedText.textNode !== expandedTextNode {
+                    self.expandedText.textNode?.textNode.view.removeFromSuperview()
+                    
+                    self.expandedText.textNode = expandedTextNode
+                    if expandedTextNode.textNode.view.superview == nil  {
+                        self.scrollView.addSubview(expandedTextNode.textNode.view)
+                        
+                        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+                        recognizer.tapActionAtPoint = { point in
+                            return .waitForSingleTap
+                        }
+                        recognizer.highlight = { [weak self] point in
+                            guard let self else {
+                                return
+                            }
+                            self.updateTouchesAtPoint(point)
+                        }
+                        expandedTextNode.textNode.view.addGestureRecognizer(recognizer)
+                    }
+                    
+                    expandedTextNode.visibilityRect = CGRect(origin: CGPoint(), size: CGSize(width: 100000.0, height: 100000.0))
+                }
                 
-                if let dustNode = self.dustNode {
-                    self.dustNode = nil
-                    dustNode.removeFromSupernode()
+                let expandedTextFrame = CGRect(origin: CGPoint(x: sideInset, y: availableSize.height - visibleTextHeight - verticalInset), size: expandedTextLayout.0.size)
+                expandedTextNode.textNode.frame = expandedTextFrame
+                
+                if let (_, expandedSpoilerTextApply) = expandedSpoilerTextLayoutAndApply {
+                    let expandedSpoilerTextNode = expandedSpoilerTextApply(TextNodeWithEntities.Arguments(
+                        context: component.context,
+                        cache: component.context.animationCache,
+                        renderer: component.context.animationRenderer,
+                        placeholderColor: UIColor(white: 0.2, alpha: 1.0),
+                        attemptSynchronous: true
+                    ))
+                    if self.expandedText.spoilerTextNode == nil {
+                        expandedSpoilerTextNode.textNode.alpha = 0.0
+                        expandedSpoilerTextNode.textNode.isUserInteractionEnabled = false
+                        expandedSpoilerTextNode.textNode.contentMode = .topLeft
+                        expandedSpoilerTextNode.textNode.contentsScale = UIScreenScale
+                        expandedSpoilerTextNode.textNode.displaysAsynchronously = false
+                        self.scrollView.insertSubview(expandedSpoilerTextNode.textNode.view, belowSubview: expandedTextNode.textNode.view)
+                        
+                        expandedSpoilerTextNode.visibilityRect = CGRect(origin: CGPoint(), size: CGSize(width: 100000.0, height: 100000.0))
+                        
+                        self.expandedText.spoilerTextNode = expandedSpoilerTextNode
+                    }
+                    
+                    self.expandedText.spoilerTextNode?.textNode.frame = expandedTextFrame
+                    
+                    let expandedDustNode: InvisibleInkDustNode
+                    if let current = self.expandedText.dustNode {
+                        expandedDustNode = current
+                    } else {
+                        expandedDustNode = InvisibleInkDustNode(textNode: expandedSpoilerTextNode.textNode, enableAnimations: component.context.sharedContext.energyUsageSettings.fullTranslucency)
+                        self.expandedText.dustNode = expandedDustNode
+                        self.scrollView.insertSubview(expandedDustNode.view, aboveSubview: expandedSpoilerTextNode.textNode.view)
+                    }
+                    expandedDustNode.frame = expandedTextFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 0.0)
+                    expandedDustNode.update(size: expandedDustNode.frame.size, color: .white, textColor: .white, rects: expandedTextLayout.0.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: expandedTextLayout.0.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+                } else if let expandedSpoilerTextNode = self.expandedText.spoilerTextNode {
+                    self.expandedText.spoilerTextNode = nil
+                    expandedSpoilerTextNode.textNode.removeFromSupernode()
+                    
+                    if let expandedDustNode = self.expandedText.dustNode {
+                        self.expandedText.dustNode = nil
+                        expandedDustNode.view.removeFromSuperview()
+                    }
                 }
             }
             
@@ -515,11 +653,40 @@ final class StoryContentCaptionComponent: Component {
             
             let gradientEdgeHeight: CGFloat = 18.0
             
-            transition.setFrame(view: self.scrollFullMaskView, frame: CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: availableSize.height)))
-            transition.setFrame(view: self.scrollCenterMaskView, frame: CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: availableSize.height - gradientEdgeHeight)))
+            transition.setFrame(view: self.scrollFullMaskView, frame: CGRect(origin: CGPoint(x: 0.0, y: gradientEdgeHeight), size: CGSize(width: availableSize.width, height: availableSize.height - gradientEdgeHeight)))
+            transition.setFrame(view: self.scrollCenterMaskView, frame: CGRect(origin: CGPoint(x: 0.0, y: gradientEdgeHeight), size: CGSize(width: availableSize.width, height: availableSize.height - gradientEdgeHeight * 2.0)))
             transition.setFrame(view: self.scrollBottomMaskView, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - gradientEdgeHeight), size: CGSize(width: availableSize.width, height: gradientEdgeHeight)))
+            transition.setFrame(view: self.scrollTopMaskView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: gradientEdgeHeight)))
             
             self.ignoreExternalState = false
+            
+            var isExpandedTransition = transition
+            if transition.animation.isImmediate, let hint = transition.userData(TransitionHint.self), case .isExpandedUpdated = hint.kind {
+                isExpandedTransition = transition.withAnimation(.curve(duration: 0.25, curve: .easeInOut))
+            }
+            
+            if let textNode = self.collapsedText.textNode {
+                isExpandedTransition.setAlpha(view: textNode.textNode.view, alpha: self.isExpanded ? 0.0 : 1.0)
+            }
+            if let spoilerTextNode = self.collapsedText.spoilerTextNode {
+                isExpandedTransition.setAlpha(view: spoilerTextNode.textNode.view, alpha: self.isExpanded ? 0.0 : 1.0)
+            }
+            if let dustNode = self.collapsedText.dustNode {
+                isExpandedTransition.setAlpha(view: dustNode.view, alpha: self.isExpanded ? 0.0 : 1.0)
+            }
+            
+            if let textNode = self.expandedText.textNode {
+                isExpandedTransition.setAlpha(view: textNode.textNode.view, alpha: !self.isExpanded ? 0.0 : 1.0)
+            }
+            if let spoilerTextNode = self.expandedText.spoilerTextNode {
+                isExpandedTransition.setAlpha(view: spoilerTextNode.textNode.view, alpha: !self.isExpanded ? 0.0 : 1.0)
+            }
+            if let dustNode = self.expandedText.dustNode {
+                isExpandedTransition.setAlpha(view: dustNode.view, alpha: !self.isExpanded ? 0.0 : 1.0)
+            }
+            
+            isExpandedTransition.setAlpha(layer: self.shadowPlainLayer, alpha: self.isExpanded ? 0.0 : 1.0)
+            isExpandedTransition.setAlpha(layer: self.shadowGradientLayer, alpha: self.isExpanded ? 0.0 : 1.0)
             
             return availableSize
         }

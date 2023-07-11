@@ -1009,11 +1009,13 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 var transitionIn: StoryContainerScreen.TransitionIn?
                 
                 let story = item.story
+                var foundItem: SparseItemGridDisplayItem?
                 var foundItemLayer: SparseItemGridLayer?
                 self.itemGrid.forEachVisibleItem { item in
                     guard let itemLayer = item.layer as? ItemLayer else {
                         return
                     }
+                    foundItem = item
                     if let listItem = itemLayer.item, listItem.story.id == story.id {
                         foundItemLayer = itemLayer
                     }
@@ -1026,6 +1028,11 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         sourceCornerRadius: 0.0,
                         sourceIsAvatar: false
                     )
+                    
+                    if let blurLayer = foundItem?.blurLayer {
+                        let transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
+                        transition.setAlpha(layer: blurLayer, alpha: 0.0)
+                    }
                 }
                 
                 let storyContainerScreen = StoryContainerScreen(
@@ -1037,16 +1044,23 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                             return nil
                         }
                         
+                        var foundItem: SparseItemGridDisplayItem?
                         var foundItemLayer: SparseItemGridLayer?
                         self.itemGrid.forEachVisibleItem { item in
                             guard let itemLayer = item.layer as? ItemLayer else {
                                 return
                             }
+                            foundItem = item
                             if let listItem = itemLayer.item, AnyHashable(listItem.story.id) == itemId {
                                 foundItemLayer = itemLayer
                             }
                         }
                         if let foundItemLayer {
+                            if let blurLayer = foundItem?.blurLayer {
+                                let transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
+                                transition.setAlpha(layer: blurLayer, alpha: 1.0)
+                            }
+                            
                             let itemRect = self.itemGrid.frameForItem(layer: foundItemLayer)
                             return StoryContainerScreen.TransitionOut(
                                 destinationView: self.view,
@@ -1862,11 +1876,21 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     }
     
     private func updateHiddenItems() {
-        self.itemGrid.forEachVisibleItem { item in
-            guard let itemLayer = item.layer as? ItemLayer, let item = itemLayer.item else {
+        self.itemGrid.forEachVisibleItem { itemValue in
+            guard let itemLayer = itemValue.layer as? ItemLayer, let item = itemLayer.item else {
                 return
             }
-            itemLayer.isHidden = self.itemInteraction.hiddenMedia.contains(item.story.id)
+            let itemHidden = self.itemInteraction.hiddenMedia.contains(item.story.id)
+            itemLayer.isHidden = itemHidden
+            
+            if let blurLayer = itemValue.blurLayer {
+                let transition = Transition.immediate
+                if itemHidden {
+                    transition.setAlpha(layer: blurLayer, alpha: 0.0)
+                } else {
+                    transition.setAlpha(layer: blurLayer, alpha: 1.0)
+                }
+            }
         }
     }
     
