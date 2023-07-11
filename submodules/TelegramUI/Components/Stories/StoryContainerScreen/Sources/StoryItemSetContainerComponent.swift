@@ -355,6 +355,7 @@ public final class StoryItemSetContainerComponent: Component {
         var videoRecordingBackgroundView: UIVisualEffectView?
         let inputPanel = ComponentView<Empty>()
         let inputPanelExternalState = MessageInputPanelComponent.ExternalState()
+        private let inputPanelContainer = UIView()
         private let inputPanelBackground = ComponentView<Empty>()
         
         var preparingToDisplayViewList: Bool = false
@@ -426,6 +427,9 @@ public final class StoryItemSetContainerComponent: Component {
             self.closeButtonIconView = UIImageView()
             
             self.transitionCloneContainerView = UIView()
+            
+            self.inputPanelContainer.isUserInteractionEnabled = false
+            self.inputPanelContainer.layer.cornerRadius = 11.0
             
             super.init(frame: frame)
 
@@ -1870,11 +1874,11 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
                         
-            let inputMediaNodeHeight = self.sendMessageContext.updateInputMediaNode(inputPanel: self.inputPanel, availableSize: availableSize, bottomInset: component.safeInsets.bottom, inputHeight: component.inputHeight, effectiveInputHeight: inputHeight, metrics: component.metrics, deviceMetrics: component.deviceMetrics, transition: transition)
+            let inputMediaNodeHeight = self.sendMessageContext.updateInputMediaNode(inputPanel: self.inputPanel, availableSize: availableSize, bottomInset: component.safeInsets.bottom, bottomContainerInset: component.containerInsets.bottom, inputHeight: component.inputHeight, effectiveInputHeight: inputHeight, metrics: component.metrics, deviceMetrics: component.deviceMetrics, transition: transition)
             if inputMediaNodeHeight > 0.0 {
                 inputHeight = inputMediaNodeHeight
             }
-            keyboardHeight = max(keyboardHeight, inputMediaNodeHeight)
+            keyboardHeight = inputHeight
             
             let hasRecordingBlurBackground = self.sendMessageContext.videoRecorderValue != nil || self.sendMessageContext.hasRecordedVideoPreview
             if hasRecordingBlurBackground {
@@ -1905,11 +1909,12 @@ public final class StoryItemSetContainerComponent: Component {
                 transition: transition,
                 component: AnyComponent(BlurredGradientComponent(position: .bottom, dark: true, tag: nil)),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width, height: keyboardHeight + 100.0)
+                containerSize: CGSize(width: availableSize.width, height: max(0.0, keyboardHeight + 100.0 - component.containerInsets.bottom))
             )
             if let inputPanelBackgroundView = self.inputPanelBackground.view {
                 if inputPanelBackgroundView.superview == nil {
-                    self.addSubview(inputPanelBackgroundView)
+                    self.addSubview(self.inputPanelContainer)
+                    self.inputPanelContainer.addSubview(inputPanelBackgroundView)
                 }
                 let isVisible = inputHeight > 44.0 && !hasRecordingBlurBackground
                 transition.setFrame(view: inputPanelBackgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: isVisible ? availableSize.height - inputPanelBackgroundSize.height : availableSize.height), size: inputPanelBackgroundSize))
@@ -2188,6 +2193,8 @@ public final class StoryItemSetContainerComponent: Component {
             //print("contentScaleFraction: \(contentScaleFraction), minimizedBottomContentFraction: \(minimizedBottomContentFraction)")
             
             let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: component.containerInsets.top - (contentSize.height - contentVisualHeight) * 0.5), size: contentSize)
+            
+            transition.setFrame(view: self.inputPanelContainer, frame: contentFrame)
             
             let itemLayout = ItemLayout(
                 containerSize: availableSize,
@@ -2855,8 +2862,8 @@ public final class StoryItemSetContainerComponent: Component {
                             
                             let _ = (enqueueMessages(account: context.account, peerId: peer.id, messages: [message])
                             |> deliverOnMainQueue).start(next: { [weak self] messageIds in
-                                if let animation {
-                                    presentController(UndoOverlayController(
+                                if let animation, let self {
+                                    let controller = UndoOverlayController(
                                         presentationData: presentationData,
                                         content: .sticker(context: context, file: animation, loop: false, title: nil, text: "Reaction Sent.", undoText: "View in Chat", customAction: { [weak self] in
                                             if let messageId = messageIds.first, let self {
@@ -2865,8 +2872,15 @@ public final class StoryItemSetContainerComponent: Component {
                                         }),
                                         elevatedLayout: false,
                                         animateInAsReplacement: false,
-                                        action: { _ in return false }
-                                    ), nil)
+                                        action: { [weak self] _ in
+                                            self?.sendMessageContext.tooltipScreen = nil
+                                            self?.updateIsProgressPaused()
+                                            return false
+                                        }
+                                    )
+                                    self.sendMessageContext.tooltipScreen = controller
+                                    self.updateIsProgressPaused()
+                                    presentController(controller, nil)
                                 }
                             })
                         })

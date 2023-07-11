@@ -752,7 +752,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     .disappear(.default(scale: true))
                 )
 
-                if !isTablet && Camera.isDualCamSupported {
+                if !isTablet && Camera.isDualCameraSupported {
                     let dualButton = dualButton.update(
                         component: CameraButton(
                             content: AnyComponentWithIdentity(
@@ -1164,9 +1164,11 @@ public class CameraScreen: ViewController {
             self.previewBlurView = BlurView()
             self.previewBlurView.isUserInteractionEnabled = false
             
-            var isDualCameraEnabled = true
-            if let isDualCameraEnabledValue = UserDefaults.standard.object(forKey: "TelegramStoryCameraIsDualEnabled") as? NSNumber {
-                isDualCameraEnabled = isDualCameraEnabledValue.boolValue
+            var isDualCameraEnabled = Camera.isDualCameraSupported
+            if isDualCameraEnabled {
+                if let isDualCameraEnabledValue = UserDefaults.standard.object(forKey: "TelegramStoryCameraIsDualEnabled") as? NSNumber {
+                    isDualCameraEnabled = isDualCameraEnabledValue.boolValue
+                }
             }
             
             var dualCameraPosition: PIPPosition = .topRight
@@ -2078,8 +2080,9 @@ public class CameraScreen: ViewController {
             let dualCamUpdated = self.appliedDualCamera != isDualCameraEnabled
             self.appliedDualCamera = isDualCameraEnabled
             
-            let circleSide = floorToScreenPixels(previewSize.width * 160.0 / 430.0)
-            let circleOffset = CGPoint(x: previewSize.width * 224.0 / 1080.0, y: previewSize.width * 480.0 / 1080.0)
+            let dualCameraSize: CGFloat = 160.0
+            let circleSide = floorToScreenPixels(previewSize.width * dualCameraSize / 393.0)
+            let circleOffset = CGPoint(x: previewSize.width * (dualCameraSize + 107.0) / 1080.0, y: previewSize.width * (dualCameraSize + 278.0) / 1080.0)
             
             var origin: CGPoint
             switch self.pipPosition {

@@ -878,8 +878,8 @@ public final class Camera {
         }
     }
     
-    public static var isDualCamSupported: Bool {
-        if #available(iOS 13.0, *), AVCaptureMultiCamSession.isMultiCamSupported {
+    public static var isDualCameraSupported: Bool {
+        if #available(iOS 13.0, *), AVCaptureMultiCamSession.isMultiCamSupported && !DeviceModel.current.isIpad {
             return true
         } else {
             return false
