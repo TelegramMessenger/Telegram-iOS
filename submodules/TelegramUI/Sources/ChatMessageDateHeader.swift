@@ -556,7 +556,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                             videoNode = current
                         } else {
                             videoNode = AvatarVideoNode(context: context)
-                            strongSelf.avatarNode.addSubnode(videoNode)
+                            strongSelf.avatarNode.contentNode.addSubnode(videoNode)
                             strongSelf.avatarVideoNode = videoNode
                         }
                         videoNode.update(peer: EnginePeer(peer), photo: photo, size: CGSize(width: 38.0, height: 38.0))

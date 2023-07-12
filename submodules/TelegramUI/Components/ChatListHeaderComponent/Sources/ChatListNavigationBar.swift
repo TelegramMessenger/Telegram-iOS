@@ -326,7 +326,7 @@ public final class ChatListNavigationBar: Component {
                 
                 if offset <= -60.0 {
                     storiesUnlocked = true
-                } else if offset >= -56.0 {
+                } else if offset >= -58.0 {
                     storiesUnlocked = false
                 } else {
                     storiesUnlocked = self.storiesUnlocked

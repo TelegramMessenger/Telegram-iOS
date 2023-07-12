@@ -1423,7 +1423,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 videoNode = current
                             } else {
                                 videoNode = AvatarVideoNode(context: item.context)
-                                strongSelf.avatarNode.addSubnode(videoNode)
+                                strongSelf.avatarNode.contentNode.addSubnode(videoNode)
                                 strongSelf.avatarVideoNode = videoNode
                             }
                             videoNode.update(peer: peer, photo: photo, size: CGSize(width: 60.0, height: 60.0))

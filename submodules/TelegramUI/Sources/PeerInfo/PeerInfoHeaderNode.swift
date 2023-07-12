@@ -712,7 +712,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                         shape.path = maskPath.cgPath
                         videoNode.layer.mask = shape
                                                             
-                        self.containerNode.addSubnode(videoNode)
+                        self.avatarNode.contentNode.addSubnode(videoNode)
                     }
                 } else {
                     if let markupNode = self.markupNode {
@@ -751,7 +751,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 if self.canAttachVideo {
                     videoNode.updateLayout(size: self.avatarNode.frame.size, transition: .immediate)
                 }
-                videoNode.frame = self.avatarNode.frame
+                videoNode.frame = self.avatarNode.contentNode.bounds
                 
                 if isExpanded == videoNode.canAttachContent {
                     self.isExpanded = isExpanded
@@ -1115,7 +1115,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
             if self.canAttachVideo {
                 videoNode.updateLayout(size: self.avatarNode.frame.size, transition: .immediate)
             }
-            videoNode.frame = self.avatarNode.frame
+            videoNode.frame = self.avatarNode.contentNode.bounds
             
             if isEditing != videoNode.canAttachContent {
                 videoNode.canAttachContent = isEditing && self.canAttachVideo

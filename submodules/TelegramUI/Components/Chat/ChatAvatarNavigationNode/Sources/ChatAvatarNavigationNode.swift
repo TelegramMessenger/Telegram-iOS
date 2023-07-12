@@ -150,7 +150,7 @@ public final class ChatAvatarNavigationNode: ASDisplayNode {
                             videoNode = current
                         } else {
                             videoNode = AvatarVideoNode(context: context)
-                            strongSelf.avatarNode.addSubnode(videoNode)
+                            strongSelf.avatarNode.contentNode.addSubnode(videoNode)
                             strongSelf.avatarVideoNode = videoNode
                         }
                         videoNode.update(peer: peer, photo: photo, size: CGSize(width: 37.0, height: 37.0))
