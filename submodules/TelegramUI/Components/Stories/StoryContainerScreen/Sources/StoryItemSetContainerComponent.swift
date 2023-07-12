@@ -1383,6 +1383,19 @@ public final class StoryItemSetContainerComponent: Component {
                 captionItemView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
             }
             
+            if let reactionContextNode = self.reactionContextNode {
+                self.reactionContextNode = nil
+                reactionContextNode.layer.animateAlpha(from: reactionContextNode.alpha, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak reactionContextNode] _ in
+                    reactionContextNode?.view.removeFromSuperview()
+                })
+            }
+            if let disappearingReactionContextNode = self.disappearingReactionContextNode {
+                self.disappearingReactionContextNode = nil
+                disappearingReactionContextNode.layer.animateAlpha(from: disappearingReactionContextNode.alpha, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak disappearingReactionContextNode] _ in
+                    disappearingReactionContextNode?.view.removeFromSuperview()
+                })
+            }
+            
             if let component = self.component, let sourceView = transitionOut.destinationView, let contentContainerView = self.visibleItems[component.slice.item.storyItem.id]?.contentContainerView {
                 let sourceLocalFrame = sourceView.convert(transitionOut.destinationRect, to: self)
                 let innerSourceLocalFrame = CGRect(origin: CGPoint(x: sourceLocalFrame.minX - contentContainerView.frame.minX, y: sourceLocalFrame.minY - contentContainerView.frame.minY), size: sourceLocalFrame.size)
