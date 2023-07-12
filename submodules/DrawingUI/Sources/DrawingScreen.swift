@@ -2975,6 +2975,8 @@ public final class DrawingToolsInteraction {
     private var isActive = false
     private var validLayout: ContainerViewLayout?
     
+    private let startTimestamp = CACurrentMediaTime()
+    
     public init(
         context: AccountContext,
         drawingView: DrawingView,
@@ -3126,6 +3128,10 @@ public final class DrawingToolsInteraction {
             if let textEntityView = entityView as? DrawingTextEntityView {
                 textEntityView.beginEditing(accessoryView: self.textEditAccessoryView)
             } else {
+                if self.isVideo {
+                    entityView.seek(to: 0.0)
+                }
+                
                 entityView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 entityView.layer.animateScale(from: 0.1, to: entity.scale, duration: 0.2)
                 

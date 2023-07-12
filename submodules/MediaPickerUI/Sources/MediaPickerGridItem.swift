@@ -16,6 +16,7 @@ import InvisibleInkDustNode
 import ImageBlur
 import FastBlur
 import MediaEditor
+import RadialStatusNode
 
 enum MediaPickerGridItemContent: Equatable {
     case asset(PHFetchResult<PHAsset>, Int)
@@ -90,7 +91,9 @@ private let maskImage = generateImage(CGSize(width: 1.0, height: 36.0), opaque: 
 
 final class MediaPickerGridItemNode: GridItemNode {
     var currentMediaState: (TGMediaSelectableItem, Int)?
-    var currentState: (PHFetchResult<PHAsset>, Int)?
+    var currentAssetState: (PHFetchResult<PHAsset>, Int)?
+    var currentAsset: PHAsset?
+    
     var currentDraftState: (MediaEditorDraft, Int)?
     var enableAnimations: Bool = true
     var stories: Bool = false
@@ -103,6 +106,7 @@ final class MediaPickerGridItemNode: GridItemNode {
     private let typeIconNode: ASImageNode
     private let durationNode: ImmediateTextNode
     private let draftNode: ImmediateTextNode
+    private var statusNode: RadialStatusNode?
     
     private let activateAreaNode: AccessibilityAreaNode
     
@@ -111,6 +115,8 @@ final class MediaPickerGridItemNode: GridItemNode {
         
     private let spoilerDisposable = MetaDisposable()
     var spoilerNode: SpoilerOverlayNode?
+    
+    private let progressDisposable = MetaDisposable()
     
     private var currentIsPreviewing = false
             
@@ -140,7 +146,7 @@ final class MediaPickerGridItemNode: GridItemNode {
         
         self.activateAreaNode = AccessibilityAreaNode()
         self.activateAreaNode.accessibilityTraits = [.image]
-                
+                        
         super.init()
         
         self.clipsToBounds = true
@@ -168,7 +174,7 @@ final class MediaPickerGridItemNode: GridItemNode {
     var selectableItem: TGMediaSelectableItem? {
         if let (media, _) = self.currentMediaState {
             return media
-        } else if let (fetchResult, index) = self.currentState {
+        } else if let (fetchResult, index) = self.currentAssetState {
             return TGMediaAsset(phAsset: fetchResult[index])
         } else {
             return nil
@@ -179,7 +185,7 @@ final class MediaPickerGridItemNode: GridItemNode {
     var tag: Int32? {
         if let tag = self._cachedTag {
             return tag
-        } else if let (fetchResult, index) = self.currentState {
+        } else if let (fetchResult, index) = self.currentAssetState {
             let asset = fetchResult.object(at: index)
             if let localTimestamp = asset.creationDate?.timeIntervalSince1970 {
                 let tag = Month(localTimestamp: Int32(localTimestamp)).packedValue
@@ -251,6 +257,32 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
     }
     
+    func updateProgress(_ value: Float?, animated: Bool) {
+        if let value {
+            let statusNode: RadialStatusNode
+            if let current = self.statusNode {
+                statusNode = current
+            } else {
+                statusNode = RadialStatusNode(backgroundNodeColor: UIColor(rgb: 0x000000, alpha: 0.6))
+                statusNode.isUserInteractionEnabled = false
+                self.addSubnode(statusNode)
+                self.statusNode = statusNode
+            }
+            let adjustedProgress = max(0.027, CGFloat(value))
+            let state: RadialStatusNodeState = .progress(color: .white, lineWidth: nil, value: adjustedProgress, cancelEnabled: true, animateRotation: true)
+            statusNode.transitionToState(state)
+        } else if let statusNode = self.statusNode {
+            self.statusNode = nil
+            if animated {
+                statusNode.transitionToState(.none, animated: true, completion: { [weak statusNode] in
+                    statusNode?.removeFromSupernode()
+                })
+            } else {
+                statusNode.removeFromSupernode()
+            }
+        }
+    }
+    
     func setup(interaction: MediaPickerInteraction, draft: MediaEditorDraft, index: Int, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool, stories: Bool) {
         self.interaction = interaction
         self.theme = theme
@@ -259,14 +291,18 @@ final class MediaPickerGridItemNode: GridItemNode {
         
         self.backgroundColor = theme.list.mediaPlaceholderColor
         
-        if self.currentDraftState == nil || self.currentDraftState?.0.path != draft.path || self.currentDraftState!.1 != index || self.currentState != nil {
+        if self.currentDraftState == nil || self.currentDraftState?.0.path != draft.path || self.currentDraftState!.1 != index || self.currentAssetState != nil {
             let imageSignal: Signal<UIImage?, NoError> = .single(draft.thumbnail)
             self.imageNode.setSignal(imageSignal)
             
             self.currentDraftState = (draft, index)
-            if self.currentState != nil {
-                self.currentState = nil
+            if self.currentAssetState != nil {
+                self.currentAsset = nil
+                self.currentAssetState = nil
                 self.typeIconNode.removeFromSupernode()
+                
+                self.progressDisposable.set(nil)
+                self.updateProgress(nil, animated: false)
             }
             
             if self.draftNode.supernode == nil {
@@ -354,10 +390,29 @@ final class MediaPickerGridItemNode: GridItemNode {
             self.draftNode.removeFromSupernode()
         }
         
-        if self.currentState == nil || self.currentState!.0 !== fetchResult || self.currentState!.1 != index || self.currentDraftState != nil {
-            self.backgroundNode.image = nil
+        if self.currentAssetState == nil || self.currentAssetState!.0 !== fetchResult || self.currentAssetState!.1 != index || self.currentDraftState != nil {
             let editingContext = interaction.editingState
             let asset = fetchResult.object(at: index)
+            
+            if asset.localIdentifier == self.currentAsset?.localIdentifier {
+                return
+            }
+            
+            self.progressDisposable.set(
+                (interaction.downloadManager.downloadProgress(identifier: asset.localIdentifier)
+                 |> deliverOnMainQueue).start(next: { [weak self] status in
+                     if let self {
+                         switch status {
+                         case .none, .completed:
+                             self.updateProgress(nil, animated: true)
+                         case let .progress(progress):
+                             self.updateProgress(progress, animated: true)
+                         }
+                     }
+                 })
+            )
+            
+            self.backgroundNode.image = nil
             
             if #available(iOS 15.0, *) {
                 self.activateAreaNode.accessibilityLabel = "Photo \(asset.creationDate?.formatted(date: .abbreviated, time: .standard) ?? "")"
@@ -489,7 +544,8 @@ final class MediaPickerGridItemNode: GridItemNode {
                 }
             }
             
-            self.currentState = (fetchResult, index)
+            self.currentAssetState = (fetchResult, index)
+            self.currentAsset = asset
             self.setNeedsLayout()
         }
         
@@ -554,6 +610,11 @@ final class MediaPickerGridItemNode: GridItemNode {
             spoilerNode.frame = self.bounds
             spoilerNode.update(size: self.bounds.size, transition: .immediate)
         }
+        
+        let statusSize = CGSize(width: 40.0, height: 40.0)
+        if let statusNode = self.statusNode {
+            statusNode.view.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.bounds.width - statusSize.width) / 2.0), y: floorToScreenPixels((self.bounds.height - statusSize.height) / 2.0)), size: statusSize)
+        }
     }
     
     func transitionView(snapshot: Bool) -> UIView {
@@ -589,10 +650,16 @@ final class MediaPickerGridItemNode: GridItemNode {
             self.interaction?.openDraft(draft, self.imageNode.image)
             return
         }
-        guard let (fetchResult, index) = self.currentState else {
+        guard let (fetchResult, index) = self.currentAssetState else {
             return
         }
-        self.interaction?.openMedia(fetchResult, index, self.imageNode.image)
+        if self.statusNode != nil {
+            if let asset = self.currentAsset {
+                self.interaction?.downloadManager.cancel(identifier: asset.localIdentifier)
+            }
+        } else {
+            self.interaction?.openMedia(fetchResult, index, self.imageNode.image)
+        }
     }
 }
 

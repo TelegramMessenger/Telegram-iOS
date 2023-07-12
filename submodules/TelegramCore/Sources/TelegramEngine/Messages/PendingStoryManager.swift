@@ -284,6 +284,7 @@ final class PendingStoryManager {
                 self.currentPendingItemContext = pendingItemContext
                 
                 let stableId = firstItem.stableId
+                Logger.shared.log("PendingStoryManager", "setting up item context for: \(firstItem.stableId) randomId: \(firstItem.randomId)")
                 pendingItemContext.disposable = (_internal_uploadStoryImpl(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.revalidationContext, auxiliaryMethods: self.auxiliaryMethods, stableId: stableId, media: firstItem.media, text: firstItem.text, entities: firstItem.entities, embeddedStickers: firstItem.embeddedStickers, pin: firstItem.pin, privacy: firstItem.privacy, isForwardingDisabled: firstItem.isForwardingDisabled, period: Int(firstItem.period), randomId: firstItem.randomId)
                 |> deliverOn(self.queue)).start(next: { [weak self] event in
                     guard let `self` = self else {

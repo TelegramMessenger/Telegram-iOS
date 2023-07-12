@@ -75,7 +75,6 @@ final class CameraOutput: NSObject {
     let videoOutput = AVCaptureVideoDataOutput()
     let audioOutput = AVCaptureAudioDataOutput()
     let metadataOutput = AVCaptureMetadataOutput()
-    private let faceLandmarksOutput = FaceLandmarksDataOutput()
     
     let exclusive: Bool
     
@@ -85,17 +84,12 @@ final class CameraOutput: NSObject {
     
     private let queue = DispatchQueue(label: "")
     private let metadataQueue = DispatchQueue(label: "")
-    private let faceLandmarksQueue = DispatchQueue(label: "")
     
     private var photoCaptureRequests: [Int64: PhotoCaptureContext] = [:]
     private var videoRecorder: VideoRecorder?
-    
-    var activeFilter: CameraFilter?
-    var faceLandmarks: Bool = false
-    
+        
     var processSampleBuffer: ((CMSampleBuffer, CVImageBuffer, AVCaptureConnection) -> Void)?
     var processCodes: (([CameraCode]) -> Void)?
-    var processFaceLandmarks: (([VNFaceObservation]) -> Void)?
     
     init(exclusive: Bool) {
         self.exclusive = exclusive
@@ -104,12 +98,6 @@ final class CameraOutput: NSObject {
 
         self.videoOutput.alwaysDiscardsLateVideoFrames = false
         self.videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange] as [String : Any]
-        
-        self.faceLandmarksOutput.outputFaceObservations = { [weak self] observations in
-            if let self {
-                self.processFaceLandmarks?(observations)
-            }
-        }
     }
     
     deinit {
@@ -273,7 +261,7 @@ final class CameraOutput: NSObject {
         }
         
         let uniqueId = settings.uniqueID
-        let photoCapture = PhotoCaptureContext(settings: settings, filter: self.activeFilter, mirror: mirror)
+        let photoCapture = PhotoCaptureContext(settings: settings, filter: nil, mirror: mirror)
         self.photoCaptureRequests[uniqueId] = photoCapture
         self.photoOutput.capturePhoto(with: settings, delegate: photoCapture)
         
@@ -361,31 +349,9 @@ extension CameraOutput: AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureA
             return
         }
         
-        if self.faceLandmarks {
-            self.faceLandmarksQueue.async {
-                self.faceLandmarksOutput.process(sampleBuffer: sampleBuffer)
-            }
-        }
-        
         if let videoPixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
             self.processSampleBuffer?(sampleBuffer, videoPixelBuffer, connection)
         }
-        
-//        let finalSampleBuffer: CMSampleBuffer = sampleBuffer
-//        if let videoPixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer), let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer) {
-//            var finalVideoPixelBuffer = videoPixelBuffer
-//            if let filter = self.activeFilter {
-//                if !filter.isPrepared {
-//                    filter.prepare(with: formatDescription, outputRetainedBufferCountHint: 3)
-//                }
-//
-//                guard let filteredBuffer = filter.render(pixelBuffer: finalVideoPixelBuffer) else {
-//                    return
-//                }
-//                finalVideoPixelBuffer = filteredBuffer
-//            }
-//            self.processSampleBuffer?(finalVideoPixelBuffer, connection)
-//        }
         
         if let videoRecorder = self.videoRecorder, videoRecorder.isRecording {
             videoRecorder.appendSampleBuffer(sampleBuffer)

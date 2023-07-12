@@ -507,7 +507,9 @@ public final class MediaEditor {
                             self.onPlaybackAction(.seek(start))
                             self.player?.play()
                             self.additionalPlayer?.play()
-                            self.onPlaybackAction(.play)
+                            Queue.mainQueue().justDispatch {
+                                self.onPlaybackAction(.play)
+                            }
                         }
                     })
                     Queue.mainQueue().justDispatch {

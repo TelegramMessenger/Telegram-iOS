@@ -25,6 +25,7 @@ import CameraScreen
 import MediaEditor
 
 final class MediaPickerInteraction {
+    let downloadManager: AssetDownloadManager
     let openMedia: (PHFetchResult<PHAsset>, Int, UIImage?) -> Void
     let openSelectedMedia: (TGMediaSelectableItem, UIImage?) -> Void
     let openDraft: (MediaEditorDraft, UIImage?) -> Void
@@ -36,7 +37,8 @@ final class MediaPickerInteraction {
     let editingState: TGMediaEditingContext
     var hiddenMediaId: String?
     
-    init(openMedia: @escaping (PHFetchResult<PHAsset>, Int, UIImage?) -> Void, openSelectedMedia: @escaping (TGMediaSelectableItem, UIImage?) -> Void, openDraft: @escaping (MediaEditorDraft, UIImage?) -> Void, toggleSelection: @escaping (TGMediaSelectableItem, Bool, Bool) -> Bool, sendSelected: @escaping (TGMediaSelectableItem?, Bool, Int32?, Bool, @escaping () -> Void) -> Void, schedule: @escaping  () -> Void, dismissInput: @escaping () -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
+    init(downloadManager: AssetDownloadManager, openMedia: @escaping (PHFetchResult<PHAsset>, Int, UIImage?) -> Void, openSelectedMedia: @escaping (TGMediaSelectableItem, UIImage?) -> Void, openDraft: @escaping (MediaEditorDraft, UIImage?) -> Void, toggleSelection: @escaping (TGMediaSelectableItem, Bool, Bool) -> Bool, sendSelected: @escaping (TGMediaSelectableItem?, Bool, Int32?, Bool, @escaping () -> Void) -> Void, schedule: @escaping  () -> Void, dismissInput: @escaping () -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
+        self.downloadManager = downloadManager
         self.openMedia = openMedia
         self.openSelectedMedia = openSelectedMedia
         self.openDraft = openDraft
@@ -393,6 +395,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.selectionChangedDisposable?.dispose()
             self.itemsDimensionsUpdatedDisposable?.dispose()
             self.fastScrollDisposable?.dispose()
+            self.currentAssetDownloadDisposable.dispose()
         }
         
         override func didLoad() {
@@ -777,8 +780,29 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         
         private weak var currentGalleryController: TGModernGalleryController?
         
-        private func requestAssetDownload(_ asset: PHAsset) {
-            
+        fileprivate var currentAssetDownloadDisposable = MetaDisposable()
+        
+        fileprivate func cancelAssetDownloads() {
+            guard let downloadManager = self.controller?.downloadManager else {
+                return
+            }
+            self.currentAssetDownloadDisposable.set(nil)
+            downloadManager.cancelAllDownloads()
+        }
+        
+        fileprivate func requestAssetDownload(asset: PHAsset) {
+            guard let downloadManager = self.controller?.downloadManager else {
+                return
+            }
+            downloadManager.download(asset: asset)
+            self.currentAssetDownloadDisposable.set(
+                (downloadManager.downloadProgress(identifier: asset.localIdentifier)
+                |> deliverOnMainQueue).start(next: { [weak self] status in
+                    if let self, case .completed = status, let controller = self.controller, let customSelection = self.controller?.customSelection {
+                        customSelection(controller, asset)
+                    }
+                })
+            )
         }
         
         private var openingMedia = false
@@ -794,26 +818,19 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 self.openingMedia = true
                 
                 let asset = fetchResult[index]
-                customSelection(controller, asset)
-
-//                let isLocallyAvailable = asset.isLocallyAvailable
-//
-//                if let isLocallyAvailable {
-//                    if isLocallyAvailable {
-//                        customSelection(controller, asset)
-//                    } else {
-//                        self.requestAssetDownload(asset)
-//                    }
-//                } else {
-//                    let _ = (checkIfAssetIsLocal(asset)
-//                    |> deliverOnMainQueue).start(next: { [weak self] isLocallyAvailable in
-//                        if isLocallyAvailable {
-//                            customSelection(controller, asset)
-//                        } else {
-//                            self?.requestAssetDownload(asset)
-//                        }
-//                    })
-//                }
+                
+                let _ = (checkIfAssetIsLocal(asset)
+                |> deliverOnMainQueue).start(next: { [weak self] isLocallyAvailable in
+                    guard let self else {
+                        return
+                    }
+                    if isLocallyAvailable {
+                        self.cancelAssetDownloads()
+                        customSelection(controller, asset)
+                    } else {
+                        self.requestAssetDownload(asset: asset)
+                    }
+                })
                 
                 Queue.mainQueue().after(0.3) {
                     self.openingMedia = false
@@ -1365,6 +1382,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     }
     private let groupedPromise = ValuePromise<Bool>(true)
     
+    private let downloadManager = AssetDownloadManager()
+    
     private var isDismissing = false
     
     fileprivate let mainButtonState: AttachmentMainButtonState?
@@ -1538,13 +1557,17 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
         }
         
-        self.interaction = MediaPickerInteraction(openMedia: { [weak self] fetchResult, index, immediateThumbnail in
+        self.interaction = MediaPickerInteraction(downloadManager: self.downloadManager,
+        openMedia: { [weak self] fetchResult, index, immediateThumbnail in
             self?.controllerNode.openMedia(fetchResult: fetchResult, index: index, immediateThumbnail: immediateThumbnail)
-        }, openSelectedMedia: { [weak self] item, immediateThumbnail in
+        },
+        openSelectedMedia: { [weak self] item, immediateThumbnail in
             self?.controllerNode.openSelectedMedia(item: item, immediateThumbnail: immediateThumbnail)
-        }, openDraft: { [weak self] draft, immediateThumbnail in
+        },
+        openDraft: { [weak self] draft, immediateThumbnail in
             self?.controllerNode.openDraft(draft: draft, immediateThumbnail: immediateThumbnail)
-        }, toggleSelection: { [weak self] item, value, suggestUndo in
+        },
+        toggleSelection: { [weak self] item, value, suggestUndo in
             if let self = self, let selectionState = self.interaction?.selectionState {
                 if let _ = item as? TGMediaPickerGalleryPhotoItem {
                     if self.bannedSendPhotos != nil {
@@ -1798,7 +1821,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         self.undoOverlayController?.dismissWithCommitAction()
     }
     
-    public func requestDismiss(completion: @escaping () -> Void) {
+    public func requestDismiss(completion: @escaping () -> Void) {        
         if let selectionState = self.interaction?.selectionState, selectionState.count() > 0 {
             self.isDismissing = true
             
@@ -1835,6 +1858,12 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         self.dismissAllTooltips()
         
         self.dismiss()
+    }
+    
+    public override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
+        self.controllerNode.cancelAssetDownloads()
+        
+        super.dismiss(animated: flag, completion: completion)
     }
     
     @objc private func rightButtonPressed() {

@@ -374,6 +374,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                             case let .image(image, dimensions):
                                 if let imageData = compressImageToJPEG(image, quality: 0.7) {
                                     let entities = generateChatInputTextEntities(caption)
+                                    Logger.shared.log("MediaEditor", "Calling uploadStory for image, randomId \(randomId)")
                                     self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData, stickers: stickers), text: caption.string, entities: entities, pin: privacy.pin, privacy: privacy.privacy, isForwardingDisabled: privacy.isForwardingDisabled, period: privacy.timeout, randomId: randomId)
                                     Queue.mainQueue().justDispatch {
                                         commit({})
@@ -404,7 +405,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                             return nil
                                         }
                                     }
-                                    
+                                    Logger.shared.log("MediaEditor", "Calling uploadStory for video, randomId \(randomId)")
                                     let entities = generateChatInputTextEntities(caption)
                                     self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), text: caption.string, entities: entities, pin: privacy.pin, privacy: privacy.privacy, isForwardingDisabled: privacy.isForwardingDisabled, period: privacy.timeout, randomId: randomId)
                                     Queue.mainQueue().justDispatch {
