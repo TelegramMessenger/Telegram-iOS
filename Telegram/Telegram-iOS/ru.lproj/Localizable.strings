@@ -4,7 +4,7 @@
 "PasscodeSettings.FakePasscode" = "Ложный код-пароль %1$d";
 "PasscodeSettings.AddFakePasscode" = "Добавить ложный код-пароль";
 "PasscodeSettings.FakePasscodeHelp" = "Действия которые будут выполнены, когда введен ложный код-пароль";
-"PasscodeSettings.PasscodeInUse" = "Этот код-пароль уже используется";
+"PasscodeSettings.PasscodeInUse" = "Этот код уже используется";
 "PasscodeSettings.ConfirmDeletion" = "Подтверждение удаления";
 "PasscodeSettings.AllFakePasscodesWillBeDeleted" = "Все ложные код-пароли будут удалены. Хотите продолжить?";
 
@@ -87,23 +87,24 @@
 
 "SiriAndDictationAreDisabledAlert" = "Для перевода в текст голосовых сообщений требуется включить Диктовку (Настройки системы > Основные > Клавиатура) или Siri (Настройки системы > Siri и Поиск).";
 
-"SecretPasscodeSettings.Title" = "Секретный код-пароль";
-"SecretPasscodeSettings.EnterPasscode" = "Введите секретный код-пароль";
-"SecretPasscodeSettings.EnterNewPasscode" = "Введите новый секретный код-пароль";
-"SecretPasscodeSettings.RepeatNewPasscode" = "Повторите новый секретный код-пароль";
+"SecretPasscodeSettings.Title" = "Секретный код";
+"SecretPasscodeSettings.EnterPasscode" = "Введите секретный код";
+"SecretPasscodeSettings.EnterNewPasscode" = "Введите новый секретный код";
+"SecretPasscodeSettings.RepeatNewPasscode" = "Повторите новый секретный код";
 "SecretPasscodeSettings.AutoHide" = "Авто-скрытие";
 "SecretPasscodeSettings.AccountsHeader" = "Скрываемые аккаунты";
 "SecretPasscodeSettings.AddAccount" = "Добавить аккаунт";
 "SecretPasscodeSettings.SecretChatsHeader" = "Скрываемые секретные чаты";
 "SecretPasscodeSettings.AddSecretChats" = "Добавить секретные чаты";
-"SecretPasscodeSettings.DeleteSecretPasscode" = "Удалить секретный код-пароль";
+"SecretPasscodeSettings.ChangePasscode" = "Изменить код";
+"SecretPasscodeSettings.DeleteSecretPasscode" = "Удалить секретный код";
 "SecretPasscodeSettings.DeleteSecretPasscodeNotice" = "⚠️ Все указанные здесь аккаунты и секретные чаты станут видимыми все время.";
 "SecretPasscodeSettings.AtLeastOneAccountMustRemainUnhidden" = "Хотя бы один аккаунт должен оставаться видимым все время.";
-"SecretPasscodeSettings.Intro" = "Укажите **секреты**: аккаунты и секретные чаты, которые будут скрыты, пока вы не введете этот секретный код-пароль.";
-"Settings.EnterSecretPasscode" = "Ввести секретный код-пароль";
-"Settings.ManageSecretPasscodes" = "Управлять секретными код-паролями";
-"SecretPasscodeMenu.Add" = "Добавить секретный код-пароль";
-"SecretPasscodeMenu.Edit" = "Редактировать секретный код-пароль";
+"SecretPasscodeSettings.Intro" = "Укажите **секреты**: аккаунты и секретные чаты, которые будут скрыты, пока вы не введете этот секретный код.";
+"Settings.EnterSecretPasscode" = "Ввести секретный код";
+"Settings.ManageSecretPasscodes" = "Управлять секретными кодами";
+"SecretPasscodeMenu.Add" = "Добавить секретный код";
+"SecretPasscodeMenu.Edit" = "Редактировать секретный код";
 "SecretPasscodeMenu.HideAllSecrets" = "Скрыть все секреты";
 "SecretPasscodeStatus.SomeRevealed" = "Некоторые секреты открыты.";
 "SecretPasscodeStatus.AllHidden" = "Все секреты скрыты.";
@@ -118,14 +119,14 @@
 "FunctionalityUnavailableForHidableAccounts" = "Эта функция недоступна для скрываемых аккаунтов.";
 "ContactsSyncHelpForHidableAccounts" = "Контакты не синхронизируются в скрываемых аккаунтах.";
 
-"PasscodeAttempts.TryAgainIn" = "Защита от перебора код-паролей. Попробуйте снова через %@.";
+"PasscodeAttempts.TryAgainIn" = "Защита от перебора кодов. Попробуйте снова через %@.";
 
 "Share.LockedTitle" = "Разблокируйте Vartagram";
 "Share.LockedDescription" = "Откройте и разблокируйте Vartagram, чтобы поделиться.";
 
 "ChatList.EmptyChatSelectionList" = "Нет чатов для выбора.";
 
-"Login.HaveNotReceivedCodeInThirdPartyApp" = "Поскольку сторонние клиенты Telegram не могут запрашивать SMS, убедитесь, что вы уже вошли в систему с этим номером в другом приложении или на другом устройстве.\n\nЕсли это не так, сначала войдите в официальном приложении Telegram. Позже вы можете выйти там из этого аккаунта.";
+"Login.HaveNotReceivedCodeInThirdPartyApp" = "Поскольку сторонние клиенты Telegram не могут запрашивать SMS, убедитесь, что вы уже вошли с этим номером в другом приложении или на другом устройстве.\n\nЕсли это не так, сначала войдите в официальном приложении Telegram. Позже вы можете выйти там из этого аккаунта.";
 
 "StorageKeepMedia.AllChatTypes" = "Все типы чатов";
 

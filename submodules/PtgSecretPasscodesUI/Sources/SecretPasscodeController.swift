@@ -227,7 +227,7 @@ private func secretPasscodeControllerEntries(presentationData: PresentationData,
         entries.append(.secretChat(Int32(index), presentationData.dateTimeFormat, presentationData.nameDisplayOrder, value))
     }
     
-    entries.append(.changePasscode(presentationData.strings.PasscodeSettings_ChangePasscode))
+    entries.append(.changePasscode(presentationData.strings.SecretPasscodeSettings_ChangePasscode))
     
     entries.append(.delete(presentationData.strings.SecretPasscodeSettings_DeleteSecretPasscode))
     

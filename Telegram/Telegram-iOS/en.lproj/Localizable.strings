@@ -4,7 +4,7 @@
 "PasscodeSettings.FakePasscode" = "Fake Passcode %1$d";
 "PasscodeSettings.AddFakePasscode" = "Add Fake Passcode";
 "PasscodeSettings.FakePasscodeHelp" = "When a fake passcode is entered, selected actions are performed.";
-"PasscodeSettings.PasscodeInUse" = "This passcode is already in use";
+"PasscodeSettings.PasscodeInUse" = "This code is already in use";
 "PasscodeSettings.ConfirmDeletion" = "Confirm deletion";
 "PasscodeSettings.AllFakePasscodesWillBeDeleted" = "All fake passcodes will be deleted. Are you sure you want to continue?";
 
@@ -87,23 +87,24 @@
 
 "SiriAndDictationAreDisabledAlert" = "To convert voice messages to text, either Dictation (System Settings > General > Keyboard) or Siri (System Settings > Siri & Search) needs to be enabled.";
 
-"SecretPasscodeSettings.Title" = "Secret Passcode";
-"SecretPasscodeSettings.EnterPasscode" = "Enter secret passcode";
-"SecretPasscodeSettings.EnterNewPasscode" = "Enter new secret passcode";
-"SecretPasscodeSettings.RepeatNewPasscode" = "Re-enter new secret passcode";
+"SecretPasscodeSettings.Title" = "Secret Code";
+"SecretPasscodeSettings.EnterPasscode" = "Enter secret code";
+"SecretPasscodeSettings.EnterNewPasscode" = "Enter new secret code";
+"SecretPasscodeSettings.RepeatNewPasscode" = "Re-enter new secret code";
 "SecretPasscodeSettings.AutoHide" = "Auto-Hide";
 "SecretPasscodeSettings.AccountsHeader" = "Hiding Accounts";
 "SecretPasscodeSettings.AddAccount" = "Add Account";
 "SecretPasscodeSettings.SecretChatsHeader" = "Hiding Secret Chats";
 "SecretPasscodeSettings.AddSecretChats" = "Add Secret Chats";
-"SecretPasscodeSettings.DeleteSecretPasscode" = "Delete Secret Passcode";
+"SecretPasscodeSettings.ChangePasscode" = "Change Code";
+"SecretPasscodeSettings.DeleteSecretPasscode" = "Delete Secret Code";
 "SecretPasscodeSettings.DeleteSecretPasscodeNotice" = "⚠️ All accounts and secret chats specified here will become visible at all times.";
 "SecretPasscodeSettings.AtLeastOneAccountMustRemainUnhidden" = "At least one account must remain visible at all times.";
-"SecretPasscodeSettings.Intro" = "Specify **secrets**: accounts and secret chats that will be hidden until you enter this secret passcode.";
-"Settings.EnterSecretPasscode" = "Enter Secret Passcode";
-"Settings.ManageSecretPasscodes" = "Manage Secret Passcodes";
-"SecretPasscodeMenu.Add" = "Add Secret Passcode";
-"SecretPasscodeMenu.Edit" = "Edit Secret Passcode";
+"SecretPasscodeSettings.Intro" = "Specify **secrets**: accounts and secret chats that will be hidden until you enter this secret code.";
+"Settings.EnterSecretPasscode" = "Enter Secret Code";
+"Settings.ManageSecretPasscodes" = "Manage Secret Codes";
+"SecretPasscodeMenu.Add" = "Add Secret Code";
+"SecretPasscodeMenu.Edit" = "Edit Secret Code";
 "SecretPasscodeMenu.HideAllSecrets" = "Hide All Secrets";
 "SecretPasscodeStatus.SomeRevealed" = "Some secrets are revealed.";
 "SecretPasscodeStatus.AllHidden" = "All secrets are hidden.";

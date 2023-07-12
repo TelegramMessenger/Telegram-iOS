@@ -4,7 +4,7 @@
 "PasscodeSettings.FakePasscode" = "Несапраўдны код доступу %1$d";
 "PasscodeSettings.AddFakePasscode" = "Дадаць несапраўдны код доступу";
 "PasscodeSettings.FakePasscodeHelp" = "Пры ўводзе несапраўднага кода доступу выконваюцца выбранныя дзеянні.";
-"PasscodeSettings.PasscodeInUse" = "Гэты код доступу ужо выкарыстоўваецца";
+"PasscodeSettings.PasscodeInUse" = "Гэты код ужо выкарыстоўваецца";
 "PasscodeSettings.ConfirmDeletion" = "Пацвердзіце выдаленне";
 "PasscodeSettings.AllFakePasscodesWillBeDeleted" = "Усе несапраўдныя кады доступу будць выдалены. Жадаеце працягнуць?";
 
@@ -87,23 +87,24 @@
 
 "SiriAndDictationAreDisabledAlert" = "Каб перакладаць ў тэкст галасавыя паведамленні, неабходна ўключыць дыктоўку (Налады сістэмы > Агульныя > Клавіятура) або Siri (Налады сістэмы > Siri і пошук).";
 
-"SecretPasscodeSettings.Title" = "Сакрэтны код доступу";
-"SecretPasscodeSettings.EnterPasscode" = "Увядзіце сакрэтны код доступу";
-"SecretPasscodeSettings.EnterNewPasscode" = "Увядзіце новы сакрэтны код доступу";
-"SecretPasscodeSettings.RepeatNewPasscode" = "Увядзіце новы сакрэтны код доступу яшчэ раз";
+"SecretPasscodeSettings.Title" = "Сакрэтны код";
+"SecretPasscodeSettings.EnterPasscode" = "Увядзіце сакрэтны код";
+"SecretPasscodeSettings.EnterNewPasscode" = "Увядзіце новы сакрэтны код";
+"SecretPasscodeSettings.RepeatNewPasscode" = "Увядзіце новы сакрэтны код яшчэ раз";
 "SecretPasscodeSettings.AutoHide" = "Аўта-схаванне";
 "SecretPasscodeSettings.AccountsHeader" = "Акаўнты якія хаваюцца";
 "SecretPasscodeSettings.AddAccount" = "Дадаць акаўнт";
 "SecretPasscodeSettings.SecretChatsHeader" = "Сакрэтныя чаты якія хаваюцца";
 "SecretPasscodeSettings.AddSecretChats" = "Дадаць сакрэтныя чаты";
-"SecretPasscodeSettings.DeleteSecretPasscode" = "Выдаліць сакрэтны код доступу";
+"SecretPasscodeSettings.ChangePasscode" = "Змяніць код";
+"SecretPasscodeSettings.DeleteSecretPasscode" = "Выдаліць сакрэтны код";
 "SecretPasscodeSettings.DeleteSecretPasscodeNotice" = "⚠️ Усе ўказаныя тут акаўнты і сакрэтныя чаты стануць бачнымі ўвесь час.";
 "SecretPasscodeSettings.AtLeastOneAccountMustRemainUnhidden" = "Прынамсі адзін акаўнт павінен заставацца бачным увесь час.";
-"SecretPasscodeSettings.Intro" = "Укажыце **сакрэты**: акаўнты і сакрэтныя чаты, якія будуць схаваны, пакуль вы не ўвядзеце гэты сакрэтны код доступу.";
-"Settings.EnterSecretPasscode" = "Увесці сакрэтны код доступу";
-"Settings.ManageSecretPasscodes" = "Кіраваць сакрэтнымі кадамі доступу";
-"SecretPasscodeMenu.Add" = "Дадаць сакрэтны код доступу";
-"SecretPasscodeMenu.Edit" = "Рэдагаваць сакрэтны код доступу";
+"SecretPasscodeSettings.Intro" = "Укажыце **сакрэты**: акаўнты і сакрэтныя чаты, якія будуць схаваны, пакуль вы не ўвядзеце гэты сакрэтны код.";
+"Settings.EnterSecretPasscode" = "Увесці сакрэтны код";
+"Settings.ManageSecretPasscodes" = "Кіраваць сакрэтнымі кадамі";
+"SecretPasscodeMenu.Add" = "Дадаць сакрэтны код";
+"SecretPasscodeMenu.Edit" = "Рэдагаваць сакрэтны код";
 "SecretPasscodeMenu.HideAllSecrets" = "Схаваць усе сакрэты";
 "SecretPasscodeStatus.SomeRevealed" = "Некаторыя сакрэты адкрыты.";
 "SecretPasscodeStatus.AllHidden" = "Усе сакрэты схаваны.";
@@ -125,7 +126,7 @@
 
 "ChatList.EmptyChatSelectionList" = "Няма чатаў для выбару.";
 
-"Login.HaveNotReceivedCodeInThirdPartyApp" = "Паколькі староннія кліенты Telegram не могуць запытваць SMS, пераканайцеся, што вы ўжо ўвайшлі ў сістэму з гэтым нумарам у іншым дадатку ці на іншай прыладзе.\n\nКалі гэта не так, спачатку ўвайдзіце ў афіцыйным дадатку Telegram. Пазней вы можаце выйсці там з гэтага акаўнта.";
+"Login.HaveNotReceivedCodeInThirdPartyApp" = "Паколькі староннія кліенты Telegram не могуць запытваць SMS, пераканайцеся, што вы ўжо ўвайшлі з гэтым нумарам у іншым дадатку ці на іншай прыладзе.\n\nКалі гэта не так, спачатку ўвайдзіце ў афіцыйным дадатку Telegram. Пазней вы можаце выйсці там з гэтага акаўнта.";
 
 "StorageKeepMedia.AllChatTypes" = "Усе тыпы чатаў";
 
