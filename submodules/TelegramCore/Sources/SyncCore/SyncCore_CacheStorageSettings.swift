@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 
 public let maximumCacheSizeValues: [Int32] = {
-    return [1, 2, 4, Int32.max]
+    return [1, 2, 4, 8, Int32.max]
 }()
 
 public struct CacheStorageSettings: Codable, Equatable {
