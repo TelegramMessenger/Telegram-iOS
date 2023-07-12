@@ -89,8 +89,8 @@ private enum StickerSearchEntry: Identifiable, Comparable {
     func item(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, interaction: StickerPaneSearchInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction) -> GridItem {
         switch self {
         case let .sticker(_, code, stickerItem, theme):
-            return StickerPaneSearchStickerItem(context: context, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, theme: theme, selected: { node, rect in
-                interaction.sendSticker(.standalone(media: stickerItem.file), node.view, rect)
+            return StickerPaneSearchStickerItem(context: context, theme: theme, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, selected: { node, layer, rect in
+                interaction.sendSticker(.standalone(media: stickerItem.file), node.view, layer, rect)
             })
         case let .global(_, info, topItems, installed, topSeparator):
             let itemContext = StickerPaneSearchGlobalItemContext()
@@ -316,9 +316,10 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 |> deliverOnMainQueue).start(next: { _ in
                 })
             }
-        }, sendSticker: { [weak self] file, sourceView, sourceRect in
-            if let strongSelf = self {
-                let _ = strongSelf.interaction.sendSticker(file, false, false, nil, false, sourceView, sourceRect, nil, [])
+        }, sendSticker: { [weak self] file, sourceView, sourceLayer, sourceRect in
+            if let self {
+                let sourceRect = sourceView.convert(sourceRect, to: self.view)
+                let _ = self.interaction.sendSticker(file, false, false, nil, false, self.view, sourceRect, sourceLayer, [])
             }
         }, getItemIsPreviewed: { item in
             return inputNodeInteraction.previewedStickerPackItemFile?.id == item.file.id

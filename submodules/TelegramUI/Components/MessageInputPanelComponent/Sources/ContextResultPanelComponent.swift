@@ -322,10 +322,10 @@ final class ContextResultPanelComponent: Component {
             
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: minimizedHeight)))
 
-            let visibleTopContentHeight = min(scrollContentSize.height, measureItemSize.height * 3.5 + 19.0)
+            let visibleTopContentHeight = min(scrollContentSize.height, measureItemSize.height * 3.5)
             let topInset = availableSize.height - visibleTopContentHeight
             
-            let scrollContentInsets = UIEdgeInsets(top: topInset, left: 0.0, bottom: 19.0, right: 0.0)
+            let scrollContentInsets = UIEdgeInsets(top: topInset, left: 0.0, bottom: 0.0, right: 0.0)
             let scrollIndicatorInsets = UIEdgeInsets(top: topInset + 17.0, left: 0.0, bottom: 19.0, right: 0.0)
             if self.scrollView.contentInset != scrollContentInsets {
                 self.scrollView.contentInset = scrollContentInsets

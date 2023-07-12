@@ -295,7 +295,6 @@ private final class StickerSelectionComponent: Component {
                             },
                             peekBehavior: stickerPeekBehavior
                         )
-                        
                         return searchContainerNode
                     },
                     contentIdUpdated: { _ in },

@@ -303,6 +303,8 @@ private final class CameraScreenComponent: CombinedComponent {
                         self.isPressingButton = true
                     }
                     self.buttonPressTimestamp = nil
+                    self.buttonPressTimer?.invalidate()
+                    self.buttonPressTimer = nil
                 }
             }, queue: Queue.mainQueue())
             self.buttonPressTimer?.start()
@@ -641,11 +643,15 @@ private final class CameraScreenComponent: CombinedComponent {
                         }
                         controller.presentGallery()
                     },
-                    swipeHintUpdated: { hint in
-                        state.updateSwipeHint(hint)
+                    swipeHintUpdated: { [weak state] hint in
+                        if let state {
+                            state.updateSwipeHint(hint)
+                        }
                     },
-                    zoomUpdated: { fraction in
-                        state.updateZoom(fraction: fraction)
+                    zoomUpdated: { [weak state] fraction in
+                        if let state {
+                            state.updateZoom(fraction: fraction)
+                        }
                     },
                     flipAnimationAction: animateFlipAction
                 ),
@@ -737,10 +743,9 @@ private final class CameraScreenComponent: CombinedComponent {
                     component: CameraButton(
                         content: flashContentComponent,
                         action: { [weak state] in
-                            guard let state else {
-                                return
+                            if let state {
+                                state.toggleFlashMode()
                             }
-                            state.toggleFlashMode()
                         }
                     ).tagged(flashButtonTag),
                     availableSize: CGSize(width: 40.0, height: 40.0),
@@ -762,10 +767,9 @@ private final class CameraScreenComponent: CombinedComponent {
                                 )
                             ),
                             action: { [weak state] in
-                                guard let state else {
-                                    return
+                                if let state {
+                                    state.toggleDualCamera()
                                 }
-                                state.toggleDualCamera()
                             }
                         ).tagged(dualButtonTag),
                         availableSize: CGSize(width: 40.0, height: 40.0),

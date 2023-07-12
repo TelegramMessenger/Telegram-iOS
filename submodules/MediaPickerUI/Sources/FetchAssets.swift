@@ -17,7 +17,7 @@ final class AssetDownloadManager {
         let identifier: String
         let updated: () -> Void
         
-        var status: AssetDownloadStatus = .progress(0.0)
+        var status: AssetDownloadStatus = .none
         var disposable: Disposable?
         
         init(identifier: String, updated: @escaping () -> Void) {
@@ -40,9 +40,7 @@ final class AssetDownloadManager {
     }
     
     func download(asset: PHAsset) {
-        if let currentAssetContext = self.currentAssetContext {
-            currentAssetContext.disposable?.dispose()
-        }
+        self.cancelAllDownloads()
         
         let queue = self.queue
         let identifier = asset.localIdentifier
@@ -59,6 +57,7 @@ final class AssetDownloadManager {
                 }
             }
         })
+        self.currentAssetContext = assetContext
         assetContext.disposable = (downloadAssetMediaData(asset)
         |> deliverOn(queue)).start(next: { [weak self] status in
             guard let self else {
@@ -69,13 +68,31 @@ final class AssetDownloadManager {
                 currentAssetContext.updated()
             }
         })
-        self.currentAssetContext = assetContext
+    }
+    
+    func cancelAllDownloads() {
+        if let currentAssetContext = self.currentAssetContext {
+            currentAssetContext.status = .none
+            currentAssetContext.updated()
+            currentAssetContext.disposable?.dispose()
+            self.queue.justDispatch {
+                if self.currentAssetContext === currentAssetContext {
+                    self.currentAssetContext = nil
+                }
+            }
+        }
     }
     
     func cancel(identifier: String) {
         if let currentAssetContext = self.currentAssetContext, currentAssetContext.identifier == identifier {
+            currentAssetContext.status = .none
+            currentAssetContext.updated()
             currentAssetContext.disposable?.dispose()
-            self.currentAssetContext = nil
+            self.queue.justDispatch {
+                if self.currentAssetContext === currentAssetContext {
+                    self.currentAssetContext = nil
+                }
+            }
         }
     }
     
@@ -93,7 +110,7 @@ final class AssetDownloadManager {
         if let currentAssetContext = self.currentAssetContext, currentAssetContext.identifier == identifier {
             next(currentAssetContext.status)
         } else {
-            next(.progress(0.0))
+            next(.none)
         }
         
         let queue = self.queue
@@ -129,27 +146,35 @@ final class AssetDownloadManager {
 }
 
 func checkIfAssetIsLocal(_ asset: PHAsset) -> Signal<Bool, NoError> {
+    if asset.isLocallyAvailable == true {
+        return .single(true)
+    }
     return Signal { subscriber in
-        let options = PHImageRequestOptions()
-        options.isNetworkAccessAllowed = false
-        
         let requestId: PHImageRequestID
-        if #available(iOS 13, *) {
-            requestId = imageManager.requestImageDataAndOrientation(for: asset, options: options) { data, _, _, _ in
-                if data != nil {
-                    subscriber.putNext(data != nil)
-                }
+        if case .video = asset.mediaType {
+            let options = PHVideoRequestOptions()
+            options.isNetworkAccessAllowed = false
+            
+            requestId = imageManager.requestAVAsset(forVideo: asset, options: options) { asset, _, _ in
+                subscriber.putNext(asset != nil)
                 subscriber.putCompletion()
             }
         } else {
-            requestId = imageManager.requestImageData(for: asset, options: options) { data, _, _, _ in
-                if data != nil {
+            let options = PHImageRequestOptions()
+            options.isNetworkAccessAllowed = false
+
+            if #available(iOS 13, *) {
+                requestId = imageManager.requestImageDataAndOrientation(for: asset, options: options) { data, _, _, _ in
                     subscriber.putNext(data != nil)
+                    subscriber.putCompletion()
                 }
-                subscriber.putCompletion()
+            } else {
+                requestId = imageManager.requestImageData(for: asset, options: options) { data, _, _, _ in
+                    subscriber.putNext(data != nil)
+                    subscriber.putCompletion()
+                }
             }
         }
-        
         return ActionDisposable {
             imageManager.cancelImageRequest(requestId)
         }
@@ -157,32 +182,57 @@ func checkIfAssetIsLocal(_ asset: PHAsset) -> Signal<Bool, NoError> {
 }
 
 enum AssetDownloadStatus {
+    case none
     case progress(Float)
     case completed
 }
 
 private func downloadAssetMediaData(_ asset: PHAsset) -> Signal<AssetDownloadStatus, NoError> {
     return Signal { subscriber in
-        let options = PHImageRequestOptions()
-        options.isNetworkAccessAllowed = true
-        options.progressHandler = { progress, _, _, _ in
-            subscriber.putNext(.progress(Float(progress)))
-        }
-        
         let requestId: PHImageRequestID
-        if #available(iOS 13, *) {
-            requestId = imageManager.requestImageDataAndOrientation(for: asset, options: options) { data, _, _, _ in
-                if data != nil {
+        if case .video = asset.mediaType {
+            let options = PHVideoRequestOptions()
+            options.isNetworkAccessAllowed = true
+            options.progressHandler = { progress, _, _, _ in
+                subscriber.putNext(.progress(Float(progress)))
+            }
+            
+            subscriber.putNext(.progress(0.0))
+            
+            requestId = imageManager.requestAVAsset(forVideo: asset, options: options) { asset, _, _ in
+                if asset != nil {
                     subscriber.putNext(.completed)
+                } else {
+                    subscriber.putNext(.none)
                 }
                 subscriber.putCompletion()
             }
         } else {
-            requestId = imageManager.requestImageData(for: asset, options: options) { data, _, _, _ in
-                if data != nil {
-                    subscriber.putNext(.completed)
+            let options = PHImageRequestOptions()
+            options.isNetworkAccessAllowed = true
+            options.progressHandler = { progress, _, _, _ in
+                subscriber.putNext(.progress(Float(progress)))
+            }
+            
+            subscriber.putNext(.progress(0.0))
+            if #available(iOS 13, *) {
+                requestId = imageManager.requestImageDataAndOrientation(for: asset, options: options) { data, _, _, _ in
+                    if data != nil {
+                        subscriber.putNext(.completed)
+                    } else {
+                        subscriber.putNext(.none)
+                    }
+                    subscriber.putCompletion()
                 }
-                subscriber.putCompletion()
+            } else {
+                requestId = imageManager.requestImageData(for: asset, options: options) { data, _, _, _ in
+                    if data != nil {
+                        subscriber.putNext(.completed)
+                    } else {
+                        subscriber.putNext(.none)
+                    }
+                    subscriber.putCompletion()
+                }
             }
         }
         

@@ -366,17 +366,17 @@ private final class CameraContext {
                              |> map { first, second in
                         return first && second
                     }
-                             |> filter { $0 }
-                             |> take(1)
-                             |> delay(0.1, queue: self.queue)
-                             |> deliverOn(self.queue)).start(next: { [weak self] _ in
+                    |> filter { $0 }
+                    |> take(1)
+                    |> delay(0.1, queue: self.queue)
+                    |> deliverOn(self.queue)).start(next: { [weak self] _ in
                         self?.modeChange = .none
                     })
                 } else {
                     let _ = (previewView.isPreviewing
-                             |> filter { $0 }
-                             |> take(1)
-                             |> deliverOn(self.queue)).start(next: { [weak self] _ in
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOn(self.queue)).start(next: { [weak self] _ in
                         self?.modeChange = .none
                     })
                 }

@@ -2160,8 +2160,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     })
                 } else if let sourceNode = sourceView.asyncdisplaykit_node as? HorizontalStickerGridItemNode {
                     strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .mediaPanel(itemNode: sourceNode), replyPanel: replyPanel), initiated: {})
-                } else if let sourceNode = sourceView.asyncdisplaykit_node as? StickerPaneSearchStickerItemNode {
-                    strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .inputPanelSearch(itemNode: sourceNode), replyPanel: replyPanel), initiated: {})
                 } else if let sourceNode = sourceView.asyncdisplaykit_node as? ChatEmptyNodeStickerContentNode {
                     strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .emptyPanel(itemNode: sourceNode), replyPanel: nil), initiated: {})
                 } else if let sourceLayer = sourceLayer {

@@ -3615,6 +3615,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
                 let fittedSize = resultImage.size.aspectFitted(CGSize(width: 128.0, height: 128.0))
                 
+                let context = self.context
                 let saveImageDraft: (UIImage, PixelDimensions) -> Void = { image, dimensions in
                     if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
                         let path = "\(Int64.random(in: .min ... .max)).jpg"
@@ -3622,9 +3623,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             let draft = MediaEditorDraft(path: path, isVideo: false, thumbnail: thumbnailImage, dimensions: dimensions, duration: nil, values: values, caption: caption, privacy: privacy, timestamp: timestamp)
                             try? data.write(to: URL(fileURLWithPath: draft.fullPath()))
                             if let id {
-                                saveStorySource(engine: self.context.engine, item: draft, id: id)
+                                saveStorySource(engine: context.engine, item: draft, id: id)
                             } else {
-                                addStoryDraft(engine: self.context.engine, item: draft)
+                                addStoryDraft(engine: context.engine, item: draft)
                             }
                         }
                     }
@@ -3636,9 +3637,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         let draft = MediaEditorDraft(path: path, isVideo: true, thumbnail: thumbnailImage, dimensions: dimensions, duration: duration, values: values, caption: caption, privacy: privacy, timestamp: timestamp)
                         try? FileManager.default.moveItem(atPath: videoPath, toPath: draft.fullPath())
                         if let id {
-                            saveStorySource(engine: self.context.engine, item: draft, id: id)
+                            saveStorySource(engine: context.engine, item: draft, id: id)
                         } else {
-                            addStoryDraft(engine: self.context.engine, item: draft)
+                            addStoryDraft(engine: context.engine, item: draft)
                         }
                     }
                 }
@@ -3861,6 +3862,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if let self {
                     makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image ?? UIImage(), dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] coverImage in
                         if let self {
+                            Logger.shared.log("Media Editor", "completed with video \(videoResult)")
                             self.completion(randomId, .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions), caption, self.state.privacy, stickers, { [weak self] finished in
                                 self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                     self?.dismiss()
@@ -3883,6 +3885,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 
                 makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] resultImage in
                     if let self, let resultImage {
+                        Logger.shared.log("Media Editor", "completed with image \(resultImage)")
                         self.completion(randomId, .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), caption, self.state.privacy, stickers, { [weak self] finished in
                             self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                 self?.dismiss()

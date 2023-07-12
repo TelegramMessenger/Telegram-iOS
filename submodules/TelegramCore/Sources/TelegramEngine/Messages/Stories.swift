@@ -755,6 +755,7 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
             period: Int32(period),
             randomId: randomId
         ))
+        Logger.shared.log("UploadStory", "Appended new pending item stableId: \(stableId) randomId: \(randomId)")
         transaction.setLocalStoryState(state: CodableEntry(currentState))
     }).start()
 }
@@ -798,6 +799,7 @@ private func _internal_putPendingStoryIdMapping(accountPeerId: PeerId, stableId:
 }
 
 func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId: PeerId, stateManager: AccountStateManager, messageMediaPreuploadManager: MessageMediaPreuploadManager, revalidationContext: MediaReferenceRevalidationContext, auxiliaryMethods: AccountAuxiliaryMethods, stableId: Int32, media: Media, text: String, entities: [MessageTextEntity], embeddedStickers: [TelegramMediaFile], pin: Bool, privacy: EngineStoryPrivacy, isForwardingDisabled: Bool, period: Int, randomId: Int64) -> Signal<StoryUploadResult, NoError> {
+    Logger.shared.log("UploadStory", "uploadStoryImpl for stableId: \(stableId) randomId: \(randomId)")
     let passFetchProgress = media is TelegramMediaFile
     let (contentSignal, originalMedia) = uploadedStoryContent(postbox: postbox, network: network, media: media, embeddedStickers: embeddedStickers, accountPeerId: accountPeerId, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: revalidationContext, auxiliaryMethods: auxiliaryMethods, passFetchProgress: passFetchProgress)
     return contentSignal

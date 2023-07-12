@@ -295,12 +295,7 @@ final class StickersResultPanelComponent: Component {
                     let controller = PeekController(presentationData: presentationData, content: content, sourceView: {
                         return (sourceView, sourceRect)
                     })
-                    //                        controller.visibilityUpdated = { [weak self] visible in
-                    //                            self?.previewingStickersPromise.set(visible)
-                    //                        }
                     component.presentInGlobalOverlay(controller)
-                    //                        strongSelf.peekController = controller
-                    //                        strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(controller, nil)
                     return controller
                 }
                 return nil
