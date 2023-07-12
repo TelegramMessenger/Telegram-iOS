@@ -1375,7 +1375,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             lineWidth: 2.33,
             inactiveLineWidth: 1.33
         ), transition: .immediate)
-        self.avatarTapRecognizer?.isEnabled = storyState != nil
+        self.avatarNode.isUserInteractionEnabled = storyState != nil
         
         if let peer = peer {
             var overrideImage: AvatarNodeImageOverride?

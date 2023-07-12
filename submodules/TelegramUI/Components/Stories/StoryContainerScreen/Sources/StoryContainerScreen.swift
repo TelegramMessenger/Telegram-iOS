@@ -352,6 +352,9 @@ private final class StoryContainerScreenComponent: Component {
         private var isMuteSwitchOn: Bool = false
         private var muteMonitor: MuteMonitor?
         
+        private var headphonesDisposable: Disposable?
+        private var areHeadphonesConnected: Bool = false
+        
         private var audioMode: StoryContentItem.AudioMode = .ambient {
             didSet {
                 self.audioModePromise.set(self.audioMode)
@@ -486,6 +489,7 @@ private final class StoryContainerScreenComponent: Component {
                     }
                     if self.isMuteSwitchOn != isMuteSwitchOn {
                         let changedToOff = self.isMuteSwitchOn && !isMuteSwitchOn
+                        let changedToOn = !self.isMuteSwitchOn && isMuteSwitchOn
                         
                         self.isMuteSwitchOn = isMuteSwitchOn
                         
@@ -494,10 +498,40 @@ private final class StoryContainerScreenComponent: Component {
                         if changedToOff {
                             switch self.audioMode {
                             case .on:
-                                self.audioMode = .ambient
+                                if self.isMuteSwitchOn || self.areHeadphonesConnected {
+                                    self.audioMode = .off
+                                    for (_, itemSetView) in self.visibleItemSetViews {
+                                        if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                                            componentView.enterAmbientMode(ambient: false)
+                                        }
+                                    }
+                                } else {
+                                    self.audioMode = .ambient
+                                    for (_, itemSetView) in self.visibleItemSetViews {
+                                        if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                                            componentView.enterAmbientMode(ambient: !(self.isMuteSwitchOn || self.areHeadphonesConnected))
+                                        }
+                                    }
+                                }
+                            case .ambient:
+                                if self.areHeadphonesConnected {
+                                    self.audioMode = .off
+                                    for (_, itemSetView) in self.visibleItemSetViews {
+                                        if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                                            componentView.enterAmbientMode(ambient: false)
+                                        }
+                                    }
+                                }
+                            default:
+                                break
+                            }
+                        } else if changedToOn {
+                            switch self.audioMode {
+                            case .off:
+                                self.audioMode = .on
                                 for (_, itemSetView) in self.visibleItemSetViews {
                                     if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
-                                        componentView.enterAmbientMode(ambient: !self.isMuteSwitchOn)
+                                        componentView.leaveAmbientMode()
                                     }
                                 }
                             default:
@@ -551,6 +585,7 @@ private final class StoryContainerScreenComponent: Component {
         deinit {
             self.contentUpdatedDisposable?.dispose()
             self.volumeButtonsListenerShouldBeActiveDisposable?.dispose()
+            self.headphonesDisposable?.dispose()
         }
         
         override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -998,6 +1033,24 @@ private final class StoryContainerScreenComponent: Component {
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             self.environment = environment
             
+            if self.component == nil {
+                self.areHeadphonesConnected = component.context.sharedContext.mediaManager.audioSession.getIsHeadsetPluggedIn()
+                var update = false
+                self.headphonesDisposable = (component.context.sharedContext.mediaManager.audioSession.headsetConnected()
+                |> deliverOnMainQueue).start(next: { [weak self] value in
+                    guard let self else {
+                        return
+                    }
+                    if self.areHeadphonesConnected != value {
+                        self.areHeadphonesConnected = value
+                        if update {
+                            self.state?.updated(transition: .immediate)
+                        }
+                    }
+                })
+                update = true
+            }
+            
             if self.component?.content !== component.content {
                 if self.component == nil {
                     var update = false
@@ -1237,7 +1290,7 @@ private final class StoryContainerScreenComponent: Component {
                                 metrics: environment.metrics,
                                 deviceMetrics: environment.deviceMetrics,
                                 isProgressPaused: isProgressPaused || i != focusedIndex,
-                                isAudioMuted: self.audioMode == .off || (self.audioMode == .ambient && !self.isMuteSwitchOn),
+                                isAudioMuted: self.audioMode == .off || (self.audioMode == .ambient && !(self.isMuteSwitchOn || self.areHeadphonesConnected)),
                                 audioMode: self.audioMode,
                                 hideUI: (i == focusedIndex && (self.itemSetPanState?.didBegin == false || self.itemSetPinchState != nil)),
                                 visibilityFraction: 1.0 - abs(panFraction + cubeAdditionalRotationFraction),
@@ -1309,12 +1362,12 @@ private final class StoryContainerScreenComponent: Component {
                                     
                                     switch self.audioMode {
                                     case .ambient:
-                                        if self.isMuteSwitchOn {
+                                        if self.isMuteSwitchOn || self.areHeadphonesConnected {
                                             self.audioMode = .off
                                             
                                             for (_, itemSetView) in self.visibleItemSetViews {
                                                 if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
-                                                    componentView.enterAmbientMode(ambient: !self.isMuteSwitchOn)
+                                                    componentView.enterAmbientMode(ambient: !(self.isMuteSwitchOn || self.areHeadphonesConnected))
                                                 }
                                             }
                                         } else {
@@ -1330,7 +1383,7 @@ private final class StoryContainerScreenComponent: Component {
                                         self.audioMode = .off
                                         for (_, itemSetView) in self.visibleItemSetViews {
                                             if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
-                                                componentView.enterAmbientMode(ambient: !self.isMuteSwitchOn)
+                                                componentView.enterAmbientMode(ambient: !(self.isMuteSwitchOn || self.areHeadphonesConnected))
                                             }
                                         }
                                     case .off:
