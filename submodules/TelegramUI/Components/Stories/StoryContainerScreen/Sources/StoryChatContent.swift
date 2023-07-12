@@ -553,7 +553,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                 self.updatePeerContexts()
             })
         } else {
-            self.storySubscriptionsDisposable = (context.engine.messages.storySubscriptions(isHidden: isHidden)
+            self.storySubscriptionsDisposable = (context.engine.messages.storySubscriptions(isHidden: isHidden, tempKeepNewlyArchived: true)
             |> deliverOnMainQueue).start(next: { [weak self] storySubscriptions in
                 guard let self else {
                     return

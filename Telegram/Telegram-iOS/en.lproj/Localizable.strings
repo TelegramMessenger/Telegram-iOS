@@ -265,6 +265,7 @@
 
 "PUSH_STORY_NOTEXT" = "%1$@|posted a story";
 "PUSH_MESSAGE_STORY" = "%1$@|shared a story with you";
+"PUSH_MESSAGE_STORY_MENTION" = "%1$@|mentioned you in a story";
 "PUSH_CHANNEL_MESSAGE_STORY" = "%1$@|shared a story";
 "PUSH_CHAT_MESSAGE_STORY" = "%2$@|%1$@ shared a story to the group";
 
