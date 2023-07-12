@@ -1,9 +1,9 @@
 /* Localized versions of Info.plist keys */
 
-"NSContactsUsageDescription" = "Telegram, arkadaşlarınızla tüm cihazlarınız arasında bağlantı kurmanızı sağlamak için kişilerinizi sürekli olarak şifreli bulut sunucularına yükleyecek.";
-"NSLocationWhenInUseUsageDescription" = "Konumunuzu arkadaşlarınıza gönderdiğinizde, Telegram'ın onlara bir harita göstermesi için erişmesi gerekiyor.";
-"NSLocationAlwaysAndWhenInUseUsageDescription" = "Canlı Konumunuzu arkadaşlarınızla bir sohbette paylaşmayı seçtiğinizde, Telegram'ın canlı paylaşım süresince onları güncel tutmak için konumunuza arka plan erişimi olması gerekir.";
-"NSLocationAlwaysUsageDescription" = "Canlı konumunuzu bir sohbette arkadaşlarınızla paylaşmayı seçtiğinizde, Telegram'ın canlı paylaşım süresince konumunuzu güncel tutması için bir arka plan erişimi gerekir. Ayrıca Apple Watch'dan konum göndermek için de buna ihtiyacınız var.";
+"NSContactsUsageDescription" = "Vartagram, arkadaşlarınızla tüm cihazlarınız arasında bağlantı kurmanızı sağlamak için kişilerinizi sürekli olarak şifreli bulut sunucularına yükleyecek.";
+"NSLocationWhenInUseUsageDescription" = "Konumunuzu arkadaşlarınıza gönderdiğinizde, Vartagram'ın onlara bir harita göstermesi için erişmesi gerekiyor.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Canlı Konumunuzu arkadaşlarınızla bir sohbette paylaşmayı seçtiğinizde, Vartagram'ın canlı paylaşım süresince onları güncel tutmak için konumunuza arka plan erişimi olması gerekir.";
+"NSLocationAlwaysUsageDescription" = "Canlı konumunuzu bir sohbette arkadaşlarınızla paylaşmayı seçtiğinizde, Vartagram'ın canlı paylaşım süresince konumunuzu güncel tutması için bir arka plan erişimi gerekir. Ayrıca Apple Watch'dan konum göndermek için de buna ihtiyacınız var.";
 "NSCameraUsageDescription" = "Fotoğraf ve video çekip paylaşabilmeniz ve görüntülü arama yapabilmeniz için buna ihtiyacımız var.";
 "NSPhotoLibraryUsageDescription" = "Fotoğraf arşivinizdeki fotoğraf ve videoları paylaşabilmeniz için buna ihtiyacımız var.";
 "NSPhotoLibraryAddUsageDescription" = "Fotoğraf arşivine fotoğraf ve video kaydedebilmeniz için buna ihtiyacımız var.";

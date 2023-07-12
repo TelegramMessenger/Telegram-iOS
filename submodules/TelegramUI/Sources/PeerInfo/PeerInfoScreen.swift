@@ -486,7 +486,7 @@ private enum PeerInfoSettingsSection {
     case emojiStatus
     case powerSaving
     
-    case cloudballon
+    case ptgSettings
     case enterSecretPasscode
     case manageSecretPasscodes
 }
@@ -665,7 +665,7 @@ private enum SettingsSection: Int, CaseIterable {
     case accounts
     case proxy
     case secretPasscodes
-    case cloudballon
+    case ptgSettings
     case shortcuts
     case advanced
     case payment
@@ -893,8 +893,8 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         interaction.openSettings(.tips)
     }))
     
-    items[.cloudballon]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.PtgSettings_Title, icon: PresentationResourcesSettings.cloudballon, action: {
-        interaction.openSettings(.cloudballon)
+    items[.ptgSettings]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.PtgSettings_Title, icon: PresentationResourcesSettings.cloudballon, action: {
+        interaction.openSettings(.ptgSettings)
     }))
 
     items[.secretPasscodes]!.append(PeerInfoScreenActionItem(id: 0, text: presentationData.strings.Settings_EnterSecretPasscode, icon: PresentationResourcesItemList.enterSecretPasscodeIcon(presentationData.theme), action: {
@@ -8122,7 +8122,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             case .powerSaving:
                 self.controller?.push(energySavingSettingsScreen(context: self.context))
             
-            case .cloudballon:
+            case .ptgSettings:
                 self.controller?.push(ptgSettingsController(context: self.context))
             
             case .enterSecretPasscode:

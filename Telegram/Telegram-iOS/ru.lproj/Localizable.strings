@@ -23,7 +23,7 @@
 "PasscodeSettings.BadPasscodeTriesToActivateHelp" = "Действия с ложным паролем будут выполнены после указанного количества неудачных попыток ввода код-пароля.";
 "PasscodeSettings.FakePasscodeActionsTitle" = "Действия";
 "PasscodeSettings.FakePasscodeSmsActionTitle" = "СМС";
-"PasscodeSettings.ClearTelegramCache" = "Очищать кэш Telegram";
+"PasscodeSettings.ClearTelegramCache" = "Очищать кэш Vartagram";
 "PasscodeSettings.ClearProxiesOnFakeLogin" = "Очищать список прокси";
 "PasscodeSettings.FakePasscodeActionsHelp" = "При вводе ложного код-пароля выполняются выбранные действия.";
 "PasscodeSettings.FakePasscodeAccountsTitle" = "Действия для аккаунтов";
@@ -34,7 +34,7 @@
 "PasscodeSettings.FakePasscodeDeleteTitle" = "Удалить ложный код-пароль";
 "PasscodeSettings.FakePasscodeDeleteMessage" = "Вы точно хотите удалить этот ложный код-пароль?";
 
-"Settings.Version" = "Cloudballon %1$@ (%2$@)\nНа основе оригинального Telegram %3$@";
+"Settings.Version" = "Vartagram %1$@ (%2$@)\nНа основе оригинального Telegram %3$@";
 
 "FakePasscodes.Common.DoNotShowAgain" = "Не показывать снова";
 
@@ -69,7 +69,7 @@
 
 "AccountActions.SessionsToTerminate.24hWarningMessage" = "Эта функция не сработает, если после входа в аккаунт на этом устройстве прошло менее 24 часов.";
 
-"PtgSettings.Title" = "Cloudballon";
+"PtgSettings.Title" = "Vartagram";
 "PtgSettings.ShowPeerId" = "Показывать ID";
 "PtgSettings.ShowPeerIdHelp" = "Показывать ID в профилях пользователей, групп, каналов, ботов.";
 "PtgSettings.ForeignAgentNoticeHeader" = "Маркировка иноагентов РФ";
@@ -120,8 +120,8 @@
 
 "PasscodeAttempts.TryAgainIn" = "Защита от перебора код-паролей. Попробуйте снова через %@.";
 
-"Share.LockedTitle" = "Разблокируйте Telegram";
-"Share.LockedDescription" = "Откройте и разблокируйте Telegram, чтобы поделиться.";
+"Share.LockedTitle" = "Разблокируйте Vartagram";
+"Share.LockedDescription" = "Откройте и разблокируйте Vartagram, чтобы поделиться.";
 
 "ChatList.EmptyChatSelectionList" = "Нет чатов для выбора.";
 

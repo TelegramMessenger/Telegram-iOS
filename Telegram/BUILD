@@ -49,9 +49,8 @@ load(
     "telegram_enable_icloud",
     "telegram_enable_siri",
     "telegram_enable_watch",
+    "telegram_appstore_id",
     "telegram_is_non_dev_account",
-    "telegram_bundle_name",
-    "telegram_bundle_display_name",
 )
 
 load("@build_bazel_rules_apple//apple:resources.bzl",
@@ -166,6 +165,9 @@ objc_library(
     module_name = "PresentationStrings",
     srcs = [
         "GeneratedPresentationStrings/Sources/PresentationStrings.m",
+    ],
+    copts = [
+        "-DAPP_CONFIG_APPSTORE_ID={}".format(telegram_appstore_id),
     ],
     hdrs = [
         "GeneratedPresentationStrings/PublicHeaders/PresentationStrings/PresentationStrings.h",
@@ -650,10 +652,8 @@ plist_fragment(
     template =
     """
     <key>CFBundleDisplayName</key>
-    <string>{telegram_bundle_display_name}</string>
-    """.format(
-        telegram_bundle_display_name = telegram_bundle_display_name,
-    )
+    <string>Vartagram</string>
+    """
 )
 
 plist_fragment(
@@ -700,14 +700,13 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.watchkitapp.watchkitextension</string>
     <key>CFBundleName</key>
-    <string>{telegram_bundle_name}</string>
+    <string>Vartagram</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>WKExtensionDelegateClassName</key>
     <string>TGExtensionDelegate</string>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
-        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -721,7 +720,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.watchkitapp</string>
     <key>CFBundleName</key>
-    <string>{telegram_bundle_name}</string>
+    <string>Vartagram</string>
     <key>UISupportedInterfaceOrientations</key>
     <array>
         <string>UIInterfaceOrientationPortrait</string>
@@ -733,7 +732,6 @@ plist_fragment(
     <string>APPL</string>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
-        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1166,7 +1164,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.Share</string>
     <key>CFBundleName</key>
-    <string>{telegram_bundle_name}</string>
+    <string>Vartagram</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1203,7 +1201,6 @@ plist_fragment(
     </dict>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
-        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1260,7 +1257,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.NotificationContent</string>
     <key>CFBundleName</key>
-    <string>{telegram_bundle_name}</string>
+    <string>Vartagram</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1282,7 +1279,6 @@ plist_fragment(
     </dict>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
-        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1370,7 +1366,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.Widget</string>
     <key>CFBundleName</key>
-    <string>{telegram_bundle_name}</string>
+    <string>Vartagram</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1384,7 +1380,6 @@ plist_fragment(
     </array>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
-        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1489,7 +1484,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.SiriIntents</string>
     <key>CFBundleName</key>
-    <string>{telegram_bundle_name}</string>
+    <string>Vartagram</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1518,7 +1513,6 @@ plist_fragment(
     </dict>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
-        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1625,7 +1619,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.BroadcastUpload</string>
     <key>CFBundleName</key>
-    <string>{telegram_bundle_name}</string>
+    <string>Vartagram</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1639,7 +1633,6 @@ plist_fragment(
     </dict>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
-        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1722,7 +1715,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.NotificationService</string>
     <key>CFBundleName</key>
-    <string>{telegram_bundle_name}</string>
+    <string>Vartagram</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1741,7 +1734,6 @@ plist_fragment(
     </dict>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
-        telegram_bundle_name = telegram_bundle_name,
     )
 )
 
@@ -1898,11 +1890,11 @@ plist_fragment(
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleDisplayName</key>
-    <string>{telegram_bundle_display_name}</string>
+    <string>Vartagram</string>
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}</string>
     <key>CFBundleName</key>
-    <string>{telegram_bundle_name}</string>
+    <string>Vartagram</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleSignature</key>
@@ -1955,19 +1947,19 @@ plist_fragment(
     <key>NSCameraUsageDescription</key>
     <string>We need this so that you can take and share photos and videos.</string>
     <key>NSContactsUsageDescription</key>
-    <string>Telegram stores your contacts heavily encrypted in the cloud to let you connect with your friends across all your devices.</string>
+    <string>Vartagram stores your contacts heavily encrypted in the cloud to let you connect with your friends across all your devices.</string>
     <key>NSFaceIDUsageDescription</key>
     <string>You can use Face ID to unlock the app.</string>
     <key>NSLocationAlwaysUsageDescription</key>
-    <string>When you send your location to your friends, Telegram needs access to show them a map. You also need this to send locations from an Apple Watch.</string>
+    <string>When you send your location to your friends, Vartagram needs access to show them a map. You also need this to send locations from an Apple Watch.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
-    <string>When you send your location to your friends, Telegram needs access to show them a map.</string>
+    <string>When you send your location to your friends, Vartagram needs access to show them a map.</string>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>When you choose to share your Live Location with friends in a chat, Telegram needs background access to your location to keep them updated for the duration of the live sharing.</string>
+    <string>When you choose to share your Live Location with friends in a chat, Vartagram needs background access to your location to keep them updated for the duration of the live sharing.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>We need this so that you can record and share voice messages and videos with sound.</string>
     <key>NSMotionUsageDescription</key>
-    <string>When you send your location to your friends, Telegram needs access to show them a map.</string>
+    <string>When you send your location to your friends, Vartagram needs access to show them a map.</string>
     <key>NSPhotoLibraryAddUsageDescription</key>
     <string>We need this so that you can share photos and videos from your photo library.</string>
     <key>NSPhotoLibraryUsageDescription</key>
@@ -2058,8 +2050,6 @@ plist_fragment(
     <true/>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
-        telegram_bundle_name = telegram_bundle_name,
-        telegram_bundle_display_name = telegram_bundle_display_name,
     )
 )
 

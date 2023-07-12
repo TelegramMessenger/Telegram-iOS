@@ -341,6 +341,78 @@ static _FormattedString * _Nonnull getFormatted{num_arguments}(_PresentationStri
 
 static NSDictionary<NSString *, NSString *> * _Nullable localizableDictionary(NSString * _Nonnull languageCode);
 
+static NSDictionary<NSString *, NSString *> * _Nonnull replaceAppName(NSDictionary<NSString *, NSString *> * _Nonnull dict) {
+    NSString *appTitle = [[[NSBundle mainBundle] localizedInfoDictionary] objectForKey:@"CFBundleDisplayName"];
+    if (appTitle == nil) {
+        appTitle = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleDisplayName"];
+    }
+    if (appTitle == nil) {
+        return dict;
+    }
+    
+    // replacing only in strings where Telegram means app name, and not a service like in "Telegram account"
+    NSArray<NSString *> *stringsToModify = @[
+        @"Contacts.AccessDeniedError",
+        @"Conversation.UnsupportedMedia",
+        @"EnterPasscode.EnterPasscode",
+        @"EnterPasscode.TouchId",
+        @"DialogList.PasscodeLockHelp",
+        @"AccessDenied.VoiceMicrophone",
+        @"AccessDenied.VideoMicrophone",
+        @"AccessDenied.Camera",
+        @"AccessDenied.CameraRestricted",
+        @"AccessDenied.PhotosAndVideos",
+        @"AccessDenied.SaveMedia",
+        @"AccessDenied.LocationDenied",
+        @"AccessDenied.LocationDisabled",
+        @"AccessDenied.LocationTracking",
+        @"AccessDenied.CallMicrophone",
+        @"AccessDenied.LocationAlwaysDenied",
+        @"Passport.UpdateRequiredError",
+        @"Share.AuthTitle",
+        @"Share.AuthDescription",
+        @"Passcode.AppLockedAlert",
+        @"Permissions.CellularDataText.v0",
+        @"Contacts.PermissionsText",
+        @"Conversation.UnsupportedMediaPlaceholder",
+        @"Conversation.UpdateTelegram",
+        @"AccessDenied.Wallpapers",
+        @"AppUpgrade.Running",
+        @"Map.HomeAndWorkInfo",
+        @"AccessDenied.VideoCallCamera",
+        @"Media.LimitedAccessText",
+        @"ChatImportActivity.OpenApp",
+        @"Intents.ErrorLockedText",
+        @"AccessDenied.QrCode",
+        @"AccessDenied.QrCamera",
+        @"Attachment.LimitedMediaAccessText",
+        @"Attachment.CameraAccessText",
+        @"AccessDenied.LocationPreciseDenied",
+        @"StorageManagement.DescriptionChatUsage",
+        @"StorageManagement.DescriptionAppUsage",
+        @"PowerSavingScreen.OptionAutoplayEffectsText",
+    ];
+    
+    NSString *originalTitle = @"Telegram";
+    NSMutableDictionary *updatedDict = [[NSMutableDictionary alloc] initWithDictionary:dict];
+    for (NSString *key in stringsToModify) {
+        NSString *value = updatedDict[key];
+        if (value != nil) {
+            value = [value stringByReplacingOccurrencesOfString:originalTitle withString:appTitle];
+            if ([key isEqualToString:@"Conversation.UnsupportedMedia"]) {
+                // using 'https:' because 'itms-apps:' links will not be clickable
+                NSString *appStoreLink = [NSString stringWithFormat:@"https://itunes.apple.com/app/id%d", APP_CONFIG_APPSTORE_ID];
+                value = [value stringByReplacingOccurrencesOfString:@"https://telegram.org/update" withString:appStoreLink];
+            }
+            if ([key isEqualToString:@"Conversation.UpdateTelegram"]) {
+                value = [value stringByReplacingOccurrencesOfString:[originalTitle uppercaseString] withString:[appTitle uppercaseString]];
+            }
+            updatedDict[key] = value;
+        }
+    }
+    return updatedDict;
+}
+
 @implementation _PresentationStringsComponent
 
 - (instancetype _Nonnull)initWithLanguageCode:(NSString * _Nonnull)languageCode
@@ -352,7 +424,7 @@ static NSDictionary<NSString *, NSString *> * _Nullable localizableDictionary(NS
         _languageCode = languageCode;
         _localizedName = localizedName;
         _pluralizationRulesCode = pluralizationRulesCode;
-        _dict = dict;
+        _dict = replaceAppName(dict);
         _fallbackLocal = localizableDictionary(self.languageCode);
     }
     return self;

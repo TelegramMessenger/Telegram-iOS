@@ -23,7 +23,7 @@
 "PasscodeSettings.BadPasscodeTriesToActivateHelp" = "Дзеянні з несапраўдным кодам блакіроўкі будуць выкананы пасля адзначанай колькасці няўдалых спроб уводу кода блакіроўкі.";
 "PasscodeSettings.FakePasscodeActionsTitle" = "Дзеянні";
 "PasscodeSettings.FakePasscodeSmsActionTitle" = "СМС";
-"PasscodeSettings.ClearTelegramCache" = "Ачышчаць кэш Telegram";
+"PasscodeSettings.ClearTelegramCache" = "Ачышчаць кэш Vartagram";
 "PasscodeSettings.ClearProxiesOnFakeLogin" = "Ачышчаць спіс проксі";
 "PasscodeSettings.FakePasscodeActionsHelp" = "Пры ўводзе несапраўднага кода блакіроўкі выконваюцца выбраныя дзеянні.";
 "PasscodeSettings.FakePasscodeAccountsTitle" = "Дзеянні для акаўнтаў";
@@ -34,7 +34,7 @@
 "PasscodeSettings.FakePasscodeDeleteTitle" = "Выдаліць несапраўдны код блакіроўкі";
 "PasscodeSettings.FakePasscodeDeleteMessage" = "Вы дакладна хочаце выдаліць гэты несапраўдны код блакіроўкі?";
 
-"Settings.Version" = "Cloudballon %1$@ (%2$@)\nНа аснове арыгінальнага Telegram %3$@";
+"Settings.Version" = "Vartagram %1$@ (%2$@)\nНа аснове арыгінальнага Telegram %3$@";
 
 "FakePasscodes.Common.DoNotShowAgain" = "Больш не паказваць";
 
@@ -69,7 +69,7 @@
 
 "AccountActions.SessionsToTerminate.24hWarningMessage" = "Гэта функцыя не будзе працавать, калі пасля увахода ў аккаўнт на гэтым дэвайсе прайшло менш за 24 гадзіны.";
 
-"PtgSettings.Title" = "Cloudballon";
+"PtgSettings.Title" = "Vartagram";
 "PtgSettings.ShowPeerId" = "Паказваць ID";
 "PtgSettings.ShowPeerIdHelp" = "Паказваць ID у профілях карыстальнікаў, суполак, каналаў, ботаў.";
 "PtgSettings.ForeignAgentNoticeHeader" = "Маркіроўка замежных агентаў РФ";
@@ -120,8 +120,8 @@
 
 "PasscodeAttempts.TryAgainIn" = "Абарона ад атак грубай сілай. Паспрабуйце зноў праз %@.";
 
-"Share.LockedTitle" = "Разблакіруйце Telegram";
-"Share.LockedDescription" = "Адкрыйце і разблакіруйце Telegram, каб абагуліць.";
+"Share.LockedTitle" = "Разблакіруйце Vartagram";
+"Share.LockedDescription" = "Адкрыйце і разблакіруйце Vartagram, каб абагуліць.";
 
 "ChatList.EmptyChatSelectionList" = "Няма чатаў для выбару.";
 
