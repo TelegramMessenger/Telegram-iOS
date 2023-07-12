@@ -1227,7 +1227,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                             case .filled:
                                 nextStyle = .semi
                             case .semi:
-                                nextStyle = .stroke
+                                nextStyle = .regular
                             case .stroke:
                                 nextStyle = .regular
                             }
@@ -3480,7 +3480,7 @@ public final class DrawingToolsInteraction {
                                 case .filled:
                                     nextStyle = .semi
                                 case .semi:
-                                    nextStyle = .stroke
+                                    nextStyle = .regular
                                 case .stroke:
                                     nextStyle = .regular
                                 }

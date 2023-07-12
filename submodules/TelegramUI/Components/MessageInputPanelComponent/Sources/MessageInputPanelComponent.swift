@@ -1449,7 +1449,7 @@ public final class MessageInputPanelComponent: Component {
                     containerSize: CGSize(width: availableSize.width - panelLeftInset - panelRightInset, height: availablePanelHeight)
                 )
                 
-                let panelFrame = CGRect(origin: CGPoint(x: insets.left, y: -panelSize.height + 33.0), size: panelSize)
+                let panelFrame = CGRect(origin: CGPoint(x: insets.left, y: -panelSize.height + 14.0), size: CGSize(width: panelSize.width, height: panelSize.height + 19.0))
                 if let panelView = panel.view as? ContextResultPanelComponent.View {
                     if panelView.superview == nil {
                         self.insertSubview(panelView, at: 0)
