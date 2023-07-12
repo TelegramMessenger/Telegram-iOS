@@ -338,7 +338,7 @@ public final class StorySubscriptionsContext {
                                             updatedPeerEntries.append(previousEntry)
                                         } else {
                                             if let codedEntry = CodableEntry(storedItem) {
-                                                updatedPeerEntries.append(StoryItemsTableEntry(value: codedEntry, id: storedItem.id, expirationTimestamp: storedItem.expirationTimestamp))
+                                                updatedPeerEntries.append(StoryItemsTableEntry(value: codedEntry, id: storedItem.id, expirationTimestamp: storedItem.expirationTimestamp, isCloseFriends: storedItem.isCloseFriends))
                                             }
                                         }
                                     }
@@ -1014,7 +1014,7 @@ public final class PeerExpiringStoryListContext {
                                             updatedPeerEntries.append(previousEntry)
                                         } else {
                                             if let codedEntry = CodableEntry(storedItem) {
-                                                updatedPeerEntries.append(StoryItemsTableEntry(value: codedEntry, id: storedItem.id, expirationTimestamp: storedItem.expirationTimestamp))
+                                                updatedPeerEntries.append(StoryItemsTableEntry(value: codedEntry, id: storedItem.id, expirationTimestamp: storedItem.expirationTimestamp, isCloseFriends: storedItem.isCloseFriends))
                                             }
                                         }
                                     }
@@ -1180,7 +1180,7 @@ public func _internal_pollPeerStories(postbox: Postbox, network: Network, accoun
                                     updatedPeerEntries.append(previousEntry)
                                 } else {
                                     if let codedEntry = CodableEntry(storedItem) {
-                                        updatedPeerEntries.append(StoryItemsTableEntry(value: codedEntry, id: storedItem.id, expirationTimestamp: storedItem.expirationTimestamp))
+                                        updatedPeerEntries.append(StoryItemsTableEntry(value: codedEntry, id: storedItem.id, expirationTimestamp: storedItem.expirationTimestamp, isCloseFriends: storedItem.isCloseFriends))
                                     }
                                 }
                             }

@@ -327,6 +327,10 @@ public final class StoryItemSetContainerComponent: Component {
         }
     }
     
+    private static let shadowImage: UIImage? = {
+        UIImage(named: "Stories/PanelGradient")
+    }()
+    
     public final class View: UIView, UIScrollViewDelegate, UIGestureRecognizerDelegate {
         let sendMessageContext: StoryItemSetContainerSendMessage
         
@@ -334,7 +338,7 @@ public final class StoryItemSetContainerComponent: Component {
         
         let itemsContainerView: UIView
         let controlsContainerView: UIView
-        let topContentGradientLayer: SimpleGradientLayer
+        let topContentGradientView: UIImageView
         let bottomContentGradientLayer: SimpleGradientLayer
         let contentDimView: UIView
         
@@ -417,7 +421,12 @@ public final class StoryItemSetContainerComponent: Component {
                 self.controlsContainerView.layer.cornerCurve = .continuous
             }
             
-            self.topContentGradientLayer = SimpleGradientLayer()
+            self.topContentGradientView = UIImageView()
+            if let image = StoryItemSetContainerComponent.shadowImage {
+                self.topContentGradientView.image = image.stretchableImage(withLeftCapWidth: 0, topCapHeight: Int(image.size.height - 1.0))
+                self.topContentGradientView.transform = CGAffineTransformMakeScale(1.0, -1.0)
+            }
+            
             self.bottomContentGradientLayer = SimpleGradientLayer()
             
             self.contentDimView = UIView()
@@ -441,7 +450,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.addSubview(self.controlsContainerView)
             
             self.controlsContainerView.addSubview(self.contentDimView)
-            self.controlsContainerView.layer.addSublayer(self.topContentGradientLayer)
+            self.controlsContainerView.addSubview(self.topContentGradientView)
             self.layer.addSublayer(self.bottomContentGradientLayer)
             
             self.closeButton.addSubview(self.closeButtonIconView)
@@ -605,7 +614,18 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
+            if let captionItemView = self.captionItem?.view.view as? StoryContentCaptionComponent.View {
+                if captionItemView.hitTest(self.convert(point, to: captionItemView), with: nil) != nil {
+                    return false
+                }
+            }
+            
             if self.controlsContainerView.frame.contains(point) {
+                if let result = self.controlsContainerView.hitTest(self.convert(point, to: self.controlsContainerView), with: nil) {
+                    if result != self.controlsContainerView {
+                        return false
+                    }
+                }
                 return true
             }
             
@@ -1257,7 +1277,7 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 self.closeButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                 
-                self.topContentGradientLayer.animateAlpha(from: 0.0, to: CGFloat(self.topContentGradientLayer.opacity), duration: 0.25)
+                self.topContentGradientView.layer.animateAlpha(from: 0.0, to: self.topContentGradientView.alpha, duration: 0.25)
                 
                 let sourceLocalFrame = sourceView.convert(transitionIn.sourceRect, to: self)
                 let innerSourceLocalFrame = CGRect(origin: CGPoint(x: sourceLocalFrame.minX - contentContainerView.frame.minX, y: sourceLocalFrame.minY - contentContainerView.frame.minY), size: sourceLocalFrame.size)
@@ -1385,7 +1405,7 @@ public final class StoryItemSetContainerComponent: Component {
                     captionView.layer.animateAlpha(from: captionView.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false)
                 }
                 self.closeButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
-                self.topContentGradientLayer.animateAlpha(from: CGFloat(self.topContentGradientLayer.opacity), to: 0.0, duration: 0.25, removeOnCompletion: false)
+                self.topContentGradientView.layer.animateAlpha(from: self.topContentGradientView.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false)
                 
                 if let leftInfoView = self.leftInfoItem?.view.view {
                     if transitionOut.destinationIsAvatar {
@@ -1624,7 +1644,7 @@ public final class StoryItemSetContainerComponent: Component {
                 resetScrollingOffsetWithItemTransition = true
             }
             
-            if self.topContentGradientLayer.colors == nil {
+            /*if self.topContentGradientLayer.colors == nil {
                 var locations: [NSNumber] = []
                 var colors: [CGColor] = []
                 let numStops = 4
@@ -1642,7 +1662,7 @@ public final class StoryItemSetContainerComponent: Component {
                 self.topContentGradientLayer.locations = locations
                 self.topContentGradientLayer.colors = colors
                 self.topContentGradientLayer.type = .axial
-            }
+            }*/
             if self.bottomContentGradientLayer.colors == nil {
                 var locations: [NSNumber] = []
                 var colors: [CGColor] = []
@@ -1662,7 +1682,7 @@ public final class StoryItemSetContainerComponent: Component {
                 self.bottomContentGradientLayer.colors = colors
                 self.bottomContentGradientLayer.type = .axial
                 
-                self.contentDimView.backgroundColor = UIColor(white: 0.0, alpha: 0.3)
+                self.contentDimView.backgroundColor = UIColor(white: 0.0, alpha: 0.6)
             }
             
             let wasPanning = self.component?.isPanning ?? false
@@ -2569,9 +2589,10 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
-            let gradientHeight: CGFloat = 74.0
-            transition.setFrame(layer: self.topContentGradientLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: contentFrame.width, height: gradientHeight)))
-            transition.setAlpha(layer: self.topContentGradientLayer, alpha: (component.hideUI || self.displayViewList || self.isEditingStory) ? 0.0 : 1.0)
+            let topGradientHeight: CGFloat = 90.0
+            let topContentGradientRect = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: contentFrame.width, height: topGradientHeight))
+            transition.setPosition(view: self.topContentGradientView, position: topContentGradientRect.center)
+            transition.setBounds(view: self.topContentGradientView, bounds: CGRect(origin: CGPoint(), size: topContentGradientRect.size))
             
             let inputPanelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - inputPanelSize.width) / 2.0), y: availableSize.height - inputPanelBottomInset - inputPanelSize.height), size: inputPanelSize)
             var inputPanelAlpha: CGFloat = component.slice.peer.id == component.context.account.peerId || component.hideUI || self.isEditingStory ? 0.0 : 1.0
@@ -2983,9 +3004,13 @@ public final class StoryItemSetContainerComponent: Component {
             //transition.setAlpha(layer: self.bottomContentGradientLayer, alpha: inputPanelIsOverlay ? 1.0 : 0.0)
             transition.setAlpha(layer: self.bottomContentGradientLayer, alpha: 0.0)
             
+            var topGradientAlpha: CGFloat = (component.hideUI || self.displayViewList || self.isEditingStory) ? 0.0 : 1.0
             var normalDimAlpha: CGFloat = 0.0
             var forceDimAnimation = false
             if let captionItem = self.captionItem {
+                if captionItem.externalState.isExpanded {
+                    topGradientAlpha = 0.0
+                }
                 normalDimAlpha = captionItem.externalState.isExpanded ? 1.0 : 0.0
                 if transition.animation.isImmediate && transition.userData(StoryContentCaptionComponent.TransitionHint.self)?.kind == .isExpandedUpdated {
                     forceDimAnimation = true
@@ -2997,6 +3022,12 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             transition.setFrame(view: self.contentDimView, frame: CGRect(origin: CGPoint(), size: contentFrame.size))
+            
+            if transition.animation.isImmediate && forceDimAnimation && self.topContentGradientView.alpha != topGradientAlpha {
+                Transition(animation: .curve(duration: 0.25, curve: .easeInOut)).setAlpha(view: self.topContentGradientView, alpha: topGradientAlpha)
+            } else {
+                transition.setAlpha(view: self.topContentGradientView, alpha: topGradientAlpha)
+            }
             
             if transition.animation.isImmediate && forceDimAnimation && self.contentDimView.alpha != dimAlpha {
                 Transition(animation: .curve(duration: 0.25, curve: .easeInOut)).setAlpha(view: self.contentDimView, alpha: dimAlpha)

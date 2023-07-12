@@ -43,15 +43,15 @@ func updatePeers(transaction: Transaction, accountPeerId: PeerId, peers: Accumul
     for (_, user) in peers.users {
         if let telegramUser = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
             parsedPeers.append(telegramUser)
-            
             switch user {
-            case let .user(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, storiesMaxId):
+            case let .user(flags, flags2, _, _, _, _, _, _, _, _, _, _, _, _, _, _, storiesMaxId):
+                let isMin = (flags & (1 << 20)) != 0
+                let storiesUnavailable = (flags2 & (1 << 4)) != 0
                 if let storiesMaxId = storiesMaxId {
                     transaction.setStoryItemsInexactMaxId(peerId: user.peerId, id: storiesMaxId)
+                } else if !isMin && storiesUnavailable {
+                    transaction.clearStoryItemsInexactMaxId(peerId: user.peerId)
                 }
-                /*#if DEBUG
-                transaction.setStoryItemsInexactMaxId(peerId: user.peerId, id: 10)
-                #endif*/
             case .userEmpty:
                 break
             }

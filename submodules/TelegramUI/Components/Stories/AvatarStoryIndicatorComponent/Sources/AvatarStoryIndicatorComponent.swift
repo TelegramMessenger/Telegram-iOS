@@ -268,7 +268,7 @@ public final class AvatarStoryIndicatorComponent: Component {
             
             let maxOuterInset = component.activeLineWidth * 2.0
             diameter = availableSize.width + maxOuterInset * 2.0
-            let imageDiameter = availableSize.width + ceilToScreenPixels(maxOuterInset) * 2.0
+            let imageDiameter = ceil(availableSize.width + maxOuterInset * 2.0)
             
             let activeColors: [CGColor]
             let inactiveColors: [CGColor]

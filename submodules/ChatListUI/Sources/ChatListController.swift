@@ -1881,24 +1881,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     self.chatListDisplayNode.scrollToTopIfStoriesAreExpanded()
                 }
                 
-                /*self.chatListDisplayNode.mainContainerNode.currentItemNode.updateState { chatListState in
-                    var chatListState = chatListState
-                    
-                    var peerStoryMapping: [EnginePeer.Id: ChatListNodeState.StoryState] = [:]
-                    for item in rawStorySubscriptions.items {
-                        if item.peer.id == self.context.account.peerId {
-                            continue
-                        }
-                        peerStoryMapping[item.peer.id] = ChatListNodeState.StoryState(
-                            hasUnseen: item.hasUnseen,
-                            hasUnseenCloseFriends: item.hasUnseenCloseFriends
-                        )
-                    }
-                    chatListState.peerStoryMapping = peerStoryMapping
-                    
-                    return chatListState
-                }*/
-                
                 self.storiesReady.set(.single(true))
                 
                 Queue.mainQueue().after(1.0, { [weak self] in
@@ -1935,12 +1917,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 unseenCount += 1
                             }
                         }
+                        let hasUnseenCloseFriends = rawStoryArchiveSubscriptions.items.contains(where: { $0.hasUnseenCloseFriends })
                         archiveStoryState = ChatListNodeState.StoryState(
                             stats: EngineChatList.StoryStats(
                                 totalCount: rawStoryArchiveSubscriptions.items.count,
-                                unseenCount: unseenCount
+                                unseenCount: unseenCount,
+                                hasUnseenCloseFriends: hasUnseenCloseFriends
                             ),
-                            hasUnseenCloseFriends: rawStoryArchiveSubscriptions.items.contains(where: { $0.hasUnseenCloseFriends })
+                            hasUnseenCloseFriends: hasUnseenCloseFriends
                         )
                     }
                     
@@ -2823,13 +2807,28 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             guard let self else {
                                 return
                             }
+                            let undoValue: Bool
                             if self.location == .chatList(groupId: .archive) {
                                 self.context.engine.peers.updatePeerStoriesHidden(id: peer.id, isHidden: false)
+                                undoValue = true
                             } else {
                                 self.context.engine.peers.updatePeerStoriesHidden(id: peer.id, isHidden: true)
+                                undoValue = false
                             }
-                        
-                            guard let parentController = self.parent as? TabBarController, let contactsController = (self.navigationController as? TelegramRootControllerInterface)?.getContactsController(), let sourceFrame = parentController.frameForControllerTab(controller: contactsController) else {
+                            
+                            //TODO:localize
+                            if self.location != .chatList(groupId: .archive) {
+                                self.present(UndoOverlayController(presentationData: self.presentationData, content: .archivedChat(peerId: peer.id.toInt64(), title: "", text: "Stories from **\(peer.compactDisplayTitle)** will now be shown in Archived Chats.", undo: true), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { [weak self] action in
+                                    if case .undo = action {
+                                        if let self {
+                                            self.context.engine.peers.updatePeerStoriesHidden(id: peer.id, isHidden: undoValue)
+                                        }
+                                    }
+                                    return false
+                                }), in: .current)
+                            }
+                            
+                            /*guard let parentController = self.parent as? TabBarController, let contactsController = (self.navigationController as? TelegramRootControllerInterface)?.getContactsController(), let sourceFrame = parentController.frameForControllerTab(controller: contactsController) else {
                                 return
                             }
                             
@@ -2851,7 +2850,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 location: .point(location, .bottom),
                                 shouldDismissOnTouch: { _, _ in return .dismiss(consume: false) }
                             )
-                            self.present(tooltipController, in: .window(.root))
+                            self.present(tooltipController, in: .window(.root))*/
                         })))
                     }
                     

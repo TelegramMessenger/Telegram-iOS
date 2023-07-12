@@ -936,6 +936,12 @@ public final class AvatarNode: ASDisplayNode {
     
     public func pushLoadingStatus(signal: Signal<Never, NoError>) -> Disposable {
         let disposable = MetaDisposable()
+        
+        for d in self.loadingStatuses.copyItems() {
+            d.dispose()
+        }
+        self.loadingStatuses.removeAll()
+        
         let index = self.loadingStatuses.add(disposable)
         
         DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.2, execute: { [weak self] in

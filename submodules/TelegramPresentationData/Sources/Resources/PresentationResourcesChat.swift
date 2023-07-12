@@ -1272,4 +1272,30 @@ public struct PresentationResourcesChat {
             })
         })
     }
+    
+    public static func chatReplyStoryIndicatorIcon(_ theme: PresentationTheme, type: ChatExpiredStoryIndicatorType) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatReplyStoryIndicatorIcon(type: type), { theme in
+            return generateImage(CGSize(width: 16.0, height: 16.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                let foregroundColor: UIColor
+                switch type {
+                case .incoming:
+                    foregroundColor = theme.chat.message.incoming.mediaActiveControlColor
+                case .outgoing:
+                    foregroundColor = theme.chat.message.outgoing.mediaActiveControlColor
+                case .free:
+                    foregroundColor = theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText
+                }
+                
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ReplyStoryIcon"), color: foregroundColor) {
+                    UIGraphicsPushContext(context)
+                    
+                    let fittedSize = image.size
+                    image.draw(in: CGRect(origin: CGPoint(x: floor((size.width - fittedSize.width) * 0.5), y: floor((size.height - fittedSize.height) * 0.5)), size: fittedSize), blendMode: .normal, alpha: 1.0)
+                    
+                    UIGraphicsPopContext()
+                }
+            })
+        })
+    }
 }

@@ -916,6 +916,7 @@ public final class StoryContentContextImpl: StoryContentContext {
 
 public final class SingleStoryContentContextImpl: StoryContentContext {
     private let context: AccountContext
+    private let readGlobally: Bool
     
     public private(set) var stateValue: StoryContentContextState?
     public var state: Signal<StoryContentContextState, NoError> {
@@ -935,9 +936,11 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
     
     public init(
         context: AccountContext,
-        storyId: StoryId
+        storyId: StoryId,
+        readGlobally: Bool
     ) {
         self.context = context
+        self.readGlobally = readGlobally
         
         self.storyDisposable = (combineLatest(queue: .mainQueue(),
             context.engine.data.subscribe(
@@ -1084,6 +1087,9 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
     }
     
     public func markAsSeen(id: StoryId) {
+        if self.readGlobally {
+            let _ = self.context.engine.messages.markStoryAsSeen(peerId: id.peerId, id: id.id, asPinned: false).start()
+        }
     }
 }
 

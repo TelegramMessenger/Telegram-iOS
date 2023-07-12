@@ -3895,7 +3895,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     self.headerNode.avatarListNode.avatarContainerNode.storyData = nil
                     self.headerNode.avatarListNode.listContainerNode.storyParams = nil
                 } else {
-                    self.headerNode.avatarListNode.avatarContainerNode.storyData = (state.hasUnseen, state.hasUnseenCloseFriends && peer.id != self.context.account.peerId)
+                    let totalCount = state.items.count
+                    var unseenCount = 0
+                    for item in state.items {
+                        if item.id > state.maxReadId {
+                            unseenCount += 1
+                        }
+                    }
+                    
+                    self.headerNode.avatarListNode.avatarContainerNode.storyData = (totalCount, unseenCount, state.hasUnseenCloseFriends && peer.id != self.context.account.peerId)
                     self.headerNode.avatarListNode.listContainerNode.storyParams = (peer, state.items.prefix(3).compactMap { item -> EngineStoryItem? in
                         switch item {
                         case let .item(item):

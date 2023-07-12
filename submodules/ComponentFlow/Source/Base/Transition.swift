@@ -1064,4 +1064,18 @@ public struct Transition {
             )
         }
     }
+    
+    public func animateContentsImage(layer: CALayer, from fromImage: CGImage, to toImage: CGImage, duration: Double, curve: Transition.Animation.Curve, completion: ((Bool) -> Void)? = nil) {
+        layer.animate(
+            from: fromImage,
+            to: toImage,
+            keyPath: "contents",
+            duration: duration,
+            delay: 0.0,
+            curve: .easeInOut,
+            removeOnCompletion: true,
+            additive: false,
+            completion: completion
+        )
+    }
 }

@@ -1187,7 +1187,7 @@ open class TextNode: ASDisplayNode {
                     if brokenLineRange.location + brokenLineRange.length > attributedString.length {
                         brokenLineRange.length = attributedString.length - brokenLineRange.location
                     }
-                    if lineRange.length == 0 {
+                    if lineRange.length == 0 && !didClipLinebreak {
                         break
                     }
                     
@@ -1202,7 +1202,11 @@ open class TextNode: ASDisplayNode {
                     
                     let truncatedTokenString: NSAttributedString
                     if let customTruncationToken {
-                        truncatedTokenString = customTruncationToken
+                        if lineRange.length == 0 && customTruncationToken.string.hasPrefix("\u{2026} ") {
+                            truncatedTokenString = customTruncationToken.attributedSubstring(from: NSRange(location: 2, length: customTruncationToken.length - 2))
+                        } else {
+                            truncatedTokenString = customTruncationToken
+                        }
                     } else {
                         var truncationTokenAttributes: [NSAttributedString.Key : AnyObject] = [:]
                         truncationTokenAttributes[NSAttributedString.Key.font] = font

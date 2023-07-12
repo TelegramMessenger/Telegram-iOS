@@ -1003,7 +1003,7 @@ public extension TelegramEngine {
                                     isEdited: item.isEdited
                                 ))
                                 if let entry = CodableEntry(updatedItem) {
-                                    currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp)
+                                    currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
                                 }
                             }
                         }
