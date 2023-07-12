@@ -1059,8 +1059,8 @@ private enum FeaturedSearchEntry: Identifiable, Comparable {
     func item(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, interaction: StickerPaneSearchInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, itemContext: StickerPaneSearchGlobalItemContext) -> GridItem {
         switch self {
         case let .sticker(_, code, stickerItem, theme):
-            return StickerPaneSearchStickerItem(context: context, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, theme: theme, selected: { node, rect in
-                interaction.sendSticker(.standalone(media: stickerItem.file), node.view, rect)
+            return StickerPaneSearchStickerItem(context: context, theme: theme, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, selected: { node, layer, rect in
+                interaction.sendSticker(.standalone(media: stickerItem.file), node.view, layer, rect)
             })
         case let .global(_, info, topItems, installed, topSeparator):
             return StickerPaneSearchGlobalItem(context: context, theme: theme, strings: strings, listAppearance: true, fillsRow: true, info: info, topItems: topItems, topSeparator: topSeparator, regularInsets: false, installed: installed, unread: false, open: {
@@ -1201,7 +1201,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
                 |> deliverOnMainQueue).start(next: { _ in
                 })
             }
-        }, sendSticker: { [weak self] file, sourceView, sourceRect in
+        }, sendSticker: { [weak self] file, sourceView, layer, sourceRect in
             if let strongSelf = self {
                 let _ = strongSelf.sendSticker?(file, sourceView, sourceRect)
             }
@@ -1521,10 +1521,10 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
 public final class StickerPaneSearchInteraction {
     public let open: (StickerPackCollectionInfo) -> Void
     public let install: (StickerPackCollectionInfo, [ItemCollectionItem], Bool) -> Void
-    public let sendSticker: (FileMediaReference, UIView, CGRect) -> Void
+    public let sendSticker: (FileMediaReference, UIView, CALayer, CGRect) -> Void
     public let getItemIsPreviewed: (StickerPackItem) -> Bool
     
-    public init(open: @escaping (StickerPackCollectionInfo) -> Void, install: @escaping (StickerPackCollectionInfo, [ItemCollectionItem], Bool) -> Void, sendSticker: @escaping (FileMediaReference, UIView, CGRect) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
+    public init(open: @escaping (StickerPackCollectionInfo) -> Void, install: @escaping (StickerPackCollectionInfo, [ItemCollectionItem], Bool) -> Void, sendSticker: @escaping (FileMediaReference, UIView, CALayer, CGRect) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
         self.open = open
         self.install = install
         self.sendSticker = sendSticker

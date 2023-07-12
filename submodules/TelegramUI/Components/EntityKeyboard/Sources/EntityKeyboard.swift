@@ -743,10 +743,11 @@ public final class EntityKeyboardComponent: Component {
                 panelHideBehavior = .hideOnScroll
             }
             
+            let isContentInFocus = component.isContentInFocus && self.searchComponent == nil
             let pagerSize = self.pagerView.update(
                 transition: transition,
                 component: AnyComponent(PagerComponent(
-                    isContentInFocus: component.isContentInFocus,
+                    isContentInFocus: isContentInFocus,
                     contentInsets: component.containerInsets,
                     contents: contents,
                     contentTopPanels: contentTopPanels,
@@ -801,7 +802,7 @@ public final class EntityKeyboardComponent: Component {
                     EntityKeyboardChildEnvironment(
                         theme: component.theme,
                         strings: component.strings,
-                        isContentInFocus: component.isContentInFocus,
+                        isContentInFocus: isContentInFocus,
                         getContentActiveItemUpdated: { id in
                             if id == AnyHashable("gifs") {
                                 return gifsContentItemIdUpdated
@@ -950,7 +951,7 @@ public final class EntityKeyboardComponent: Component {
                         }
                     )
                 }
-                //self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                
                 component.hideInputUpdated(true, true, Transition(animation: .curve(duration: 0.3, curve: .spring)))
             }
         }
