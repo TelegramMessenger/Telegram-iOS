@@ -209,7 +209,7 @@ class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
                             if let story, let selectedMedia {
                                 if mediaUpdated {
                                     if story.isForwardingDisabled {
-                                        let maxImageSize = CGSize(width: 180.0, height: 180.0)
+                                        let maxImageSize = CGSize(width: 180.0, height: 180.0).aspectFitted(imageSize)
                                         let boundingImageSize = maxImageSize
                                         
                                         var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?

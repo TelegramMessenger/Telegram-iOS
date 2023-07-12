@@ -814,7 +814,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             }
             |> deliverOnMainQueue).start(next: { exists in
                 if exists {
-                    let storyContent = SingleStoryContentContextImpl(context: context, storyId: StoryId(peerId: peerId, id: id))
+                    let storyContent = SingleStoryContentContextImpl(context: context, storyId: StoryId(peerId: peerId, id: id), readGlobally: false)
                     let _ = (storyContent.state
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak navigationController] _ in

@@ -614,7 +614,18 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
+            if let captionItemView = self.captionItem?.view.view as? StoryContentCaptionComponent.View {
+                if captionItemView.hitTest(self.convert(point, to: captionItemView), with: nil) != nil {
+                    return false
+                }
+            }
+            
             if self.controlsContainerView.frame.contains(point) {
+                if let result = self.controlsContainerView.hitTest(self.convert(point, to: self.controlsContainerView), with: nil) {
+                    if result != self.controlsContainerView {
+                        return false
+                    }
+                }
                 return true
             }
             

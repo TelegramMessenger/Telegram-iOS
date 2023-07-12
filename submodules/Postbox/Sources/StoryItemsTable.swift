@@ -4,15 +4,18 @@ public final class StoryItemsTableEntry: Equatable {
     public let value: CodableEntry
     public let id: Int32
     public let expirationTimestamp: Int32?
+    public let isCloseFriends: Bool
     
     public init(
         value: CodableEntry,
         id: Int32,
-        expirationTimestamp: Int32?
+        expirationTimestamp: Int32?,
+        isCloseFriends: Bool
     ) {
         self.value = value
         self.id = id
         self.expirationTimestamp = expirationTimestamp
+        self.isCloseFriends = isCloseFriends
     }
     
     public static func ==(lhs: StoryItemsTableEntry, rhs: StoryItemsTableEntry) -> Bool {
@@ -26,6 +29,9 @@ public final class StoryItemsTableEntry: Equatable {
             return false
         }
         if lhs.expirationTimestamp != rhs.expirationTimestamp {
+            return false
+        }
+        if lhs.isCloseFriends != rhs.isCloseFriends {
             return false
         }
         return true
@@ -133,22 +139,53 @@ final class StoryItemsTable: Table {
         return key.successor
     }
     
-    public func getStats(peerId: PeerId, maxSeenId: Int32) -> (total: Int, unseen: Int) {
+    public func getStats(peerId: PeerId, maxSeenId: Int32) -> (total: Int, unseen: Int, hasUnseenCloseFriends: Bool) {
         var total = 0
         var unseen = 0
+        var hasUnseenCloseFriends = false
         
-        self.valueBox.range(self.table, start: self.lowerBound(peerId: peerId), end: self.upperBound(peerId: peerId), keys: { key in
+        self.valueBox.range(self.table, start: self.lowerBound(peerId: peerId), end: self.upperBound(peerId: peerId), values: { key, value in
             let id = key.getInt32(8)
             
             total += 1
             if id > maxSeenId {
                 unseen += 1
+                
+                var isCloseFriends = false
+                let readBuffer = ReadBuffer(data: value.makeData())
+                var magic: UInt32 = 0
+                readBuffer.read(&magic, offset: 0, length: 4)
+                if magic == 0xabcd1234 {
+                } else if magic == 0xabcd1235 {
+                    var length: Int32 = 0
+                    readBuffer.read(&length, offset: 0, length: 4)
+                    if length > 0 && readBuffer.offset + Int(length) <= readBuffer.length {
+                        readBuffer.skip(Int(length))
+                        if readBuffer.offset + 4 <= readBuffer.length {
+                            readBuffer.skip(4)
+                            
+                            if readBuffer.offset + 1 <= readBuffer.length {
+                                var flags: UInt8 = 0
+                                readBuffer.read(&flags, offset: 0, length: 1)
+                                isCloseFriends = (flags & (1 << 0)) != 0
+                            }
+                        }
+                    } else {
+                        assertionFailure()
+                    }
+                } else {
+                    assertionFailure()
+                }
+                
+                if isCloseFriends {
+                    hasUnseenCloseFriends = true
+                }
             }
             
             return true
         }, limit: 10000)
         
-        return (total, unseen)
+        return (total, unseen, hasUnseenCloseFriends)
     }
     
     public func get(peerId: PeerId) -> [StoryItemsTableEntry] {
@@ -161,6 +198,7 @@ final class StoryItemsTable: Table {
             
             let entry: CodableEntry
             var expirationTimestamp: Int32?
+            var isCloseFriends = false
             
             let readBuffer = ReadBuffer(data: value.makeData())
             var magic: UInt32 = 0
@@ -173,16 +211,41 @@ final class StoryItemsTable: Table {
                     if readBuffer.offset + 4 <= readBuffer.length {
                         var expirationTimestampValue: Int32 = 0
                         readBuffer.read(&expirationTimestampValue, offset: 0, length: 4)
-                        expirationTimestamp = expirationTimestampValue
+                        if expirationTimestampValue != 0 {
+                            expirationTimestamp = expirationTimestampValue
+                        }
                     }
                 } else {
                     entry = CodableEntry(data: Data())
                 }
+            } else if magic == 0xabcd1235 {
+                var length: Int32 = 0
+                readBuffer.read(&length, offset: 0, length: 4)
+                if length > 0 && readBuffer.offset + Int(length) <= readBuffer.length {
+                    entry = CodableEntry(data: readBuffer.readData(length: Int(length)))
+                    if readBuffer.offset + 4 <= readBuffer.length {
+                        var expirationTimestampValue: Int32 = 0
+                        readBuffer.read(&expirationTimestampValue, offset: 0, length: 4)
+                        if expirationTimestampValue != 0 {
+                            expirationTimestamp = expirationTimestampValue
+                        }
+                        
+                        if readBuffer.offset + 1 <= readBuffer.length {
+                            var flags: UInt8 = 0
+                            readBuffer.read(&flags, offset: 0, length: 1)
+                            isCloseFriends = (flags & (1 << 0)) != 0
+                        }
+                    }
+                } else {
+                    assertionFailure()
+                    entry = CodableEntry(data: Data())
+                }
             } else {
+                assertionFailure()
                 entry = CodableEntry(data: value.makeData())
             }
             
-            result.append(StoryItemsTableEntry(value: entry, id: id, expirationTimestamp: expirationTimestamp))
+            result.append(StoryItemsTableEntry(value: entry, id: id, expirationTimestamp: expirationTimestamp, isCloseFriends: isCloseFriends))
             
             return true
         }, limit: 10000)
@@ -209,7 +272,22 @@ final class StoryItemsTable: Table {
                     if readBuffer.offset + 4 <= readBuffer.length {
                         var expirationTimestampValue: Int32 = 0
                         readBuffer.read(&expirationTimestampValue, offset: 0, length: 4)
-                        expirationTimestamp = expirationTimestampValue
+                        if expirationTimestampValue != 0 {
+                            expirationTimestamp = expirationTimestampValue
+                        }
+                    }
+                }
+            } else if magic == 0xabcd1235 {
+                var length: Int32 = 0
+                readBuffer.read(&length, offset: 0, length: 4)
+                if length > 0 && readBuffer.offset + Int(length) <= readBuffer.length {
+                    readBuffer.skip(Int(length))
+                    if readBuffer.offset + 4 <= readBuffer.length {
+                        var expirationTimestampValue: Int32 = 0
+                        readBuffer.read(&expirationTimestampValue, offset: 0, length: 4)
+                        if expirationTimestampValue != 0 {
+                            expirationTimestamp = expirationTimestampValue
+                        }
                     }
                 }
             }
@@ -244,7 +322,22 @@ final class StoryItemsTable: Table {
                     if readBuffer.offset + 4 <= readBuffer.length {
                         var expirationTimestampValue: Int32 = 0
                         readBuffer.read(&expirationTimestampValue, offset: 0, length: 4)
-                        expirationTimestamp = expirationTimestampValue
+                        if expirationTimestampValue != 0 {
+                            expirationTimestamp = expirationTimestampValue
+                        }
+                    }
+                }
+            } else if magic == 0xabcd1235 {
+                var length: Int32 = 0
+                readBuffer.read(&length, offset: 0, length: 4)
+                if length > 0 && readBuffer.offset + Int(length) <= readBuffer.length {
+                    readBuffer.skip(Int(length))
+                    if readBuffer.offset + 4 <= readBuffer.length {
+                        var expirationTimestampValue: Int32 = 0
+                        readBuffer.read(&expirationTimestampValue, offset: 0, length: 4)
+                        if expirationTimestampValue != 0 {
+                            expirationTimestamp = expirationTimestampValue
+                        }
                     }
                 }
             }
@@ -279,17 +372,21 @@ final class StoryItemsTable: Table {
         for entry in entries {
             buffer.reset()
             
-            var magic: UInt32 = 0xabcd1234
+            var magic: UInt32 = 0xabcd1235
             buffer.write(&magic, length: 4)
             
             var length: Int32 = Int32(entry.value.data.count)
             buffer.write(&length, length: 4)
             buffer.write(entry.value.data)
             
-            if let expirationTimestamp = entry.expirationTimestamp {
-                var expirationTimestampValue: Int32 = expirationTimestamp
-                buffer.write(&expirationTimestampValue, length: 4)
+            var expirationTimestampValue: Int32 = entry.expirationTimestamp ?? 0
+            buffer.write(&expirationTimestampValue, length: 4)
+            
+            var flags: UInt8 = 0
+            if entry.isCloseFriends {
+                flags |= (1 << 0)
             }
+            buffer.write(&flags, length: 1)
             
             self.valueBox.set(self.table, key: self.key(Key(peerId: peerId, id: entry.id)), value: buffer.readBufferNoCopy())
         }

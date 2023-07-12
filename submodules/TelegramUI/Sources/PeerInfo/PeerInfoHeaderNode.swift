@@ -423,7 +423,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     
     private let playbackStartDisposable = MetaDisposable()
     
-    var storyData: (hasUnseen: Bool, hasUnseenCloseFriends: Bool)?
+    var storyData: (totalCount: Int, unseenCount: Int, hasUnseenCloseFriends: Bool)?
     
     init(context: AccountContext) {
         self.context = context
@@ -464,8 +464,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
         ]
         self.avatarNode.setStoryStats(storyStats: self.storyData.flatMap { storyData in
             return AvatarNode.StoryStats(
-                totalCount: 1,
-                unseenCount: storyData.hasUnseen ? 1 : 0,
+                totalCount: storyData.totalCount,
+                unseenCount: storyData.unseenCount,
                 hasUnseenCloseFriendsItems: storyData.hasUnseenCloseFriends
             )
         }, presentationParams: AvatarNode.StoryPresentationParams(

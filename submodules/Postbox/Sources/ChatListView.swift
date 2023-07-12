@@ -260,10 +260,12 @@ public enum ChatListEntry: Comparable {
 public struct PeerStoryStats: Equatable {
     public var totalCount: Int
     public var unseenCount: Int
+    public var hasUnseenCloseFriends: Bool
     
-    public init(totalCount: Int, unseenCount: Int) {
+    public init(totalCount: Int, unseenCount: Int, hasUnseenCloseFriends: Bool) {
         self.totalCount = totalCount
         self.unseenCount = unseenCount
+        self.hasUnseenCloseFriends = hasUnseenCloseFriends
     }
 }
 
@@ -282,9 +284,9 @@ func fetchPeerStoryStats(postbox: PostboxImpl, peerId: PeerId) -> PeerStoryStats
     
     if topItems.isExact {
         let stats = postbox.storyItemsTable.getStats(peerId: peerId, maxSeenId: maxSeenId)
-        return PeerStoryStats(totalCount: stats.total, unseenCount: stats.unseen)
+        return PeerStoryStats(totalCount: stats.total, unseenCount: stats.unseen, hasUnseenCloseFriends: stats.hasUnseenCloseFriends)
     } else {
-        return PeerStoryStats(totalCount: 1, unseenCount: topItems.id > maxSeenId ? 1 : 0)
+        return PeerStoryStats(totalCount: 1, unseenCount: topItems.id > maxSeenId ? 1 : 0, hasUnseenCloseFriends: false)
     }
 }
 

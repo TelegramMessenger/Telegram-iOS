@@ -1358,7 +1358,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                                 return AvatarNode.StoryStats(
                                     totalCount: storyStats.totalCount,
                                     unseenCount: storyStats.unseenCount,
-                                    hasUnseenCloseFriendsItems: false
+                                    hasUnseenCloseFriendsItems: storyStats.hasUnseenCloseFriends
                                 )
                             }, presentationParams: AvatarNode.StoryPresentationParams(
                                 colors: AvatarNode.Colors(theme: item.presentationData.theme),

@@ -4531,7 +4531,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            let storyContent = SingleStoryContentContextImpl(context: self.context, storyId: storyId)
+            let storyContent = SingleStoryContentContextImpl(context: self.context, storyId: storyId, readGlobally: false)
             let _ = (storyContent.state
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] _ in
@@ -4556,7 +4556,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 transitionIn = StoryContainerScreen.TransitionIn(
                                     sourceView: result,
                                     sourceRect: result.bounds,
-                                    sourceCornerRadius: 2.0,
+                                    sourceCornerRadius: 6.0,
                                     sourceIsAvatar: false
                                 )
                             }
@@ -5005,9 +5005,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 return nil
                                             }
                                             return AvatarNode.StoryStats(
-                                                totalCount: storyStats.totalCount == 0 ? 0 : 1,
-                                                unseenCount: storyStats.unseenCount == 0 ? 0 : 1,
-                                                hasUnseenCloseFriendsItems: false
+                                                totalCount: storyStats.totalCount,
+                                                unseenCount: storyStats.unseenCount,
+                                                hasUnseenCloseFriendsItems: storyStats.hasUnseenCloseFriends
                                             )
                                         }, presentationParams: AvatarNode.StoryPresentationParams(
                                             colors: AvatarNode.Colors(theme: strongSelf.presentationData.theme),

@@ -697,7 +697,7 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
             storyState: entry.renderedPeer.peerId == accountPeerId ? nil : entry.storyStats.flatMap { stats -> ChatListNodeState.StoryState in
                 return ChatListNodeState.StoryState(
                     stats: stats,
-                    hasUnseenCloseFriends: false
+                    hasUnseenCloseFriends: stats.hasUnseenCloseFriends
                 )
             }
         ))

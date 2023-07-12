@@ -170,8 +170,16 @@ final class StoryItemContentComponent: Component {
                             return
                         }
                         
+                        var shouldLoop = false
                         if self.progressMode == .blurred {
+                            shouldLoop = true
+                        } else if let component = self.component, component.item.isPending {
+                            shouldLoop = true
+                        }
+                        
+                        if shouldLoop {
                             self.rewind()
+                            
                             if let videoNode = self.videoNode {
                                 if self.contentLoaded {
                                     videoNode.play()
@@ -251,12 +259,7 @@ final class StoryItemContentComponent: Component {
         
         private func updateProgressMode(update: Bool) {
             if let videoNode = self.videoNode {
-                var canPlay = self.progressMode != .pause && self.contentLoaded && self.hierarchyTrackingLayer.isInHierarchy
-                if let component = self.component {
-                    if component.item.isPending {
-                        canPlay = false
-                    }
-                }
+                let canPlay = self.progressMode != .pause && self.contentLoaded && self.hierarchyTrackingLayer.isInHierarchy
                 
                 if canPlay {
                     videoNode.play()
@@ -274,7 +277,10 @@ final class StoryItemContentComponent: Component {
             var needsTimer = self.progressMode != .pause && self.contentLoaded && self.hierarchyTrackingLayer.isInHierarchy
             if let component = self.component {
                 if component.item.isPending {
-                    needsTimer = false
+                    if case .file = self.currentMessageMedia {
+                    } else {
+                        needsTimer = false
+                    }
                 }
             }
             

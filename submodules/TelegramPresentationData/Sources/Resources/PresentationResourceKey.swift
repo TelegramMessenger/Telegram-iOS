@@ -341,4 +341,5 @@ public enum PresentationResourceParameterKey: Hashable {
     case statusAutoremoveIcon(isActive: Bool)
     
     case chatExpiredStoryIndicatorIcon(type: ChatExpiredStoryIndicatorType)
+    case chatReplyStoryIndicatorIcon(type: ChatExpiredStoryIndicatorType)
 }

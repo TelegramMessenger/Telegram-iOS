@@ -94,15 +94,15 @@ private final class StoryLongPressRecognizer: UILongPressGestureRecognizer {
     
     override var state: UIGestureRecognizer.State {
         didSet {
-            switch self.state {
-            case .began, .cancelled, .ended, .failed:
+            /*switch self.state {
+            case .cancelled, .ended, .failed:
                 if self.isTracking {
                     self.isTracking = false
-                    self.updateIsTracking?(false)
+                    self.updateIsTracking?(self.isTracking)
                 }
             default:
                 break
-            }
+            }*/
         }
     }
     
@@ -371,6 +371,8 @@ private final class StoryContainerScreenComponent: Component {
         var dismissWithoutTransitionOut: Bool = false
         
         var longPressRecognizer: StoryLongPressRecognizer?
+        
+        private var pendingNavigationToItemId: (peerId: EnginePeer.Id, id: Int32)?
         
         override init(frame: CGRect) {
             self.backgroundLayer = SimpleLayer()
@@ -971,16 +973,19 @@ private final class StoryContainerScreenComponent: Component {
                         self.commitHorizontalPan(velocity: CGPoint(x: 200.0, y: 0.0))
                     }
                 } else {
-                    let mappedDirection: StoryContentContextNavigation.ItemDirection
+                    var mappedId: Int32?
                     switch direction {
                     case .previous:
-                        mappedDirection = .previous
+                        mappedId = slice.previousItemId
                     case .next:
-                        mappedDirection = .next
+                        mappedId = slice.nextItemId
                     case let .id(id):
-                        mappedDirection = .id(id)
+                        mappedId = id
                     }
-                    component.content.navigate(navigation: .item(mappedDirection))
+                    if let mappedId {
+                        self.pendingNavigationToItemId = (slice.peer.id, mappedId)
+                        component.content.navigate(navigation: .item(.id(mappedId)))
+                    }
                 }
             }
         }
@@ -1073,6 +1078,16 @@ private final class StoryContainerScreenComponent: Component {
             self.component = component
             self.state = state
             
+            if let pendingNavigationToItemId = self.pendingNavigationToItemId {
+                if let slice = component.content.stateValue?.slice, slice.peer.id == pendingNavigationToItemId.peerId {
+                    if slice.item.storyItem.id == pendingNavigationToItemId.id {
+                        self.pendingNavigationToItemId = nil
+                    }
+                } else {
+                    self.pendingNavigationToItemId = nil
+                }
+            }
+            
             transition.setFrame(view: self.transitionCloneMasterView, frame: CGRect(origin: CGPoint(), size: availableSize))
             
             transition.setFrame(layer: self.backgroundLayer, frame: CGRect(origin: CGPoint(), size: availableSize))
@@ -1102,6 +1117,9 @@ private final class StoryContainerScreenComponent: Component {
                 isProgressPaused = true
             }
             if !environment.isVisible {
+                isProgressPaused = true
+            }
+            if self.pendingNavigationToItemId != nil {
                 isProgressPaused = true
             }
             
@@ -1291,10 +1309,21 @@ private final class StoryContainerScreenComponent: Component {
                                     
                                     switch self.audioMode {
                                     case .ambient:
-                                        self.audioMode = .on
-                                        for (_, itemSetView) in self.visibleItemSetViews {
-                                            if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
-                                                componentView.leaveAmbientMode()
+                                        if self.isMuteSwitchOn {
+                                            self.audioMode = .off
+                                            
+                                            for (_, itemSetView) in self.visibleItemSetViews {
+                                                if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                                                    componentView.enterAmbientMode(ambient: !self.isMuteSwitchOn)
+                                                }
+                                            }
+                                        } else {
+                                            self.audioMode = .on
+                                            
+                                            for (_, itemSetView) in self.visibleItemSetViews {
+                                                if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                                                    componentView.leaveAmbientMode()
+                                                }
                                             }
                                         }
                                     case .on:

@@ -360,7 +360,7 @@ public final class PeerListItemComponent: Component {
                     return AvatarNode.StoryStats(
                         totalCount: storyStats.totalCount == 0 ? 0 : 1,
                         unseenCount: storyStats.unseenCount == 0 ? 0 : 1,
-                        hasUnseenCloseFriendsItems: false
+                        hasUnseenCloseFriendsItems: storyStats.hasUnseenCloseFriends
                     )
                 }, presentationParams: AvatarNode.StoryPresentationParams(
                     colors: AvatarNode.Colors(theme: component.theme),

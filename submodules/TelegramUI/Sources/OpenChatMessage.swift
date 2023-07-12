@@ -37,7 +37,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
     if let story {
         let navigationController = params.navigationController
         let context = params.context
-        let storyContent = SingleStoryContentContextImpl(context: params.context, storyId: story.storyId)
+        let storyContent = SingleStoryContentContextImpl(context: params.context, storyId: story.storyId, readGlobally: story.isMention)
         let _ = (storyContent.state
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak navigationController] _ in

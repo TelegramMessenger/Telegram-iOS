@@ -2107,6 +2107,20 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                     } else if let action = media as? TelegramMediaAction, case let .suggestedProfilePhoto(image) = action.action, let _ = image {
                                         let fitSize = contentImageSize
                                         contentImageSpecs.append((message, .action(action), fitSize))
+                                    } else if let storyMedia = media as? TelegramMediaStory, let story = message.associatedStories[storyMedia.storyId], !story.data.isEmpty, case let .item(storyItem) = story.get(Stories.StoredItem.self) {
+                                        if let image = storyItem.media as? TelegramMediaImage {
+                                            if let _ = largestImageRepresentation(image.representations) {
+                                                let fitSize = contentImageSize
+                                                contentImageSpecs.append((message, .image(image), fitSize))
+                                            }
+                                            break inner
+                                        } else if let file = storyItem.media as? TelegramMediaFile {
+                                            if file.isVideo, !file.isInstantVideo, let _ = file.dimensions {
+                                                let fitSize = contentImageSize
+                                                contentImageSpecs.append((message, .file(file), fitSize))
+                                            }
+                                            break inner
+                                        }
                                     }
                                 }
                             }
@@ -3369,7 +3383,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     inputActivitiesApply?()
                     
-                    var mediaPreviewOffset = textNodeFrame.origin.offsetBy(dx: 1.0, dy: floor((measureLayout.size.height - contentImageSize.height) / 2.0))
+                    var mediaPreviewOffset = textNodeFrame.origin.offsetBy(dx: 1.0, dy: 1.0 + floor((measureLayout.size.height - contentImageSize.height) / 2.0))
                     
                     var messageTypeIcon: UIImage?
                     var messageTypeIconOffset = mediaPreviewOffset

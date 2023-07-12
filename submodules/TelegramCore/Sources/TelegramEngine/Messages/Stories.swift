@@ -382,6 +382,15 @@ public enum Stories {
             }
         }
         
+        public var isCloseFriends: Bool {
+            switch self {
+            case let .item(item):
+                return item.isCloseFriends
+            case .placeholder:
+                return false
+            }
+        }
+        
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             
@@ -886,7 +895,7 @@ func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId
                                                         isEdited: item.isEdited
                                                     )
                                                     if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
-                                                        items.append(StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp))
+                                                        items.append(StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends))
                                                     }
                                                     updatedItems.append(updatedItem)
                                                 }
@@ -1064,7 +1073,7 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
                 isEdited: item.isEdited
             )
             if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
-                items[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp)
+                items[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
             }
             
             updatedItems.append(updatedItem)
@@ -1191,7 +1200,7 @@ func _internal_updateStoriesArePinned(account: Account, ids: [Int32: EngineStory
                     isEdited: item.isEdited
                 )
                 if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
-                    items[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp)
+                    items[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
                 }
                 
                 updatedItems.append(updatedItem)
@@ -1661,7 +1670,7 @@ public final class EngineStoryViewListContext {
                                             isEdited: item.isEdited
                                         ))
                                         if let entry = CodableEntry(updatedItem) {
-                                            currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp)
+                                            currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
                                         }
                                     }
                                 }
@@ -1838,7 +1847,7 @@ func _internal_refreshStories(account: Account, peerId: PeerId, ids: [Int32]) ->
                 if let updatedItem = result.first(where: { $0.id == currentItems[i].id }) {
                     if case .item = updatedItem {
                         if let entry = CodableEntry(updatedItem) {
-                            currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp)
+                            currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
                         }
                     }
                 }
