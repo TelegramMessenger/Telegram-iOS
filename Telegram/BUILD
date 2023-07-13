@@ -147,7 +147,6 @@ empty_languages = [
     "pl",
     "pt",
     "tr",
-    "uk",
     "uz",
 ]
 
@@ -240,6 +239,7 @@ filegroup(
         "Telegram-iOS/en.lproj/Localizable.strings",
         "Telegram-iOS/be.lproj/Localizable.strings",
         "Telegram-iOS/ru.lproj/Localizable.strings",
+        "Telegram-iOS/uk.lproj/Localizable.strings",
     ] + [
         "{}.lproj/Localizable.strings".format(language) for language in empty_languages
     ],
