@@ -286,11 +286,13 @@ public final class AvatarStoryIndicatorComponent: Component {
             self.indicatorView.image = generateImage(CGSize(width: imageDiameter, height: imageDiameter), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 
+                context.setLineCap(.round)
+                
                 var locations: [CGFloat] = [0.0, 1.0]
                 
                 if let counters = component.counters, counters.totalCount > 1 {
                     let center = CGPoint(x: size.width * 0.5, y: size.height * 0.5)
-                    let spacing: CGFloat = 2.0
+                    let spacing: CGFloat = component.activeLineWidth * 2.0
                     let angularSpacing: CGFloat = spacing / radius
                     let circleLength = CGFloat.pi * 2.0 * radius
                     let segmentLength = (circleLength - spacing * CGFloat(counters.totalCount)) / CGFloat(counters.totalCount)

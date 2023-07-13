@@ -295,20 +295,24 @@ public enum Stories {
             case id
             case timestamp
             case expirationTimestamp
+            case isCloseFriends = "clf"
         }
         
         public let id: Int32
         public let timestamp: Int32
         public let expirationTimestamp: Int32
+        public let isCloseFriends: Bool
         
         public init(
             id: Int32,
             timestamp: Int32,
-            expirationTimestamp: Int32
+            expirationTimestamp: Int32,
+            isCloseFriends: Bool
         ) {
             self.id = id
             self.timestamp = timestamp
             self.expirationTimestamp = expirationTimestamp
+            self.isCloseFriends = isCloseFriends
         }
         
         public init(from decoder: Decoder) throws {
@@ -317,6 +321,7 @@ public enum Stories {
             self.id = try container.decode(Int32.self, forKey: .id)
             self.timestamp = try container.decode(Int32.self, forKey: .timestamp)
             self.expirationTimestamp = try container.decode(Int32.self, forKey: .expirationTimestamp)
+            self.isCloseFriends = try container.decodeIfPresent(Bool.self, forKey: .isCloseFriends) ?? false
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -325,6 +330,7 @@ public enum Stories {
             try container.encode(self.id, forKey: .id)
             try container.encode(self.timestamp, forKey: .timestamp)
             try container.encode(self.expirationTimestamp, forKey: .expirationTimestamp)
+            try container.encode(self.isCloseFriends, forKey: .isCloseFriends)
         }
         
         public static func ==(lhs: Placeholder, rhs: Placeholder) -> Bool {
@@ -335,6 +341,9 @@ public enum Stories {
                 return false
             }
             if lhs.expirationTimestamp != rhs.expirationTimestamp {
+                return false
+            }
+            if lhs.isCloseFriends != rhs.isCloseFriends {
                 return false
             }
             return true
@@ -386,8 +395,8 @@ public enum Stories {
             switch self {
             case let .item(item):
                 return item.isCloseFriends
-            case .placeholder:
-                return false
+            case let .placeholder(placeholder):
+                return placeholder.isCloseFriends
             }
         }
         
@@ -1252,7 +1261,7 @@ extension Api.StoryItem {
             return id
         case let .storyItemDeleted(id):
             return id
-        case let .storyItemSkipped(id, _, _):
+        case let .storyItemSkipped(_, id, _, _):
             return id
         }
     }
@@ -1341,8 +1350,9 @@ extension Stories.StoredItem {
             } else {
                 return nil
             }
-        case let .storyItemSkipped(id, date, expireDate):
-            self = .placeholder(Stories.Placeholder(id: id, timestamp: date, expirationTimestamp: expireDate))
+        case let .storyItemSkipped(flags, id, date, expireDate):
+            let isCloseFriends = (flags & (1 << 8)) != 0
+            self = .placeholder(Stories.Placeholder(id: id, timestamp: date, expirationTimestamp: expireDate, isCloseFriends: isCloseFriends))
         case .storyItemDeleted:
             return nil
         }

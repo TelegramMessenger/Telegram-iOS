@@ -8,7 +8,7 @@ public enum RecentPeers {
     case disabled
 }
 
-private func cachedRecentPeersEntryId() -> ItemCacheEntryId {
+func cachedRecentPeersEntryId() -> ItemCacheEntryId {
     return ItemCacheEntryId(collectionId: 101, key: CachedRecentPeers.cacheKey())
 }
 

@@ -149,14 +149,17 @@ func _internal_requestAccountPrivacySettings(account: Account) -> Signal<Account
             peerMap[peer.peer.id] = peer
         }
         
-        let automaticallyArchiveAndMuteNonContacts: Bool
+        let globalSettings: GlobalPrivacySettings
         switch globalPrivacySettings {
-        case let .globalPrivacySettings(_, archiveAndMuteNewNoncontactPeers):
-            if let archiveAndMuteNewNoncontactPeers = archiveAndMuteNewNoncontactPeers {
-                automaticallyArchiveAndMuteNonContacts = archiveAndMuteNewNoncontactPeers == .boolTrue
-            } else {
-                automaticallyArchiveAndMuteNonContacts = false
-            }
+        case let .globalPrivacySettings(flags):
+            let automaticallyArchiveAndMuteNonContacts = (flags & (1 << 0)) != 0
+            let keepArchivedUnmuted = (flags & (1 << 1)) != 0
+            let keepArchivedFolders = (flags & (1 << 2)) != 0
+            globalSettings = GlobalPrivacySettings(
+                automaticallyArchiveAndMuteNonContacts: automaticallyArchiveAndMuteNonContacts,
+                keepArchivedUnmuted: keepArchivedUnmuted,
+                keepArchivedFolders: keepArchivedFolders
+            )
         }
         
         return account.postbox.transaction { transaction -> AccountPrivacySettings in
@@ -170,14 +173,81 @@ func _internal_requestAccountPrivacySettings(account: Account) -> Signal<Account
                 return settings
             })
             
-            return AccountPrivacySettings(presence: SelectivePrivacySettings(apiRules: lastSeenRules, peers: peerMap), groupInvitations: SelectivePrivacySettings(apiRules: groupRules, peers: peerMap), voiceCalls: SelectivePrivacySettings(apiRules: voiceRules, peers: peerMap), voiceCallsP2P: SelectivePrivacySettings(apiRules: voiceP2PRules, peers: peerMap), profilePhoto: SelectivePrivacySettings(apiRules: profilePhotoRules, peers: peerMap), forwards: SelectivePrivacySettings(apiRules: forwardRules, peers: peerMap), phoneNumber: SelectivePrivacySettings(apiRules: phoneNumberRules, peers: peerMap), phoneDiscoveryEnabled: phoneDiscoveryValue, voiceMessages: SelectivePrivacySettings(apiRules: voiceMessagesRules, peers: peerMap), bio: SelectivePrivacySettings(apiRules: bioRules, peers: peerMap), automaticallyArchiveAndMuteNonContacts: automaticallyArchiveAndMuteNonContacts, accountRemovalTimeout: accountTimeoutSeconds, messageAutoremoveTimeout: messageAutoremoveSeconds)
+            updateGlobalPrivacySettings(transaction: transaction, { _ in
+                return globalSettings
+            })
+            
+            return AccountPrivacySettings(
+                presence: SelectivePrivacySettings(apiRules: lastSeenRules, peers: peerMap),
+                groupInvitations: SelectivePrivacySettings(apiRules: groupRules, peers: peerMap),
+                voiceCalls: SelectivePrivacySettings(apiRules: voiceRules, peers: peerMap),
+                voiceCallsP2P: SelectivePrivacySettings(apiRules: voiceP2PRules, peers: peerMap),
+                profilePhoto: SelectivePrivacySettings(apiRules: profilePhotoRules, peers: peerMap),
+                forwards: SelectivePrivacySettings(apiRules: forwardRules, peers: peerMap),
+                phoneNumber: SelectivePrivacySettings(apiRules: phoneNumberRules, peers: peerMap),
+                phoneDiscoveryEnabled: phoneDiscoveryValue,
+                voiceMessages: SelectivePrivacySettings(apiRules: voiceMessagesRules, peers: peerMap),
+                bio: SelectivePrivacySettings(apiRules: bioRules, peers: peerMap),
+                globalSettings: globalSettings,
+                accountRemovalTimeout: accountTimeoutSeconds,
+                messageAutoremoveTimeout: messageAutoremoveSeconds
+            )
         }
     }
 }
 
 func _internal_updateAccountAutoArchiveChats(account: Account, value: Bool) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> GlobalPrivacySettings in
+        return fetchGlobalPrivacySettings(transaction: transaction)
+    }
+    |> mapToSignal { settings -> Signal<Never, NoError> in
+        var settings = settings
+        settings.automaticallyArchiveAndMuteNonContacts = value
+        return _internal_updateGlobalPrivacySettings(account: account, settings: settings)
+    }
+}
+
+func _internal_updateAccountKeepArchivedFolders(account: Account, value: Bool) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> GlobalPrivacySettings in
+        return fetchGlobalPrivacySettings(transaction: transaction)
+    }
+    |> mapToSignal { settings -> Signal<Never, NoError> in
+        var settings = settings
+        settings.keepArchivedFolders = value
+        return _internal_updateGlobalPrivacySettings(account: account, settings: settings)
+    }
+}
+
+func _internal_updateAccountKeepArchivedUnmuted(account: Account, value: Bool) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> GlobalPrivacySettings in
+        return fetchGlobalPrivacySettings(transaction: transaction)
+    }
+    |> mapToSignal { settings -> Signal<Never, NoError> in
+        var settings = settings
+        settings.keepArchivedUnmuted = value
+        return _internal_updateGlobalPrivacySettings(account: account, settings: settings)
+    }
+}
+
+func _internal_updateGlobalPrivacySettings(account: Account, settings: GlobalPrivacySettings) -> Signal<Never, NoError> {
+    let _ = (account.postbox.transaction { transaction -> Void in
+        updateGlobalPrivacySettings(transaction: transaction, { _ in
+            return settings
+        })
+    }).start()
+    
+    var flags: Int32 = 0
+    if settings.automaticallyArchiveAndMuteNonContacts {
+        flags |= 1 << 0
+    }
+    if settings.keepArchivedUnmuted {
+        flags |= 1 << 1
+    }
+    if settings.keepArchivedFolders {
+        flags |= 1 << 2
+    }
     return account.network.request(Api.functions.account.setGlobalPrivacySettings(
-        settings: .globalPrivacySettings(flags: 1 << 0, archiveAndMuteNewNoncontactPeers: value ? .boolTrue : .boolFalse)
+        settings: .globalPrivacySettings(flags: flags)
     ))
     |> retryRequest
     |> ignoreValues

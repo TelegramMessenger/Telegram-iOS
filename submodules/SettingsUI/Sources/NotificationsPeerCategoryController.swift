@@ -444,10 +444,10 @@ private func notificationsPeerCategoryEntries(category: NotificationsPeerCategor
                                 title += ", "
                             }
                             //TODO:localize
-                            if case .show = value.settings.displayPreviews {
-                                title += "Show Names"
+                            if case .show = value.settings.storySettings.hideSender {
+                                title += "Show Name"
                             } else {
-                                title += "Hide Names"
+                                title += "Hide Name"
                             }
                         }
                     }

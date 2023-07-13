@@ -9,6 +9,11 @@ import AppBundle
 import SolidRoundedButtonNode
 import ActivityIndicator
 import AccountContext
+import TelegramCore
+import ComponentFlow
+import ArchiveInfoScreen
+import ComponentDisplayAdapters
+import SwiftSignalKit
 
 final class ChatListEmptyNode: ASDisplayNode {
     enum Subject {
@@ -19,6 +24,11 @@ final class ChatListEmptyNode: ASDisplayNode {
     }
     private let action: () -> Void
     private let secondaryAction: () -> Void
+    private let openArchiveSettings: () -> Void
+    
+    private let context: AccountContext
+    private var theme: PresentationTheme
+    private var strings: PresentationStrings
     
     let subject: Subject
     private(set) var isLoading: Bool
@@ -29,14 +39,24 @@ final class ChatListEmptyNode: ASDisplayNode {
     private let secondaryButtonNode: HighlightableButtonNode
     private let activityIndicator: ActivityIndicator
     
+    private var emptyArchive: ComponentView<Empty>?
+    
     private var animationSize: CGSize = CGSize()
     private var buttonIsHidden: Bool
     
     private var validLayout: CGSize?
     
-    init(context: AccountContext, subject: Subject, isLoading: Bool, theme: PresentationTheme, strings: PresentationStrings, action: @escaping () -> Void, secondaryAction: @escaping () -> Void) {
+    private var globalPrivacySettings: GlobalPrivacySettings = .default
+    private var archiveSettingsDisposable: Disposable?
+    
+    init(context: AccountContext, subject: Subject, isLoading: Bool, theme: PresentationTheme, strings: PresentationStrings, action: @escaping () -> Void, secondaryAction: @escaping () -> Void, openArchiveSettings: @escaping () -> Void) {
+        self.context = context
+        self.theme = theme
+        self.strings = strings
+        
         self.action = action
         self.secondaryAction = secondaryAction
+        self.openArchiveSettings = openArchiveSettings
         self.subject = subject
         self.isLoading = isLoading
         
@@ -81,16 +101,20 @@ final class ChatListEmptyNode: ASDisplayNode {
         
         super.init()
         
-        self.addSubnode(self.animationNode)
-        self.addSubnode(self.textNode)
-        self.addSubnode(self.descriptionNode)
-        self.addSubnode(self.buttonNode)
-        self.addSubnode(self.secondaryButtonNode)
-        self.addSubnode(self.activityIndicator)
-
-        self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 248, height: 248, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
         self.animationSize = CGSize(width: 124.0, height: 124.0)
-        self.animationNode.visibility = true
+        
+        if case .archive = subject {
+        } else {
+            self.addSubnode(self.animationNode)
+            self.addSubnode(self.textNode)
+            self.addSubnode(self.descriptionNode)
+            self.addSubnode(self.buttonNode)
+            self.addSubnode(self.secondaryButtonNode)
+            self.addSubnode(self.activityIndicator)
+            
+            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 248, height: 248, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+            self.animationNode.visibility = true
+        }
         
         self.animationNode.isHidden = self.isLoading
         self.textNode.isHidden = self.isLoading
@@ -108,6 +132,25 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.updateThemeAndStrings(theme: theme, strings: strings)
         
         self.animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.animationTapGesture(_:))))
+        
+        if case .archive = subject {
+            self.archiveSettingsDisposable = (context.engine.data.subscribe(
+                TelegramEngine.EngineData.Item.Configuration.GlobalPrivacy()
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] settings in
+                guard let self else {
+                    return
+                }
+                self.globalPrivacySettings = settings
+                if let size = self.validLayout {
+                    self.updateLayout(size: size, transition: .immediate)
+                }
+            })
+        }
+    }
+    
+    deinit {
+        self.archiveSettingsDisposable?.dispose()
     }
     
     @objc private func buttonPressed() {
@@ -131,6 +174,9 @@ final class ChatListEmptyNode: ASDisplayNode {
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+        self.theme = theme
+        self.strings = strings
+        
         let text: String
         var descriptionText = ""
         let buttonText: String?
@@ -184,6 +230,42 @@ final class ChatListEmptyNode: ASDisplayNode {
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
+        
+        if case .archive = self.subject {
+            let emptyArchive: ComponentView<Empty>
+            if let current = self.emptyArchive {
+                emptyArchive = current
+            } else {
+                emptyArchive = ComponentView()
+                self.emptyArchive = emptyArchive
+            }
+            let emptyArchiveSize = emptyArchive.update(
+                transition: Transition(transition),
+                component: AnyComponent(ArchiveInfoContentComponent(
+                    theme: self.theme,
+                    strings: self.strings,
+                    settings: self.globalPrivacySettings,
+                    openSettings: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.openArchiveSettings()
+                    }
+                )),
+                environment: {
+                },
+                containerSize: CGSize(width: size.width, height: size.height - 41.0)
+            )
+            if let emptyArchiveView = emptyArchive.view {
+                if emptyArchiveView.superview == nil {
+                    self.view.addSubview(emptyArchiveView)
+                }
+                transition.updateFrame(view: emptyArchiveView, frame: CGRect(origin: CGPoint(x: floor((size.width - emptyArchiveSize.width) * 0.5), y: 41.0), size: emptyArchiveSize))
+            }
+        } else if let emptyArchive = self.emptyArchive {
+            self.emptyArchive = nil
+            emptyArchive.view?.removeFromSuperview()
+        }
         
         let indicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((size.width - indicatorSize.width) / 2.0), y: floor((size.height - indicatorSize.height - 50.0) / 2.0)), size: indicatorSize))
@@ -252,6 +334,11 @@ final class ChatListEmptyNode: ASDisplayNode {
         }
         if self.secondaryButtonNode.frame.contains(point), !self.secondaryButtonNode.isHidden {
             return self.secondaryButtonNode.view.hitTest(self.view.convert(point, to: self.secondaryButtonNode.view), with: event)
+        }
+        if let emptyArchiveView = self.emptyArchive?.view {
+            if let result = emptyArchiveView.hitTest(self.view.convert(point, to: emptyArchiveView), with: event) {
+                return result
+            }
         }
         return nil
     }

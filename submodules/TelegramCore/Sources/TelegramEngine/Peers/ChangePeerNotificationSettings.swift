@@ -62,8 +62,16 @@ func _internal_togglePeerMuted(account: Account, peerId: PeerId, threadId: Int64
     }
 }
 
-public func resolvedAreStoriesMuted(globalSettings: GlobalNotificationSettingsSet, peer: Peer, peerSettings: TelegramPeerNotificationSettings?) -> Bool {
-    let defaultIsMuted = globalSettings.privateChats.storySettings.mute == .muted
+public func resolvedAreStoriesMuted(globalSettings: GlobalNotificationSettingsSet, peer: Peer, peerSettings: TelegramPeerNotificationSettings?, topSearchPeers: [PeerId]) -> Bool {
+    let defaultIsMuted: Bool
+    switch globalSettings.privateChats.storySettings.mute {
+    case .muted:
+        defaultIsMuted = true
+    case .unmuted:
+        defaultIsMuted = false
+    case .default:
+        defaultIsMuted = !topSearchPeers.prefix(5).contains(peer.id)
+    }
     switch peerSettings?.storySettings.mute {
     case .none:
         return defaultIsMuted
@@ -95,13 +103,18 @@ func _internal_togglePeerStoriesMuted(account: Account, peerId: PeerId) -> Signa
             previousSettings = TelegramPeerNotificationSettings.defaultSettings
         }
         
+        var topSearchPeers: [PeerId] = []
+        if let value = transaction.retrieveItemCacheEntry(id: cachedRecentPeersEntryId())?.get(CachedRecentPeers.self), value.enabled {
+            topSearchPeers = value.ids
+        }
+        
         let updatedSettings: TelegramPeerNotificationSettings
         var storySettings = previousSettings.storySettings
         switch previousSettings.storySettings.mute {
         case .default:
             let globalNotificationSettings = transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications)?.get(GlobalNotificationSettings.self) ?? GlobalNotificationSettings.defaultSettings
             
-            if resolvedAreStoriesMuted(globalSettings: globalNotificationSettings.effective, peer: peer, peerSettings: previousSettings) {
+            if resolvedAreStoriesMuted(globalSettings: globalNotificationSettings.effective, peer: peer, peerSettings: previousSettings, topSearchPeers: topSearchPeers) {
                 storySettings.mute = .unmuted
             } else {
                 storySettings.mute = .muted

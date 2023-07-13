@@ -309,7 +309,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: messageText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: contrainedTextSize, alignment: .natural, cutout: nil, insets: textInsets))
             
             let imageSide: CGFloat
-            imageSide = titleLayout.size.height + textLayout.size.height - 13.0
+            imageSide = titleLayout.size.height + textLayout.size.height - 12.0
             
             var applyImage: (() -> TransformImageNode)?
             if let imageDimensions = imageDimensions {
