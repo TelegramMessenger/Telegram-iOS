@@ -366,7 +366,7 @@ public extension Api {
     indirect enum StoryItem: TypeConstructorDescription {
         case storyItem(flags: Int32, id: Int32, date: Int32, expireDate: Int32, caption: String?, entities: [Api.MessageEntity]?, media: Api.MessageMedia, privacy: [Api.PrivacyRule]?, views: Api.StoryViews?)
         case storyItemDeleted(id: Int32)
-        case storyItemSkipped(id: Int32, date: Int32, expireDate: Int32)
+        case storyItemSkipped(flags: Int32, id: Int32, date: Int32, expireDate: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -398,10 +398,11 @@ public extension Api {
                     }
                     serializeInt32(id, buffer: buffer, boxed: false)
                     break
-                case .storyItemSkipped(let id, let date, let expireDate):
+                case .storyItemSkipped(let flags, let id, let date, let expireDate):
                     if boxed {
-                        buffer.appendInt32(1764886178)
+                        buffer.appendInt32(-5388013)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     serializeInt32(expireDate, buffer: buffer, boxed: false)
@@ -415,8 +416,8 @@ public extension Api {
                 return ("storyItem", [("flags", flags as Any), ("id", id as Any), ("date", date as Any), ("expireDate", expireDate as Any), ("caption", caption as Any), ("entities", entities as Any), ("media", media as Any), ("privacy", privacy as Any), ("views", views as Any)])
                 case .storyItemDeleted(let id):
                 return ("storyItemDeleted", [("id", id as Any)])
-                case .storyItemSkipped(let id, let date, let expireDate):
-                return ("storyItemSkipped", [("id", id as Any), ("date", date as Any), ("expireDate", expireDate as Any)])
+                case .storyItemSkipped(let flags, let id, let date, let expireDate):
+                return ("storyItemSkipped", [("flags", flags as Any), ("id", id as Any), ("date", date as Any), ("expireDate", expireDate as Any)])
     }
     }
     
@@ -481,11 +482,14 @@ public extension Api {
             _2 = reader.readInt32()
             var _3: Int32?
             _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.StoryItem.storyItemSkipped(id: _1!, date: _2!, expireDate: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.StoryItem.storyItemSkipped(flags: _1!, id: _2!, date: _3!, expireDate: _4!)
             }
             else {
                 return nil

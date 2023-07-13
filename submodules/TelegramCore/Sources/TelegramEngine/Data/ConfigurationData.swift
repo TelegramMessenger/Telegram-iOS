@@ -432,5 +432,26 @@ public extension TelegramEngine.EngineData.Item {
                 return EngineConfiguration.Links(value)
             }
         }
+        
+        public struct GlobalPrivacy: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = GlobalPrivacySettings
+            
+            public init() {
+            }
+            
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.globalPrivacySettings]))
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let value = view.values[PreferencesKeys.globalPrivacySettings]?.get(GlobalPrivacySettings.self) else {
+                    return GlobalPrivacySettings.default
+                }
+                return value
+            }
+        }
     }
 }

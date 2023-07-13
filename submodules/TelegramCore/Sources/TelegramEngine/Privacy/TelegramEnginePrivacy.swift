@@ -24,9 +24,21 @@ public extension TelegramEngine {
         public func requestAccountPrivacySettings() -> Signal<AccountPrivacySettings, NoError> {
             return _internal_requestAccountPrivacySettings(account: self.account)
         }
-
+        
         public func updateAccountAutoArchiveChats(value: Bool) -> Signal<Never, NoError> {
             return _internal_updateAccountAutoArchiveChats(account: self.account, value: value)
+        }
+        
+        public func updateAccountKeepArchivedFolders(value: Bool) -> Signal<Never, NoError> {
+            return _internal_updateAccountKeepArchivedFolders(account: self.account, value: value)
+        }
+        
+        public func updateAccountKeepArchivedUnmuted(value: Bool) -> Signal<Never, NoError> {
+            return _internal_updateAccountKeepArchivedUnmuted(account: self.account, value: value)
+        }
+
+        public func updateGlobalPrivacySettings(settings: GlobalPrivacySettings) -> Signal<Never, NoError> {
+            return _internal_updateGlobalPrivacySettings(account: self.account, settings: settings)
         }
 
         public func updateAccountRemovalTimeout(timeout: Int32) -> Signal<Void, NoError> {

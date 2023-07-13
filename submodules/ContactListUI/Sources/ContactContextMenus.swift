@@ -20,9 +20,10 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
         TelegramEngine.EngineData.Item.Peer.AreVoiceCallsAvailable(id: peerId),
         TelegramEngine.EngineData.Item.Peer.AreVideoCallsAvailable(id: peerId),
         TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peerId),
-        TelegramEngine.EngineData.Item.NotificationSettings.Global()
+        TelegramEngine.EngineData.Item.NotificationSettings.Global(),
+        TelegramEngine.EngineData.Item.Contacts.Top()
     )
-    |> map { [weak contactsController] peer, areVoiceCallsAvailable, areVideoCallsAvailable, notificationSettings, globalSettings -> [ContextMenuItem] in
+    |> map { [weak contactsController] peer, areVoiceCallsAvailable, areVideoCallsAvailable, notificationSettings, globalSettings, topSearchPeers -> [ContextMenuItem] in
         guard let peer else {
             return []
         }
@@ -47,7 +48,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
                 })
             })))
             
-            let isMuted = resolvedAreStoriesMuted(globalSettings: globalSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: notificationSettings._asNotificationSettings())
+            let isMuted = resolvedAreStoriesMuted(globalSettings: globalSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: notificationSettings._asNotificationSettings(), topSearchPeers: topSearchPeers)
             
             items.append(.action(ContextMenuActionItem(text: isMuted ? "Notify" : "Don't Notify", icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)

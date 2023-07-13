@@ -341,6 +341,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
     private let becameEmpty: (ChatListFilter?) -> Void
     private let emptyAction: (ChatListFilter?) -> Void
     private let secondaryEmptyAction: () -> Void
+    private let openArchiveSettings: () -> Void
     private let isInlineMode: Bool
     
     private var floatingHeaderOffset: CGFloat?
@@ -362,7 +363,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
     
     private(set) var validLayout: (size: CGSize, insets: UIEdgeInsets, visualNavigationHeight: CGFloat, originalNavigationHeight: CGFloat, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat, storiesInset: CGFloat)?
     
-    init(context: AccountContext, controller: ChatListControllerImpl?, location: ChatListControllerLocation, filter: ChatListFilter?, chatListMode: ChatListNodeMode, previewing: Bool, isInlineMode: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, becameEmpty: @escaping (ChatListFilter?) -> Void, emptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void, autoSetReady: Bool) {
+    init(context: AccountContext, controller: ChatListControllerImpl?, location: ChatListControllerLocation, filter: ChatListFilter?, chatListMode: ChatListNodeMode, previewing: Bool, isInlineMode: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, becameEmpty: @escaping (ChatListFilter?) -> Void, emptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void, openArchiveSettings: @escaping () -> Void, autoSetReady: Bool) {
         self.context = context
         self.controller = controller
         self.location = location
@@ -372,6 +373,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
         self.becameEmpty = becameEmpty
         self.emptyAction = emptyAction
         self.secondaryEmptyAction = secondaryEmptyAction
+        self.openArchiveSettings = openArchiveSettings
         self.isInlineMode = isInlineMode
         
         self.listNode = ChatListNode(context: context, location: location, chatListFilter: filter, previewing: previewing, fillPreloadItems: controlsHistoryPreload, mode: chatListMode, theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: animationCache, animationRenderer: animationRenderer, disableAnimations: true, isInlineMode: isInlineMode, autoSetReady: autoSetReady)
@@ -446,9 +448,11 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                         self?.emptyAction(filter)
                     }, secondaryAction: {
                         self?.secondaryEmptyAction()
+                    }, openArchiveSettings: {
+                        self?.openArchiveSettings()
                     })
                     strongSelf.emptyNode = emptyNode
-                    strongSelf.addSubnode(emptyNode)
+                    strongSelf.listNode.addSubnode(emptyNode)
                     if let (size, insets, _, _, _, _, _) = strongSelf.validLayout {
                         let emptyNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
                         emptyNode.frame = emptyNodeFrame
@@ -752,6 +756,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
     private let filterBecameEmpty: (ChatListFilter?) -> Void
     private let filterEmptyAction: (ChatListFilter?) -> Void
     private let secondaryEmptyAction: () -> Void
+    private let openArchiveSettings: () -> Void
     
     fileprivate var onStoriesLockedUpdated: ((Bool) -> Void)?
     
@@ -1086,7 +1091,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
     var canExpandHiddenItems: (() -> Bool)?
     public var displayFilterLimit: (() -> Void)?
     
-    public init(context: AccountContext, controller: ChatListControllerImpl?, location: ChatListControllerLocation, chatListMode: ChatListNodeMode = .chatList(appendContacts: true), previewing: Bool, controlsHistoryPreload: Bool, isInlineMode: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, filterBecameEmpty: @escaping (ChatListFilter?) -> Void, filterEmptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void) {
+    public init(context: AccountContext, controller: ChatListControllerImpl?, location: ChatListControllerLocation, chatListMode: ChatListNodeMode = .chatList(appendContacts: true), previewing: Bool, controlsHistoryPreload: Bool, isInlineMode: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, filterBecameEmpty: @escaping (ChatListFilter?) -> Void, filterEmptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void, openArchiveSettings: @escaping () -> Void) {
         self.context = context
         self.controller = controller
         self.location = location
@@ -1096,6 +1101,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
         self.filterBecameEmpty = filterBecameEmpty
         self.filterEmptyAction = filterEmptyAction
         self.secondaryEmptyAction = secondaryEmptyAction
+        self.openArchiveSettings = openArchiveSettings
         self.controlsHistoryPreload = controlsHistoryPreload
         
         self.presentationData = presentationData
@@ -1118,6 +1124,8 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             self?.filterEmptyAction(filter)
         }, secondaryEmptyAction: { [weak self] in
             self?.secondaryEmptyAction()
+        }, openArchiveSettings: { [weak self] in
+            self?.openArchiveSettings()
         }, autoSetReady: true)
         self.itemNodes[.all] = itemNode
         self.addSubnode(itemNode)
@@ -1460,6 +1468,8 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                     self?.filterEmptyAction(filter)
                 }, secondaryEmptyAction: { [weak self] in
                     self?.secondaryEmptyAction()
+                }, openArchiveSettings: { [weak self] in
+                    self?.openArchiveSettings()
                 }, autoSetReady: !animated)
                 let disposable = MetaDisposable()
                 self.pendingItemNode = (id, itemNode, disposable)
@@ -1590,6 +1600,8 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                         self?.filterEmptyAction(filter)
                     }, secondaryEmptyAction: { [weak self] in
                         self?.secondaryEmptyAction()
+                    }, openArchiveSettings: { [weak self] in
+                        self?.openArchiveSettings()
                     }, autoSetReady: false)
                     itemNode.listNode.tempTopInset = self.tempTopInset
                     self.itemNodes[id] = itemNode
@@ -1724,12 +1736,15 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         var filterBecameEmpty: ((ChatListFilter?) -> Void)?
         var filterEmptyAction: ((ChatListFilter?) -> Void)?
         var secondaryEmptyAction: (() -> Void)?
+        var openArchiveSettings: (() -> Void)?
         self.mainContainerNode = ChatListContainerNode(context: context, controller: controller, location: location, previewing: previewing, controlsHistoryPreload: controlsHistoryPreload, isInlineMode: false, presentationData: presentationData, animationCache: animationCache, animationRenderer: animationRenderer, filterBecameEmpty: { filter in
             filterBecameEmpty?(filter)
         }, filterEmptyAction: { filter in
             filterEmptyAction?(filter)
         }, secondaryEmptyAction: {
             secondaryEmptyAction?()
+        }, openArchiveSettings: {
+            openArchiveSettings?()
         })
         
         self.controller = controller
@@ -1781,6 +1796,13 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             
             let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(previewing: false))
             (controller.navigationController as? NavigationController)?.replaceController(controller, with: chatController, animated: false)
+        }
+        
+        openArchiveSettings = { [weak self] in
+            guard let self, let controller = self.controller else {
+                return
+            }
+            controller.push(self.context.sharedContext.makeArchiveSettingsController(context: self.context))
         }
         
         self.mainContainerNode.onFilterSwitch = { [weak self] in
@@ -2433,7 +2455,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             forumPeerId = peerId
         }
         
-        let inlineStackContainerNode = ChatListContainerNode(context: self.context, controller: self.controller, location: location, previewing: false, controlsHistoryPreload: false, isInlineMode: true, presentationData: self.presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filterBecameEmpty: { _ in }, filterEmptyAction: { [weak self] _ in self?.emptyListAction?(forumPeerId) }, secondaryEmptyAction: {})
+        let inlineStackContainerNode = ChatListContainerNode(context: self.context, controller: self.controller, location: location, previewing: false, controlsHistoryPreload: false, isInlineMode: true, presentationData: self.presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filterBecameEmpty: { _ in }, filterEmptyAction: { [weak self] _ in self?.emptyListAction?(forumPeerId) }, secondaryEmptyAction: {}, openArchiveSettings: {})
         return inlineStackContainerNode
     }
     

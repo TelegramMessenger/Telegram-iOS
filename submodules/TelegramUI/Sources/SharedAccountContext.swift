@@ -1728,6 +1728,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return PeerInfoStoryGridScreen(context: context, peerId: context.account.peerId, scope: isArchive ? .archive : .saved)
     }
     
+    public func makeArchiveSettingsController(context: AccountContext) -> ViewController {
+        return archiveSettingsController(context: context)
+    }
+    
     public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController {
         let mappedSource: PremiumSource
         switch source {

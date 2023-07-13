@@ -48,6 +48,7 @@ import ChatFolderLinkPreviewScreen
 import StoryContainerScreen
 import FullScreenEffectView
 import PeerInfoStoryGridScreen
+import ArchiveInfoScreen
 
 private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
     let controller: ViewController
@@ -2666,9 +2667,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 
                 let _ = (self.context.engine.data.get(
                     TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peer.id),
-                    TelegramEngine.EngineData.Item.NotificationSettings.Global()
+                    TelegramEngine.EngineData.Item.NotificationSettings.Global(),
+                    TelegramEngine.EngineData.Item.Contacts.Top()
                 )
-                |> deliverOnMainQueue).start(next: { [weak self] notificationSettings, globalSettings in
+                |> deliverOnMainQueue).start(next: { [weak self] notificationSettings, globalSettings, topSearchPeers in
                     guard let self else {
                         return
                     }
@@ -2748,7 +2750,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             })
                         })))
                         
-                        let isMuted = resolvedAreStoriesMuted(globalSettings: globalSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: notificationSettings._asNotificationSettings())
+                        let isMuted = resolvedAreStoriesMuted(globalSettings: globalSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: notificationSettings._asNotificationSettings(), topSearchPeers: topSearchPeers)
                         items.append(.action(ContextMenuActionItem(text: isMuted ? "Notify" : "Don't Notify", icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
@@ -3257,6 +3259,65 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: sourceController, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             sourceController.presentInGlobalOverlay(contextController)
+        })
+    }
+    
+    func openArchiveMoreMenu(sourceView: UIView, gesture: ContextGesture?) {
+        let _ = (
+            self.context.engine.messages.chatList(group: .archive, count: 10) |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] archiveChatList in
+            guard let self else {
+                return
+            }
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            
+            var items: [ContextMenuItem] = []
+            
+            //TODO:localize
+            items.append(.action(ContextMenuActionItem(text: "Archive Settings", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Customize"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] _, a in
+                a(.default)
+                
+                guard let self else {
+                    return
+                }
+                self.push(self.context.sharedContext.makeArchiveSettingsController(context: self.context))
+            })))
+            
+            if !archiveChatList.items.isEmpty {
+                items.append(.action(ContextMenuActionItem(text: "How Does It Work?", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/Question"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, a in
+                    a(.default)
+                    
+                    guard let self else {
+                        return
+                    }
+                    let _ = (self.context.engine.data.get(
+                        TelegramEngine.EngineData.Item.Configuration.GlobalPrivacy()
+                    )
+                    |> deliverOnMainQueue).start(next: { [weak self] settings in
+                        guard let self else {
+                            return
+                        }
+                        self.push(ArchiveInfoScreen(context: self.context, settings: settings))
+                    })
+                })))
+                items.append(.action(ContextMenuActionItem(text: "Select Chats", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, a in
+                    a(.default)
+                    
+                    guard let self else {
+                        return
+                    }
+                    self.editPressed()
+                })))
+            }
+
+            let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            self.presentInGlobalOverlay(contextController)
         })
     }
     
@@ -5953,10 +6014,19 @@ private final class ChatListLocationContext {
                     self.storyButton = nil
                 }
             } else {
-                self.rightButton = AnyComponentWithIdentity(id: "edit", component: AnyComponent(NavigationButtonComponent(
-                    content: .text(title: presentationData.strings.Common_Edit, isBold: false),
-                    pressed: { [weak self] _ in
-                        self?.parentController?.editPressed()
+                let parentController = self.parentController
+                self.rightButton = AnyComponentWithIdentity(id: "more", component: AnyComponent(NavigationButtonComponent(
+                    content: .more,
+                    pressed: { [weak parentController] sourceView in
+                        if let primaryContext = parentController?.primaryContext {
+                            primaryContext.performMoreAction(sourceView: sourceView)
+                        }
+                    },
+                    contextAction: { [weak self] sourceView, gesture in
+                        guard let self, let parentController = self.parentController else {
+                            return
+                        }
+                        parentController.openArchiveMoreMenu(sourceView: sourceView, gesture: gesture)
                     }
                 )))
             }
@@ -6147,8 +6217,10 @@ private final class ChatListLocationContext {
             return
         }
         switch self.location {
-        case .chatList:
-            break
+        case let .chatList(mode):
+            if case .archive = mode {
+                parentController.openArchiveMoreMenu(sourceView: sourceView, gesture: nil)
+            }
         case let .forum(peerId):
             ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: parentController, isViewingAsTopics: true, sourceView: sourceView, gesture: nil)
         }

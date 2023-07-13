@@ -107,11 +107,11 @@ public struct AccountPrivacySettings: Equatable {
     public let voiceMessages: SelectivePrivacySettings
     public let bio: SelectivePrivacySettings
     
-    public let automaticallyArchiveAndMuteNonContacts: Bool
+    public let globalSettings: GlobalPrivacySettings
     public let accountRemovalTimeout: Int32
     public let messageAutoremoveTimeout: Int32?
     
-    public init(presence: SelectivePrivacySettings, groupInvitations: SelectivePrivacySettings, voiceCalls: SelectivePrivacySettings, voiceCallsP2P: SelectivePrivacySettings, profilePhoto: SelectivePrivacySettings, forwards: SelectivePrivacySettings, phoneNumber: SelectivePrivacySettings, phoneDiscoveryEnabled: Bool, voiceMessages: SelectivePrivacySettings, bio: SelectivePrivacySettings, automaticallyArchiveAndMuteNonContacts: Bool, accountRemovalTimeout: Int32, messageAutoremoveTimeout: Int32?) {
+    public init(presence: SelectivePrivacySettings, groupInvitations: SelectivePrivacySettings, voiceCalls: SelectivePrivacySettings, voiceCallsP2P: SelectivePrivacySettings, profilePhoto: SelectivePrivacySettings, forwards: SelectivePrivacySettings, phoneNumber: SelectivePrivacySettings, phoneDiscoveryEnabled: Bool, voiceMessages: SelectivePrivacySettings, bio: SelectivePrivacySettings, globalSettings: GlobalPrivacySettings, accountRemovalTimeout: Int32, messageAutoremoveTimeout: Int32?) {
         self.presence = presence
         self.groupInvitations = groupInvitations
         self.voiceCalls = voiceCalls
@@ -122,7 +122,7 @@ public struct AccountPrivacySettings: Equatable {
         self.phoneDiscoveryEnabled = phoneDiscoveryEnabled
         self.voiceMessages = voiceMessages
         self.bio = bio
-        self.automaticallyArchiveAndMuteNonContacts = automaticallyArchiveAndMuteNonContacts
+        self.globalSettings = globalSettings
         self.accountRemovalTimeout = accountRemovalTimeout
         self.messageAutoremoveTimeout = messageAutoremoveTimeout
     }
@@ -158,7 +158,7 @@ public struct AccountPrivacySettings: Equatable {
         if lhs.bio != rhs.bio {
             return false
         }
-        if lhs.automaticallyArchiveAndMuteNonContacts != rhs.automaticallyArchiveAndMuteNonContacts {
+        if lhs.globalSettings != rhs.globalSettings {
             return false
         }
         if lhs.accountRemovalTimeout != rhs.accountRemovalTimeout {
@@ -242,6 +242,40 @@ public struct GlobalMessageAutoremoveTimeoutSettings: Equatable, Codable {
 func updateGlobalMessageAutoremoveTimeoutSettings(transaction: Transaction, _ f: (GlobalMessageAutoremoveTimeoutSettings) -> GlobalMessageAutoremoveTimeoutSettings) {
     transaction.updatePreferencesEntry(key: PreferencesKeys.globalMessageAutoremoveTimeoutSettings, { current in
         let previous = current?.get(GlobalMessageAutoremoveTimeoutSettings.self) ?? GlobalMessageAutoremoveTimeoutSettings.default
+        let updated = f(previous)
+        return PreferencesEntry(updated)
+    })
+}
+
+public struct GlobalPrivacySettings: Equatable, Codable {
+    public static var `default` = GlobalPrivacySettings(
+        automaticallyArchiveAndMuteNonContacts: false,
+        keepArchivedUnmuted: true,
+        keepArchivedFolders: true
+    )
+
+    public var automaticallyArchiveAndMuteNonContacts: Bool
+    public var keepArchivedUnmuted: Bool
+    public var keepArchivedFolders: Bool
+
+    public init(
+        automaticallyArchiveAndMuteNonContacts: Bool,
+        keepArchivedUnmuted: Bool,
+        keepArchivedFolders: Bool
+    ) {
+        self.automaticallyArchiveAndMuteNonContacts = automaticallyArchiveAndMuteNonContacts
+        self.keepArchivedUnmuted = keepArchivedUnmuted
+        self.keepArchivedFolders = keepArchivedFolders
+    }
+}
+
+func fetchGlobalPrivacySettings(transaction: Transaction) -> GlobalPrivacySettings {
+    return transaction.getPreferencesEntry(key: PreferencesKeys.globalPrivacySettings)?.get(GlobalPrivacySettings.self) ?? GlobalPrivacySettings.default
+}
+
+func updateGlobalPrivacySettings(transaction: Transaction, _ f: (GlobalPrivacySettings) -> GlobalPrivacySettings) {
+    transaction.updatePreferencesEntry(key: PreferencesKeys.globalPrivacySettings, { current in
+        let previous = current?.get(GlobalPrivacySettings.self) ?? GlobalPrivacySettings.default
         let updated = f(previous)
         return PreferencesEntry(updated)
     })

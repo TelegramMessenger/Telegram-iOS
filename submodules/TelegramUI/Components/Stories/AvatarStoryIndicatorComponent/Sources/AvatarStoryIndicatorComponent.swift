@@ -286,6 +286,8 @@ public final class AvatarStoryIndicatorComponent: Component {
             self.indicatorView.image = generateImage(CGSize(width: imageDiameter, height: imageDiameter), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 
+                context.setLineCap(.round)
+                
                 var locations: [CGFloat] = [0.0, 1.0]
                 
                 if let counters = component.counters, counters.totalCount > 1 {
