@@ -254,7 +254,7 @@ final class ChatListEmptyNode: ASDisplayNode {
                 )),
                 environment: {
                 },
-                containerSize: CGSize(width: size.width, height: 1000.0)
+                containerSize: CGSize(width: size.width, height: size.height - 41.0)
             )
             if let emptyArchiveView = emptyArchive.view {
                 if emptyArchiveView.superview == nil {
