@@ -221,7 +221,10 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
             if let strongSelf = self {
                 strongSelf.view.window?.endEditing(true)
                 let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
-                let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.interaction.getNavigationController(), sendSticker: { [weak self] fileReference, sourceNode, sourceRect in
+                
+                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: theme)
+                
+                let controller = StickerPackScreen(context: strongSelf.context, updatedPresentationData: (presentationData, .single(presentationData)), mainStickerPack: packReference, stickerPacks: [packReference], actionTitle: stickerActionTitle, parentNavigationController: strongSelf.interaction.getNavigationController(), sendSticker: { [weak self] fileReference, sourceNode, sourceRect in
                     if let strongSelf = self {
                         return strongSelf.interaction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil, [])
                     } else {

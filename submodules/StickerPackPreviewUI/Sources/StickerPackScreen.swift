@@ -464,13 +464,16 @@ private final class StickerPackContainer: ASDisplayNode {
                             var menuItems: [ContextMenuItem] = []
                             if let (info, _, _) = strongSelf.currentStickerPack, info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
                                 if strongSelf.sendSticker != nil {
+                                    var iconName: String
                                     let actionTitle: String
                                     if let title = strongSelf.controller?.actionTitle {
                                         actionTitle = title
+                                        iconName = "Chat/Context Menu/Add"
                                     } else {
                                         actionTitle = strongSelf.presentationData.strings.StickerPack_Send
+                                        iconName = "Chat/Context Menu/Resend"
                                     }
-                                    menuItems.append(.action(ContextMenuActionItem(text: actionTitle, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                    menuItems.append(.action(ContextMenuActionItem(text: actionTitle, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: iconName), color: theme.contextMenu.primaryColor) }, action: { _, f in
                                         if let strongSelf = self, let peekController = strongSelf.peekController {
                                             if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
                                                 let _ = strongSelf.sendSticker?(.standalone(media: item.file), animationNode.view, animationNode.bounds)

@@ -3862,7 +3862,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if let self {
                     makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image ?? UIImage(), dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] coverImage in
                         if let self {
-                            Logger.shared.log("Media Editor", "completed with video \(videoResult)")
+                            Logger.shared.log("MediaEditor", "Completed with video \(videoResult)")
                             self.completion(randomId, .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions), caption, self.state.privacy, stickers, { [weak self] finished in
                                 self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                     self?.dismiss()
@@ -3885,7 +3885,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 
                 makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] resultImage in
                     if let self, let resultImage {
-                        Logger.shared.log("Media Editor", "completed with image \(resultImage)")
+                        Logger.shared.log("MediaEditor", "Completed with image \(resultImage)")
                         self.completion(randomId, .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), caption, self.state.privacy, stickers, { [weak self] finished in
                             self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                 self?.dismiss()

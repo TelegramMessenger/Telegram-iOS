@@ -289,7 +289,7 @@ private final class StickerSelectionComponent: Component {
                             interaction: interaction,
                             inputNodeInteraction: inputNodeInteraction,
                             mode: mappedMode,
-                            stickerActionTitle: presentationData.strings.StickerPack_Select,
+                            stickerActionTitle: presentationData.strings.StickerPack_AddSticker,
                             trendingGifsPromise: trendingGifsPromise,
                             cancel: {
                             },

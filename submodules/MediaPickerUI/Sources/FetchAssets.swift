@@ -261,6 +261,7 @@ func assetImage(asset: PHAsset, targetSize: CGSize, exact: Bool, deliveryMode: P
             
             if let info = info {
                 if let cancelled = info[PHImageCancelledKey] as? Bool, cancelled {
+                    subscriber.putCompletion()
                     return
                 }
                 if let degradedValue = info[PHImageResultIsDegradedKey] as? Bool, degradedValue {
