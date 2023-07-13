@@ -115,6 +115,7 @@ final class MediaEditorComposer {
             var pixelBuffer: CVPixelBuffer?
             CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &pixelBuffer)
             
+            
             if let pixelBuffer {
                 processImage(inputImage: ciImage, time: time, completion: { compositedImage in
                     if var compositedImage {
