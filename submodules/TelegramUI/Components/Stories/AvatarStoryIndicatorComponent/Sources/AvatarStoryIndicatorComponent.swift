@@ -292,7 +292,7 @@ public final class AvatarStoryIndicatorComponent: Component {
                 
                 if let counters = component.counters, counters.totalCount > 1 {
                     let center = CGPoint(x: size.width * 0.5, y: size.height * 0.5)
-                    let spacing: CGFloat = 2.0
+                    let spacing: CGFloat = component.activeLineWidth * 2.0
                     let angularSpacing: CGFloat = spacing / radius
                     let circleLength = CGFloat.pi * 2.0 * radius
                     let segmentLength = (circleLength - spacing * CGFloat(counters.totalCount)) / CGFloat(counters.totalCount)
