@@ -553,15 +553,17 @@ public final class MediaEditorVideoExport {
             }
         }
     }
+
+    private var imageArguments: (duration: Double, frameRate: Double, position: CMTime)?
     
     private func encodeImageVideo() -> Bool {
-        guard let writer = self.writer, let composer = self.composer, case let .image(image) = self.subject else {
+        guard let writer = self.writer, let composer = self.composer, case let .image(image) = self.subject, let imageArguments = self.imageArguments else {
             return false
         }
-    
-        let duration: Double = 5.0
-        let frameRate: Double = Double(self.configuration.frameRate)
-        var position: CMTime = CMTime(value: 0, timescale: Int32(frameRate))
+        
+        let duration = imageArguments.duration
+        let frameRate = imageArguments.frameRate
+        var position = imageArguments.position
         
         var appendFailed = false
         while writer.isReadyForMoreVideoData {
@@ -580,15 +582,10 @@ public final class MediaEditorVideoExport {
             composer.processImage(inputImage: image, pool: writer.pixelBufferPool, time: position, completion: { pixelBuffer in
                 if let pixelBuffer {
                     if !writer.appendPixelBuffer(pixelBuffer, at: position) {
-                        Logger.shared.log("VideoExport", "Failed to append pixelbuffer at \(position.seconds), trying to wait")
-                        Queue.concurrentDefaultQueue().after(1.0, {
-                            if !writer.appendPixelBuffer(pixelBuffer, at: position) {
-                                Logger.shared.log("VideoExport", "Failed to append pixelbuffer at \(position.seconds), complete failure")
-                                writer.markVideoAsFinished()
-                                appendFailed = true
-                                self.semaphore.signal()
-                            }
-                        })
+                        Logger.shared.log("VideoExport", "Failed to append pixelbuffer at \(position.seconds), stopping")
+                        writer.markVideoAsFinished()
+                        appendFailed = true
+                        self.semaphore.signal()
                     } else {
                         Logger.shared.log("VideoExport", "Appended pixelbuffer at \(position.seconds)")
                         
@@ -611,6 +608,9 @@ public final class MediaEditorVideoExport {
                 return false
             }
         }
+        
+        self.imageArguments = (duration, frameRate, position)
+        
         return true
     }
     
@@ -750,6 +750,8 @@ public final class MediaEditorVideoExport {
         self.internalStatus = .exporting
         
         writer.startSession(atSourceTime: .zero)
+        
+        self.imageArguments = (5.0, Double(self.configuration.frameRate), CMTime(value: 0, timescale: Int32(self.configuration.frameRate)))
         
         var exportForVideoOutput: MediaEditorVideoExport? = self
         writer.requestVideoDataWhenReady(on: self.queue.queue) {
