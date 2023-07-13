@@ -3790,7 +3790,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let videoTrimRange = mediaEditor.values.videoTrimRange {
                         duration = videoTrimRange.upperBound - videoTrimRange.lowerBound
                     } else {
-                        duration = asset.duration
+                        duration = min(asset.duration, storyMaxVideoDuration)
                     }
                 } else {
                     duration = 5.0
@@ -3826,7 +3826,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let videoTrimRange = mediaEditor.values.videoTrimRange {
                         duration = videoTrimRange.upperBound - videoTrimRange.lowerBound
                     } else {
-                        duration = draft.duration ?? 5.0
+                        duration = min(draft.duration ?? 5.0, storyMaxVideoDuration)
                     }
                     firstFrame = Signal<UIImage?, NoError> { subscriber in
                         let avAsset = AVURLAsset(url: URL(fileURLWithPath: draft.fullPath()))
