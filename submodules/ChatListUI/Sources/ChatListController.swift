@@ -1069,6 +1069,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return
             }
             
+            let _ = self.context.engine.privacy.updateGlobalPrivacySettings().start()
             let _ = (combineLatest(
                 ApplicationSpecificNotice.displayChatListArchiveTooltip(accountManager: self.context.sharedContext.accountManager),
                 self.context.engine.data.get(
@@ -3280,6 +3281,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     func openArchiveMoreMenu(sourceView: UIView, gesture: ContextGesture?) {
+        let _ = self.context.engine.privacy.updateGlobalPrivacySettings().start()
+        
         let _ = (
             self.context.engine.messages.chatList(group: .archive, count: 10) |> take(1)
         |> deliverOnMainQueue).start(next: { [weak self] archiveChatList in

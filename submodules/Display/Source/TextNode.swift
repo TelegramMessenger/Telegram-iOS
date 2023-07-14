@@ -38,6 +38,18 @@ private final class TextNodeEmbeddedItem {
     }
 }
 
+private final class TextNodeAttachment {
+    let range: NSRange
+    let frame: CGRect
+    let attachment: UIImage
+    
+    init(range: NSRange, frame: CGRect, attachment: UIImage) {
+        self.range = range
+        self.frame = frame
+        self.attachment = attachment
+    }
+}
+
 public struct TextRangeRectEdge: Equatable {
     public var x: CGFloat
     public var y: CGFloat
@@ -59,8 +71,9 @@ private final class TextNodeLine {
     let spoilers: [TextNodeSpoiler]
     let spoilerWords: [TextNodeSpoiler]
     let embeddedItems: [TextNodeEmbeddedItem]
+    let attachments: [TextNodeAttachment]
     
-    init(line: CTLine, frame: CGRect, range: NSRange, isRTL: Bool, strikethroughs: [TextNodeStrikethrough], spoilers: [TextNodeSpoiler], spoilerWords: [TextNodeSpoiler], embeddedItems: [TextNodeEmbeddedItem]) {
+    init(line: CTLine, frame: CGRect, range: NSRange, isRTL: Bool, strikethroughs: [TextNodeStrikethrough], spoilers: [TextNodeSpoiler], spoilerWords: [TextNodeSpoiler], embeddedItems: [TextNodeEmbeddedItem], attachments: [TextNodeAttachment]) {
         self.line = line
         self.frame = frame
         self.range = range
@@ -69,6 +82,7 @@ private final class TextNodeLine {
         self.spoilers = spoilers
         self.spoilerWords = spoilerWords
         self.embeddedItems = embeddedItems
+        self.attachments = attachments
     }
 }
 
@@ -1084,6 +1098,7 @@ open class TextNode: ASDisplayNode {
                 var spoilers: [TextNodeSpoiler] = []
                 var spoilerWords: [TextNodeSpoiler] = []
                 var embeddedItems: [TextNodeEmbeddedItem] = []
+                var attachments: [TextNodeAttachment] = []
                 
                 var lineConstrainedWidth = constrainedSize.width
                 var lineConstrainedWidthDelta: CGFloat = 0.0
@@ -1157,6 +1172,24 @@ open class TextNode: ASDisplayNode {
                     }
                     
                     embeddedItems.append(TextNodeEmbeddedItem(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), item: item))
+                }
+                
+                func addAttachment(attachment: UIImage, line: CTLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
+                    var secondaryLeftOffset: CGFloat = 0.0
+                    let rawLeftOffset = CTLineGetOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
+                    var leftOffset = floor(rawLeftOffset)
+                    if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
+                        leftOffset = floor(secondaryLeftOffset)
+                    }
+                    
+                    var secondaryRightOffset: CGFloat = 0.0
+                    let rawRightOffset = CTLineGetOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
+                    var rightOffset = ceil(rawRightOffset)
+                    if !rawRightOffset.isEqual(to: secondaryRightOffset) {
+                        rightOffset = ceil(secondaryRightOffset)
+                    }
+                    
+                    attachments.append(TextNodeAttachment(range: NSMakeRange(startIndex, endIndex - startIndex), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), attachment: attachment))
                 }
                 
                 var isLastLine = false
@@ -1307,6 +1340,14 @@ open class TextNode: ASDisplayNode {
                                     addEmbeddedItem(item: embeddedItem, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
                                 }
                             }
+                            
+                            if let attachment = attributes[NSAttributedString.Key.attachment] as? UIImage {
+                                var ascent: CGFloat = 0.0
+                                var descent: CGFloat = 0.0
+                                CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
+                                
+                                addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
+                            }
                         }
                     }
                     
@@ -1328,7 +1369,7 @@ open class TextNode: ASDisplayNode {
                         }
                     }
                     
-                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: embeddedItems))
+                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: embeddedItems, attachments: attachments))
                     break
                 } else {
                     if lineCharacterCount > 0 {
@@ -1398,6 +1439,14 @@ open class TextNode: ASDisplayNode {
                                     addEmbeddedItem(item: embeddedItem, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
                                 }
                             }
+                            
+                            if let attachment = attributes[NSAttributedString.Key.attachment] as? UIImage {
+                                var ascent: CGFloat = 0.0
+                                var descent: CGFloat = 0.0
+                                CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
+                                
+                                addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
+                            }
                         }
                         
                         let lineWidth = ceil(CGFloat(CTLineGetTypographicBounds(coreTextLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(coreTextLine)))
@@ -1418,7 +1467,7 @@ open class TextNode: ASDisplayNode {
                             }
                         }
                         
-                        lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: embeddedItems))
+                        lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: embeddedItems, attachments: attachments))
                     } else {
                         if !lines.isEmpty {
                             layoutSize.height += fontLineSpacing
@@ -1854,6 +1903,7 @@ open class TextView: UIView {
                 var strikethroughs: [TextNodeStrikethrough] = []
                 var spoilers: [TextNodeSpoiler] = []
                 var spoilerWords: [TextNodeSpoiler] = []
+                var attachments: [TextNodeAttachment] = []
                 
                 var lineConstrainedWidth = constrainedSize.width
                 var lineConstrainedWidthDelta: CGFloat = 0.0
@@ -1909,6 +1959,24 @@ open class TextView: UIView {
                     }
                     
                     spoilerWords.append(TextNodeSpoiler(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent)))
+                }
+                
+                func addAttachment(attachment: UIImage, line: CTLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
+                    var secondaryLeftOffset: CGFloat = 0.0
+                    let rawLeftOffset = CTLineGetOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
+                    var leftOffset = floor(rawLeftOffset)
+                    if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
+                        leftOffset = floor(secondaryLeftOffset)
+                    }
+                    
+                    var secondaryRightOffset: CGFloat = 0.0
+                    let rawRightOffset = CTLineGetOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
+                    var rightOffset = ceil(rawRightOffset)
+                    if !rawRightOffset.isEqual(to: secondaryRightOffset) {
+                        rightOffset = ceil(secondaryRightOffset)
+                    }
+                    
+                    attachments.append(TextNodeAttachment(range: NSMakeRange(startIndex, endIndex - startIndex), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), attachment: attachment))
                 }
                 
                 var isLastLine = false
@@ -2006,7 +2074,14 @@ open class TextView: UIView {
                                 strikethroughs.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
                             } else if let paragraphStyle = attributes[NSAttributedString.Key.paragraphStyle] as? NSParagraphStyle {
                                 headIndent = paragraphStyle.headIndent
+                            }
+                            
+                            if let attachment = attributes[NSAttributedString.Key.attachment] as? UIImage {
+                                var ascent: CGFloat = 0.0
+                                var descent: CGFloat = 0.0
+                                CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
                                 
+                                addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
                             }
                         }
                     }
@@ -2029,7 +2104,7 @@ open class TextView: UIView {
                         }
                     }
                     
-                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: []))
+                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: [], attachments: attachments))
                     break
                 } else {
                     if lineCharacterCount > 0 {
@@ -2089,6 +2164,14 @@ open class TextView: UIView {
                             } else if let paragraphStyle = attributes[NSAttributedString.Key.paragraphStyle] as? NSParagraphStyle {
                                 headIndent = paragraphStyle.headIndent
                             }
+                            
+                            if let attachment = attributes[NSAttributedString.Key.attachment] as? UIImage {
+                                var ascent: CGFloat = 0.0
+                                var descent: CGFloat = 0.0
+                                CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
+                                
+                                addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
+                            }
                         }
                         
                         let lineWidth = ceil(CGFloat(CTLineGetTypographicBounds(coreTextLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(coreTextLine)))
@@ -2109,7 +2192,7 @@ open class TextView: UIView {
                             }
                         }
                         
-                        lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: []))
+                        lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: [], attachments: attachments))
                     } else {
                         if !lines.isEmpty {
                             layoutSize.height += fontLineSpacing
@@ -2229,30 +2312,47 @@ open class TextView: UIView {
                     context.clip(to: clipRects)
                 }
                     
-                let glyphRuns = CTLineGetGlyphRuns(line.line) as NSArray
-                if glyphRuns.count != 0 {
-                    for run in glyphRuns {
-                        let run = run as! CTRun
-                        let glyphCount = CTRunGetGlyphCount(run)
-                        CTRunDraw(run, context, CFRangeMake(0, glyphCount))
+                if line.attachments.isEmpty {
+                    let glyphRuns = CTLineGetGlyphRuns(line.line) as NSArray
+                    if glyphRuns.count != 0 {
+                        for run in glyphRuns {
+                            let run = run as! CTRun
+                            let glyphCount = CTRunGetGlyphCount(run)
+                            CTRunDraw(run, context, CFRangeMake(0, glyphCount))
+                        }
+                    }
+                } else {
+                    let glyphRuns = CTLineGetGlyphRuns(line.line) as NSArray
+                    if glyphRuns.count != 0 {
+                        for run in glyphRuns {
+                            let run = run as! CTRun
+                            
+                            let stringRange = CTRunGetStringRange(run)
+                            if line.attachments.contains(where: { $0.range.contains(stringRange.location) }) {
+                                continue
+                            }
+                            
+                            let glyphCount = CTRunGetGlyphCount(run)
+                            CTRunDraw(run, context, CFRangeMake(0, glyphCount))
+                        }
                     }
                 }
                 
-//                if !line.strikethroughs.isEmpty {
-//                    for strikethrough in line.strikethroughs {
-//                        var textColor: UIColor?
-//                        layout.attributedString?.enumerateAttributes(in: NSMakeRange(line.range.location, line.range.length), options: []) { attributes, range, _ in
-//                            if range == strikethrough.range, let color = attributes[NSAttributedString.Key.foregroundColor] as? UIColor {
-//                                textColor = color
-//                            }
-//                        }
-//                        if let textColor = textColor {
-//                            context.setFillColor(textColor.cgColor)
-//                        }
-//                        let frame = strikethrough.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
-//                        context.fill(CGRect(x: frame.minX, y: frame.minY - 5.0, width: frame.width, height: 1.0))
-//                    }
-//                }
+                for attachment in line.attachments {
+                    let image = attachment.attachment
+                    var textColor: UIColor?
+                    layout.attributedString?.enumerateAttributes(in: attachment.range, options: []) { attributes, range, _ in
+                        if let color = attributes[NSAttributedString.Key.foregroundColor] as? UIColor {
+                            textColor = color
+                        }
+                    }
+                    if let textColor {
+                        if let tintedImage = generateTintedImage(image: image, color: textColor) {
+                            let imageRect = CGRect(origin: CGPoint(x: attachment.frame.midX - tintedImage.size.width * 0.5, y: attachment.frame.midY - tintedImage.size.height * 0.5 + 1.0), size: tintedImage.size).offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
+                            context.draw(tintedImage.cgImage!, in: imageRect)
+                        }
+                    }
+                }
                 
                 if !line.spoilers.isEmpty {
                     if layout.displaySpoilers {

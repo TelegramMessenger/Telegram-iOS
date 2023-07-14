@@ -134,6 +134,8 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.animationTapGesture(_:))))
         
         if case .archive = subject {
+            let _ = self.context.engine.privacy.updateGlobalPrivacySettings().start()
+            
             self.archiveSettingsDisposable = (context.engine.data.subscribe(
                 TelegramEngine.EngineData.Item.Configuration.GlobalPrivacy()
             )

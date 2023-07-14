@@ -57,6 +57,8 @@ public final class ArchiveInfoContentComponent: Component {
         private let title = ComponentView<Empty>()
         private let mainText = ComponentView<Empty>()
         
+        private var chevronImage: UIImage?
+        
         private var items: [Item] = []
         
         private var component: ArchiveInfoContentComponent?
@@ -151,34 +153,43 @@ public final class ArchiveInfoContentComponent: Component {
             contentHeight += 16.0
             
             let text: String
+            //TODO:localize
             if component.settings.keepArchivedUnmuted {
-                text = "Archived chats will remain in the Archive when you receive a new message. [Tap to change 〉]()"
+                text = "Archived chats will remain in the Archive when you receive a new message. [Tap to change >]()"
             } else {
-                text = "When you receive a new message, muted chats will remain in the Archive, while unmuted chats will be moved to Chats. [Tap to change 〉]()"
+                text = "When you receive a new message, muted chats will remain in the Archive, while unmuted chats will be moved to Chats. [Tap to change >]()"
             }
             
-            //TODO:localize
+            let mainText = NSMutableAttributedString()
+            mainText.append(parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(
+                body: MarkdownAttributeSet(
+                    font: Font.regular(15.0),
+                    textColor: component.theme.list.itemSecondaryTextColor
+                ),
+                bold: MarkdownAttributeSet(
+                    font: Font.semibold(15.0),
+                    textColor: component.theme.list.itemSecondaryTextColor
+                ),
+                link: MarkdownAttributeSet(
+                    font: Font.regular(15.0),
+                    textColor: component.theme.list.itemAccentColor,
+                    additionalAttributes: [:]
+                ),
+                linkAttribute: { attributes in
+                    return ("URL", "")
+                }
+            )))
+            if self.chevronImage == nil {
+                self.chevronImage = UIImage(bundleImageName: "Settings/TextArrowRight")
+            }
+            if let range = mainText.string.range(of: ">"), let chevronImage = self.chevronImage {
+                mainText.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: mainText.string))
+            }
+            
             let mainTextSize = self.mainText.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .markdown(text: text, attributes: MarkdownAttributes(
-                        body: MarkdownAttributeSet(
-                            font: Font.regular(15.0),
-                            textColor: component.theme.list.itemSecondaryTextColor
-                        ),
-                        bold: MarkdownAttributeSet(
-                            font: Font.semibold(15.0),
-                            textColor: component.theme.list.itemSecondaryTextColor
-                        ),
-                        link: MarkdownAttributeSet(
-                            font: Font.regular(15.0),
-                            textColor: component.theme.list.itemAccentColor,
-                            additionalAttributes: [:]
-                        ),
-                        linkAttribute: { attributes in
-                            return ("URL", "")
-                        }
-                    )),
+                    text: .plain(mainText),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2,

@@ -25,6 +25,10 @@ public extension TelegramEngine {
             return _internal_requestAccountPrivacySettings(account: self.account)
         }
         
+        public func updateGlobalPrivacySettings() -> Signal<Never, NoError> {
+            return _internal_updateGlobalPrivacySettings(account: self.account)
+        }
+        
         public func updateAccountAutoArchiveChats(value: Bool) -> Signal<Never, NoError> {
             return _internal_updateAccountAutoArchiveChats(account: self.account, value: value)
         }

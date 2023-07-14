@@ -3,6 +3,36 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
+func _internal_updateGlobalPrivacySettings(account: Account) -> Signal<Never, NoError> {
+    return account.network.request(Api.functions.account.getGlobalPrivacySettings())
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.GlobalPrivacySettings?, NoError> in
+        return .single(nil)
+    }
+    |> mapToSignal { result -> Signal<Never, NoError> in
+        return account.postbox.transaction { transaction -> Void in
+            guard let result = result else {
+                return
+            }
+            let globalSettings: GlobalPrivacySettings
+            switch result {
+            case let .globalPrivacySettings(flags):
+                let automaticallyArchiveAndMuteNonContacts = (flags & (1 << 0)) != 0
+                let keepArchivedUnmuted = (flags & (1 << 1)) != 0
+                let keepArchivedFolders = (flags & (1 << 2)) != 0
+                globalSettings = GlobalPrivacySettings(
+                    automaticallyArchiveAndMuteNonContacts: automaticallyArchiveAndMuteNonContacts,
+                    keepArchivedUnmuted: keepArchivedUnmuted,
+                    keepArchivedFolders: keepArchivedFolders
+                )
+            }
+            updateGlobalPrivacySettings(transaction: transaction, { _ in
+                return globalSettings
+            })
+        }
+        |> ignoreValues
+    }
+}
 
 func _internal_requestAccountPrivacySettings(account: Account) -> Signal<AccountPrivacySettings, NoError> {
     let lastSeenPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyStatusTimestamp))
