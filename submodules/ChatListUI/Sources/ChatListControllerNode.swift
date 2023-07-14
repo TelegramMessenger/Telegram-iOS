@@ -966,8 +966,13 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             guard let self, !self.isInlineMode else {
                 return
             }
+            guard let validLayout = self.validLayout else {
+                return
+            }
             let tempTopInset: CGFloat
-            if self.currentItemNode.startedScrollingAtUpperBound && !self.isInlineMode {
+            if validLayout.inlineNavigationLocation != nil {
+                tempTopInset = 0.0
+            } else if self.currentItemNode.startedScrollingAtUpperBound && !self.isInlineMode {
                 if let controller = self.controller, let storySubscriptions = controller.orderedStorySubscriptions, shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions, isHidden: controller.location == .chatList(groupId: .archive)) {
                     tempTopInset = ChatListNavigationBar.storiesScrollHeight
                 } else {
@@ -2029,21 +2034,29 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
     }
     
-    private func getEffectiveNavigationScrollingOffset() -> CGFloat {
-        let mainOffset: CGFloat
+    private func updateNavigationScrolling(navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        var mainOffset: CGFloat
         if let contentOffset = self.mainContainerNode.contentOffset, case let .known(value) = contentOffset {
             mainOffset = value
         } else {
-            mainOffset = 1000.0
+            mainOffset = navigationHeight
+        }
+        mainOffset = min(mainOffset, ChatListNavigationBar.searchScrollHeight)
+        if abs(mainOffset) < 0.1 {
+            mainOffset = 0.0
         }
         
         let resultingOffset: CGFloat
         if let inlineStackContainerNode = self.inlineStackContainerNode {
-            let inlineOffset: CGFloat
+            var inlineOffset: CGFloat
             if let contentOffset = inlineStackContainerNode.contentOffset, case let .known(value) = contentOffset {
                 inlineOffset = value
             } else {
-                inlineOffset = 1000.0
+                inlineOffset = navigationHeight
+            }
+            inlineOffset = min(inlineOffset, ChatListNavigationBar.searchScrollHeight)
+            if abs(inlineOffset) < 0.1 {
+                inlineOffset = 0.0
             }
             
             resultingOffset = mainOffset * (1.0 - self.inlineStackContainerTransitionFraction) + inlineOffset * self.inlineStackContainerTransitionFraction
@@ -2051,11 +2064,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             resultingOffset = mainOffset
         }
         
-        return resultingOffset
-    }
-    
-    private func updateNavigationScrolling(transition: ContainedViewLayoutTransition) {
-        var offset = self.getEffectiveNavigationScrollingOffset()
+        var offset = resultingOffset
         if self.isSearchDisplayControllerActive {
             offset = 0.0
         }
@@ -2075,6 +2084,14 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 crossfadeStoryPeers: false
             )))
         }
+        
+        let mainDelta: CGFloat
+        if let _ = self.inlineStackContainerNode {
+            mainDelta = resultingOffset - max(0.0, mainOffset)
+        } else {
+            mainDelta = 0.0
+        }
+        transition.updateSublayerTransformOffset(layer: self.mainContainerNode.layer, offset: CGPoint(x: 0.0, y: -mainDelta))
     }
     
     func requestNavigationBarLayout(transition: Transition) {
@@ -2226,7 +2243,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             }
         }
         
-        self.updateNavigationScrolling(transition: transition)
+        self.updateNavigationScrolling(navigationHeight: navigationBarLayout.navigationHeight, transition: transition)
         
         if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
             navigationBarComponentView.deferScrollApplication = false
@@ -2342,50 +2359,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             let _ = inlineStackContainerNode
         }
         
-        self.updateNavigationScrolling(transition: self.tempNavigationScrollingTransition ?? .immediate)
-        
-        /*if !isPrimary {
-            self.contentOffsetChanged?(offset)
-            if "".isEmpty {
-                return
-            }
-        } else {
-            if "".isEmpty {
-                return
-            }
-        }
-        
-        let targetNode: ChatListContainerNode
-        if isPrimary {
-            targetNode = inlineStackContainerNode
-        } else {
-            targetNode = self.mainContainerNode
-        }
-        
-        switch offset {
-        case let .known(value) where (value <= containerLayout.navigationBarHeight - 76.0 - 46.0 - 8.0 + UIScreenPixel || self.contentOffsetSyncLockedIn):
-            if case let .known(otherValue) = targetNode.currentItemNode.visibleContentOffset(), abs(otherValue - value) <= UIScreenPixel {
-                self.contentOffsetSyncLockedIn = true
-            }
-        default:
-            break
-        }
-        
-        switch offset {
-        case let .known(value) where self.contentOffsetSyncLockedIn:
-            var targetValue = value
-            if targetValue > containerLayout.navigationBarHeight - 76.0 - 46.0 - 8.0 {
-                targetValue = containerLayout.navigationBarHeight - 76.0 - 46.0 - 8.0
-            }
-            
-            targetNode.fixContentOffset(offset: targetValue)
-            
-            self.contentOffsetChanged?(offset)
-        default:
-            if !isPrimary {
-                self.contentOffsetChanged?(offset)
-            }
-        }*/
+        self.updateNavigationScrolling(navigationHeight: containerLayout.navigationBarHeight, transition: self.tempNavigationScrollingTransition ?? .immediate)
     }
     
     private func shouldStopScrolling(listView: ListView, velocity: CGFloat, isPrimary: Bool) -> Bool {
@@ -2538,8 +2512,10 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                     })
                     
                     self.temporaryContentOffsetChangeTransition = transition
+                    self.tempNavigationScrollingTransition = transition
                     self.controller?.requestLayout(transition: transition)
                     self.temporaryContentOffsetChangeTransition = nil
+                    self.tempNavigationScrollingTransition = nil
                 } else {
                     inlineStackContainerNode.removeFromSupernode()
                 }

@@ -365,6 +365,7 @@ public final class StoryItemSetContainerComponent: Component {
         var preparingToDisplayViewList: Bool = false
         var displayViewList: Bool = false
         var viewLists: [Int32: ViewList] = [:]
+        let viewListsContainer: UIView
         
         var isEditingStory: Bool = false
         
@@ -440,6 +441,9 @@ public final class StoryItemSetContainerComponent: Component {
             self.inputPanelContainer.isUserInteractionEnabled = false
             self.inputPanelContainer.layer.cornerRadius = 11.0
             
+            self.viewListsContainer = SparseContainerView()
+            self.viewListsContainer.clipsToBounds = true
+            
             super.init(frame: frame)
 
             self.itemsContainerView.addSubview(self.scroller)
@@ -456,6 +460,8 @@ public final class StoryItemSetContainerComponent: Component {
             self.closeButton.addSubview(self.closeButtonIconView)
             self.controlsContainerView.addSubview(self.closeButton)
             self.closeButton.addTarget(self, action: #selector(self.closePressed), for: .touchUpInside)
+            
+            self.addSubview(self.viewListsContainer)
             
             let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
             tapRecognizer.delegate = self
@@ -983,7 +989,9 @@ public final class StoryItemSetContainerComponent: Component {
                     let combinedFraction = offsetFraction + centerFraction
                     let combinedFractionSign: CGFloat = combinedFraction < 0.0 ? -1.0 : 1.0
                     
-                    let fractionDistanceToCenter: CGFloat = min(1.0, abs(combinedFraction))
+                    let unboundFractionDistanceToCenter: CGFloat = abs(combinedFraction)
+                    let fractionDistanceToCenter: CGFloat = min(1.0, unboundFractionDistanceToCenter)
+                    let _ = fractionDistanceToCenter
                     
                     var itemPositionX = centralItemX
                     itemPositionX += min(1.0, abs(combinedFraction)) * combinedFractionSign * scaledFullItemScrollDistance
@@ -1122,7 +1130,15 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         itemTransition.setTransform(view: visibleItem.contentContainerView, transform: transform)
                         itemTransition.setCornerRadius(layer: visibleItem.contentContainerView.layer, cornerRadius: 12.0 * (1.0 / itemScale))
-                        itemTransition.setAlpha(view: visibleItem.contentContainerView, alpha: 1.0 * (1.0 - fractionDistanceToCenter) + 0.75 * fractionDistanceToCenter)
+                        
+                        let countedFractionDistanceToCenter: CGFloat = max(0.0, min(1.0, unboundFractionDistanceToCenter / 3.0))
+                        var itemAlpha: CGFloat = 1.0 * (1.0 - countedFractionDistanceToCenter) + 0.0 * countedFractionDistanceToCenter
+                        itemAlpha = max(0.0, min(1.0, itemAlpha))
+                        
+                        let collapsedAlpha = itemAlpha * itemLayout.contentScaleFraction + 0.0 * (1.0 - itemLayout.contentScaleFraction)
+                        itemAlpha = (1.0 - fractionDistanceToCenter) * itemAlpha + fractionDistanceToCenter * collapsedAlpha
+                        
+                        itemTransition.setAlpha(view: visibleItem.contentContainerView, alpha: itemAlpha)
                         
                         var itemProgressMode = self.itemProgressMode()
                         if index != centralIndex {
@@ -2139,12 +2155,12 @@ public final class StoryItemSetContainerComponent: Component {
                     
                     var viewListFrame = CGRect(origin: CGPoint(x: viewListBaseOffsetX, y: availableSize.height - viewListSize.height), size: viewListSize)
                     let indexDistance = CGFloat(max(-1, min(1, itemIndex - currentIndex)))
-                    viewListFrame.origin.x += indexDistance * availableSize.width
+                    viewListFrame.origin.x += indexDistance * (availableSize.width + 20.0)
                     
                     if let viewListView = viewList.view.view as? StoryItemSetViewListComponent.View {
                         var animateIn = false
                         if viewListView.superview == nil {
-                            self.addSubview(viewListView)
+                            self.viewListsContainer.addSubview(viewListView)
                             animateIn = true
                         } else {
                             fixedAnimationOffset = viewListFrame.minX - viewListView.frame.minX
@@ -2228,6 +2244,15 @@ public final class StoryItemSetContainerComponent: Component {
             //print("contentScaleFraction: \(contentScaleFraction), minimizedBottomContentFraction: \(minimizedBottomContentFraction)")
             
             let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: component.containerInsets.top - (contentSize.height - contentVisualHeight) * 0.5), size: contentSize)
+            
+            transition.setFrame(view: self.viewListsContainer, frame: CGRect(origin: CGPoint(x: contentFrame.minX, y: 0.0), size: CGSize(width: contentSize.width, height: availableSize.height)))
+            let viewListsRadius: CGFloat
+            if component.metrics.widthClass == .regular {
+                viewListsRadius = 10.0
+            } else {
+                viewListsRadius = 0.0
+            }
+            transition.setCornerRadius(layer: self.viewListsContainer.layer, cornerRadius: viewListsRadius)
             
             transition.setFrame(view: self.inputPanelContainer, frame: contentFrame)
             

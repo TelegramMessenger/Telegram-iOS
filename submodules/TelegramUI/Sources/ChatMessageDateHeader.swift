@@ -609,8 +609,8 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
         if self.storyStats != storyStats || self.presentationData.theme.theme !== theme || force {
             self.avatarNode.setStoryStats(storyStats: storyStats.flatMap { storyStats in
                 return AvatarNode.StoryStats(
-                    totalCount: storyStats.totalCount,
-                    unseenCount: storyStats.unseenCount,
+                    totalCount: storyStats.totalCount != 0 ? 1 : 0,
+                    unseenCount: storyStats.unseenCount != 0 ? 1 : 0,
                     hasUnseenCloseFriendsItems: storyStats.hasUnseenCloseFriends
                 )
             }, presentationParams: AvatarNode.StoryPresentationParams(

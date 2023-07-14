@@ -1488,7 +1488,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         
         self.requestHistoryAroundVisiblePosition(synchronous: false, reloadAtTop: false)
         
-        if peerId == context.account.peerId {
+        if peerId == context.account.peerId && !isArchive {
             self.preloadArchiveListContext = PeerStoryListContext(account: context.account, peerId: peerId, isArchived: true)
         }
     }
@@ -1502,8 +1502,13 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
 
     public func loadHole(anchor: SparseItemGrid.HoleAnchor, at location: SparseItemGrid.HoleLocation) -> Signal<Never, NoError> {
         let listSource = self.listSource
-        return Signal { _ in
-            listSource.loadMore()
+        return Signal { subscriber in
+            listSource.loadMore(completion: {
+                Queue.mainQueue().async {
+                    subscriber.putCompletion()
+                }
+            })
+            
             
             return EmptyDisposable
         }
@@ -1584,8 +1589,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         localMonthTimestamp: Month(localTimestamp: item.timestamp + timezoneOffset).packedValue
                     ))
                 }
-                if mappedItems.count < state.totalCount, let lastItem = state.items.last {
-                    mappedHoles.append(VisualMediaHoleAnchor(index: mappedItems.count, storyId: 1, localMonthTimestamp: Month(localTimestamp: lastItem.timestamp + timezoneOffset).packedValue))
+                if mappedItems.count < state.totalCount, let lastItem = state.items.last, let loadMoreToken = state.loadMoreToken {
+                    mappedHoles.append(VisualMediaHoleAnchor(index: mappedItems.count, storyId: Int32(loadMoreToken), localMonthTimestamp: Month(localTimestamp: lastItem.timestamp + timezoneOffset).packedValue))
                 }
             }
             totalCount = state.totalCount
