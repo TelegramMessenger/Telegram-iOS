@@ -1195,6 +1195,11 @@ func peerInfoHeaderActionButtons(peer: Peer?, isSecretChat: Bool, isContact: Boo
     if !isContact && !isSecretChat, let user = peer as? TelegramUser, user.botInfo == nil {
         result = [.message, .addContact]
     }
+    
+    if "".isEmpty {
+        return []
+    }
+    
     return result
 }
 
@@ -1202,9 +1207,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
     var result: [PeerInfoHeaderButtonKey] = []
     if let user = peer as? TelegramUser {
         if !isOpenedFromChat {
-            if isContact || user.botInfo != nil {
-                result.append(.message)
-            }
+            result.append(.message)
         }
         var callsAvailable = false
         var videoCallsAvailable = false
