@@ -305,6 +305,7 @@ final class ShareWithPeersScreenComponent: Component {
         private var ignoreScrolling: Bool = false
         private var isDismissed: Bool = false
         
+        private var savedSelectedPeers: [EnginePeer.Id] = []
         private var selectedPeers: [EnginePeer.Id] = []
         private var selectedCategories = Set<CategoryId>()
         private var selectedOptions = Set<OptionId>()
@@ -586,6 +587,7 @@ final class ShareWithPeersScreenComponent: Component {
             visibleBounds.size.height += itemLayout.topInset
             
             var visibleFrame = self.scrollView.frame
+            visibleFrame.origin.x = 0.0
             visibleFrame.origin.y -= itemLayout.topInset
             visibleFrame.size.height += itemLayout.topInset
             
@@ -675,7 +677,7 @@ final class ShareWithPeersScreenComponent: Component {
                             if minSectionHeader == nil {
                                 minSectionHeader = sectionHeaderView
                             }
-                            sectionHeaderTransition.setFrame(view: sectionHeaderView, frame: sectionHeaderFrame)
+                            sectionHeaderTransition.setFrame(view: sectionHeaderView, frame: sectionHeaderFrame.offsetBy(dx: self.scrollView.frame.minX, dy: 0.0))
                         }
                     }
                 }
@@ -721,7 +723,14 @@ final class ShareWithPeersScreenComponent: Component {
                                     }
                                     if self.selectedCategories.contains(categoryId) {
                                     } else {
-                                        self.selectedPeers = []
+                                        if self.selectedCategories.contains(.selectedContacts) {
+                                            self.savedSelectedPeers = self.selectedPeers
+                                        }
+                                        if categoryId == .selectedContacts {
+                                            self.selectedPeers = self.savedSelectedPeers
+                                        } else {
+                                            self.selectedPeers = []
+                                        }
                                         
                                         self.selectedCategories.removeAll()
                                         self.selectedCategories.insert(categoryId)

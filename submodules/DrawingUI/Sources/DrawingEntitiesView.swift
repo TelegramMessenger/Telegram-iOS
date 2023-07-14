@@ -464,6 +464,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                 self.selectedEntityView = nil
                 self.selectionChanged(nil)
                 self.hasSelectionChanged(false)
+                view.selectionView?.removeFromSuperview()
             }
             if animated {
                 view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak view] _ in

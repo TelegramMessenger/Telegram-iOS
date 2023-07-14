@@ -1038,13 +1038,15 @@ final class MediaEditorScreenComponent: Component {
                     isGeneralThreadClosed: nil
                 )
                 
-                let heightAndOverflow = inputMediaNode.updateLayout(width: availableSize.width, leftInset: 0.0, rightInset: 0.0, bottomInset: component.bottomSafeInset, standardInputHeight: environment.deviceMetrics.standardInputHeight(inLandscape: false), inputHeight: environment.inputHeight, maximumHeight: availableSize.height, inputPanelHeight: 0.0, transition: .immediate, interfaceState: presentationInterfaceState, layoutMetrics: environment.metrics, deviceMetrics: environment.deviceMetrics, isVisible: true, isExpanded: false)
+                let availableInputMediaWidth = previewSize.width
+                let heightAndOverflow = inputMediaNode.updateLayout(width: availableInputMediaWidth, leftInset: 0.0, rightInset: 0.0, bottomInset: component.bottomSafeInset, standardInputHeight: environment.deviceMetrics.standardInputHeight(inLandscape: false), inputHeight: environment.inputHeight, maximumHeight: availableSize.height, inputPanelHeight: 0.0, transition: .immediate, interfaceState: presentationInterfaceState, layoutMetrics: environment.metrics, deviceMetrics: environment.deviceMetrics, isVisible: true, isExpanded: false)
                 let inputNodeHeight = heightAndOverflow.0
-                let inputNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - inputNodeHeight), size: CGSize(width: availableSize.width, height: inputNodeHeight))
+                let inputNodeFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - availableInputMediaWidth) / 2.0), y: availableSize.height - inputNodeHeight), size: CGSize(width: availableInputMediaWidth, height: inputNodeHeight))
                 transition.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
                   
-                inputHeight = heightAndOverflow.0
-                keyboardHeight = max(keyboardHeight, heightAndOverflow.0)
+                if inputNodeHeight > 0.0 {
+                    inputHeight = inputNodeHeight
+                }
             } else if let inputMediaNode = self.inputMediaNode {
                 self.inputMediaNode = nil
                 
@@ -1073,6 +1075,8 @@ final class MediaEditorScreenComponent: Component {
                     }
                 })
             }
+            
+            keyboardHeight = inputHeight
             
             let nextInputMode: MessageInputPanelComponent.InputMode
             switch self.currentInputMode {
