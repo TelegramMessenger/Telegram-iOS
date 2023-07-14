@@ -450,6 +450,8 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
     private var cachedDataDisposable = MetaDisposable()
     private var hierarchyTrackingLayer: HierarchyTrackingLayer?
     
+    private var backgroundContent: WallpaperBubbleBackgroundNode?
+    
     private var trackingIsInHierarchy: Bool = false {
         didSet {
             if self.trackingIsInHierarchy != oldValue {
@@ -606,7 +608,40 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
     }
     
     func updateStoryStats(storyStats: PeerStoryStats?, theme: PresentationTheme, force: Bool) {
+        /*if storyStats != nil {
+            var backgroundContent: WallpaperBubbleBackgroundNode?
+            if let current = self.backgroundContent {
+                backgroundContent = current
+            } else {
+                if let backgroundContentValue = self.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+                    backgroundContentValue.clipsToBounds = true
+                    self.backgroundContent = backgroundContentValue
+                    backgroundContent = backgroundContentValue
+                    self.containerNode.insertSubnode(backgroundContentValue, belowSubnode: self.avatarNode)
+                    
+                    let maskLayer = SimpleShapeLayer()
+                    maskLayer.fillColor = nil
+                    maskLayer.strokeColor = UIColor.white.cgColor
+                    maskLayer.lineWidth = 2.0
+                    maskLayer.path = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0)).insetBy(dx: 1.0, dy: 1.0)).cgPath
+                    backgroundContentValue.layer.mask = maskLayer
+                }
+            }
+            
+            if let backgroundContent {
+                backgroundContent.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
+                backgroundContent.cornerRadius = backgroundContent.bounds.width * 0.5
+            }
+        } else {
+            if let backgroundContent = self.backgroundContent {
+                self.backgroundContent = nil
+                backgroundContent.removeFromSupernode()
+            }
+        }
+        
         if self.storyStats != storyStats || self.presentationData.theme.theme !== theme || force {
+            var colors = AvatarNode.Colors(theme: theme)
+            colors.seenColors = [UIColor(white: 1.0, alpha: 0.2), UIColor(white: 1.0, alpha: 0.2)]
             self.avatarNode.setStoryStats(storyStats: storyStats.flatMap { storyStats in
                 return AvatarNode.StoryStats(
                     totalCount: storyStats.totalCount != 0 ? 1 : 0,
@@ -614,11 +649,11 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                     hasUnseenCloseFriendsItems: storyStats.hasUnseenCloseFriends
                 )
             }, presentationParams: AvatarNode.StoryPresentationParams(
-                colors: AvatarNode.Colors(theme: theme),
+                colors: colors,
                 lineWidth: 2.0,
                 inactiveLineWidth: 2.0
             ), transition: .immediate)
-        }
+        }*/
     }
 
     override func didLoad() {

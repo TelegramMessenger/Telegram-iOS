@@ -15,7 +15,7 @@ public enum FetchMediaDataState {
     case data(MediaResourceData)
 }
 
-public func fetchMediaData(context: AccountContext, postbox: Postbox, userLocation: MediaResourceUserLocation, mediaReference: AnyMediaReference, forceVideo: Bool = false) -> Signal<(FetchMediaDataState, Bool), NoError> {
+public func fetchMediaData(context: AccountContext, postbox: Postbox, userLocation: MediaResourceUserLocation, customUserContentType: MediaResourceUserContentType? = nil, mediaReference: AnyMediaReference, forceVideo: Bool = false) -> Signal<(FetchMediaDataState, Bool), NoError> {
     var resource: MediaResource?
     var isImage = true
     var fileExtension: String?
@@ -49,6 +49,9 @@ public func fetchMediaData(context: AccountContext, postbox: Postbox, userLocati
                 resource = representation.resource
             }
         }
+    }
+    if let customUserContentType {
+        userContentType = customUserContentType
     }
     
     if let resource = resource {
@@ -86,8 +89,8 @@ public func fetchMediaData(context: AccountContext, postbox: Postbox, userLocati
     }
 }
 
-public func saveToCameraRoll(context: AccountContext, postbox: Postbox, userLocation: MediaResourceUserLocation, mediaReference: AnyMediaReference) -> Signal<Float, NoError> {
-    return fetchMediaData(context: context, postbox: postbox, userLocation: userLocation, mediaReference: mediaReference)
+public func saveToCameraRoll(context: AccountContext, postbox: Postbox, userLocation: MediaResourceUserLocation, customUserContentType: MediaResourceUserContentType? = nil, mediaReference: AnyMediaReference) -> Signal<Float, NoError> {
+    return fetchMediaData(context: context, postbox: postbox, userLocation: userLocation, customUserContentType: customUserContentType, mediaReference: mediaReference)
     |> mapToSignal { state, isImage -> Signal<Float, NoError> in
         switch state {
             case let .progress(value):

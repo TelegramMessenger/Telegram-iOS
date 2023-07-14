@@ -176,6 +176,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case displayChatListStoriesTooltip = 42
     case storiesCameraTooltip = 43
     case storiesDualCameraTooltip = 44
+    case displayChatListArchiveTooltip = 45
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -408,6 +409,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func storiesDualCameraTooltip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.storiesDualCameraTooltip.key)
+    }
+    
+    static func displayChatListArchiveTooltip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.displayChatListArchiveTooltip.key)
     }
 }
 
@@ -1527,5 +1532,26 @@ public struct ApplicationSpecificNotice {
     public static func reset(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Void, NoError> {
         return accountManager.transaction { transaction -> Void in
         }
+    }
+    
+    public static func displayChatListArchiveTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Bool, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.displayChatListArchiveTooltip())
+        |> map { view -> Bool in
+            if let _ = view.value?.get(ApplicationSpecificBoolNotice.self) {
+                return true
+            } else {
+                return false
+            }
+        }
+        |> take(1)
+    }
+    
+    public static func setDisplayChatListArchiveTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Never, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificBoolNotice()) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.displayChatListArchiveTooltip(), entry)
+            }
+        }
+        |> ignoreValues
     }
 }

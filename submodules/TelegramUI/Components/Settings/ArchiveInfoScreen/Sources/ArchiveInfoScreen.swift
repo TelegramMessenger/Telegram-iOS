@@ -133,13 +133,16 @@ private final class ArchiveInfoScreenComponent: Component {
     
     let context: AccountContext
     let settings: GlobalPrivacySettings
+    let buttonAction: (() -> Void)?
     
     init(
         context: AccountContext,
-        settings: GlobalPrivacySettings
+        settings: GlobalPrivacySettings,
+        buttonAction: (() -> Void)?
     ) {
         self.context = context
         self.settings = settings
+        self.buttonAction = buttonAction
     }
     
     static func ==(lhs: ArchiveInfoScreenComponent, rhs: ArchiveInfoScreenComponent) -> Bool {
@@ -212,10 +215,15 @@ private final class ArchiveInfoScreenComponent: Component {
                             guard let self else {
                                 return
                             }
-                            self.sheetAnimateOut.invoke(Action { _ in
+                            self.sheetAnimateOut.invoke(Action { [weak self] _ in
                                 if let controller = environment.controller() {
                                     controller.dismiss(completion: nil)
                                 }
+                                
+                                guard let self else {
+                                    return
+                                }
+                                self.component?.buttonAction?()
                             })
                         }
                     )),
@@ -249,10 +257,11 @@ private final class ArchiveInfoScreenComponent: Component {
 }
 
 public class ArchiveInfoScreen: ViewControllerComponentContainer {
-    public init(context: AccountContext, settings: GlobalPrivacySettings) {
+    public init(context: AccountContext, settings: GlobalPrivacySettings, buttonAction: (() -> Void)? = nil) {
         super.init(context: context, component: ArchiveInfoScreenComponent(
             context: context,
-            settings: settings
+            settings: settings,
+            buttonAction: buttonAction
         ), navigationBarAppearance: .none)
         
         self.statusBar.statusBarStyle = .Ignore

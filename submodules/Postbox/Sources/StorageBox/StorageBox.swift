@@ -611,7 +611,7 @@ public final class StorageBox {
             }
         }
         
-        private func allInternal(peerId: PeerId) -> [Data] {
+        private func allInternal(peerId: PeerId, excludeType: UInt8) -> [Data] {
             var hashIds: [Data] = []
             let peerIdIdKey = ValueBoxKey(length: 8)
             peerIdIdKey.setInt64(0, value: peerId.toInt64())
@@ -626,18 +626,56 @@ public final class StorageBox {
                 mainKey.setData(0, value: hashId)
                 if let infoValue = self.valueBox.get(self.hashIdToInfoTable, key: mainKey) {
                     let info = ItemInfo(buffer: infoValue)
-                    result.append(info.id)
+                    if info.contentType != excludeType {
+                        result.append(info.id)
+                    }
                 }
             }
             
             return result
         }
         
-        func all(peerId: PeerId, completion: @escaping ([Data]) -> Void) {
+        private func allInternal(peerId: PeerId, onlyType: UInt8) -> [Data] {
+            var hashIds: [Data] = []
+            let peerIdIdKey = ValueBoxKey(length: 8)
+            peerIdIdKey.setInt64(0, value: peerId.toInt64())
+            self.valueBox.range(self.peerIdToIdTable, start: peerIdIdKey, end: peerIdIdKey.successor, keys: { key in
+                hashIds.append(key.getData(8, length: 16))
+                return true
+            }, limit: 0)
+            
+            var result: [Data] = []
+            let mainKey = ValueBoxKey(length: 16)
+            for hashId in hashIds {
+                mainKey.setData(0, value: hashId)
+                if let infoValue = self.valueBox.get(self.hashIdToInfoTable, key: mainKey) {
+                    let info = ItemInfo(buffer: infoValue)
+                    if info.contentType == onlyType {
+                        result.append(info.id)
+                    }
+                }
+            }
+            
+            return result
+        }
+        
+        func all(peerId: PeerId, excludeType: UInt8, completion: @escaping ([Data]) -> Void) {
             self.beginInternalTransaction {
                 self.valueBox.begin()
                 
-                let result = self.allInternal(peerId: peerId)
+                let result = self.allInternal(peerId: peerId, excludeType: excludeType)
+                
+                self.valueBox.commit()
+                
+                completion(result)
+            }
+        }
+        
+        func all(peerId: PeerId, onlyType: UInt8, completion: @escaping ([Data]) -> Void) {
+            self.beginInternalTransaction {
+                self.valueBox.begin()
+                
+                let result = self.allInternal(peerId: peerId, onlyType: onlyType)
                 
                 self.valueBox.commit()
                 
@@ -932,7 +970,7 @@ public final class StorageBox {
                 
                 var scannedIds = Set<Data>()
                 for peerId in peerIds {
-                    scannedIds.formUnion(self.allInternal(peerId: peerId))
+                    scannedIds.formUnion(self.allInternal(peerId: peerId, excludeType: UInt8.max))
                 }
                 
                 for id in includeIds {
@@ -1047,9 +1085,20 @@ public final class StorageBox {
         }
     }
     
-    public func all(peerId: PeerId) -> Signal<[Data], NoError> {
+    public func all(peerId: PeerId, excludeType: UInt8) -> Signal<[Data], NoError> {
         return self.impl.signalWith { impl, subscriber in
-            impl.all(peerId: peerId, completion: { result in
+            impl.all(peerId: peerId, excludeType: excludeType, completion: { result in
+                subscriber.putNext(result)
+                subscriber.putCompletion()
+            })
+            
+            return EmptyDisposable
+        }
+    }
+    
+    public func all(peerId: PeerId, onlyType: UInt8) -> Signal<[Data], NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            impl.all(peerId: peerId, onlyType: onlyType, completion: { result in
                 subscriber.putNext(result)
                 subscriber.putCompletion()
             })

@@ -325,6 +325,8 @@ public func storageUsageExceptionsScreen(
                 filter.insert(.excludeSecretChats)
             case .channels:
                 filter.insert(.onlyChannels)
+            case .stories:
+                filter.insert(.onlyPrivateChats)
             }
             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: filter, hasContactSelector: false, title: presentationData.strings.Notifications_AddExceptionTitle))
             controller.peerSelected = { [weak controller] peer, _ in

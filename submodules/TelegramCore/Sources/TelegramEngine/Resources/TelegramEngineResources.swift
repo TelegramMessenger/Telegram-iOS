@@ -12,6 +12,7 @@ public enum MediaResourceUserContentType: UInt8, Equatable {
     case sticker = 6
     case avatar = 7
     case audioVideoMessage = 8
+    case story = 9
 }
 
 public extension MediaResourceUserContentType {

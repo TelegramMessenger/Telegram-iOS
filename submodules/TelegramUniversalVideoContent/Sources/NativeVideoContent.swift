@@ -198,7 +198,15 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         
         self.imageNode = TransformImageNode()
         
-        self.player = MediaPlayer(audioSessionManager: audioSessionManager, postbox: postbox, userLocation: userLocation, userContentType: MediaResourceUserContentType(file: fileReference.media), resourceReference: fileReference.resourceReference(fileReference.media.resource), tempFilePath: tempFilePath, streamable: streamVideo, video: true, preferSoftwareDecoding: false, playAutomatically: false, enableSound: enableSound, baseRate: baseRate, fetchAutomatically: fetchAutomatically, ambient: beginWithAmbientSound, mixWithOthers: mixWithOthers, continuePlayingWithoutSoundOnLostAudioSession: continuePlayingWithoutSoundOnLostAudioSession, storeAfterDownload: storeAfterDownload, isAudioVideoMessage: isAudioVideoMessage)
+        var userContentType = MediaResourceUserContentType(file: fileReference.media)
+        switch fileReference {
+        case .story:
+            userContentType = .story
+        default:
+            break
+        }
+        
+        self.player = MediaPlayer(audioSessionManager: audioSessionManager, postbox: postbox, userLocation: userLocation, userContentType: userContentType, resourceReference: fileReference.resourceReference(fileReference.media.resource), tempFilePath: tempFilePath, streamable: streamVideo, video: true, preferSoftwareDecoding: false, playAutomatically: false, enableSound: enableSound, baseRate: baseRate, fetchAutomatically: fetchAutomatically, ambient: beginWithAmbientSound, mixWithOthers: mixWithOthers, continuePlayingWithoutSoundOnLostAudioSession: continuePlayingWithoutSoundOnLostAudioSession, storeAfterDownload: storeAfterDownload, isAudioVideoMessage: isAudioVideoMessage)
         
         var actionAtEndImpl: (() -> Void)?
         if enableSound && !loopVideo {

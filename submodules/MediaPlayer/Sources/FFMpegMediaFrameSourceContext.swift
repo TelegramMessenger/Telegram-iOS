@@ -341,6 +341,17 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         self.statsCategory = video ? .video : .audio
         self.userLocation = userLocation
         self.userContentType = video ? .video : .audio
+        switch resourceReference {
+        case let .media(media, _):
+            switch media {
+            case .story:
+                self.userContentType = .story
+            default:
+                break
+            }
+        default:
+            break
+        }
         self.preferSoftwareDecoding = preferSoftwareDecoding
         self.fetchAutomatically = fetchAutomatically
         self.maximumFetchSize = maximumFetchSize

@@ -136,7 +136,7 @@ final class StoryItemContentComponent: Component {
                         decoration: StoryVideoDecoration(),
                         content: NativeVideoContent(
                             id: .contextResult(0, "\(UInt64.random(in: 0 ... UInt64.max))"),
-                            userLocation: .other,
+                            userLocation: .peer(peerReference.id),
                             fileReference: .story(peer: peerReference, id: component.item.id, media: file),
                             imageReference: nil,
                             streamVideo: .story,
@@ -470,7 +470,7 @@ final class StoryItemContentComponent: Component {
                     fetchSignal = fetchedMediaResource(
                         mediaBox: component.context.account.postbox.mediaBox,
                         userLocation: .other,
-                        userContentType: .image,
+                        userContentType: .story,
                         reference: FileMediaReference.story(peer: peerReference, id: component.item.id, media: file).resourceReference(file.resource)
                     )
                     |> ignoreValues

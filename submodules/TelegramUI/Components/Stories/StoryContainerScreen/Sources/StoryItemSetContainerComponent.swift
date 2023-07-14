@@ -938,9 +938,6 @@ public final class StoryItemSetContainerComponent: Component {
             if self.sendMessageContext.shareController != nil {
                 return .pause
             }
-            if self.sendMessageContext.tooltipScreen != nil {
-                return .pause
-            }
             if let navigationController = component.controller()?.navigationController as? NavigationController {
                 let topViewController = navigationController.topViewController
                 if !(topViewController is StoryContainerScreen) && !(topViewController is MediaEditorScreen) && !(topViewController is ShareWithPeersScreen) && !(topViewController is AttachmentController) {
@@ -3380,7 +3377,7 @@ public final class StoryItemSetContainerComponent: Component {
             if let file = media as? TelegramMediaFile {
                 duration = file.duration
             }
-            subject = fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: .story(peer: peerReference, id: item.id, media: media))
+            subject = fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .peer(peerReference.id), customUserContentType: .story, mediaReference: .story(peer: peerReference, id: item.id, media: media))
             |> mapToSignal { (value, isImage) -> Signal<MediaEditorScreen.Subject?, NoError> in
                 guard case let .data(data) = value, data.complete else {
                     return .complete()
@@ -3553,7 +3550,7 @@ public final class StoryItemSetContainerComponent: Component {
             let saveScreen = SaveProgressScreen(context: component.context, content: .progress("Saving", 0.0))
             component.controller()?.present(saveScreen, in: .current)
             
-            let disposable = (saveToCameraRoll(context: component.context, postbox: component.context.account.postbox, userLocation: .other, mediaReference: .story(peer: peerReference, id: component.slice.item.storyItem.id, media: component.slice.item.storyItem.media._asMedia()))
+            let disposable = (saveToCameraRoll(context: component.context, postbox: component.context.account.postbox, userLocation: .peer(peerReference.id), customUserContentType: .story, mediaReference: .story(peer: peerReference, id: component.slice.item.storyItem.id, media: component.slice.item.storyItem.media._asMedia()))
             |> deliverOnMainQueue).start(next: { [weak saveScreen] progress in
                 guard let saveScreen else {
                     return

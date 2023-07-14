@@ -167,7 +167,8 @@ public final class StorySetIndicatorComponent: Component {
                 case let .image(image):
                     signal = chatMessagePhoto(
                         postbox: context.account.postbox,
-                        userLocation: .other,
+                        userLocation: .peer(peerReference.id),
+                        userContentType: .story,
                         photoReference: .story(peer: peerReference, id: item.id, media: image),
                         synchronousLoad: false,
                         highQuality: true
@@ -175,8 +176,8 @@ public final class StorySetIndicatorComponent: Component {
                     if let representation = image.representations.last {
                         fetchSignal = fetchedMediaResource(
                             mediaBox: context.account.postbox.mediaBox,
-                            userLocation: .other,
-                            userContentType: .image,
+                            userLocation: .peer(peerReference.id),
+                            userContentType: .story,
                             reference: ImageMediaReference.story(peer: peerReference, id: item.id, media: image).resourceReference(representation.resource)
                         )
                         |> ignoreValues
@@ -187,7 +188,8 @@ public final class StorySetIndicatorComponent: Component {
                 case let .file(file):
                     signal = mediaGridMessageVideo(
                         postbox: context.account.postbox,
-                        userLocation: .other,
+                        userLocation: .peer(peerReference.id),
+                        userContentType: .story,
                         videoReference: .story(peer: peerReference, id: item.id, media: file),
                         onlyFullSize: false,
                         useLargeThumbnail: true,
@@ -200,8 +202,8 @@ public final class StorySetIndicatorComponent: Component {
                     )
                     fetchSignal = fetchedMediaResource(
                         mediaBox: context.account.postbox.mediaBox,
-                        userLocation: .other,
-                        userContentType: .image,
+                        userLocation: .peer(peerReference.id),
+                        userContentType: .story,
                         reference: FileMediaReference.story(peer: peerReference, id: item.id, media: file).resourceReference(file.resource)
                     )
                     |> ignoreValues

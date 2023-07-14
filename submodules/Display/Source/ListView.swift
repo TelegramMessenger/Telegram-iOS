@@ -1173,6 +1173,14 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
     }
     
+    private func getAdjustedContentHeight(effectiveInsets: UIEdgeInsets) -> CGFloat {
+        if let keepMinimalScrollHeightWithTopInset = self.keepMinimalScrollHeightWithTopInset, !keepMinimalScrollHeightWithTopInset.isZero {
+            return self.visibleSize.height + effectiveInsets.top + effectiveInsets.bottom// - 137.0
+        } else {
+            return 0.0
+        }
+    }
+    
     private func snapToBounds(snapTopItem: Bool, stackFromBottom: Bool, updateSizeAndInsets: ListViewUpdateSizeAndInsets? = nil, scrollToItem: ListViewScrollToItem? = nil, isExperimentalSnapToScrollToItem: Bool = false, insetDeltaOffsetFix: CGFloat) -> (snappedTopInset: CGFloat, offset: CGFloat) {
         if self.itemNodes.count == 0 {
             return (0.0, 0.0)
@@ -1236,7 +1244,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         if let keepMinimalScrollHeightWithTopInset = self.keepMinimalScrollHeightWithTopInset, topItemFound {
             if !self.stackFromBottom {
                 if !keepMinimalScrollHeightWithTopInset.isZero {
-                    completeHeight = max(completeHeight, self.visibleSize.height + effectiveInsets.top + effectiveInsets.bottom)
+                    completeHeight = max(completeHeight, self.getAdjustedContentHeight(effectiveInsets: effectiveInsets))
                 }
                 //completeHeight = max(completeHeight, self.visibleSize.height + keepMinimalScrollHeightWithTopInset - effectiveInsets.bottom - effectiveInsets.top)
                 bottomItemEdge = max(bottomItemEdge, topItemEdge + completeHeight)
@@ -1651,7 +1659,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 if let keepMinimalScrollHeightWithTopInset = self.keepMinimalScrollHeightWithTopInset {
                     if !self.stackFromBottom {
                         if !keepMinimalScrollHeightWithTopInset.isZero {
-                            completeHeight = max(completeHeight, self.visibleSize.height + effectiveInsets.top + effectiveInsets.bottom)
+                            completeHeight = max(completeHeight, self.getAdjustedContentHeight(effectiveInsets: effectiveInsets))
                         }
                         //completeHeight = max(completeHeight, self.visibleSize.height + keepMinimalScrollHeightWithTopInset)
                         bottomItemEdge = max(bottomItemEdge, topItemEdge + completeHeight)

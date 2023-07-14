@@ -6,6 +6,7 @@ public struct CacheStorageSettings: Codable, Equatable {
         case privateChats = "privateChats"
         case groups = "groups"
         case channels = "channels"
+        case stories = "stories"
     }
     
     private struct CategoryStorageTimeoutRepresentation: Codable {
@@ -25,7 +26,8 @@ public struct CacheStorageSettings: Codable, Equatable {
             categoryStorageTimeout: [
                 .privateChats: Int32.max,
                 .groups: Int32(31 * 24 * 60 * 60),
-                .channels: Int32(7 * 24 * 60 * 60)
+                .channels: Int32(7 * 24 * 60 * 60),
+                .stories: Int32(2 * 24 * 60 * 60)
             ]
         )
     }

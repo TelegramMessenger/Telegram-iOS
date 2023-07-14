@@ -1401,7 +1401,7 @@ public func preloadStoryMedia(context: AccountContext, peer: PeerReference, stor
     switch media {
     case let .image(image):
         if let representation = largestImageRepresentation(image.representations) {
-            signals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(peer.id), userContentType: .other, reference: .media(media: .story(peer: peer, id: storyId, media: media._asMedia()), resource: representation.resource), range: nil)
+            signals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(peer.id), userContentType: .story, reference: .media(media: .story(peer: peer, id: storyId, media: media._asMedia()), resource: representation.resource), range: nil)
             |> ignoreValues
             |> `catch` { _ -> Signal<Never, NoError> in
                 return .complete()
@@ -1418,7 +1418,7 @@ public func preloadStoryMedia(context: AccountContext, peer: PeerReference, stor
             }
         }
         
-        signals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(peer.id), userContentType: .other, reference: .media(media: .story(peer: peer, id: storyId, media: media._asMedia()), resource: file.resource), range: fetchRange)
+        signals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(peer.id), userContentType: .story, reference: .media(media: .story(peer: peer, id: storyId, media: media._asMedia()), resource: file.resource), range: fetchRange)
         |> ignoreValues
         |> `catch` { _ -> Signal<Never, NoError> in
             return .complete()
@@ -1459,7 +1459,7 @@ public func waitUntilStoryMediaPreloaded(context: AccountContext, peerId: Engine
                     |> ignoreValues
                 )
                 
-                loadSignals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(peer.id), userContentType: .other, reference: .media(media: .story(peer: peer, id: storyItem.id, media: storyItem.media._asMedia()), resource: representation.resource), range: nil)
+                loadSignals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(peer.id), userContentType: .story, reference: .media(media: .story(peer: peer, id: storyItem.id, media: storyItem.media._asMedia()), resource: representation.resource), range: nil)
                 |> ignoreValues
                 |> `catch` { _ -> Signal<Never, NoError> in
                     return .complete()
@@ -1489,7 +1489,7 @@ public func waitUntilStoryMediaPreloaded(context: AccountContext, peerId: Engine
                 |> ignoreValues
             )
             
-            loadSignals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(peer.id), userContentType: .other, reference: .media(media: .story(peer: peer, id: storyItem.id, media: storyItem.media._asMedia()), resource: file.resource), range: fetchRange)
+            loadSignals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(peer.id), userContentType: .story, reference: .media(media: .story(peer: peer, id: storyItem.id, media: storyItem.media._asMedia()), resource: file.resource), range: fetchRange)
             |> ignoreValues
             |> `catch` { _ -> Signal<Never, NoError> in
                 return .complete()

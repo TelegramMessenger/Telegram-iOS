@@ -1065,28 +1065,45 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         
         self.chatListDisplayNode.mainContainerNode.groupSelected = { [weak self] groupId in
-            if let strongSelf = self {
-                if let navigationController = strongSelf.navigationController as? NavigationController {
-                    let chatListController = ChatListControllerImpl(context: strongSelf.context, location: .chatList(groupId: groupId), controlsHistoryPreload: false, enableDebugActions: false)
-                    chatListController.navigationPresentation = .master
-                    #if DEBUG && false
-                    navigationController.pushViewController(chatListController, animated: false, completion: {})
-                    chatListController.onDidAppear = { [weak chatListController] in
-                        Queue.mainQueue().after(0.1, {
-                            guard let chatListController else {
-                                return
-                            }
-                            if chatListController.hasStorySubscriptions {
-                                chatListController.scrollToStoriesAnimated()
-                            }
-                        })
-                    }
-                    #else
-                    navigationController.pushViewController(chatListController)
-                    #endif
-                    strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.clearHighlightAnimated(true)
-                }
+            guard let self else {
+                return
             }
+            
+            let _ = (combineLatest(
+                ApplicationSpecificNotice.displayChatListArchiveTooltip(accountManager: self.context.sharedContext.accountManager),
+                self.context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Configuration.GlobalPrivacy()
+                )
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] didDisplayTip, settings in
+                guard let self else {
+                    return
+                }
+                
+                self.chatListDisplayNode.mainContainerNode.currentItemNode.clearHighlightAnimated(true)
+                
+                if !didDisplayTip {
+                    let _ = ApplicationSpecificNotice.setDisplayChatListArchiveTooltip(accountManager: self.context.sharedContext.accountManager).start()
+                    
+                    self.push(ArchiveInfoScreen(context: self.context, settings: settings, buttonAction: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        
+                        if let navigationController = self.navigationController as? NavigationController {
+                            let chatListController = ChatListControllerImpl(context: self.context, location: .chatList(groupId: groupId), controlsHistoryPreload: false, enableDebugActions: false)
+                            chatListController.navigationPresentation = .master
+                            navigationController.pushViewController(chatListController)
+                        }
+                    }))
+                } else {
+                    if let navigationController = self.navigationController as? NavigationController {
+                        let chatListController = ChatListControllerImpl(context: self.context, location: .chatList(groupId: groupId), controlsHistoryPreload: false, enableDebugActions: false)
+                        chatListController.navigationPresentation = .master
+                        navigationController.pushViewController(chatListController)
+                    }
+                }
+            })
         }
         
         self.chatListDisplayNode.mainContainerNode.updatePeerGrouping = { [weak self] peerId, group in
