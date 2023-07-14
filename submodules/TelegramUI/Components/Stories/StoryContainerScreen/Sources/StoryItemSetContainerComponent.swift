@@ -715,8 +715,10 @@ public final class StoryItemSetContainerComponent: Component {
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state, let component = self.component, let itemLayout = self.itemLayout {
-                if hasFirstResponder(self) || self.sendMessageContext.currentInputMode == .media {
-                    self.deactivateInput()
+                if self.hasActiveDeactivateableInput() {
+                    Queue.mainQueue().justDispatch {
+                        self.deactivateInput()
+                    }
                 } else if self.displayViewList {
                     let point = recognizer.location(in: self)
                     
