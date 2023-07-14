@@ -14,8 +14,13 @@ private func fullEntityMediaPath(_ path: String) -> String {
 
 public final class DrawingStickerEntity: DrawingEntity, Codable {
     public enum Content: Equatable {
+        public enum ImageType: Equatable {
+            case sticker
+            case rectangle
+            case dualPhoto
+        }
         case file(TelegramMediaFile)
-        case image(UIImage, Bool)
+        case image(UIImage, ImageType)
         case video(String, UIImage?, Bool)
         case dualVideoReference
         
@@ -27,9 +32,9 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
                 } else {
                     return false
                 }
-            case let .image(lhsImage, lhsIsRectangle):
-                if case let .image(rhsImage, rhsIsRectangle) = rhs {
-                    return lhsImage === rhsImage && lhsIsRectangle == rhsIsRectangle
+            case let .image(lhsImage, lhsImageType):
+                if case let .image(rhsImage, rhsImageType) = rhs {
+                    return lhsImage === rhsImage && lhsImageType == rhsImageType
                 } else {
                     return false
                 }
@@ -56,6 +61,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case videoImagePath
         case videoMirrored
         case isRectangle
+        case isDualPhoto
         case dualVideo
         case referenceDrawingSize
         case position
@@ -121,8 +127,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     
     public var isRectangle: Bool {
         switch self.content {
-        case let .image(_, isRectangle):
-            return isRectangle
+        case let .image(_, imageType):
+            return imageType == .rectangle
         default:
             return false
         }
@@ -157,7 +163,16 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             self.content = .file(file)
         } else if let imagePath = try container.decodeIfPresent(String.self, forKey: .imagePath), let image = UIImage(contentsOfFile: fullEntityMediaPath(imagePath)) {
             let isRectangle = try container.decodeIfPresent(Bool.self, forKey: .isRectangle) ?? false
-            self.content = .image(image, isRectangle)
+            let isDualPhoto = try container.decodeIfPresent(Bool.self, forKey: .isDualPhoto) ?? false
+            let imageType: Content.ImageType
+            if isDualPhoto {
+                imageType = .dualPhoto
+            } else if isRectangle {
+                imageType = .rectangle
+            } else {
+                imageType = .sticker
+            }
+            self.content = .image(image, imageType)
         } else if let videoPath = try container.decodeIfPresent(String.self, forKey: .videoPath) {
             var imageValue: UIImage?
             if let imagePath = try container.decodeIfPresent(String.self, forKey: .videoImagePath), let image = UIImage(contentsOfFile: fullEntityMediaPath(imagePath)) {
@@ -182,7 +197,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         switch self.content {
         case let .file(file):
             try container.encode(file, forKey: .file)
-        case let .image(image, isRectangle):
+        case let .image(image, imageType):
             let imagePath = "\(self.uuid).png"
             let fullImagePath = fullEntityMediaPath(imagePath)
             if let imageData = image.pngData() {
@@ -190,7 +205,14 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
                 try? imageData.write(to: URL(fileURLWithPath: fullImagePath))
                 try container.encodeIfPresent(imagePath, forKey: .imagePath)
             }
-            try container.encode(isRectangle, forKey: .isRectangle)
+            switch imageType {
+            case .dualPhoto:
+                try container.encode(true, forKey: .isDualPhoto)
+            case .rectangle:
+                try container.encode(true, forKey: .isRectangle)
+            default:
+                break
+            }
         case let .video(path, image, videoMirrored):
             try container.encode(path, forKey: .videoPath)
             let imagePath = "\(self.uuid).jpg"

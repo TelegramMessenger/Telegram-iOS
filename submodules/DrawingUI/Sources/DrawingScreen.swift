@@ -2930,7 +2930,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
             }
             let images = imageItems as! [UIImage]
             if images.count == 1, let image = images.first, max(image.size.width, image.size.height) > 1.0 {
-                let entity = DrawingStickerEntity(content: .image(image, false))
+                let entity = DrawingStickerEntity(content: .image(image, .sticker))
                 strongSelf.node.insertEntity.invoke(entity)
             }
         }

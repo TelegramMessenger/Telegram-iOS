@@ -21,6 +21,7 @@ import BundleIconComponent
 import CameraButtonComponent
 import VolumeButtons
 import TelegramNotices
+import DeviceAccess
 
 let videoRedColor = UIColor(rgb: 0xff3b30)
 
@@ -87,6 +88,8 @@ private final class CameraScreenComponent: CombinedComponent {
     
     let context: AccountContext
     let cameraState: CameraState
+    let cameraAuthorizationStatus: AccessType
+    let microphoneAuthorizationStatus: AccessType
     let hasAppeared: Bool
     let isVisible: Bool
     let panelWidth: CGFloat
@@ -101,6 +104,8 @@ private final class CameraScreenComponent: CombinedComponent {
     init(
         context: AccountContext,
         cameraState: CameraState,
+        cameraAuthorizationStatus: AccessType,
+        microphoneAuthorizationStatus: AccessType,
         hasAppeared: Bool,
         isVisible: Bool,
         panelWidth: CGFloat,
@@ -114,6 +119,8 @@ private final class CameraScreenComponent: CombinedComponent {
     ) {
         self.context = context
         self.cameraState = cameraState
+        self.cameraAuthorizationStatus = cameraAuthorizationStatus
+        self.microphoneAuthorizationStatus = microphoneAuthorizationStatus
         self.hasAppeared = hasAppeared
         self.isVisible = isVisible
         self.panelWidth = panelWidth
@@ -131,6 +138,12 @@ private final class CameraScreenComponent: CombinedComponent {
             return false
         }
         if lhs.cameraState != rhs.cameraState {
+            return false
+        }
+        if lhs.cameraAuthorizationStatus != rhs.cameraAuthorizationStatus {
+            return false
+        }
+        if lhs.microphoneAuthorizationStatus != rhs.microphoneAuthorizationStatus {
             return false
         }
         if lhs.hasAppeared != rhs.hasAppeared {
@@ -166,11 +179,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 return image
             }
         }
-        
-        private var cameraAuthorizationStatus: AVAuthorizationStatus = .notDetermined
-        private var microphoneAuthorizationStatus: AVAuthorizationStatus = .notDetermined
-        private var galleryAuthorizationStatus: PHAuthorizationStatus = .notDetermined
-        
+                
         private let context: AccountContext
         private let present: (ViewController) -> Void
         private let completion: ActionSlot<Signal<CameraScreen.Result, NoError>>
@@ -180,7 +189,7 @@ private final class CameraScreenComponent: CombinedComponent {
         private let getController: () -> CameraScreen?
         
         private var resultDisposable = MetaDisposable()
-        
+                
         private var mediaAssetsContext: MediaAssetsContext?
         fileprivate var lastGalleryAsset: PHAsset?
         private var lastGalleryAssetsDisposable: Disposable?
@@ -502,6 +511,7 @@ private final class CameraScreenComponent: CombinedComponent {
     }
     
     static var body: Body {
+        let placeholder = Child(PlaceholderComponent.self)
         let cancelButton = Child(CameraButton.self)
         let captureControls = Child(CaptureControlsComponent.self)
         let zoomControl = Child(ZoomComponent.self)
@@ -535,11 +545,50 @@ private final class CameraScreenComponent: CombinedComponent {
             let panelWidth = min(component.panelWidth, 185.0)
             
             var controlsBottomInset: CGFloat = 0.0
+            let previewHeight = floorToScreenPixels(availableSize.width * 1.77778)
             if !isTablet {
-                let previewHeight = floorToScreenPixels(availableSize.width * 1.77778)
                 if availableSize.height < previewHeight + 30.0 {
                     controlsBottomInset = -48.0
                 }
+            }
+            
+            let hasAllRequiredAccess: Bool
+            switch component.cameraAuthorizationStatus {
+            case .notDetermined:
+                hasAllRequiredAccess = true
+            case .allowed:
+                switch component.microphoneAuthorizationStatus {
+                case .notDetermined:
+                    hasAllRequiredAccess = true
+                case .allowed:
+                    hasAllRequiredAccess = true
+                default:
+                    hasAllRequiredAccess = false
+                }
+            default:
+                hasAllRequiredAccess = false
+            }
+                        
+            if !hasAllRequiredAccess {
+                let accountContext = component.context
+                let placeholder = placeholder.update(
+                    component: PlaceholderComponent(
+                        context: component.context,
+                        mode: .denied,
+                        action: {
+                            accountContext.sharedContext.applicationBindings.openSettings()
+                        }
+                    ),
+                    availableSize: CGSize(width: availableSize.width, height: previewHeight),
+                    transition: context.transition
+                )
+                context.add(placeholder
+                    .position(CGPoint(x: availableSize.width / 2.0, y: environment.safeInsets.top + previewHeight / 2.0))
+                    .clipsToBounds(true)
+                    .cornerRadius(11.0)
+                    .appear(.default(alpha: true))
+                    .disappear(.default(alpha: true))
+                )
             }
                         
             if case .holding = component.cameraState.recording {
@@ -593,7 +642,8 @@ private final class CameraScreenComponent: CombinedComponent {
             let captureControls = captureControls.update(
                 component: CaptureControlsComponent(
                     isTablet: isTablet,
-                    hasAppeared: component.hasAppeared,
+                    hasAppeared: component.hasAppeared && hasAllRequiredAccess,
+                    hasAccess: hasAllRequiredAccess,
                     shutterState: shutterState,
                     lastGalleryAsset: state.lastGalleryAsset,
                     tag: captureControlsTag,
@@ -739,51 +789,53 @@ private final class CameraScreenComponent: CombinedComponent {
                     )
                 }
                 
-                let flashButton = flashButton.update(
-                    component: CameraButton(
-                        content: flashContentComponent,
-                        action: { [weak state] in
-                            if let state {
-                                state.toggleFlashMode()
-                            }
-                        }
-                    ).tagged(flashButtonTag),
-                    availableSize: CGSize(width: 40.0, height: 40.0),
-                    transition: .immediate
-                )
-                context.add(flashButton
-                    .position(CGPoint(x: isTablet ? availableSize.width - smallPanelWidth / 2.0 : availableSize.width - topControlInset - flashButton.size.width / 2.0 - 5.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + flashButton.size.height / 2.0))
-                    .appear(.default(scale: true))
-                    .disappear(.default(scale: true))
-                )
-
-                if !isTablet && Camera.isDualCameraSupported {
-                    let dualButton = dualButton.update(
+                if hasAllRequiredAccess {
+                    let flashButton = flashButton.update(
                         component: CameraButton(
-                            content: AnyComponentWithIdentity(
-                                id: "dual",
-                                component: AnyComponent(
-                                    DualIconComponent(isSelected: component.cameraState.isDualCameraEnabled)
-                                )
-                            ),
+                            content: flashContentComponent,
                             action: { [weak state] in
                                 if let state {
-                                    state.toggleDualCamera()
+                                    state.toggleFlashMode()
                                 }
                             }
-                        ).tagged(dualButtonTag),
+                        ).tagged(flashButtonTag),
                         availableSize: CGSize(width: 40.0, height: 40.0),
                         transition: .immediate
                     )
-                    context.add(dualButton
-                        .position(CGPoint(x: availableSize.width - topControlInset - flashButton.size.width / 2.0 - 58.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + dualButton.size.height / 2.0 + 2.0))
+                    context.add(flashButton
+                        .position(CGPoint(x: isTablet ? availableSize.width - smallPanelWidth / 2.0 : availableSize.width - topControlInset - flashButton.size.width / 2.0 - 5.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + flashButton.size.height / 2.0))
                         .appear(.default(scale: true))
                         .disappear(.default(scale: true))
                     )
+                    
+                    if !isTablet && Camera.isDualCameraSupported {
+                        let dualButton = dualButton.update(
+                            component: CameraButton(
+                                content: AnyComponentWithIdentity(
+                                    id: "dual",
+                                    component: AnyComponent(
+                                        DualIconComponent(isSelected: component.cameraState.isDualCameraEnabled)
+                                    )
+                                ),
+                                action: { [weak state] in
+                                    if let state {
+                                        state.toggleDualCamera()
+                                    }
+                                }
+                            ).tagged(dualButtonTag),
+                            availableSize: CGSize(width: 40.0, height: 40.0),
+                            transition: .immediate
+                        )
+                        context.add(dualButton
+                            .position(CGPoint(x: availableSize.width - topControlInset - flashButton.size.width / 2.0 - 58.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + dualButton.size.height / 2.0 + 2.0))
+                            .appear(.default(scale: true))
+                            .disappear(.default(scale: true))
+                        )
+                    }
                 }
             }
             
-            if isTablet {
+            if isTablet && hasAllRequiredAccess {
                 let flipButton = flipButton.update(
                     component: CameraButton(
                         content: AnyComponentWithIdentity(
@@ -807,6 +859,8 @@ private final class CameraScreenComponent: CombinedComponent {
                 )
                 context.add(flipButton
                     .position(CGPoint(x: smallPanelWidth / 2.0, y: availableSize.height / 2.0))
+                    .appear(.default(scale: true))
+                    .disappear(.default(scale: true))
                 )
             }
             
@@ -885,7 +939,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 }
             }
             
-            if case .none = component.cameraState.recording, !state.isTransitioning {
+            if case .none = component.cameraState.recording, !state.isTransitioning && hasAllRequiredAccess {
                 let availableModeControlSize: CGSize
                 if isTablet {
                     availableModeControlSize = CGSize(width: panelWidth, height: 120.0)
@@ -1141,6 +1195,11 @@ public class CameraScreen: ViewController {
                 }
             }
         }
+        
+        private var cameraAuthorizationStatus: AccessType = .notDetermined
+        private var microphoneAuthorizationStatus: AccessType = .notDetermined
+        private var galleryAuthorizationStatus: AccessType = .notDetermined
+        private var authorizationStatusDisposables = DisposableSet()
                 
         init(controller: CameraScreen) {
             self.controller = controller
@@ -1312,12 +1371,33 @@ public class CameraScreen: ViewController {
             }
             
             self.idleTimerExtensionDisposable.set(self.context.sharedContext.applicationBindings.pushIdleTimerExtension())
+            
+            self.authorizationStatusDisposables.add((DeviceAccess.authorizationStatus(subject: .camera(.video))
+            |> deliverOnMainQueue).start(next: { [weak self] status in
+                if let self {
+                    self.cameraAuthorizationStatus = status
+                    self.requestUpdateLayout(hasAppeared: self.hasAppeared, transition: .easeInOut(duration: 0.2))
+                    
+                    self.maybeSetupCamera()
+                }
+            }))
+            
+            self.authorizationStatusDisposables.add((DeviceAccess.authorizationStatus(subject: .microphone(.video))
+            |> deliverOnMainQueue).start(next: { [weak self] status in
+                if let self {
+                    self.microphoneAuthorizationStatus = status
+                    self.requestUpdateLayout(hasAppeared: self.hasAppeared, transition: .easeInOut(duration: 0.2))
+                    
+                    self.maybeSetupCamera()
+                }
+            }))
         }
         
         deinit {
             self.cameraStateDisposable?.dispose()
             self.changingPositionDisposable?.dispose()
             self.idleTimerExtensionDisposable.dispose()
+            self.authorizationStatusDisposables.dispose()
         }
         
         private var pipPanGestureRecognizer: UIPanGestureRecognizer?
@@ -1346,11 +1426,23 @@ public class CameraScreen: ViewController {
             pipPanGestureRecognizer.delegate = self
             self.previewContainerView.addGestureRecognizer(pipPanGestureRecognizer)
             self.pipPanGestureRecognizer = pipPanGestureRecognizer
-            
-            self.setupCamera()
         }
         
-        func setupCamera() {
+        private func maybeSetupCamera() {
+            if case .allowed = self.cameraAuthorizationStatus, case .allowed = self.microphoneAuthorizationStatus {
+                self.setupCamera()
+            }
+        }
+        
+        private func requestDeviceAccess() {
+            DeviceAccess.authorizeAccess(to: .camera(.video), { granted in
+                if granted {
+                    DeviceAccess.authorizeAccess(to: .microphone(.video))
+                }
+            })
+        }
+        
+        private func setupCamera() {
             guard self.camera == nil else {
                 return
             }
@@ -1461,6 +1553,10 @@ public class CameraScreen: ViewController {
             camera.startCapture()
             
             self.camera = camera
+            
+            if self.hasAppeared {
+                self.maybePresentTooltips()
+            }
         }
         
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -1581,7 +1677,7 @@ public class CameraScreen: ViewController {
             
             CATransaction.begin()
             CATransaction.setDisableActions(true)
-            self.requestUpdateLayout(hasAppeared: false, transition: .immediate)
+            self.requestUpdateLayout(hasAppeared: self.hasAppeared, transition: .immediate)
             CATransaction.commit()
             
             self.additionalPreviewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -1866,9 +1962,12 @@ public class CameraScreen: ViewController {
             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY + 3.0), size: CGSize())
             
             let accountManager = self.context.sharedContext.accountManager
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Take photos or videos to share with all\nyour contacts or close friends at once."), textAlignment: .center, location: .point(location, .bottom), displayDuration: .custom(4.5), inset: 16.0, shouldDismissOnTouch: { point, containerFrame in
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Take photos or videos to share with all\nyour contacts or close friends at once."), textAlignment: .center, location: .point(location, .bottom), displayDuration: .custom(4.5), inset: 16.0, shouldDismissOnTouch: { [weak self] point, containerFrame in
                 if containerFrame.contains(point) {
                     let _ = ApplicationSpecificNotice.incrementStoriesCameraTip(accountManager: accountManager).start()
+                    Queue.mainQueue().justDispatch {
+                        self?.maybePresentTooltips()
+                    }
                     return .dismiss(consume: true)
                 }
                 return .ignore
@@ -2006,7 +2105,11 @@ public class CameraScreen: ViewController {
                 self.hasAppeared = hasAppeared
                 transition = transition.withUserData(CameraScreenTransition.finishedAnimateIn)
                 
-                self.maybePresentTooltips()
+                if self.camera != nil {
+                    self.maybePresentTooltips()
+                } else if case .notDetermined = self.cameraAuthorizationStatus {
+                    self.requestDeviceAccess()
+                }
             }
 
             let componentSize = self.componentHost.update(
@@ -2015,6 +2118,8 @@ public class CameraScreen: ViewController {
                     CameraScreenComponent(
                         context: self.context,
                         cameraState: self.cameraState,
+                        cameraAuthorizationStatus: self.cameraAuthorizationStatus,
+                        microphoneAuthorizationStatus: self.microphoneAuthorizationStatus,
                         hasAppeared: self.hasAppeared,
                         isVisible: self.cameraIsActive && !self.hasGallery,
                         panelWidth: panelWidth,

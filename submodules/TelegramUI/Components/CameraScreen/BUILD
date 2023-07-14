@@ -71,12 +71,16 @@ swift_library(
         "//submodules/Components/BlurredBackgroundComponent",
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
         "//submodules/Components/BundleIconComponent:BundleIconComponent",
+        "//submodules/TelegramUI/Components/ButtonComponent",
+        "//submodules/TelegramUI/Components/LottieComponent",
         "//submodules/TooltipUI",
         "//submodules/TelegramUI/Components/MediaEditor",
         "//submodules/Components/MetalImageView",
         "//submodules/TelegramUI/Components/CameraButtonComponent",
         "//submodules/Utils/VolumeButtons",
         "//submodules/TelegramNotices",
+        "//submodules/DeviceAccess",
+        
     ],
     visibility = [
         "//visibility:public",

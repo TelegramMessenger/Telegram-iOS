@@ -481,7 +481,8 @@ public final class MediaEditor {
                 
                 if player == nil {
                     self.updateRenderChain()
-                    self.maybeGeneratePersonSegmentation(image)
+                    let _ = image
+//                    self.maybeGeneratePersonSegmentation(image)
                 }
                 
                 if let player {
