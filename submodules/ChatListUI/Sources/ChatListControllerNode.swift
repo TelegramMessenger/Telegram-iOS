@@ -2042,6 +2042,9 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             mainOffset = navigationHeight
         }
         mainOffset = min(mainOffset, ChatListNavigationBar.searchScrollHeight)
+        if abs(mainOffset) < 0.1 {
+            mainOffset = 0.0
+        }
         
         let resultingOffset: CGFloat
         if let inlineStackContainerNode = self.inlineStackContainerNode {
@@ -2052,6 +2055,9 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 inlineOffset = navigationHeight
             }
             inlineOffset = min(inlineOffset, ChatListNavigationBar.searchScrollHeight)
+            if abs(inlineOffset) < 0.1 {
+                inlineOffset = 0.0
+            }
             
             resultingOffset = mainOffset * (1.0 - self.inlineStackContainerTransitionFraction) + inlineOffset * self.inlineStackContainerTransitionFraction
         } else {
@@ -2079,7 +2085,12 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             )))
         }
         
-        let mainDelta = max(0.0, resultingOffset) - max(0.0, mainOffset)
+        let mainDelta: CGFloat
+        if let _ = self.inlineStackContainerNode {
+            mainDelta = resultingOffset - max(0.0, mainOffset)
+        } else {
+            mainDelta = 0.0
+        }
         transition.updateSublayerTransformOffset(layer: self.mainContainerNode.layer, offset: CGPoint(x: 0.0, y: -mainDelta))
     }
     
