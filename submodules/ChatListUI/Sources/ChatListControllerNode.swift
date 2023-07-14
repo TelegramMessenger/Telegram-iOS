@@ -2079,7 +2079,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             )))
         }
         
-        let mainDelta = resultingOffset - mainOffset
+        let mainDelta = max(0.0, resultingOffset) - max(0.0, mainOffset)
         transition.updateSublayerTransformOffset(layer: self.mainContainerNode.layer, offset: CGPoint(x: 0.0, y: -mainDelta))
     }
     
