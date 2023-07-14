@@ -289,7 +289,7 @@ private final class StickerSelectionComponent: Component {
                             interaction: interaction,
                             inputNodeInteraction: inputNodeInteraction,
                             mode: mappedMode,
-                            stickerActionTitle: presentationData.strings.StickerPack_Select,
+                            stickerActionTitle: presentationData.strings.StickerPack_AddSticker,
                             trendingGifsPromise: trendingGifsPromise,
                             cancel: {
                             },
@@ -585,7 +585,7 @@ public class StickerPickerScreen: ViewController {
                             CTLineDraw(line, context)
                             context.translateBy(x: -lineOrigin.x, y: -lineOrigin.y)
                         }) {
-                            strongSelf.controller?.completion(.image(image, false))
+                            strongSelf.controller?.completion(.image(image, .sticker))
                         }
                         strongSelf.controller?.dismiss(animated: true)
                     }

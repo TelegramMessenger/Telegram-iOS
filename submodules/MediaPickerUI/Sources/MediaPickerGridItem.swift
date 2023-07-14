@@ -125,23 +125,27 @@ final class MediaPickerGridItemNode: GridItemNode {
     override init() {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.contentMode = .scaleToFill
+        self.backgroundNode.isLayerBacked = true
         
         self.imageNode = ImageNode()
         self.imageNode.clipsToBounds = true
         self.imageNode.contentMode = .scaleAspectFill
-        self.imageNode.isLayerBacked = false
+        self.imageNode.isLayerBacked = true
         self.imageNode.animateFirstTransition = false
         
         self.gradientNode = ASImageNode()
         self.gradientNode.displaysAsynchronously = false
         self.gradientNode.displayWithoutProcessing = true
         self.gradientNode.image = maskImage
+        self.gradientNode.isLayerBacked = true
         
         self.typeIconNode = ASImageNode()
         self.typeIconNode.displaysAsynchronously = false
         self.typeIconNode.displayWithoutProcessing = true
+        self.typeIconNode.isLayerBacked = true
         
         self.durationNode = ImmediateTextNode()
+        self.durationNode.isLayerBacked = true
         self.draftNode = ImmediateTextNode()
         
         self.activateAreaNode = AccessibilityAreaNode()
@@ -472,7 +476,7 @@ final class MediaPickerGridItemNode: GridItemNode {
                 }
             }
             
-            let originalSignal = assetImageSignal //assetImage(fetchResult: fetchResult, index: index, targetSize: targetSize, exact: false, synchronous: true)
+            let originalSignal = assetImageSignal
             let imageSignal: Signal<UIImage?, NoError> = editedSignal
             |> mapToSignal { result in
                 if let result = result {
@@ -519,18 +523,22 @@ final class MediaPickerGridItemNode: GridItemNode {
                     self.addSubnode(self.typeIconNode)
                     self.setNeedsLayout()
                 }
-            } else if asset.mediaType == .video {
-                if asset.mediaSubtypes.contains(.videoHighFrameRate) {
-                    self.typeIconNode.image = UIImage(bundleImageName: "Media Editor/MediaSlomo")
-                } else if asset.mediaSubtypes.contains(.videoTimelapse) {
-                    self.typeIconNode.image = UIImage(bundleImageName: "Media Editor/MediaTimelapse")
-                } else {
-                    self.typeIconNode.image = UIImage(bundleImageName: "Media Editor/MediaVideo")
+            }
+            
+            if asset.mediaType == .video {
+                if !asset.isFavorite {
+                    if asset.mediaSubtypes.contains(.videoHighFrameRate) {
+                        self.typeIconNode.image = UIImage(bundleImageName: "Media Editor/MediaSlomo")
+                    } else if asset.mediaSubtypes.contains(.videoTimelapse) {
+                        self.typeIconNode.image = UIImage(bundleImageName: "Media Editor/MediaTimelapse")
+                    } else {
+                        self.typeIconNode.image = UIImage(bundleImageName: "Media Editor/MediaVideo")
+                    }
                 }
                 
                 self.durationNode.attributedText = NSAttributedString(string: stringForDuration(Int32(asset.duration)), font: Font.semibold(12.0), textColor: .white)
                 
-                if self.typeIconNode.supernode == nil {
+                if self.durationNode.supernode == nil {
                     self.addSubnode(self.gradientNode)
                     self.addSubnode(self.typeIconNode)
                     self.addSubnode(self.durationNode)
@@ -588,7 +596,7 @@ final class MediaPickerGridItemNode: GridItemNode {
         
         let backgroundSize = CGSize(width: self.bounds.width, height: floorToScreenPixels(self.bounds.height / 9.0 * 16.0))
         self.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((self.bounds.height - backgroundSize.height) / 2.0)), size: backgroundSize)
-        self.imageNode.frame = self.bounds.insetBy(dx: -1.0 + UIScreenPixel, dy: -1.0 + UIScreenPixel)
+        self.imageNode.frame = self.bounds
         self.gradientNode.frame = CGRect(x: 0.0, y: self.bounds.height - 36.0, width: self.bounds.width, height: 36.0)
         self.typeIconNode.frame = CGRect(x: 0.0, y: self.bounds.height - 20.0, width: 19.0, height: 19.0)
         self.activateAreaNode.frame = self.bounds
@@ -619,11 +627,11 @@ final class MediaPickerGridItemNode: GridItemNode {
     
     func transitionView(snapshot: Bool) -> UIView {
         if snapshot {
-            let view = self.imageNode.view.snapshotContentTree(unhide: true, keepTransform: true)!
+            let view = self.imageNode.layer.snapshotContentTreeAsView(unhide: true)!
             view.frame = self.convert(self.bounds, to: nil)
             return view
         } else {
-            return self.imageNode.view
+            return self.view
         }
     }
     

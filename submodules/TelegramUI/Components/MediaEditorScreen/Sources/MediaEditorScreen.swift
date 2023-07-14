@@ -1167,13 +1167,13 @@ final class MediaEditorScreenComponent: Component {
                         switch data {
                         case let .sticker(image, _):
                             if max(image.size.width, image.size.height) > 1.0 {
-                                let entity = DrawingStickerEntity(content: .image(image, false))
+                                let entity = DrawingStickerEntity(content: .image(image, .sticker))
                                 controller.node.interaction?.insertEntity(entity, scale: 1.0)
                                 self.deactivateInput()
                             }
                         case let .images(images):
                             if images.count == 1, let image = images.first, max(image.size.width, image.size.height) > 1.0 {
-                                let entity = DrawingStickerEntity(content: .image(image, true))
+                                let entity = DrawingStickerEntity(content: .image(image, .rectangle))
                                 controller.node.interaction?.insertEntity(entity, scale: 2.5)
                                 self.deactivateInput()
                             }
@@ -1925,8 +1925,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let cgImage = additionalImage.cgImage {
                         context.draw(cgImage, in: CGRect(origin: CGPoint(x: (size.width - additionalImage.size.width) / 2.0, y: (size.height - additionalImage.size.height) / 2.0), size: additionalImage.size))
                     }
-                })
-                let imageEntity = DrawingStickerEntity(content: .image(image ?? additionalImage, false))
+                }, scale: 1.0)
+                let imageEntity = DrawingStickerEntity(content: .image(image ?? additionalImage, .dualPhoto))
                 imageEntity.referenceDrawingSize = storyDimensions
                 imageEntity.scale = 1.625
                 imageEntity.position = position.getPosition(storyDimensions)
@@ -2730,7 +2730,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { [weak self] image, _ in
                     if let self, let image {
                         Queue.mainQueue().async {
-                            self.interaction?.insertEntity(DrawingStickerEntity(content: .image(image, true)), scale: 2.5)
+                            self.interaction?.insertEntity(DrawingStickerEntity(content: .image(image, .rectangle)), scale: 2.5)
                         }
                     }
                 }
@@ -3862,7 +3862,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if let self {
                     makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image ?? UIImage(), dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] coverImage in
                         if let self {
-                            Logger.shared.log("Media Editor", "completed with video \(videoResult)")
+                            Logger.shared.log("MediaEditor", "Completed with video \(videoResult)")
                             self.completion(randomId, .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions), caption, self.state.privacy, stickers, { [weak self] finished in
                                 self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                     self?.dismiss()
@@ -3885,7 +3885,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 
                 makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] resultImage in
                     if let self, let resultImage {
-                        Logger.shared.log("Media Editor", "completed with image \(resultImage)")
+                        Logger.shared.log("MediaEditor", "Completed with image \(resultImage)")
                         self.completion(randomId, .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), caption, self.state.privacy, stickers, { [weak self] finished in
                             self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                 self?.dismiss()
@@ -4110,7 +4110,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
             let images = imageItems as! [UIImage]
             if images.count == 1, let image = images.first, max(image.size.width, image.size.height) > 1.0 {
-                self.node.interaction?.insertEntity(DrawingStickerEntity(content: .image(image, false)), scale: 2.5)
+                self.node.interaction?.insertEntity(DrawingStickerEntity(content: .image(image, .sticker)), scale: 2.5)
             }
         }
     }

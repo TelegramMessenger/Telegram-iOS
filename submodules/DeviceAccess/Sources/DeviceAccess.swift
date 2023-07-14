@@ -82,6 +82,16 @@ public final class DeviceAccess {
         return self.locationPromise.get()
     }
     
+    private static let cameraPromise = Promise<Bool?>(nil)
+    static var camera: Signal<Bool?, NoError> {
+        return self.cameraPromise.get()
+    }
+    
+    private static let microphonePromise = Promise<Bool?>(nil)
+    static var microphone: Signal<Bool?, NoError> {
+        return self.microphonePromise.get()
+    }
+    
     public static func isMicrophoneAccessAuthorized() -> Bool? {
         return AVAudioSession.sharedInstance().recordPermission == .granted
     }
@@ -248,12 +258,72 @@ public final class DeviceAccess {
                         }
                     }
                 )
+            case .camera:
+                return Signal { subscriber in
+                    let status = AVCaptureDevice.authorizationStatus(for: .video)
+                    switch status {
+                    case .authorized:
+                        subscriber.putNext(.allowed)
+                    case .denied, .restricted:
+                        subscriber.putNext(.denied)
+                    case .notDetermined:
+                        subscriber.putNext(.notDetermined)
+                    @unknown default:
+                        fatalError()
+                    }
+                    subscriber.putCompletion()
+                    return EmptyDisposable
+                }
+                |> then(self.camera
+                    |> mapToSignal { authorized -> Signal<AccessType, NoError> in
+                        if let authorized = authorized {
+                            return .single(authorized ? .allowed : .denied)
+                        } else {
+                            return .complete()
+                        }
+                    }
+                )
+            case .microphone:
+                return Signal { subscriber in
+                    let status = AVCaptureDevice.authorizationStatus(for: .audio)
+                    switch status {
+                    case .authorized:
+                        subscriber.putNext(.allowed)
+                    case .denied, .restricted:
+                        subscriber.putNext(.denied)
+                    case .notDetermined:
+                        subscriber.putNext(.notDetermined)
+                    @unknown default:
+                        fatalError()
+                    }
+                    subscriber.putCompletion()
+                    return EmptyDisposable
+                }
+                |> then(self.microphone
+                    |> mapToSignal { authorized -> Signal<AccessType, NoError> in
+                        if let authorized = authorized {
+                            return .single(authorized ? .allowed : .denied)
+                        } else {
+                            return .complete()
+                        }
+                    }
+                )
             default:
                 return .single(.notDetermined)
         }
     }
     
-    public static func authorizeAccess(to subject: DeviceAccessSubject, onlyCheck: Bool = false, registerForNotifications: ((@escaping (Bool) -> Void) -> Void)? = nil, requestSiriAuthorization: ((@escaping (Bool) -> Void) -> Void)? = nil, locationManager: LocationManager? = nil, presentationData: PresentationData? = nil, present: @escaping (ViewController, Any?) -> Void = { _, _ in }, openSettings: @escaping () -> Void = { }, displayNotificationFromBackground: @escaping (String) -> Void = { _ in }, _ completion: @escaping (Bool) -> Void = { _ in }) {
+    public static func authorizeAccess(
+        to subject: DeviceAccessSubject,
+        onlyCheck: Bool = false,
+        registerForNotifications: ((@escaping (Bool) -> Void) -> Void)? = nil,
+        requestSiriAuthorization: ((@escaping (Bool) -> Void) -> Void)? = nil,
+        locationManager: LocationManager? = nil,
+        presentationData: PresentationData? = nil,
+        present: @escaping (ViewController, Any?) -> Void = { _, _ in },
+        openSettings: @escaping () -> Void = { },
+        displayNotificationFromBackground: @escaping (String) -> Void = { _ in },
+        _ completion: @escaping (Bool) -> Void = { _ in }) {
             switch subject {
                 case let .camera(cameraSubject):
                     let status = AVCaptureDevice.authorizationStatus(for: .video)
@@ -262,6 +332,7 @@ public final class DeviceAccess {
                             AVCaptureDevice.requestAccess(for: AVMediaType.video) { response in
                                 Queue.mainQueue().async {
                                     completion(response)
+                                    self.cameraPromise.set(.single(response))
                                     if !response, let presentationData = presentationData {
                                         let text: String
                                         switch cameraSubject {
@@ -331,6 +402,7 @@ public final class DeviceAccess {
                                         displayNotificationFromBackground(text)
                                     }
                                 }
+                                self.microphonePromise.set(.single(granted))
                             }
                         })
                     }

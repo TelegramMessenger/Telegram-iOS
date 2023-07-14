@@ -446,6 +446,7 @@ final class CaptureControlsComponent: Component {
     
     let isTablet: Bool
     let hasAppeared: Bool
+    let hasAccess: Bool
     let shutterState: ShutterButtonState
     let lastGalleryAsset: PHAsset?
     let tag: AnyObject?
@@ -463,6 +464,7 @@ final class CaptureControlsComponent: Component {
     init(
         isTablet: Bool,
         hasAppeared: Bool,
+        hasAccess: Bool,
         shutterState: ShutterButtonState,
         lastGalleryAsset: PHAsset?,
         tag: AnyObject?,
@@ -479,6 +481,7 @@ final class CaptureControlsComponent: Component {
     ) {
         self.isTablet = isTablet
         self.hasAppeared = hasAppeared
+        self.hasAccess = hasAccess
         self.shutterState = shutterState
         self.lastGalleryAsset = lastGalleryAsset
         self.tag = tag
@@ -499,6 +502,9 @@ final class CaptureControlsComponent: Component {
             return false
         }
         if lhs.hasAppeared != rhs.hasAppeared {
+            return false
+        }
+        if lhs.hasAccess != rhs.hasAccess {
             return false
         }
         if lhs.shutterState != rhs.shutterState {
@@ -944,7 +950,7 @@ final class CaptureControlsComponent: Component {
                 transition.setAlpha(view: galleryButtonView, alpha: isRecording || isTransitioning ? 0.0 : 1.0)
             }
                         
-            if !component.isTablet {
+            if !component.isTablet && component.hasAccess {
                 let flipButtonOriginX = availableSize.width - 48.0 - buttonSideInset
                 let flipButtonMaskFrame: CGRect = CGRect(origin: CGPoint(x: availableSize.width / 2.0 - (flipButtonOriginX + 22.0) + 6.0 + self.shutterOffsetX, y: 8.0), size: CGSize(width: 32.0, height: 32.0))
                 
@@ -1153,10 +1159,13 @@ final class CaptureControlsComponent: Component {
                     
                     self.addSubview(shutterButtonView)
                 }
+                let alpha: CGFloat = component.hasAccess ? 1.0 : 0.3
                 transition.setBounds(view: shutterButtonView, bounds: CGRect(origin: .zero, size: shutterButtonFrame.size))
                 transition.setPosition(view: shutterButtonView, position: shutterButtonFrame.center)
                 transition.setScale(view: shutterButtonView, scale: isTransitioning ? 0.01 : 1.0)
-                transition.setAlpha(view: shutterButtonView, alpha: isTransitioning ? 0.0 : 1.0)
+                transition.setAlpha(view: shutterButtonView, alpha: isTransitioning ? 0.0 : alpha)
+                
+                shutterButtonView.isUserInteractionEnabled = component.hasAccess
             }
             
             if let buttonView = self.flipButtonView.view as? CameraButton.View, let contentView = buttonView.contentView.componentView as? FlipButtonContentComponent.View {

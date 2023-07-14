@@ -694,6 +694,8 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         if let selectedEntityView = self.selectedEntityView, let selectionView = selectedEntityView.selectionView {
             if !self.hasBin {
                 selectionView.handlePan(gestureRecognizer)
+            } else if let stickerEntity = selectedEntityView.entity as? DrawingStickerEntity, case .dualVideoReference = stickerEntity.content {
+                selectionView.handlePan(gestureRecognizer)
             } else {
                 var isTrappedInBin = false
                 let scale = 100.0 / selectedEntityView.bounds.size.width

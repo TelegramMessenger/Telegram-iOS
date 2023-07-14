@@ -978,7 +978,7 @@ final class ShareWithPeersScreenComponent: Component {
             }
             
             let fadeTransition = Transition.easeInOut(duration: 0.25)
-            if let searchStateContext = self.searchStateContext, case let .search(query) = searchStateContext.subject, let value = searchStateContext.stateValue, value.peers.isEmpty {
+            if let searchStateContext = self.searchStateContext, case let .search(query, _) = searchStateContext.subject, let value = searchStateContext.stateValue, value.peers.isEmpty {
                 let sideInset: CGFloat = 44.0
                 let emptyAnimationHeight = 148.0
                 let topInset: CGFloat = topOffset + itemLayout.containerInset + 40.0
@@ -1280,10 +1280,14 @@ final class ShareWithPeersScreenComponent: Component {
                 )
                 
                 if !self.navigationTextFieldState.text.isEmpty {
-                    if let searchStateContext = self.searchStateContext, searchStateContext.subject == .search(self.navigationTextFieldState.text) {
+                    var onlyContacts = false
+                    if component.initialPrivacy.base == .closeFriends || component.initialPrivacy.base == .contacts {
+                        onlyContacts = true
+                    }
+                    if let searchStateContext = self.searchStateContext, searchStateContext.subject == .search(query: self.navigationTextFieldState.text, onlyContacts: onlyContacts) {
                     } else {
                         self.searchStateDisposable?.dispose()
-                        let searchStateContext = ShareWithPeersScreen.StateContext(context: component.context, subject: .search(self.navigationTextFieldState.text))
+                        let searchStateContext = ShareWithPeersScreen.StateContext(context: component.context, subject: .search(query: self.navigationTextFieldState.text, onlyContacts: onlyContacts))
                         var applyState = false
                         self.searchStateDisposable = (searchStateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
                             guard let self else {
@@ -1335,7 +1339,7 @@ final class ShareWithPeersScreenComponent: Component {
                     sideInset: sideInset,
                     title: "Name",
                     peer: nil,
-                    subtitle: "sub",
+                    subtitle: self.searchStateContext != nil ? "" : "sub",
                     subtitleAccessory: .none,
                     presence: nil,
                     selectionState: .editing(isSelected: false, isTinted: false),
@@ -1753,7 +1757,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
             case stories(editing: Bool)
             case chats
             case contacts(EngineStoryPrivacy.Base)
-            case search(String)
+            case search(query: String, onlyContacts: Bool)
         }
         
         fileprivate var stateValue: State?
@@ -1889,7 +1893,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     
                     self.readySubject.set(true)
                 })
-            case let .search(query):
+            case let .search(query, _):
                 self.stateDisposable = (context.engine.contacts.searchLocalPeers(query: query)
                 |> deliverOnMainQueue).start(next: { [weak self] peers in
                     guard let self else {

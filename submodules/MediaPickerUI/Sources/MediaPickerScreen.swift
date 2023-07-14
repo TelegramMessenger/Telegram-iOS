@@ -478,7 +478,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             
             let throttledContentOffsetSignal = self.fastScrollContentOffset.get()
             |> mapToThrottled { next -> Signal<CGPoint, NoError> in
-                return .single(next) |> then(.complete() |> delay(0.02, queue: Queue.concurrentDefaultQueue()))
+                return .single(next) |> then(.complete() |> delay(0.05, queue: Queue.concurrentDefaultQueue()))
             }
             self.fastScrollDisposable = (throttledContentOffsetSignal
             |> deliverOnMainQueue).start(next: { [weak self] contentOffset in
@@ -1266,7 +1266,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 itemHeight = floor(itemWidth * 1.227)
             }
             
-            self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: bounds.size, insets: gridInsets, scrollIndicatorInsets: nil, preloadSize: itemHeight * 3.0, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemHeight), fillWidth: true, lineSpacing: itemSpacing, itemSpacing: itemSpacing), cutout: cameraRect), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, updateOpaqueState: nil, synchronousLoads: false), completion: { [weak self] _ in
+            let preloadSize: CGFloat = itemHeight// * 3.0
+            self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: bounds.size, insets: gridInsets, scrollIndicatorInsets: nil, preloadSize: preloadSize, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemHeight), fillWidth: true, lineSpacing: itemSpacing, itemSpacing: itemSpacing), cutout: cameraRect), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, updateOpaqueState: nil, synchronousLoads: false), completion: { [weak self] _ in
                 guard let strongSelf = self else {
                     return
                 }
