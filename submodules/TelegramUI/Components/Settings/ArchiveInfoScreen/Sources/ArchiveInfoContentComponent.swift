@@ -125,11 +125,17 @@ public final class ArchiveInfoContentComponent: Component {
             contentHeight += iconSize
             contentHeight += 15.0
             
+            let titleString = NSMutableAttributedString()
+            titleString.append(NSAttributedString(string: "This is Your Archive", font: Font.semibold(19.0), textColor: component.theme.list.itemPrimaryTextColor))
+            let imageAttachment = NSTextAttachment()
+            imageAttachment.image = self.iconBackground.image
+            titleString.append(NSAttributedString(attachment: imageAttachment))
+            
             //TODO:localize
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "This is Your Archive", font: Font.semibold(19.0), textColor: component.theme.list.itemPrimaryTextColor)),
+                    text: .plain(titleString),
                     maximumNumberOfLines: 1
                 )),
                 environment: {},

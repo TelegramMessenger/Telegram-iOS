@@ -3197,7 +3197,7 @@ public final class ChatListNode: ListView {
             }
             
             var options = transition.options
-            options.insert(.Synchronous)
+            //options.insert(.Synchronous)
             if self.view.window != nil {
                 if !options.contains(.AnimateInsertion) {
                     options.insert(.PreferSynchronousDrawing)

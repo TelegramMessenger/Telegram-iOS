@@ -406,12 +406,15 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             
             if hasAvatar {
                 if let effectiveAuthor = effectiveAuthor {
-                    let storyStats: PeerStoryStats?
-                    switch content {
-                    case let .message(_, _, _, attributes, _):
-                        storyStats = attributes.authorStoryStats
-                    case let .group(messages):
-                        storyStats = messages.first?.3.authorStoryStats
+                    var storyStats: PeerStoryStats?
+                    if case .peer(id: context.account.peerId) = chatLocation {
+                    } else {
+                        switch content {
+                        case let .message(_, _, _, attributes, _):
+                            storyStats = attributes.authorStoryStats
+                        case let .group(messages):
+                            storyStats = messages.first?.3.authorStoryStats
+                        }
                     }
                     
                     avatarHeader = ChatMessageAvatarHeader(timestamp: content.index.timestamp, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), message: message, presentationData: presentationData, context: context, controllerInteraction: controllerInteraction, storyStats: storyStats)

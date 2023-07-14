@@ -163,7 +163,7 @@ final class StoryItemContentComponent: Component {
                     videoNode.isHidden = true
                     
                     self.videoNode = videoNode
-                    self.addSubnode(videoNode)
+                    //self.addSubview(videoNode.view)
                     
                     videoNode.playbackCompleted = { [weak self] in
                         guard let self else {

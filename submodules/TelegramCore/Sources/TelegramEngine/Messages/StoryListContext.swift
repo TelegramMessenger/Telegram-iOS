@@ -450,6 +450,8 @@ public final class PeerStoryListContext {
         
         private var updatesDisposable: Disposable?
         
+        private var completionCallbacksByToken: [Int: [() -> Void]] = [:]
+        
         init(queue: Queue, account: Account, peerId: EnginePeer.Id, isArchived: Bool) {
             self.queue = queue
             self.account = account
@@ -519,7 +521,7 @@ public final class PeerStoryListContext {
                 }
                 
                 self.stateValue = State(peerReference: peerReference, items: items, totalCount: totalCount, loadMoreToken: 0, isCached: true, allEntityFiles: allEntityFiles)
-                self.loadMore()
+                self.loadMore(completion: nil)
             })
         }
         
@@ -527,15 +529,25 @@ public final class PeerStoryListContext {
             self.requestDisposable?.dispose()
         }
         
-        func loadMore() {
-            if self.isLoadingMore {
-                return
-            }
+        func loadMore(completion: (() -> Void)?) {
             guard let loadMoreToken = self.stateValue.loadMoreToken else {
                 return
             }
             
+            if let completion = completion {
+                if self.completionCallbacksByToken[loadMoreToken] == nil {
+                    self.completionCallbacksByToken[loadMoreToken] = []
+                }
+                self.completionCallbacksByToken[loadMoreToken]?.append(completion)
+            }
+            
+            if self.isLoadingMore {
+                return
+            }
+            
             self.isLoadingMore = true
+            
+            let limit = 100
             
             let peerId = self.peerId
             let account = self.account
@@ -551,9 +563,9 @@ public final class PeerStoryListContext {
                 
                 let signal: Signal<Api.stories.Stories, MTRpcError>
                 if isArchived {
-                    signal = account.network.request(Api.functions.stories.getStoriesArchive(offsetId: Int32(loadMoreToken), limit: 100))
+                    signal = account.network.request(Api.functions.stories.getStoriesArchive(offsetId: Int32(loadMoreToken), limit: Int32(limit)))
                 } else {
-                    signal = account.network.request(Api.functions.stories.getPinnedStories(userId: inputUser, offsetId: Int32(loadMoreToken), limit: 100))
+                    signal = account.network.request(Api.functions.stories.getPinnedStories(userId: inputUser, offsetId: Int32(loadMoreToken), limit: Int32(limit)))
                 }
                 return signal
                 |> map { result -> Api.stories.Stories? in
@@ -575,7 +587,7 @@ public final class PeerStoryListContext {
                         switch result {
                         case let .stories(count, stories, users):
                             totalCount = Int(count)
-                            hasMore = stories.count >= 100
+                            hasMore = stories.count >= limit
                             
                             updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
                             
@@ -663,6 +675,12 @@ public final class PeerStoryListContext {
                     updatedState.totalCount = updatedState.items.count
                 }
                 self.stateValue = updatedState
+                
+                if let callbacks = self.completionCallbacksByToken.removeValue(forKey: loadMoreToken) {
+                    for f in callbacks {
+                        f()
+                    }
+                }
                 
                 if self.updatesDisposable == nil {
                     self.updatesDisposable = (self.account.stateManager.storyUpdates
@@ -863,9 +881,9 @@ public final class PeerStoryListContext {
         })
     }
     
-    public func loadMore() {
+    public func loadMore(completion: (() -> Void)? = nil) {
         self.impl.with { impl in
-            impl.loadMore()
+            impl.loadMore(completion : completion)
         }
     }
 }
