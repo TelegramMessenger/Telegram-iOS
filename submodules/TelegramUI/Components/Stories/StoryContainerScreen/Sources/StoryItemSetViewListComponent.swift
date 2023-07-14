@@ -586,10 +586,11 @@ final class StoryItemSetViewListComponent: Component {
             }
             
             if itemUpdated || viewsNilUpdated {
-                self.viewListState = nil
                 self.viewListDisposable?.dispose()
                 
                 if let views = component.storyItem.views {
+                    self.viewListState = nil
+                    
                     let viewList: EngineStoryViewListContext
                     if let current = component.sharedListsContext.viewLists[StoryId(peerId: component.peerId, id: component.storyItem.id)] {
                         viewList = current
@@ -618,6 +619,8 @@ final class StoryItemSetViewListComponent: Component {
                     })
                     applyState = true
                     let _ = synchronous
+                } else {
+                    self.viewListState = EngineStoryViewListContext.State(totalCount: 0, items: [], loadMoreToken: nil)
                 }
             }
             
