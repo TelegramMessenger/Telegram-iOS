@@ -2155,6 +2155,16 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             }
                         }
                     }
+                    if textString.length == 0, case let .groupReference(data) = item.content, let storyState = data.storyState, storyState.stats.totalCount != 0 {
+                        //TODO:localize
+                        let storyText: String
+                        if storyState.stats.totalCount == 1 {
+                            storyText = "1 story"
+                        } else {
+                            storyText = "\(storyState.stats.totalCount) stories"
+                        }
+                        textString.append(NSAttributedString(string: storyText, font: textFont, textColor: theme.messageTextColor))
+                    }
                     attributedText = textString
             }
             
