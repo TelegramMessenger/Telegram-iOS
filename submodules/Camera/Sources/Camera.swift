@@ -460,15 +460,16 @@ private final class CameraContext {
         }
         mainDeviceContext.device.setTorchMode(self._flashMode)
         
+        let orientation = self.simplePreviewView?.videoPreviewLayer.connection?.videoOrientation ?? .portrait
         if let additionalDeviceContext = self.additionalDeviceContext {
             return combineLatest(
-                mainDeviceContext.output.startRecording(isDualCamera: true, position: self.positionValue),
-                additionalDeviceContext.output.startRecording(isDualCamera: true)
+                mainDeviceContext.output.startRecording(isDualCamera: true, position: self.positionValue, orientation: orientation),
+                additionalDeviceContext.output.startRecording(isDualCamera: true, orientation: .portrait)
             ) |> map { value, _ in
                 return value
             }
         } else {
-            return mainDeviceContext.output.startRecording(isDualCamera: false)
+            return mainDeviceContext.output.startRecording(isDualCamera: false, orientation: orientation)
         }
     }
     
@@ -486,7 +487,7 @@ private final class CameraContext {
                     if let cgImage = additionalResult.1.cgImage {
                         additionalTransitionImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .leftMirrored)
                     }
-                    return .single(.finished(mainResult, (additionalResult.0, additionalTransitionImage, true), duration, positionChangeTimestamps, CACurrentMediaTime()))
+                    return .single(.finished(mainResult, (additionalResult.0, additionalTransitionImage, true, additionalResult.3), duration, positionChangeTimestamps, CACurrentMediaTime()))
                 } else {
                     return .complete()
                 }
@@ -500,7 +501,7 @@ private final class CameraContext {
                     if mirror, let cgImage = transitionImage.cgImage {
                         transitionImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .leftMirrored)
                     }
-                    return .finished((mainResult.0, transitionImage, mirror), nil, duration, positionChangeTimestamps, time)
+                    return .finished((mainResult.0, transitionImage, mirror, mainResult.3), nil, duration, positionChangeTimestamps, time)
                 } else {
                     return result
                 }
