@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 
 public struct CacheStorageSettings: Codable, Equatable {
-    public enum PeerStorageCategory: String, Codable, Hashable {
+    public enum PeerStorageCategory: String, Codable, Hashable, CaseIterable {
         case privateChats = "privateChats"
         case groups = "groups"
         case channels = "channels"
@@ -60,6 +60,11 @@ public struct CacheStorageSettings: Codable, Equatable {
                 var categoryStorageTimeout: [PeerStorageCategory: Int32] = [:]
                 for item in items {
                     categoryStorageTimeout[item.key] = item.value
+                }
+                for key in PeerStorageCategory.allCases {
+                    if categoryStorageTimeout[key] == nil, let value = CacheStorageSettings.defaultSettings.categoryStorageTimeout[key] {
+                        categoryStorageTimeout[key] = value
+                    }
                 }
                 self.categoryStorageTimeout = categoryStorageTimeout
             } else {

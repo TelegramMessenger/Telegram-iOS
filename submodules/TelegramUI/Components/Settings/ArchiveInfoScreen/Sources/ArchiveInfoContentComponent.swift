@@ -111,14 +111,14 @@ public final class ArchiveInfoContentComponent: Component {
             let iconSize: CGFloat = 90.0
             if self.iconBackground.image == nil {
                 let backgroundColors = component.theme.chatList.pinnedArchiveAvatarColor.backgroundColors.colors
-                let colors: NSArray = [backgroundColors.0.cgColor, backgroundColors.1.cgColor]
+                let colors: NSArray = [backgroundColors.1.cgColor, backgroundColors.0.cgColor]
                 self.iconBackground.image = generateGradientFilledCircleImage(diameter: iconSize, colors: colors)
             }
             let iconBackgroundFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize) * 0.5), y: contentHeight), size: CGSize(width: iconSize, height: iconSize))
             transition.setFrame(view: self.iconBackground, frame: iconBackgroundFrame)
             
             if self.iconForeground.image == nil {
-                self.iconForeground.image = generateTintedImage(image: UIImage(bundleImageName: "Avatar/ArchiveAvatarIcon"), color: .white)
+                self.iconForeground.image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/ArchiveIconLarge"), color: .white)
             }
             if let image = self.iconForeground.image {
                 transition.setFrame(view: self.iconForeground, frame: CGRect(origin: CGPoint(x: iconBackgroundFrame.minX + floor((iconBackgroundFrame.width - image.size.width) * 0.5), y: iconBackgroundFrame.minY + floor((iconBackgroundFrame.height - image.size.height) * 0.5)), size: image.size))
