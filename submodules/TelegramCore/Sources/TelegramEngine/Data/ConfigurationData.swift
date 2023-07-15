@@ -52,6 +52,7 @@ public enum EngineConfiguration {
         public let maxSharedFolderInviteLinks: Int32
         public let maxSharedFolderJoin: Int32
         public let maxStoryCaptionLength: Int32
+        public let maxExpiringStoriesCount: Int32
         
         public static var defaultValue: UserLimits {
             return UserLimits(UserLimitsConfiguration.defaultValue)
@@ -73,7 +74,8 @@ public enum EngineConfiguration {
             maxReactionsPerMessage: Int32,
             maxSharedFolderInviteLinks: Int32,
             maxSharedFolderJoin: Int32,
-            maxStoryCaptionLength: Int32
+            maxStoryCaptionLength: Int32,
+            maxExpiringStoriesCount: Int32
         ) {
             self.maxPinnedChatCount = maxPinnedChatCount
             self.maxArchivedPinnedChatCount = maxArchivedPinnedChatCount
@@ -91,6 +93,7 @@ public enum EngineConfiguration {
             self.maxSharedFolderInviteLinks = maxSharedFolderInviteLinks
             self.maxSharedFolderJoin = maxSharedFolderJoin
             self.maxStoryCaptionLength = maxStoryCaptionLength
+            self.maxExpiringStoriesCount = maxExpiringStoriesCount
         }
     }
 }
@@ -143,7 +146,8 @@ public extension EngineConfiguration.UserLimits {
             maxReactionsPerMessage: userLimitsConfiguration.maxReactionsPerMessage,
             maxSharedFolderInviteLinks: userLimitsConfiguration.maxSharedFolderInviteLinks,
             maxSharedFolderJoin: userLimitsConfiguration.maxSharedFolderJoin,
-            maxStoryCaptionLength: userLimitsConfiguration.maxStoryCaptionLength
+            maxStoryCaptionLength: userLimitsConfiguration.maxStoryCaptionLength,
+            maxExpiringStoriesCount: userLimitsConfiguration.maxExpiringStoriesCount
         )
     }
 }

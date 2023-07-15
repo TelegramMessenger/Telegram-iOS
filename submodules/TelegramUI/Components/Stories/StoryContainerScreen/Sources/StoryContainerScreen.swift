@@ -363,6 +363,7 @@ private final class StoryContainerScreenComponent: Component {
         private let audioModePromise = ValuePromise<StoryContentItem.AudioMode>(.ambient, ignoreRepeated: true)
         
         private let inputMediaNodeDataPromise = Promise<ChatEntityKeyboardInputNode.InputData>()
+        private let closeFriendsPromise = Promise<[EnginePeer]>()
         
         private var availableReactions: StoryAvailableReactions?
         
@@ -1078,6 +1079,10 @@ private final class StoryContainerScreenComponent: Component {
                             sendGif: nil
                         )
                     )
+                    
+                    self.closeFriendsPromise.set(
+                        component.context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.CloseFriends())
+                    )
                 }
                 
                 var update = false
@@ -1398,6 +1403,7 @@ private final class StoryContainerScreenComponent: Component {
                                     self.state?.updated(transition: .immediate)
                                 },
                                 keyboardInputData: self.inputMediaNodeDataPromise.get(),
+                                closeFriends: self.closeFriendsPromise.get(),
                                 sharedViewListsContext: self.sharedViewListsContext
                             )),
                             environment: {},

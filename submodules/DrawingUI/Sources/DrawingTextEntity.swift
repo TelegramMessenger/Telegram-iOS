@@ -589,6 +589,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             self.textView.layer.shadowOpacity = 0.0
             self.textView.layer.shadowRadius = 0.0
         }
+        self.textView.textAlignment = self.textEntity.alignment.alignment
         
         self.updateText(keepSelectedRange: afterAppendingEmoji)
         

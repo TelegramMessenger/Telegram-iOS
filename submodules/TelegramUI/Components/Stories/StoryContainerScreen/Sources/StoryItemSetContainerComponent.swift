@@ -103,6 +103,7 @@ public final class StoryItemSetContainerComponent: Component {
     public let controller: () -> ViewController?
     public let toggleAmbientMode: () -> Void
     public let keyboardInputData: Signal<ChatEntityKeyboardInputNode.InputData, NoError>
+    public let closeFriends: Signal<[EnginePeer], NoError>
     let sharedViewListsContext: StoryItemSetViewListComponent.SharedListsContext
     
     init(
@@ -135,6 +136,7 @@ public final class StoryItemSetContainerComponent: Component {
         controller: @escaping () -> ViewController?,
         toggleAmbientMode: @escaping () -> Void,
         keyboardInputData: Signal<ChatEntityKeyboardInputNode.InputData, NoError>,
+        closeFriends: Signal<[EnginePeer], NoError>,
         sharedViewListsContext: StoryItemSetViewListComponent.SharedListsContext
     ) {
         self.context = context
@@ -166,6 +168,7 @@ public final class StoryItemSetContainerComponent: Component {
         self.controller = controller
         self.toggleAmbientMode = toggleAmbientMode
         self.keyboardInputData = keyboardInputData
+        self.closeFriends = closeFriends
         self.sharedViewListsContext = sharedViewListsContext
     }
     
@@ -3173,16 +3176,23 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         private func openItemPrivacySettings(initialPrivacy: EngineStoryPrivacy? = nil) {
-            guard let context = self.component?.context else {
+            guard let component = self.component else {
                 return
             }
+            
+            let context = component.context
             
             let privacy = initialPrivacy ?? self.component?.slice.item.storyItem.privacy
             guard let privacy else {
                 return
             }
             
-            let stateContext = ShareWithPeersScreen.StateContext(context: context, subject: .stories(editing: true), initialPeerIds: Set(privacy.additionallyIncludePeers))
+            let stateContext = ShareWithPeersScreen.StateContext(
+                context: context,
+                subject: .stories(editing: true),
+                initialPeerIds: Set(privacy.additionallyIncludePeers),
+                closeFriends: component.closeFriends
+            )
             let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
                 guard let self else {
                     return
