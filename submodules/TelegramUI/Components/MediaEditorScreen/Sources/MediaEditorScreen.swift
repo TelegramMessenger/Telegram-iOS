@@ -2091,6 +2091,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             } else {
                                 self.mediaEditor?.play()
                             }
+                        } else if self.mediaEditor?.sourceIsVideo == true {
+                            if isInteracting {
+                                self.mediaEditor?.stop()
+                            } else {
+                                self.mediaEditor?.play()
+                            }
                         }
                         self.isInteractingWithEntities = isInteracting
                         if !isInteracting {
