@@ -646,15 +646,15 @@ private final class MediaToolsScreenComponent: Component {
                         minValue: 0.0,
                         maxValue: 1.0,
                         startValue: 0.0
-                    ),
-                    AdjustmentTool(
-                        key: .sharpen,
-                        title: "Sharpen",
-                        value: mediaEditor?.getToolValue(.sharpen) as? Float ?? 0.0,
-                        minValue: 0.0,
-                        maxValue: 1.0,
-                        startValue: 0.0
                     )
+//                    AdjustmentTool(
+//                        key: .sharpen,
+//                        title: "Sharpen",
+//                        value: mediaEditor?.getToolValue(.sharpen) as? Float ?? 0.0,
+//                        minValue: 0.0,
+//                        maxValue: 1.0,
+//                        startValue: 0.0
+//                    )
                 ]
                 
                 if !component.mediaEditor.sourceIsVideo {

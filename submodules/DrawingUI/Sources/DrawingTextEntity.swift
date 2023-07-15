@@ -6,6 +6,8 @@ import AccountContext
 import TextFormat
 import EmojiTextAttachmentView
 import MediaEditor
+import MobileCoreServices
+import ImageTransparency
 
 extension DrawingTextEntity.Alignment {
     var alignment: NSTextAlignment {
@@ -30,6 +32,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
     var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
     
     var textChanged: () -> Void = {}
+    var replaceWithImage: (UIImage, Bool) -> Void = { _, _ in }
     
     init(context: AccountContext, entity: DrawingTextEntity) {
         self.textView = DrawingTextView(frame: .zero)
@@ -64,6 +67,10 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             return EmojiTextAttachmentView(context: context, userLocation: .other, emoji: emoji, file: emoji.file, cache: strongSelf.context.animationCache, renderer: strongSelf.context.animationRenderer, placeholderColor: UIColor.white.withAlphaComponent(0.12), pointSize: CGSize(width: pointSize, height: pointSize))
         }
         
+        self.textView.onPaste = { [weak self] in
+            return self?.onPaste() ?? false
+        }
+        
         self.update(animated: false)
     }
     
@@ -86,6 +93,52 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
     
     @objc private func fadePressed() {
         self.endEditing()
+    }
+    
+    private func onPaste() -> Bool {
+        let pasteboard = UIPasteboard.general
+
+        var images: [UIImage] = []
+        var isPNG = false
+        var isMemoji = false
+        for item in pasteboard.items {
+            if let image = item["com.apple.png-sticker"] as? UIImage {
+                images.append(image)
+                isPNG = true
+                isMemoji = true
+            } else if let image = item[kUTTypePNG as String] as? UIImage {
+                images.append(image)
+                isPNG = true
+            } else if let image = item["com.apple.uikit.image"] as? UIImage {
+                images.append(image)
+                isPNG = true
+            } else if let image = item[kUTTypeJPEG as String] as? UIImage {
+                images.append(image)
+            } else if let image = item[kUTTypeGIF as String] as? UIImage {
+                images.append(image)
+            }
+        }
+        
+        if isPNG && images.count == 1, let image = images.first, let cgImage = image.cgImage {
+            let maxSide = max(image.size.width, image.size.height)
+            if maxSide.isZero {
+                return false
+            }
+            let aspectRatio = min(image.size.width, image.size.height) / maxSide
+            if isMemoji || (imageHasTransparency(cgImage) && aspectRatio > 0.2) {
+                self.endEditing(reset: true)
+                self.replaceWithImage(image, true)
+                return false
+            }
+        }
+        
+        if !images.isEmpty, let image = images.first {
+            self.endEditing(reset: true)
+            self.replaceWithImage(image, false)
+            return false
+        }
+        
+        return true
     }
     
     private var emojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)] = []
@@ -1270,12 +1323,6 @@ final class DrawingTextView: UITextView, NSLayoutManagerDelegate {
         self.fixTypingAttributes()
     }
         
-    override func paste(_ sender: Any?) {
-        self.fixTypingAttributes()
-        super.paste(sender)
-        self.fixTypingAttributes()
-    }
-    
     fileprivate func fixTypingAttributes() {
         var attributes: [NSAttributedString.Key: Any] = [:]
         if let font = self.font {
@@ -1346,6 +1393,29 @@ final class DrawingTextView: UITextView, NSLayoutManagerDelegate {
         }
         
         self.onLayersUpdate?()
+    }
+    
+    var onPaste: () -> Bool = { return true }
+    override func paste(_ sender: Any?) {
+        if !self.text.isEmpty || self.onPaste() {
+            self.fixTypingAttributes()
+            super.paste(sender)
+            self.fixTypingAttributes()
+        }
+    }
+    
+    override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
+        if action == #selector(self.paste(_:)) {
+            if UIPasteboard.general.hasImages && self.text.isEmpty {
+                return true
+            }
+        }
+        if #available(iOS 15.0, *) {
+            if action == #selector(captureTextFromCamera(_:)) {
+                return false
+            }
+        }
+        return super.canPerformAction(action, withSender: sender)
     }
 }
 
