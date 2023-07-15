@@ -34,11 +34,11 @@ public enum PhotoCaptureResult: Equatable {
 
 final class PhotoCaptureContext: NSObject, AVCapturePhotoCaptureDelegate {
     private let pipe = ValuePipe<PhotoCaptureResult>()
-    private let filter: CameraFilter?
+    private let orientation: AVCaptureVideoOrientation
     private let mirror: Bool
     
-    init(settings: AVCapturePhotoSettings, filter: CameraFilter?, mirror: Bool) {
-        self.filter = filter
+    init(settings: AVCapturePhotoSettings, orientation: AVCaptureVideoOrientation, mirror: Bool) {
+        self.orientation = orientation
         self.mirror = mirror
         
         super.init()
@@ -60,25 +60,20 @@ final class PhotoCaptureContext: NSObject, AVCapturePhotoCaptureDelegate {
             var photoFormatDescription: CMFormatDescription?
             CMVideoFormatDescriptionCreateForImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: photoPixelBuffer, formatDescriptionOut: &photoFormatDescription)
             
-            var finalPixelBuffer = photoPixelBuffer
-            if let filter = self.filter {
-                if !filter.isPrepared {
-                    if let unwrappedPhotoFormatDescription = photoFormatDescription {
-                        filter.prepare(with: unwrappedPhotoFormatDescription, outputRetainedBufferCountHint: 2)
-                    }
-                }
-                
-                guard let filteredPixelBuffer = filter.render(pixelBuffer: finalPixelBuffer) else {
-                    print("Unable to filter photo buffer")
-                    return
-                }
-                finalPixelBuffer = filteredPixelBuffer
+            var orientation: UIImage.Orientation = .right
+            if self.orientation == .landscapeLeft {
+                orientation = .down
+            } else if self.orientation == .landscapeRight {
+                orientation = .up
+            } else if self.orientation == .portraitUpsideDown {
+                orientation = .left
             }
             
+            let finalPixelBuffer = photoPixelBuffer
             let ciContext = CIContext()
             let renderedCIImage = CIImage(cvImageBuffer: finalPixelBuffer)
             if let cgImage = ciContext.createCGImage(renderedCIImage, from: renderedCIImage.extent)  {
-                var image = UIImage(cgImage: cgImage, scale: 1.0, orientation: .right)
+                var image = UIImage(cgImage: cgImage, scale: 1.0, orientation: orientation)
                 if image.imageOrientation != .up {
                     UIGraphicsBeginImageContextWithOptions(image.size, true, image.scale)
                     if self.mirror, let context = UIGraphicsGetCurrentContext() {

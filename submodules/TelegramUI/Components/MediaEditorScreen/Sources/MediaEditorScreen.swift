@@ -1850,10 +1850,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 controller.state.privacy = privacy
             }
             
+            var isFromCamera = false
             let isSavingAvailable: Bool
             switch subject {
             case .image, .video:
                 isSavingAvailable = !controller.isEditingStory
+                isFromCamera = true
             case .draft:
                 isSavingAvailable = true
             default:
@@ -1872,12 +1874,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             } else {
                 mediaEntity.scale = storyDimensions.width / fittedSize.width
             }
-            self.entitiesView.add(mediaEntity, announce: false)
-                                    
+
             let initialPosition = mediaEntity.position
             let initialScale = mediaEntity.scale
             let initialRotation = mediaEntity.rotation
             
+            if isFromCamera && mediaDimensions.width > mediaDimensions.height {
+                mediaEntity.scale = storyDimensions.height / fittedSize.height
+            }
+
+            self.entitiesView.add(mediaEntity, announce: false)
+                                    
             if let entityView = self.entitiesView.getView(for: mediaEntity.uuid) as? DrawingMediaEntityView {
                 self.entitiesView.sendSubviewToBack(entityView)
                 entityView.previewView = self.previewView

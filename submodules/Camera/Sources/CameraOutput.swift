@@ -261,7 +261,7 @@ final class CameraOutput: NSObject {
         }
         
         let uniqueId = settings.uniqueID
-        let photoCapture = PhotoCaptureContext(settings: settings, filter: nil, mirror: mirror)
+        let photoCapture = PhotoCaptureContext(settings: settings, orientation: orientation, mirror: mirror)
         self.photoCaptureRequests[uniqueId] = photoCapture
         self.photoOutput.capturePhoto(with: settings, delegate: photoCapture)
         
