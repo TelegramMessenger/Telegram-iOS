@@ -362,6 +362,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
     private var canReportPeer: Bool = false
     
     private(set) var validLayout: (size: CGSize, insets: UIEdgeInsets, visualNavigationHeight: CGFloat, originalNavigationHeight: CGFloat, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat, storiesInset: CGFloat)?
+    private var scrollingOffset: (navigationHeight: CGFloat, offset: CGFloat)?
     
     init(context: AccountContext, controller: ChatListControllerImpl?, location: ChatListControllerLocation, filter: ChatListFilter?, chatListMode: ChatListNodeMode, previewing: Bool, isInlineMode: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, becameEmpty: @escaping (ChatListFilter?) -> Void, emptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void, openArchiveSettings: @escaping () -> Void, autoSetReady: Bool) {
         self.context = context
@@ -454,9 +455,13 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                     strongSelf.emptyNode = emptyNode
                     strongSelf.listNode.addSubnode(emptyNode)
                     if let (size, insets, _, _, _, _, _) = strongSelf.validLayout {
-                        let emptyNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
+                        let emptyNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height))
                         emptyNode.frame = emptyNodeFrame
-                        emptyNode.updateLayout(size: emptyNodeFrame.size, transition: .immediate)
+                        emptyNode.updateLayout(size: size, insets: insets,  transition: .immediate)
+                        
+                        if let scrollingOffset = strongSelf.scrollingOffset {
+                            emptyNode.updateScrollingOffset(navigationHeight: scrollingOffset.navigationHeight, offset: scrollingOffset.offset, transition: .immediate)
+                        }
                     }
                     emptyNode.alpha = 0.0
                     transition.updateAlpha(node: emptyNode, alpha: 1.0)
@@ -736,12 +741,24 @@ private final class ChatListContainerItemNode: ASDisplayNode {
         self.listNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, visibleTopInset: visualNavigationHeight + additionalTopInset, originalTopInset: originalNavigationHeight + additionalTopInset, storiesInset: storiesInset, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction)
         
         if let emptyNode = self.emptyNode {
-            let emptyNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: listInsets.top), size: CGSize(width: size.width, height: size.height - listInsets.top - listInsets.bottom))
+            let emptyNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height))
             transition.updateFrame(node: emptyNode, frame: emptyNodeFrame)
-            emptyNode.updateLayout(size: emptyNodeFrame.size, transition: transition)
+            emptyNode.updateLayout(size: emptyNodeFrame.size, insets: listInsets, transition: transition)
+            
+            if let scrollingOffset = self.scrollingOffset {
+                emptyNode.updateScrollingOffset(navigationHeight: scrollingOffset.navigationHeight, offset: scrollingOffset.offset, transition: transition)
+            }
         }
         
         self.layoutAdditionalPanels(transition: transition)
+    }
+    
+    func updateScrollingOffset(navigationHeight: CGFloat, offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.scrollingOffset = (navigationHeight, offset)
+        
+        if let emptyNode = self.emptyNode {
+            emptyNode.updateScrollingOffset(navigationHeight: navigationHeight, offset: offset, transition: transition)
+        }
     }
 }
 
@@ -803,6 +820,8 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
     private var transitionFractionOffset: CGFloat = 0.0
     private var disableItemNodeOperationsWhileAnimating: Bool = false
     private var validLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, originalNavigationHeight: CGFloat, cleanNavigationBarHeight: CGFloat, insets: UIEdgeInsets, isReorderingFilters: Bool, isEditing: Bool, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat, storiesInset: CGFloat)?
+    
+    private var scrollingOffset: (navigationHeight: CGFloat, offset: CGFloat)?
     
     private var enableAdjacentFilterLoading: Bool = false
     
@@ -1551,6 +1570,9 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                         transition.animatePositionAdditive(node: itemNode, offset: CGPoint(x: -offset, y: 0.0))
                                                 
                         itemNode.updateLayout(size: layout.size, insets: insets, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, storiesInset: storiesInset, transition: .immediate)
+                        if let scrollingOffset = strongSelf.scrollingOffset {
+                            itemNode.updateScrollingOffset(navigationHeight: scrollingOffset.navigationHeight, offset: scrollingOffset.offset, transition: .immediate)
+                        }
                         
                         strongSelf.selectedId = id
                         if let currentItemNode = strongSelf.currentItemNodeValue {
@@ -1568,9 +1590,20 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                 
                 if let (layout, _, visualNavigationHeight, originalNavigationHeight, _, insets, _, _, inlineNavigationLocation, inlineNavigationTransitionFraction, storiesInset) = self.validLayout {
                     itemNode.updateLayout(size: layout.size, insets: insets, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, storiesInset: storiesInset, transition: .immediate)
+                    
+                    if let scrollingOffset = self.scrollingOffset {
+                        itemNode.updateScrollingOffset(navigationHeight: scrollingOffset.navigationHeight, offset: scrollingOffset.offset, transition: .immediate)
+                    }
                     return
                 }
             }
+        }
+    }
+    
+    func updateScrollingOffset(navigationHeight: CGFloat, offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.scrollingOffset = (navigationHeight, offset)
+        for (_, itemNode) in self.itemNodes {
+            itemNode.updateScrollingOffset(navigationHeight: navigationHeight, offset: offset, transition: transition)
         }
     }
     
@@ -1647,6 +1680,9 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                 }
                 
                 itemNode.updateLayout(size: layout.size, insets: insets, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: itemInlineNavigationTransitionFraction, storiesInset: storiesInset, transition: nodeTransition)
+                if let scrollingOffset = self.scrollingOffset {
+                    itemNode.updateScrollingOffset(navigationHeight: scrollingOffset.navigationHeight, offset: scrollingOffset.offset, transition: nodeTransition)
+                }
                 
                 if wasAdded, case .animated = transition {
                     animateSlidingIds.append(id)
@@ -2041,6 +2077,9 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         } else {
             mainOffset = navigationHeight
         }
+        
+        self.mainContainerNode.updateScrollingOffset(navigationHeight: navigationHeight, offset: mainOffset, transition: transition)
+        
         mainOffset = min(mainOffset, ChatListNavigationBar.searchScrollHeight)
         if abs(mainOffset) < 0.1 {
             mainOffset = 0.0
@@ -2354,11 +2393,6 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         guard let containerLayout = self.containerLayout else {
             return
         }
-        let _ = containerLayout
-        if let inlineStackContainerNode = self.inlineStackContainerNode {
-            let _ = inlineStackContainerNode
-        }
-        
         self.updateNavigationScrolling(navigationHeight: containerLayout.navigationBarHeight, transition: self.tempNavigationScrollingTransition ?? .immediate)
     }
     

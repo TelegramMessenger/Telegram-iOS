@@ -14,6 +14,7 @@ import ComponentFlow
 import ArchiveInfoScreen
 import ComponentDisplayAdapters
 import SwiftSignalKit
+import ChatListHeaderComponent
 
 final class ChatListEmptyNode: ASDisplayNode {
     enum Subject {
@@ -44,7 +45,8 @@ final class ChatListEmptyNode: ASDisplayNode {
     private var animationSize: CGSize = CGSize()
     private var buttonIsHidden: Bool
     
-    private var validLayout: CGSize?
+    private var validLayout: (size: CGSize, insets: UIEdgeInsets)?
+    private var scrollingOffset: (navigationHeight: CGFloat, offset: CGFloat)?
     
     private var globalPrivacySettings: GlobalPrivacySettings = .default
     private var archiveSettingsDisposable: Disposable?
@@ -144,8 +146,8 @@ final class ChatListEmptyNode: ASDisplayNode {
                     return
                 }
                 self.globalPrivacySettings = settings
-                if let size = self.validLayout {
-                    self.updateLayout(size: size, transition: .immediate)
+                if let (size, insets) = self.validLayout {
+                    self.updateLayout(size: size, insets: insets, transition: .immediate)
                 }
             })
         }
@@ -213,8 +215,12 @@ final class ChatListEmptyNode: ASDisplayNode {
     
         self.activityIndicator.type = .custom(theme.list.itemAccentColor, 22.0, 1.0, false)
         
-        if let size = self.validLayout {
-            self.updateLayout(size: size, transition: .immediate)
+        if let (size, insets) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, transition: .immediate)
+            
+            if let scrollingOffset = self.scrollingOffset {
+                self.updateScrollingOffset(navigationHeight: scrollingOffset.navigationHeight, offset: scrollingOffset.offset, transition: .immediate)
+            }
         }
     }
     
@@ -230,44 +236,8 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.activityIndicator.isHidden = !self.isLoading
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        self.validLayout = size
-        
-        if case .archive = self.subject {
-            let emptyArchive: ComponentView<Empty>
-            if let current = self.emptyArchive {
-                emptyArchive = current
-            } else {
-                emptyArchive = ComponentView()
-                self.emptyArchive = emptyArchive
-            }
-            let emptyArchiveSize = emptyArchive.update(
-                transition: Transition(transition),
-                component: AnyComponent(ArchiveInfoContentComponent(
-                    theme: self.theme,
-                    strings: self.strings,
-                    settings: self.globalPrivacySettings,
-                    openSettings: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.openArchiveSettings()
-                    }
-                )),
-                environment: {
-                },
-                containerSize: CGSize(width: size.width, height: size.height - 41.0)
-            )
-            if let emptyArchiveView = emptyArchive.view {
-                if emptyArchiveView.superview == nil {
-                    self.view.addSubview(emptyArchiveView)
-                }
-                transition.updateFrame(view: emptyArchiveView, frame: CGRect(origin: CGPoint(x: floor((size.width - emptyArchiveSize.width) * 0.5), y: 41.0), size: emptyArchiveSize))
-            }
-        } else if let emptyArchive = self.emptyArchive {
-            self.emptyArchive = nil
-            emptyArchive.view?.removeFromSuperview()
-        }
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, insets)
         
         let indicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((size.width - indicatorSize.width) / 2.0), y: floor((size.height - indicatorSize.height - 50.0) / 2.0)), size: indicatorSize))
@@ -328,6 +298,63 @@ final class ChatListEmptyNode: ASDisplayNode {
             buttonFrame = CGRect(origin: CGPoint(x: floor((size.width - buttonSize.width) / 2.0), y: size.height - buttonHeight - bottomInset), size: buttonSize)
         }
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
+    }
+    
+    func updateScrollingOffset(navigationHeight: CGFloat, offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.scrollingOffset = (navigationHeight, offset)
+        
+        guard let (size, _) = self.validLayout else {
+            return
+        }
+        
+        if case .archive = self.subject {
+            let emptyArchive: ComponentView<Empty>
+            if let current = self.emptyArchive {
+                emptyArchive = current
+            } else {
+                emptyArchive = ComponentView()
+                self.emptyArchive = emptyArchive
+            }
+            let emptyArchiveSize = emptyArchive.update(
+                transition: Transition(transition),
+                component: AnyComponent(ArchiveInfoContentComponent(
+                    theme: self.theme,
+                    strings: self.strings,
+                    settings: self.globalPrivacySettings,
+                    openSettings: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.openArchiveSettings()
+                    }
+                )),
+                environment: {
+                },
+                containerSize: CGSize(width: size.width, height: 10000.0)
+            )
+            if let emptyArchiveView = emptyArchive.view {
+                if emptyArchiveView.superview == nil {
+                    self.view.addSubview(emptyArchiveView)
+                }
+                
+                let cancelledOutHeight: CGFloat = max(0.0, ChatListNavigationBar.searchScrollHeight - offset)
+                let visibleNavigationHeight: CGFloat = navigationHeight - ChatListNavigationBar.searchScrollHeight + cancelledOutHeight
+                
+                let additionalOffset = min(0.0, -offset + ChatListNavigationBar.searchScrollHeight)
+                
+                var archiveFrame = CGRect(origin: CGPoint(x: 0.0, y: visibleNavigationHeight + floorToScreenPixels((size.height - visibleNavigationHeight - emptyArchiveSize.height - 50.0) * 0.5)), size: emptyArchiveSize)
+                archiveFrame.origin.y = max(archiveFrame.origin.y, visibleNavigationHeight + 20.0)
+                
+                if size.height - visibleNavigationHeight - emptyArchiveSize.height - 20.0 < 0.0 {
+                    archiveFrame.origin.y += additionalOffset
+                }
+                
+                transition.updateFrame(view: emptyArchiveView, frame: archiveFrame)
+            }
+        } else if let emptyArchive = self.emptyArchive {
+            self.emptyArchive = nil
+            emptyArchive.view?.removeFromSuperview()
+        }
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

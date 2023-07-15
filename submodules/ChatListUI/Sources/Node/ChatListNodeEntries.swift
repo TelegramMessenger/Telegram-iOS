@@ -865,7 +865,7 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
             }
             
             if displayArchiveIntro {
-                result.append(.ArchiveIntro(presentationData: state.presentationData))
+                //result.append(.ArchiveIntro(presentationData: state.presentationData))
             } else if !contacts.isEmpty && !result.contains(where: { entry in
                 if case .PeerEntry = entry {
                     return true
