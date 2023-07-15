@@ -1083,26 +1083,19 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 
                 self.chatListDisplayNode.mainContainerNode.currentItemNode.clearHighlightAnimated(true)
                 
+                if let navigationController = self.navigationController as? NavigationController {
+                    let chatListController = ChatListControllerImpl(context: self.context, location: .chatList(groupId: groupId), controlsHistoryPreload: false, enableDebugActions: false)
+                    chatListController.navigationPresentation = .master
+                    navigationController.pushViewController(chatListController)
+                }
+                
                 if !didDisplayTip {
+                    #if DEBUG
+                    #else
                     let _ = ApplicationSpecificNotice.setDisplayChatListArchiveTooltip(accountManager: self.context.sharedContext.accountManager).start()
+                    #endif
                     
-                    self.push(ArchiveInfoScreen(context: self.context, settings: settings, buttonAction: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        
-                        if let navigationController = self.navigationController as? NavigationController {
-                            let chatListController = ChatListControllerImpl(context: self.context, location: .chatList(groupId: groupId), controlsHistoryPreload: false, enableDebugActions: false)
-                            chatListController.navigationPresentation = .master
-                            navigationController.pushViewController(chatListController)
-                        }
-                    }))
-                } else {
-                    if let navigationController = self.navigationController as? NavigationController {
-                        let chatListController = ChatListControllerImpl(context: self.context, location: .chatList(groupId: groupId), controlsHistoryPreload: false, enableDebugActions: false)
-                        chatListController.navigationPresentation = .master
-                        navigationController.pushViewController(chatListController)
-                    }
+                    self.push(ArchiveInfoScreen(context: self.context, settings: settings))
                 }
             })
         }
@@ -2693,6 +2686,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         return
                     }
                     
+                    if peer.isService {
+                        return
+                    }
+                    
                     var items: [ContextMenuItem] = []
                                     
                     //TODO:localize
@@ -2769,7 +2766,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         })))
                         
                         let isMuted = resolvedAreStoriesMuted(globalSettings: globalSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: notificationSettings._asNotificationSettings(), topSearchPeers: topSearchPeers)
-                        items.append(.action(ContextMenuActionItem(text: isMuted ? "Notify" : "Don't Notify", icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: isMuted ? "Notify About Stories" : "Do Not Notify About Stories", icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
                             f(.default)
@@ -2814,11 +2811,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         
                         let hideText: String
                         if self.location == .chatList(groupId: .archive) {
-                            hideText = "Unarchive"
+                            hideText = "Unhide Stories"
                         } else {
-                            hideText = "Archive"
+                            hideText = "Hide Stories"
                         }
-                        let iconName = self.location == .chatList(groupId: .archive) ? "Chat/Context Menu/MoveToChats" : "Chat/Context Menu/MoveToContacts"
+                        let iconName = self.location == .chatList(groupId: .archive) ? "Chat/Context Menu/Unarchive" : "Chat/Context Menu/Archive"
                         items.append(.action(ContextMenuActionItem(text: hideText, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: iconName), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in

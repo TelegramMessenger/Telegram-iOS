@@ -194,6 +194,7 @@ public func archiveSettingsController(context: AccountContext) -> ViewController
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.navigationPresentation = .modal
     
     presentUndoImpl = { [weak controller] content in
         guard let controller else {

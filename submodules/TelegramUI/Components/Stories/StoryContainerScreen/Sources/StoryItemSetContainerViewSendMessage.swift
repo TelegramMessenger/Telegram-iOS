@@ -910,7 +910,7 @@ final class StoryItemSetContainerSendMessage {
             component.presentController(actionSheet, nil)
         } else {
             var preferredAction: ShareControllerPreferredAction?
-            if focusedItem.storyItem.isPublic {
+            if focusedItem.storyItem.isPublic && !component.slice.peer.isService {
                 preferredAction = .custom(action: ShareControllerAction(title: "Copy Link", action: {
                     let _ = ((component.context.engine.messages.exportStoryLink(peerId: peerId, id: focusedItem.storyItem.id))
                              |> deliverOnMainQueue).start(next: { link in

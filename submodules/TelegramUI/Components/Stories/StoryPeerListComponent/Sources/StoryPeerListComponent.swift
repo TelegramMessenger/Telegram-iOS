@@ -617,9 +617,10 @@ public final class StoryPeerListComponent: Component {
                 var activityFraction: CGFloat
             }
             
-            let targetExpandedFraction = component.collapseFraction
+            let mappedTargetFraction: CGFloat = component.collapseFraction
             
-            let targetFraction: CGFloat = component.collapseFraction
+            let targetExpandedFraction: CGFloat = mappedTargetFraction
+            let targetFraction: CGFloat = mappedTargetFraction
             
             let targetScaleFraction: CGFloat
             let targetMinFraction: CGFloat
@@ -704,7 +705,7 @@ public final class StoryPeerListComponent: Component {
                 }
             } else {
                 collapsedState = CollapseState(
-                    globalFraction: component.collapseFraction,
+                    globalFraction: targetFraction,
                     scaleFraction: targetScaleFraction,
                     minFraction: targetMinFraction,
                     maxFraction: targetMaxFraction,
@@ -769,6 +770,8 @@ public final class StoryPeerListComponent: Component {
             
             let expandedItemWidth: CGFloat = 60.0
             
+            let overscrollFraction: CGFloat = max(0.0, collapsedState.maxFraction - 1.0)
+            
             struct MeasuredItem {
                 var itemFrame: CGRect
                 var itemScale: CGFloat
@@ -804,11 +807,11 @@ public final class StoryPeerListComponent: Component {
                 
                 let minimizedMaxItemScale: CGFloat = (24.0 + 4.0) / 52.0
                 
-                let maximizedItemScale: CGFloat = 1.0
+                let maximizedItemScale: CGFloat = 1.0 + overscrollFraction * 0.1
                 
                 let minItemScale: CGFloat = minimizedItemScale.interpolate(to: minimizedMaxItemScale, amount: collapsedState.minFraction) * (1.0 - collapsedState.activityFraction) + 0.1 * collapsedState.activityFraction
                 
-                let itemScale: CGFloat = minItemScale.interpolate(to: maximizedItemScale, amount: collapsedState.maxFraction)
+                let itemScale: CGFloat = minItemScale.interpolate(to: maximizedItemScale, amount: min(1.0, collapsedState.maxFraction))
                 
                 let itemFrame: CGRect
                 if isReallyVisible {
@@ -819,14 +822,16 @@ public final class StoryPeerListComponent: Component {
                         adjustedRegularFrame = adjustedRegularFrame.interpolate(to: itemLayout.frame(at: effectiveFirstVisibleIndex + collapseEndIndex), amount: 0.0)
                     }
                     adjustedRegularFrame.origin.x -= effectiveVisibleBounds.minX
+                    adjustedRegularFrame.origin.y += overscrollFraction * 83.0 * 0.5
                     
                     let collapsedItemPosition: CGPoint = collapsedItemFrame.center.interpolate(to: collapsedMaxItemFrame.center, amount: collapsedState.minFraction)
                     
-                    var itemPosition = collapsedItemPosition.interpolate(to: adjustedRegularFrame.center, amount: collapsedState.maxFraction)
+                    let itemPosition = collapsedItemPosition.interpolate(to: adjustedRegularFrame.center, amount: min(1.0, collapsedState.maxFraction))
                     
-                    var bounceOffsetFraction = (adjustedRegularFrame.midX - itemLayout.frame(at: collapseStartIndex).midX) / itemLayout.containerSize.width
+                    let _ = expandBoundsFraction
+                    /*var bounceOffsetFraction = (adjustedRegularFrame.midX - itemLayout.frame(at: collapseStartIndex).midX) / itemLayout.containerSize.width
                     bounceOffsetFraction = max(-1.0, min(1.0, bounceOffsetFraction))
-                    itemPosition.x += min(10.0, expandBoundsFraction * collapsedState.maxFraction * 1200.0) * bounceOffsetFraction
+                    itemPosition.x += min(10.0, expandBoundsFraction * min(1.0, collapsedState.maxFraction) * 1200.0) * bounceOffsetFraction*/
                     
                     let itemSize = CGSize(width: adjustedRegularFrame.width * itemScale, height: adjustedRegularFrame.height)
                     
@@ -902,7 +907,7 @@ public final class StoryPeerListComponent: Component {
                 var isCollapsable: Bool = false
                 var itemScale = measuredItem.itemScale
                 if itemLayout.itemCount == 1 {
-                    let singleScaleFactor = min(1.0, collapsedState.minFraction + collapsedState.maxFraction)
+                    let singleScaleFactor = min(1.0, collapsedState.minFraction + min(1.0, collapsedState.maxFraction))
                     itemScale = 0.001 * (1.0 - singleScaleFactor) + itemScale * singleScaleFactor
                 }
                 
@@ -920,7 +925,7 @@ public final class StoryPeerListComponent: Component {
                     itemAlpha = (collapsedState.sideAlphaFraction * 1.0 + (1.0 - collapsedState.sideAlphaFraction) * (1.0 - collapsedState.activityFraction)) * collapsedState.sideAlphaFraction
                 } else {
                     if itemLayout.itemCount == 1 {
-                        itemAlpha = min(1.0, (collapsedState.minFraction + collapsedState.maxFraction) * 4.0)
+                        itemAlpha = min(1.0, (collapsedState.minFraction + min(1.0, collapsedState.maxFraction)) * 4.0)
                     } else {
                         itemAlpha = collapsedState.sideAlphaFraction
                     }
@@ -1165,7 +1170,7 @@ public final class StoryPeerListComponent: Component {
             if self.sortedItems.isEmpty {
                 titleContentOffset = collapsedTitleOffset
             } else {
-                titleContentOffset = titleMinContentOffset.interpolate(to: ((itemLayout.containerSize.width - collapsedState.titleWidth) * 0.5) as CGFloat, amount: collapsedState.maxFraction * (1.0 - collapsedState.activityFraction))
+                titleContentOffset = titleMinContentOffset.interpolate(to: ((itemLayout.containerSize.width - collapsedState.titleWidth) * 0.5) as CGFloat, amount: min(1.0, collapsedState.maxFraction) * (1.0 - collapsedState.activityFraction))
             }
             
             var titleIndicatorSize: CGSize?
