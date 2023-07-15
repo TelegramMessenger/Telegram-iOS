@@ -2535,50 +2535,74 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     fileprivate func openStoryCamera(fromList: Bool) {
+        var reachedCountLimit = false
+        var premiumNeeded = false
+        
+        let storiesCountLimit = self.context.userLimits.maxExpiringStoriesCount
+        if let rawStorySubscriptions = self.rawStorySubscriptions, let accountItem = rawStorySubscriptions.accountItem {
+            if accountItem.storyCount >= self.context.userLimits.maxExpiringStoriesCount {
+                reachedCountLimit = true
+            }
+        }
+        
         switch self.storyPostingAvailability {
         case .premium:
-            guard self.isPremium else {
-                if let componentView = self.chatListHeaderView() {
-                    var sourceFrame: CGRect?
-                    if fromList {
-                        if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
-                            sourceFrame = transitionView.convert(transitionView.bounds, to: nil).offsetBy(dx: 18.0 - UIScreenPixel, dy: 1.0)
-                        }
-                    } else {
-                        if let rightButtonView = componentView.rightButtonViews["story"] {
-                            sourceFrame = rightButtonView.convert(rightButtonView.bounds, to: nil).offsetBy(dx: 5.0, dy: -8.0)
-                        }
-                    }
-                    if let sourceFrame {
-                        let context = self.context
-                        let location = CGRect(origin: CGPoint(x: sourceFrame.midX, y: sourceFrame.maxY), size: CGSize())
-                        let tooltipController = TooltipScreen(
-                            context: context,
-                            account: context.account,
-                            sharedContext: context.sharedContext,
-                            text: .markdown(text: "Posting stories is currently available only\nto subscribers of [Telegram Premium]()."),
-                            style: .customBlur(UIColor(rgb: 0x2a2a2a), 2.0),
-                            icon: .none,
-                            location: .point(location, .top),
-                            shouldDismissOnTouch: { [weak self] point, containerFrame in
-                                if containerFrame.contains(point) {
-                                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories)
-                                    self?.push(controller)
-                                    return .dismiss(consume: true)
-                                } else {
-                                    return .dismiss(consume: false)
-                                }
-                            }
-                        )
-                        self.present(tooltipController, in: .window(.root))
-                    }
-                }
-                return
+            if !self.isPremium {
+                premiumNeeded = true
             }
         case .disabled:
             return
         default:
             break
+        }
+        
+        if reachedCountLimit || premiumNeeded {
+            if let componentView = self.chatListHeaderView() {
+                var sourceFrame: CGRect?
+                if fromList {
+                    if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
+                        sourceFrame = transitionView.convert(transitionView.bounds, to: nil).offsetBy(dx: 18.0 - UIScreenPixel, dy: 1.0)
+                    }
+                } else {
+                    if let rightButtonView = componentView.rightButtonViews["story"] {
+                        sourceFrame = rightButtonView.convert(rightButtonView.bounds, to: nil).offsetBy(dx: 5.0, dy: -8.0)
+                    }
+                }
+                if let sourceFrame {
+                    let context = self.context
+                    let location = CGRect(origin: CGPoint(x: sourceFrame.midX, y: sourceFrame.maxY), size: CGSize())
+                    
+                    let text: String
+                    if premiumNeeded {
+                        text = "Posting stories is currently available only\nto subscribers of [Telegram Premium]()."
+                    } else if reachedCountLimit {
+                        text = "You can't post more than **\(storiesCountLimit)** stories in **24 hours**."
+                    } else {
+                        text = ""
+                    }
+                    
+                    let tooltipController = TooltipScreen(
+                        context: context,
+                        account: context.account,
+                        sharedContext: context.sharedContext,
+                        text: .markdown(text: text),
+                        style: .customBlur(UIColor(rgb: 0x2a2a2a), 2.0),
+                        icon: .none,
+                        location: .point(location, .top),
+                        shouldDismissOnTouch: { [weak self] point, containerFrame in
+                            if containerFrame.contains(point) {
+                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories)
+                                self?.push(controller)
+                                return .dismiss(consume: true)
+                            } else {
+                                return .dismiss(consume: false)
+                            }
+                        }
+                    )
+                    self.present(tooltipController, in: .window(.root))
+                }
+            }
+            return
         }
    
         var cameraTransitionIn: StoryCameraTransitionIn?
