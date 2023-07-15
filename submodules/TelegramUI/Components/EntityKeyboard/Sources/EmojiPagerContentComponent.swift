@@ -5036,6 +5036,11 @@ public final class EmojiPagerContentComponent: Component {
                 default:
                     return
                 }
+                
+                if item.0.icon == .locked {
+                    return
+                }
+                
                 self.longPressItem = item.1
                 
                 if #available(iOS 13.0, *) {

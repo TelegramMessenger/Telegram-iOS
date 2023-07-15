@@ -8,7 +8,7 @@ import VideoToolbox
 import TelegramCore
 
 public enum VideoCaptureResult: Equatable {
-    case finished((String, UIImage, Bool), (String, UIImage, Bool)?, Double, [(Bool, Double)], Double)
+    case finished((String, UIImage, Bool, CGSize), (String, UIImage, Bool, CGSize)?, Double, [(Bool, Double)], Double)
     case failed
     
     public static func == (lhs: VideoCaptureResult, rhs: VideoCaptureResult) -> Bool {
@@ -276,7 +276,7 @@ final class CameraOutput: NSObject {
     }
     
     private var recordingCompletionPipe = ValuePipe<VideoCaptureResult>()
-    func startRecording(isDualCamera: Bool, position: Camera.Position? = nil) -> Signal<Double, NoError> {
+    func startRecording(isDualCamera: Bool, position: Camera.Position? = nil, orientation: AVCaptureVideoOrientation) -> Signal<Double, NoError> {
         guard self.videoRecorder == nil else {
             return .complete()
         }
@@ -293,12 +293,20 @@ final class CameraOutput: NSObject {
         }
         let audioSettings = self.audioOutput.recommendedAudioSettingsForAssetWriter(writingTo: .mp4) ?? [:]
         
+        var dimensions: CGSize = CGSize(width: 1080, height: 1920)
+        if orientation == .landscapeLeft {
+            dimensions = CGSize(width: 1920, height: 1080)
+        } else if orientation == .landscapeRight {
+            dimensions = CGSize(width: 1920, height: 1080)
+        }
+        
         let outputFileName = NSUUID().uuidString
         let outputFilePath = NSTemporaryDirectory() + outputFileName + ".mp4"
         let outputFileURL = URL(fileURLWithPath: outputFilePath)
-        let videoRecorder = VideoRecorder(configuration: VideoRecorder.Configuration(videoSettings: videoSettings, audioSettings: audioSettings), videoTransform: CGAffineTransform(rotationAngle: .pi / 2.0), fileUrl: outputFileURL, completion: { [weak self] result in
+        
+        let videoRecorder = VideoRecorder(configuration: VideoRecorder.Configuration(videoSettings: videoSettings, audioSettings: audioSettings), orientation: orientation, fileUrl: outputFileURL, completion: { [weak self] result in
             if case let .success(transitionImage, duration, positionChangeTimestamps) = result {
-                self?.recordingCompletionPipe.putNext(.finished((outputFilePath, transitionImage ?? UIImage(), false), nil, duration, positionChangeTimestamps.map { ($0 == .front, $1) }, CACurrentMediaTime()))
+                self?.recordingCompletionPipe.putNext(.finished((outputFilePath, transitionImage ?? UIImage(), false, dimensions), nil, duration, positionChangeTimestamps.map { ($0 == .front, $1) }, CACurrentMediaTime()))
             } else {
                 self?.recordingCompletionPipe.putNext(.failed)
             }

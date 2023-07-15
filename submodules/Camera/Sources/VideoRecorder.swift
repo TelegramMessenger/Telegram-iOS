@@ -52,6 +52,7 @@ private final class VideoRecorderImpl {
     private var positionChangeTimestamps: [(Camera.Position, CMTime)] = []
     
     private let configuration: VideoRecorder.Configuration
+    private let orientation: AVCaptureVideoOrientation
     private let videoTransform: CGAffineTransform
     private let url: URL
     fileprivate var completion: (Bool, UIImage?, [(Camera.Position, CMTime)]?) -> Void = { _, _, _ in }
@@ -62,9 +63,20 @@ private final class VideoRecorderImpl {
     private var hasAllVideoBuffers = false
     private var hasAllAudioBuffers = false
     
-    public init?(configuration: VideoRecorder.Configuration, videoTransform: CGAffineTransform, fileUrl: URL) {
+    public init?(configuration: VideoRecorder.Configuration, orientation: AVCaptureVideoOrientation, fileUrl: URL) {
         self.configuration = configuration
-        self.videoTransform = videoTransform
+        
+        var transform: CGAffineTransform = CGAffineTransform(rotationAngle: .pi / 2.0)
+        if orientation == .landscapeLeft {
+            transform = CGAffineTransform(rotationAngle: .pi)
+        } else if orientation == .landscapeRight {
+            transform = CGAffineTransform(rotationAngle: 0.0)
+        } else if orientation == .portraitUpsideDown {
+            transform = CGAffineTransform(rotationAngle: -.pi / 2.0)
+        }
+        
+        self.orientation = orientation
+        self.videoTransform = transform
         self.url = fileUrl
         
         try? FileManager.default.removeItem(at: url)
@@ -173,7 +185,15 @@ private final class VideoRecorderImpl {
                         Queue.concurrentBackgroundQueue().async {
                             let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
                             if let cgImage = self.imageContext.createCGImage(ciImage, from: ciImage.extent) {
-                                self.transitionImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .right)
+                                var orientation: UIImage.Orientation = .right
+                                if self.orientation == .landscapeLeft {
+                                    orientation = .down
+                                } else if self.orientation == .landscapeRight {
+                                    orientation = .up
+                                } else if self.orientation == .portraitUpsideDown {
+                                    orientation = .left
+                                }
+                                self.transitionImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: orientation)
                             } else {
                                 self.savedTransitionImage = false
                             }
@@ -452,7 +472,6 @@ public final class VideoRecorder {
     
     private let impl: VideoRecorderImpl
     fileprivate let configuration: Configuration
-    fileprivate let videoTransform: CGAffineTransform
     fileprivate let fileUrl: URL
     private let completion: (Result) -> Void
     
@@ -460,13 +479,12 @@ public final class VideoRecorder {
         return self.impl.isRecording
     }
     
-    init?(configuration: Configuration, videoTransform: CGAffineTransform, fileUrl: URL, completion: @escaping (Result) -> Void) {
+    init?(configuration: Configuration, orientation: AVCaptureVideoOrientation, fileUrl: URL, completion: @escaping (Result) -> Void) {
         self.configuration = configuration
-        self.videoTransform = videoTransform
         self.fileUrl = fileUrl
         self.completion = completion
         
-        guard let impl = VideoRecorderImpl(configuration: configuration, videoTransform: videoTransform, fileUrl: fileUrl) else {
+        guard let impl = VideoRecorderImpl(configuration: configuration, orientation: orientation, fileUrl: fileUrl) else {
             completion(.initError(.generic))
             return nil
         }
