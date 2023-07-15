@@ -771,6 +771,7 @@ public final class StoryPeerListComponent: Component {
             let expandedItemWidth: CGFloat = 60.0
             
             let overscrollFraction: CGFloat = max(0.0, collapsedState.maxFraction - 1.0)
+            let realTimeOverscrollFraction: CGFloat = max(0.0, (1.0 - component.collapseFraction) - 1.0)
             
             struct MeasuredItem {
                 var itemFrame: CGRect
@@ -822,11 +823,12 @@ public final class StoryPeerListComponent: Component {
                         adjustedRegularFrame = adjustedRegularFrame.interpolate(to: itemLayout.frame(at: effectiveFirstVisibleIndex + collapseEndIndex), amount: 0.0)
                     }
                     adjustedRegularFrame.origin.x -= effectiveVisibleBounds.minX
-                    adjustedRegularFrame.origin.y += overscrollFraction * 83.0 * 0.5
                     
                     let collapsedItemPosition: CGPoint = collapsedItemFrame.center.interpolate(to: collapsedMaxItemFrame.center, amount: collapsedState.minFraction)
                     
-                    let itemPosition = collapsedItemPosition.interpolate(to: adjustedRegularFrame.center, amount: min(1.0, collapsedState.maxFraction))
+                    var itemPosition = collapsedItemPosition.interpolate(to: adjustedRegularFrame.center, amount: min(1.0, collapsedState.maxFraction))
+                    
+                    itemPosition.y += realTimeOverscrollFraction * 83.0 * 0.5
                     
                     let _ = expandBoundsFraction
                     /*var bounceOffsetFraction = (adjustedRegularFrame.midX - itemLayout.frame(at: collapseStartIndex).midX) / itemLayout.containerSize.width
