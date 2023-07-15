@@ -56,5 +56,23 @@ public extension TelegramEngine.EngineData.Item {
                 }
             }
         }
+        
+        public struct CloseFriends: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = Array<EnginePeer>
+
+            public init() {
+            }
+
+            var key: PostboxViewKey {
+                return .contacts(accountPeerId: nil, includePresences: false)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? ContactPeersView else {
+                    preconditionFailure()
+                }
+                return view.peers.filter { $0.isCloseFriend }.map(EnginePeer.init)
+            }
+        }
     }
 }

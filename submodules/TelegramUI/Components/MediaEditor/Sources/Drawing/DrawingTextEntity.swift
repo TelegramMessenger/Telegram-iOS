@@ -302,22 +302,4 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
         }
         return true
     }
-    
-//    public weak var currentEntityView: DrawingEntityView?
-//    public func makeView(context: AccountContext) -> DrawingEntityView {
-//        let entityView = DrawingTextEntityView(context: context, entity: self)
-//        self.currentEntityView = entityView
-//        return entityView
-//    }
-//
-//    public func prepareForRender() {
-//        self.renderImage = (self.currentEntityView as? DrawingTextEntityView)?.getRenderImage()
-//        self.renderSubEntities = (self.currentEntityView as? DrawingTextEntityView)?.getRenderSubEntities()
-//
-//        if case .none = self.animation {
-//            self.renderAnimationFrames = nil
-//        } else {
-//            self.renderAnimationFrames = (self.currentEntityView as? DrawingTextEntityView)?.getRenderAnimationFrames()
-//        }
-//    }
 }

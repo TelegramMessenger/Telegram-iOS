@@ -1038,13 +1038,15 @@ final class MediaEditorScreenComponent: Component {
                     isGeneralThreadClosed: nil
                 )
                 
-                let heightAndOverflow = inputMediaNode.updateLayout(width: availableSize.width, leftInset: 0.0, rightInset: 0.0, bottomInset: component.bottomSafeInset, standardInputHeight: environment.deviceMetrics.standardInputHeight(inLandscape: false), inputHeight: environment.inputHeight, maximumHeight: availableSize.height, inputPanelHeight: 0.0, transition: .immediate, interfaceState: presentationInterfaceState, layoutMetrics: environment.metrics, deviceMetrics: environment.deviceMetrics, isVisible: true, isExpanded: false)
+                let availableInputMediaWidth = previewSize.width
+                let heightAndOverflow = inputMediaNode.updateLayout(width: availableInputMediaWidth, leftInset: 0.0, rightInset: 0.0, bottomInset: component.bottomSafeInset, standardInputHeight: environment.deviceMetrics.standardInputHeight(inLandscape: false), inputHeight: environment.inputHeight, maximumHeight: availableSize.height, inputPanelHeight: 0.0, transition: .immediate, interfaceState: presentationInterfaceState, layoutMetrics: environment.metrics, deviceMetrics: environment.deviceMetrics, isVisible: true, isExpanded: false)
                 let inputNodeHeight = heightAndOverflow.0
-                let inputNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - inputNodeHeight), size: CGSize(width: availableSize.width, height: inputNodeHeight))
+                let inputNodeFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - availableInputMediaWidth) / 2.0), y: availableSize.height - inputNodeHeight), size: CGSize(width: availableInputMediaWidth, height: inputNodeHeight))
                 transition.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
                   
-                inputHeight = heightAndOverflow.0
-                keyboardHeight = max(keyboardHeight, heightAndOverflow.0)
+                if inputNodeHeight > 0.0 {
+                    inputHeight = inputNodeHeight
+                }
             } else if let inputMediaNode = self.inputMediaNode {
                 self.inputMediaNode = nil
                 
@@ -1073,6 +1075,8 @@ final class MediaEditorScreenComponent: Component {
                     }
                 })
             }
+            
+            keyboardHeight = inputHeight
             
             let nextInputMode: MessageInputPanelComponent.InputMode
             switch self.currentInputMode {
@@ -2082,6 +2086,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 onInteractionUpdated: { [weak self] isInteracting in
                     if let self {
                         if let selectedEntityView = self.entitiesView.selectedEntityView as? DrawingStickerEntityView, let entity = selectedEntityView.entity as? DrawingStickerEntity, case .dualVideoReference = entity.content {
+                            if isInteracting {
+                                self.mediaEditor?.stop()
+                            } else {
+                                self.mediaEditor?.play()
+                            }
+                        } else if self.mediaEditor?.sourceIsVideo == true {
                             if isInteracting {
                                 self.mediaEditor?.stop()
                             } else {
@@ -3234,6 +3244,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     public var dismissed: () -> Void = { }
     public var willDismiss: () -> Void = { }
     
+    private var closeFriends = Promise<[EnginePeer]>()
+    
     private let hapticFeedback = HapticFeedback()
     
     public init(
@@ -3309,6 +3321,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         let dropInteraction = UIDropInteraction(delegate: self)
         self.displayNode.view.addInteraction(dropInteraction)
+        
+        Queue.mainQueue().after(1.0) {
+            self.closeFriends.set(self.context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.CloseFriends()))
+        }
     }
             
     func openPrivacySettings(_ privacy: MediaEditorResultPrivacy? = nil, completion: @escaping () -> Void = {}) {
@@ -3321,7 +3337,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let text = self.getCaption().string
         let mentions = generateTextEntities(text, enabledTypes: [.mention], currentEntities: []).map { (text as NSString).substring(with: NSRange(location: $0.range.lowerBound + 1, length: $0.range.upperBound - $0.range.lowerBound - 1)) }
                 
-        let stateContext = ShareWithPeersScreen.StateContext(context: self.context, subject: .stories(editing: false), initialPeerIds: Set(privacy.privacy.additionallyIncludePeers))
+        let stateContext = ShareWithPeersScreen.StateContext(
+            context: self.context,
+            subject: .stories(editing: false),
+            initialPeerIds: Set(privacy.privacy.additionallyIncludePeers),
+            closeFriends: self.closeFriends.get()
+        )
         let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
             guard let self else {
                 return

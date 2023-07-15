@@ -305,6 +305,7 @@ final class ShareWithPeersScreenComponent: Component {
         private var ignoreScrolling: Bool = false
         private var isDismissed: Bool = false
         
+        private var savedSelectedPeers: [EnginePeer.Id] = []
         private var selectedPeers: [EnginePeer.Id] = []
         private var selectedCategories = Set<CategoryId>()
         private var selectedOptions = Set<OptionId>()
@@ -586,6 +587,7 @@ final class ShareWithPeersScreenComponent: Component {
             visibleBounds.size.height += itemLayout.topInset
             
             var visibleFrame = self.scrollView.frame
+            visibleFrame.origin.x = 0.0
             visibleFrame.origin.y -= itemLayout.topInset
             visibleFrame.size.height += itemLayout.topInset
             
@@ -675,7 +677,7 @@ final class ShareWithPeersScreenComponent: Component {
                             if minSectionHeader == nil {
                                 minSectionHeader = sectionHeaderView
                             }
-                            sectionHeaderTransition.setFrame(view: sectionHeaderView, frame: sectionHeaderFrame)
+                            sectionHeaderTransition.setFrame(view: sectionHeaderView, frame: sectionHeaderFrame.offsetBy(dx: self.scrollView.frame.minX, dy: 0.0))
                         }
                     }
                 }
@@ -721,7 +723,14 @@ final class ShareWithPeersScreenComponent: Component {
                                     }
                                     if self.selectedCategories.contains(categoryId) {
                                     } else {
-                                        self.selectedPeers = []
+                                        if self.selectedCategories.contains(.selectedContacts) {
+                                            self.savedSelectedPeers = self.selectedPeers
+                                        }
+                                        if categoryId == .selectedContacts {
+                                            self.selectedPeers = self.savedSelectedPeers
+                                        } else {
+                                            self.selectedPeers = []
+                                        }
                                         
                                         self.selectedCategories.removeAll()
                                         self.selectedCategories.insert(categoryId)
@@ -1742,13 +1751,16 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
     public final class State {
         let peers: [EnginePeer]
         let presences: [EnginePeer.Id: EnginePeer.Presence]
+        let closeFriendsPeers: [EnginePeer]
         
         fileprivate init(
             peers: [EnginePeer],
-            presences: [EnginePeer.Id: EnginePeer.Presence]
+            presences: [EnginePeer.Id: EnginePeer.Presence],
+            closeFriendsPeers: [EnginePeer]
         ) {
             self.peers = peers
             self.presences = presences
+            self.closeFriendsPeers = closeFriendsPeers
         }
     }
     
@@ -1778,28 +1790,33 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         public init(
             context: AccountContext,
             subject: Subject = .chats,
-            initialPeerIds: Set<EnginePeer.Id> = Set()
+            initialPeerIds: Set<EnginePeer.Id> = Set(),
+            closeFriends: Signal<[EnginePeer], NoError> = .single([])
         ) {
             self.subject = subject
             self.initialPeerIds = initialPeerIds
             
             switch subject {
             case .stories:
-                var signals: [Signal<EnginePeer?, NoError>] = []
+                var peerSignals: [Signal<EnginePeer?, NoError>] = []
                 if initialPeerIds.count < 3 {
                     for peerId in initialPeerIds {
-                        signals.append(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)))
+                        peerSignals.append(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)))
                     }
                 }
-                self.stateDisposable = (combineLatest(signals)
-                |> deliverOnMainQueue).start(next: { [weak self] peers in
+                                
+                let peers = combineLatest(peerSignals)
+                                
+                self.stateDisposable = combineLatest(queue: Queue.mainQueue(), peers, closeFriends)
+                .start(next: { [weak self] peers, closeFriends in
                     guard let self else {
                         return
                     }
 
                     let state = State(
                         peers: peers.compactMap { $0 },
-                        presences: [:]
+                        presences: [:],
+                        closeFriendsPeers: closeFriends
                     )
                     self.stateValue = state
                     self.stateSubject.set(.single(state))
@@ -1831,7 +1848,8 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     
                     let state = State(
                         peers: peers,
-                        presences: presences
+                        presences: presences,
+                        closeFriendsPeers: []
                     )
                     self.stateValue = state
                     self.stateSubject.set(.single(state))
@@ -1885,7 +1903,8 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     
                     let state = State(
                         peers: peers,
-                        presences: contactList.presences
+                        presences: contactList.presences,
+                        closeFriendsPeers: []
                     )
                                         
                     self.stateValue = state
@@ -1893,8 +1912,17 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     
                     self.readySubject.set(true)
                 })
-            case let .search(query, _):
-                self.stateDisposable = (context.engine.contacts.searchLocalPeers(query: query)
+            case let .search(query, onlyContacts):
+                let signal: Signal<[EngineRenderedPeer], NoError>
+                if onlyContacts {
+                    signal = context.engine.contacts.searchContacts(query: query)
+                    |> map { result in
+                        return result.0.map { EngineRenderedPeer(peer: $0) }
+                    }
+                } else {
+                    signal = context.engine.contacts.searchLocalPeers(query: query)
+                }
+                self.stateDisposable = (signal
                 |> deliverOnMainQueue).start(next: { [weak self] peers in
                     guard let self else {
                         return
@@ -1914,7 +1942,8 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                                 return false
                             }
                         },
-                        presences: [:]
+                        presences: [:],
+                        closeFriendsPeers: []
                     )
                     self.stateValue = state
                     self.stateSubject.set(.single(state))
@@ -1990,12 +2019,20 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                 actionTitle: contactsSubtitle
             ))
             
+            var closeFriendsSubtitle = "edit list"
+            if let peers = stateContext.stateValue?.closeFriendsPeers, !peers.isEmpty {
+                if peers.count > 2 {
+                    closeFriendsSubtitle = "\(peers.count) people"
+                } else {
+                    closeFriendsSubtitle = String(peers.map { $0.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) }.joined(separator: ", "))
+                }
+            }
             categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
                 id: .closeFriends,
                 title: "Close Friends",
                 icon: "Call/StarHighlighted",
                 iconColor: .green,
-                actionTitle: "edit list"
+                actionTitle: closeFriendsSubtitle
             ))
             
             var selectedContactsSubtitle = "choose"

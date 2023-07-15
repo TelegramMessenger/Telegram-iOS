@@ -110,6 +110,8 @@ struct Month: Equatable {
     }
 }
 
+private var savedStoriesContentOffset: CGFloat?
+
 public final class MediaPickerScreen: ViewController, AttachmentContainable {
     public enum Subject {
         public enum Media: Equatable {
@@ -207,7 +209,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         
         private let containerNode: ASDisplayNode
         private let backgroundNode: NavigationBackgroundNode
-        private let gridNode: GridNode
+        fileprivate let gridNode: GridNode
         fileprivate var cameraView: TGAttachmentCameraView?
         private var cameraActivateAreaNode: AccessibilityAreaNode
         private var placeholderNode: MediaPickerPlaceholderNode?
@@ -1076,12 +1078,21 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
         }
         
+        private var didRestoreContentOffset = false
         private func dequeueTransaction() {
             if self.enqueuedTransactions.isEmpty {
                 return
             }
             let transaction = self.enqueuedTransactions.removeFirst()
             self.gridNode.transaction(GridNodeTransaction(deleteItems: transaction.deletions, insertItems: transaction.insertions, updateItems: transaction.updates, scrollToItem: transaction.scrollToItem, updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+            
+            if let subject = self.controller?.subject, case .assets(_, .story) = subject, let contentOffset = savedStoriesContentOffset, !self.didRestoreContentOffset {
+                if contentOffset > 64.0 {
+                    self.gridNode.scrollView.setContentOffset(CGPoint(x: 0.0, y: contentOffset), animated: false)
+                    self.controller?.requestAttachmentMenuExpansion()
+                }
+                self.didRestoreContentOffset = true
+            }
         }
         
         func scrollToTop(animated: Bool = false) {
@@ -1861,10 +1872,17 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         self.dismiss()
     }
     
-    public override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
+    public override func dismiss(completion: (() -> Void)? = nil) {
         self.controllerNode.cancelAssetDownloads()
         
-        super.dismiss(animated: flag, completion: completion)
+        if case .assets(_, .story) = self.subject {
+            let contentOffset = self.controllerNode.gridNode.scrollView.contentOffset.y
+            if contentOffset > 100.0 || savedStoriesContentOffset != nil {
+                savedStoriesContentOffset = contentOffset
+            }
+        }
+        
+        super.dismiss(completion: completion)
     }
     
     @objc private func rightButtonPressed() {

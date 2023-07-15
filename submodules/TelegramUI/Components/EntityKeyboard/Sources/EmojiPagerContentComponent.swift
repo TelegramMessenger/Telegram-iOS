@@ -3799,7 +3799,7 @@ public final class EmojiPagerContentComponent: Component {
                 }
             }
             contextGesture.activatedAfterCompletion = { [weak self] point, wasTap in
-                guard let `self` = self, let component = self.component else {
+                guard let self, let component = self.component, !self.isSearchActivated else {
                     return
                 }
                 

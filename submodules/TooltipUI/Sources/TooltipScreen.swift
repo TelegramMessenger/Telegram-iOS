@@ -542,7 +542,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             animationSpacing = 8.0
         }
         
-        let containerWidth = max(100.0, min(layout.size.width, 614.0) - sideInset * 2.0)
+        let containerWidth = max(100.0, min(layout.size.width - sideInset * 2.0, 614.0))
         
         var actionSize: CGSize = .zero
         

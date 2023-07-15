@@ -245,7 +245,16 @@ private final class CameraScreenComponent: CombinedComponent {
         func setupRecentAssetSubscription() {
             let mediaAssetsContext = MediaAssetsContext()
             self.mediaAssetsContext = mediaAssetsContext
-            self.lastGalleryAssetsDisposable = (mediaAssetsContext.recentAssets()
+            
+            self.lastGalleryAssetsDisposable = (
+                mediaAssetsContext.mediaAccess()
+                |> mapToSignal { [weak mediaAssetsContext] status in
+                    if case .authorized = status, let mediaAssetsContext {
+                        return mediaAssetsContext.recentAssets()
+                    } else {
+                        return .complete()
+                    }
+                }
             |> map { fetchResult in
                 return fetchResult?.lastObject
             }
@@ -256,6 +265,13 @@ private final class CameraScreenComponent: CombinedComponent {
                 self.lastGalleryAsset = asset
                 self.updated(transition: .easeInOut(duration: 0.2))
             })
+        }
+        
+        func requestMediaAccess(completion: @escaping () -> Void) {
+            guard let mediaAssetsContext = self.mediaAssetsContext else {
+                return
+            }
+            mediaAssetsContext.requestMediaAccess(completion: completion)
         }
         
         func setupVolumeButtonsHandler() {
@@ -687,11 +703,13 @@ private final class CameraScreenComponent: CombinedComponent {
                         }
                         state.togglePosition(animateFlipAction)
                     },
-                    galleryTapped: {
+                    galleryTapped: { [weak state] in
                         guard let controller = environment.controller() as? CameraScreen else {
                             return
                         }
-                        controller.presentGallery()
+                        state?.requestMediaAccess {
+                            controller.presentGallery()
+                        }
                     },
                     swipeHintUpdated: { [weak state] hint in
                         if let state {
@@ -1350,15 +1368,15 @@ public class CameraScreen: ViewController {
                     )
                     |> filter { $0 && $1 }
                     |> take(1)).start(next: { [weak self] _, _ in
-                        self?.mainPreviewView.removePlaceholder(delay: 0.15)
-                        self?.additionalPreviewView.removePlaceholder(delay: 0.15)
+                        self?.mainPreviewView.removePlaceholder(delay: 0.35)
+                        self?.additionalPreviewView.removePlaceholder(delay: 0.35)
                     })
                 } else {
                     let _ = (self.mainPreviewView.isPreviewing
                     |> filter { $0 }
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak self] _ in
-                        self?.mainPreviewView.removePlaceholder(delay: 0.15)
+                        self?.mainPreviewView.removePlaceholder(delay: 0.35)
                     })
                 }
             } else {
@@ -1561,6 +1579,9 @@ public class CameraScreen: ViewController {
         
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
             if gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer is UIPanGestureRecognizer {
+                return false
+            }
+            if gestureRecognizer is UIPinchGestureRecognizer && otherGestureRecognizer is UIPanGestureRecognizer {
                 return false
             }
             return true

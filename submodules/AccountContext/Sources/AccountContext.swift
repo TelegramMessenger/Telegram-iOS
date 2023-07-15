@@ -1100,9 +1100,6 @@ public struct StoriesConfiguration {
     }
     
     public static func with(appConfiguration: AppConfiguration) -> StoriesConfiguration {
-//#if DEBUG
-//        return StoriesConfiguration(posting: .premium)
-//#else
         if let data = appConfiguration.data, let postingString = data["stories_posting"] as? String {
             var posting: PostingAvailability
             switch postingString {
@@ -1117,7 +1114,6 @@ public struct StoriesConfiguration {
         } else {
             return .defaultValue
         }
-//#endif
     }
 }
 

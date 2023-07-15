@@ -287,7 +287,6 @@ public final class TextFieldComponent: Component {
                 return false
             }
             
-            var images: [UIImage] = []
             if let data = pasteboard.data(forPasteboardType: "com.compuserve.gif") {
                 component.paste(.gif(data))
                 return false
@@ -295,6 +294,7 @@ public final class TextFieldComponent: Component {
                 component.paste(.video(data))
                 return false
             } else {
+                var images: [UIImage] = []
                 var isPNG = false
                 var isMemoji = false
                 for item in pasteboard.items {
@@ -332,6 +332,7 @@ public final class TextFieldComponent: Component {
                     return false
                 }
             }
+            
             return true
         }
         

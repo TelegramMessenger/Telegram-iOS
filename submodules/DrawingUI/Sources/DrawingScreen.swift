@@ -3127,6 +3127,12 @@ public final class DrawingToolsInteraction {
         if let entityView = self.entitiesView.getView(for: entity.uuid) {
             if let textEntityView = entityView as? DrawingTextEntityView {
                 textEntityView.beginEditing(accessoryView: self.textEditAccessoryView)
+                
+                textEntityView.replaceWithImage = { [weak self] image, isSticker in
+                    if let self {
+                        self.insertEntity(DrawingStickerEntity(content: .image(image, isSticker ? .sticker : .rectangle)), scale: 2.5)
+                    }
+                }
             } else {
                 if self.isVideo {
                     entityView.seek(to: 0.0)

@@ -5744,6 +5744,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
             return false
         }
         
+        private var isPanningList = false
         @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
             guard let (layout, _) = self.validLayout else {
                 return
@@ -5765,6 +5766,19 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                     
                     self.controller?.dismissAllTooltips()
                     
+                    let location = recognizer.location(in: self.listContainer.view)
+                    let isPanningList: Bool
+                    if self.listNode.frame.contains(location) {
+                        if case let .known(value) = contentOffset, value <= 0.5 {
+                            isPanningList = false
+                        } else {
+                            isPanningList = true
+                        }
+                    } else {
+                        isPanningList = false
+                    }
+                    self.isPanningList = isPanningList
+                
                     if case .fullscreen = self.displayMode, case .compact = layout.metrics.widthClass {
                         self.isPanning = true
                         
@@ -5789,9 +5803,11 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                         return
                     }
                     
-                    let translateBounds: Bool
+                    var translateBounds = false
                     if case .regular = layout.metrics.widthClass {
-                        translateBounds = true
+                        if !self.isPanningList {
+                            translateBounds = true
+                        }
                     } else {
                         switch self.displayMode {
                             case let .modal(isExpanded, previousIsFilled):
@@ -5960,52 +5976,56 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                     } else {
                         self.panGestureArguments = nil
                         var dismissing = false
-                        if bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) {
-                            if self.isScheduling {
-                                self.dismissScheduled()
-                                dismissing = true
-                            } else if case .regular = layout.metrics.widthClass {
-                                self.controller?.dismiss(closing: false, manual: true)
-                                dismissing = true
-                            } else {
-                                if case .fullscreen = self.displayMode {
-                                } else {
+                        if case .regular = layout.metrics.widthClass, self.isPanningList {
+
+                        } else {
+                            if bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) {
+                                if self.isScheduling {
+                                    self.dismissScheduled()
+                                    dismissing = true
+                                } else if case .regular = layout.metrics.widthClass {
                                     self.controller?.dismiss(closing: false, manual: true)
                                     dismissing = true
+                                } else {
+                                    if case .fullscreen = self.displayMode {
+                                    } else {
+                                        self.controller?.dismiss(closing: false, manual: true)
+                                        dismissing = true
+                                    }
                                 }
-                            }
-                        } else if !self.isScheduling && (velocity.y < -300.0 || offset < topInset / 2.0) {
-                            if velocity.y > -2200.0 && !self.isFullscreen {
-                                DispatchQueue.main.async {
-                                    self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                            } else if !self.isScheduling && (velocity.y < -300.0 || offset < topInset / 2.0) {
+                                if velocity.y > -2200.0 && !self.isFullscreen {
+                                    DispatchQueue.main.async {
+                                        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                                    }
                                 }
+                                
+                                let initialVelocity: CGFloat = offset.isZero ? 0.0 : abs(velocity.y / offset)
+                                let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
+                                if case .modal = self.displayMode {
+                                    self.displayMode = .modal(isExpanded: true, isFilled: true)
+                                }
+                                self.updateDecorationsColors()
+                                self.animatingExpansion = true
+                                
+                                if let (layout, navigationHeight) = self.validLayout {
+                                    self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: transition)
+                                }
+                                self.updateDecorationsLayout(transition: transition, completion: {
+                                    self.animatingExpansion = false
+                                })
+                            } else if !self.isScheduling {
+                                self.updateDecorationsColors()
+                                self.animatingExpansion = true
+                                self.listNode.scroller.setContentOffset(CGPoint(), animated: false)
+                                
+                                if let (layout, navigationHeight) = self.validLayout {
+                                    self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                                }
+                                self.updateDecorationsLayout(transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
+                                    self.animatingExpansion = false
+                                })
                             }
-                                                        
-                            let initialVelocity: CGFloat = offset.isZero ? 0.0 : abs(velocity.y / offset)
-                            let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
-                            if case .modal = self.displayMode {
-                                self.displayMode = .modal(isExpanded: true, isFilled: true)
-                            }
-                            self.updateDecorationsColors()
-                            self.animatingExpansion = true
-                            
-                            if let (layout, navigationHeight) = self.validLayout {
-                                self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: transition)
-                            }
-                            self.updateDecorationsLayout(transition: transition, completion: {
-                                self.animatingExpansion = false
-                            })
-                        } else if !self.isScheduling {
-                            self.updateDecorationsColors()
-                            self.animatingExpansion = true
-                            self.listNode.scroller.setContentOffset(CGPoint(), animated: false)
-                                                        
-                            if let (layout, navigationHeight) = self.validLayout {
-                                self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
-                            }
-                            self.updateDecorationsLayout(transition: .animated(duration: 0.3, curve: .easeInOut), completion: {
-                                self.animatingExpansion = false
-                            })
                         }
                         if !dismissing {
                             var bounds = self.contentContainer.bounds
