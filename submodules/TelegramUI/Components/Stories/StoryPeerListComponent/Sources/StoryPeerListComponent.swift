@@ -779,7 +779,10 @@ public final class StoryPeerListComponent: Component {
             
             let expandedItemWidth: CGFloat = 60.0
             
-            let overscrollFraction: CGFloat = max(0.0, collapsedState.maxFraction - 1.0)
+            let totalOverscrollFraction: CGFloat = max(0.0, collapsedState.maxFraction - 1.0)
+            let overscrollStage1 = min(0.7, totalOverscrollFraction)
+            let overscrollStage2 = max(0.0, totalOverscrollFraction - 0.7)
+            
             let realTimeOverscrollFraction: CGFloat = max(0.0, (1.0 - component.collapseFraction) - 1.0)
             
             var overscrollFocusIndex: Int?
@@ -789,7 +792,7 @@ public final class StoryPeerListComponent: Component {
                     break
                 }
             }
-            if let overscrollFocusIndex, overscrollFraction >= 0.7 {
+            if let overscrollFocusIndex, overscrollStage2 >= 0.6 {
                 self.overscrollSelectedId = self.sortedItems[overscrollFocusIndex].peer.id
             } else {
                 self.overscrollSelectedId = nil
@@ -832,11 +835,11 @@ public final class StoryPeerListComponent: Component {
                 
                 let overscrollScaleFactor: CGFloat
                 if index == overscrollFocusIndex {
-                    overscrollScaleFactor = 0.5
+                    overscrollScaleFactor = 1.0
                 } else {
-                    overscrollScaleFactor = 0.1
+                    overscrollScaleFactor = 0.0
                 }
-                let maximizedItemScale: CGFloat = 1.0 + overscrollFraction * overscrollScaleFactor
+                let maximizedItemScale: CGFloat = 1.0 + overscrollStage1 * 0.1 + overscrollScaleFactor * overscrollStage2 * 0.5
                 
                 let minItemScale: CGFloat = minimizedItemScale.interpolate(to: minimizedMaxItemScale, amount: collapsedState.minFraction) * (1.0 - collapsedState.activityFraction) + 0.1 * collapsedState.activityFraction
                 
@@ -854,7 +857,7 @@ public final class StoryPeerListComponent: Component {
                     
                     if let overscrollFocusIndex {
                         let focusIndexOffset: CGFloat = max(-1.0, min(1.0, CGFloat(index - overscrollFocusIndex)))
-                        adjustedRegularFrame.origin.x += focusIndexOffset * overscrollFraction * 0.3 * adjustedRegularFrame.width * 0.5
+                        adjustedRegularFrame.origin.x += focusIndexOffset * overscrollStage2 * 0.3 * adjustedRegularFrame.width * 0.5
                     }
                     
                     let collapsedItemPosition: CGPoint = collapsedItemFrame.center.interpolate(to: collapsedMaxItemFrame.center, amount: collapsedState.minFraction)
