@@ -3913,7 +3913,7 @@ public final class StoryItemSetContainerComponent: Component {
                         
                         let _ = component.context.engine.peers.updatePeerStoriesHidden(id: component.slice.peer.id, isHidden: !isHidden)
                         
-                        let text = isHidden ? "Stories from **\(component.slice.peer.compactDisplayTitle)** will now be shown in Archived Chats." : "Stories from **\(component.slice.peer.compactDisplayTitle)** will now be shown in Chats."
+                        let text = !isHidden ? "Stories from **\(component.slice.peer.compactDisplayTitle)** will now be shown in Archived Chats." : "Stories from **\(component.slice.peer.compactDisplayTitle)** will now be shown in Chats."
                         let tooltipScreen = TooltipScreen(
                             context: component.context,
                             account: component.context.account,
