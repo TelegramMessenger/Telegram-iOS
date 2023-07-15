@@ -8974,6 +8974,25 @@ public extension Api.functions.users {
                 }
 }
 public extension Api.functions.users {
+                static func getStoriesMaxIDs(id: [Api.InputUser]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Int32]>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-904087125)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(id.count))
+                    for item in id {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription(name: "users.getStoriesMaxIDs", parameters: [("id", String(describing: id))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Int32]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Int32]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.users {
                 static func getUsers(id: [Api.InputUser]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.User]>) {
                     let buffer = Buffer()
                     buffer.appendInt32(227648840)

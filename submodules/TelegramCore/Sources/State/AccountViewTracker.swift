@@ -1289,7 +1289,7 @@ public final class AccountViewTracker {
                 let messageTimestamp = self.refreshStoriesForPeerIdsAndTimestamps[peerId]
                 var refresh = false
                 if let messageTimestamp = messageTimestamp {
-                    refresh = messageTimestamp < timestamp - 60
+                    refresh = messageTimestamp < timestamp - 60 * 60
                 } else {
                     refresh = true
                 }
@@ -1304,8 +1304,14 @@ public final class AccountViewTracker {
                 self.nextUpdatedUnsupportedMediaDisposableId += 1
                 
                 if let account = self.account {
-                    let signal = account.postbox.transaction { transaction -> [Api.InputUser] in
-                        return addedPeerIds.compactMap { transaction.getPeer($0).flatMap(apiInputUser) }
+                    let signal = account.postbox.transaction { transaction -> [(PeerId, Api.InputUser)] in
+                        return addedPeerIds.compactMap { id -> (PeerId, Api.InputUser)? in
+                            if let user = transaction.getPeer(id).flatMap(apiInputUser) {
+                                return (id, user)
+                            } else {
+                                return nil
+                            }
+                        }
                     }
                     |> mapToSignal { inputUsers -> Signal<Never, NoError> in
                         guard !inputUsers.isEmpty else {
@@ -1314,21 +1320,30 @@ public final class AccountViewTracker {
                         
                         var requests: [Signal<Never, NoError>] = []
                         
-                        let batchCount = 50
+                        let batchCount = 100
                         var startIndex = 0
                         while startIndex < inputUsers.count {
-                            var slice: [Api.InputUser] = []
+                            var slice: [(PeerId, Api.InputUser)] = []
                             for i in startIndex ..< min(startIndex + batchCount, inputUsers.count) {
                                 slice.append(inputUsers[i])
                             }
                             startIndex += batchCount
-                            requests.append(account.network.request(Api.functions.users.getUsers(id: slice))
-                            |> `catch` { _ -> Signal<[Api.User], NoError> in
+                            requests.append(account.network.request(Api.functions.users.getStoriesMaxIDs(id: slice.map(\.1)))
+                            |> `catch` { _ -> Signal<[Int32], NoError> in
                                 return .single([])
                             }
                             |> mapToSignal { result -> Signal<Never, NoError> in
                                 return account.postbox.transaction { transaction in
-                                    updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: AccumulatedPeers(users: result))
+                                    for i in 0 ..< result.count {
+                                        if i < slice.count {
+                                            let value = result[i]
+                                            if value <= 0 {
+                                                transaction.clearStoryItemsInexactMaxId(peerId: slice[i].0)
+                                            } else {
+                                                transaction.setStoryItemsInexactMaxId(peerId: slice[i].0, id: value)
+                                            }
+                                        }
+                                    }
                                 }
                                 |> ignoreValues
                             })
