@@ -629,7 +629,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             self.textView.strokeColor = color
             self.textView.frameColor = nil
         }
-        self.textView.tintColor = cursorColor
+        self.textView.tintColor = self.textView.text.isEmpty ? .white : cursorColor
         
         if case .regular = self.textEntity.style {
             self.textView.layer.shadowColor = UIColor.black.cgColor

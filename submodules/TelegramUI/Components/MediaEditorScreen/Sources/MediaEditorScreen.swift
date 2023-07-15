@@ -2192,7 +2192,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 return false
             }
             if gestureRecognizer === self.dismissPanGestureRecognizer {
-                if self.isDisplayingTool || self.entitiesView.hasSelection {
+                let location = gestureRecognizer.location(in: self.entitiesView)
+                if self.isDisplayingTool || self.entitiesView.hasSelection || self.entitiesView.getView(at: location) != nil {
                     return false
                 }
                 return true

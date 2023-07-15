@@ -551,6 +551,19 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         return nil
     }
     
+    public func getView(at point: CGPoint) -> DrawingEntityView? {
+        for case let view as DrawingEntityView in self.subviews {
+            if view is DrawingMediaEntityView {
+                continue
+            }
+            if view.frame.contains(point) {
+                return view
+            }
+        }
+        return nil
+    }
+    
+    
     public func eachView(_ f: (DrawingEntityView) -> Void) {
         for case let view as DrawingEntityView in self.subviews {
             f(view)
@@ -762,9 +775,10 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                 }
             }
         }
-//        else if gestureRecognizer.numberOfTouches == 1, let viewToSelect = self.entity(at: location) {
-//            self.selectEntity(viewToSelect.entity)
-//        }
+        else if gestureRecognizer.numberOfTouches == 1, let viewToSelect = self.entity(at: location) {
+            self.selectEntity(viewToSelect.entity)
+            self.onInteractionUpdated(true)
+        }
         else if gestureRecognizer.numberOfTouches == 2, let mediaEntityView = self.subviews.first(where: { $0 is DrawingEntityMediaView }) as? DrawingEntityMediaView {
             mediaEntityView.handlePan(gestureRecognizer)
         }
