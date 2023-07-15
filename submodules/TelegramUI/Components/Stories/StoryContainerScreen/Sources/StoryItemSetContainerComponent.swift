@@ -56,6 +56,14 @@ public final class StoryItemSetContainerComponent: Component {
         }
     }
     
+    public final class TransitionHint {
+        public let allowSynchronousLoads: Bool
+        
+        public init(allowSynchronousLoads: Bool) {
+            self.allowSynchronousLoads = allowSynchronousLoads
+        }
+    }
+    
     public enum NavigationDirection {
         case previous
         case next
@@ -960,6 +968,11 @@ public final class StoryItemSetContainerComponent: Component {
                 return
             }
             
+            var hintAllowSynchronousLoads = true
+            if let hint = transition.userData(TransitionHint.self) {
+                hintAllowSynchronousLoads = hint.allowSynchronousLoads
+            }
+            
             var validIds: [Int32] = []
             var trulyValidIds: [Int32] = []
             
@@ -1080,7 +1093,7 @@ public final class StoryItemSetContainerComponent: Component {
                     )
                     let _ = visibleItem.view.update(
                         transition: itemTransition.withUserData(StoryItemContentComponent.Hint(
-                            synchronousLoad: index == centralIndex && itemLayout.contentScaleFraction <= 0.0001
+                            synchronousLoad: index == centralIndex && itemLayout.contentScaleFraction <= 0.0001 && hintAllowSynchronousLoads
                         )),
                         component: AnyComponent(StoryItemContentComponent(
                             context: component.context,

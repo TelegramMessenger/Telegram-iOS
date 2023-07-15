@@ -2525,7 +2525,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         super.updateNavigationBarLayout(layout, transition: transition)
     }
     
-    private func chatListHeaderView() -> ChatListHeaderComponent.View? {
+    func chatListHeaderView() -> ChatListHeaderComponent.View? {
         if let navigationBarView = self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
             if let componentView = navigationBarView.headerContent.view as? ChatListHeaderComponent.View {
                 return componentView
@@ -3667,6 +3667,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                                     sourceCornerRadius: transitionView.bounds.height * 0.5,
                                                     sourceIsAvatar: true
                                                 )
+                                                
+                                                Queue.mainQueue().after(0.3, { [weak self] in
+                                                    guard let self else {
+                                                        return
+                                                    }
+                                                    
+                                                    self.chatListDisplayNode.mainContainerNode.currentItemNode.scroller.panGestureRecognizer.state = .cancelled
+                                                })
                                             }
                                         }
                                     }
@@ -3680,6 +3688,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 
                                 if let navigationBarView = self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
                                     if navigationBarView.storiesUnlocked {
+                                        self.scrollToStories()
+                                        
                                         if let componentView = self.chatListHeaderView() {
                                             if let (transitionView, transitionContentView) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
                                                 return StoryContainerScreen.TransitionOut(

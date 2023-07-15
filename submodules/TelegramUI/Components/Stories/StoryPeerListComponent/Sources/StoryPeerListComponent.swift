@@ -348,6 +348,8 @@ public final class StoryPeerListComponent: Component {
         private var currentTitleWidth: CGFloat = 0.0
         private var currentActivityFraction: CGFloat = 0.0
         
+        public private(set) var overscrollSelectedId: EnginePeer.Id?
+        
         private var sharedBlurEffect: NSObject?
         
         public override init(frame: CGRect) {
@@ -449,18 +451,25 @@ public final class StoryPeerListComponent: Component {
         }
         
         public func setLoadingItem(peerId: EnginePeer.Id, signal: Signal<Never, NoError>) {
-            self.loadingItemId = peerId
-            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.2, execute: { [weak self] in
-                self?.state?.updated(transition: .immediate)
-            })
-            
+            var applyLoadingItem = true
             self.loadingItemDisposable?.dispose()
             self.loadingItemDisposable = (signal |> deliverOnMainQueue).start(completed: { [weak self] in
                 guard let self else {
                     return
                 }
                 self.loadingItemId = nil
+                applyLoadingItem = false
                 self.state?.updated(transition: .immediate)
+            })
+            
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.2, execute: { [weak self] in
+                guard let self else {
+                    return
+                }
+                if applyLoadingItem {
+                    self.loadingItemId = peerId
+                    self.state?.updated(transition: .immediate)
+                }
             })
         }
         
@@ -773,6 +782,19 @@ public final class StoryPeerListComponent: Component {
             let overscrollFraction: CGFloat = max(0.0, collapsedState.maxFraction - 1.0)
             let realTimeOverscrollFraction: CGFloat = max(0.0, (1.0 - component.collapseFraction) - 1.0)
             
+            var overscrollFocusIndex: Int?
+            for i in 0 ..< self.sortedItems.count {
+                if self.sortedItems[i].peer.id != component.context.account.peerId {
+                    overscrollFocusIndex = i
+                    break
+                }
+            }
+            if let overscrollFocusIndex, overscrollFraction >= 0.7 {
+                self.overscrollSelectedId = self.sortedItems[overscrollFocusIndex].peer.id
+            } else {
+                self.overscrollSelectedId = nil
+            }
+            
             struct MeasuredItem {
                 var itemFrame: CGRect
                 var itemScale: CGFloat
@@ -808,7 +830,13 @@ public final class StoryPeerListComponent: Component {
                 
                 let minimizedMaxItemScale: CGFloat = (24.0 + 4.0) / 52.0
                 
-                let maximizedItemScale: CGFloat = 1.0 + overscrollFraction * 0.1
+                let overscrollScaleFactor: CGFloat
+                if index == overscrollFocusIndex {
+                    overscrollScaleFactor = 0.5
+                } else {
+                    overscrollScaleFactor = 0.1
+                }
+                let maximizedItemScale: CGFloat = 1.0 + overscrollFraction * overscrollScaleFactor
                 
                 let minItemScale: CGFloat = minimizedItemScale.interpolate(to: minimizedMaxItemScale, amount: collapsedState.minFraction) * (1.0 - collapsedState.activityFraction) + 0.1 * collapsedState.activityFraction
                 
@@ -823,6 +851,11 @@ public final class StoryPeerListComponent: Component {
                         adjustedRegularFrame = adjustedRegularFrame.interpolate(to: itemLayout.frame(at: effectiveFirstVisibleIndex + collapseEndIndex), amount: 0.0)
                     }
                     adjustedRegularFrame.origin.x -= effectiveVisibleBounds.minX
+                    
+                    if let overscrollFocusIndex {
+                        let focusIndexOffset: CGFloat = max(-1.0, min(1.0, CGFloat(index - overscrollFocusIndex)))
+                        adjustedRegularFrame.origin.x += focusIndexOffset * overscrollFraction * 0.3 * adjustedRegularFrame.width * 0.5
+                    }
                     
                     let collapsedItemPosition: CGPoint = collapsedItemFrame.center.interpolate(to: collapsedMaxItemFrame.center, amount: collapsedState.minFraction)
                     

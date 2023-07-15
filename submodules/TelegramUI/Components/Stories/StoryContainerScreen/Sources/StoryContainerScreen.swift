@@ -1257,7 +1257,9 @@ private final class StoryContainerScreenComponent: Component {
                         if let current = self.visibleItemSetViews[slice.peer.id] {
                             itemSetView = current
                         } else {
-                            itemSetTransition = .immediate
+                            itemSetTransition = transition.withAnimation(.none).withUserData(StoryItemSetContainerComponent.TransitionHint(
+                                allowSynchronousLoads: !self.visibleItemSetViews.isEmpty
+                            ))
                             itemSetView = ItemSetView()
                             self.visibleItemSetViews[slice.peer.id] = itemSetView
                         }
