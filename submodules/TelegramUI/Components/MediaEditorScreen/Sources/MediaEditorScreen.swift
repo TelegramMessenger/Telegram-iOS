@@ -2192,7 +2192,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 return false
             }
             if gestureRecognizer === self.dismissPanGestureRecognizer {
-                if self.isDisplayingTool || self.entitiesView.hasSelection {
+                let location = gestureRecognizer.location(in: self.entitiesView)
+                if self.isDisplayingTool || self.entitiesView.hasSelection || self.entitiesView.getView(at: location) != nil {
                     return false
                 }
                 return true
@@ -2900,7 +2901,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         if let self {
                                             if let content {
                                                 let stickerEntity = DrawingStickerEntity(content: content)
-                                                self.interaction?.insertEntity(stickerEntity)
+                                                self.interaction?.insertEntity(stickerEntity, scale: 1.33)
                                                 
                                                 self.hasAnyChanges = true
                                                 self.controller?.isSavingAvailable = true

@@ -29,6 +29,14 @@ final class DrawingVectorEntityView: DrawingEntityView {
         return max(10.0, max(self.vectorEntity.referenceDrawingSize.width, self.vectorEntity.referenceDrawingSize.height) * 0.1)
     }
     
+    override func animateSelection() {
+        guard let selectionView = self.selectionView else {
+            return
+        }
+                
+        selectionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.1)
+    }
+    
     override func update(animated: Bool) {
         self.center = CGPoint(x: self.vectorEntity.drawingSize.width * 0.5, y: self.vectorEntity.drawingSize.height * 0.5)
         self.bounds = CGRect(origin: .zero, size: self.vectorEntity.drawingSize)

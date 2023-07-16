@@ -1774,6 +1774,10 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         self.textView.view?.isHidden = false*/
     }
     
+    var isActive: Bool {
+        return self.textField?.isFirstResponder ?? false
+    }
+    
     func deactivate() {
         if let text = self.textField?.text, !text.isEmpty {
             self.textField?.endEditing(true)
@@ -5209,12 +5213,8 @@ public final class EmojiPagerContentComponent: Component {
                 scrollView.layer.removeAllAnimations()
             }
             
-            if self.isSearchActivated, let component = self.component, component.searchState == .empty(hasResults: true), !component.searchAlwaysActive, let visibleSearchHeader = self.visibleSearchHeader, visibleSearchHeader.currentPresetSearchTerm == nil {
-                scrollView.isScrollEnabled = false
-                DispatchQueue.main.async {
-                    scrollView.isScrollEnabled = true
-                }
-                self.visibleSearchHeader?.deactivate()
+            if let component = self.component, self.isSearchActivated, let visibleSearchHeader = self.visibleSearchHeader, visibleSearchHeader.isActive && !component.searchAlwaysActive {
+                visibleSearchHeader.deactivate()
             }
             self.component?.inputInteractionHolder.inputInteraction?.onScroll()
             self.component?.inputInteractionHolder.inputInteraction?.scrollingStickersGridPromise.set(true)
