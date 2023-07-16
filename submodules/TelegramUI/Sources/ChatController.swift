@@ -4528,7 +4528,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            let storyContent = SingleStoryContentContextImpl(context: self.context, storyId: storyId, readGlobally: false)
+            let storyContent = SingleStoryContentContextImpl(context: self.context, storyId: storyId, readGlobally: true)
             let _ = (storyContent.state
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] _ in
