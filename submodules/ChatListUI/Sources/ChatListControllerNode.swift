@@ -983,14 +983,19 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             }
         }
         itemNode.listNode.didBeginInteractiveDragging = { [weak self] _ in
-            guard let self, !self.isInlineMode else {
-                return
-            }
-            guard let validLayout = self.validLayout else {
+            guard let self else {
                 return
             }
             
             self.didBeginInteractiveDragging?()
+            
+            if self.isInlineMode {
+                return
+            }
+            
+            guard let validLayout = self.validLayout else {
+                return
+            }
             
             let tempTopInset: CGFloat
             if validLayout.inlineNavigationLocation != nil {
@@ -2408,8 +2413,15 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         self.updateNavigationScrolling(navigationHeight: containerLayout.navigationBarHeight, transition: self.tempNavigationScrollingTransition ?? .immediate)
         
         if listView.isDragging {
+            var overscrollSelectedId: EnginePeer.Id?
+            var overscrollHiddenChatItemsAllowed = false
             if let controller = self.controller, let componentView = controller.chatListHeaderView(), let storyPeerListView = componentView.storyPeerListView() {
-                if let peerId = storyPeerListView.overscrollSelectedId {
+                overscrollSelectedId = storyPeerListView.overscrollSelectedId
+                overscrollHiddenChatItemsAllowed = storyPeerListView.overscrollHiddenChatItemsAllowed
+            }
+            
+            if let controller = self.controller {
+                if let peerId = overscrollSelectedId {
                     if self.allowOverscrollStoryExpansion && self.inlineStackContainerNode == nil && isPrimary {
                         self.allowOverscrollStoryExpansion = false
                         self.allowOverscrollItemExpansion = false
@@ -2418,21 +2430,40 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                         
                         controller.openStories(peerId: peerId)
                     }
-                } else if storyPeerListView.overscrollHiddenChatItemsAllowed {
-                    if self.allowOverscrollItemExpansion {
-                        let timestamp = CACurrentMediaTime()
-                        if let _ = self.currentOverscrollItemExpansionTimestamp {
+                } else {
+                    if !overscrollHiddenChatItemsAllowed {
+                        var manuallyAllow = false
+                        
+                        if isPrimary {
+                            if let storySubscriptions = controller.orderedStorySubscriptions, shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions, isHidden: controller.location == .chatList(groupId: .archive)) {
+                            } else {
+                                manuallyAllow = true
+                            }
                         } else {
-                            self.currentOverscrollItemExpansionTimestamp = timestamp
+                            manuallyAllow = true
                         }
                         
-                        if let currentOverscrollItemExpansionTimestamp = self.currentOverscrollItemExpansionTimestamp, currentOverscrollItemExpansionTimestamp <= timestamp - 0.2 {
-                            self.allowOverscrollItemExpansion = false
-                            
-                            if isPrimary {
-                                self.mainContainerNode.currentItemNode.revealScrollHiddenItem()
+                        if manuallyAllow, case let .known(value) = offset, value + listView.tempTopInset <= -40.0 {
+                            overscrollHiddenChatItemsAllowed = true
+                        }
+                    }
+                
+                    if overscrollHiddenChatItemsAllowed {
+                        if self.allowOverscrollItemExpansion {
+                            let timestamp = CACurrentMediaTime()
+                            if let _ = self.currentOverscrollItemExpansionTimestamp {
                             } else {
-                                self.inlineStackContainerNode?.currentItemNode.revealScrollHiddenItem()
+                                self.currentOverscrollItemExpansionTimestamp = timestamp
+                            }
+                            
+                            if let currentOverscrollItemExpansionTimestamp = self.currentOverscrollItemExpansionTimestamp, currentOverscrollItemExpansionTimestamp <= timestamp - 0.2 {
+                                self.allowOverscrollItemExpansion = false
+                                
+                                if isPrimary {
+                                    self.mainContainerNode.currentItemNode.revealScrollHiddenItem()
+                                } else {
+                                    self.inlineStackContainerNode?.currentItemNode.revealScrollHiddenItem()
+                                }
                             }
                         }
                     }
@@ -2470,16 +2501,16 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private func didBeginInteractiveDragging(isPrimary: Bool) {
         if isPrimary {
             self.allowOverscrollStoryExpansion = true
-            self.allowOverscrollItemExpansion = true
         }
+        self.allowOverscrollItemExpansion = true
     }
     
     private func endedInteractiveDragging(listView: ListView, isPrimary: Bool) {
         if isPrimary {
             self.allowOverscrollStoryExpansion = false
-            self.allowOverscrollItemExpansion = false
-            self.currentOverscrollItemExpansionTimestamp = nil
         }
+        self.allowOverscrollItemExpansion = false
+        self.currentOverscrollItemExpansionTimestamp = nil
     }
     
     private func contentScrollingEnded(listView: ListView, isPrimary: Bool) -> Bool {
@@ -2550,7 +2581,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 inlineStackContainerNode.contentOffsetChanged = { [weak self] offset, listView in
                     self?.contentOffsetChanged(offset: offset, listView: listView, isPrimary: false)
                 }
-                inlineStackContainerNode.endedInteractiveDragging = { [weak self] listView in
+                inlineStackContainerNode.didBeginInteractiveDragging = { [weak self] in
                     self?.didBeginInteractiveDragging(isPrimary: false)
                 }
                 inlineStackContainerNode.endedInteractiveDragging = { [weak self] listView in
