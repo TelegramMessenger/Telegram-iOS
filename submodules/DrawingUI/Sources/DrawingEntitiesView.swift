@@ -610,6 +610,9 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     private func entity(at location: CGPoint) -> DrawingEntityView? {
         var intersectedViews: [DrawingEntityView] = []
         for case let view as DrawingEntityView in self.subviews {
+            if view is DrawingMediaEntityView {
+                continue
+            }
             if view.precisePoint(inside: self.convert(location, to: view)) {
                 intersectedViews.append(view)
             }
