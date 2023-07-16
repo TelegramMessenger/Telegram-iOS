@@ -1,3 +1,7 @@
+load(
+    "@build_configuration//:variables.bzl",
+    "telegram_is_internal_build",
+)
 
 public_headers = glob([
     "PublicHeaders/**/*.h",
@@ -29,6 +33,7 @@ objc_library(
         "-DNDEBUG=1",
         "-DSQLITE_MAX_MMAP_SIZE=0",
     ],
+    defines = ["TEST_BUILD"] if telegram_is_internal_build == "true" else [],
     sdk_frameworks = [
       "Foundation",
       "Security",

@@ -1287,7 +1287,7 @@ public class Account {
         |> then(self.postbox.mediaBox.cacheStorageBox.optimizeStorage(minFreePagesFraction: minFreePagesFraction))
     }
     
-    #if DEBUG
+    #if TEST_BUILD
     public func debugDumpAllDbStats() -> Signal<String, NoError> {
         return self.postbox.debugDumpDbStat()
         |> then (self.postbox.mediaBox.storageBox.debugDumpDbStat())
@@ -1453,7 +1453,7 @@ public class Account {
         }
     }
     
-    #if DEBUG
+    #if TEST_BUILD
     public func debugChatMessagesStat() -> Signal<String, NoError> {
         return self.postbox.transaction { transaction in
             let peerIds = transaction.chatListGetAllPeerIds()

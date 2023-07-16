@@ -496,14 +496,20 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         })
         
         // once installed via App Store, some debugging tools will no longer be available (for security)
-        if applicationBindings.isMainApp, initialPresentationDataAndSettings.ptgSettings.isTestingEnvironment != false {
+        if applicationBindings.isMainApp, initialPresentationDataAndSettings.ptgSettings.testToolsEnabled != false {
+            #if TEST_BUILD
+            let testToolsEnabled = Bundle.isTestFlightOrDevelopment
+            #else
+            let testToolsEnabled = false
+            #endif
+            
             let _ = accountManager.transaction({ transaction in
                 transaction.updateSharedData(ApplicationSpecificSharedDataKeys.ptgSettings, { entry in
-                    return PreferencesEntry(PtgSettings(entry).withUpdated(isTestingEnvironment: Bundle.isTestFlightOrDevelopment))
+                    return PreferencesEntry(PtgSettings(entry).withUpdated(testToolsEnabled: testToolsEnabled))
                 })
             }).start()
             
-            if !Bundle.isTestFlightOrDevelopment {
+            if !testToolsEnabled {
                 let _ = updateLoggingSettings(accountManager: accountManager, {
                     $0.withUpdatedLogToFile(false).withUpdatedLogToConsole(false).withUpdatedRedactSensitiveData(true)
                 }).start()

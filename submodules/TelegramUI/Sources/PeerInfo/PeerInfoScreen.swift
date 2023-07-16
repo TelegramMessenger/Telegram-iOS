@@ -5459,43 +5459,45 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }
                 }
                 
-                #if DEBUG
-                if !items.isEmpty {
-                    items.append(.separator)
+                #if TEST_BUILD
+                if strongSelf.context.sharedContext.currentPtgSettings.with({ $0.testToolsEnabled == true }) {
+                    if !items.isEmpty {
+                        items.append(.separator)
+                    }
+                    items.append(.action(ContextMenuActionItem(text: "Storage Usage", icon: { [weak self] theme in
+                        guard let strongSelf = self else {
+                            return nil
+                        }
+                        
+                        let mediaBox = strongSelf.context.account.postbox.mediaBox
+                        var peerResourceIds: [Data] = []
+                        
+                        let semaphore = DispatchSemaphore(value: 0)
+                        
+                        let _ = mediaBox.storageBox.all(peerId: strongSelf.peerId).start(next: { result in
+                            peerResourceIds = result
+                            semaphore.signal()
+                        })
+                        
+                        semaphore.wait()
+                        
+                        var totalSize: Int64 = 0
+                        for resourceId in peerResourceIds {
+                            let id = MediaResourceId(String(data: resourceId, encoding: .utf8)!)
+                            totalSize += mediaBox.fileSizeForId(id)
+                        }
+                        
+                        let text = NSAttributedString(string: dataSizeString(totalSize, formatting: DataSizeStringFormatting(presentationData: presentationData)), font: Font.regular(14.0), textColor: theme.contextMenu.secondaryColor)
+                        let bounds = text.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
+                        return generateImage(bounds.size.integralFloor, rotatedContext: { size, context in
+                            context.clear(CGRect(origin: CGPoint(), size: size))
+                            UIGraphicsPushContext(context)
+                            text.draw(in: bounds)
+                            UIGraphicsPopContext()
+                        })
+                    }, action: { _, _ in
+                    })))
                 }
-                items.append(.action(ContextMenuActionItem(text: "Storage Usage", icon: { [weak self] theme in
-                    guard let strongSelf = self else {
-                        return nil
-                    }
-                    
-                    let mediaBox = strongSelf.context.account.postbox.mediaBox
-                    var peerResourceIds: [Data] = []
-                    
-                    let semaphore = DispatchSemaphore(value: 0)
-                    
-                    let _ = mediaBox.storageBox.all(peerId: strongSelf.peerId).start(next: { result in
-                        peerResourceIds = result
-                        semaphore.signal()
-                    })
-                    
-                    semaphore.wait()
-                    
-                    var totalSize: Int64 = 0
-                    for resourceId in peerResourceIds {
-                        let id = MediaResourceId(String(data: resourceId, encoding: .utf8)!)
-                        totalSize += mediaBox.fileSizeForId(id)
-                    }
-                    
-                    let text = NSAttributedString(string: dataSizeString(totalSize, formatting: DataSizeStringFormatting(presentationData: presentationData)), font: Font.regular(14.0), textColor: theme.contextMenu.secondaryColor)
-                    let bounds = text.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
-                    return generateImage(bounds.size.integralFloor, rotatedContext: { size, context in
-                        context.clear(CGRect(origin: CGPoint(), size: size))
-                        UIGraphicsPushContext(context)
-                        text.draw(in: bounds)
-                        UIGraphicsPopContext()
-                    })
-                }, action: { _, _ in
-                })))
                 #endif
                 
                 return .single(items)
@@ -9506,6 +9508,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             if !self.state.isEditing {
                 let versionText = self.presentationData.strings.Settings_Version(Bundle.main.appVersion, Bundle.main.appBuildNumber, Bundle.main.originalVersion).string
                 self.versionLabelNode.attributedText = NSAttributedString(string: versionText, font: Font.regular(self.presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: presentationData.theme.list.freeTextColor, paragraphAlignment: .center)
+                #if TEST_BUILD
+                let mutable = NSMutableAttributedString(attributedString: self.versionLabelNode.attributedText!)
+                mutable.insert(NSAttributedString(string: " TEST BUILD", attributes: [NSAttributedString.Key.foregroundColor: UIColor.red]), at: NSRange(versionText.range(of: "\n")!, in: versionText).location)
+                self.versionLabelNode.attributedText = mutable
+                #endif
                 
                 let horizontalPadding = 20.0
                 var frame = CGRect(origin: CGPoint(x: horizontalPadding, y: contentHeight), size: CGSize(width: layout.size.width - 2 * horizontalPadding, height: 100))
@@ -9932,7 +9939,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, reactionSourceMessageId: MessageId?, callMessages: [Message], isSettings: Bool = false, hintGroupInCommon: PeerId? = nil, requestsContext: PeerInvitationImportersContext? = nil, forumTopicThread: ChatReplyThreadMessage? = nil) {
-        precondition(context.sharedContext.currentPtgSettings.with({ $0.isTestingEnvironment == true }) || context.currentInactiveSecretChatPeerIds.with { !$0.contains(peerId) })
+        precondition(context.currentInactiveSecretChatPeerIds.with { !$0.contains(peerId) })
         
         self.context = context
         self.updatedPresentationData = updatedPresentationData

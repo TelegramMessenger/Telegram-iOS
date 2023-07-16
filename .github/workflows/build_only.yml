@@ -82,7 +82,7 @@ jobs:
           # use the official release configuration
           rm -rf $HOME/telegram-configuration
           mkdir -p $HOME/telegram-configuration
-          cp build-system/appstore-configuration.json $HOME/telegram-configuration/
+          cp build-system/public-release-configuration.json $HOME/telegram-configuration/
 
           # prepare provisioning profiles
           PROVISIONING_PATH=$HOME/telegram-configuration/provisioning/profiles
@@ -102,7 +102,7 @@ jobs:
           python3 -u build-system/Make/Make.py \
             --bazelUserRoot="$BAZEL_USER_ROOT" \
             build \
-            --configurationPath="$HOME/telegram-configuration/appstore-configuration.json" \
+            --configurationPath="$HOME/telegram-configuration/public-release-configuration.json" \
             --codesigningInformationPath="$HOME/telegram-configuration/provisioning" \
             --buildNumber=$BUILD_NUMBER \
             --configuration=release_arm64

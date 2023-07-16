@@ -90,6 +90,7 @@ public final class Logger {
         self.basePath = basePath
     }
     
+    #if TEST_BUILD
     public func collectLogs(prefix: String? = nil) -> Signal<[(String, String)], NoError> {
         return Signal { subscriber in
             self.queue.async {
@@ -164,6 +165,7 @@ public final class Logger {
             return EmptyDisposable
         }
     }
+    #endif
     
     public func collectShortLog() -> Signal<[(Double, String)], NoError> {
         return Signal { subscriber in

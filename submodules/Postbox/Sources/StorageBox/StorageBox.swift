@@ -997,7 +997,7 @@ public final class StorageBox {
             return self.valueBox.dbFilesSize()
         }
         
-        #if DEBUG
+        #if TEST_BUILD
         fileprivate func debugDumpDbStat() -> Signal<String, NoError> {
             return self.valueBox.debugDumpStat()
         }
@@ -1172,7 +1172,7 @@ public final class StorageBox {
         }
     }
     
-    #if DEBUG
+    #if TEST_BUILD
     public func debugDumpDbStat() -> Signal<String, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()

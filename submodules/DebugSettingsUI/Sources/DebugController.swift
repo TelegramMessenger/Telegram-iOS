@@ -57,6 +57,7 @@ private enum DebugControllerSection: Int32 {
 
 private enum DebugControllerEntry: ItemListNodeEntry {
     case testStickerImport(PresentationTheme)
+    #if TEST_BUILD
     case sendLogs(PresentationTheme)
     case sendOneLog(PresentationTheme)
     case sendShareLogs
@@ -65,30 +66,35 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case sendNotificationLogs(PresentationTheme)
     case sendCriticalLogs(PresentationTheme)
     case sendAllLogs
-    #if DEBUG
     case sendDatabaseStats
     case sendChatMessagesStats
-    #endif
     case accounts(PresentationTheme)
     case logToFile(PresentationTheme, Bool)
     case logToConsole(PresentationTheme, Bool)
     case redactSensitiveData(PresentationTheme, Bool)
+    #endif
     case keepChatNavigationStack(PresentationTheme, Bool)
     case skipReadHistory(PresentationTheme, Bool)
     case crashOnSlowQueries(PresentationTheme, Bool)
     case clearTips(PresentationTheme)
     case resetNotifications
+    #if TEST_BUILD
     case crash(PresentationTheme)
     case resetData(PresentationTheme)
     case resetDatabase(PresentationTheme)
     case resetDatabaseAndCache(PresentationTheme)
+    #endif
     case resetHoles(PresentationTheme)
     case reindexUnread(PresentationTheme)
+    #if TEST_BUILD
     case resetCacheIndex
+    #endif
     case reindexCache
     case resetBiometricsData(PresentationTheme)
     case resetWebViewCache(PresentationTheme)
+    #if TEST_BUILD
     case optimizeDatabase(PresentationTheme)
+    #endif
     case photoPreview(PresentationTheme, Bool)
     case knockoutWallpaper(PresentationTheme, Bool)
     case experimentalCompatibility(Bool)
@@ -106,31 +112,41 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case enableNetworkFramework(Bool)
     case enableNetworkExperiments(Bool)
     case restorePurchases(PresentationTheme)
+    #if TEST_BUILD
     case logTranslationRecognition(Bool)
+    #endif
     case resetTranslationStates
     case hostInfo(PresentationTheme, String)
     case versionInfo(PresentationTheme)
+    #if TEST_BUILD
     case ptgResetPasscodeAttempts
+    #endif
     
     var section: ItemListSectionId {
         switch self {
         case .testStickerImport:
             return DebugControllerSection.sticker.rawValue
+        #if TEST_BUILD
         case .sendLogs, .sendOneLog, .sendShareLogs, .sendGroupCallLogs, .sendStorageStats, .sendNotificationLogs, .sendCriticalLogs, .sendAllLogs:
             return DebugControllerSection.logs.rawValue
-        #if DEBUG
         case .sendDatabaseStats, .sendChatMessagesStats:
             return DebugControllerSection.logs.rawValue
-        #endif
         case .accounts:
             return DebugControllerSection.logs.rawValue
         case .logToFile, .logToConsole, .redactSensitiveData:
             return DebugControllerSection.logging.rawValue
+        #endif
         case .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetNotifications, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .inlineForums, .localTranscription, .enableReactionOverrides, .restorePurchases:
+        case .clearTips, .resetNotifications, .resetHoles, .reindexUnread, .reindexCache, .resetBiometricsData, .resetWebViewCache, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .inlineForums, .localTranscription, .enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
-        case .logTranslationRecognition, .resetTranslationStates:
+        #if TEST_BUILD
+        case .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetCacheIndex, .optimizeDatabase:
+            return DebugControllerSection.experiments.rawValue
+        case .logTranslationRecognition:
+            return DebugControllerSection.translation.rawValue
+        #endif
+        case .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -138,8 +154,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.videoExperiments2.rawValue
         case .hostInfo, .versionInfo:
             return DebugControllerSection.info.rawValue
+        #if TEST_BUILD
         case .ptgResetPasscodeAttempts:
             return DebugControllerSection.ptg.rawValue
+        #endif
         }
     }
     
@@ -147,6 +165,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         switch self {
         case .testStickerImport:
             return 0
+        #if TEST_BUILD
         case .sendLogs:
             return 1
         case .sendOneLog:
@@ -163,12 +182,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 7
         case .sendStorageStats:
             return 8
-        #if DEBUG
         case .sendDatabaseStats:
             return 8.1
         case .sendChatMessagesStats:
             return 8.2
-        #endif
         case .accounts:
             return 9
         case .logToFile:
@@ -177,6 +194,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 11
         case .redactSensitiveData:
             return 12
+        #endif
         case .keepChatNavigationStack:
             return 14
         case .skipReadHistory:
@@ -187,6 +205,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 17
         case .resetNotifications:
             return 19
+        #if TEST_BUILD
         case .crash:
             return 20
         case .resetData:
@@ -195,20 +214,25 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 22
         case .resetDatabaseAndCache:
             return 23
+        #endif
         case .resetHoles:
             return 24
         case .reindexUnread:
             return 25
+        #if TEST_BUILD
         case .resetCacheIndex:
             return 26
+        #endif
         case .reindexCache:
             return 27
         case .resetBiometricsData:
             return 28
         case .resetWebViewCache:
             return 29
+        #if TEST_BUILD
         case .optimizeDatabase:
             return 30
+        #endif
         case .photoPreview:
             return 31
         case .knockoutWallpaper:
@@ -227,8 +251,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 39
         case .restorePurchases:
             return 40
+        #if TEST_BUILD
         case .logTranslationRecognition:
             return 41
+        #endif
         case .resetTranslationStates:
             return 42
         case .playerEmbedding:
@@ -251,8 +277,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 103
         case .versionInfo:
             return 104
+        #if TEST_BUILD
         case .ptgResetPasscodeAttempts:
             return 1001
+        #endif
         }
     }
     
@@ -278,6 +306,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     context.sharedContext.openResolvedUrl(.importStickers, context: context, urlContext: .generic, navigationController: arguments.getNavigationController(), forceExternal: false, openPeer: { _, _ in }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { c, a in arguments.presentController(c, a as? ViewControllerPresentationArguments) }, dismissInput: {}, contentContext: nil)
                 }
             })
+        #if TEST_BUILD
         case .sendLogs:
             return ItemListDisclosureItem(presentationData: presentationData, title: "Send Logs (Up to 40 MB)", label: "", sectionId: self.section, style: .blocks, action: {
                 let _ = (Logger.shared.collectLogs()
@@ -902,7 +931,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     arguments.presentController(actionSheet, nil)
                 })
             })
-        #if DEBUG
         case .sendDatabaseStats:
             return ItemListDisclosureItem(presentationData: presentationData, title: "Send Database Stats", label: "", sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
@@ -1009,7 +1037,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     arguments.presentController(actionSheet, nil)
                 })
             })
-        #endif
         case .accounts:
             return ItemListDisclosureItem(presentationData: presentationData, title: "Accounts", label: "", sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
@@ -1035,6 +1062,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     $0.withUpdatedRedactSensitiveData(value)
                 }).start()
             })
+        #endif
         case let .keepChatNavigationStack(_, value):
             return ItemListSwitchItem(presentationData: presentationData, title: "Keep Chat Stack", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
@@ -1073,6 +1101,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     let _ = context.engine.peers.unmarkChatListFeaturedFiltersAsSeen()
                 }
             })
+        #if TEST_BUILD
         case let .logTranslationRecognition(value):
             return ItemListSwitchItem(presentationData: presentationData, title: "Log Language Recognition", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
@@ -1081,6 +1110,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return settings
                 }).start()
             })
+        #endif
         case .resetTranslationStates:
             return ItemListActionItem(presentationData: presentationData, title: "Reset Translation States", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 if let context = arguments.context {
@@ -1098,6 +1128,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     arguments.presentController(controller, nil)
                 }
             })
+        #if TEST_BUILD
         case .crash:
             return ItemListActionItem(presentationData: presentationData, title: "Crash", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 preconditionFailure()
@@ -1165,6 +1196,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     ])])
                 arguments.presentController(actionSheet, nil)
             })
+        #endif
         case .resetHoles:
             return ItemListActionItem(presentationData: presentationData, title: "Reset Holes", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
@@ -1191,6 +1223,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     controller.dismiss()
                 })
             })
+        #if TEST_BUILD
         case .resetCacheIndex:
             return ItemListActionItem(presentationData: presentationData, title: "Reset Cache Index [!]", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
@@ -1199,6 +1232,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 
                 context.account.postbox.mediaBox.storageBox.reset()
             })
+        #endif
         case .reindexCache:
             return ItemListActionItem(presentationData: presentationData, title: "Reindex Cache", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
@@ -1249,6 +1283,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListActionItem(presentationData: presentationData, title: "Clear Web View Cache", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 WKWebsiteDataStore.default().removeData(ofTypes: [WKWebsiteDataTypeDiskCache, WKWebsiteDataTypeMemoryCache], modifiedSince: Date(timeIntervalSince1970: 0), completionHandler:{ })
             })
+        #if TEST_BUILD
         case .optimizeDatabase:
             return ItemListActionItem(presentationData: presentationData, title: "Optimize Database", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
@@ -1265,6 +1300,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         arguments.presentController(controller, nil)
                     })
             })
+        #endif
         case let .photoPreview(_, value):
             return ItemListSwitchItem(presentationData: presentationData, title: "Media Preview (Updated)", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -1449,13 +1485,15 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             let bundleVersion = bundle.infoDictionary?["CFBundleShortVersionString"] ?? ""
             let bundleBuild = bundle.infoDictionary?[kCFBundleVersionKey as String] ?? ""
             return ItemListTextItem(presentationData: presentationData, text: .plain("\(bundleId)\n\(bundleVersion) (\(bundleBuild))"), sectionId: self.section)
+        #if TEST_BUILD
         case .ptgResetPasscodeAttempts:
-            return ItemListActionItem(presentationData: presentationData, title: "Reset Secret Passcode Attempts", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            return ItemListActionItem(presentationData: presentationData, title: "Reset Secret Code Attempts", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let passcodeAttemptAccounter = arguments.context?.sharedContext.passcodeAttemptAccounter else {
                     return
                 }
                 passcodeAttemptAccounter.debugResetAllCounters()
             })
+        #endif
         }
     }
 }
@@ -1464,8 +1502,10 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     var entries: [DebugControllerEntry] = []
 
     let isMainApp = sharedContext.applicationBindings.isMainApp
+    let testToolsEnabled = sharedContext.currentPtgSettings.with({ $0.testToolsEnabled == true })
     
-    if sharedContext.currentPtgSettings.with({ $0.isTestingEnvironment == true }) {
+    #if TEST_BUILD
+    if testToolsEnabled {
         //    entries.append(.testStickerImport(presentationData.theme))
         entries.append(.sendLogs(presentationData.theme))
         //entries.append(.sendOneLog(presentationData.theme))
@@ -1475,10 +1515,8 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.sendCriticalLogs(presentationData.theme))
         entries.append(.sendAllLogs)
         entries.append(.sendStorageStats)
-        #if DEBUG
         entries.append(.sendDatabaseStats)
         entries.append(.sendChatMessagesStats)
-        #endif
         if isMainApp {
             entries.append(.accounts(presentationData.theme))
         }
@@ -1487,6 +1525,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.logToConsole(presentationData.theme, loggingSettings.logToConsole))
         entries.append(.redactSensitiveData(presentationData.theme, loggingSettings.redactSensitiveData))
     }
+    #endif
 
     if isMainApp {
         entries.append(.keepChatNavigationStack(presentationData.theme, experimentalSettings.keepChatNavigationStack))
@@ -1499,18 +1538,30 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.clearTips(presentationData.theme))
         entries.append(.resetNotifications)
     }
-    entries.append(.crash(presentationData.theme))
-    entries.append(.resetData(presentationData.theme))
-    entries.append(.resetDatabase(presentationData.theme))
-    entries.append(.resetDatabaseAndCache(presentationData.theme))
+    #if TEST_BUILD
+    if testToolsEnabled {
+        entries.append(.crash(presentationData.theme))
+        entries.append(.resetData(presentationData.theme))
+        entries.append(.resetDatabase(presentationData.theme))
+        entries.append(.resetDatabaseAndCache(presentationData.theme))
+    }
+    #endif
     entries.append(.resetHoles(presentationData.theme))
     if isMainApp {
         entries.append(.reindexUnread(presentationData.theme))
-        entries.append(.resetCacheIndex)
+        #if TEST_BUILD
+        if testToolsEnabled {
+            entries.append(.resetCacheIndex)
+        }
+        #endif
         entries.append(.reindexCache)
         entries.append(.resetWebViewCache(presentationData.theme))
     }
-    entries.append(.optimizeDatabase(presentationData.theme))
+    #if TEST_BUILD
+    if testToolsEnabled {
+        entries.append(.optimizeDatabase(presentationData.theme))
+    }
+    #endif
     if isMainApp {
         entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
         entries.append(.experimentalCompatibility(experimentalSettings.experimentalCompatibility))
@@ -1523,9 +1574,11 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         }
 //        entries.append(.restorePurchases(presentationData.theme))
         
-        if sharedContext.currentPtgSettings.with({ $0.isTestingEnvironment == true }) {
+        #if TEST_BUILD
+        if testToolsEnabled {
             entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
         }
+        #endif
         entries.append(.resetTranslationStates)
         
         entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
@@ -1556,9 +1609,11 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     }
 //    entries.append(.versionInfo(presentationData.theme))
     
-    if sharedContext.currentPtgSettings.with({ $0.isTestingEnvironment == true }) {
+    #if TEST_BUILD
+    if testToolsEnabled {
         entries.append(.ptgResetPasscodeAttempts)
     }
+    #endif
     
     return entries
 }
