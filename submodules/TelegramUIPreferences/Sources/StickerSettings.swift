@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 
@@ -70,7 +69,7 @@ public func updateStickerSettingsInteractively(accountManager: AccountManager<Te
             } else {
                 currentSettings = StickerSettings.defaultSettings
             }
-            return PreferencesEntry(f(currentSettings))
+            return SharedPreferencesEntry(f(currentSettings))
         })
     }
 }

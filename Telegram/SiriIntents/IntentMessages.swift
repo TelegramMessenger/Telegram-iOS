@@ -36,7 +36,11 @@ func unreadMessages(account: Account) -> Signal<[INMessage], NoError> {
     |> mapToSignal { view -> Signal<[INMessage], NoError> in
         var signals: [Signal<[INMessage], NoError>] = []
         for entry in view.0.entries {
-            if case let .MessageEntry(index, _, readState, isMuted, _, _, _, _, _, _, _, _, _) = entry {
+            if case let .MessageEntry(entryData) = entry {
+                let index = entryData.index
+                let readState = entryData.readState
+                let isMuted = entryData.isRemovedFromTotalUnreadCount
+                
                 if index.messageIndex.id.peerId.namespace != Namespaces.Peer.CloudUser {
                     continue
                 }

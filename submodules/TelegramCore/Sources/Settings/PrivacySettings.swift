@@ -36,7 +36,7 @@ public final class SelectivePrivacyPeer: Equatable {
 public enum SelectivePrivacySettings: Equatable {
     case enableEveryone(disableFor: [PeerId: SelectivePrivacyPeer])
     case enableContacts(enableFor: [PeerId: SelectivePrivacyPeer], disableFor: [PeerId: SelectivePrivacyPeer])
-    case disableEveryone(enableFor: [PeerId: SelectivePrivacyPeer])
+    case disableEveryone(enableFor: [PeerId: SelectivePrivacyPeer], enableForCloseFriends: Bool)
     
     public static func ==(lhs: SelectivePrivacySettings, rhs: SelectivePrivacySettings) -> Bool {
         switch lhs {
@@ -52,8 +52,8 @@ public enum SelectivePrivacySettings: Equatable {
                 } else {
                     return false
                 }
-            case let .disableEveryone(enableFor):
-                if case .disableEveryone(enableFor) = rhs {
+            case let .disableEveryone(enableFor, enableForCloseFriends):
+                if case .disableEveryone(enableFor, enableForCloseFriends) = rhs {
                     return true
                 } else {
                     return false
@@ -63,8 +63,8 @@ public enum SelectivePrivacySettings: Equatable {
     
     func withEnabledPeers(_ peers: [PeerId: SelectivePrivacyPeer]) -> SelectivePrivacySettings {
         switch self {
-            case let .disableEveryone(enableFor):
-                return .disableEveryone(enableFor: enableFor.merging(peers, uniquingKeysWith: { lhs, rhs in lhs }))
+            case let .disableEveryone(enableFor, enableForCloseFriends):
+                return .disableEveryone(enableFor: enableFor.merging(peers, uniquingKeysWith: { lhs, rhs in lhs }), enableForCloseFriends: enableForCloseFriends)
             case let .enableContacts(enableFor, disableFor):
                 return .enableContacts(enableFor: enableFor.merging(peers, uniquingKeysWith: { lhs, rhs in lhs }), disableFor: disableFor)
             case .enableEveryone:
@@ -82,6 +82,17 @@ public enum SelectivePrivacySettings: Equatable {
                 return .enableEveryone(disableFor: disableFor.merging(peers, uniquingKeysWith: { lhs, rhs in lhs }))
         }
     }
+    
+    func withEnableForCloseFriends(_ enableForCloseFriends: Bool) -> SelectivePrivacySettings {
+        switch self {
+        case let .disableEveryone(enableFor, _):
+            return .disableEveryone(enableFor: enableFor, enableForCloseFriends: enableForCloseFriends)
+        case .enableContacts:
+            return self
+        case .enableEveryone:
+            return self
+        }
+    }
 }
 
 public struct AccountPrivacySettings: Equatable {
@@ -94,12 +105,13 @@ public struct AccountPrivacySettings: Equatable {
     public let phoneNumber: SelectivePrivacySettings
     public let phoneDiscoveryEnabled: Bool
     public let voiceMessages: SelectivePrivacySettings
+    public let bio: SelectivePrivacySettings
     
-    public let automaticallyArchiveAndMuteNonContacts: Bool
+    public let globalSettings: GlobalPrivacySettings
     public let accountRemovalTimeout: Int32
     public let messageAutoremoveTimeout: Int32?
     
-    public init(presence: SelectivePrivacySettings, groupInvitations: SelectivePrivacySettings, voiceCalls: SelectivePrivacySettings, voiceCallsP2P: SelectivePrivacySettings, profilePhoto: SelectivePrivacySettings, forwards: SelectivePrivacySettings, phoneNumber: SelectivePrivacySettings, phoneDiscoveryEnabled: Bool, voiceMessages: SelectivePrivacySettings, automaticallyArchiveAndMuteNonContacts: Bool, accountRemovalTimeout: Int32, messageAutoremoveTimeout: Int32?) {
+    public init(presence: SelectivePrivacySettings, groupInvitations: SelectivePrivacySettings, voiceCalls: SelectivePrivacySettings, voiceCallsP2P: SelectivePrivacySettings, profilePhoto: SelectivePrivacySettings, forwards: SelectivePrivacySettings, phoneNumber: SelectivePrivacySettings, phoneDiscoveryEnabled: Bool, voiceMessages: SelectivePrivacySettings, bio: SelectivePrivacySettings, globalSettings: GlobalPrivacySettings, accountRemovalTimeout: Int32, messageAutoremoveTimeout: Int32?) {
         self.presence = presence
         self.groupInvitations = groupInvitations
         self.voiceCalls = voiceCalls
@@ -109,7 +121,8 @@ public struct AccountPrivacySettings: Equatable {
         self.phoneNumber = phoneNumber
         self.phoneDiscoveryEnabled = phoneDiscoveryEnabled
         self.voiceMessages = voiceMessages
-        self.automaticallyArchiveAndMuteNonContacts = automaticallyArchiveAndMuteNonContacts
+        self.bio = bio
+        self.globalSettings = globalSettings
         self.accountRemovalTimeout = accountRemovalTimeout
         self.messageAutoremoveTimeout = messageAutoremoveTimeout
     }
@@ -142,7 +155,10 @@ public struct AccountPrivacySettings: Equatable {
         if lhs.voiceMessages != rhs.voiceMessages {
             return false
         }
-        if lhs.automaticallyArchiveAndMuteNonContacts != rhs.automaticallyArchiveAndMuteNonContacts {
+        if lhs.bio != rhs.bio {
+            return false
+        }
+        if lhs.globalSettings != rhs.globalSettings {
             return false
         }
         if lhs.accountRemovalTimeout != rhs.accountRemovalTimeout {
@@ -158,10 +174,11 @@ public struct AccountPrivacySettings: Equatable {
 
 extension SelectivePrivacySettings {
     init(apiRules: [Api.PrivacyRule], peers: [PeerId: SelectivePrivacyPeer]) {
-        var current: SelectivePrivacySettings = .disableEveryone(enableFor: [:])
+        var current: SelectivePrivacySettings = .disableEveryone(enableFor: [:], enableForCloseFriends: false)
         
         var disableFor: [PeerId: SelectivePrivacyPeer] = [:]
         var enableFor: [PeerId: SelectivePrivacyPeer] = [:]
+        var enableForCloseFriends: Bool = false
         
         for rule in apiRules {
             switch rule {
@@ -201,10 +218,12 @@ extension SelectivePrivacySettings {
                             }
                         }
                     }
+                case .privacyValueAllowCloseFriends:
+                    enableForCloseFriends = true
             }
         }
         
-        self = current.withEnabledPeers(enableFor).withDisabledPeers(disableFor)
+        self = current.withEnabledPeers(enableFor).withDisabledPeers(disableFor).withEnableForCloseFriends(enableForCloseFriends)
     }
 }
 
@@ -223,6 +242,40 @@ public struct GlobalMessageAutoremoveTimeoutSettings: Equatable, Codable {
 func updateGlobalMessageAutoremoveTimeoutSettings(transaction: Transaction, _ f: (GlobalMessageAutoremoveTimeoutSettings) -> GlobalMessageAutoremoveTimeoutSettings) {
     transaction.updatePreferencesEntry(key: PreferencesKeys.globalMessageAutoremoveTimeoutSettings, { current in
         let previous = current?.get(GlobalMessageAutoremoveTimeoutSettings.self) ?? GlobalMessageAutoremoveTimeoutSettings.default
+        let updated = f(previous)
+        return PreferencesEntry(updated)
+    })
+}
+
+public struct GlobalPrivacySettings: Equatable, Codable {
+    public static var `default` = GlobalPrivacySettings(
+        automaticallyArchiveAndMuteNonContacts: false,
+        keepArchivedUnmuted: true,
+        keepArchivedFolders: true
+    )
+
+    public var automaticallyArchiveAndMuteNonContacts: Bool
+    public var keepArchivedUnmuted: Bool
+    public var keepArchivedFolders: Bool
+
+    public init(
+        automaticallyArchiveAndMuteNonContacts: Bool,
+        keepArchivedUnmuted: Bool,
+        keepArchivedFolders: Bool
+    ) {
+        self.automaticallyArchiveAndMuteNonContacts = automaticallyArchiveAndMuteNonContacts
+        self.keepArchivedUnmuted = keepArchivedUnmuted
+        self.keepArchivedFolders = keepArchivedFolders
+    }
+}
+
+func fetchGlobalPrivacySettings(transaction: Transaction) -> GlobalPrivacySettings {
+    return transaction.getPreferencesEntry(key: PreferencesKeys.globalPrivacySettings)?.get(GlobalPrivacySettings.self) ?? GlobalPrivacySettings.default
+}
+
+func updateGlobalPrivacySettings(transaction: Transaction, _ f: (GlobalPrivacySettings) -> GlobalPrivacySettings) {
+    transaction.updatePreferencesEntry(key: PreferencesKeys.globalPrivacySettings, { current in
+        let previous = current?.get(GlobalPrivacySettings.self) ?? GlobalPrivacySettings.default
         let updated = f(previous)
         return PreferencesEntry(updated)
     })

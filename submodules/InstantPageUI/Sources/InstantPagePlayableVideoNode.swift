@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -29,7 +28,7 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode, Galler
     
     private var currentSize: CGSize?
     
-    private var fetchStatus: MediaResourceStatus?
+    private var fetchStatus: EngineMediaResource.FetchStatus?
     private var fetchedDisposable = MetaDisposable()
     private var statusDisposable = MetaDisposable()
     
@@ -47,17 +46,19 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode, Galler
         self.openMedia = openMedia
         
         var imageReference: ImageMediaReference?
-        if let file = media.media as? TelegramMediaFile, let presentation = smallestImageRepresentation(file.previewRepresentations) {
-            let image = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [presentation], immediateThumbnailData: file.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+        if case let .file(file) = media.media, let presentation = smallestImageRepresentation(file.previewRepresentations) {
+            let image = TelegramMediaImage(imageId: EngineMedia.Id(namespace: 0, id: 0), representations: [presentation], immediateThumbnailData: file.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
             imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
         }
         
         var streamVideo = false
-        if let file = media.media as? TelegramMediaFile {
+        var fileValue: TelegramMediaFile?
+        if case let .file(file) = media.media {
             streamVideo = isMediaStreamable(media: file)
+            fileValue = file
         }
         
-        self.videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: NativeVideoContent(id: .instantPage(webPage.webpageId, media.media.id!), userLocation: userLocation, fileReference: .webPage(webPage: WebpageReference(webPage), media: media.media as! TelegramMediaFile), imageReference: imageReference, streamVideo: streamVideo ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, placeholderColor: theme.pageBackgroundColor, storeAfterDownload: nil), priority: .embedded, autoplay: true)
+        self.videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: NativeVideoContent(id: .instantPage(webPage.webpageId, media.media.id!), userLocation: userLocation, fileReference: .webPage(webPage: WebpageReference(webPage), media: fileValue!), imageReference: imageReference, streamVideo: streamVideo ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, placeholderColor: theme.pageBackgroundColor, storeAfterDownload: nil), priority: .embedded, autoplay: true)
         self.videoNode.isUserInteractionEnabled = false
         
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
@@ -66,13 +67,13 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode, Galler
         
         self.addSubnode(self.videoNode)
         
-        if let file = media.media as? TelegramMediaFile {
+        if case let .file(file) = media.media {
             self.fetchedDisposable.set(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: userLocation, userContentType: .video, reference: AnyMediaReference.webPage(webPage: WebpageReference(webPage), media: file).resourceReference(file.resource)).start())
             
             self.statusDisposable.set((context.account.postbox.mediaBox.resourceStatus(file.resource) |> deliverOnMainQueue).start(next: { [weak self] status in
                 displayLinkDispatcher.dispatch {
                     if let strongSelf = self {
-                        strongSelf.fetchStatus = status
+                        strongSelf.fetchStatus = EngineMediaResource.FetchStatus(status)
                         strongSelf.updateFetchStatus()
                     }
                 }

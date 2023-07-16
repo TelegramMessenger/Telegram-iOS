@@ -366,7 +366,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
                 let messageContainer = self.messageContainers[k]
                 let messageSize = messageContainer.frame.size
                 
-                messageContainer.update(size: size, hasAvatar: self.chatType != .channel, rect: CGRect(origin: CGPoint(x: 0.0, y: offset - messageSize.height), size: messageSize), transition: transition)
+                messageContainer.update(size: size, hasAvatar: self.chatType != .channel && self.chatType != .user, rect: CGRect(origin: CGPoint(x: 0.0, y: offset - messageSize.height), size: messageSize), transition: transition)
                 offset -= messageSize.height
             }
         }
@@ -394,6 +394,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
     
     enum ChatType: Equatable {
         case generic
+        case user
         case group
         case channel
     }
@@ -401,7 +402,9 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
     func updatePresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState) {
         var chatType: ChatType = .channel
         if let peer = chatPresentationInterfaceState.renderedPeer?.peer {
-            if peer is TelegramGroup {
+            if peer is TelegramUser {
+                chatType = .user
+            } else if peer is TelegramGroup {
                 chatType = .group
             } else if let channel = peer as? TelegramChannel {
                 if case .group = channel.info {
@@ -475,7 +478,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         
         for messageContainer in self.messageContainers {
             let messageSize = dimensions[index % 14]
-            messageContainer.update(size: bounds.size, hasAvatar: self.chatType != .channel, rect: CGRect(origin: CGPoint(x: 0.0, y: bounds.size.height - insets.bottom - offset - messageSize.height), size: messageSize), transition: transition)
+            messageContainer.update(size: bounds.size, hasAvatar: self.chatType != .channel && self.chatType != .user, rect: CGRect(origin: CGPoint(x: 0.0, y: bounds.size.height - insets.bottom - offset - messageSize.height), size: messageSize), transition: transition)
             offset += messageSize.height
             index += 1
         }

@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramCore
-import Postbox
 import TelegramPresentationData
 import TextFormat
 import Markdown
@@ -130,7 +129,14 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 }
                 self.animatedStickerNode = nil
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
-                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
+            
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { contents in
+                    return ("URL", contents)
+                }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
                 displayUndo = undo
                 self.originalRemainingSeconds = 5
             case let .hidArchive(title, text, undo):
@@ -155,7 +161,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = undo
                 self.originalRemainingSeconds = 3
-            case let .autoDelete(isOn, title, text):
+            case let .autoDelete(isOn, title, text, customUndoText):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -165,8 +171,18 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 if let title = title {
                     self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 }
-                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
-                displayUndo = false
+
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+                if let customUndoText {
+                    
+                    undoText = customUndoText
+                    displayUndo = true
+                } else {
+                    displayUndo = false
+                }
                 self.originalRemainingSeconds = 4.5
             case let .succeed(text):
                 self.avatarNode = nil
@@ -212,14 +228,16 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     isUserInteractionEnabled = true
                 }
             
-            case let .actionSucceeded(title, text, cancel):
+            case let .actionSucceeded(title, text, cancel, destructive):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_success", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
                 
-                undoTextColor = UIColor(rgb: 0xff7b74)
+                if destructive {
+                    undoTextColor = UIColor(rgb: 0xff7b74)
+                }
             
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -673,7 +691,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 
                 displayUndo = false
                 self.originalRemainingSeconds = 3
-            case let .sticker(context, file, title, text, customUndoText, _):
+            case let .sticker(context, file, loop, title, text, customUndoText, _):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -770,7 +788,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     case let .animated(resource):
                         let animatedStickerNode = DefaultAnimatedStickerNodeImpl()
                         self.animatedStickerNode = animatedStickerNode
-                        animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: resource._asResource(), isVideo: file.isVideoSticker), width: 80, height: 80, mode: .cached)
+                        animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: resource._asResource(), isVideo: file.isVideoSticker), width: 80, height: 80, playbackMode: loop ? .loop : .once, mode: .cached)
                     }
                 }
             case let .copy(text):
@@ -827,7 +845,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.animatedStickerNode = nil
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 
-            
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
                 let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
@@ -885,6 +902,69 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         return ("URL", contents)
                     }), textAlignment: .natural)
                     self.textNode.attributedText = attributedText
+                }
+            
+                if text.contains("](") {
+                    isUserInteractionEnabled = true
+                }
+                self.originalRemainingSeconds = timeout ?? (isUserInteractionEnabled ? 5 : 3)
+            
+                self.textNode.maximumNumberOfLines = 5
+                
+                if let customUndoText = customUndoText {
+                    undoText = customUndoText
+                    displayUndo = true
+                } else {
+                    displayUndo = false
+                }
+            case let .premiumPaywall(title, text, customUndoText, timeout, linkAction):
+                self.avatarNode = nil
+                self.iconNode = ASImageNode()
+                self.iconNode?.displayWithoutProcessing = true
+                self.iconNode?.displaysAsynchronously = false
+                self.iconNode?.image = generateTintedImage(image: UIImage(bundleImageName: "Peer Info/PremiumIcon"), color: .white)
+                self.iconCheckNode = nil
+                self.animationNode = nil
+                self.animatedStickerNode = nil
+            
+                if let title = title, text.isEmpty {
+                    self.titleNode.attributedText = nil
+                    let body = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                    let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                    let link = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: undoTextColor)
+                    let attributedText = parseMarkdownIntoAttributedString(title, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { contents in
+                        return ("URL", contents)
+                    }), textAlignment: .natural)
+                    self.textNode.attributedText = attributedText
+                } else {
+                    if let title = title {
+                        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                    } else {
+                        self.titleNode.attributedText = nil
+                    }
+                    
+                    let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                    let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                    let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+                    let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { contents in
+                        return ("URL", contents)
+                    }), textAlignment: .natural)
+                    self.textNode.attributedText = attributedText
+                }
+            
+                if let linkAction {
+                    self.textNode.highlightAttributeAction = { attributes in
+                        if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
+                            return NSAttributedString.Key(rawValue: "URL")
+                        } else {
+                            return nil
+                        }
+                    }
+                    self.textNode.tapAttributeAction = { attributes, _ in
+                        if let value = attributes[NSAttributedString.Key(rawValue: "URL")] as? String {
+                            linkAction(value)
+                        }
+                    }
                 }
             
                 if text.contains("](") {
@@ -1002,7 +1082,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         switch content {
         case .removedChat:
             self.panelWrapperNode.addSubnode(self.timerTextNode)
-        case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .copy, .mediaSaved, .paymentSent, .image, .inviteRequestSent, .notificationSoundAdded, .universal, .peers:
+        case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .copy, .mediaSaved, .paymentSent, .image, .inviteRequestSent, .notificationSoundAdded, .universal, .premiumPaywall, .peers:
             if self.textNode.tapAttributeAction != nil || displayUndo {
                 self.isUserInteractionEnabled = true
             } else {
@@ -1089,7 +1169,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     
     @objc private func undoButtonPressed() {
         switch self.content {
-        case let .sticker(_, _, _, _, _, customAction):
+        case let .sticker(_, _, _, _, _, _, customAction):
             if let customAction = customAction {
                 customAction()
             } else {
@@ -1363,6 +1443,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         } else {
             self.panelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             self.panelWrapperNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            
+            self.panelNode.layer.animateScale(from: 0.96, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+            self.panelWrapperNode.layer.animateScale(from: 0.96, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
         }
         
         if let iconCheckNode = self.iconCheckNode, self.iconNode != nil {
@@ -1392,6 +1475,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.panelWrapperNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false) { _ in
             completion()
         }
+        self.panelNode.layer.animateScale(from: 1.0, to: 0.96, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+        self.panelWrapperNode.layer.animateScale(from: 1.0, to: 0.96, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
     }
     
     func animateOutWithReplacement(completion: @escaping () -> Void) {

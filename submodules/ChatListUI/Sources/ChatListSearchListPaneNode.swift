@@ -797,7 +797,8 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                         hasFailedMessages: false,
                         forumTopicData: nil,
                         topForumTopicItems: [],
-                        autoremoveTimeout: nil
+                        autoremoveTimeout: nil,
+                        storyState: nil
                     )), editing: false, hasActiveRevealControls: false, selected: false, header: tagMask == nil ? header : nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
                 }
             case let .addContact(phoneNumber, theme, strings):
@@ -2068,7 +2069,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 interaction.dismissInput()
             }, present: { c, a in
                 interaction.present(c, a)
-            }, transitionNode: { messageId, media in
+            }, transitionNode: { messageId, media, _ in
                 return transitionNodeImpl?(messageId, EngineMedia(media))
             }, addToTransitionSurface: { view in
                 addToTransitionSurfaceImpl?(view)
@@ -2166,6 +2167,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }, openPremiumIntro: {
         }, openChatFolderUpdates: {
         }, hideChatFolderUpdates: {
+        }, openStories: { _, _ in
         })
         chatListInteraction.isSearchMode = true
         
@@ -2202,12 +2204,12 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 interaction.dismissInput()
             }, present: { c, a in
                 interaction.present(c, a)
-            }, transitionNode: { messageId, media in
+            }, transitionNode: { messageId, media, _ in
                 var transitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                 if let strongSelf = self {
                     strongSelf.listNode.forEachItemNode { itemNode in
                         if let itemNode = itemNode as? ListMessageNode {
-                            if let result = itemNode.transitionNode(id: messageId, media: media) {
+                            if let result = itemNode.transitionNode(id: messageId, media: media, adjustRect: false) {
                                 transitionNode = result
                             }
                         }
@@ -3029,7 +3031,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         var transitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
         self.listNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ListMessageNode {
-                if let result = itemNode.transitionNode(id: messageId, media: media._asMedia()) {
+                if let result = itemNode.transitionNode(id: messageId, media: media._asMedia(), adjustRect: false) {
                     transitionNode = result
                 }
             }
@@ -3242,8 +3244,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             switch item.content {
                 case let .peer(peerData):
                     return (selectedItemNode.view, bounds, peerData.messages.last?.id ?? peerData.peer.peerId)
-                case let .groupReference(groupId, _, _, _, _):
-                    return (selectedItemNode.view, bounds, groupId)
+                case let .groupReference(groupReference):
+                    return (selectedItemNode.view, bounds, groupReference.groupId)
             }
         }
         return nil
@@ -3366,13 +3368,13 @@ private final class ShimmerEffectNode: ASDisplayNode {
     }
 }
 
-private final class ChatListSearchShimmerNode: ASDisplayNode {
+public final class ChatListSearchShimmerNode: ASDisplayNode {
     private let backgroundColorNode: ASDisplayNode
     private let effectNode: ShimmerEffectNode
     private let maskNode: ASImageNode
     private var currentParams: (size: CGSize, presentationData: PresentationData, key: ChatListSearchPaneKey)?
     
-    init(key: ChatListSearchPaneKey) {
+    public init(key: ChatListSearchPaneKey) {
         self.backgroundColorNode = ASDisplayNode()
         self.effectNode = ShimmerEffectNode()
         self.maskNode = ASImageNode()
@@ -3386,13 +3388,13 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
         self.addSubnode(self.maskNode)
     }
     
-    func update(context: AccountContext, size: CGSize, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, key: ChatListSearchPaneKey, hasSelection: Bool, transition: ContainedViewLayoutTransition) {
+    public func update(context: AccountContext, size: CGSize, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, key: ChatListSearchPaneKey, hasSelection: Bool, transition: ContainedViewLayoutTransition) {
         if self.currentParams?.size != size || self.currentParams?.presentationData !== presentationData || self.currentParams?.key != key {
             self.currentParams = (size, presentationData, key)
             
             let chatListPresentationData = ChatListPresentationData(theme: presentationData.theme, fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true)
             
-            let peer1: EnginePeer = .user(TelegramUser(id: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "FirstName", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: []))
+            let peer1: EnginePeer = .user(TelegramUser(id: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "FirstName", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil))
             let timestamp1: Int32 = 100000
             var peers: [EnginePeer.Id: EnginePeer] = [:]
             peers[peer1.id] = peer1
@@ -3400,6 +3402,7 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
             }, messageSelected: { _, _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, setPeerThreadMuted: { _, _, _ in }, deletePeer: { _, _ in }, deletePeerThread: { _, _ in }, setPeerThreadStopped: { _, _, _ in }, setPeerThreadPinned: { _, _, _ in }, setPeerThreadHidden: { _, _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, toggleThreadsSelection: { _, _ in }, hidePsa: { _ in }, activateChatPreview: { _, _, _, gesture, _ in
                 gesture?.cancel()
             }, present: { _ in }, openForumThread: { _, _ in }, openStorageManagement: {}, openPasswordSetup: {}, openPremiumIntro: {}, openChatFolderUpdates: {}, hideChatFolderUpdates: {
+            }, openStories: { _, _ in
             })
             var isInlineMode = false
             if case .topics = key {
@@ -3433,7 +3436,8 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             associatedMessages: [:],
                             associatedMessageIds: [],
                             associatedMedia: [:],
-                            associatedThreadInfo: nil
+                            associatedThreadInfo: nil,
+                            associatedStories: [:]
                         )
                         let readState = EnginePeerReadCounters()
                         return ChatListItem(presentationData: chatListPresentationData, context: context, chatListLocation: .chatList(groupId: .root), filterData: nil, index: .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: 0, messageIndex: EngineMessage.Index(id: EngineMessage.Id(peerId: peer1.id, namespace: 0, id: 0), timestamp: timestamp1))), content: .peer(ChatListItemContent.PeerData(
@@ -3453,13 +3457,14 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             hasFailedMessages: false,
                             forumTopicData: nil,
                             topForumTopicItems: [],
-                            autoremoveTimeout: nil
+                            autoremoveTimeout: nil,
+                            storyState: nil
                         )), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
                     case .media:
                         return nil
                     case .links:
                         var media: [EngineMedia] = []
-                        media.append(.webpage(TelegramMediaWebpage(webpageId: EngineMedia.Id(namespace: 0, id: 0), content: .Loaded(TelegramMediaWebpageLoadedContent(url: "https://telegram.org", displayUrl: "https://telegram.org", hash: 0, type: nil, websiteName: "Telegram", title: "Telegram Telegram", text: "Telegram", embedUrl: nil, embedType: nil, embedSize: nil, duration: nil, author: nil, image: nil, file: nil, attributes: [], instantPage: nil)))))
+                        media.append(.webpage(TelegramMediaWebpage(webpageId: EngineMedia.Id(namespace: 0, id: 0), content: .Loaded(TelegramMediaWebpageLoadedContent(url: "https://telegram.org", displayUrl: "https://telegram.org", hash: 0, type: nil, websiteName: "Telegram", title: "Telegram Telegram", text: "Telegram", embedUrl: nil, embedType: nil, embedSize: nil, duration: nil, author: nil, image: nil, file: nil, story: nil, attributes: [], instantPage: nil)))))
                         let message = EngineMessage(
                             stableId: 0,
                             stableVersion: 0,
@@ -3482,7 +3487,8 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             associatedMessages: [:],
                             associatedMessageIds: [],
                             associatedMedia: [:],
-                            associatedThreadInfo: nil
+                            associatedThreadInfo: nil,
+                            associatedStories: [:]
                         )
                         
                         return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(id: peer1.id), interaction: ListMessageItemInteraction.default, message: message._asMessage(), selection: hasSelection ? .selectable(selected: false) : .none, displayHeader: false, customHeader: nil, hintIsLink: true, isGlobalSearchResult: true)
@@ -3511,7 +3517,8 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             associatedMessages: [:],
                             associatedMessageIds: [],
                             associatedMedia: [:],
-                            associatedThreadInfo: nil
+                            associatedThreadInfo: nil,
+                            associatedStories: [:]
                         )
                         
                         return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(id: peer1.id), interaction: ListMessageItemInteraction.default, message: message._asMessage(), selection: hasSelection ? .selectable(selected: false) : .none, displayHeader: false, customHeader: nil, hintIsLink: false, isGlobalSearchResult: true)
@@ -3540,7 +3547,8 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             associatedMessages: [:],
                             associatedMessageIds: [],
                             associatedMedia: [:],
-                            associatedThreadInfo: nil
+                            associatedThreadInfo: nil,
+                            associatedStories: [:]
                         )
                         
                         return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(id: peer1.id), interaction: ListMessageItemInteraction.default, message: message._asMessage(), selection: hasSelection ? .selectable(selected: false) : .none, displayHeader: false, customHeader: nil, hintIsLink: false, isGlobalSearchResult: true)
@@ -3569,7 +3577,8 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             associatedMessages: [:],
                             associatedMessageIds: [],
                             associatedMedia: [:],
-                            associatedThreadInfo: nil
+                            associatedThreadInfo: nil,
+                            associatedStories: [:]
                         )
                         
                         return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(id: peer1.id), interaction: ListMessageItemInteraction.default, message: message._asMessage(), selection: hasSelection ? .selectable(selected: false) : .none, displayHeader: false, customHeader: nil, hintIsLink: false, isGlobalSearchResult: true)

@@ -518,12 +518,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private struct SummaryParticipantsState: Equatable {
         public var participantCount: Int
         public var topParticipants: [GroupCallParticipantsContext.Participant]
-        public var activeSpeakers: Set<PeerId>
+        public var activeSpeakers: Set<EnginePeer.Id>
     
         public init(
             participantCount: Int,
             topParticipants: [GroupCallParticipantsContext.Participant],
-            activeSpeakers: Set<PeerId>
+            activeSpeakers: Set<EnginePeer.Id>
         ) {
             self.participantCount = participantCount
             self.topParticipants = topParticipants
@@ -542,26 +542,26 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             let level: Float
         }
         
-        private var participants: [PeerId: Participant] = [:]
+        private var participants: [EnginePeer.Id: Participant] = [:]
         private let speakingParticipantsPromise = ValuePromise<[PeerId: UInt32]>()
-        private var speakingParticipants = [PeerId: UInt32]() {
+        private var speakingParticipants = [EnginePeer.Id: UInt32]() {
             didSet {
                 self.speakingParticipantsPromise.set(self.speakingParticipants)
             }
         }
         
-        private let audioLevelsPromise = Promise<[(PeerId, UInt32, Float, Bool)]>()
+        private let audioLevelsPromise = Promise<[(EnginePeer.Id, UInt32, Float, Bool)]>()
         
         init() {
         }
         
-        func update(levels: [(PeerId, UInt32, Float, Bool)]) {
+        func update(levels: [(EnginePeer.Id, UInt32, Float, Bool)]) {
             let timestamp = Int32(CFAbsoluteTimeGetCurrent())
             let currentParticipants: [PeerId: Participant] = self.participants
             
-            var validSpeakers: [PeerId: Participant] = [:]
-            var silentParticipants = Set<PeerId>()
-            var speakingParticipants = [PeerId: UInt32]()
+            var validSpeakers: [EnginePeer.Id: Participant] = [:]
+            var silentParticipants = Set<EnginePeer.Id>()
+            var speakingParticipants = [EnginePeer.Id: UInt32]()
             for (peerId, ssrc, level, hasVoice) in levels {
                 if level > speakingLevelThreshold && hasVoice {
                     validSpeakers[peerId] = Participant(ssrc: ssrc, timestamp: timestamp, level: level)
@@ -587,7 +587,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 }
             }
             
-            var audioLevels: [(PeerId, UInt32, Float, Bool)] = []
+            var audioLevels: [(EnginePeer.Id, UInt32, Float, Bool)] = []
             for (peerId, source, level, hasVoice) in levels {
                 if level > 0.001 {
                     audioLevels.append((peerId, source, level, hasVoice))
@@ -599,11 +599,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             self.audioLevelsPromise.set(.single(audioLevels))
         }
         
-        func get() -> Signal<[PeerId: UInt32], NoError> {
+        func get() -> Signal<[EnginePeer.Id: UInt32], NoError> {
             return self.speakingParticipantsPromise.get()
         }
         
-        func getAudioLevels() -> Signal<[(PeerId, UInt32, Float, Bool)], NoError> {
+        func getAudioLevels() -> Signal<[(EnginePeer.Id, UInt32, Float, Bool)], NoError> {
             return self.audioLevelsPromise.get()
         }
     }
@@ -620,12 +620,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     private(set) var initialCall: EngineGroupCallDescription?
     public let internalId: CallSessionInternalId
-    public let peerId: PeerId
+    public let peerId: EnginePeer.Id
     private let isChannel: Bool
     private var invite: String?
-    private var joinAsPeerId: PeerId
+    private var joinAsPeerId: EnginePeer.Id
     private var ignorePreviousJoinAsPeerId: (PeerId, UInt32)?
-    private var reconnectingAsPeer: Peer?
+    private var reconnectingAsPeer: EnginePeer?
     
     public private(set) var hasVideo: Bool
     public private(set) var hasScreencast: Bool
@@ -653,7 +653,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var screencastCapturer: OngoingCallVideoCapturer?
 
     private struct SsrcMapping {
-        var peerId: PeerId
+        var peerId: EnginePeer.Id
         var isPresentation: Bool
     }
     private var ssrcMapping: [UInt32: SsrcMapping] = [:]
@@ -708,8 +708,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var audioLevelsDisposable = MetaDisposable()
     
     private let speakingParticipantsContext = SpeakingParticipantsContext()
-    private var speakingParticipantsReportTimestamp: [PeerId: Double] = [:]
-    public var audioLevels: Signal<[(PeerId, UInt32, Float, Bool)], NoError> {
+    private var speakingParticipantsReportTimestamp: [EnginePeer.Id: Double] = [:]
+    public var audioLevels: Signal<[(EnginePeer.Id, UInt32, Float, Bool)], NoError> {
         return self.speakingParticipantsContext.getAudioLevels()
     }
     
@@ -778,15 +778,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         return self.membersPromise.get()
     }
     
-    private var invitedPeersValue: [PeerId] = [] {
+    private var invitedPeersValue: [EnginePeer.Id] = [] {
         didSet {
             if self.invitedPeersValue != oldValue {
                 self.inivitedPeersPromise.set(self.invitedPeersValue)
             }
         }
     }
-    private let inivitedPeersPromise = ValuePromise<[PeerId]>([])
-    public var invitedPeers: Signal<[PeerId], NoError> {
+    private let inivitedPeersPromise = ValuePromise<[EnginePeer.Id]>([])
+    public var invitedPeers: Signal<[EnginePeer.Id], NoError> {
         return self.inivitedPeersPromise.get()
     }
     
@@ -796,8 +796,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     private let memberEventsPipeDisposable = MetaDisposable()
 
-    private let reconnectedAsEventsPipe = ValuePipe<Peer>()
-    public var reconnectedAsEvents: Signal<Peer, NoError> {
+    private let reconnectedAsEventsPipe = ValuePipe<EnginePeer>()
+    public var reconnectedAsEvents: Signal<EnginePeer, NoError> {
         return self.reconnectedAsEventsPipe.signal()
     }
     
@@ -860,10 +860,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void),
         initialCall: EngineGroupCallDescription?,
         internalId: CallSessionInternalId,
-        peerId: PeerId,
+        peerId: EnginePeer.Id,
         isChannel: Bool,
         invite: String?,
-        joinAsPeerId: PeerId?,
+        joinAsPeerId: EnginePeer.Id?,
         isStream: Bool
     ) {
         self.account = accountContext.account
@@ -898,7 +898,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             self.audioOutputStatePromise.set(.single(([], .speaker)))
         }
         
-        self.audioSessionDisposable = audioSession.push(audioSessionType: self.isStream ? .play : .voiceCall, activateImmediately: true, manualActivate: { [weak self] control in
+        self.audioSessionDisposable = audioSession.push(audioSessionType: self.isStream ? .play(mixWithOthers: false) : .voiceCall, activateImmediately: true, manualActivate: { [weak self] control in
             Queue.mainQueue().async {
                 if let strongSelf = self {
                     strongSelf.updateSessionState(internalState: strongSelf.internalState, audioSessionControl: control)
@@ -2354,7 +2354,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     |> mapToSignal { peer, isContact, chatListIndex -> Signal<PresentationGroupCallMemberEvent, NoError> in
                         if let peer = peer {
                             let isInChatList = chatListIndex != nil
-                            return .single(PresentationGroupCallMemberEvent(peer: peer._asPeer(), isContact: isContact, isInChatList: isInChatList, canUnmute: event.canUnmute, joined: event.joined))
+                            return .single(PresentationGroupCallMemberEvent(peer: peer, isContact: isContact, isInChatList: isInChatList, canUnmute: event.canUnmute, joined: event.joined))
                         } else {
                             return .complete()
                         }
@@ -2554,7 +2554,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.requestCall(movingFromBroadcastToRtc: false)
     }
     
-    public func reconnect(as peerId: PeerId) {
+    public func reconnect(as peerId: EnginePeer.Id) {
         if peerId == self.joinAsPeerId {
             return
         }
@@ -2572,14 +2572,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             
             if strongSelf.stateValue.scheduleTimestamp != nil {
                 strongSelf.stateValue.myPeerId = peerId
-                strongSelf.reconnectedAsEventsPipe.putNext(myPeer._asPeer())
+                strongSelf.reconnectedAsEventsPipe.putNext(myPeer)
                 strongSelf.switchToTemporaryScheduledParticipantsContext()
             } else {
                 strongSelf.disableVideo()
                 strongSelf.isMutedValue = .muted(isPushToTalkActive: false)
                 strongSelf.isMutedPromise.set(strongSelf.isMutedValue)
                 
-                strongSelf.reconnectingAsPeer = myPeer._asPeer()
+                strongSelf.reconnectingAsPeer = myPeer
                 
                 if let participantsContext = strongSelf.participantsContext, let immediateState = participantsContext.immediateState {
                     for participant in immediateState.participants {

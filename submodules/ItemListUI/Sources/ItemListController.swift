@@ -636,7 +636,7 @@ private final class ItemListTextWithSubtitleTitleView: UIView, NavigationBarTitl
         self.titleNode.attributedText = NSAttributedString(string: self.titleNode.attributedText?.string ?? "", font: Font.medium(17.0), textColor: theme.rootController.navigationBar.primaryTextColor)
         self.subtitleNode.attributedText = NSAttributedString(string: self.subtitleNode.attributedText?.string ?? "", font: Font.regular(13.0), textColor: theme.rootController.navigationBar.secondaryTextColor)
         if let (size, clearBounds) = self.validLayout {
-            self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)
+            let _ = self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)
         }
     }
     
@@ -644,11 +644,11 @@ private final class ItemListTextWithSubtitleTitleView: UIView, NavigationBarTitl
         super.layoutSubviews()
         
         if let (size, clearBounds) = self.validLayout {
-            self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)
+            let _ = self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)
         }
     }
     
-    func updateLayout(size: CGSize, clearBounds: CGRect, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, clearBounds: CGRect, transition: ContainedViewLayoutTransition) -> CGRect {
         self.validLayout = (size, clearBounds)
         
         let titleSize = self.titleNode.updateLayout(size)
@@ -660,6 +660,8 @@ private final class ItemListTextWithSubtitleTitleView: UIView, NavigationBarTitl
             
         self.titleNode.frame = titleFrame
         self.subtitleNode.frame = subtitleFrame
+        
+        return titleFrame
     }
     
     func animateLayoutTransition() {

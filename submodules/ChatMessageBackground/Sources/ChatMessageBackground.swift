@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import Postbox
 import TelegramPresentationData
 import WallpaperBackgroundNode
 
@@ -523,7 +522,7 @@ public final class ChatMessageBubbleBackdrop: ASDisplayNode {
         self.clipsToBounds = true
     }
     
-    public func setMaskMode(_ maskMode: Bool, mediaBox: MediaBox) {
+    public func setMaskMode(_ maskMode: Bool) {
         if let currentType = self.currentType, let theme = self.theme, let essentialGraphics = self.essentialGraphics, let backgroundNode = self.backgroundNode {
             self.setType(type: currentType, theme: theme, essentialGraphics: essentialGraphics, maskMode: maskMode, backgroundNode: backgroundNode)
         }
@@ -685,7 +684,7 @@ public final class ChatMessageBubbleBackdrop: ASDisplayNode {
         })
     }
 
-    public func animateFrom(sourceView: UIView, mediaBox: MediaBox, transition: CombinedTransition) {
+    public func animateFrom(sourceView: UIView, transition: CombinedTransition) {
         if transition.isAnimated {
             let previousFrame = self.frame
             self.updateFrame(CGRect(origin: CGPoint(x: previousFrame.minX, y: sourceView.frame.minY), size: sourceView.frame.size), transition: .immediate)

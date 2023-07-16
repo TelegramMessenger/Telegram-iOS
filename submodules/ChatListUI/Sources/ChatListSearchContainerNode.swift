@@ -1326,7 +1326,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                             if !entities.isEmpty {
                                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
                             }
-                            result.append(.message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
+                            result.append(.message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                         }
                     }
                 }
@@ -1364,12 +1364,12 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                             |> deliverOnMainQueue).start())
                         }
                     })
-                    if let secretPeer = peer as? TelegramSecretChat {
+                    if case let .secretChat(secretPeer) = peer {
                         if let peer = peerMap[secretPeer.regularPeerId] {
-                            displayPeers.append(EnginePeer(peer))
+                            displayPeers.append(peer)
                         }
                     } else {
-                        displayPeers.append(EnginePeer(peer))
+                        displayPeers.append(peer)
                     }
                 }
                     

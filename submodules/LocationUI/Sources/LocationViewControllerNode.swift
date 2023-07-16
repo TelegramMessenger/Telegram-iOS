@@ -3,7 +3,6 @@ import UIKit
 import Display
 import LegacyComponents
 import TelegramCore
-import Postbox
 import SwiftSignalKit
 import MergeLists
 import ItemListUI
@@ -19,11 +18,11 @@ import Geocoding
 import DeviceAccess
 import TooltipUI
 
-func getLocation(from message: Message) -> TelegramMediaMap? {
+func getLocation(from message: EngineMessage) -> TelegramMediaMap? {
     return message.media.first(where: { $0 is TelegramMediaMap } ) as? TelegramMediaMap
 }
 
-private func areMessagesEqual(_ lhsMessage: Message, _ rhsMessage: Message) -> Bool {
+private func areMessagesEqual(_ lhsMessage: EngineMessage, _ rhsMessage: EngineMessage) -> Bool {
     if lhsMessage.stableVersion != rhsMessage.stableVersion {
         return false
     }
@@ -50,7 +49,7 @@ private enum LocationViewEntryId: Hashable {
 private enum LocationViewEntry: Comparable, Identifiable {
     case info(PresentationTheme, TelegramMediaMap, String?, Double?, ExpectedTravelTime, ExpectedTravelTime, ExpectedTravelTime)
     case toggleLiveLocation(PresentationTheme, String, String, Double?, Double?)
-    case liveLocation(PresentationTheme, PresentationDateTimeFormat, PresentationPersonNameOrder, Message, Double?, ExpectedTravelTime, ExpectedTravelTime, ExpectedTravelTime, Int)
+    case liveLocation(PresentationTheme, PresentationDateTimeFormat, PresentationPersonNameOrder, EngineMessage, Double?, ExpectedTravelTime, ExpectedTravelTime, ExpectedTravelTime, Int)
     
     var stableId: LocationViewEntryId {
         switch self {
@@ -155,7 +154,7 @@ private enum LocationViewEntry: Comparable, Identifiable {
             case let .liveLocation(_, dateTimeFormat, nameDisplayOrder, message, distance, drivingTime, transitTime, walkingTime, _):
                 var title: String?
                 if let author = message.author {
-                    title = EnginePeer(author).displayTitle(strings: presentationData.strings, displayOrder: nameDisplayOrder)
+                    title = author.displayTitle(strings: presentationData.strings, displayOrder: nameDisplayOrder)
                 }
                 return LocationLiveListItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: context, message: message, distance: distance, drivingTime: drivingTime, transitTime: transitTime, walkingTime: walkingTime, action: {
                     if let location = getLocation(from: message) {
@@ -217,7 +216,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
     private let context: AccountContext
     private var presentationData: PresentationData
     private let presentationDataPromise: Promise<PresentationData>
-    private var subject: Message
+    private var subject: EngineMessage
     private let interaction: LocationViewInteraction
     private let locationManager: LocationManager
     
@@ -247,7 +246,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
     }
     private let travelTimesPromise = Promise<[EngineMessage.Id: (Double, ExpectedTravelTime, ExpectedTravelTime, ExpectedTravelTime)]>([:])
 
-    init(context: AccountContext, presentationData: PresentationData, subject: Message, interaction: LocationViewInteraction, locationManager: LocationManager) {
+    init(context: AccountContext, presentationData: PresentationData, subject: EngineMessage, interaction: LocationViewInteraction, locationManager: LocationManager) {
         self.context = context
         self.presentationData = presentationData
         self.presentationDataPromise = Promise(presentationData)
@@ -321,15 +320,15 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
         }
         
         let liveLocations = context.engine.messages.topPeerActiveLiveLocationMessages(peerId: subject.id.peerId)
-        |> map { _, messages -> [Message] in
-            return messages
+        |> map { _, messages -> [EngineMessage] in
+            return messages.map(EngineMessage.init)
         }
         
         setupProximityNotificationImpl = { reset in
             let _ = (liveLocations
             |> take(1)
             |> deliverOnMainQueue).start(next: { messages in
-                var ownMessageId: MessageId?
+                var ownMessageId: EngineMessage.Id?
                 for message in messages {
                     if message.localTags.contains(.OutgoingLiveLocation) {
                         ownMessageId = message.id
@@ -356,7 +355,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 var entries: [LocationViewEntry] = []
                 var annotations: [LocationPinAnnotation] = []
                 var userAnnotation: LocationPinAnnotation? = nil
-                var effectiveLiveLocations: [Message] = liveLocations
+                var effectiveLiveLocations: [EngineMessage] = liveLocations
                 
                 let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                 
@@ -375,7 +374,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     
                     annotations.append(LocationPinAnnotation(context: context, theme: presentationData.theme, location: location, forcedSelection: true))
                 } else {
-                    var activeOwnLiveLocation: Message?
+                    var activeOwnLiveLocation: EngineMessage?
                     for message in effectiveLiveLocations {
                         if message.localTags.contains(.OutgoingLiveLocation) {
                             activeOwnLiveLocation = message
@@ -417,14 +416,14 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                         timeout = nil
                     }
                     
-                    if let channel = subject.author as? TelegramChannel, case .broadcast = channel.info, activeOwnLiveLocation == nil {
+                    if case let .channel(channel) = subject.author, case .broadcast = channel.info, activeOwnLiveLocation == nil {
                     } else {
                         entries.append(.toggleLiveLocation(presentationData.theme, title, subtitle, beginTime, timeout))
                     }
                     
-                    var sortedLiveLocations: [Message] = []
+                    var sortedLiveLocations: [EngineMessage] = []
                     
-                    var effectiveSubject: Message?
+                    var effectiveSubject: EngineMessage?
                     for message in effectiveLiveLocations {
                         if message.id == subject.id {
                             effectiveSubject = message
@@ -460,7 +459,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                         
                         let timestamp = CACurrentMediaTime()
                         if message.localTags.contains(.OutgoingLiveLocation), let selfPeer = selfPeer {
-                            userAnnotation = LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer._asPeer(), isSelf: true, heading: location.heading)
+                            userAnnotation = LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer, isSelf: true, heading: location.heading)
                         } else {
                             var drivingTime: ExpectedTravelTime = .unknown
                             var transitTime: ExpectedTravelTime = .unknown
@@ -515,7 +514,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                                 }
                             }
                             
-                            annotations.append(LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer?._asPeer(), isSelf: message.author?.id == context.account.peerId, heading: location.heading))
+                            annotations.append(LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer, isSelf: message.author?.id == context.account.peerId, heading: location.heading))
                             entries.append(.liveLocation(presentationData.theme, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, message, distance, drivingTime, transitTime, walkingTime, index))
                         }
                         index += 1
@@ -533,7 +532,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 if subject.id.peerId.namespace != Namespaces.Peer.CloudUser, proximityNotification == nil {
                     proximityNotification = false
                 }
-                if let channel = subject.author as? TelegramChannel, case .broadcast = channel.info {
+                if case let .channel(channel) = subject.author, case .broadcast = channel.info {
                     proximityNotification = nil
                 }
                 
@@ -829,7 +828,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 text = strongSelf.presentationData.strings.Location_ProximityTip(EnginePeer(peer).compactDisplayTitle).string
             }
             
-            strongSelf.interaction.present(TooltipScreen(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, text: text, icon: nil, location: .point(location.offsetBy(dx: -9.0, dy: 0.0), .right), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
+            strongSelf.interaction.present(TooltipScreen(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, text: .plain(text: text), icon: nil, location: .point(location.offsetBy(dx: -9.0, dy: 0.0), .right), displayDuration: .custom(3.0), shouldDismissOnTouch: { _, _ in
                 return .dismiss(consume: false)
             }))
         })

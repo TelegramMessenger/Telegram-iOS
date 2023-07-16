@@ -3,8 +3,8 @@ import UIKit
 import Display
 import ComponentFlow
 import SwiftSignalKit
-import Postbox
 import TelegramCore
+import Postbox
 import TelegramPresentationData
 import PresentationDataUtils
 import ViewControllerComponent
@@ -397,6 +397,8 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                             demoSubject = .emojiStatus
                         case .translation:
                             demoSubject = .translation
+                        case .stories:
+                            demoSubject = .stories
                         }
                         
                         let buttonText: String

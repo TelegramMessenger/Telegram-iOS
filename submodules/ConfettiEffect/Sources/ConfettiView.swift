@@ -124,8 +124,11 @@ public final class ConfettiView: UIView {
             }
         }
         
+        var previousTimestamp = CACurrentMediaTime()
         self.displayLink = ConstantDisplayLinkAnimator(update: { [weak self] in
-            self?.step()
+            let currentTimestamp = CACurrentMediaTime()
+            self?.step(dt: currentTimestamp - previousTimestamp)
+            previousTimestamp = currentTimestamp
         })
         
         self.displayLink?.isPaused = false
@@ -137,12 +140,12 @@ public final class ConfettiView: UIView {
     
     private var slowdownStartTimestamps: [Float?] = [nil, nil, nil]
     
-    private func step() {
+    private func step(dt: Double) {
+        let dt = Float(dt)
         self.slowdownStartTimestamps[0] = 0.33
         
         var haveParticlesAboveGround = false
         let maxPositionY = self.bounds.height + 30.0
-        let dt: Float = 1.0 * 1.0 / 60.0
         
         let typeDelays: [Float] = [0.0, 0.01, 0.08]
         var dtAndDamping: [(Float, Float)] = []

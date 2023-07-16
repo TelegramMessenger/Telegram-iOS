@@ -19,18 +19,20 @@ import AppBundle
 import StickerResources
 import ContextUI
 import QrCodeUI
+import StoryContainerScreen
+import ChatListHeaderComponent
 
 private final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
     private let controller: ViewController
-    private let sourceNode: ContextReferenceContentNode
+    private let sourceView: UIView
 
-    init(controller: ViewController, sourceNode: ContextReferenceContentNode) {
+    init(controller: ViewController, sourceView: UIView) {
         self.controller = controller
-        self.sourceNode = sourceNode
+        self.sourceView = sourceView
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }
 
@@ -96,48 +98,6 @@ private final class SortHeaderButton: HighlightableButtonNode {
     }
 }
 
-private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
-    if listNode.scroller.isDragging {
-        return false
-    }
-    if searchNode.expansionProgress > 0.0 && searchNode.expansionProgress < 1.0 {
-        let offset: CGFloat
-        if searchNode.expansionProgress < 0.6 {
-            offset = navigationBarSearchContentHeight
-        } else {
-            offset = 0.0
-        }
-        let _ = listNode.scrollToOffsetFromTop(offset, animated: true)
-        return true
-    } else if searchNode.expansionProgress == 1.0 {
-        var sortItemNode: ListViewItemNode?
-        var nextItemNode: ListViewItemNode?
-        
-        listNode.forEachItemNode({ itemNode in
-            if sortItemNode == nil, let itemNode = itemNode as? ContactListActionItemNode {
-                sortItemNode = itemNode
-            } else if sortItemNode != nil && nextItemNode == nil {
-                nextItemNode = itemNode as? ListViewItemNode
-            }
-        })
-        
-        if false, let sortItemNode = sortItemNode {
-            let itemFrame = sortItemNode.apparentFrame
-            if itemFrame.contains(CGPoint(x: 0.0, y: listNode.insets.top)) {
-                var scrollToItem: ListViewScrollToItem?
-                if itemFrame.minY + itemFrame.height * 0.6 < listNode.insets.top {
-                    scrollToItem = ListViewScrollToItem(index: 0, position: .top(-76.0), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
-                } else {
-                    scrollToItem = ListViewScrollToItem(index: 0, position: .top(0), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
-                }
-                listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: scrollToItem, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
-                return true
-            }
-        }
-    }
-    return false
-}
-
 public class ContactsController: ViewController {
     private let context: AccountContext
     
@@ -159,8 +119,6 @@ public class ContactsController: ViewController {
     private let sortOrderPromise = Promise<ContactsSortOrder>()
     private let isInVoiceOver = ValuePromise<Bool>(false)
     
-    private var searchContentNode: NavigationBarSearchContentNode?
-    
     public var switchToChatsController: (() -> Void)?
     
     public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -178,7 +136,8 @@ public class ContactsController: ViewController {
         
         self.sortButton = SortHeaderButton(presentationData: self.presentationData)
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
+        //super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
+        super.init(navigationBarPresentationData: nil)
         
         self.tabBarItemContextActionType = .always
         
@@ -209,9 +168,6 @@ public class ContactsController: ViewController {
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
-                if let searchContentNode = strongSelf.searchContentNode {
-                    searchContentNode.updateExpansionProgress(1.0, animated: true)
-                }
                 strongSelf.contactsNode.scrollToTop()
             }
         }
@@ -264,12 +220,6 @@ public class ContactsController: ViewController {
             })
         }
         
-        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search, activate: { [weak self] in
-            self?.contactsNode.contactListNode.listNode.cancelTracking()
-            self?.activateSearch()
-        })
-        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
-        
         self.sortButton.addTarget(self, action: #selector(self.sortPressed), forControlEvents: .touchUpInside)
     }
     
@@ -286,7 +236,7 @@ public class ContactsController: ViewController {
         self.sortButton.update(theme: self.presentationData.theme, strings: self.presentationData.strings)
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
-        self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search)
+        
         self.title = self.presentationData.strings.Contacts_Title
         self.tabBarItem.title = self.presentationData.strings.Contacts_Title
         if !self.presentationData.reduceMotion {
@@ -313,7 +263,15 @@ public class ContactsController: ViewController {
         self.displayNode = ContactsControllerNode(context: self.context, sortOrder: sortOrderSignal |> distinctUntilChanged, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, controller: self)
-        self._ready.set(self.contactsNode.contactListNode.ready)
+        self._ready.set(combineLatest(queue: .mainQueue(),
+            self.contactsNode.contactListNode.ready,
+            self.contactsNode.storiesReady.get()
+        )
+        |> filter { a, b in
+            return a && b
+        }
+        |> take(1)
+        |> map { _ -> Bool in true })
         
         self.contactsNode.navigationBar = self.navigationBar
         
@@ -505,26 +463,8 @@ public class ContactsController: ViewController {
             }
         }
         
-        self.contactsNode.contactListNode.contentOffsetChanged = { [weak self] offset in
-            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode, let validLayout = strongSelf.validLayout {
-                var offset = offset
-                if validLayout.inVoiceOver {
-                    offset = .known(0.0)
-                }
-                searchContentNode.updateListVisibleContentOffset(offset)
-            }
-        }
-        
-        self.contactsNode.contactListNode.contentScrollingEnded = { [weak self] listView in
-            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
-                return fixListNodeScrolling(listView, searchNode: searchContentNode)
-            } else {
-                return false
-            }
-        }
-        
         self.sortButton.contextAction = { [weak self] sourceNode, gesture in
-            self?.presentSortMenu(sourceNode: sourceNode, gesture: gesture)
+            self?.presentSortMenu(sourceView: sourceNode.view, gesture: gesture)
         }
         
         self.displayNodeDidLoad()
@@ -533,6 +473,7 @@ public class ContactsController: ViewController {
     override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
+        self.contactsNode.didAppear = true
         self.contactsNode.contactListNode.enableUpdates = true
     }
     
@@ -540,6 +481,22 @@ public class ContactsController: ViewController {
         super.viewDidDisappear(animated)
         
         self.contactsNode.contactListNode.enableUpdates = false
+    }
+    
+    private func searchContentNode() -> NavigationBarSearchContentNode? {
+        if let navigationBarView = self.contactsNode.navigationBarView.view as? ChatListNavigationBar.View {
+            return navigationBarView.searchContentNode
+        }
+        return nil
+    }
+    
+    private func chatListHeaderView() -> ChatListHeaderComponent.View? {
+        if let navigationBarView = self.contactsNode.navigationBarView.view as? ChatListNavigationBar.View {
+            if let componentView = navigationBarView.headerContent.view as? ChatListHeaderComponent.View {
+                return componentView
+            }
+        }
+        return nil
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -550,6 +507,16 @@ public class ContactsController: ViewController {
         self.validLayout = layout
         
         self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.cleanNavigationHeight, actualNavigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
+        
+        self.contactsNode.openStories = { [weak self] peer, sourceNode in
+            guard let self else {
+                return
+            }
+            
+            if let itemNode = sourceNode as? ContactsPeerItemNode {
+                StoryContainerScreen.openPeerStories(context: self.context, peerId: peer.id, parentController: self, avatarNode: itemNode.avatarNode)
+            }
+        }
     }
     
     @objc private func sortPressed() {
@@ -557,24 +524,20 @@ public class ContactsController: ViewController {
     }
     
     private func activateSearch() {
-        if self.displayNavigationBar {
-            if let searchContentNode = self.searchContentNode {
-                self.contactsNode.activateSearch(placeholderNode: searchContentNode.placeholderNode)
-            }
-            self.setDisplayNavigationBar(false, transition: .animated(duration: 0.5, curve: .spring))
+        if let searchContentNode = self.searchContentNode() {
+            self.contactsNode.activateSearch(placeholderNode: searchContentNode.placeholderNode)
         }
+        self.requestLayout(transition: .animated(duration: 0.5, curve: .spring))
     }
     
     private func deactivateSearch(animated: Bool) {
-        if !self.displayNavigationBar {
-            self.setDisplayNavigationBar(true, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate)
-            if let searchContentNode = self.searchContentNode {
-                self.contactsNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode, animated: animated)
-            }
+        if let searchContentNode = self.searchContentNode() {
+            self.contactsNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode, animated: animated)
+            self.requestLayout(transition: .animated(duration: 0.5, curve: .spring))
         }
     }
     
-    private func presentSortMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {
+    func presentSortMenu(sourceView: UIView, gesture: ContextGesture?) {
         let updateSortOrder: (ContactsSortOrder) -> Void = { [weak self] sortOrder in
             if let strongSelf = self {
                 strongSelf.sortOrderPromise.set(.single(sortOrder))
@@ -609,7 +572,7 @@ public class ContactsController: ViewController {
             })))
             return items
         }
-        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceNode: self.sortButton.referenceNode)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
+        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceView: sourceView)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
         self.presentInGlobalOverlay(contextController)
     }
     
@@ -698,6 +661,29 @@ private final class ContactsTabBarContextExtractedContentSource: ContextExtracte
     init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode) {
         self.controller = controller
         self.sourceNode = sourceNode
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+private final class ChatListHeaderBarContextExtractedContentSource: ContextExtractedContentSource {
+    let keepInPlace: Bool
+    let ignoreContentTouches: Bool = true
+    let blurBackground: Bool = true
+    
+    private let controller: ViewController
+    private let sourceNode: ContextExtractedContentContainingNode
+    
+    init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode, keepInPlace: Bool) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+        self.keepInPlace = keepInPlace
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {

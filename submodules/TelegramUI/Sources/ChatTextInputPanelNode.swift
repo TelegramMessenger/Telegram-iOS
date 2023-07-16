@@ -36,6 +36,8 @@ import StickerPeekUI
 import LottieComponent
 import SolidRoundedButtonNode
 import TooltipUI
+import ChatTextInputMediaRecordingButton
+import ChatContextQuery
 
 private let accessoryButtonFont = Font.medium(14.0)
 private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])
@@ -1482,7 +1484,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                             tooltipController.location = .point(location, .bottom)
                         }
                     } else {
-                        let controller = TooltipScreen(account: context.account, sharedContext: context.sharedContext, text: interfaceState.strings.Bot_TapToUse, icon: .downArrows, location: .point(location, .bottom), displayDuration: .infinite, shouldDismissOnTouch: { _ in
+                        let controller = TooltipScreen(account: context.account, sharedContext: context.sharedContext, text: .plain(text: interfaceState.strings.Bot_TapToUse), icon: .downArrows, location: .point(location, .bottom), displayDuration: .infinite, shouldDismissOnTouch: { _, _ in
                             return .ignore
                         })
                         controller.alwaysVisible = true
@@ -2857,7 +2859,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 component: AnyComponent(EmojiSuggestionsComponent(
                     context: context,
                     userLocation: .other,
-                    theme: theme,
+                    theme: EmojiSuggestionsComponent.Theme(theme: theme),
                     animationCache: presentationContext.animationCache,
                     animationRenderer: presentationContext.animationRenderer,
                     files: value,
@@ -3135,7 +3137,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                                                 
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     
-                    let undoController = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: presentationData.strings.EmojiStatus_AppliedText, undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
+                    let undoController = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.EmojiStatus_AppliedText, undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
                     //strongSelf.currentUndoOverlayController = controller
                     controller.controllerInteraction?.presentController(undoController, nil)
                 }
@@ -3852,7 +3854,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     return false
                 }
                 let aspectRatio = min(image.size.width, image.size.height) / maxSide
-                if isMemoji || (imageHasTransparency(cgImage) && aspectRatio > 0.85) {
+                if isMemoji || (imageHasTransparency(cgImage) && aspectRatio > 0.2) {
                     self.paste(.sticker(image, isMemoji))
                     return true
                 }

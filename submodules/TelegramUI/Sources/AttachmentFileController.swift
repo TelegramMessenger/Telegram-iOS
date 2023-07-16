@@ -193,7 +193,7 @@ private final class AttachmentFileContext: AttachmentMediaPickerContext {
     }
 }
 
-class AttachmentFileControllerImpl: ItemListController, AttachmentContainable {
+class AttachmentFileControllerImpl: ItemListController, AttachmentFileController, AttachmentContainable {
     public var requestAttachmentMenuExpansion: () -> Void = {}
     public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
@@ -224,7 +224,7 @@ private struct AttachmentFileControllerState: Equatable {
     var searching: Bool
 }
 
-func attachmentFileController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, bannedSendMedia: (Int32, Bool)?, presentGallery: @escaping () -> Void, presentFiles: @escaping () -> Void, send: @escaping (AnyMediaReference) -> Void) -> AttachmentFileControllerImpl {
+func makeAttachmentFileControllerImpl(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, bannedSendMedia: (Int32, Bool)?, presentGallery: @escaping () -> Void, presentFiles: @escaping () -> Void, send: @escaping (AnyMediaReference) -> Void) -> AttachmentFileController {
     let actionsDisposable = DisposableSet()
     
     let statePromise = ValuePromise(AttachmentFileControllerState(searching: false), ignoreRepeated: true)

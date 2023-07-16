@@ -20,6 +20,7 @@ import ComponentFlow
 import AnimationCache
 import MultiAnimationRenderer
 import EmojiStatusComponent
+import AvatarStoryIndicatorComponent
 
 public final class ContactItemHighlighting {
     public var chatLocation: ChatLocation?
@@ -179,6 +180,8 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     let arrowAction: (() -> Void)?
     let animationCache: AnimationCache?
     let animationRenderer: MultiAnimationRenderer?
+    let storyStats: (total: Int, unseen: Int, hasUnseenCloseFriends: Bool)?
+    let openStories: ((ContactsPeerItemPeer, ASDisplayNode) -> Void)?
     
     public let selectable: Bool
     
@@ -213,7 +216,9 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         itemHighlighting: ContactItemHighlighting? = nil,
         contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? = nil, arrowAction: (() -> Void)? = nil,
         animationCache: AnimationCache? = nil,
-        animationRenderer: MultiAnimationRenderer? = nil
+        animationRenderer: MultiAnimationRenderer? = nil,
+        storyStats: (total: Int, unseen: Int, hasUnseenCloseFriends: Bool)? = nil,
+        openStories: ((ContactsPeerItemPeer, ASDisplayNode) -> Void)? = nil
     ) {
         self.presentationData = presentationData
         self.style = style
@@ -243,6 +248,8 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         self.arrowAction = arrowAction
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
+        self.storyStats = storyStats
+        self.openStories = openStories
         
         if let index = index {
             var letter: String = "#"
@@ -391,8 +398,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private var nonExtractedRect: CGRect?
     
     private let offsetContainerNode: ASDisplayNode
-    
-    private let avatarNode: AvatarNode
+    private let avatarNodeContainer: ASDisplayNode
+    public let avatarNode: AvatarNode
+    private var avatarStoryIndicator: ComponentView<Empty>?
     private var avatarIconView: ComponentHostView<Empty>?
     private var avatarIconComponent: EmojiStatusComponent?
     private let titleNode: TextNode
@@ -493,8 +501,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         
         self.offsetContainerNode = ASDisplayNode()
         
+        self.avatarNodeContainer = ASDisplayNode()
         self.avatarNode = AvatarNode(font: avatarFont)
-        self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
+        self.avatarNode.isLayerBacked = false
         
         self.titleNode = TextNode()
         self.statusNode = TextNode()
@@ -515,7 +524,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         self.contextSourceNode.contentNode.addSubnode(self.extractedBackgroundImageNode)
         self.contextSourceNode.contentNode.addSubnode(self.offsetContainerNode)
         
-        self.offsetContainerNode.addSubnode(self.avatarNode)
+        self.avatarNodeContainer.addSubnode(self.avatarNode)
+        self.offsetContainerNode.addSubnode(self.avatarNodeContainer)
         self.offsetContainerNode.addSubnode(self.titleNode)
         self.offsetContainerNode.addSubnode(self.statusNode)
         
@@ -1069,7 +1079,68 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 }
                             }
                             
-                            transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 50.0, y: floor((nodeLayout.contentSize.height - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter)))
+                            let avatarFrame = CGRect(origin: CGPoint(x: revealOffset + leftInset - 50.0, y: floor((nodeLayout.contentSize.height - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter))
+                            
+                            strongSelf.avatarNode.frame = CGRect(origin: CGPoint(), size: avatarFrame.size)
+                            
+                            transition.updatePosition(node: strongSelf.avatarNodeContainer, position: avatarFrame.center)
+                            transition.updateBounds(node: strongSelf.avatarNodeContainer, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
+                            
+                            var avatarScale: CGFloat = 1.0
+                            
+                            if item.storyStats != nil {
+                                avatarScale *= (avatarFrame.width - 2.0 * 2.0) / avatarFrame.width
+                            }
+                            
+                            transition.updateTransformScale(node: strongSelf.avatarNodeContainer, scale: CGPoint(x: avatarScale, y: avatarScale))
+                            
+                            let storyIndicatorScale: CGFloat = 1.0
+                            
+                            if let storyStats = item.storyStats {
+                                var indicatorTransition = Transition(transition)
+                                let avatarStoryIndicator: ComponentView<Empty>
+                                if let current = strongSelf.avatarStoryIndicator {
+                                    avatarStoryIndicator = current
+                                } else {
+                                    indicatorTransition = .immediate
+                                    avatarStoryIndicator = ComponentView()
+                                    strongSelf.avatarStoryIndicator = avatarStoryIndicator
+                                }
+                                
+                                var indicatorFrame = CGRect(origin: CGPoint(x: avatarFrame.minX + 2.0, y: avatarFrame.minY + 2.0), size: CGSize(width: avatarFrame.width - 2.0 - 2.0, height: avatarFrame.height - 2.0 - 2.0))
+                                indicatorFrame.origin.x -= (avatarFrame.width - avatarFrame.width * storyIndicatorScale) * 0.5
+                                
+                                let _ = avatarStoryIndicator.update(
+                                    transition: indicatorTransition,
+                                    component: AnyComponent(AvatarStoryIndicatorComponent(
+                                        hasUnseen: storyStats.unseen != 0,
+                                        hasUnseenCloseFriendsItems: storyStats.hasUnseenCloseFriends,
+                                        colors: AvatarStoryIndicatorComponent.Colors(theme: item.presentationData.theme),
+                                        activeLineWidth: 1.0 + UIScreenPixel,
+                                        inactiveLineWidth: 1.0 + UIScreenPixel,
+                                        counters: AvatarStoryIndicatorComponent.Counters(totalCount: storyStats.total, unseenCount: storyStats.unseen)
+                                    )),
+                                    environment: {},
+                                    containerSize: indicatorFrame.size
+                                )
+                                if let avatarStoryIndicatorView = avatarStoryIndicator.view {
+                                    if avatarStoryIndicatorView.superview == nil {
+                                        avatarStoryIndicatorView.isUserInteractionEnabled = true
+                                        avatarStoryIndicatorView.addGestureRecognizer(UITapGestureRecognizer(target: strongSelf, action: #selector(strongSelf.avatarStoryTapGesture(_:))))
+                                        
+                                        strongSelf.offsetContainerNode.view.insertSubview(avatarStoryIndicatorView, belowSubview: strongSelf.avatarNodeContainer.view)
+                                    }
+                                    
+                                    indicatorTransition.setPosition(view: avatarStoryIndicatorView, position: indicatorFrame.center)
+                                    indicatorTransition.setBounds(view: avatarStoryIndicatorView, bounds: CGRect(origin: CGPoint(), size: indicatorFrame.size))
+                                    indicatorTransition.setScale(view: avatarStoryIndicatorView, scale: storyIndicatorScale)
+                                }
+                            } else {
+                                if let avatarStoryIndicator = strongSelf.avatarStoryIndicator {
+                                    strongSelf.avatarStoryIndicator = nil
+                                    avatarStoryIndicator.view?.removeFromSuperview()
+                                }
+                            }
                             
                             if case let .thread(_, title, icon, color) = item.peer {
                                 let animationCache = item.context.animationCache
@@ -1109,12 +1180,12 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 )
                                 transition.updateFrame(view: avatarIconView, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 43.0, y: floor((nodeLayout.contentSize.height - iconSize.height) / 2.0)), size: iconSize))
 
-                                strongSelf.avatarNode.isHidden = true
+                                strongSelf.avatarNodeContainer.isHidden = true
                             } else if let avatarIconView = strongSelf.avatarIconView {
                                 strongSelf.avatarIconView = nil
                                 avatarIconView.removeFromSuperview()
 
-                                strongSelf.avatarNode.isHidden = false
+                                strongSelf.avatarNodeContainer.isHidden = false
                             }
                             
                             let _ = titleApply()
@@ -1471,6 +1542,14 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false)
     }
     
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let avatarStoryIndicatorView = self.avatarStoryIndicator?.view, let result = avatarStoryIndicatorView.hitTest(self.view.convert(point, to: avatarStoryIndicatorView), with: event) {
+            return result
+        }
+        
+        return super.hitTest(point, with: event)
+    }
+    
     override public func headers() -> [ListViewItemHeader]? {
         if let (item, _, _, _, _, _) = self.layoutParams {
             return item.header.flatMap { [$0] }
@@ -1482,6 +1561,14 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     @objc func arrowButtonPressed() {
         if let (item, _, _, _, _, _) = self.layoutParams {
             item.arrowAction?()
+        }
+    }
+    
+    @objc private func avatarStoryTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            if let (item, _, _, _, _, _) = self.layoutParams {
+                item.openStories?(item.peer, self)
+            }
         }
     }
 }

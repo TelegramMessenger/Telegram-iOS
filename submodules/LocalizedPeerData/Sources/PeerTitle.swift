@@ -59,3 +59,69 @@ public extension EnginePeer {
         }
     }
 }
+
+public extension EnginePeer.IndexName {
+    func isLessThan(other: EnginePeer.IndexName, ordering: PresentationPersonNameOrder) -> ComparisonResult {
+        switch self {
+        case let .title(lhsTitle, _):
+            let rhsString: String
+            switch other {
+            case let .title(title, _):
+                rhsString = title
+            case let .personName(first, last, _, _):
+                switch ordering {
+                case .firstLast:
+                    if first.isEmpty {
+                        rhsString = last
+                    } else {
+                        rhsString = first + last
+                    }
+                case .lastFirst:
+                    if last.isEmpty {
+                        rhsString = first
+                    } else {
+                        rhsString = last + first
+                    }
+                }
+            }
+            return lhsTitle.caseInsensitiveCompare(rhsString)
+        case let .personName(lhsFirst, lhsLast, _, _):
+            let lhsString: String
+            switch ordering {
+            case .firstLast:
+                if lhsFirst.isEmpty {
+                    lhsString = lhsLast
+                } else {
+                    lhsString = lhsFirst + lhsLast
+                }
+            case .lastFirst:
+                if lhsLast.isEmpty {
+                    lhsString = lhsFirst
+                } else {
+                    lhsString = lhsLast + lhsFirst
+                }
+            }
+            let rhsString: String
+            switch other {
+            case let .title(title, _):
+                rhsString = title
+            case let .personName(first, last, _, _):
+                switch ordering {
+                case .firstLast:
+                    if first.isEmpty {
+                        rhsString = last
+                    } else {
+                        rhsString = first + last
+                    }
+                case .lastFirst:
+                    if last.isEmpty {
+                        rhsString = first
+                    } else {
+                        rhsString = last + first
+                    }
+                }
+            }
+            return lhsString.caseInsensitiveCompare(rhsString)
+        }
+    }
+}

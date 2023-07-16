@@ -389,7 +389,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     }
 }
 
-public final class TelegramMediaAction: Media {
+public final class TelegramMediaAction: Media, Equatable {
     public let id: MediaId? = nil
     public var peerIds: [PeerId] {
         return self.action.peerIds
@@ -414,6 +414,10 @@ public final class TelegramMediaAction: Media {
     
     public func encode(_ encoder: PostboxEncoder) {
         self.action.encode(encoder)
+    }
+    
+    public static func ==(lhs: TelegramMediaAction, rhs: TelegramMediaAction) -> Bool {
+        return lhs.isEqual(to: rhs)
     }
     
     public func isEqual(to other: Media) -> Bool {

@@ -3,19 +3,18 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import Postbox
 import TelegramPresentationData
 import AvatarNode
 import AccountContext
 
 public class VoiceChatPeerActionSheetItem: ActionSheetItem {
     public let context: AccountContext
-    public let peer: Peer
+    public let peer: EnginePeer
     public let title: String
     public let subtitle: String
     public let action: () -> Void
     
-    public init(context: AccountContext, peer: Peer, title: String, subtitle: String, action: @escaping () -> Void) {
+    public init(context: AccountContext, peer: EnginePeer, title: String, subtitle: String, action: @escaping () -> Void) {
         self.context = context
         self.peer = peer
         self.title = title
@@ -120,7 +119,7 @@ public class VoiceChatPeerActionSheetItemNode: ActionSheetItemNode {
         self.subtitleNode.attributedText = NSAttributedString(string: item.subtitle, font: subtitleFont, textColor: self.theme.secondaryTextColor)
         
         let theme = item.context.sharedContext.currentPresentationData.with { $0 }.theme
-        self.avatarNode.setPeer(context: item.context, theme: theme, peer: EnginePeer(item.peer))
+        self.avatarNode.setPeer(context: item.context, theme: theme, peer: item.peer)
                 
         self.accessibilityArea.accessibilityTraits = [.button]
         self.accessibilityArea.accessibilityLabel = item.title

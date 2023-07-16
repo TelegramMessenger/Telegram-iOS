@@ -1,12 +1,11 @@
 import Foundation
 import UIKit
 import TelegramCore
-import Postbox
 import SwiftSignalKit
 import UniversalMediaPlayer
 import AccountContext
 
-private func internalMessageFileMediaPlaybackStatus(context: AccountContext, file: TelegramMediaFile, message: Message, isRecentActions: Bool, isGlobalSearch: Bool, isDownloadList: Bool) -> Signal<MediaPlayerStatus?, NoError> {
+private func internalMessageFileMediaPlaybackStatus(context: AccountContext, file: TelegramMediaFile, message: EngineMessage, isRecentActions: Bool, isGlobalSearch: Bool, isDownloadList: Bool) -> Signal<MediaPlayerStatus?, NoError> {
     guard let playerType = peerMessageMediaPlayerType(message) else {
         return .single(nil)
     }
@@ -21,7 +20,7 @@ private func internalMessageFileMediaPlaybackStatus(context: AccountContext, fil
     }
 }
 
-public func messageFileMediaPlaybackStatus(context: AccountContext, file: TelegramMediaFile, message: Message, isRecentActions: Bool, isGlobalSearch: Bool, isDownloadList: Bool) -> Signal<MediaPlayerStatus, NoError> {
+public func messageFileMediaPlaybackStatus(context: AccountContext, file: TelegramMediaFile, message: EngineMessage, isRecentActions: Bool, isGlobalSearch: Bool, isDownloadList: Bool) -> Signal<MediaPlayerStatus, NoError> {
     var duration = 0.0
     if let value = file.duration {
         duration = Double(value)
@@ -33,7 +32,7 @@ public func messageFileMediaPlaybackStatus(context: AccountContext, file: Telegr
     }
 }
 
-public func messageFileMediaPlaybackAudioLevelEvents(context: AccountContext, file: TelegramMediaFile, message: Message, isRecentActions: Bool, isGlobalSearch: Bool, isDownloadList: Bool) -> Signal<Float, NoError> {
+public func messageFileMediaPlaybackAudioLevelEvents(context: AccountContext, file: TelegramMediaFile, message: EngineMessage, isRecentActions: Bool, isGlobalSearch: Bool, isDownloadList: Bool) -> Signal<Float, NoError> {
     guard let playerType = peerMessageMediaPlayerType(message) else {
         return .never()
     }
@@ -45,7 +44,7 @@ public func messageFileMediaPlaybackAudioLevelEvents(context: AccountContext, fi
     }
 }
 
-public func messageFileMediaResourceStatus(context: AccountContext, file: TelegramMediaFile, message: Message, isRecentActions: Bool, isSharedMedia: Bool = false, isGlobalSearch: Bool = false, isDownloadList: Bool = false) -> Signal<FileMediaResourceStatus, NoError> {
+public func messageFileMediaResourceStatus(context: AccountContext, file: TelegramMediaFile, message: EngineMessage, isRecentActions: Bool, isSharedMedia: Bool = false, isGlobalSearch: Bool = false, isDownloadList: Bool = false) -> Signal<FileMediaResourceStatus, NoError> {
     let playbackStatus = internalMessageFileMediaPlaybackStatus(context: context, file: file, message: message, isRecentActions: isRecentActions, isGlobalSearch: isGlobalSearch, isDownloadList: isDownloadList) |> map { status -> MediaPlayerPlaybackStatus? in
         return status?.status
     }
@@ -70,9 +69,9 @@ public func messageFileMediaResourceStatus(context: AccountContext, file: Telegr
             } else if let pendingStatus = pendingStatus {
                 mediaStatus = .fetchStatus(.Fetching(isActive: pendingStatus.isRunning, progress: pendingStatus.progress))
             } else {
-                mediaStatus = .fetchStatus(resourceStatus)
+                mediaStatus = .fetchStatus(EngineMediaResource.FetchStatus(resourceStatus))
             }
-            return FileMediaResourceStatus(mediaStatus: mediaStatus, fetchStatus: resourceStatus)
+            return FileMediaResourceStatus(mediaStatus: mediaStatus, fetchStatus: EngineMediaResource.FetchStatus(resourceStatus))
         }
     } else {
         return combineLatest(messageMediaFileStatus(context: context, messageId: message.id, file: file), playbackStatus)
@@ -92,14 +91,14 @@ public func messageFileMediaResourceStatus(context: AccountContext, file: Telegr
                         }
                 }
             } else {
-                mediaStatus = .fetchStatus(resourceStatus)
+                mediaStatus = .fetchStatus(EngineMediaResource.FetchStatus(resourceStatus))
             }
-            return FileMediaResourceStatus(mediaStatus: mediaStatus, fetchStatus: resourceStatus)
+            return FileMediaResourceStatus(mediaStatus: mediaStatus, fetchStatus: EngineMediaResource.FetchStatus(resourceStatus))
         }
     }
 }
 
-public func messageImageMediaResourceStatus(context: AccountContext, image: TelegramMediaImage, message: Message, isRecentActions: Bool, isSharedMedia: Bool = false, isGlobalSearch: Bool = false) -> Signal<FileMediaResourceStatus, NoError> {
+public func messageImageMediaResourceStatus(context: AccountContext, image: TelegramMediaImage, message: EngineMessage, isRecentActions: Bool, isSharedMedia: Bool = false, isGlobalSearch: Bool = false) -> Signal<FileMediaResourceStatus, NoError> {
     if message.flags.isSending {
         return combineLatest(messageMediaImageStatus(context: context, messageId: message.id, image: image), context.account.pendingMessageManager.pendingMessageStatus(message.id) |> map { $0.0 })
         |> map { resourceStatus, pendingStatus -> FileMediaResourceStatus in
@@ -107,16 +106,16 @@ public func messageImageMediaResourceStatus(context: AccountContext, image: Tele
             if let pendingStatus = pendingStatus {
                 mediaStatus = .fetchStatus(.Fetching(isActive: pendingStatus.isRunning, progress: pendingStatus.progress))
             } else {
-                mediaStatus = .fetchStatus(resourceStatus)
+                mediaStatus = .fetchStatus(EngineMediaResource.FetchStatus(resourceStatus))
             }
-            return FileMediaResourceStatus(mediaStatus: mediaStatus, fetchStatus: resourceStatus)
+            return FileMediaResourceStatus(mediaStatus: mediaStatus, fetchStatus: EngineMediaResource.FetchStatus(resourceStatus))
         }
     } else {
         return messageMediaImageStatus(context: context, messageId: message.id, image: image)
         |> map { resourceStatus -> FileMediaResourceStatus in
             let mediaStatus: FileMediaResourceMediaStatus
-            mediaStatus = .fetchStatus(resourceStatus)
-            return FileMediaResourceStatus(mediaStatus: mediaStatus, fetchStatus: resourceStatus)
+            mediaStatus = .fetchStatus(EngineMediaResource.FetchStatus(resourceStatus))
+            return FileMediaResourceStatus(mediaStatus: mediaStatus, fetchStatus: EngineMediaResource.FetchStatus(resourceStatus))
         }
     }
 }

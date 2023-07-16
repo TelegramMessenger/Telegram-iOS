@@ -162,6 +162,7 @@ public class ImageNode: ASDisplayNode {
     
     public func setSignal(_ signal: Signal<UIImage?, NoError>) {
         var reportedHasImage = false
+        var wasSynchronous = true
         self.disposable.set((signal |> deliverOnMainQueue).start(next: {[weak self] next in
             dispatcher.dispatch {
                 if let strongSelf = self {
@@ -169,12 +170,12 @@ public class ImageNode: ASDisplayNode {
                     if strongSelf.first && next != nil {
                         strongSelf.first = false
                         animate = false
-                        if strongSelf.isNodeLoaded && strongSelf.animateFirstTransition {
+                        if strongSelf.isNodeLoaded && strongSelf.animateFirstTransition && !wasSynchronous {
                             strongSelf.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
                         }
                     }
                     if let image = next?.cgImage {
-                        if animate, let previousContents = strongSelf.contents {
+                        if animate, let previousContents = strongSelf.contents, !wasSynchronous {
                             strongSelf.contents = image
                             let tempLayer = CALayer()
                             tempLayer.contents = previousContents
@@ -207,6 +208,7 @@ public class ImageNode: ASDisplayNode {
                 }
             }
         }))
+        wasSynchronous = false
     }
     
     public override func clearContents() {

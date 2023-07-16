@@ -1,6 +1,5 @@
 import Foundation
 import UIKit
-import Postbox
 import TelegramCore
 import AsyncDisplayKit
 import TelegramPresentationData
@@ -14,12 +13,12 @@ public final class InstantPagePeerReferenceItem: InstantPageItem {
     public let separatesTiles: Bool = false
     public let medias: [InstantPageMedia] = []
     
-    let initialPeer: Peer
+    let initialPeer: EnginePeer
     let safeInset: CGFloat
     let transparent: Bool
     let rtl: Bool
     
-    init(frame: CGRect, initialPeer: Peer, safeInset: CGFloat, transparent: Bool, rtl: Bool) {
+    init(frame: CGRect, initialPeer: EnginePeer, safeInset: CGFloat, transparent: Bool, rtl: Bool) {
         self.frame = frame
         self.initialPeer = initialPeer
         self.safeInset = safeInset

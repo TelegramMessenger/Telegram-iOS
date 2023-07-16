@@ -11,7 +11,6 @@ import AccountContext
 import TelegramCore
 import MultilineTextComponent
 import EmojiStatusComponent
-import Postbox
 
 private func processChartData(data: PieChartComponent.ChartData) -> PieChartComponent.ChartData {
     var data = data

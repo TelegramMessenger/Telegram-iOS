@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import MediaEditor
 
 final class MarkerTool: DrawingElement {
     let uuid: UUID

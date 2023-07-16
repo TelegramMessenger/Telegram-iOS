@@ -11,6 +11,7 @@ import AccountContext
 import ChatPresentationInterfaceState
 import ChatControllerInteraction
 import ItemListUI
+import ChatContextQuery
 
 private struct CommandChatInputContextPanelEntryStableId: Hashable {
     let command: PeerCommand

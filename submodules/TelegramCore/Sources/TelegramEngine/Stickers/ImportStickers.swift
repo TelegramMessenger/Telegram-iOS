@@ -56,7 +56,7 @@ func _internal_uploadSticker(account: Account, peer: Peer, resource: MediaResour
                         |> mapError { _ -> UploadStickerError in return .generic }
                         |> mapToSignal { media -> Signal<UploadStickerStatus, UploadStickerError> in
                             switch media {
-                                case let .messageMediaDocument(_, document, _):
+                                case let .messageMediaDocument(_, document, _, _):
                                     if let document = document, let file = telegramMediaFileFromApiDocument(document), let resource = file.resource as? CloudDocumentMediaResource {
                                         return .single(.complete(resource, file.mimeType))
                                     }
@@ -89,6 +89,28 @@ public struct ImportSticker {
         self.dimensions = dimensions
         self.mimeType = mimeType
         self.keywords = keywords
+    }
+}
+
+public extension ImportSticker {
+    var stickerPackItem: StickerPackItem? {
+        guard let resource = self.resource as? TelegramMediaResource else {
+            return nil
+        }
+        var fileAttributes: [TelegramMediaFileAttribute] = []
+        if self.mimeType == "video/webm" {
+            fileAttributes.append(.FileName(fileName: "sticker.webm"))
+            fileAttributes.append(.Animated)
+            fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
+        } else if self.mimeType == "application/x-tgsticker" {
+            fileAttributes.append(.FileName(fileName: "sticker.tgs"))
+            fileAttributes.append(.Animated)
+            fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
+        } else {
+            fileAttributes.append(.FileName(fileName: "sticker.webp"))
+        }
+        fileAttributes.append(.ImageSize(size: self.dimensions))
+        return StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: TelegramMediaFile(fileId: EngineMedia.Id(namespace: 0, id: 0), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: self.mimeType, size: nil, attributes: fileAttributes), indexKeys: [])
     }
 }
 

@@ -62,6 +62,7 @@ private func pollMessages(entries: [MessageHistoryEntry]) -> (Set<MessageId>, [M
 }
 
 private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void, NoError> {
+    let accountPeerId = account.peerId
     return account.postbox.loadedPeerWithId(messageId.peerId)
     |> take(1)
     |> mapToSignal { peer in
@@ -105,19 +106,7 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                 }
                 
                 return account.postbox.transaction { transaction -> Void in
-                    var peers: [Peer] = []
-                    var peerPresences: [PeerId: Api.User] = [:]
-                    for chat in chats {
-                        if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
-                            peers.append(groupOrChannel)
-                        }
-                    }
-                    for apiUser in users {
-                        if let user = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) {
-                            peers.append(user)
-                            peerPresences[user.id] = apiUser
-                        }
-                    }
+                    let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                     
                     for message in messages {
                         if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: peer.isForum, namespace: isScheduledMessage ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
@@ -145,11 +134,7 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                         }
                     }
                     
-                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                        return updated
-                    })
-                    
-                    updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                 }
             }
         } else {
@@ -308,8 +293,12 @@ public final class AccountViewTracker {
     
     private var updatedUnsupportedMediaMessageIdsAndTimestamps: [MessageId: Int32] = [:]
     private var refreshSecretChatMediaMessageIdsAndTimestamps: [MessageId: Int32] = [:]
+    private var refreshStoriesForMessageIdsAndTimestamps: [MessageId: Int32] = [:]
     private var nextUpdatedUnsupportedMediaDisposableId: Int32 = 0
     private var updatedUnsupportedMediaDisposables = DisposableDict<Int32>()
+    private var refreshStoriesForPeerIdsAndTimestamps: [PeerId: Int32] = [:]
+    private var refreshStoriesForPeerIdsDebounceDisposable: Disposable?
+    private var pendingRefreshStoriesForPeerIds: [PeerId] = []
     
     private var updatedSeenPersonalMessageIds = Set<MessageId>()
     private var updatedReactionsSeenForMessageIds = Set<MessageId>()
@@ -687,6 +676,7 @@ public final class AccountViewTracker {
                     self.nextUpdatedViewCountDisposableId += 1
                     
                     if let account = self.account {
+                        let accountPeerId = account.peerId
                         let signal: Signal<[MessageId: ViewCountContextState], NoError> = (account.postbox.transaction { transaction -> Signal<[MessageId: ViewCountContextState], NoError> in
                             guard let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) else {
                                 return .complete()
@@ -702,28 +692,11 @@ public final class AccountViewTracker {
                                 }
                                 
                                 return account.postbox.transaction { transaction -> [MessageId: ViewCountContextState] in
-                                    var peers: [Peer] = []
-                                    var peerPresences: [PeerId: Api.User] = [:]
-                                    
                                     var resultStates: [MessageId: ViewCountContextState] = [:]
                                     
-                                    for apiUser in users {
-                                        if let user = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) {
-                                            peers.append(user)
-                                            peerPresences[user.id] = apiUser
-                                        }
-                                    }
-                                    for chat in chats {
-                                        if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
-                                            peers.append(groupOrChannel)
-                                        }
-                                    }
+                                    let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                                     
-                                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                                        return updated
-                                    })
-                                    
-                                    updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                                     
                                     for i in 0 ..< messageIds.count {
                                         if i < viewCounts.count {
@@ -1045,6 +1018,7 @@ public final class AccountViewTracker {
                     self.nextUpdatedUnsupportedMediaDisposableId += 1
                     
                     if let account = self.account {
+                        let accountPeerId = account.peerId
                         let signal = account.postbox.transaction { transaction -> Peer? in
                             if let peer = transaction.getPeer(peerId) {
                                 return peer
@@ -1090,26 +1064,8 @@ public final class AccountViewTracker {
                             }
                             |> mapToSignal { topPeer, messages, chats, users -> Signal<Void, NoError> in
                                 return account.postbox.transaction { transaction -> Void in
-                                    var peers: [Peer] = []
-                                    var peerPresences: [PeerId: Api.User] = [:]
-                                    
-                                    for chat in chats {
-                                        if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
-                                            peers.append(groupOrChannel)
-                                        }
-                                    }
-                                    for apiUser in users {
-                                        if let user = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) {
-                                            peers.append(user)
-                                            peerPresences[user.id] = apiUser
-                                        }
-                                    }
-                                    
-                                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                                        return updated
-                                    })
-                                    
-                                    updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                                    let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                                     
                                     for message in messages {
                                         guard let storeMessage = StoreMessage(apiMessage: message, peerIsForum: topPeer.isForum) else {
@@ -1224,6 +1180,184 @@ public final class AccountViewTracker {
                         }
                         self.updatedUnsupportedMediaDisposables.set(signal.start(), forKey: disposableId)
                     }
+                }
+            }
+        }
+    }
+    
+    public func refreshStoriesForMessageIds(messageIds: Set<MessageId>) {
+        self.queue.async {
+            var addedMessageIds: [MessageId] = []
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+            for messageId in messageIds {
+                let messageTimestamp = self.refreshStoriesForMessageIdsAndTimestamps[messageId]
+                var refresh = false
+                if let messageTimestamp = messageTimestamp {
+                    refresh = messageTimestamp < timestamp - 60
+                } else {
+                    refresh = true
+                }
+                
+                if refresh {
+                    self.refreshStoriesForMessageIdsAndTimestamps[messageId] = timestamp
+                    addedMessageIds.append(messageId)
+                }
+            }
+            if !addedMessageIds.isEmpty {
+                for (_, messageIds) in messagesIdsGroupedByPeerId(Set(addedMessageIds)) {
+                    let disposableId = self.nextUpdatedUnsupportedMediaDisposableId
+                    self.nextUpdatedUnsupportedMediaDisposableId += 1
+                    
+                    if let account = self.account {
+                        let signal = account.postbox.transaction { transaction -> Set<StoryId> in
+                            var result = Set<StoryId>()
+                            for id in messageIds {
+                                if let message = transaction.getMessage(id) {
+                                    for media in message.media {
+                                        if let storyMedia = media as? TelegramMediaStory {
+                                            result.insert(storyMedia.storyId)
+                                        } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content)  = webpage.content, let story = content.story {
+                                            result.insert(story.storyId)
+                                        }
+                                    }
+                                    
+                                    for attribute in message.attributes {
+                                        if let attribute = attribute as? ReplyStoryAttribute {
+                                            result.insert(attribute.storyId)
+                                        }
+                                    }
+                                }
+                            }
+                            return result
+                        }
+                        |> mapToSignal { ids -> Signal<Never, NoError> in
+                            guard !ids.isEmpty else {
+                                return .complete()
+                            }
+                            
+                            var requests: [Signal<Never, NoError>] = []
+                            
+                            var idsGroupedByPeerId: [PeerId: Set<Int32>] = [:]
+                            for id in ids {
+                                if idsGroupedByPeerId[id.peerId] == nil {
+                                    idsGroupedByPeerId[id.peerId] = Set([id.id])
+                                } else {
+                                    idsGroupedByPeerId[id.peerId]?.insert(id.id)
+                                }
+                            }
+                            
+                            for (peerId, ids) in idsGroupedByPeerId {
+                                requests.append(_internal_refreshStories(account: account, peerId: peerId, ids: Array(ids)))
+                            }
+                            
+                            return combineLatest(requests)
+                            |> ignoreValues
+                        }
+                        |> afterDisposed { [weak self] in
+                            self?.queue.async {
+                                self?.updatedUnsupportedMediaDisposables.set(nil, forKey: disposableId)
+                            }
+                        }
+                        self.updatedUnsupportedMediaDisposables.set(signal.start(), forKey: disposableId)
+                    }
+                }
+            }
+        }
+    }
+    
+    public func refreshStoryStatsForPeerIds(peerIds: [PeerId]) {
+        self.queue.async {
+            self.pendingRefreshStoriesForPeerIds.append(contentsOf: peerIds)
+            
+            if self.refreshStoriesForPeerIdsDebounceDisposable == nil {
+                self.refreshStoriesForPeerIdsDebounceDisposable = (Signal<Never, NoError>.complete() |> delay(0.15, queue: self.queue)).start(completed: {
+                    self.refreshStoriesForPeerIdsDebounceDisposable = nil
+                    
+                    let pendingPeerIds = self.pendingRefreshStoriesForPeerIds
+                    self.pendingRefreshStoriesForPeerIds.removeAll()
+                    self.internalRefreshStoryStatsForPeerIds(peerIds: pendingPeerIds)
+                })
+            }
+        }
+    }
+    
+    private func internalRefreshStoryStatsForPeerIds(peerIds: [PeerId]) {
+        self.queue.async {
+            var addedPeerIds: [PeerId] = []
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+            for peerId in peerIds {
+                let messageTimestamp = self.refreshStoriesForPeerIdsAndTimestamps[peerId]
+                var refresh = false
+                if let messageTimestamp = messageTimestamp {
+                    refresh = messageTimestamp < timestamp - 60 * 60
+                } else {
+                    refresh = true
+                }
+                
+                if refresh {
+                    self.refreshStoriesForPeerIdsAndTimestamps[peerId] = timestamp
+                    addedPeerIds.append(peerId)
+                }
+            }
+            if !addedPeerIds.isEmpty {
+                let disposableId = self.nextUpdatedUnsupportedMediaDisposableId
+                self.nextUpdatedUnsupportedMediaDisposableId += 1
+                
+                if let account = self.account {
+                    let signal = account.postbox.transaction { transaction -> [(PeerId, Api.InputUser)] in
+                        return addedPeerIds.compactMap { id -> (PeerId, Api.InputUser)? in
+                            if let user = transaction.getPeer(id).flatMap(apiInputUser) {
+                                return (id, user)
+                            } else {
+                                return nil
+                            }
+                        }
+                    }
+                    |> mapToSignal { inputUsers -> Signal<Never, NoError> in
+                        guard !inputUsers.isEmpty else {
+                            return .complete()
+                        }
+                        
+                        var requests: [Signal<Never, NoError>] = []
+                        
+                        let batchCount = 100
+                        var startIndex = 0
+                        while startIndex < inputUsers.count {
+                            var slice: [(PeerId, Api.InputUser)] = []
+                            for i in startIndex ..< min(startIndex + batchCount, inputUsers.count) {
+                                slice.append(inputUsers[i])
+                            }
+                            startIndex += batchCount
+                            requests.append(account.network.request(Api.functions.users.getStoriesMaxIDs(id: slice.map(\.1)))
+                            |> `catch` { _ -> Signal<[Int32], NoError> in
+                                return .single([])
+                            }
+                            |> mapToSignal { result -> Signal<Never, NoError> in
+                                return account.postbox.transaction { transaction in
+                                    for i in 0 ..< result.count {
+                                        if i < slice.count {
+                                            let value = result[i]
+                                            if value <= 0 {
+                                                transaction.clearStoryItemsInexactMaxId(peerId: slice[i].0)
+                                            } else {
+                                                transaction.setStoryItemsInexactMaxId(peerId: slice[i].0, id: value)
+                                            }
+                                        }
+                                    }
+                                }
+                                |> ignoreValues
+                            })
+                        }
+                        
+                        return combineLatest(requests)
+                        |> ignoreValues
+                    }
+                    |> afterDisposed { [weak self] in
+                        self?.queue.async {
+                            self?.updatedUnsupportedMediaDisposables.set(nil, forKey: disposableId)
+                        }
+                    }
+                    self.updatedUnsupportedMediaDisposables.set(signal.start(), forKey: disposableId)
                 }
             }
         }

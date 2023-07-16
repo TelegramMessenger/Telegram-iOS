@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import Postbox
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
@@ -183,15 +182,6 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                 titleString = titleStringValue
                 
                 textString = NSAttributedString(string: item.strings.ChatList_PremiumRestoreDiscountText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
-            case let .chatFolderUpdates(count):
-                let rawTitleString = item.strings.ChatList_ChatFolderUpdateHintTitle(item.strings.ChatList_ChatFolderUpdateCount(Int32(count)))
-                let titleStringValue = NSMutableAttributedString(attributedString: NSAttributedString(string: rawTitleString.string, font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor))
-                if let range = rawTitleString.ranges.first {
-                    titleStringValue.addAttribute(.foregroundColor, value: item.theme.rootController.navigationBar.accentTextColor, range: range.range)
-                }
-                titleString = titleStringValue
-                
-                textString = NSAttributedString(string: item.strings.ChatList_ChatFolderUpdateHintText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
             }
             
             let titleLayout = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
@@ -230,8 +220,6 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.contentContainer.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                     
                     switch item.notice {
-                    case .chatFolderUpdates:
-                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.strings.ChatList_HideAction, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
                     default:
                         strongSelf.setRevealOptions((left: [], right: []))
                     }

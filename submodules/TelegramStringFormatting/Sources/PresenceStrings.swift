@@ -362,7 +362,7 @@ public func stringForRelativeLiveLocationUpdateTimestamp(strings: PresentationSt
     }
 }
 
-public func stringForRelativeActivityTimestamp(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, relativeTimestamp: Int32, relativeTo timestamp: Int32) -> String {
+public func stringForRelativeActivityTimestamp(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, preciseTime: Bool = false, relativeTimestamp: Int32, relativeTo timestamp: Int32) -> String {
     let difference = timestamp - relativeTimestamp
     if difference < 60 {
         return strings.Time_JustNow
@@ -392,6 +392,8 @@ public func stringForRelativeActivityTimestamp(strings: PresentationStrings, dat
                 day = .yesterday
             }
             return humanReadableStringForTimestamp(strings: strings, day: day, dateTimeFormat: dateTimeFormat, hours: timeinfo.tm_hour, minutes: timeinfo.tm_min).string
+        } else if preciseTime {
+            return strings.Time_AtPreciseDate(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat), stringForShortTimestamp(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min, dateTimeFormat: dateTimeFormat)).string
         } else {
             return strings.Time_AtDate(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat)).string
         }

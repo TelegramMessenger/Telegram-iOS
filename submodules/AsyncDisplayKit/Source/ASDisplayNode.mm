@@ -2998,7 +2998,7 @@ ASDISPLAYNODE_INLINE BOOL subtreeIsRasterized(ASDisplayNode *node) {
         if ([self _implementsDisplay]) {
           if (nowDisplay) {
             [ASDisplayNode scheduleNodeForRecursiveDisplay:self];
-          } else {
+          } else if (!self.disableClearContentsOnHide) {
             [[self asyncLayer] cancelAsyncDisplay];
             //schedule clear contents on next runloop
             dispatch_async(dispatch_get_main_queue(), ^{

@@ -6,12 +6,14 @@ import TelegramApi
 
 func telegramMediaWebpageAttributeFromApiWebpageAttribute(_ attribute: Api.WebPageAttribute) -> TelegramMediaWebpageAttribute? {
     switch attribute {
-        case let .webPageAttributeTheme(_, documents, settings):
-            var files: [TelegramMediaFile] = []
-            if let documents = documents {
-                files = documents.compactMap { telegramMediaFileFromApiDocument($0) }
-            }
-            return .theme(TelegraMediaWebpageThemeAttribute(files: files, settings: settings.flatMap { TelegramThemeSettings(apiThemeSettings: $0) }))
+    case let .webPageAttributeTheme(_, documents, settings):
+        var files: [TelegramMediaFile] = []
+        if let documents = documents {
+            files = documents.compactMap { telegramMediaFileFromApiDocument($0) }
+        }
+        return .theme(TelegraMediaWebpageThemeAttribute(files: files, settings: settings.flatMap { TelegramThemeSettings(apiThemeSettings: $0) }))
+    case .webPageAttributeStory:
+        return nil
     }
 }
 
@@ -38,15 +40,22 @@ func telegramMediaWebpageFromApiWebpage(_ webpage: Api.WebPage, url: String?) ->
             if let document = document {
                 file = telegramMediaFileFromApiDocument(document)
             }
+            var story: TelegramMediaStory?
             var webpageAttributes: [TelegramMediaWebpageAttribute] = []
             if let attributes = attributes {
                 webpageAttributes = attributes.compactMap(telegramMediaWebpageAttributeFromApiWebpageAttribute)
+                for attribute in attributes {
+                    if case let .webPageAttributeStory(_, userId, id, _) = attribute {
+                        story = TelegramMediaStory(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: id), isMention: false)
+                    }
+                }
             }
+        
             var instantPage: InstantPage?
             if let cachedPage = cachedPage {
                 instantPage = InstantPage(apiPage: cachedPage)
             }
-            return TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), content: .Loaded(TelegramMediaWebpageLoadedContent(url: url, displayUrl: displayUrl, hash: hash, type: type, websiteName: siteName, title: title, text: description, embedUrl: embedUrl, embedType: embedType, embedSize: embedSize, duration: webpageDuration, author: author, image: image, file: file, attributes: webpageAttributes, instantPage: instantPage)))
+            return TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), content: .Loaded(TelegramMediaWebpageLoadedContent(url: url, displayUrl: displayUrl, hash: hash, type: type, websiteName: siteName, title: title, text: description, embedUrl: embedUrl, embedType: embedType, embedSize: embedSize, duration: webpageDuration, author: author, image: image, file: file, story: story, attributes: webpageAttributes, instantPage: instantPage)))
         case .webPageEmpty:
             return nil
     }

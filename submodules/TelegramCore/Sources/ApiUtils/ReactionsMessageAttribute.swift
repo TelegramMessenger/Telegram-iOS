@@ -25,8 +25,9 @@ extension ReactionsMessageAttribute {
                     case let .messagePeerReaction(flags, peerId, date, reaction):
                         let isLarge = (flags & (1 << 0)) != 0
                         let isUnseen = (flags & (1 << 1)) != 0
+                        let isMy = (flags & (1 << 2)) != 0
                         if let reaction = MessageReaction.Reaction(apiReaction: reaction) {
-                            return ReactionsMessageAttribute.RecentPeer(value: reaction, isLarge: isLarge, isUnseen: isUnseen, peerId: peerId.peerId, timestamp: date)
+                            return ReactionsMessageAttribute.RecentPeer(value: reaction, isLarge: isLarge, isUnseen: isUnseen, isMy: isMy, peerId: peerId.peerId, timestamp: date)
                         } else {
                             return nil
                         }
@@ -114,16 +115,20 @@ private func mergeReactions(reactions: [MessageReaction], recentPeers: [Reaction
             pendingIndex += 1
         }
         
-        if let index = recentPeers.firstIndex(where: { $0.value == pendingReaction.value && $0.peerId == accountPeerId }) {
+        let pendingReactionSendAsPeerId = pendingReaction.sendAsPeerId ?? accountPeerId
+        
+        if let index = recentPeers.firstIndex(where: {
+            $0.value == pendingReaction.value && ($0.peerId == pendingReactionSendAsPeerId || $0.isMy)
+        }) {
             recentPeers.remove(at: index)
         }
-        recentPeers.append(ReactionsMessageAttribute.RecentPeer(value: pendingReaction.value, isLarge: false, isUnseen: false, peerId: accountPeerId, timestamp: Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)))
+        recentPeers.append(ReactionsMessageAttribute.RecentPeer(value: pendingReaction.value, isLarge: false, isUnseen: false, isMy: true, peerId: pendingReactionSendAsPeerId, timestamp: Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)))
     }
     
     for i in (0 ..< result.count).reversed() {
         if result[i].chosenOrder != nil {
             if !pending.contains(where: { $0.value == result[i].value }) {
-                if let index = recentPeers.firstIndex(where: { $0.value == result[i].value && $0.peerId == accountPeerId }) {
+                if let index = recentPeers.firstIndex(where: { $0.value == result[i].value && ($0.peerId == accountPeerId || $0.isMy) }) {
                     recentPeers.remove(at: index)
                 }
                 
@@ -187,8 +192,9 @@ extension ReactionsMessageAttribute {
                     case let .messagePeerReaction(flags, peerId, date, reaction):
                         let isLarge = (flags & (1 << 0)) != 0
                         let isUnseen = (flags & (1 << 1)) != 0
+                        let isMy = (flags & (1 << 2)) != 0
                         if let reaction = MessageReaction.Reaction(apiReaction: reaction) {
-                            return ReactionsMessageAttribute.RecentPeer(value: reaction, isLarge: isLarge, isUnseen: isUnseen, peerId: peerId.peerId, timestamp: date)
+                            return ReactionsMessageAttribute.RecentPeer(value: reaction, isLarge: isLarge, isUnseen: isUnseen, isMy: isMy, peerId: peerId.peerId, timestamp: date)
                         } else {
                             return nil
                         }

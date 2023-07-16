@@ -189,6 +189,15 @@ public extension Peer {
         }
     }
     
+    var isCloseFriend: Bool {
+        switch self {
+        case let user as TelegramUser:
+            return user.flags.contains(.isCloseFriend)
+        default:
+            return false
+        }
+    }
+    
     var isCopyProtectionEnabled: Bool {
         switch self {
         case let group as TelegramGroup:

@@ -269,7 +269,7 @@ private func removeCachedAttachMenuBot(postbox: Postbox, botId: PeerId) -> Signa
     }
 }
 
-func managedSynchronizeAttachMenuBots(postbox: Postbox, network: Network, force: Bool = false) -> Signal<Void, NoError> {
+func managedSynchronizeAttachMenuBots(accountPeerId: PeerId, postbox: Postbox, network: Network, force: Bool = false) -> Signal<Void, NoError> {
     let poll = Signal<Void, NoError> { subscriber in
         let signal: Signal<Void, NoError> = cachedAttachMenuBots(postbox: postbox)
         |> mapToSignal { current in
@@ -285,14 +285,7 @@ func managedSynchronizeAttachMenuBots(postbox: Postbox, network: Network, force:
                 return postbox.transaction { transaction -> Void in
                     switch result {
                         case let .attachMenuBots(hash, bots, users):
-                            var peers: [Peer] = []
-                            for user in users {
-                                let telegramUser = TelegramUser(user: user)
-                                peers.append(telegramUser)
-                            }
-                            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                                return updated
-                            })
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
 
                             var resultBots: [AttachMenuBots.Bot] = []
                             for bot in bots {
@@ -368,7 +361,7 @@ public enum AddBotToAttachMenuError {
 }
 
 
-func _internal_addBotToAttachMenu(postbox: Postbox, network: Network, botId: PeerId, allowWrite: Bool) -> Signal<Bool, AddBotToAttachMenuError> {
+func _internal_addBotToAttachMenu(accountPeerId: PeerId, postbox: Postbox, network: Network, botId: PeerId, allowWrite: Bool) -> Signal<Bool, AddBotToAttachMenuError> {
     return postbox.transaction { transaction -> Signal<Bool, AddBotToAttachMenuError> in
         guard let peer = transaction.getPeer(botId), let inputUser = apiInputUser(peer) else {
             return .complete()
@@ -391,7 +384,7 @@ func _internal_addBotToAttachMenu(postbox: Postbox, network: Network, botId: Pee
         }
         |> mapToSignal { value -> Signal<Bool, AddBotToAttachMenuError> in
             if value {
-                return managedSynchronizeAttachMenuBots(postbox: postbox, network: network, force: true)
+                return managedSynchronizeAttachMenuBots(accountPeerId: accountPeerId, postbox: postbox, network: network, force: true)
                 |> castError(AddBotToAttachMenuError.self)
                 |> take(1)
                 |> map { _ -> Bool in
@@ -406,7 +399,7 @@ func _internal_addBotToAttachMenu(postbox: Postbox, network: Network, botId: Pee
     |> switchToLatest
 }
 
-func _internal_removeBotFromAttachMenu(postbox: Postbox, network: Network, botId: PeerId) -> Signal<Bool, NoError> {
+func _internal_removeBotFromAttachMenu(accountPeerId: PeerId, postbox: Postbox, network: Network, botId: PeerId) -> Signal<Bool, NoError> {
     return postbox.transaction { transaction -> Signal<Bool, NoError> in
         guard let peer = transaction.getPeer(botId), let inputUser = apiInputUser(peer) else {
             return .complete()
@@ -424,7 +417,7 @@ func _internal_removeBotFromAttachMenu(postbox: Postbox, network: Network, botId
             return .single(false)
         }
         |> afterCompleted {
-            let _ = (managedSynchronizeAttachMenuBots(postbox: postbox, network: network, force: true)
+            let _ = (managedSynchronizeAttachMenuBots(accountPeerId: accountPeerId, postbox: postbox, network: network, force: true)
             |> take(1)).start(completed: {
                 let _ = removeCachedAttachMenuBot(postbox: postbox, botId: botId)
             })
@@ -468,7 +461,7 @@ public enum GetAttachMenuBotError {
     case generic
 }
  
-func _internal_getAttachMenuBot(postbox: Postbox, network: Network, botId: PeerId, cached: Bool) -> Signal<AttachMenuBot, GetAttachMenuBotError> {
+func _internal_getAttachMenuBot(accountPeerId: PeerId, postbox: Postbox, network: Network, botId: PeerId, cached: Bool) -> Signal<AttachMenuBot, GetAttachMenuBotError> {
     return postbox.transaction { transaction -> Signal<AttachMenuBot, GetAttachMenuBotError> in
         if cached, let cachedBots = cachedAttachMenuBots(transaction: transaction)?.bots {
             if let bot = cachedBots.first(where: { $0.peerId == botId }), let peer = transaction.getPeer(bot.peerId) {
@@ -487,19 +480,14 @@ func _internal_getAttachMenuBot(postbox: Postbox, network: Network, botId: PeerI
             return postbox.transaction { transaction -> Signal<AttachMenuBot, GetAttachMenuBotError> in
                 switch result {
                     case let .attachMenuBotsBot(bot, users):
-                        var peers: [Peer] = []
                         var peer: Peer?
                         for user in users {
                             let telegramUser = TelegramUser(user: user)
-                            peers.append(telegramUser)
-                            
                             if telegramUser.id == botId {
                                 peer = telegramUser
                             }
                         }
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                            return updated
-                        })
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
                     
                         guard let peer = peer else {
                             return .fail(.generic)
@@ -709,14 +697,15 @@ func _internal_getBotApp(account: Account, reference: BotAppReference) -> Signal
         }
         |> mapToSignal { result -> Signal<BotApp, GetBotAppError> in
             switch result {
-                case let .botApp(_, app):
+                case let .botApp(botAppFlags, app):
                 switch app {
                 case let .botApp(flags, id, accessHash, shortName, title, description, photo, document, hash):
+                    let _ = flags
                     var appFlags = BotApp.Flags()
-                    if (flags & (1 << 0)) != 0 {
+                    if (botAppFlags & (1 << 0)) != 0 {
                         appFlags.insert(.notActivated)
                     }
-                    if (flags & (1 << 1)) != 0 {
+                    if (botAppFlags & (1 << 1)) != 0 {
                         appFlags.insert(.requiresWriteAccess)
                     }
                     return .single(BotApp(id: id, accessHash: accessHash, shortName: shortName, title: title, description: description, photo: telegramMediaImageFromApiPhoto(photo), document: document.flatMap(telegramMediaFileFromApiDocument), hash: hash, flags: appFlags))

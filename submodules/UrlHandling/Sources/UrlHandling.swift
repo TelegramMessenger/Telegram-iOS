@@ -72,6 +72,7 @@ public enum ParsedInternalPeerUrlParameter {
     case replyThread(Int32, Int32)
     case voiceChat(String?)
     case appStart(String, String?)
+    case story(Int32)
 }
 
 public enum ParsedInternalUrl {
@@ -246,6 +247,10 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                         }
                                     }
                                     return .startAttach(peerName, value, choose)
+                                } else if queryItem.name == "story" {
+                                    if let id = Int32(value) {
+                                        return .peer(.name(peerName), .story(id))
+                                    }
                                 }
                             } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name)  {
                                 return .peer(.name(peerName), .voiceChat(nil))
@@ -459,6 +464,12 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     } else {
                         return nil
                     }
+                } else if pathComponents.count >= 3 && pathComponents[1] == "s" {
+                    if let storyId = Int32(pathComponents[2]) {
+                        return .peer(.name(pathComponents[0]), .story(storyId))
+                    } else {
+                        return nil
+                    }
                 } else if pathComponents.count == 4 && pathComponents[0] == "c" {
                     if let channelId = Int64(pathComponents[1]), let threadId = Int32(pathComponents[2]), let messageId = Int32(pathComponents[3]) {
                         var timecode: Double?
@@ -539,7 +550,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     if let queryItems = components.queryItems {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
-                                if queryItem.name == "startApp"{
+                                if queryItem.name == "startapp" {
                                     startApp = value
                                 }
                             }
@@ -697,6 +708,11 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 }
                             case let .voiceChat(invite):
                                 return .single(.joinVoiceChat(peer.id, invite))
+                            case let .story(id):
+                                return context.engine.messages.refreshStories(peerId: peer.id, ids: [id])
+                                |> map { _ -> ResolvedUrl? in
+                                }
+                                |> then(.single(.story(peerId: peer.id, id: id)))
                         }
                     } else {
                         return .single(.peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil)))

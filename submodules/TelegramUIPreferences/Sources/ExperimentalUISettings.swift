@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 
@@ -7,10 +6,10 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public struct AccountReactionOverrides: Equatable, Codable {
         public struct Item: Equatable, Codable {
             public var key: MessageReaction.Reaction
-            public var messageId: MessageId
-            public var mediaId: MediaId
+            public var messageId: EngineMessage.Id
+            public var mediaId: EngineMedia.Id
             
-            public init(key: MessageReaction.Reaction, messageId: MessageId, mediaId: MediaId) {
+            public init(key: MessageReaction.Reaction, messageId: EngineMessage.Id, mediaId: EngineMedia.Id) {
                 self.key = key
                 self.messageId = messageId
                 self.mediaId = mediaId
@@ -51,6 +50,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var disableImageContentAnalysis: Bool
     public var disableBackgroundAnimation: Bool
     public var logLanguageRecognition: Bool
+    public var storiesExperiment: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -78,7 +78,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
             disableLanguageRecognition: false,
             disableImageContentAnalysis: false,
             disableBackgroundAnimation: false,
-            logLanguageRecognition: false
+            logLanguageRecognition: false,
+            storiesExperiment: false
         )
     }
     
@@ -107,7 +108,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         disableLanguageRecognition: Bool,
         disableImageContentAnalysis: Bool,
         disableBackgroundAnimation: Bool,
-        logLanguageRecognition: Bool
+        logLanguageRecognition: Bool,
+        storiesExperiment: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -134,6 +136,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.disableImageContentAnalysis = disableImageContentAnalysis
         self.disableBackgroundAnimation = disableBackgroundAnimation
         self.logLanguageRecognition = logLanguageRecognition
+        self.storiesExperiment = storiesExperiment
     }
     
     public init(from decoder: Decoder) throws {
@@ -164,6 +167,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.disableImageContentAnalysis = try container.decodeIfPresent(Bool.self, forKey: "disableImageContentAnalysis") ?? false
         self.disableBackgroundAnimation = try container.decodeIfPresent(Bool.self, forKey: "disableBackgroundAnimation") ?? false
         self.logLanguageRecognition = try container.decodeIfPresent(Bool.self, forKey: "logLanguageRecognition") ?? false
+        self.storiesExperiment = try container.decodeIfPresent(Bool.self, forKey: "storiesExperiment") ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -194,6 +198,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode(self.disableImageContentAnalysis, forKey: "disableImageContentAnalysis")
         try container.encode(self.disableBackgroundAnimation, forKey: "disableBackgroundAnimation")
         try container.encode(self.logLanguageRecognition, forKey: "logLanguageRecognition")
+        try container.encode(self.storiesExperiment, forKey: "storiesExperiment")
     }
 }
 
@@ -206,7 +211,7 @@ public func updateExperimentalUISettingsInteractively(accountManager: AccountMan
             } else {
                 currentSettings = .defaultSettings
             }
-            return PreferencesEntry(f(currentSettings))
+            return SharedPreferencesEntry(f(currentSettings))
         })
     }
 }

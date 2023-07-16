@@ -56,7 +56,7 @@ final class ChatMessageUnsupportedBubbleContentNode: ChatMessageBubbleContentNod
                     let bubbleColor = bubbleColorComponents(theme: presentationData.theme.theme, incoming: false, wallpaper: !presentationData.theme.wallpaper.isEmpty)
                     titleHighlightedColor = bubbleColor.fill[0]
                 }
-                let (buttonWidth, continueActionButtonLayout) = makeButtonLayout(constrainedSize.width, buttonImage, buttonHighlightedImage, nil, nil, presentationData.strings.Conversation_UpdateTelegram, titleColor, titleHighlightedColor, false)
+                let (buttonWidth, continueActionButtonLayout) = makeButtonLayout(constrainedSize.width, buttonImage, buttonHighlightedImage, nil, nil, false, presentationData.strings.Conversation_UpdateTelegram, titleColor, titleHighlightedColor, false)
                 
                 let initialWidth = buttonWidth + insets.left + insets.right
                 

@@ -3,8 +3,17 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 
-public typealias EngineTempBox = TempBox
-public typealias EngineTempBoxFile = TempBoxFile
+public enum MediaResourceUserContentType: UInt8, Equatable {
+    case other = 0
+    case image = 1
+    case video = 2
+    case audio = 3
+    case file = 4
+    case sticker = 6
+    case avatar = 7
+    case audioVideoMessage = 8
+    case story = 9
+}
 
 public extension MediaResourceUserContentType {
     init(file: TelegramMediaFile) {
@@ -25,6 +34,12 @@ public extension MediaResourceUserContentType {
         } else {
             self = .file
         }
+    }
+}
+
+public extension MediaResourceFetchParameters {
+    init(tag: MediaResourceFetchTag?, info: MediaResourceFetchInfo?, location: MediaResourceStorageLocation?, contentType: MediaResourceUserContentType, isRandomAccessAllowed: Bool) {
+        self.init(tag: tag, info: info, location: location, contentType: contentType.rawValue, isRandomAccessAllowed: isRandomAccessAllowed)
     }
 }
 
@@ -217,7 +232,7 @@ public extension TelegramEngine {
             self.account = account
         }
 
-        public func preUpload(id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<MediaResourceData, NoError>, onComplete: (()->Void)? = nil) {
+        public func preUpload(id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<EngineMediaResource.ResourceData, NoError>, onComplete: (()->Void)? = nil) {
             return self.account.messageMediaPreuploadManager.add(network: self.account.network, postbox: self.account.postbox, id: id, encrypt: encrypt, tag: tag, source: source, onComplete: onComplete)
         }
 
@@ -254,7 +269,7 @@ public extension TelegramEngine {
             
             return _internal_reindexCacheInBackground(account: self.account, lowImpact: lowImpact)
             |> then(Signal { subscriber in
-                return mediaBox.updateResourceIndex(lowImpact: lowImpact, completion: {
+                return mediaBox.updateResourceIndex(otherResourceContentType: MediaResourceUserContentType.other.rawValue, lowImpact: lowImpact, completion: {
                     subscriber.putCompletion()
                 })
             })
@@ -339,7 +354,7 @@ public extension TelegramEngine {
             |> mapToSignal { datacenterId -> Signal<EngineMediaResource.Fetch.Result, EngineMediaResource.Fetch.Error> in
                 let resource = AlbumCoverResource(datacenterId: Int(datacenterId), file: file, title: title, performer: performer, isThumbnail: isThumbnail)
                 
-                return multipartFetch(postbox: self.account.postbox, network: self.account.network, mediaReferenceRevalidationContext: self.account.mediaReferenceRevalidationContext, networkStatsContext: self.account.networkStatsContext, resource: resource, datacenterId: Int(datacenterId), size: nil, intervals: .single([(0 ..< Int64.max, .default)]), parameters: MediaResourceFetchParameters(
+                return multipartFetch(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, mediaReferenceRevalidationContext: self.account.mediaReferenceRevalidationContext, networkStatsContext: self.account.networkStatsContext, resource: resource, datacenterId: Int(datacenterId), size: nil, intervals: .single([(0 ..< Int64.max, .default)]), parameters: MediaResourceFetchParameters(
                     tag: nil,
                     info: TelegramCloudMediaResourceFetchInfo(
                         reference: MediaResourceReference.standalone(resource: resource),
@@ -383,6 +398,10 @@ public extension TelegramEngine {
 
         public func cancelAllFetches(id: String) {
             preconditionFailure()
+        }
+        
+        public func pushPriorityDownload(resourceId: String) -> Disposable {
+            return self.account.network.multiplexedRequestManager.pushPriority(resourceId: resourceId)
         }
     }
 }

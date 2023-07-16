@@ -177,7 +177,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                         processed = true
                                         break inner
                                     }
-                                case let .Video(_, _, flags):
+                                case let .Video(_, _, flags, _):
                                     if flags.contains(.instantRoundVideo) {
                                         messageText = strings.Message_VideoMessage
                                         processed = true
@@ -295,6 +295,16 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                         messageText = "📊 \(poll.text)"
                     case let dice as TelegramMediaDice:
                         messageText = dice.emoji
+                    case let story as TelegramMediaStory:
+                        if story.isMention, let peer {
+                            if message.flags.contains(.Incoming) {
+                                messageText = strings.Conversation_StoryMentionTextIncoming(peer.compactDisplayTitle).string
+                            } else {
+                                messageText = strings.Conversation_StoryMentionTextOutgoing(peer.compactDisplayTitle).string
+                            }
+                        } else {
+                            messageText = strings.Notification_Story
+                        }
                     default:
                         break
                 }

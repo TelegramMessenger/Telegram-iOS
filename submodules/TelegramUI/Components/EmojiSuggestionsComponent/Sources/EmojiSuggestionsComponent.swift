@@ -7,7 +7,6 @@ import MultiAnimationRenderer
 import ComponentFlow
 import AccountContext
 import TelegramCore
-import Postbox
 import TelegramPresentationData
 import EmojiTextAttachmentView
 import TextFormat
@@ -15,6 +14,22 @@ import TelegramUIPreferences
 
 public final class EmojiSuggestionsComponent: Component {
     public typealias EnvironmentType = Empty
+    
+    public struct Theme: Equatable {
+        let backgroundColor: UIColor
+        let textColor: UIColor
+        let placeholderColor: UIColor
+        
+        public init(
+            backgroundColor: UIColor,
+            textColor: UIColor,
+            placeholderColor: UIColor
+        ) {
+            self.backgroundColor = backgroundColor
+            self.textColor = textColor
+            self.placeholderColor = placeholderColor
+        }
+    }
     
     public static func suggestionData(context: AccountContext, isSavedMessages: Bool, query: String) -> Signal<[TelegramMediaFile], NoError> {
         let hasPremium: Signal<Bool, NoError>
@@ -52,7 +67,7 @@ public final class EmojiSuggestionsComponent: Component {
             
             let normalizedQuery = query.basicEmoji.0
             
-            var existingIds = Set<MediaId>()
+            var existingIds = Set<EngineMedia.Id>()
             for entry in view.entries {
                 guard let item = entry.item as? StickerPackItem else {
                     continue
@@ -99,7 +114,7 @@ public final class EmojiSuggestionsComponent: Component {
     }
     
     public let context: AccountContext
-    public let theme: PresentationTheme
+    public let theme: Theme
     public let animationCache: AnimationCache
     public let animationRenderer: MultiAnimationRenderer
     public let files: [TelegramMediaFile]
@@ -108,7 +123,7 @@ public final class EmojiSuggestionsComponent: Component {
     public init(
         context: AccountContext,
         userLocation: MediaResourceUserLocation,
-        theme: PresentationTheme,
+        theme: Theme,
         animationCache: AnimationCache,
         animationRenderer: MultiAnimationRenderer,
         files: [TelegramMediaFile],
@@ -126,7 +141,7 @@ public final class EmojiSuggestionsComponent: Component {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.theme !== rhs.theme {
+        if lhs.theme != rhs.theme {
             return false
         }
         if lhs.animationCache !== rhs.animationCache {
@@ -179,7 +194,7 @@ public final class EmojiSuggestionsComponent: Component {
         private var itemLayout: ItemLayout?
         private var ignoreScrolling: Bool = false
         
-        private var visibleLayers: [MediaId: InlineStickerItemLayer] = [:]
+        private var visibleLayers: [EngineMedia.Id: InlineStickerItemLayer] = [:]
         
         override init(frame: CGRect) {
             self.blurView = BlurredBackgroundView(color: .clear, enableBlur: true)
@@ -296,7 +311,7 @@ public final class EmojiSuggestionsComponent: Component {
 
             let visibleBounds = self.scrollView.bounds
             
-            var visibleIds = Set<MediaId>()
+            var visibleIds = Set<EngineMedia.Id>()
             for i in 0 ..< component.files.count {
                 let itemFrame = itemLayout.frame(at: i)
                 if visibleBounds.intersects(itemFrame) {
@@ -306,7 +321,7 @@ public final class EmojiSuggestionsComponent: Component {
                     let itemLayer: InlineStickerItemLayer
                     if let current = self.visibleLayers[item.fileId] {
                         itemLayer = current
-                        itemLayer.dynamicColor = component.theme.list.itemPrimaryTextColor
+                        itemLayer.dynamicColor = component.theme.textColor
                     } else {
                         itemLayer = InlineStickerItemLayer(
                             context: component.context,
@@ -316,9 +331,9 @@ public final class EmojiSuggestionsComponent: Component {
                             file: item,
                             cache: component.animationCache,
                             renderer: component.animationRenderer,
-                            placeholderColor: component.theme.list.mediaPlaceholderColor,
+                            placeholderColor: component.theme.placeholderColor,
                             pointSize: itemFrame.size,
-                            dynamicColor: component.theme.list.itemPrimaryTextColor
+                            dynamicColor: component.theme.textColor
                         )
                         self.visibleLayers[item.fileId] = itemLayer
                         self.scrollView.layer.addSublayer(itemLayer)
@@ -330,7 +345,7 @@ public final class EmojiSuggestionsComponent: Component {
                 }
             }
             
-            var removedIds: [MediaId] = []
+            var removedIds: [EngineMedia.Id] = []
             for (id, itemLayer) in self.visibleLayers {
                 if !visibleIds.contains(id) {
                     itemLayer.removeFromSuperlayer()
@@ -383,10 +398,10 @@ public final class EmojiSuggestionsComponent: Component {
         func update(component: EmojiSuggestionsComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             let height: CGFloat = 54.0
             
-            if self.component?.theme !== component.theme {
+            if self.component?.theme.backgroundColor != component.theme.backgroundColor {
                 //self.backgroundLayer.fillColor = component.theme.list.plainBackgroundColor.cgColor
                 self.backgroundLayer.fillColor = UIColor.black.cgColor
-                self.blurView.updateColor(color: component.theme.list.plainBackgroundColor.withMultipliedAlpha(0.88), transition: .immediate)
+                self.blurView.updateColor(color: component.theme.backgroundColor, transition: .immediate)
             }
             var resetScrollingPosition = false
             if self.component?.files != component.files {
@@ -426,5 +441,13 @@ public final class EmojiSuggestionsComponent: Component {
     
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+public extension EmojiSuggestionsComponent.Theme {
+    init(theme: PresentationTheme) {
+        self.backgroundColor = theme.list.plainBackgroundColor.withMultipliedAlpha(0.88)
+        self.textColor = theme.list.itemPrimaryTextColor
+        self.placeholderColor = theme.list.mediaPlaceholderColor
     }
 }

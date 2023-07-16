@@ -112,6 +112,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
         var forumTopicData: EngineChatList.ForumTopicData?
         var topForumTopicItems: [EngineChatList.ForumTopicData]
         var revealed: Bool
+        var storyState: ChatListNodeState.StoryState?
         
         init(
             index: EngineChatList.Item.Index,
@@ -135,7 +136,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             autoremoveTimeout: Int32?,
             forumTopicData: EngineChatList.ForumTopicData?,
             topForumTopicItems: [EngineChatList.ForumTopicData],
-            revealed: Bool
+            revealed: Bool,
+            storyState: ChatListNodeState.StoryState?
         ) {
             self.index = index
             self.presentationData = presentationData
@@ -159,6 +161,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             self.forumTopicData = forumTopicData
             self.topForumTopicItems = topForumTopicItems
             self.revealed = revealed
+            self.storyState = storyState
         }
         
         static func ==(lhs: PeerEntryData, rhs: PeerEntryData) -> Bool {
@@ -268,6 +271,9 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             if lhs.revealed != rhs.revealed {
                 return false
             }
+            if lhs.storyState != rhs.storyState {
+                return false
+            }
             return true
         }
     }
@@ -297,10 +303,82 @@ enum ChatListNodeEntry: Comparable, Identifiable {
         }
     }
     
+    struct GroupReferenceEntryData: Equatable {
+        var index: EngineChatList.Item.Index
+        var presentationData: ChatListPresentationData
+        var groupId: EngineChatList.Group
+        var peers: [EngineChatList.GroupItem.Item]
+        var message: EngineMessage?
+        var editing: Bool
+        var unreadCount: Int
+        var revealed: Bool
+        var hiddenByDefault: Bool
+        var storyState: ChatListNodeState.StoryState?
+        
+        init(
+            index: EngineChatList.Item.Index,
+            presentationData: ChatListPresentationData,
+            groupId: EngineChatList.Group,
+            peers: [EngineChatList.GroupItem.Item],
+            message: EngineMessage?,
+            editing: Bool,
+            unreadCount: Int,
+            revealed: Bool,
+            hiddenByDefault: Bool,
+            storyState: ChatListNodeState.StoryState?
+        ) {
+            self.index = index
+            self.presentationData = presentationData
+            self.groupId = groupId
+            self.peers = peers
+            self.message = message
+            self.editing = editing
+            self.unreadCount = unreadCount
+            self.revealed = revealed
+            self.hiddenByDefault = hiddenByDefault
+            self.storyState = storyState
+        }
+        
+        static func ==(lhs: GroupReferenceEntryData, rhs: GroupReferenceEntryData) -> Bool {
+            if lhs.index != rhs.index {
+                return false
+            }
+            if lhs.presentationData !== rhs.presentationData {
+                return false
+            }
+            if lhs.groupId != rhs.groupId {
+                return false
+            }
+            if lhs.peers != rhs.peers {
+                return false
+            }
+            if lhs.message?.stableId != rhs.message?.stableId {
+                return false
+            }
+            if lhs.editing != rhs.editing {
+                return false
+            }
+            if lhs.unreadCount != rhs.unreadCount {
+                return false
+            }
+            if lhs.revealed != rhs.revealed {
+                return false
+            }
+            if lhs.hiddenByDefault != rhs.hiddenByDefault {
+                return false
+            }
+            if lhs.storyState != rhs.storyState {
+                return false
+            }
+            
+            return true
+        }
+    }
+    
     case HeaderEntry
     case PeerEntry(PeerEntryData)
     case HoleEntry(EngineMessage.Index, theme: PresentationTheme)
-    case GroupReferenceEntry(index: EngineChatList.Item.Index, presentationData: ChatListPresentationData, groupId: EngineChatList.Group, peers: [EngineChatList.GroupItem.Item], message: EngineMessage?, editing: Bool, unreadCount: Int, revealed: Bool, hiddenByDefault: Bool)
+    case GroupReferenceEntry(GroupReferenceEntryData)
     case ContactEntry(ContactEntryData)
     case ArchiveIntro(presentationData: ChatListPresentationData)
     case EmptyIntro(presentationData: ChatListPresentationData)
@@ -316,8 +394,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             return .index(peerEntry.index)
         case let .HoleEntry(holeIndex, _):
             return .index(.chatList(EngineChatList.Item.Index.ChatList(pinningIndex: nil, messageIndex: holeIndex)))
-        case let .GroupReferenceEntry(index, _, _, _, _, _, _, _, _):
-            return .index(index)
+        case let .GroupReferenceEntry(groupReferenceEntry):
+            return .index(groupReferenceEntry.index)
         case let .ContactEntry(contactEntry):
             return .contact(id: contactEntry.peer.id, presence: contactEntry.presence)
         case .ArchiveIntro:
@@ -346,8 +424,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             }
         case let .HoleEntry(holeIndex, _):
             return .Hole(Int64(holeIndex.id.id))
-        case let .GroupReferenceEntry(_, _, groupId, _, _, _, _, _, _):
-            return .GroupId(groupId)
+        case let .GroupReferenceEntry(groupReferenceEntry):
+            return .GroupId(groupReferenceEntry.groupId)
         case let .ContactEntry(contactEntry):
             return .ContactId(contactEntry.peer.id)
         case .ArchiveIntro:
@@ -388,35 +466,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                     default:
                         return false
                 }
-            case let .GroupReferenceEntry(lhsIndex, lhsPresentationData, lhsGroupId, lhsPeers, lhsMessage, lhsEditing, lhsUnreadState, lhsRevealed, lhsHiddenByDefault):
-                if case let .GroupReferenceEntry(rhsIndex, rhsPresentationData, rhsGroupId, rhsPeers, rhsMessage, rhsEditing, rhsUnreadState, rhsRevealed, rhsHiddenByDefault) = rhs {
-                    if lhsIndex != rhsIndex {
-                        return false
-                    }
-                    if lhsPresentationData !== rhsPresentationData {
-                        return false
-                    }
-                    if lhsGroupId != rhsGroupId {
-                        return false
-                    }
-                    if lhsPeers != rhsPeers {
-                        return false
-                    }
-                    if lhsMessage?.stableId != rhsMessage?.stableId {
-                        return false
-                    }
-                    if lhsEditing != rhsEditing {
-                        return false
-                    }
-                    if lhsUnreadState != rhsUnreadState {
-                        return false
-                    }
-                    if lhsRevealed != rhsRevealed {
-                        return false
-                    }
-                    if lhsHiddenByDefault != rhsHiddenByDefault {
-                        return false
-                    }
+            case let .GroupReferenceEntry(groupReferenceEntry):
+                if case .GroupReferenceEntry(groupReferenceEntry) = rhs {
                     return true
                 } else {
                     return false
@@ -518,7 +569,17 @@ struct ChatListContactPeer {
     }
 }
 
-func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, notice: ChatListNotice?, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation, contacts: [ChatListContactPeer]) -> (entries: [ChatListNodeEntry], loading: Bool) {
+func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, notice: ChatListNotice?, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation, contacts: [ChatListContactPeer], accountPeerId: EnginePeer.Id, isMainTab: Bool) -> (entries: [ChatListNodeEntry], loading: Bool) {
+    var groupItems = view.groupItems
+    if isMainTab && state.archiveStoryState != nil && groupItems.isEmpty {
+        groupItems.append(EngineChatList.GroupItem(
+            id: .archive,
+            topMessage: nil,
+            items: [],
+            unreadCount: 0
+        ))
+    }
+    
     var result: [ChatListNodeEntry] = []
     
     if !view.hasEarlier {
@@ -538,7 +599,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
     
     if !view.hasLater, case .chatList = mode {
         var groupEntryCount = 0
-        for _ in view.groupItems {
+        for _ in groupItems {
             groupEntryCount += 1
         }
         pinnedIndexOffset += UInt16(groupEntryCount)
@@ -633,7 +694,13 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             autoremoveTimeout: entry.autoremoveTimeout,
             forumTopicData: entry.forumTopicData,
             topForumTopicItems: entry.topForumTopicItems,
-            revealed: threadId == 1 && (state.hiddenItemShouldBeTemporaryRevealed || state.editing)
+            revealed: threadId == 1 && (state.hiddenItemShouldBeTemporaryRevealed || state.editing),
+            storyState: entry.renderedPeer.peerId == accountPeerId ? nil : entry.storyStats.flatMap { stats -> ChatListNodeState.StoryState in
+                return ChatListNodeState.StoryState(
+                    stats: stats,
+                    hasUnseenCloseFriends: stats.hasUnseenCloseFriends
+                )
+            }
         ))
         
         if let threadInfo, threadInfo.isHidden {
@@ -682,7 +749,8 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                         autoremoveTimeout: nil,
                         forumTopicData: nil,
                         topForumTopicItems: [],
-                        revealed: false
+                        revealed: false,
+                        storyState: nil
                     )))
                     if foundPinningIndex != 0 {
                         foundPinningIndex -= 1
@@ -712,7 +780,8 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                 autoremoveTimeout: nil,
                 forumTopicData: nil,
                 topForumTopicItems: [],
-                revealed: false
+                revealed: false,
+                storyState: nil
             )))
         } else {
             if !filteredAdditionalItemEntries.isEmpty {
@@ -762,7 +831,8 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                         autoremoveTimeout: item.item.autoremoveTimeout,
                         forumTopicData: item.item.forumTopicData,
                         topForumTopicItems: item.item.topForumTopicItems,
-                        revealed: state.hiddenItemShouldBeTemporaryRevealed || state.editing
+                        revealed: state.hiddenItemShouldBeTemporaryRevealed || state.editing,
+                        storyState: nil
                     )))
                     if pinningIndex != 0 {
                         pinningIndex -= 1
@@ -772,9 +842,13 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
         }
         
         if !view.hasLater, case .chatList = mode {
-            for groupReference in view.groupItems {
+            for groupReference in groupItems {
                 let messageIndex = EngineMessage.Index(id: EngineMessage.Id(peerId: EnginePeer.Id(0), namespace: 0, id: 0), timestamp: 1)
-                result.append(.GroupReferenceEntry(
+                var mappedStoryState: ChatListNodeState.StoryState?
+                if let archiveStoryState = state.archiveStoryState {
+                    mappedStoryState = archiveStoryState
+                }
+                result.append(.GroupReferenceEntry(ChatListNodeEntry.GroupReferenceEntryData(
                     index: .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: pinningIndex, messageIndex: messageIndex)),
                     presentationData: state.presentationData,
                     groupId: groupReference.id,
@@ -783,15 +857,16 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                     editing: state.editing,
                     unreadCount: groupReference.unreadCount,
                     revealed: state.hiddenItemShouldBeTemporaryRevealed,
-                    hiddenByDefault: hideArchivedFolderByDefault
-                ))
+                    hiddenByDefault: hideArchivedFolderByDefault,
+                    storyState: mappedStoryState
+                )))
                 if pinningIndex != 0 {
                     pinningIndex -= 1
                 }
             }
             
             if displayArchiveIntro {
-                result.append(.ArchiveIntro(presentationData: state.presentationData))
+                //result.append(.ArchiveIntro(presentationData: state.presentationData))
             } else if !contacts.isEmpty && !result.contains(where: { entry in
                 if case .PeerEntry = entry {
                     return true
@@ -810,7 +885,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
         }
         
         if !view.hasLater {
-            if case let .peers(_, _, additionalCategories, _, _) = mode {
+            if case let .peers(_, _, additionalCategories, _, _, _) = mode {
                 var index = 0
                 for category in additionalCategories.reversed() {
                     result.append(.AdditionalCategory(index: index, id: category.id, title: category.title, image: category.icon, appearance: category.appearance, selected: state.selectedAdditionalCategoryIds.contains(category.id), presentationData: state.presentationData))

@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 import Display
-import Postbox
 import TelegramPresentationData
 import ActivityIndicator
 import RadialStatusNode
@@ -13,6 +12,26 @@ import AppBundle
 import TelegramUniversalVideoContent
 import TelegramCore
 import AccountContext
+
+private func fileSize(_ path: String, useTotalFileAllocatedSize: Bool = false) -> Int64? {
+    if useTotalFileAllocatedSize {
+        let url = URL(fileURLWithPath: path)
+        if let values = (try? url.resourceValues(forKeys: Set([.isRegularFileKey, .totalFileAllocatedSizeKey]))) {
+            if values.isRegularFile ?? false {
+                if let fileSize = values.totalFileAllocatedSize {
+                    return Int64(fileSize)
+                }
+            }
+        }
+    }
+    
+    var value = stat()
+    if stat(path, &value) == 0 {
+        return value.st_size
+    } else {
+        return nil
+    }
+}
 
 public enum ShareLoadingState {
     case preparing
@@ -71,7 +90,7 @@ public final class ShareLoadingContainerNode: ASDisplayNode, ShareContentContain
     public func deactivate() {
     }
     
-    public func setEnsurePeerVisibleOnLayout(_ peerId: PeerId?) {
+    public func setEnsurePeerVisibleOnLayout(_ peerId: EnginePeer.Id?) {
     }
     
     public func setContentOffsetUpdated(_ f: ((CGFloat, ContainedViewLayoutTransition) -> Void)?) {
@@ -256,9 +275,9 @@ public final class ShareProlongedLoadingContainerNode: ASDisplayNode, ShareConte
         if let account = account, let path = getAppBundle().path(forResource: "BlankVideo", ofType: "m4v"), let size = fileSize(path) {
             let decoration = ChatBubbleVideoDecoration(corners: ImageCorners(), nativeSize: CGSize(width: 100.0, height: 100.0), contentMode: .aspectFit, backgroundColor: .black)
             
-            let dummyFile = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 1), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: 12345), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: size, attributes: [.Video(duration: 1, size: PixelDimensions(width: 100, height: 100), flags: [])])
+            let dummyFile = TelegramMediaFile(fileId: EngineMedia.Id(namespace: 0, id: 1), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: 12345), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: size, attributes: [.Video(duration: 1, size: PixelDimensions(width: 100, height: 100), flags: [], preloadSize: nil)])
             
-            let videoContent = NativeVideoContent(id: .message(1, MediaId(namespace: 0, id: 1)), userLocation: .other, fileReference: .standalone(media: dummyFile), streamVideo: .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .black, storeAfterDownload: nil)
+            let videoContent = NativeVideoContent(id: .message(1, EngineMedia.Id(namespace: 0, id: 1)), userLocation: .other, fileReference: .standalone(media: dummyFile), streamVideo: .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .black, storeAfterDownload: nil)
             
             let videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: sharedContext.mediaManager.audioSession, manager: sharedContext.mediaManager.universalVideoManager, decoration: decoration, content: videoContent, priority: .embedded)
             videoNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 2.0, height: 2.0))
@@ -285,7 +304,7 @@ public final class ShareProlongedLoadingContainerNode: ASDisplayNode, ShareConte
     public func deactivate() {
     }
     
-    public func setEnsurePeerVisibleOnLayout(_ peerId: PeerId?) {
+    public func setEnsurePeerVisibleOnLayout(_ peerId: EnginePeer.Id?) {
     }
     
     public func setContentOffsetUpdated(_ f: ((CGFloat, ContainedViewLayoutTransition) -> Void)?) {

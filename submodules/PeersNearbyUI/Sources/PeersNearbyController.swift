@@ -497,9 +497,26 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
     })
     
     let dataSignal: Signal<PeersNearbyData?, NoError> = coordinatePromise.get()
+    |> distinctUntilChanged(isEqual: { lhs, rhs in
+        return lhs?.latitude == rhs?.latitude && lhs?.longitude == rhs?.longitude
+    })
     |> mapToSignal { coordinate -> Signal<PeersNearbyData?, NoError> in
         guard let coordinate = coordinate else {
             return .single(nil)
+            /*let peersNearbyContext = PeersNearbyContext(network: context.account.network, stateManager: context.account.stateManager, coordinate: nil)
+            return peersNearbyContext.get()
+            |> map { peersNearby -> PeersNearbyData in
+                var isVisible = false
+                if let peersNearby {
+                    for peer in peersNearby {
+                        if case .selfPeer = peer {
+                            isVisible = true
+                            break
+                        }
+                    }
+                }
+                return PeersNearbyData(latitude: 0.0, longitude: 0.0, address: nil, visible: isVisible, accountPeerId: context.account.peerId, users: [], groups: [], channels: [])
+            }*/
         }
         
         return Signal { subscriber in

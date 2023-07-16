@@ -355,8 +355,10 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
     let shimmering: ItemListPeerItemShimmering?
     let displayDecorations: Bool
     let disableInteractiveTransitionIfNecessary: Bool
+    let storyStats: PeerStoryStats?
+    let openStories: ((UIView) -> Void)?
     
-    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: EnginePeer, threadInfo: EngineMessageHistoryThread.Info? = nil, height: ItemListPeerItemHeight = .peerList, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, nameStyle: ItemListPeerItemNameStyle = .distinctBold, presence: EnginePeer.Presence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, highlighted: Bool = false, selectable: Bool, highlightable: Bool = true, animateFirstAvatarTransition: Bool = true, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, removePeer: @escaping (EnginePeer.Id) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, noInsets: Bool = false, noCorners: Bool = false, tag: ItemListItemTag? = nil, header: ListViewItemHeader? = nil, shimmering: ItemListPeerItemShimmering? = nil, displayDecorations: Bool = true, disableInteractiveTransitionIfNecessary: Bool = false) {
+    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: EnginePeer, threadInfo: EngineMessageHistoryThread.Info? = nil, height: ItemListPeerItemHeight = .peerList, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, nameStyle: ItemListPeerItemNameStyle = .distinctBold, presence: EnginePeer.Presence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, highlighted: Bool = false, selectable: Bool, highlightable: Bool = true, animateFirstAvatarTransition: Bool = true, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, removePeer: @escaping (EnginePeer.Id) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, noInsets: Bool = false, noCorners: Bool = false, tag: ItemListItemTag? = nil, header: ListViewItemHeader? = nil, shimmering: ItemListPeerItemShimmering? = nil, displayDecorations: Bool = true, disableInteractiveTransitionIfNecessary: Bool = false, storyStats: PeerStoryStats? = nil, openStories: ((UIView) -> Void)? = nil) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
@@ -393,6 +395,8 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
         self.shimmering = shimmering
         self.displayDecorations = displayDecorations
         self.disableInteractiveTransitionIfNecessary = disableInteractiveTransitionIfNecessary
+        self.storyStats = storyStats
+        self.openStories = openStories
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -470,6 +474,8 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
     fileprivate let avatarNode: AvatarNode
     private var avatarIconComponent: EmojiStatusComponent?
     private var avatarIconView: ComponentView<Empty>?
+    
+    private var avatarButton: HighlightTrackingButton?
     
     private let titleNode: TextNode
     private let labelNode: TextNode
@@ -1250,6 +1256,22 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     let avatarFrame = CGRect(origin: CGPoint(x: params.leftInset + additionalLeftInset + revealOffset + editingOffset + 15.0, y: floorToScreenPixels((layout.contentSize.height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
                     transition.updateFrame(node: strongSelf.avatarNode, frame: avatarFrame)
                     
+                    if item.storyStats != nil {
+                        let avatarButton: HighlightTrackingButton
+                        if let current = strongSelf.avatarButton {
+                            avatarButton = current
+                        } else {
+                            avatarButton = HighlightTrackingButton()
+                            strongSelf.avatarButton = avatarButton
+                            strongSelf.containerNode.view.addSubview(avatarButton)
+                            avatarButton.addTarget(strongSelf, action: #selector(strongSelf.avatarButtonPressed), for: .touchUpInside)
+                        }
+                        avatarButton.frame = avatarFrame
+                    } else if let avatarButton = strongSelf.avatarButton {
+                        strongSelf.avatarButton = nil
+                        avatarButton.removeFromSuperview()
+                    }
+                    
                     if let switchValue = item.switchValue, case .leftCheck = switchValue.style {
                         let leftCheckNode: CheckNode
                         if let current = strongSelf.leftCheckNode {
@@ -1332,6 +1354,17 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                                 clipStyle = .roundedRect
                             }
                             strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: item.peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, clipStyle: clipStyle, synchronousLoad: synchronousLoad)
+                            strongSelf.avatarNode.setStoryStats(storyStats: item.storyStats.flatMap { storyStats in
+                                return AvatarNode.StoryStats(
+                                    totalCount: storyStats.totalCount,
+                                    unseenCount: storyStats.unseenCount,
+                                    hasUnseenCloseFriendsItems: storyStats.hasUnseenCloseFriends
+                                )
+                            }, presentationParams: AvatarNode.StoryPresentationParams(
+                                colors: AvatarNode.Colors(theme: item.presentationData.theme),
+                                lineWidth: 1.33,
+                                inactiveLineWidth: 1.33
+                            ), transition: .immediate)
                         }
                     }
                     
@@ -1443,10 +1476,14 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
     
     override public func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
         super.setHighlighted(highlighted, at: point, animated: animated)
-             
-        self.isHighlighted = highlighted
+        
+        if let avatarButton = self.avatarButton, avatarButton.bounds.contains(self.view.convert(point, to: avatarButton)) {
+            self.isHighlighted = false
+        } else {
+            self.isHighlighted = highlighted
             
-        self.updateIsHighlighted(transition: (animated && !highlighted) ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
+            self.updateIsHighlighted(transition: (animated && !highlighted) ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
+        }
     }
     
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
@@ -1513,7 +1550,11 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         
         transition.updateFrame(node: self.labelBadgeNode, frame: CGRect(origin: CGPoint(x: offset + params.width - rightLabelInset - badgeWidth, y: self.labelBadgeNode.frame.minY), size: CGSize(width: badgeWidth, height: badgeDiameter)))
         
-        transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + editingOffset + params.leftInset + 15.0, y: self.avatarNode.frame.minY), size: self.avatarNode.bounds.size))
+        let avatarFrame = CGRect(origin: CGPoint(x: revealOffset + editingOffset + params.leftInset + 15.0, y: self.avatarNode.frame.minY), size: self.avatarNode.bounds.size)
+        transition.updateFrame(node: self.avatarNode, frame: avatarFrame)
+        if let avatarButton = self.avatarButton {
+            avatarButton.frame = avatarFrame
+        }
         
         if let avatarIconComponentView = self.avatarIconView?.view {
             let avatarFrame = self.avatarNode.frame
@@ -1579,6 +1620,13 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             return true
         }
         return false
+    }
+    
+    @objc private func avatarButtonPressed() {
+        guard let item = self.layoutParams?.0 else {
+            return
+        }
+        item.openStories?(self.avatarNode.view)
     }
 }
 

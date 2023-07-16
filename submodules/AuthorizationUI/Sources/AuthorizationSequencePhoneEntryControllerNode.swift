@@ -128,8 +128,9 @@ private final class PhoneAndCountryNode: ASDisplayNode {
             if let strongSelf = self {
                 let _ = strongSelf.processNumberChange(number: strongSelf.phoneInputNode.number)
                                 
-                if strongSelf.hasCountry {
-                    strongSelf.hasNumberUpdated?(!strongSelf.phoneInputNode.codeAndNumber.2.isEmpty)
+                let isServiceNumber = strongSelf.phoneInputNode.number.hasPrefix("+999")
+                if strongSelf.hasCountry || isServiceNumber {
+                    strongSelf.hasNumberUpdated?(!strongSelf.phoneInputNode.codeAndNumber.2.isEmpty || isServiceNumber)
                 } else {
                     strongSelf.hasNumberUpdated?(false)
                 }

@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import LegacyComponents
 import TelegramPresentationData
@@ -48,10 +47,10 @@ private func getUserPeer(engine: TelegramEngine, peerId: EnginePeer.Id) -> Signa
     }
 }
 
-public func openAddPersonContactImpl(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+public func openAddPersonContactImpl(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void, completion: @escaping () -> Void = {}) {
     let _ = (getUserPeer(engine: context.engine, peerId: peerId)
     |> deliverOnMainQueue).start(next: { peer, statusSettings in
-        guard case let .user(user) = peer, let contactData = DeviceContactExtendedData(peer: user) else {
+        guard let peer, case let .user(user) = peer, let contactData = DeviceContactExtendedData(peer: peer) else {
             return
         }
         
@@ -62,8 +61,7 @@ public func openAddPersonContactImpl(context: AccountContext, updatedPresentatio
         
         pushController(deviceContactInfoController(context: context, updatedPresentationData: updatedPresentationData, subject: .create(peer: user, contactData: contactData, isSharing: true, shareViaException: shareViaException, completion: { peer, stableId, contactData in
             if let peer = peer as? TelegramUser {
-                if let phone = peer.phone, !phone.isEmpty {
-                }
+                completion()
                 
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 present(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.AddContact_StatusSuccess(EnginePeer(peer).compactDisplayTitle).string, true)), nil)

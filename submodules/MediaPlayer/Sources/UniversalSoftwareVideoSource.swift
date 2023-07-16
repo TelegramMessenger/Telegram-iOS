@@ -138,7 +138,7 @@ private final class UniversalSoftwareVideoSourceImpl {
         
         let ioBufferSize = 1 * 1024
         
-        guard let avIoContext = FFMpegAVIOContext(bufferSize: Int32(ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: readPacketCallback, writePacket: nil, seek: seekCallback) else {
+        guard let avIoContext = FFMpegAVIOContext(bufferSize: Int32(ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: readPacketCallback, writePacket: nil, seek: seekCallback, isSeekable: true) else {
             return nil
         }
         self.avIoContext = avIoContext

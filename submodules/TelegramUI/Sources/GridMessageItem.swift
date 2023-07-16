@@ -272,7 +272,7 @@ final class GridMessageItemNode: GridItemNode {
                         })
                         
                         if let duration = file.duration {
-                            let durationString = stringForDuration(duration)
+                            let durationString = stringForDuration(Int32(duration))
                             
                             var badgeContent: ChatMessageInteractiveMediaBadgeContent?
                             var mediaDownloadState: ChatMessageInteractiveMediaDownloadState?
@@ -380,7 +380,7 @@ final class GridMessageItemNode: GridItemNode {
         }
     }
     
-    func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    func transitionNode(id: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if self.messageId == id {
             let imageNode = self.imageNode
             return (self.imageNode, self.imageNode.bounds, { [weak self, weak imageNode] in

@@ -81,10 +81,27 @@ private enum MultipartFetchMasterLocation {
 
 private struct DownloadWrapper {
     let consumerId: Int64
+    let resourceId: String?
     let datacenterId: Int32
     let isCdn: Bool
     let network: Network
     let useMainConnection: Bool
+    
+    init(
+        consumerId: Int64,
+        resourceId: String?,
+        datacenterId: Int32,
+        isCdn: Bool,
+        network: Network,
+        useMainConnection: Bool
+    ) {
+        self.consumerId = consumerId
+        self.resourceId = resourceId
+        self.datacenterId = datacenterId
+        self.isCdn = isCdn
+        self.network = network
+        self.useMainConnection = useMainConnection
+    }
     
     func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: MediaResourceFetchTag?, continueInBackground: Bool) -> Signal<(T, NetworkResponseInfo), MTRpcError> {
         let target: MultiplexedRequestTarget
@@ -93,7 +110,7 @@ private struct DownloadWrapper {
         } else {
             target = .main(Int(self.datacenterId))
         }
-        return network.multiplexedRequestManager.requestWithAdditionalInfo(to: target, consumerId: self.consumerId, data: data, tag: tag, continueInBackground: continueInBackground)
+        return network.multiplexedRequestManager.requestWithAdditionalInfo(to: target, consumerId: self.consumerId, resourceId: self.resourceId, data: data, tag: tag, continueInBackground: continueInBackground)
         |> mapError { error, _ -> MTRpcError in
             return error
         }
@@ -473,6 +490,7 @@ private final class MultipartFetchManager {
     var completeSize: Int64?
     var completeSizeReported = false
     
+    let accountPeerId: PeerId
     let postbox: Postbox
     let network: Network
     let networkStatsContext: NetworkStatsContext?
@@ -505,14 +523,34 @@ private final class MultipartFetchManager {
     private var fetchSpeedRecords: [FetchSpeedRecord] = []
     private var totalFetchedByteCount: Int = 0
     
-    init(resource: TelegramMediaResource, parameters: MediaResourceFetchParameters?, size: Int64?, intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>, encryptionKey: SecretFileEncryptionKey?, decryptedSize: Int64?, location: MultipartFetchMasterLocation, postbox: Postbox, network: Network, networkStatsContext: NetworkStatsContext?, revalidationContext: MediaReferenceRevalidationContext?, partReady: @escaping (Int64, Data) -> Void, reportCompleteSize: @escaping (Int64) -> Void, finishWithError: @escaping (MediaResourceDataFetchError) -> Void, useMainConnection: Bool) {
+    init(resource: TelegramMediaResource, parameters: MediaResourceFetchParameters?, size: Int64?, intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>, encryptionKey: SecretFileEncryptionKey?, decryptedSize: Int64?, location: MultipartFetchMasterLocation, accountPeerId: PeerId, postbox: Postbox, network: Network, networkStatsContext: NetworkStatsContext?, revalidationContext: MediaReferenceRevalidationContext?, partReady: @escaping (Int64, Data) -> Void, reportCompleteSize: @escaping (Int64) -> Void, finishWithError: @escaping (MediaResourceDataFetchError) -> Void, useMainConnection: Bool) {
         self.resource = resource
         self.parameters = parameters
         self.consumerId = Int64.random(in: Int64.min ... Int64.max)
         self.useMainConnection = useMainConnection
         
         self.completeSize = size
-        if let size = size {
+        
+        var isStory = false
+        if let info = parameters?.info as? TelegramCloudMediaResourceFetchInfo {
+            switch info.reference {
+            case let .media(media, _):
+                if case .story = media {
+                    isStory = true
+                }
+            default:
+                break
+            }
+        }
+        
+        if isStory {
+            self.defaultPartSize = 512 * 1024
+            if let size = size, size > self.defaultPartSize {
+                self.parallelParts = 4
+            } else {
+                self.parallelParts = 1
+            }
+        } else if let size = size {
             if size <= 512 * 1024 {
                 self.defaultPartSize = 16 * 1024
                 self.parallelParts = 4 * 4
@@ -555,11 +593,12 @@ private final class MultipartFetchManager {
         }
         
         self.state = MultipartDownloadState(encryptionKey: encryptionKey, decryptedSize: decryptedSize)
+        self.accountPeerId = accountPeerId
         self.postbox = postbox
         self.network = network
         self.networkStatsContext = networkStatsContext
         self.revalidationContext = revalidationContext
-        self.source = .master(location: location, download: DownloadWrapper(consumerId: self.consumerId, datacenterId: location.datacenterId, isCdn: false, network: network, useMainConnection: self.useMainConnection))
+        self.source = .master(location: location, download: DownloadWrapper(consumerId: self.consumerId, resourceId: self.resource.id.stringRepresentation, datacenterId: location.datacenterId, isCdn: false, network: network, useMainConnection: self.useMainConnection))
         self.partReady = partReady
         self.reportCompleteSize = reportCompleteSize
         self.finishWithError = finishWithError
@@ -836,7 +875,7 @@ private final class MultipartFetchManager {
                             strongSelf.fetchingParts.removeAll()
                             
                             if let info = strongSelf.parameters?.info as? TelegramCloudMediaResourceFetchInfo, let revalidationContext = strongSelf.revalidationContext {
-                                strongSelf.revalidateMediaReferenceDisposable.set((revalidateMediaResourceReference(postbox: strongSelf.postbox, network: strongSelf.network, revalidationContext: revalidationContext, info: info, resource: strongSelf.resource)
+                                strongSelf.revalidateMediaReferenceDisposable.set((revalidateMediaResourceReference(accountPeerId: strongSelf.accountPeerId, postbox: strongSelf.postbox, network: strongSelf.network, revalidationContext: revalidationContext, info: info, resource: strongSelf.resource)
                                 |> deliverOn(strongSelf.queue)).start(next: { validationResult in
                                     if let strongSelf = self {
                                         strongSelf.revalidatingMediaReference = false
@@ -862,7 +901,7 @@ private final class MultipartFetchManager {
                         switch strongSelf.source {
                             case let .master(location, download):
                                 strongSelf.partAlignment = dataHashLength
-                            strongSelf.source = .cdn(masterDatacenterId: location.datacenterId, cdnDatacenterId: id, fileToken: token, key: key, iv: iv, download: DownloadWrapper(consumerId: strongSelf.consumerId, datacenterId: id, isCdn: true, network: strongSelf.network, useMainConnection: strongSelf.useMainConnection), masterDownload: download, hashSource: MultipartCdnHashSource(queue: strongSelf.queue, fileToken: token, hashes: partHashes, masterDownload: download, continueInBackground: strongSelf.continueInBackground))
+                            strongSelf.source = .cdn(masterDatacenterId: location.datacenterId, cdnDatacenterId: id, fileToken: token, key: key, iv: iv, download: DownloadWrapper(consumerId: strongSelf.consumerId, resourceId: strongSelf.resource.id.stringRepresentation, datacenterId: id, isCdn: true, network: strongSelf.network, useMainConnection: strongSelf.useMainConnection), masterDownload: download, hashSource: MultipartCdnHashSource(queue: strongSelf.queue, fileToken: token, hashes: partHashes, masterDownload: download, continueInBackground: strongSelf.continueInBackground))
                                 strongSelf.checkState()
                             case .cdn, .none:
                                 break
@@ -897,8 +936,9 @@ private final class MultipartFetchManager {
     }
 }
 
-public func standaloneMultipartFetch(postbox: Postbox, network: Network, resource: TelegramMediaResource, datacenterId: Int, size: Int64?, intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>, parameters: MediaResourceFetchParameters?, encryptionKey: SecretFileEncryptionKey? = nil, decryptedSize: Int32? = nil, continueInBackground: Bool = false, useMainConnection: Bool = false) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+public func standaloneMultipartFetch(accountPeerId: PeerId, postbox: Postbox, network: Network, resource: TelegramMediaResource, datacenterId: Int, size: Int64?, intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>, parameters: MediaResourceFetchParameters?, encryptionKey: SecretFileEncryptionKey? = nil, decryptedSize: Int32? = nil, continueInBackground: Bool = false, useMainConnection: Bool = false) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return multipartFetch(
+        accountPeerId: accountPeerId,
         postbox: postbox,
         network: network,
         mediaReferenceRevalidationContext: nil,
@@ -920,7 +960,16 @@ public func resourceFetchInfo(resource: TelegramMediaResource) -> MediaResourceF
     )
 }
 
+public func resourceFetchInfo(reference: MediaResourceReference) -> MediaResourceFetchInfo? {
+    return TelegramCloudMediaResourceFetchInfo(
+        reference: reference,
+        preferBackgroundReferenceRevalidation: false,
+        continueInBackground: false
+    )
+}
+
 private func multipartFetchV1(
+    accountPeerId: PeerId,
     postbox: Postbox,
     network: Network,
     mediaReferenceRevalidationContext: MediaReferenceRevalidationContext?,
@@ -992,7 +1041,7 @@ private func multipartFetchV1(
             subscriber.putNext(.reset)
         }
         
-        let manager = MultipartFetchManager(resource: resource, parameters: parameters, size: size, intervals: intervals, encryptionKey: encryptionKey, decryptedSize: decryptedSize, location: location, postbox: postbox, network: network, networkStatsContext: networkStatsContext, revalidationContext: mediaReferenceRevalidationContext, partReady: { dataOffset, data in
+        let manager = MultipartFetchManager(resource: resource, parameters: parameters, size: size, intervals: intervals, encryptionKey: encryptionKey, decryptedSize: decryptedSize, location: location, accountPeerId: accountPeerId, postbox: postbox, network: network, networkStatsContext: networkStatsContext, revalidationContext: mediaReferenceRevalidationContext, partReady: { dataOffset, data in
             subscriber.putNext(.dataPart(resourceOffset: dataOffset, data: data, range: 0 ..< Int64(data.count), complete: false))
         }, reportCompleteSize: { size in
             subscriber.putNext(.resourceSizeUpdated(size))
@@ -1013,6 +1062,7 @@ private func multipartFetchV1(
 }
 
 func multipartFetch(
+    accountPeerId: PeerId,
     postbox: Postbox,
     network: Network,
     mediaReferenceRevalidationContext: MediaReferenceRevalidationContext?,
@@ -1029,6 +1079,7 @@ func multipartFetch(
 ) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     if network.useExperimentalFeatures, let _ = resource as? TelegramCloudMediaResource, !(resource is SecretFileMediaResource) {
         return multipartFetchV2(
+            accountPeerId: accountPeerId,
             postbox: postbox,
             network: network,
             mediaReferenceRevalidationContext: mediaReferenceRevalidationContext,
@@ -1044,6 +1095,7 @@ func multipartFetch(
         )
     }
     return multipartFetchV1(
+        accountPeerId: accountPeerId,
         postbox: postbox,
         network: network,
         mediaReferenceRevalidationContext: mediaReferenceRevalidationContext,

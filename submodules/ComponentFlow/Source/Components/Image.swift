@@ -4,13 +4,19 @@ import UIKit
 public final class Image: Component {
     public let image: UIImage?
     public let tintColor: UIColor?
+    public let size: CGSize?
+    public let contentMode: UIImageView.ContentMode
 
     public init(
         image: UIImage?,
-        tintColor: UIColor? = nil
+        tintColor: UIColor? = nil,
+        size: CGSize? = nil,
+        contentMode: UIImageView.ContentMode = .scaleToFill
     ) {
         self.image = image
         self.tintColor = tintColor
+        self.size = size
+        self.contentMode = contentMode
     }
 
     public static func ==(lhs: Image, rhs: Image) -> Bool {
@@ -18,6 +24,12 @@ public final class Image: Component {
             return false
         }
         if lhs.tintColor != rhs.tintColor {
+            return false
+        }
+        if lhs.size != rhs.size {
+            return false
+        }
+        if lhs.contentMode != rhs.contentMode {
             return false
         }
         return true
@@ -35,8 +47,9 @@ public final class Image: Component {
         func update(component: Image, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.image = component.image
             self.tintColor = component.tintColor
+            self.contentMode = component.contentMode
 
-            return availableSize
+            return component.size ?? availableSize
         }
     }
 

@@ -338,7 +338,7 @@ func messageMediaEditingOptions(message: Message) -> MessageMediaEditingOptions 
                         return []
                     case .Animated:
                         return []
-                    case let .Video(_, _, flags):
+                    case let .Video(_, _, flags, _):
                         if flags.contains(.instantRoundVideo) {
                             return []
                         } else {
@@ -457,9 +457,6 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Info, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
         }, iconSource: nil, action: { _, f in
-            /*c.dismiss(completion: {
-                controllerInteraction.navigationController()?.pushViewController(AdInfoScreen(context: context))
-            })*/
             f(.dismissWithoutContent)
             controllerInteraction.navigationController()?.pushViewController(AdInfoScreen(context: context))
         })))
@@ -625,6 +622,14 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
     }
     
+    for media in messages[0].media {
+        if let story = media as? TelegramMediaStory {
+            if let story = message.associatedStories[story.storyId], story.data.isEmpty {
+                canPin = false
+            }
+        }
+    }
+    
     var loadStickerSaveStatusSignal: Signal<Bool?, NoError> = .single(nil)
     if let loadStickerSaveStatus = loadStickerSaveStatus {
         loadStickerSaveStatusSignal = context.engine.stickers.isStickerSaved(id: loadStickerSaveStatus)
@@ -784,7 +789,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                         
                                         let id = Int64.random(in: Int64.min ... Int64.max)
                                         let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: logPath, randomId: id), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: "CallStats.log")])
-                                        let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+                                        let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
                                         
                                         let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
                                     }
@@ -1943,6 +1948,10 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                         }
                     } else if let action = media as? TelegramMediaAction, case .phoneCall = action.action {
                         optionsMap[id]!.insert(.rateCall)
+                    } else if let story = media as? TelegramMediaStory {
+                        if let story = message.associatedStories[story.storyId], story.data.isEmpty {
+                            isShareProtected = true
+                        }
                     }
                 }
                 if id.namespace == Namespaces.Message.ScheduledCloud {
@@ -1962,7 +1971,7 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                         optionsMap[id]!.insert(.deleteLocally)
                     }
                 } else if id.peerId == accountPeerId {
-                    if !(message.flags.isSending || message.flags.contains(.Failed)) {
+                    if !(message.flags.isSending || message.flags.contains(.Failed)) && !isShareProtected {
                         optionsMap[id]!.insert(.forward)
                     }
                     optionsMap[id]!.insert(.deleteLocally)
@@ -2006,7 +2015,7 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                                 banPeer = nil
                             }
                         }
-                        if !message.containsSecretMedia && !isAction {
+                        if !message.containsSecretMedia && !isAction && !isShareProtected {
                             if message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.isCopyProtected() {
                                 if !(message.flags.isSending || message.flags.contains(.Failed)) {
                                     optionsMap[id]!.insert(.forward)
@@ -2023,7 +2032,7 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                         }
                     } else if let group = peer as? TelegramGroup {
                         if message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia {
-                            if !isAction && !message.isCopyProtected() {
+                            if !isAction && !message.isCopyProtected() && !isShareProtected {
                                 if !(message.flags.isSending || message.flags.contains(.Failed)) {
                                     optionsMap[id]!.insert(.forward)
                                 }
@@ -2057,7 +2066,7 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                             }
                         }
                     } else if let user = peer as? TelegramUser {
-                        if !isScheduled && message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia && !isAction && !message.id.peerId.isReplies && !message.isCopyProtected() {
+                        if !isScheduled && message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia && !isAction && !message.id.peerId.isReplies && !message.isCopyProtected() && !isShareProtected {
                             if !(message.flags.isSending || message.flags.contains(.Failed)) {
                                 optionsMap[id]!.insert(.forward)
                             }

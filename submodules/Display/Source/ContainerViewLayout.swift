@@ -160,6 +160,6 @@ public extension ContainerViewLayout {
     }
     
     var standardInputHeight: CGFloat {
-        return self.deviceMetrics.keyboardHeight(inLandscape: self.orientation == .landscape) + self.deviceMetrics.predictiveInputHeight(inLandscape: self.orientation == .landscape)
+        return self.deviceMetrics.standardInputHeight(inLandscape: self.orientation == .landscape)
     }
 }

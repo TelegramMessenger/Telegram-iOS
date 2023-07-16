@@ -1,4 +1,120 @@
 public extension Api {
+    enum InputWebFileLocation: TypeConstructorDescription {
+        case inputWebFileAudioAlbumThumbLocation(flags: Int32, document: Api.InputDocument?, title: String?, performer: String?)
+        case inputWebFileGeoPointLocation(geoPoint: Api.InputGeoPoint, accessHash: Int64, w: Int32, h: Int32, zoom: Int32, scale: Int32)
+        case inputWebFileLocation(url: String, accessHash: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputWebFileAudioAlbumThumbLocation(let flags, let document, let title, let performer):
+                    if boxed {
+                        buffer.appendInt32(-193992412)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {document!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(performer!, buffer: buffer, boxed: false)}
+                    break
+                case .inputWebFileGeoPointLocation(let geoPoint, let accessHash, let w, let h, let zoom, let scale):
+                    if boxed {
+                        buffer.appendInt32(-1625153079)
+                    }
+                    geoPoint.serialize(buffer, true)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeInt32(w, buffer: buffer, boxed: false)
+                    serializeInt32(h, buffer: buffer, boxed: false)
+                    serializeInt32(zoom, buffer: buffer, boxed: false)
+                    serializeInt32(scale, buffer: buffer, boxed: false)
+                    break
+                case .inputWebFileLocation(let url, let accessHash):
+                    if boxed {
+                        buffer.appendInt32(-1036396922)
+                    }
+                    serializeString(url, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputWebFileAudioAlbumThumbLocation(let flags, let document, let title, let performer):
+                return ("inputWebFileAudioAlbumThumbLocation", [("flags", flags as Any), ("document", document as Any), ("title", title as Any), ("performer", performer as Any)])
+                case .inputWebFileGeoPointLocation(let geoPoint, let accessHash, let w, let h, let zoom, let scale):
+                return ("inputWebFileGeoPointLocation", [("geoPoint", geoPoint as Any), ("accessHash", accessHash as Any), ("w", w as Any), ("h", h as Any), ("zoom", zoom as Any), ("scale", scale as Any)])
+                case .inputWebFileLocation(let url, let accessHash):
+                return ("inputWebFileLocation", [("url", url as Any), ("accessHash", accessHash as Any)])
+    }
+    }
+    
+        public static func parse_inputWebFileAudioAlbumThumbLocation(_ reader: BufferReader) -> InputWebFileLocation? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.InputDocument?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.InputDocument
+            } }
+            var _3: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_3 = parseString(reader) }
+            var _4: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_4 = parseString(reader) }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.InputWebFileLocation.inputWebFileAudioAlbumThumbLocation(flags: _1!, document: _2, title: _3, performer: _4)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputWebFileGeoPointLocation(_ reader: BufferReader) -> InputWebFileLocation? {
+            var _1: Api.InputGeoPoint?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputGeoPoint
+            }
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: Int32?
+            _6 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.InputWebFileLocation.inputWebFileGeoPointLocation(geoPoint: _1!, accessHash: _2!, w: _3!, h: _4!, zoom: _5!, scale: _6!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputWebFileLocation(_ reader: BufferReader) -> InputWebFileLocation? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputWebFileLocation.inputWebFileLocation(url: _1!, accessHash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum Invoice: TypeConstructorDescription {
         case invoice(flags: Int32, currency: String, prices: [Api.LabeledPrice], maxTipAmount: Int64?, suggestedTipAmounts: [Int64]?, recurringTermsUrl: String?)
     
@@ -992,54 +1108,6 @@ public extension Api {
             let _c8 = _8 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
                 return Api.LangPackString.langPackStringPluralized(flags: _1!, key: _2!, zeroValue: _3, oneValue: _4, twoValue: _5, fewValue: _6, manyValue: _7, otherValue: _8!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum MaskCoords: TypeConstructorDescription {
-        case maskCoords(n: Int32, x: Double, y: Double, zoom: Double)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .maskCoords(let n, let x, let y, let zoom):
-                    if boxed {
-                        buffer.appendInt32(-1361650766)
-                    }
-                    serializeInt32(n, buffer: buffer, boxed: false)
-                    serializeDouble(x, buffer: buffer, boxed: false)
-                    serializeDouble(y, buffer: buffer, boxed: false)
-                    serializeDouble(zoom, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .maskCoords(let n, let x, let y, let zoom):
-                return ("maskCoords", [("n", n as Any), ("x", x as Any), ("y", y as Any), ("zoom", zoom as Any)])
-    }
-    }
-    
-        public static func parse_maskCoords(_ reader: BufferReader) -> MaskCoords? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Double?
-            _2 = reader.readDouble()
-            var _3: Double?
-            _3 = reader.readDouble()
-            var _4: Double?
-            _4 = reader.readDouble()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.MaskCoords.maskCoords(n: _1!, x: _2!, y: _3!, zoom: _4!)
             }
             else {
                 return nil

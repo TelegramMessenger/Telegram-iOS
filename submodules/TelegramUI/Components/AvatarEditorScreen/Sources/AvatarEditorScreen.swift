@@ -23,6 +23,7 @@ import DrawingUI
 import SolidRoundedButtonComponent
 import AnimationCache
 import EmojiTextAttachmentView
+import MediaEditor
 
 enum AvatarBackground: Equatable {
     case gradient([UInt32])
@@ -686,7 +687,9 @@ final class AvatarEditorScreenComponent: Component {
                 externalBackground: nil,
                 externalExpansionView: nil,
                 useOpaqueTheme: true,
-                hideBackground: true
+                hideBackground: true,
+                stateContext: nil,
+                addImage: nil
             )
             
             data.stickers?.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
@@ -813,7 +816,9 @@ final class AvatarEditorScreenComponent: Component {
                 externalBackground: nil,
                 externalExpansionView: nil,
                 useOpaqueTheme: true,
-                hideBackground: true
+                hideBackground: true,
+                stateContext: nil,
+                addImage: nil
             )
             
             self.state?.updated(transition: .immediate)
@@ -1269,7 +1274,8 @@ final class AvatarEditorScreenComponent: Component {
                         inputHeight: 0.0,
                         displayBottomPanel: false,
                         isExpanded: true,
-                        clipContentToTopPanel: false
+                        clipContentToTopPanel: false,
+                        useExternalSearchContainer: false
                     )),
                     environment: {},
                     containerSize: CGSize(width: keyboardContainerFrame.size.width, height: keyboardContainerFrame.size.height - 6.0 + (isSearchActive ? 40.0 : 0.0))
@@ -1407,7 +1413,7 @@ final class AvatarEditorScreenComponent: Component {
                     
                     let colors: [NSNumber] = state.selectedBackground.colors.map { Int32(bitPattern: $0) as NSNumber }
                     
-                    let entitiesData = DrawingEntitiesView.encodeEntities([entity])
+                    let entitiesData = DrawingEntitiesView.encodeEntitiesData([entity])
                     
                     let paintingData = TGPaintingData(
                         drawing: nil,

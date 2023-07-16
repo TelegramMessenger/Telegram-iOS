@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -18,11 +17,11 @@ import ContactListUI
 import ChatListSearchItemHeader
 
 private final class ChannelMembersSearchInteraction {
-    let openPeer: (Peer, RenderedChannelParticipant?) -> Void
+    let openPeer: (EnginePeer, RenderedChannelParticipant?) -> Void
     let copyInviteLink: () -> Void
     
     init(
-        openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void,
+        openPeer: @escaping (EnginePeer, RenderedChannelParticipant?) -> Void,
         copyInviteLink: @escaping () -> Void
     ) {
         self.openPeer = openPeer
@@ -32,14 +31,14 @@ private final class ChannelMembersSearchInteraction {
 
 private enum ChannelMembersSearchEntryId: Hashable {
     case copyInviteLink
-    case peer(PeerId)
-    case contact(PeerId)
+    case peer(EnginePeer.Id)
+    case contact(EnginePeer.Id)
 }
 
 private enum ChannelMembersSearchEntry: Comparable, Identifiable {
     case copyInviteLink
     case peer(Int, RenderedChannelParticipant, ContactsPeerItemEditing, String?, Bool, Bool, Bool)
-    case contact(Int, Peer, TelegramUserPresence?)
+    case contact(Int, EnginePeer, TelegramUserPresence?)
     
     var stableId: ChannelMembersSearchEntryId {
         switch self {
@@ -71,7 +70,7 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
                 if lhsIndex != rhsIndex {
                     return false
                 }
-                if !lhsPeer.isEqual(rhsPeer) {
+                if lhsPeer != rhsPeer {
                     return false
                 }
                 if lhsPresence != rhsPresence {
@@ -146,7 +145,7 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
             }
             
             return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: EnginePeer(participant.peer), chatPeer: nil), status: status, enabled: enabled, selection: .none, editing: editing, index: nil, header: ChatListSearchItemHeader(type: headerType, theme: presentationData.theme, strings: presentationData.strings), action: { _ in
-                interaction.openPeer(participant.peer, participant)
+                interaction.openPeer(EnginePeer(participant.peer), participant)
             })
         case let .contact(_, peer, presence):
             let status: ContactsPeerItemStatus
@@ -156,7 +155,7 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
                 status = .none
             }
             
-            return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: EnginePeer(peer), chatPeer: nil), status: status, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .contacts, theme: presentationData.theme, strings: presentationData.strings), action: { _ in
+            return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: peer, chatPeer: nil), status: status, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .contacts, theme: presentationData.theme, strings: presentationData.strings), action: { _ in
                 interaction.openPeer(peer, nil)
             })
         }
@@ -182,7 +181,7 @@ private func preparedTransition(from fromEntries: [ChannelMembersSearchEntry]?, 
 
 class ChannelMembersSearchControllerNode: ASDisplayNode {
     private let context: AccountContext
-    private let peerId: PeerId
+    private let peerId: EnginePeer.Id
     private let mode: ChannelMembersSearchControllerMode
     private let filters: [ChannelMembersSearchFilter]
     let listNode: ListView
@@ -196,7 +195,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
     
     var requestActivateSearch: (() -> Void)?
     var requestDeactivateSearch: (() -> Void)?
-    var requestOpenPeerFromSearch: ((Peer, RenderedChannelParticipant?) -> Void)?
+    var requestOpenPeerFromSearch: ((EnginePeer, RenderedChannelParticipant?) -> Void)?
     var requestCopyInviteLink: (() -> Void)?
     var pushController: ((ViewController) -> Void)?
     
@@ -206,7 +205,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
     private var disposable: Disposable?
     private var listControl: PeerChannelMemberCategoryControl?
     
-    init(context: AccountContext, presentationData: PresentationData, forceTheme: PresentationTheme?, peerId: PeerId, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter]) {
+    init(context: AccountContext, presentationData: PresentationData, forceTheme: PresentationTheme?, peerId: EnginePeer.Id, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter]) {
         self.context = context
         self.listNode = ListView()
         self.peerId = peerId
@@ -265,12 +264,12 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                 guard let cachedData = peerView.cachedData as? CachedGroupData, let participants = cachedData.participants else {
                     return
                 }
-                var creatorPeer: Peer?
+                var creatorPeer: EnginePeer?
                 for participant in participants.participants {
                     if let peer = peerView.peers[participant.peerId] {
                         switch participant {
                             case .creator:
-                                creatorPeer = peer
+                                creatorPeer = EnginePeer(peer)
                             default:
                                 break
                         }
@@ -397,14 +396,14 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                         case .creator:
                             renderedParticipant = RenderedChannelParticipant(participant: .creator(id: peer.id, adminInfo: nil, rank: nil), peer: peer, presences: peerView.peerPresences)
                         case .admin:
-                            var peers: [PeerId: Peer] = [:]
+                            var peers: [EnginePeer.Id: EnginePeer] = [:]
                             peers[creator.id] = creator
-                            peers[peer.id] = peer
-                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: TelegramChatAdminRightsFlags.peerSpecific(peer: EnginePeer(mainPeer))), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers, presences: peerView.peerPresences)
+                            peers[peer.id] = EnginePeer(peer)
+                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: TelegramChatAdminRightsFlags.peerSpecific(peer: EnginePeer(mainPeer))), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers.mapValues({ $0._asPeer() }), presences: peerView.peerPresences)
                         case .member:
-                            var peers: [PeerId: Peer] = [:]
-                            peers[peer.id] = peer
-                            renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil), peer: peer, peers: peers, presences: peerView.peerPresences)
+                            var peers: [EnginePeer.Id: EnginePeer] = [:]
+                            peers[peer.id] = EnginePeer(peer)
+                            renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil), peer: peer, peers: peers.mapValues({ $0._asPeer() }), presences: peerView.peerPresences)
                     }
                     
                     entries.append(.peer(index, renderedParticipant, ContactsPeerItemEditing(editable: false, editing: false, revealed: false), label, enabled, false, false))
@@ -419,7 +418,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     }
                 }) {
                     for peer in contactsView.peers {
-                        entries.append(ChannelMembersSearchEntry.contact(index, peer._asPeer(), contactsView.presences[peer.id]?._asPresence()))
+                        entries.append(ChannelMembersSearchEntry.contact(index, peer, contactsView.presences[peer.id]?._asPresence()))
                         index += 1
                     }
                 }
@@ -477,7 +476,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                 }
                 
                 var index = 0
-                var existingPeersIds = Set<PeerId>()
+                var existingPeersIds = Set<EnginePeer.Id>()
                 if case .inviteToCall = mode, canInviteByLink, !filters.contains(where: { filter in
                     if case .excludeNonMembers = filter {
                         return true
@@ -596,7 +595,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     }
                 }) {
                     for peer in contactsView.peers {
-                        entries.append(ChannelMembersSearchEntry.contact(index, peer._asPeer(), contactsView.presences[peer.id]?._asPresence()))
+                        entries.append(ChannelMembersSearchEntry.contact(index, peer, contactsView.presences[peer.id]?._asPresence()))
                         index += 1
                     }
                 }

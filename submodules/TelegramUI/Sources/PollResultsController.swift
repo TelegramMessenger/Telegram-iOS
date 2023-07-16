@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -16,10 +15,10 @@ private final class PollResultsControllerArguments {
     let context: AccountContext
     let collapseOption: (Data) -> Void
     let expandOption: (Data) -> Void
-    let openPeer: (RenderedPeer) -> Void
+    let openPeer: (EngineRenderedPeer) -> Void
     let expandSolution: () -> Void
     
-    init(context: AccountContext, collapseOption: @escaping (Data) -> Void, expandOption: @escaping (Data) -> Void, openPeer: @escaping (RenderedPeer) -> Void, expandSolution: @escaping () -> Void) {
+    init(context: AccountContext, collapseOption: @escaping (Data) -> Void, expandOption: @escaping (Data) -> Void, openPeer: @escaping (EngineRenderedPeer) -> Void, expandSolution: @escaping () -> Void) {
         self.context = context
         self.collapseOption = collapseOption
         self.expandOption = expandOption
@@ -67,7 +66,7 @@ private enum PollResultsItemTag: ItemListItemTag, Equatable {
 
 private enum PollResultsEntry: ItemListNodeEntry {
     case text(String)
-    case optionPeer(optionId: Int, index: Int, peer: RenderedPeer, optionText: String, optionAdditionalText: String, optionCount: Int32, optionExpanded: Bool, opaqueIdentifier: Data, shimmeringAlternation: Int?, isFirstInOption: Bool)
+    case optionPeer(optionId: Int, index: Int, peer: EngineRenderedPeer, optionText: String, optionAdditionalText: String, optionCount: Int32, optionExpanded: Bool, opaqueIdentifier: Data, shimmeringAlternation: Int?, isFirstInOption: Bool)
     case optionExpand(optionId: Int, opaqueIdentifier: Data, text: String, enabled: Bool)
     case solutionHeader(String)
     case solutionText(String)
@@ -187,7 +186,7 @@ private enum PollResultsEntry: ItemListNodeEntry {
             let header = ItemListPeerItemHeader(theme: presentationData.theme, strings: presentationData.strings, text: optionText, additionalText: optionAdditionalText, actionTitle: optionExpanded ? presentationData.strings.PollResults_Collapse : presentationData.strings.MessagePoll_VotedCount(optionCount), id: Int64(optionId), action: optionExpanded ? {
                 arguments.collapseOption(opaqueIdentifier)
             } : nil)
-            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: EnginePeer(peer.peers[peer.peerId]!), presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: shimmeringAlternation == nil, sectionId: self.section, action: {
+            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: peer.peers[peer.peerId]!, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: shimmeringAlternation == nil, sectionId: self.section, action: {
                 arguments.openPeer(peer)
             }, setPeerIdWithRevealedOptions: { _, _ in
             }, removePeer: { _ in
@@ -251,8 +250,8 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
                     displayCount = Int(voterCount)
                 }
                 for peerIndex in 0 ..< displayCount {
-                    let fakeUser = TelegramUser(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [])
-                    let peer = RenderedPeer(peer: fakeUser)
+                    let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil)
+                    let peer = EngineRenderedPeer(peer: EnginePeer(fakeUser))
                     entries.append(.optionPeer(optionId: i, index: peerIndex, peer: peer, optionText: optionTextHeader, optionAdditionalText: optionAdditionalTextHeader, optionCount: voterCount, optionExpanded: false, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: peerIndex % 2, isFirstInOption: peerIndex == 0))
                 }
                 if displayCount < Int(voterCount) {
@@ -295,7 +294,7 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
                     if peerIndex >= displayCount {
                         break inner
                     }
-                    entries.append(.optionPeer(optionId: i, index: peerIndex, peer: peer, optionText: optionTextHeader, optionAdditionalText: optionAdditionalTextHeader, optionCount: Int32(count), optionExpanded: optionExpandedAtCount != nil, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: nil, isFirstInOption: peerIndex == 0))
+                    entries.append(.optionPeer(optionId: i, index: peerIndex, peer: EngineRenderedPeer(peer), optionText: optionTextHeader, optionAdditionalText: optionAdditionalTextHeader, optionCount: Int32(count), optionExpanded: optionExpandedAtCount != nil, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: nil, isFirstInOption: peerIndex == 0))
                     peerIndex += 1
                 }
                 
@@ -310,7 +309,7 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
     return entries
 }
 
-public func pollResultsController(context: AccountContext, messageId: MessageId, poll: TelegramMediaPoll, focusOnOptionWithOpaqueIdentifier: Data? = nil) -> ViewController {
+public func pollResultsController(context: AccountContext, messageId: EngineMessage.Id, poll: TelegramMediaPoll, focusOnOptionWithOpaqueIdentifier: Data? = nil) -> ViewController {
     let statePromise = ValuePromise(PollResultsControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: PollResultsControllerState())
     let updateState: ((PollResultsControllerState) -> PollResultsControllerState) -> Void = { f in
@@ -349,7 +348,7 @@ public func pollResultsController(context: AccountContext, messageId: MessageId,
         })
     }, openPeer: { peer in
         if let peer = peer.peers[peer.peerId] {
-            if let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+            if let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
                 pushControllerImpl?(controller)
             }
         }

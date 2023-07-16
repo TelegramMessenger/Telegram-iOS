@@ -278,27 +278,30 @@ public extension Api {
 }
 public extension Api {
     enum InputPeerNotifySettings: TypeConstructorDescription {
-        case inputPeerNotifySettings(flags: Int32, showPreviews: Api.Bool?, silent: Api.Bool?, muteUntil: Int32?, sound: Api.NotificationSound?)
+        case inputPeerNotifySettings(flags: Int32, showPreviews: Api.Bool?, silent: Api.Bool?, muteUntil: Int32?, sound: Api.NotificationSound?, storiesMuted: Api.Bool?, storiesHideSender: Api.Bool?, storiesSound: Api.NotificationSound?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .inputPeerNotifySettings(let flags, let showPreviews, let silent, let muteUntil, let sound):
+                case .inputPeerNotifySettings(let flags, let showPreviews, let silent, let muteUntil, let sound, let storiesMuted, let storiesHideSender, let storiesSound):
                     if boxed {
-                        buffer.appendInt32(-551616469)
+                        buffer.appendInt32(-892638494)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {showPreviews!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 1) != 0 {silent!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(muteUntil!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 3) != 0 {sound!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 6) != 0 {storiesMuted!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 7) != 0 {storiesHideSender!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 8) != 0 {storiesSound!.serialize(buffer, true)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .inputPeerNotifySettings(let flags, let showPreviews, let silent, let muteUntil, let sound):
-                return ("inputPeerNotifySettings", [("flags", flags as Any), ("showPreviews", showPreviews as Any), ("silent", silent as Any), ("muteUntil", muteUntil as Any), ("sound", sound as Any)])
+                case .inputPeerNotifySettings(let flags, let showPreviews, let silent, let muteUntil, let sound, let storiesMuted, let storiesHideSender, let storiesSound):
+                return ("inputPeerNotifySettings", [("flags", flags as Any), ("showPreviews", showPreviews as Any), ("silent", silent as Any), ("muteUntil", muteUntil as Any), ("sound", sound as Any), ("storiesMuted", storiesMuted as Any), ("storiesHideSender", storiesHideSender as Any), ("storiesSound", storiesSound as Any)])
     }
     }
     
@@ -319,13 +322,28 @@ public extension Api {
             if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
                 _5 = Api.parse(reader, signature: signature) as? Api.NotificationSound
             } }
+            var _6: Api.Bool?
+            if Int(_1!) & Int(1 << 6) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.Bool
+            } }
+            var _7: Api.Bool?
+            if Int(_1!) & Int(1 << 7) != 0 {if let signature = reader.readInt32() {
+                _7 = Api.parse(reader, signature: signature) as? Api.Bool
+            } }
+            var _8: Api.NotificationSound?
+            if Int(_1!) & Int(1 << 8) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.NotificationSound
+            } }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: _1!, showPreviews: _2, silent: _3, muteUntil: _4, sound: _5)
+            let _c6 = (Int(_1!) & Int(1 << 6) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 7) == 0) || _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 8) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: _1!, showPreviews: _2, silent: _3, muteUntil: _4, sound: _5, storiesMuted: _6, storiesHideSender: _7, storiesSound: _8)
             }
             else {
                 return nil
@@ -432,6 +450,7 @@ public extension Api {
 }
 public extension Api {
     enum InputPrivacyKey: TypeConstructorDescription {
+        case inputPrivacyKeyAbout
         case inputPrivacyKeyAddedByPhone
         case inputPrivacyKeyChatInvite
         case inputPrivacyKeyForwards
@@ -444,6 +463,12 @@ public extension Api {
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
+                case .inputPrivacyKeyAbout:
+                    if boxed {
+                        buffer.appendInt32(941870144)
+                    }
+                    
+                    break
                 case .inputPrivacyKeyAddedByPhone:
                     if boxed {
                         buffer.appendInt32(-786326563)
@@ -503,6 +528,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
+                case .inputPrivacyKeyAbout:
+                return ("inputPrivacyKeyAbout", [])
                 case .inputPrivacyKeyAddedByPhone:
                 return ("inputPrivacyKeyAddedByPhone", [])
                 case .inputPrivacyKeyChatInvite:
@@ -524,6 +551,9 @@ public extension Api {
     }
     }
     
+        public static func parse_inputPrivacyKeyAbout(_ reader: BufferReader) -> InputPrivacyKey? {
+            return Api.InputPrivacyKey.inputPrivacyKeyAbout
+        }
         public static func parse_inputPrivacyKeyAddedByPhone(_ reader: BufferReader) -> InputPrivacyKey? {
             return Api.InputPrivacyKey.inputPrivacyKeyAddedByPhone
         }
@@ -558,6 +588,7 @@ public extension Api {
     enum InputPrivacyRule: TypeConstructorDescription {
         case inputPrivacyValueAllowAll
         case inputPrivacyValueAllowChatParticipants(chats: [Int64])
+        case inputPrivacyValueAllowCloseFriends
         case inputPrivacyValueAllowContacts
         case inputPrivacyValueAllowUsers(users: [Api.InputUser])
         case inputPrivacyValueDisallowAll
@@ -582,6 +613,12 @@ public extension Api {
                     for item in chats {
                         serializeInt64(item, buffer: buffer, boxed: false)
                     }
+                    break
+                case .inputPrivacyValueAllowCloseFriends:
+                    if boxed {
+                        buffer.appendInt32(793067081)
+                    }
+                    
                     break
                 case .inputPrivacyValueAllowContacts:
                     if boxed {
@@ -640,6 +677,8 @@ public extension Api {
                 return ("inputPrivacyValueAllowAll", [])
                 case .inputPrivacyValueAllowChatParticipants(let chats):
                 return ("inputPrivacyValueAllowChatParticipants", [("chats", chats as Any)])
+                case .inputPrivacyValueAllowCloseFriends:
+                return ("inputPrivacyValueAllowCloseFriends", [])
                 case .inputPrivacyValueAllowContacts:
                 return ("inputPrivacyValueAllowContacts", [])
                 case .inputPrivacyValueAllowUsers(let users):
@@ -670,6 +709,9 @@ public extension Api {
             else {
                 return nil
             }
+        }
+        public static func parse_inputPrivacyValueAllowCloseFriends(_ reader: BufferReader) -> InputPrivacyRule? {
+            return Api.InputPrivacyRule.inputPrivacyValueAllowCloseFriends
         }
         public static func parse_inputPrivacyValueAllowContacts(_ reader: BufferReader) -> InputPrivacyRule? {
             return Api.InputPrivacyRule.inputPrivacyValueAllowContacts

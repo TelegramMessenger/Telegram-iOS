@@ -577,7 +577,7 @@ private final class RecurrentConfirmationNode: ASDisplayNode {
         
         let checkSize = CGSize(width: 22.0, height: 22.0)
         
-        self.textNode.linkHighlightColor = presentationData.theme.list.itemAccentColor.withAlphaComponent(0.3)
+        self.textNode.linkHighlightColor = presentationData.theme.list.itemAccentColor.withAlphaComponent(0.2)
         
         let attributedText = parseMarkdownIntoAttributedString(
             presentationData.strings.Bot_AccepRecurrentInfo(botName).string,

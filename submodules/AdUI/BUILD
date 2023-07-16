@@ -17,6 +17,7 @@ swift_library(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/AccountContext:AccountContext",
+        "//submodules/Markdown",
     ],
     visibility = [
         "//visibility:public",

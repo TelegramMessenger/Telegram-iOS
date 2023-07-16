@@ -121,6 +121,7 @@ public final class EntityKeyboardComponent: Component {
     public let displayBottomPanel: Bool
     public let isExpanded: Bool
     public let clipContentToTopPanel: Bool
+    public let useExternalSearchContainer: Bool
     public let hidePanels: Bool
     
     public init(
@@ -153,6 +154,7 @@ public final class EntityKeyboardComponent: Component {
         displayBottomPanel: Bool,
         isExpanded: Bool,
         clipContentToTopPanel: Bool,
+        useExternalSearchContainer: Bool,
         hidePanels: Bool = false
     ) {
         self.theme = theme
@@ -184,6 +186,7 @@ public final class EntityKeyboardComponent: Component {
         self.displayBottomPanel = displayBottomPanel
         self.isExpanded = isExpanded
         self.clipContentToTopPanel = clipContentToTopPanel
+        self.useExternalSearchContainer = useExternalSearchContainer
         self.hidePanels = hidePanels
     }
     
@@ -246,6 +249,9 @@ public final class EntityKeyboardComponent: Component {
             return false
         }
         if lhs.clipContentToTopPanel != rhs.clipContentToTopPanel {
+            return false
+        }
+        if lhs.useExternalSearchContainer != rhs.useExternalSearchContainer {
             return false
         }
         
@@ -582,6 +588,18 @@ public final class EntityKeyboardComponent: Component {
                         }
                     ).minSize(CGSize(width: 38.0, height: 38.0)))))
                 }
+                if let addImage = component.stickerContent?.inputInteractionHolder.inputInteraction?.addImage {
+                    contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(Button(
+                        content: AnyComponent(BundleIconComponent(
+                            name: "Media Editor/AddImage",
+                            tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
+                            maxSize: nil
+                        )),
+                        action: {
+                            addImage()
+                        }
+                    ).minSize(CGSize(width: 38.0, height: 38.0)))))
+                }
             }
             
             let deleteBackwards = component.emojiContent?.inputInteractionHolder.inputInteraction?.deleteBackwards
@@ -683,6 +701,17 @@ public final class EntityKeyboardComponent: Component {
                             component.switchToTextInput()
                         }
                     ).minSize(CGSize(width: 38.0, height: 38.0)))))
+                } else if let addImage = component.emojiContent?.inputInteractionHolder.inputInteraction?.addImage {
+                    contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "emoji", component: AnyComponent(Button(
+                        content: AnyComponent(BundleIconComponent(
+                            name: "Media Editor/AddImage",
+                            tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
+                            maxSize: nil
+                        )),
+                        action: {
+                            addImage()
+                        }
+                    ).minSize(CGSize(width: 38.0, height: 38.0)))))
                 }
             }
                             
@@ -714,10 +743,11 @@ public final class EntityKeyboardComponent: Component {
                 panelHideBehavior = .hideOnScroll
             }
             
+            let isContentInFocus = component.isContentInFocus && self.searchComponent == nil
             let pagerSize = self.pagerView.update(
                 transition: transition,
                 component: AnyComponent(PagerComponent(
-                    isContentInFocus: component.isContentInFocus,
+                    isContentInFocus: isContentInFocus,
                     contentInsets: component.containerInsets,
                     contents: contents,
                     contentTopPanels: contentTopPanels,
@@ -772,7 +802,7 @@ public final class EntityKeyboardComponent: Component {
                     EntityKeyboardChildEnvironment(
                         theme: component.theme,
                         strings: component.strings,
-                        isContentInFocus: component.isContentInFocus,
+                        isContentInFocus: isContentInFocus,
                         getContentActiveItemUpdated: { id in
                             if id == AnyHashable("gifs") {
                                 return gifsContentItemIdUpdated
@@ -803,7 +833,7 @@ public final class EntityKeyboardComponent: Component {
                     searchView = ComponentHostView<EntitySearchContentEnvironment>()
                     self.searchView = searchView
                     self.addSubview(searchView)
-                    
+                                        
                     animateIn = true
                     component.topPanelExtensionUpdated(0.0, transition)
                 }
@@ -908,15 +938,20 @@ public final class EntityKeyboardComponent: Component {
                     contentType = .stickers
                 }
                 
-                self.searchComponent = EntitySearchContentComponent(
-                    makeContainerNode: {
-                        return component.makeSearchContainerNode(contentType)
-                    },
-                    dismissSearch: { [weak self] in
-                        self?.closeSearch()
-                    }
-                )
-                //self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                if component.useExternalSearchContainer, let containerNode = component.makeSearchContainerNode(contentType) {
+                    let controller = EntitySearchContainerController(containerNode: containerNode)
+                    self.component?.emojiContent?.inputInteractionHolder.inputInteraction?.pushController(controller)
+                } else {
+                    self.searchComponent = EntitySearchContentComponent(
+                        makeContainerNode: {
+                            return component.makeSearchContainerNode(contentType)
+                        },
+                        dismissSearch: { [weak self] in
+                            self?.closeSearch()
+                        }
+                    )
+                }
+                
                 component.hideInputUpdated(true, true, Transition(animation: .curve(duration: 0.3, curve: .spring)))
             }
         }
@@ -929,14 +964,19 @@ public final class EntityKeyboardComponent: Component {
                 return
             }
             
-            self.searchComponent = EntitySearchContentComponent(
-                makeContainerNode: {
-                    return content
-                },
-                dismissSearch: { [weak self] in
-                    self?.closeSearch()
-                }
-            )
+            if component.useExternalSearchContainer {
+                let controller = EntitySearchContainerController(containerNode: content)
+                self.component?.emojiContent?.inputInteractionHolder.inputInteraction?.pushController(controller)
+            } else {
+                self.searchComponent = EntitySearchContentComponent(
+                    makeContainerNode: {
+                        return content
+                    },
+                    dismissSearch: { [weak self] in
+                        self?.closeSearch()
+                    }
+                )
+            }
             component.hideInputUpdated(true, true, Transition(animation: .curve(duration: 0.3, curve: .spring)))
         }
         

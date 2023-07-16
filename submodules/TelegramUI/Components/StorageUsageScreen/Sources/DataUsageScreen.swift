@@ -11,7 +11,6 @@ import AccountContext
 import TelegramCore
 import MultilineTextComponent
 import EmojiStatusComponent
-import Postbox
 import Markdown
 import ContextUI
 import AnimatedAvatarSetNode

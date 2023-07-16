@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramUIPreferences
 import AccountContext
@@ -22,7 +21,11 @@ struct InstantPageMediaPlaylistItemId: SharedMediaPlaylistItemId {
 }
 
 private func extractFileMedia(_ item: InstantPageMedia) -> TelegramMediaFile? {
-    return item.media as? TelegramMediaFile
+    if case let .file(file) = item.media {
+        return file
+    } else {
+        return nil
+    }
 }
 
 final class InstantPageMediaPlaylistItem: SharedMediaPlaylistItem {
@@ -50,7 +53,7 @@ final class InstantPageMediaPlaylistItem: SharedMediaPlaylistItem {
                         } else {
                             return SharedMediaPlaybackData(type: .music, source: .telegramFile(reference: .webPage(webPage: WebpageReference(self.webPage), media: file), isCopyProtected: false))
                         }
-                    case let .Video(_, _, flags):
+                    case let .Video(_, _, flags, _):
                         if flags.contains(.instantRoundVideo) {
                             return SharedMediaPlaybackData(type: .instantVideo, source: .telegramFile(reference: .webPage(webPage: WebpageReference(self.webPage), media: file), isCopyProtected: false))
                         } else {
@@ -96,7 +99,7 @@ final class InstantPageMediaPlaylistItem: SharedMediaPlaylistItem {
                             
                             return SharedMediaPlaybackDisplayData.music(title: updatedTitle, performer: updatedPerformer, albumArt: albumArt, long: false, caption: nil)
                         }
-                    case let .Video(_, _, flags):
+                    case let .Video(_, _, flags, _):
                         if flags.contains(.instantRoundVideo) {
                             return SharedMediaPlaybackDisplayData.instantVideo(author: nil, peer: nil, timestamp: 0)
                         } else {
@@ -114,7 +117,7 @@ final class InstantPageMediaPlaylistItem: SharedMediaPlaylistItem {
 }
 
 struct InstantPageMediaPlaylistId: SharedMediaPlaylistId {
-    let webpageId: MediaId
+    let webpageId: EngineMedia.Id
     
     func isEqual(to: SharedMediaPlaylistId) -> Bool {
         if let to = to as? InstantPageMediaPlaylistId {
@@ -125,7 +128,7 @@ struct InstantPageMediaPlaylistId: SharedMediaPlaylistId {
 }
 
 struct InstantPagePlaylistLocation: Equatable, SharedMediaPlaylistLocation {
-    let webpageId: MediaId
+    let webpageId: EngineMedia.Id
     
     func isEqual(to: SharedMediaPlaylistLocation) -> Bool {
         guard let to = to as? InstantPagePlaylistLocation else {

@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
-import Postbox
 import TelegramPresentationData
 import AccountContext
 
@@ -14,11 +13,11 @@ public final class SecretChatKeyController: ViewController {
     
     private let context: AccountContext
     private let fingerprint: SecretChatKeyFingerprint
-    private let peer: Peer
+    private let peer: EnginePeer
     
     private var presentationData: PresentationData
     
-    public init(context: AccountContext, fingerprint: SecretChatKeyFingerprint, peer: Peer) {
+    public init(context: AccountContext, fingerprint: SecretChatKeyFingerprint, peer: EnginePeer) {
         self.context = context
         self.fingerprint = fingerprint
         self.peer = peer

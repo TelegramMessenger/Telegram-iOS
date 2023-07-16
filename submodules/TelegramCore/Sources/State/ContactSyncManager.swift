@@ -192,7 +192,7 @@ private final class ContactSyncManagerImpl {
             case let .sync(importableContacts):
                 let importSignal: Signal<PushDeviceContactsResult, NoError>
                 if let importableContacts = importableContacts {
-                    importSignal = pushDeviceContacts(postbox: self.postbox, network: self.network, importableContacts: importableContacts, reimportAttempts: self.reimportAttempts)
+                    importSignal = pushDeviceContacts(accountPeerId: self.accountPeerId, postbox: self.postbox, network: self.network, importableContacts: importableContacts, reimportAttempts: self.reimportAttempts)
                 } else {
                     importSignal = .single(PushDeviceContactsResult(addedReimportAttempts: [:]))
                 }
@@ -235,7 +235,7 @@ private struct PushDeviceContactsResult {
     let addedReimportAttempts: [TelegramDeviceContactImportIdentifier: Double]
 }
 
-private func pushDeviceContacts(postbox: Postbox, network: Network, importableContacts: [DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData], reimportAttempts: [TelegramDeviceContactImportIdentifier: Double]) -> Signal<PushDeviceContactsResult, NoError> {
+private func pushDeviceContacts(accountPeerId: PeerId, postbox: Postbox, network: Network, importableContacts: [DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData], reimportAttempts: [TelegramDeviceContactImportIdentifier: Double]) -> Signal<PushDeviceContactsResult, NoError> {
     return postbox.transaction { transaction -> Signal<PushDeviceContactsResult, NoError> in
         var noLongerImportedIdentifiers = Set<TelegramDeviceContactImportIdentifier>()
         var updatedDataIdentifiers = Set<TelegramDeviceContactImportIdentifier>()
@@ -312,14 +312,14 @@ private func pushDeviceContacts(postbox: Postbox, network: Network, importableCo
             }
         }
         
-        return pushDeviceContactData(postbox: postbox, network: network, contacts: preparedContactData)
+        return pushDeviceContactData(accountPeerId: accountPeerId, postbox: postbox, network: network, contacts: preparedContactData)
     }
     |> switchToLatest
 }
 
 private let importBatchCount: Int = 500
 
-private func pushDeviceContactData(postbox: Postbox, network: Network, contacts: [(DeviceContactNormalizedPhoneNumber, ImportableDeviceContactData)]) -> Signal<PushDeviceContactsResult, NoError> {
+private func pushDeviceContactData(accountPeerId: PeerId, postbox: Postbox, network: Network, contacts: [(DeviceContactNormalizedPhoneNumber, ImportableDeviceContactData)]) -> Signal<PushDeviceContactsResult, NoError> {
     var batches: Signal<PushDeviceContactsResult, NoError> = .single(PushDeviceContactsResult(addedReimportAttempts: [:]))
     for s in stride(from: 0, to: contacts.count, by: importBatchCount) {
         let batch = Array(contacts[s ..< min(s + importBatchCount, contacts.count)])
@@ -342,10 +342,8 @@ private func pushDeviceContactData(postbox: Postbox, network: Network, contacts:
                         var peerIdByClientId: [Int64: PeerId] = [:]
                         switch result {
                             case let .importedContacts(imported, popularInvites, retryContacts, users):
-                                let peers = users.map { TelegramUser(user: $0) as Peer }
-                                updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                                    return updated
-                                })
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
+                            
                                 for item in imported {
                                     switch item {
                                     case let .importedContact(userId, clientId):

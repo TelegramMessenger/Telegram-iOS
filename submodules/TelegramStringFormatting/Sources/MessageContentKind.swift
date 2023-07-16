@@ -25,6 +25,7 @@ public enum MessageContentKindKey {
     case restricted
     case dice
     case invoice
+    case story
 }
 
 public enum MessageContentKind: Equatable {
@@ -46,6 +47,7 @@ public enum MessageContentKind: Equatable {
     case restricted(String)
     case dice(String)
     case invoice(String)
+    case story
     
     public func isSemanticallyEqual(to other: MessageContentKind) -> Bool {
         switch self {
@@ -157,6 +159,12 @@ public enum MessageContentKind: Equatable {
             } else {
                 return false
             }
+        case .story:
+            if case .story = other {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
@@ -198,6 +206,8 @@ public enum MessageContentKind: Equatable {
             return .dice
         case .invoice:
             return .invoice
+        case .story:
+            return .story
         }
     }
 }
@@ -285,7 +295,7 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
                         return .file(performer)
                     }
                 }
-            case let .Video(_, _, flags):
+            case let .Video(_, _, flags, _):
                 if file.isAnimated {
                     result = .animation
                 } else {
@@ -332,6 +342,8 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
         } else {
             return .invoice(invoice.title)
         }
+    case .story:
+        return .story
     default:
         return nil
     }
@@ -383,6 +395,8 @@ public func stringForMediaKind(_ kind: MessageContentKind, strings: Presentation
         return (NSAttributedString(string: emoji), true)
     case let .invoice(text):
         return (NSAttributedString(string: text), true)
+    case .story:
+        return (NSAttributedString(string: strings.Message_Story), true)
     }
 }
 
@@ -414,11 +428,13 @@ public func foldLineBreaks(_ text: String) -> String {
 
 public func foldLineBreaks(_ text: NSAttributedString) -> NSAttributedString {
     let remainingString = NSMutableAttributedString(attributedString: text)
+    
     var lines: [NSAttributedString] = []
     while true {
         if let range = remainingString.string.range(of: "\n") {
             let mappedRange = NSRange(range, in: remainingString.string)
-            lines.append(remainingString.attributedSubstring(from: NSRange(location: 0, length: mappedRange.upperBound - 1)))
+            let restString = remainingString.attributedSubstring(from: NSRange(location: 0, length: mappedRange.upperBound - 1))
+            lines.append(restString)
             remainingString.replaceCharacters(in: NSRange(location: 0, length: mappedRange.upperBound), with: "")
         } else {
             if lines.isEmpty {

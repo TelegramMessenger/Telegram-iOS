@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import Display
-import Postbox
 import TelegramCore
 import AppBundle
 
@@ -855,25 +854,25 @@ public struct PresentationResourcesChat {
     
     public static func chatMessageAttachedContentButtonIncoming(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatMessageAttachedContentButtonIncoming.rawValue, { theme in
-            return generateStretchableFilledCircleImage(diameter: 9.0, color: nil, strokeColor: theme.chat.message.incoming.accentControlColor, strokeWidth: 1.0, backgroundColor: nil)
+            return generateStretchableFilledCircleImage(diameter: 16.0, color: nil, strokeColor: theme.chat.message.incoming.accentControlColor, strokeWidth: 1.0, backgroundColor: nil)
         })
     }
     
     public static func chatMessageAttachedContentHighlightedButtonIncoming(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIncoming.rawValue, { theme in
-            return generateStretchableFilledCircleImage(diameter: 9.0, color: theme.chat.message.incoming.accentControlColor)
+            return generateStretchableFilledCircleImage(diameter: 16.0, color: theme.chat.message.incoming.accentControlColor)
         })
     }
     
     public static func chatMessageAttachedContentButtonOutgoing(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatMessageAttachedContentButtonOutgoing.rawValue, { theme in
-            return generateStretchableFilledCircleImage(diameter: 9.0, color: nil, strokeColor: theme.chat.message.outgoing.accentControlColor, strokeWidth: 1.0, backgroundColor: nil)
+            return generateStretchableFilledCircleImage(diameter: 16.0, color: nil, strokeColor: theme.chat.message.outgoing.accentControlColor, strokeWidth: 1.0, backgroundColor: nil)
         })
     }
     
     public static func chatMessageAttachedContentHighlightedButtonOutgoing(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatMessageAttachedContentHighlightedButtonOutgoing.rawValue, { theme in
-            return generateStretchableFilledCircleImage(diameter: 9.0, color: theme.chat.message.outgoing.accentControlColor)
+            return generateStretchableFilledCircleImage(diameter: 16.0, color: theme.chat.message.outgoing.accentControlColor)
         })
     }
     
@@ -900,6 +899,32 @@ public struct PresentationResourcesChat {
         let key: PresentationResourceKey = !wallpaper ? PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIconInstantOutgoingWithoutWallpaper : PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIconInstantOutgoingWithWallpaper
         return theme.image(key.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/AttachedContentInstantIcon"), color: bubbleColorComponents(theme: theme, incoming: false, wallpaper: wallpaper).fill[0])
+        })
+    }
+    
+    public static func chatMessageAttachedContentButtonIconLinkIncoming(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatMessageAttachedContentButtonIconLinkIncoming.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLink"), color: theme.chat.message.incoming.accentControlColor)
+        })
+    }
+    
+    public static func chatMessageAttachedContentHighlightedButtonIconLinkIncoming(_ theme: PresentationTheme, wallpaper: Bool) -> UIImage? {
+        let key: PresentationResourceKey = !wallpaper ? PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIconLinkIncomingWithoutWallpaper : PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIconLinkIncomingWithWallpaper
+        return theme.image(key.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLink"), color: bubbleColorComponents(theme: theme, incoming: true, wallpaper: wallpaper).fill[0])
+        })
+    }
+    
+    public static func chatMessageAttachedContentButtonIconLinkOutgoing(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatMessageAttachedContentButtonIconLinkOutgoing.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLink"), color: theme.chat.message.outgoing.accentControlColor)
+        })
+    }
+    
+    public static func chatMessageAttachedContentHighlightedButtonIconLinkOutgoing(_ theme: PresentationTheme, wallpaper: Bool) -> UIImage? {
+        let key: PresentationResourceKey = !wallpaper ? PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIconLinkOutgoingWithoutWallpaper : PresentationResourceKey.chatMessageAttachedContentHighlightedButtonIconLinkOutgoingWithWallpaper
+        return theme.image(key.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLink"), color: bubbleColorComponents(theme: theme, incoming: false, wallpaper: wallpaper).fill[0])
         })
     }
     
@@ -1219,6 +1244,58 @@ public struct PresentationResourcesChat {
     public static func chatGeneralThreadFreeIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatGeneralThreadFreeIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat List/GeneralTopicIcon"), color: theme.chat.message.mediaOverlayControlColors.foregroundColor)
+        })
+    }
+    
+    public static func chatExpiredStoryIndicatorIcon(_ theme: PresentationTheme, type: ChatExpiredStoryIndicatorType) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatExpiredStoryIndicatorIcon(type: type), { theme in
+            return generateImage(CGSize(width: 16.0, height: 16.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                let foregroundColor: UIColor
+                switch type {
+                case .incoming:
+                    foregroundColor = theme.chat.message.incoming.mediaActiveControlColor
+                case .outgoing:
+                    foregroundColor = theme.chat.message.outgoing.mediaActiveControlColor
+                case .free:
+                    foregroundColor = theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText
+                }
+                
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ExpiredStoryIcon"), color: foregroundColor) {
+                    UIGraphicsPushContext(context)
+                    
+                    let fittedSize = image.size
+                    image.draw(in: CGRect(origin: CGPoint(x: floor((size.width - fittedSize.width) * 0.5), y: floor((size.height - fittedSize.height) * 0.5)), size: fittedSize), blendMode: .normal, alpha: 1.0)
+                    
+                    UIGraphicsPopContext()
+                }
+            })
+        })
+    }
+    
+    public static func chatReplyStoryIndicatorIcon(_ theme: PresentationTheme, type: ChatExpiredStoryIndicatorType) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatReplyStoryIndicatorIcon(type: type), { theme in
+            return generateImage(CGSize(width: 16.0, height: 16.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                let foregroundColor: UIColor
+                switch type {
+                case .incoming:
+                    foregroundColor = theme.chat.message.incoming.mediaActiveControlColor
+                case .outgoing:
+                    foregroundColor = theme.chat.message.outgoing.mediaActiveControlColor
+                case .free:
+                    foregroundColor = theme.chat.serviceMessage.components.withDefaultWallpaper.primaryText
+                }
+                
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ReplyStoryIcon"), color: foregroundColor) {
+                    UIGraphicsPushContext(context)
+                    
+                    let fittedSize = image.size
+                    image.draw(in: CGRect(origin: CGPoint(x: floor((size.width - fittedSize.width) * 0.5), y: floor((size.height - fittedSize.height) * 0.5)), size: fittedSize), blendMode: .normal, alpha: 1.0)
+                    
+                    UIGraphicsPopContext()
+                }
+            })
         })
     }
 }

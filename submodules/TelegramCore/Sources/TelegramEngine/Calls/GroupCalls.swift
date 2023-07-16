@@ -84,6 +84,7 @@ public enum GetCurrentGroupCallError {
 }
 
 func _internal_getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int64, peerId: PeerId? = nil) -> Signal<GroupCallSummary?, GetCurrentGroupCallError> {
+    let accountPeerId = account.peerId
     return account.network.request(Api.functions.phone.getGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash), limit: 4))
     |> mapError { _ -> GetCurrentGroupCallError in
         return .generic
@@ -96,20 +97,7 @@ func _internal_getCurrentGroupCall(account: Account, callId: Int64, accessHash: 
                     return nil
                 }
                 
-                var peers: [Peer] = []
-                var peerPresences: [PeerId: Api.User] = [:]
-                
-                for user in users {
-                    let telegramUser = TelegramUser(user: user)
-                    peers.append(telegramUser)
-                    peerPresences[telegramUser.id] = user
-                }
-                
-                for chat in chats {
-                    if let peer = parseTelegramGroupOrChannel(chat: chat) {
-                        peers.append(peer)
-                    }
-                }
+                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                 if let peerId = peerId {
                     transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                         if let cachedData = current as? CachedChannelData {
@@ -122,10 +110,7 @@ func _internal_getCurrentGroupCall(account: Account, callId: Int64, accessHash: 
                     })
                 }
                 
-                updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                    return updated
-                })
-                updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                 
                 let parsedParticipants = participants.compactMap { GroupCallParticipantsContext.Participant($0, transaction: transaction) }
                 return GroupCallSummary(
@@ -340,6 +325,8 @@ public enum GetGroupCallParticipantsError {
 }
 
 func _internal_getGroupCallParticipants(account: Account, callId: Int64, accessHash: Int64, offset: String, ssrcs: [UInt32], limit: Int32, sortAscending: Bool?) -> Signal<GroupCallParticipantsContext.State, GetGroupCallParticipantsError> {
+    let accountPeerId = account.peerId
+    
     let sortAscendingValue: Signal<(Bool, Int32?, Bool, GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?, Bool, Int, Bool), GetGroupCallParticipantsError>
     
     sortAscendingValue = _internal_getCurrentGroupCall(account: account, callId: callId, accessHash: accessHash)
@@ -380,25 +367,8 @@ func _internal_getGroupCallParticipants(account: Account, callId: Int64, accessH
                     nextParticipantsFetchOffset = nil
                 }
                 
-                var peers: [Peer] = []
-                var peerPresences: [PeerId: Api.User] = [:]
-                
-                for user in users {
-                    let telegramUser = TelegramUser(user: user)
-                    peers.append(telegramUser)
-                    peerPresences[telegramUser.id] = user
-                }
-                
-                for chat in chats {
-                    if let peer = parseTelegramGroupOrChannel(chat: chat) {
-                        peers.append(peer)
-                    }
-                }
-                
-                updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                    return updated
-                })
-                updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                 
                 parsedParticipants = participants.compactMap { GroupCallParticipantsContext.Participant($0, transaction: transaction) }
             }
@@ -587,18 +557,7 @@ func _internal_joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, 
 
                 state.sortAscending = parsedCall.sortAscending
                 
-                let apiUsers: [Api.User] = []
-                
                 state.adminIds = Set(peerAdminIds)
-                    
-                var peers: [Peer] = []
-                var peerPresences: [PeerId: Api.User] = [:]
-
-                for user in apiUsers {
-                    let telegramUser = TelegramUser(user: user)
-                    peers.append(telegramUser)
-                    peerPresences[telegramUser.id] = user
-                }
 
                 let connectionMode: JoinGroupCallResult.ConnectionMode
                 if let clientParamsData = parsedClientParams.data(using: .utf8), let dict = (try? JSONSerialization.jsonObject(with: clientParamsData, options: [])) as? [String: Any] {
@@ -680,11 +639,6 @@ func _internal_joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, 
                     }
 
                     state.participants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: state.sortAscending) })
-
-                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                        return updated
-                    })
-                    updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
 
                     return JoinGroupCallResult(
                         callInfo: parsedCall,
@@ -805,7 +759,7 @@ func _internal_stopGroupCall(account: Account, peerId: PeerId, callId: Int64, ac
                 flags.remove(.hasVoiceChat)
                 flags.remove(.hasActiveVoiceChat)
                 peer = peer.withUpdatedFlags(flags)
-                updatePeers(transaction: transaction, peers: [peer], update: { _, updated in
+                updatePeersCustom(transaction: transaction, peers: [peer], update: { _, updated in
                     return updated
                 })
             }
@@ -814,7 +768,7 @@ func _internal_stopGroupCall(account: Account, peerId: PeerId, callId: Int64, ac
                 flags.remove(.hasVoiceChat)
                 flags.remove(.hasActiveVoiceChat)
                 peer = peer.updateFlags(flags: flags, version: peer.version)
-                updatePeers(transaction: transaction, peers: [peer], update: { _, updated in
+                updatePeersCustom(transaction: transaction, peers: [peer], update: { _, updated in
                     return updated
                 })
             }
@@ -2275,10 +2229,11 @@ func _internal_editGroupCallTitle(account: Account, callId: Int64, accessHash: I
     }
 }
 
-func _internal_groupCallDisplayAsAvailablePeers(network: Network, postbox: Postbox, peerId: PeerId) -> Signal<[FoundPeer], NoError> {
+func _internal_groupCallDisplayAsAvailablePeers(accountPeerId: PeerId, network: Network, postbox: Postbox, peerId: PeerId) -> Signal<[FoundPeer], NoError> {
     return postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(peerId).flatMap(apiInputPeer)
-    } |> mapToSignal { inputPeer in
+    }
+    |> mapToSignal { inputPeer in
         guard let inputPeer = inputPeer else {
             return .complete()
         }
@@ -2287,34 +2242,39 @@ func _internal_groupCallDisplayAsAvailablePeers(network: Network, postbox: Postb
         |> `catch` { _ -> Signal<Api.phone.JoinAsPeers?, NoError> in
             return .single(nil)
         }
-        |> mapToSignal { result in
+        |> mapToSignal { result -> Signal<[FoundPeer], NoError> in
             guard let result = result else {
                 return .single([])
             }
             switch result {
-            case let .joinAsPeers(_, chats, _):
-                var subscribers: [PeerId: Int32] = [:]
-                let peers = chats.compactMap(parseTelegramGroupOrChannel)
-                for chat in chats {
-                    if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                        switch chat {
-                        case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _):
-                            if let participantsCount = participantsCount {
+            case let .joinAsPeers(_, chats, users):
+                return postbox.transaction { transaction -> [FoundPeer] in
+                    var subscribers: [PeerId: Int32] = [:]
+                    let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                    for chat in chats {
+                        if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                            switch chat {
+                            case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _):
+                                if let participantsCount = participantsCount {
+                                    subscribers[groupOrChannel.id] = participantsCount
+                                }
+                            case let .chat(_, _, _, _, participantsCount, _, _, _, _, _):
                                 subscribers[groupOrChannel.id] = participantsCount
+                            default:
+                                break
                             }
-                        case let .chat(_, _, _, _, participantsCount, _, _, _, _, _):
-                            subscribers[groupOrChannel.id] = participantsCount
-                        default:
-                            break
                         }
                     }
-                }
-                return postbox.transaction { transaction -> [Peer] in
-                    updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                        return updated
-                    })
-                    return peers
-                } |> map { peers -> [FoundPeer] in
+                    
+                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                    
+                    var peers: [Peer] = []
+                    for chat in chats {
+                        if let peer = transaction.getPeer(chat.peerId) {
+                            peers.append(peer)
+                        }
+                    }
+                    
                     return peers.map { FoundPeer(peer: $0, subscribers: subscribers[$0.id]) }
                 }
             }
@@ -2382,7 +2342,7 @@ func _internal_cachedGroupCallDisplayAsAvailablePeers(account: Account, peerId: 
         if let (cachedPeers, timestamp) = cachedPeersAndTimestamp, currentTimestamp - timestamp < 60 * 3 && !cachedPeers.isEmpty {
             return .single(cachedPeers)
         } else {
-            return _internal_groupCallDisplayAsAvailablePeers(network: account.network, postbox: account.postbox, peerId: peerId)
+            return _internal_groupCallDisplayAsAvailablePeers(accountPeerId: account.peerId, network: account.network, postbox: account.postbox, peerId: peerId)
             |> mapToSignal { peers -> Signal<[FoundPeer], NoError> in
                 return account.postbox.transaction { transaction -> [FoundPeer] in
                     let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)

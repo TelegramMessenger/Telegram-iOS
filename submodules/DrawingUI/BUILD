@@ -93,6 +93,11 @@ swift_library(
         "//submodules/FeaturedStickersScreen:FeaturedStickersScreen",
         "//submodules/TelegramNotices:TelegramNotices",
         "//submodules/FastBlur:FastBlur",
+        "//submodules/TelegramUI/Components/MediaEditor",
+        "//submodules/ChatPresentationInterfaceState:ChatPresentationInterfaceState",
+        "//submodules/StickerPackPreviewUI:StickerPackPreviewUI",
+        "//submodules/TelegramUI/Components/LottieComponent",
+        "//submodules/ImageTransparency",
     ],
     visibility = [
         "//visibility:public",

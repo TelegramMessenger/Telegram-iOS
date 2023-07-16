@@ -396,7 +396,9 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
     if (_minimumValue < 0)
     {
         CGFloat knob = knobSize;
-        if ((NSInteger)value == 0)
+        if (fabs(_minimumValue) > 1.0 && (NSInteger)value == 0) {
+            return totalLength / 2;
+        } else if (fabs(value) < 0.01)
         {
             return totalLength / 2;
         }

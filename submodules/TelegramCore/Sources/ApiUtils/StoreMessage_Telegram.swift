@@ -50,7 +50,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
             var isAnimated = false
             inner: for attribute in file.attributes {
                 switch attribute {
-                    case let .Video(_, _, flags):
+                    case let .Video(_, _, flags, _):
                         if flags.contains(.instantRoundVideo) {
                             refinedTag = .voiceOrInstantVideo
                         } else {
@@ -142,7 +142,7 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
 
 func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
     switch message {
-        case let .message(_, _, fromId, chatPeerId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _, _, _, _, _, _):
+        case let .message(_, _, fromId, chatPeerId, fwdHeader, viaBotId, replyTo, _, _, media, _, entities, _, _, _, _, _, _, _, _, _):
             let peerId: PeerId = chatPeerId.peerId
             
             var result = [peerId]
@@ -188,6 +188,18 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
                         default:
                             break
                     }
+                }
+            }
+        
+            if let replyTo = replyTo {
+                switch replyTo {
+                case let .messageReplyStoryHeader(userId, _):
+                    let storyPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                    if !result.contains(storyPeerId) {
+                        result.append(storyPeerId)
+                    }
+                default:
+                    break
                 }
             }
             
@@ -250,6 +262,8 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: Refere
                     var replyIds = ReferencedReplyMessageIds()
                     replyIds.add(sourceId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), targetId: targetId)
                     return (replyIds, [])
+                case .messageReplyStoryHeader:
+                    break
                 }
             }
         case .messageEmpty:
@@ -262,6 +276,8 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: Refere
                     var replyIds = ReferencedReplyMessageIds()
                     replyIds.add(sourceId: MessageId(peerId: chatPeerId.peerId, namespace: Namespaces.Message.Cloud, id: id), targetId: targetId)
                     return (replyIds, [])
+                case .messageReplyStoryHeader:
+                    break
                 }
             }
     }
@@ -292,7 +308,7 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
         case let .messageMediaGeoLive(_, geo, heading, period, proximityNotificationRadius):
             let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: period, liveProximityNotificationRadius: proximityNotificationRadius, heading: heading)
             return (mediaMap, nil, nil, nil)
-        case let .messageMediaDocument(flags, document, ttlSeconds):
+        case let .messageMediaDocument(flags, document, _, ttlSeconds):
             if let document = document {
                 if let mediaFile = telegramMediaFileFromApiDocument(document) {
                     return (mediaFile, ttlSeconds, (flags & (1 << 3)) != 0, (flags & (1 << 4)) != 0)
@@ -364,6 +380,9 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
             }
         case let .messageMediaDice(value, emoticon):
             return (TelegramMediaDice(emoji: emoticon, value: value), nil, nil, nil)
+        case let .messageMediaStory(flags, userId, id, _):
+            let isMention = (flags & (1 << 1)) != 0
+            return (TelegramMediaStory(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: id), isMention: isMention), nil, nil, nil)
         }
     }
     
@@ -479,6 +498,8 @@ extension StoreMessage {
                             }
                         }
                         attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
+                    case let .messageReplyStoryHeader(userId, storyId):
+                        attributes.append(ReplyStoryAttribute(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: storyId)))
                     }
                 }
             
@@ -728,6 +749,8 @@ extension StoreMessage {
                             break
                         }
                         attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
+                    case let .messageReplyStoryHeader(userId, storyId):
+                        attributes.append(ReplyStoryAttribute(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: storyId)))
                     }
                 } else {
                     switch action {

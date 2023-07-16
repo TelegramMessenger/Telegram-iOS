@@ -723,6 +723,20 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
                             return context.engine.peers.updatePeerDisplayPreviewsSetting(peerId: peerId, threadId: threadId, displayPreviews: displayPreviews) |> deliverOnMainQueue
                         }
                         
+                        let updatePeerStoriesMuted: (PeerId, PeerStoryNotificationSettings.Mute) -> Signal<Void, NoError> = {
+                            peerId, mute in
+                            return context.engine.peers.updatePeerStoriesMutedSetting(peerId: peerId, mute: mute) |> deliverOnMainQueue
+                        }
+                        
+                        let updatePeerStoriesHideSender: (PeerId, PeerStoryNotificationSettings.HideSender) -> Signal<Void, NoError> = {
+                            peerId, hideSender in
+                            return context.engine.peers.updatePeerStoriesHideSenderSetting(peerId: peerId, hideSender: hideSender) |> deliverOnMainQueue
+                        }
+                        
+                        let updatePeerStorySound: (PeerId, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
+                            return context.engine.peers.updatePeerStorySoundInteractive(peerId: peerId, sound: sound) |> deliverOnMainQueue
+                        }
+                        
                         let defaultSound: PeerMessageSound
                         
                         if case .broadcast = channel.info {
@@ -733,7 +747,7 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
                         
                         let canRemove = false
                         
-                        let exceptionController = notificationPeerExceptionController(context: context, updatedPresentationData: nil, peer: channel, threadId: threadId, canRemove: canRemove, defaultSound: defaultSound, edit: true, updatePeerSound: { peerId, sound in
+                        let exceptionController = notificationPeerExceptionController(context: context, updatedPresentationData: nil, peer: .channel(channel), threadId: threadId, isStories: nil, canRemove: canRemove, defaultSound: defaultSound, defaultStoriesSound: defaultSound, edit: true, updatePeerSound: { peerId, sound in
                             let _ = (updatePeerSound(peerId, sound)
                             |> deliverOnMainQueue).start(next: { _ in
                             })
@@ -756,6 +770,15 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
                             |> deliverOnMainQueue).start(next: { _ in
                                 
                             })
+                        }, updatePeerStoriesMuted: { peerId, mute in
+                            let _ = (updatePeerStoriesMuted(peerId, mute)
+                            |> deliverOnMainQueue).start()
+                        }, updatePeerStoriesHideSender: { peerId, hideSender in
+                            let _ = (updatePeerStoriesHideSender(peerId, hideSender)
+                            |> deliverOnMainQueue).start()
+                        }, updatePeerStorySound: { peerId, sound in
+                            let _ = (updatePeerStorySound(peerId, sound)
+                            |> deliverOnMainQueue).start()
                         }, removePeerFromExceptions: {
                         }, modifiedPeer: {
                         })

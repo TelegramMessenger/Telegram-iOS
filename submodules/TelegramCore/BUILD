@@ -48,6 +48,7 @@ swift_library(
         "//submodules/ManagedFile:ManagedFile",
         "//submodules/Utils/RangeSet:RangeSet",
         "//submodules/Utils/DarwinDirStat",
+        "//submodules/Emoji",
     ],
     visibility = [
         "//visibility:public",

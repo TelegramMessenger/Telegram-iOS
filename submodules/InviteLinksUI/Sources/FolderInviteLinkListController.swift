@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -305,7 +304,7 @@ private struct FolderInviteLinkListControllerState: Equatable {
     var isSaving: Bool = false
 }
 
-public func folderInviteLinkListController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filterId: Int32, title filterTitle: String, allPeerIds: [PeerId], currentInvitation: ExportedChatFolderLink?, linkUpdated: @escaping (ExportedChatFolderLink?) -> Void, presentController parentPresentController: ((ViewController) -> Void)?) -> ViewController {
+public func folderInviteLinkListController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filterId: Int32, title filterTitle: String, allPeerIds: [EnginePeer.Id], currentInvitation: ExportedChatFolderLink?, linkUpdated: @escaping (ExportedChatFolderLink?) -> Void, presentController parentPresentController: ((ViewController) -> Void)?) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     let _ = pushControllerImpl
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?

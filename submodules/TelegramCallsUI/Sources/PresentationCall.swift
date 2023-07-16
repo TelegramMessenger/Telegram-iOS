@@ -27,14 +27,14 @@ public final class PresentationCallImpl: PresentationCall {
     private let getDeviceAccessData: () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void)
     
     public let internalId: CallSessionInternalId
-    public let peerId: PeerId
+    public let peerId: EnginePeer.Id
     public let isOutgoing: Bool
     public var isVideo: Bool
     public var isVideoPossible: Bool
     private let enableStunMarking: Bool
     private let enableTCP: Bool
     public let preferredVideoCodec: String?
-    public let peer: Peer?
+    public let peer: EnginePeer?
     
     private let serializedData: String?
     private let dataSaving: VoiceCallDataSaving
@@ -138,9 +138,9 @@ public final class PresentationCallImpl: PresentationCall {
         getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void),
         initialState: CallSession?,
         internalId: CallSessionInternalId,
-        peerId: PeerId,
+        peerId: EnginePeer.Id,
         isOutgoing: Bool,
-        peer: Peer?,
+        peer: EnginePeer?,
         proxyServer: ProxyServerSettings?,
         auxiliaryServers: [CallAuxiliaryServer],
         currentNetworkType: NetworkType,
@@ -453,7 +453,7 @@ public final class PresentationCallImpl: PresentationCall {
                     if !self.reportedIncomingCall, let stableId = sessionState.stableId {
                         self.reportedIncomingCall = true
                         var phoneNumber: String?
-                        if let peer = self.peer as? TelegramUser, let phone = peer.phone {
+                        if case let .user(peer) = self.peer, let phone = peer.phone {
                             phoneNumber = formatPhoneNumber(context: self.context, number: phone)
                         }
                         self.callKitIntegration?.reportIncomingCall(

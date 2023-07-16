@@ -185,13 +185,15 @@ public enum DeviceMetrics: CaseIterable, Equatable {
             case .iPhoneX, .iPhoneXSMax:
                 return 39.0
             case .iPhoneXr:
-                return 41.0 + UIScreenPixel
+                return 41.5
             case .iPhone12Mini:
                 return 44.0
-            case .iPhone12, .iPhone13, .iPhone13Pro, .iPhone14Pro, .iPhone14ProZoomed:
+            case .iPhone12, .iPhone13, .iPhone13Pro, .iPhone14ProZoomed:
                 return 47.0 + UIScreenPixel
-            case .iPhone12ProMax, .iPhone13ProMax, .iPhone14ProMax, .iPhone14ProMaxZoomed:
+            case .iPhone12ProMax, .iPhone13ProMax, .iPhone14ProMaxZoomed:
                 return 53.0 + UIScreenPixel
+            case .iPhone14Pro, .iPhone14ProMax:
+                return 55.0
             case let .unknown(_, _, onScreenNavigationHeight):
                 if let _ = onScreenNavigationHeight {
                     return 39.0
@@ -264,7 +266,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
                 return 20.0
         }
     }
-    
+        
     public func keyboardHeight(inLandscape: Bool) -> CGFloat {
         if inLandscape {
             switch self {
@@ -333,6 +335,10 @@ public enum DeviceMetrics: CaseIterable, Equatable {
                     return 44.0
             }
         }
+    }
+    
+    public func standardInputHeight(inLandscape: Bool) -> CGFloat {
+        return self.keyboardHeight(inLandscape: inLandscape) + predictiveInputHeight(inLandscape: inLandscape)
     }
     
     public var hasTopNotch: Bool {

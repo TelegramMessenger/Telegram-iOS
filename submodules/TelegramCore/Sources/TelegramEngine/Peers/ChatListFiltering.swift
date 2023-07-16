@@ -617,13 +617,7 @@ private func requestChatListFilters(accountPeerId: PeerId, postbox: Postbox, net
                 }
                 |> mapToSignal { users -> Signal<Never, NoError> in
                     return postbox.transaction { transaction -> Void in
-                        var peers: [Peer] = []
-                        for user in users {
-                            peers.append(TelegramUser(user: user))
-                        }
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                            return updated
-                        })
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
                     }
                     |> ignoreValues
                 }
@@ -641,18 +635,12 @@ private func requestChatListFilters(accountPeerId: PeerId, postbox: Postbox, net
                 |> mapToSignal { result -> Signal<Never, NoError> in
                     return postbox.transaction { transaction -> Void in
                         if let result = result {
-                            var peers: [Peer] = []
+                            let parsedPeers: AccumulatedPeers
                             switch result {
                             case .chats(let chats), .chatsSlice(_, let chats):
-                                for chat in chats {
-                                    if let peer = parseTelegramGroupOrChannel(chat: chat) {
-                                        peers.append(peer)
-                                    }
-                                }
+                                parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: [])
                             }
-                            updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                                return updated
-                            })
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                         }
                     }
                     |> ignoreValues
@@ -671,18 +659,12 @@ private func requestChatListFilters(accountPeerId: PeerId, postbox: Postbox, net
                 |> mapToSignal { result -> Signal<Never, NoError> in
                     return postbox.transaction { transaction -> Void in
                         if let result = result {
-                            var peers: [Peer] = []
+                            let parsedPeers: AccumulatedPeers
                             switch result {
                             case .chats(let chats), .chatsSlice(_, let chats):
-                                for chat in chats {
-                                    if let peer = parseTelegramGroupOrChannel(chat: chat) {
-                                        peers.append(peer)
-                                    }
-                                }
+                                parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: [])
                             }
-                            updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                                return updated
-                            })
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                         }
                     }
                     |> ignoreValues
@@ -737,24 +719,15 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
         }
         
         return postbox.transaction { transaction -> Void in
-            var peers: [Peer] = []
-            var peerPresences: [PeerId: Api.User] = [:]
             var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
             var ttlPeriods: [PeerId: CachedPeerAutoremoveTimeout] = [:]
             var channelStates: [PeerId: Int32] = [:]
             
+            let parsedPeers: AccumulatedPeers
+            
             switch result {
             case let .peerDialogs(dialogs, messages, chats, users, _):
-                for chat in chats {
-                    if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                        peers.append(groupOrChannel)
-                    }
-                }
-                for user in users {
-                    let telegramUser = TelegramUser(user: user)
-                    peers.append(telegramUser)
-                    peerPresences[telegramUser.id] = user
-                }
+                parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                 
                 var topMessageIds = Set<MessageId>()
                 
@@ -833,15 +806,10 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
                     }
                 }
                 
-                var peerMap: [PeerId: Peer] = [:]
-                for peer in peers {
-                    peerMap[peer.id] = peer
-                }
-                
                 var storeMessages: [StoreMessage] = []
                 for message in messages {
                     var peerIsForum = false
-                    if let peerId = message.peerId, let peer = peerMap[peerId], peer.isForum {
+                    if let peerId = message.peerId, let peer = parsedPeers.get(peerId), peer.isForum {
                         peerIsForum = true
                     }
                     if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
@@ -864,11 +832,7 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
                 }
             }
             
-            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                return updated
-            })
-            
-            updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
+            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
             
             transaction.updateCurrentPeerNotificationSettings(notificationSettings)
             

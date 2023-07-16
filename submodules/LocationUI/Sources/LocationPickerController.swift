@@ -3,7 +3,6 @@ import UIKit
 import Display
 import LegacyComponents
 import TelegramCore
-import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
@@ -14,7 +13,7 @@ import DeviceAccess
 import AttachmentUI
 
 public enum LocationPickerMode {
-    case share(peer: Peer?, selfPeer: Peer?, hasLiveLocation: Bool)
+    case share(peer: EnginePeer?, selfPeer: EnginePeer?, hasLiveLocation: Bool)
     case pick
 }
 
@@ -133,8 +132,8 @@ public final class LocationPickerController: ViewController, AttachmentContainab
                 }
                 let controller = ActionSheetController(presentationData: strongSelf.presentationData)
                 var title = strongSelf.presentationData.strings.Map_LiveLocationGroupDescription
-                if case let .share(peer, _, _) = strongSelf.mode, let receiver = peer as? TelegramUser {
-                    title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(EnginePeer(receiver).compactDisplayTitle).string
+                if case let .share(peer, _, _) = strongSelf.mode, let peer = peer, case .user = peer {
+                    title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(peer.compactDisplayTitle).string
                 }
                 controller.setItemGroups([
                     ActionSheetItemGroup(items: [

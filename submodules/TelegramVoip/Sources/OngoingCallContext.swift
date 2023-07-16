@@ -791,7 +791,7 @@ public final class OngoingCallContext {
         return OngoingCallThreadLocalContext.maxLayer()
     }
     
-    private let tempStatsLogFile: EngineTempBoxFile
+    private let tempStatsLogFile: EngineTempBox.File
     
     private var signalingConnectionManager: QueueLocalObject<CallSignalingConnectionManager>?
     

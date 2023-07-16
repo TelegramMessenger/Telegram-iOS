@@ -40,6 +40,11 @@ public enum PostboxViewKey: Hashable {
     case peerTimeoutAttributes
     case messageHistoryThreadIndex(id: PeerId, summaryComponents: ChatListEntrySummaryComponents)
     case messageHistoryThreadInfo(peerId: PeerId, threadId: Int64)
+    case storySubscriptions(key: PostboxStorySubscriptionsKey)
+    case storiesState(key: PostboxStoryStatesKey)
+    case storyItems(peerId: PeerId)
+    case storyExpirationTimeItems
+    case peerStoryStats(peerIds: Set<PeerId>)
 
     public func hash(into hasher: inout Hasher) {
         switch self {
@@ -134,6 +139,17 @@ public enum PostboxViewKey: Hashable {
         case let .messageHistoryThreadInfo(peerId, threadId):
             hasher.combine(peerId)
             hasher.combine(threadId)
+        case let .storySubscriptions(key):
+            hasher.combine(18)
+            hasher.combine(key)
+        case let .storiesState(key):
+            hasher.combine(key)
+        case let .storyItems(peerId):
+            hasher.combine(peerId)
+        case .storyExpirationTimeItems:
+            hasher.combine(19)
+        case let .peerStoryStats(peerIds):
+            hasher.combine(peerIds)
         }
     }
     
@@ -373,6 +389,36 @@ public enum PostboxViewKey: Hashable {
             } else {
                 return false
             }
+        case let .storySubscriptions(key):
+            if case .storySubscriptions(key) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .storiesState(key):
+            if case .storiesState(key) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .storyItems(peerId):
+            if case .storyItems(peerId) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .storyExpirationTimeItems:
+            if case .storyExpirationTimeItems = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .peerStoryStats(peerIds):
+            if case .peerStoryStats(peerIds) = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }
@@ -457,5 +503,15 @@ func postboxViewForKey(postbox: PostboxImpl, key: PostboxViewKey) -> MutablePost
         return MutableMessageHistoryThreadIndexView(postbox: postbox, peerId: id, summaryComponents: summaryComponents)
     case let .messageHistoryThreadInfo(peerId, threadId):
         return MutableMessageHistoryThreadInfoView(postbox: postbox, peerId: peerId, threadId: threadId)
+    case let .storySubscriptions(key):
+        return MutableStorySubscriptionsView(postbox: postbox, key: key)
+    case let .storiesState(key):
+        return MutableStoryStatesView(postbox: postbox, key: key)
+    case let .storyItems(peerId):
+        return MutableStoryItemsView(postbox: postbox, peerId: peerId)
+    case .storyExpirationTimeItems:
+        return MutableStoryExpirationTimeItemsView(postbox: postbox)
+    case let .peerStoryStats(peerIds):
+        return MutablePeerStoryStatsView(postbox: postbox, peerIds: peerIds)
     }
 }

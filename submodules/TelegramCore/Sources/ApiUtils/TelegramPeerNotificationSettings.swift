@@ -6,12 +6,15 @@ import TelegramApi
 extension TelegramPeerNotificationSettings {
     convenience init(apiSettings: Api.PeerNotifySettings) {
         switch apiSettings {
-        case let .peerNotifySettings(_, showPreviews, _, muteUntil, iosSound, _, desktopSound):
+        case let .peerNotifySettings(_, showPreviews, _, muteUntil, iosSound, _, desktopSound, storiesMuted, storiesHideSender, storiesIosSound, _, storiesDesktopSound):
             let sound: Api.NotificationSound?
+            let storiesSound: Api.NotificationSound?
             #if os(iOS)
             sound = iosSound
+            storiesSound = storiesIosSound
             #elseif os(macOS)
             sound = desktopSound
+            storiesSound = storiesDesktopSound
             #endif
             
             let muteState: PeerMuteState
@@ -34,7 +37,26 @@ extension TelegramPeerNotificationSettings {
             } else {
                 displayPreviews = .default
             }
-            self.init(muteState: muteState, messageSound: PeerMessageSound(apiSound: sound ?? .notificationSoundDefault), displayPreviews: displayPreviews)
+            
+            let storiesMutedValue: PeerStoryNotificationSettings.Mute
+            if let storiesMuted = storiesMuted {
+                storiesMutedValue = storiesMuted == .boolTrue ? .muted : .unmuted
+            } else {
+                storiesMutedValue = .default
+            }
+            
+            var storiesHideSenderValue: PeerStoryNotificationSettings.HideSender
+            if let storiesHideSender = storiesHideSender {
+                storiesHideSenderValue = storiesHideSender == .boolTrue ? .hide : .show
+            } else {
+                storiesHideSenderValue = .default
+            }
+            
+            self.init(muteState: muteState, messageSound: PeerMessageSound(apiSound: sound ?? .notificationSoundDefault), displayPreviews: displayPreviews, storySettings: PeerStoryNotificationSettings(
+                mute: storiesMutedValue,
+                hideSender: storiesHideSenderValue,
+                sound: PeerMessageSound(apiSound: storiesSound ?? .notificationSoundDefault)
+            ))
         }
     }
 }

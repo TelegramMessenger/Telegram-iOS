@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import TelegramCore
 import Display
-import Postbox
 import AsyncDisplayKit
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -12,9 +11,9 @@ import ContextUI
 
 public final class InstantPageUrlItem: Equatable {
     public let url: String
-    public let webpageId: MediaId?
+    public let webpageId: EngineMedia.Id?
     
-    public init(url: String, webpageId: MediaId?) {
+    public init(url: String, webpageId: EngineMedia.Id?) {
         self.url = url
         self.webpageId = webpageId
     }
@@ -36,7 +35,7 @@ struct InstantPageTextStrikethroughItem {
 struct InstantPageTextImageItem {
     let frame: CGRect
     let range: NSRange
-    let id: MediaId
+    let id: EngineMedia.Id
 }
 
 struct InstantPageTextAnchorItem {
@@ -649,7 +648,7 @@ func attributedStringForRichText(_ text: RichText, styleStack: InstantPageTextSt
     }
 }
 
-func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFloat, horizontalInset: CGFloat = 0.0, alignment: NSTextAlignment = .natural, offset: CGPoint, media: [MediaId: Media] = [:], webpage: TelegramMediaWebpage? = nil, minimizeWidth: Bool = false, maxNumberOfLines: Int = 0, opaqueBackground: Bool = false) -> (InstantPageTextItem?, [InstantPageItem], CGSize) {
+func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFloat, horizontalInset: CGFloat = 0.0, alignment: NSTextAlignment = .natural, offset: CGPoint, media: [EngineMedia.Id: EngineMedia] = [:], webpage: TelegramMediaWebpage? = nil, minimizeWidth: Bool = false, maxNumberOfLines: Int = 0, opaqueBackground: Bool = false) -> (InstantPageTextItem?, [InstantPageItem], CGSize) {
     if string.length == 0 {
         return (nil, [], CGSize())
     }
@@ -771,7 +770,7 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
                                 extraDescent = max(extraDescent, imageFrame.maxY - (workingLineOrigin.y + fontLineHeight + minSpacing))
                             }
                             maxImageHeight = max(maxImageHeight, imageFrame.height)
-                            lineImageItems.append(InstantPageTextImageItem(frame: imageFrame, range: range, id: MediaId(namespace: Namespaces.Media.CloudFile, id: id)))
+                            lineImageItems.append(InstantPageTextImageItem(frame: imageFrame, range: range, id: EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: id)))
                         }
                     }
                 }
@@ -876,8 +875,8 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
         for line in textItem.lines {
             let lineFrame = frameForLine(line, boundingWidth: boundingWidth, alignment: alignment)
             for imageItem in line.imageItems {
-                if let image = media[imageItem.id] as? TelegramMediaFile {
-                    let item = InstantPageImageItem(frame: imageItem.frame.offsetBy(dx: lineFrame.minX + offset.x, dy: offset.y), webPage: webpage, media: InstantPageMedia(index: -1, media: image, url: nil, caption: nil, credit: nil), interactive: false, roundCorners: false, fit: false)
+                if case let .image(image) = media[imageItem.id] {
+                    let item = InstantPageImageItem(frame: imageItem.frame.offsetBy(dx: lineFrame.minX + offset.x, dy: offset.y), webPage: webpage, media: InstantPageMedia(index: -1, media: .image(image), url: nil, caption: nil, credit: nil), interactive: false, roundCorners: false, fit: false)
                     additionalItems.append(item)
                     
                     if item.frame.minY < topInset {

@@ -15,7 +15,7 @@ func _internal_terminateSecretChat(transaction: Transaction, peerId: PeerId, req
         if updatedState != state {
             transaction.setPeerChatState(peerId, state: updatedState)
             if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
-                updatePeers(transaction: transaction, peers: [peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
+                updatePeersCustom(transaction: transaction, peers: [peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
                     return updated
                 })
             }
@@ -52,7 +52,7 @@ func _internal_removePeerChat(account: Account, transaction: Transaction, mediaB
             if updatedState != state {
                 transaction.setPeerChatState(peerId, state: updatedState)
                 if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
-                    updatePeers(transaction: transaction, peers: [peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
+                    updatePeersCustom(transaction: transaction, peers: [peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
                         return updated
                     })
                 }

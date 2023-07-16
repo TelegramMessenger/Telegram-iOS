@@ -5,7 +5,6 @@ import SwiftSignalKit
 import ComponentFlow
 import LegacyComponents
 import TelegramCore
-import Postbox
 import AccountContext
 import TelegramPresentationData
 import SheetComponent
@@ -14,6 +13,7 @@ import BlurredBackgroundComponent
 import SegmentedControlNode
 import MultilineTextComponent
 import HexColor
+import MediaEditor
 
 private let palleteColors: [UInt32] = [
     0xffffff, 0xebebeb, 0xd6d6d6, 0xc2c2c2, 0xadadad, 0x999999, 0x858585, 0x707070, 0x5c5c5c, 0x474747, 0x333333, 0x000000,
@@ -937,7 +937,7 @@ final class ColorSpectrumComponent: Component {
     }
 }
 
-final class ColorSpectrumPickerView: UIView, UIGestureRecognizerDelegate {
+public final class ColorSpectrumPickerView: UIView, UIGestureRecognizerDelegate {
     private var validSize: CGSize?
     private var selectedColor: DrawingColor?
     
@@ -950,7 +950,7 @@ final class ColorSpectrumPickerView: UIView, UIGestureRecognizerDelegate {
     private var circleMaskView = UIView()
     private let maskCircle = SimpleShapeLayer()
     
-    var selected: (DrawingColor) -> Void = { _ in }
+    public var selected: (DrawingColor) -> Void = { _ in }
                     
     private var bitmapData: UnsafeMutableRawPointer?
     
@@ -1048,7 +1048,7 @@ final class ColorSpectrumPickerView: UIView, UIGestureRecognizerDelegate {
     private var animatingIn = false
     private var scheduledAnimateOut: (() -> Void)?
     
-    func animateIn() {
+    public func animateIn() {
         self.animatingIn = true
         
         Queue.mainQueue().after(0.15) {
@@ -1107,7 +1107,7 @@ final class ColorSpectrumPickerView: UIView, UIGestureRecognizerDelegate {
         })
     }
         
-    func updateLayout(size: CGSize, selectedColor: DrawingColor?) -> CGSize {
+    public func updateLayout(size: CGSize, selectedColor: DrawingColor?) -> CGSize {
         let previousSize = self.validSize
         
         let imageSize = size
@@ -2413,10 +2413,10 @@ private final class ColorPickerSheetComponent: CombinedComponent {
     }
 }
 
-class ColorPickerScreen: ViewControllerComponentContainer {
+public final class ColorPickerScreen: ViewControllerComponentContainer {
     private var dismissed: () -> Void
     
-    init(context: AccountContext, initialColor: DrawingColor, updated: @escaping (DrawingColor) -> Void, openEyedropper: @escaping () -> Void, dismissed: @escaping () -> Void = {}) {
+    public init(context: AccountContext, initialColor: DrawingColor, updated: @escaping (DrawingColor) -> Void, openEyedropper: @escaping () -> Void, dismissed: @escaping () -> Void = {}) {
         self.dismissed = dismissed
         super.init(context: context, component: ColorPickerSheetComponent(context: context, initialColor: initialColor, updated: updated, openEyedropper: openEyedropper, dismissed: dismissed), navigationBarAppearance: .none)
         

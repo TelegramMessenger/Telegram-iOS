@@ -1,9 +1,207 @@
 public extension Api {
-    enum WebPageAttribute: TypeConstructorDescription {
+    enum WebPage: TypeConstructorDescription {
+        case webPage(flags: Int32, id: Int64, url: String, displayUrl: String, hash: Int32, type: String?, siteName: String?, title: String?, description: String?, photo: Api.Photo?, embedUrl: String?, embedType: String?, embedWidth: Int32?, embedHeight: Int32?, duration: Int32?, author: String?, document: Api.Document?, cachedPage: Api.Page?, attributes: [Api.WebPageAttribute]?)
+        case webPageEmpty(id: Int64)
+        case webPageNotModified(flags: Int32, cachedPageViews: Int32?)
+        case webPagePending(id: Int64, date: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .webPage(let flags, let id, let url, let displayUrl, let hash, let type, let siteName, let title, let description, let photo, let embedUrl, let embedType, let embedWidth, let embedHeight, let duration, let author, let document, let cachedPage, let attributes):
+                    if boxed {
+                        buffer.appendInt32(-392411726)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeString(url, buffer: buffer, boxed: false)
+                    serializeString(displayUrl, buffer: buffer, boxed: false)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(type!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(siteName!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeString(description!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {photo!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 5) != 0 {serializeString(embedUrl!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 5) != 0 {serializeString(embedType!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 6) != 0 {serializeInt32(embedWidth!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 6) != 0 {serializeInt32(embedHeight!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 7) != 0 {serializeInt32(duration!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 8) != 0 {serializeString(author!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 9) != 0 {document!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 10) != 0 {cachedPage!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 12) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(attributes!.count))
+                    for item in attributes! {
+                        item.serialize(buffer, true)
+                    }}
+                    break
+                case .webPageEmpty(let id):
+                    if boxed {
+                        buffer.appendInt32(-350980120)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    break
+                case .webPageNotModified(let flags, let cachedPageViews):
+                    if boxed {
+                        buffer.appendInt32(1930545681)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(cachedPageViews!, buffer: buffer, boxed: false)}
+                    break
+                case .webPagePending(let id, let date):
+                    if boxed {
+                        buffer.appendInt32(-981018084)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .webPage(let flags, let id, let url, let displayUrl, let hash, let type, let siteName, let title, let description, let photo, let embedUrl, let embedType, let embedWidth, let embedHeight, let duration, let author, let document, let cachedPage, let attributes):
+                return ("webPage", [("flags", flags as Any), ("id", id as Any), ("url", url as Any), ("displayUrl", displayUrl as Any), ("hash", hash as Any), ("type", type as Any), ("siteName", siteName as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("embedUrl", embedUrl as Any), ("embedType", embedType as Any), ("embedWidth", embedWidth as Any), ("embedHeight", embedHeight as Any), ("duration", duration as Any), ("author", author as Any), ("document", document as Any), ("cachedPage", cachedPage as Any), ("attributes", attributes as Any)])
+                case .webPageEmpty(let id):
+                return ("webPageEmpty", [("id", id as Any)])
+                case .webPageNotModified(let flags, let cachedPageViews):
+                return ("webPageNotModified", [("flags", flags as Any), ("cachedPageViews", cachedPageViews as Any)])
+                case .webPagePending(let id, let date):
+                return ("webPagePending", [("id", id as Any), ("date", date as Any)])
+    }
+    }
+    
+        public static func parse_webPage(_ reader: BufferReader) -> WebPage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_6 = parseString(reader) }
+            var _7: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_7 = parseString(reader) }
+            var _8: String?
+            if Int(_1!) & Int(1 << 2) != 0 {_8 = parseString(reader) }
+            var _9: String?
+            if Int(_1!) & Int(1 << 3) != 0 {_9 = parseString(reader) }
+            var _10: Api.Photo?
+            if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
+                _10 = Api.parse(reader, signature: signature) as? Api.Photo
+            } }
+            var _11: String?
+            if Int(_1!) & Int(1 << 5) != 0 {_11 = parseString(reader) }
+            var _12: String?
+            if Int(_1!) & Int(1 << 5) != 0 {_12 = parseString(reader) }
+            var _13: Int32?
+            if Int(_1!) & Int(1 << 6) != 0 {_13 = reader.readInt32() }
+            var _14: Int32?
+            if Int(_1!) & Int(1 << 6) != 0 {_14 = reader.readInt32() }
+            var _15: Int32?
+            if Int(_1!) & Int(1 << 7) != 0 {_15 = reader.readInt32() }
+            var _16: String?
+            if Int(_1!) & Int(1 << 8) != 0 {_16 = parseString(reader) }
+            var _17: Api.Document?
+            if Int(_1!) & Int(1 << 9) != 0 {if let signature = reader.readInt32() {
+                _17 = Api.parse(reader, signature: signature) as? Api.Document
+            } }
+            var _18: Api.Page?
+            if Int(_1!) & Int(1 << 10) != 0 {if let signature = reader.readInt32() {
+                _18 = Api.parse(reader, signature: signature) as? Api.Page
+            } }
+            var _19: [Api.WebPageAttribute]?
+            if Int(_1!) & Int(1 << 12) != 0 {if let _ = reader.readInt32() {
+                _19 = Api.parseVector(reader, elementSignature: 0, elementType: Api.WebPageAttribute.self)
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 2) == 0) || _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 3) == 0) || _9 != nil
+            let _c10 = (Int(_1!) & Int(1 << 4) == 0) || _10 != nil
+            let _c11 = (Int(_1!) & Int(1 << 5) == 0) || _11 != nil
+            let _c12 = (Int(_1!) & Int(1 << 5) == 0) || _12 != nil
+            let _c13 = (Int(_1!) & Int(1 << 6) == 0) || _13 != nil
+            let _c14 = (Int(_1!) & Int(1 << 6) == 0) || _14 != nil
+            let _c15 = (Int(_1!) & Int(1 << 7) == 0) || _15 != nil
+            let _c16 = (Int(_1!) & Int(1 << 8) == 0) || _16 != nil
+            let _c17 = (Int(_1!) & Int(1 << 9) == 0) || _17 != nil
+            let _c18 = (Int(_1!) & Int(1 << 10) == 0) || _18 != nil
+            let _c19 = (Int(_1!) & Int(1 << 12) == 0) || _19 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 {
+                return Api.WebPage.webPage(flags: _1!, id: _2!, url: _3!, displayUrl: _4!, hash: _5!, type: _6, siteName: _7, title: _8, description: _9, photo: _10, embedUrl: _11, embedType: _12, embedWidth: _13, embedHeight: _14, duration: _15, author: _16, document: _17, cachedPage: _18, attributes: _19)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_webPageEmpty(_ reader: BufferReader) -> WebPage? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.WebPage.webPageEmpty(id: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_webPageNotModified(_ reader: BufferReader) -> WebPage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            if _c1 && _c2 {
+                return Api.WebPage.webPageNotModified(flags: _1!, cachedPageViews: _2)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_webPagePending(_ reader: BufferReader) -> WebPage? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.WebPage.webPagePending(id: _1!, date: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    indirect enum WebPageAttribute: TypeConstructorDescription {
+        case webPageAttributeStory(flags: Int32, userId: Int64, id: Int32, story: Api.StoryItem?)
         case webPageAttributeTheme(flags: Int32, documents: [Api.Document]?, settings: Api.ThemeSettings?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
+                case .webPageAttributeStory(let flags, let userId, let id, let story):
+                    if boxed {
+                        buffer.appendInt32(-1818605967)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {story!.serialize(buffer, true)}
+                    break
                 case .webPageAttributeTheme(let flags, let documents, let settings):
                     if boxed {
                         buffer.appendInt32(1421174295)
@@ -21,11 +219,35 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
+                case .webPageAttributeStory(let flags, let userId, let id, let story):
+                return ("webPageAttributeStory", [("flags", flags as Any), ("userId", userId as Any), ("id", id as Any), ("story", story as Any)])
                 case .webPageAttributeTheme(let flags, let documents, let settings):
                 return ("webPageAttributeTheme", [("flags", flags as Any), ("documents", documents as Any), ("settings", settings as Any)])
     }
     }
     
+        public static func parse_webPageAttributeStory(_ reader: BufferReader) -> WebPageAttribute? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Api.StoryItem?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.StoryItem
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.WebPageAttribute.webPageAttributeStory(flags: _1!, userId: _2!, id: _3!, story: _4)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_webPageAttributeTheme(_ reader: BufferReader) -> WebPageAttribute? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -1100,236 +1322,6 @@ public extension Api.account {
         }
         public static func parse_themesNotModified(_ reader: BufferReader) -> Themes? {
             return Api.account.Themes.themesNotModified
-        }
-    
-    }
-}
-public extension Api.account {
-    enum TmpPassword: TypeConstructorDescription {
-        case tmpPassword(tmpPassword: Buffer, validUntil: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .tmpPassword(let tmpPassword, let validUntil):
-                    if boxed {
-                        buffer.appendInt32(-614138572)
-                    }
-                    serializeBytes(tmpPassword, buffer: buffer, boxed: false)
-                    serializeInt32(validUntil, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .tmpPassword(let tmpPassword, let validUntil):
-                return ("tmpPassword", [("tmpPassword", tmpPassword as Any), ("validUntil", validUntil as Any)])
-    }
-    }
-    
-        public static func parse_tmpPassword(_ reader: BufferReader) -> TmpPassword? {
-            var _1: Buffer?
-            _1 = parseBytes(reader)
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.account.TmpPassword.tmpPassword(tmpPassword: _1!, validUntil: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.account {
-    enum WallPapers: TypeConstructorDescription {
-        case wallPapers(hash: Int64, wallpapers: [Api.WallPaper])
-        case wallPapersNotModified
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .wallPapers(let hash, let wallpapers):
-                    if boxed {
-                        buffer.appendInt32(-842824308)
-                    }
-                    serializeInt64(hash, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(wallpapers.count))
-                    for item in wallpapers {
-                        item.serialize(buffer, true)
-                    }
-                    break
-                case .wallPapersNotModified:
-                    if boxed {
-                        buffer.appendInt32(471437699)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .wallPapers(let hash, let wallpapers):
-                return ("wallPapers", [("hash", hash as Any), ("wallpapers", wallpapers as Any)])
-                case .wallPapersNotModified:
-                return ("wallPapersNotModified", [])
-    }
-    }
-    
-        public static func parse_wallPapers(_ reader: BufferReader) -> WallPapers? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: [Api.WallPaper]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.WallPaper.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.account.WallPapers.wallPapers(hash: _1!, wallpapers: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_wallPapersNotModified(_ reader: BufferReader) -> WallPapers? {
-            return Api.account.WallPapers.wallPapersNotModified
-        }
-    
-    }
-}
-public extension Api.account {
-    enum WebAuthorizations: TypeConstructorDescription {
-        case webAuthorizations(authorizations: [Api.WebAuthorization], users: [Api.User])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .webAuthorizations(let authorizations, let users):
-                    if boxed {
-                        buffer.appendInt32(-313079300)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(authorizations.count))
-                    for item in authorizations {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .webAuthorizations(let authorizations, let users):
-                return ("webAuthorizations", [("authorizations", authorizations as Any), ("users", users as Any)])
-    }
-    }
-    
-        public static func parse_webAuthorizations(_ reader: BufferReader) -> WebAuthorizations? {
-            var _1: [Api.WebAuthorization]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.WebAuthorization.self)
-            }
-            var _2: [Api.User]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.account.WebAuthorizations.webAuthorizations(authorizations: _1!, users: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.auth {
-    enum Authorization: TypeConstructorDescription {
-        case authorization(flags: Int32, otherwiseReloginDays: Int32?, tmpSessions: Int32?, futureAuthToken: Buffer?, user: Api.User)
-        case authorizationSignUpRequired(flags: Int32, termsOfService: Api.help.TermsOfService?)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .authorization(let flags, let otherwiseReloginDays, let tmpSessions, let futureAuthToken, let user):
-                    if boxed {
-                        buffer.appendInt32(782418132)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(otherwiseReloginDays!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(tmpSessions!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 2) != 0 {serializeBytes(futureAuthToken!, buffer: buffer, boxed: false)}
-                    user.serialize(buffer, true)
-                    break
-                case .authorizationSignUpRequired(let flags, let termsOfService):
-                    if boxed {
-                        buffer.appendInt32(1148485274)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {termsOfService!.serialize(buffer, true)}
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .authorization(let flags, let otherwiseReloginDays, let tmpSessions, let futureAuthToken, let user):
-                return ("authorization", [("flags", flags as Any), ("otherwiseReloginDays", otherwiseReloginDays as Any), ("tmpSessions", tmpSessions as Any), ("futureAuthToken", futureAuthToken as Any), ("user", user as Any)])
-                case .authorizationSignUpRequired(let flags, let termsOfService):
-                return ("authorizationSignUpRequired", [("flags", flags as Any), ("termsOfService", termsOfService as Any)])
-    }
-    }
-    
-        public static func parse_authorization(_ reader: BufferReader) -> Authorization? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            if Int(_1!) & Int(1 << 1) != 0 {_2 = reader.readInt32() }
-            var _3: Int32?
-            if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt32() }
-            var _4: Buffer?
-            if Int(_1!) & Int(1 << 2) != 0 {_4 = parseBytes(reader) }
-            var _5: Api.User?
-            if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.User
-            }
-            let _c1 = _1 != nil
-            let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
-            let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.auth.Authorization.authorization(flags: _1!, otherwiseReloginDays: _2, tmpSessions: _3, futureAuthToken: _4, user: _5!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_authorizationSignUpRequired(_ reader: BufferReader) -> Authorization? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.help.TermsOfService?
-            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.help.TermsOfService
-            } }
-            let _c1 = _1 != nil
-            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            if _c1 && _c2 {
-                return Api.auth.Authorization.authorizationSignUpRequired(flags: _1!, termsOfService: _2)
-            }
-            else {
-                return nil
-            }
         }
     
     }

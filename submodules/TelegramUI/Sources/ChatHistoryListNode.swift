@@ -318,7 +318,7 @@ private final class ChatHistoryTransactionOpaqueState {
     }
 }
 
-private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, animatedEmojiStickers: [String: [StickerPackItem]], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]], subject: ChatControllerSubject?, currentlyPlayingMessageId: MessageIndex?, isCopyProtectionEnabled: Bool, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, alwaysDisplayTranscribeButton: ChatMessageItemAssociatedData.DisplayTranscribeButton, accountPeer: EnginePeer?, topicAuthorId: EnginePeer.Id?, hasBots: Bool, translateToLanguage: String?) -> ChatMessageItemAssociatedData {
+private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, animatedEmojiStickers: [String: [StickerPackItem]], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]], subject: ChatControllerSubject?, currentlyPlayingMessageId: MessageIndex?, isCopyProtectionEnabled: Bool, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, alwaysDisplayTranscribeButton: ChatMessageItemAssociatedData.DisplayTranscribeButton, accountPeer: EnginePeer?, topicAuthorId: EnginePeer.Id?, hasBots: Bool, translateToLanguage: String?, maxReadStoryId: Int32?) -> ChatMessageItemAssociatedData {
     var automaticDownloadPeerId: EnginePeer.Id?
     var automaticMediaDownloadPeerType: MediaAutoDownloadPeerType = .channel
     var contactsPeerIds: Set<PeerId> = Set()
@@ -372,7 +372,7 @@ private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHist
         automaticDownloadPeerId = message.messageId.peerId
     }
     
-    return ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadPeerId: automaticDownloadPeerId, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, subject: subject, contactsPeerIds: contactsPeerIds, channelDiscussionGroup: channelDiscussionGroup, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, accountPeer: accountPeer, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, topicAuthorId: topicAuthorId, hasBots: hasBots, translateToLanguage: translateToLanguage)
+    return ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadPeerId: automaticDownloadPeerId, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, subject: subject, contactsPeerIds: contactsPeerIds, channelDiscussionGroup: channelDiscussionGroup, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, accountPeer: accountPeer, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, topicAuthorId: topicAuthorId, hasBots: hasBots, translateToLanguage: translateToLanguage, maxReadStoryId: maxReadStoryId)
 }
 
 private extension ChatHistoryLocationInput {
@@ -523,6 +523,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let unseenReactionsProcessingManager = ChatMessageThrottledProcessingManager(delay: 0.2, submitInterval: 0.0)
     private let extendedMediaProcessingManager = ChatMessageVisibleThrottledProcessingManager(interval: 5.0)
     private let translationProcessingManager = ChatMessageThrottledProcessingManager(submitInterval: 1.0)
+    private let refreshStoriesProcessingManager = ChatMessageThrottledProcessingManager()
     
     let prefetchManager: InChatPrefetchManager
     private var currentEarlierPrefetchMessages: [(Message, Media)] = []
@@ -636,7 +637,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     var openNextChannelToRead: ((EnginePeer, TelegramEngine.NextUnreadChannelLocation) -> Void)?
     private var contentInsetAnimator: DisplayLinkAnimator?
 
-    private let adMessagesContext: AdMessagesHistoryContext?
+    let adMessagesContext: AdMessagesHistoryContext?
     private var adMessagesDisposable: Disposable?
     private var preloadAdPeerId: PeerId?
     private let preloadAdPeerDisposable = MetaDisposable()
@@ -792,6 +793,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         self.refreshMediaProcessingManager.process = { [weak context] messageIds in
             context?.account.viewTracker.refreshSecretMediaMediaForMessageIds(messageIds: messageIds)
+        }
+        self.refreshStoriesProcessingManager.process = { [weak context] messageIds in
+            context?.account.viewTracker.refreshStoriesForMessageIds(messageIds: messageIds)
         }
         self.translationProcessingManager.process = { [weak self, weak context] messageIds in
             if let context = context, let toLang = self?.toLang {
@@ -1082,6 +1086,24 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             self.chatHasBotsPromise.get()
         )
         
+        let maxReadStoryId: Signal<Int32?, NoError>
+        if let peerId = chatLocation.peerId, peerId.namespace == Namespaces.Peer.CloudUser {
+            maxReadStoryId = context.account.postbox.combinedView(keys: [PostboxViewKey.storiesState(key: .peer(peerId))])
+            |> map { views -> Int32? in
+                guard let view = views.views[PostboxViewKey.storiesState(key: .peer(peerId))] as? StoryStatesView else {
+                    return nil
+                }
+                if let state = view.value?.get(Stories.PeerState.self) {
+                    return state.maxReadId
+                } else {
+                    return nil
+                }
+            }
+            |> distinctUntilChanged
+        } else {
+            maxReadStoryId = .single(nil)
+        }
+        
         let historyViewTransitionDisposable = combineLatest(queue: messageViewQueue,
             historyViewUpdate,
             self.chatPresentationDataPromise.get(),
@@ -1099,8 +1121,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             promises,
             topicAuthorId,
             self.allAdMessagesPromise.get(),
-            translationState
-        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, availableReactions, defaultReaction, accountPeer, suggestAudioTranscription, promises, topicAuthorId, allAdMessages, translationState in
+            translationState,
+            maxReadStoryId
+        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, availableReactions, defaultReaction, accountPeer, suggestAudioTranscription, promises, topicAuthorId, allAdMessages, translationState, maxReadStoryId in
             let (historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, currentlyPlayingMessageIdAndType, scrollToMessageId, chatHasBots) = promises
             
             func applyHole() {
@@ -1256,7 +1279,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     translateToLanguage = languageCode
                 }
                 
-                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageIdAndType?.0, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, accountPeer: accountPeer, topicAuthorId: topicAuthorId, hasBots: chatHasBots, translateToLanguage: translateToLanguage)
+                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageIdAndType?.0, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, accountPeer: accountPeer, topicAuthorId: topicAuthorId, hasBots: chatHasBots, translateToLanguage: translateToLanguage, maxReadStoryId: maxReadStoryId)
                 
                 let filteredEntries = chatHistoryEntriesForView(
                     location: chatLocation,
@@ -1956,7 +1979,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     associatedMessages: initialMessage.associatedMessages,
                     associatedMessageIds: initialMessage.associatedMessageIds,
                     associatedMedia: initialMessage.associatedMedia,
-                    associatedThreadInfo: initialMessage.associatedThreadInfo
+                    associatedThreadInfo: initialMessage.associatedThreadInfo,
+                    associatedStories: initialMessage.associatedStories
                 )
                 self.nextPendingDynamicMessageId += 1
                 
@@ -2042,12 +2066,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             var messageIdsWithLiveLocation: [MessageId] = []
             var messageIdsWithUnsupportedMedia: [MessageId] = []
             var messageIdsWithRefreshMedia: [MessageId] = []
+            var messageIdsWithRefreshStories: [MessageId] = []
             var messageIdsWithUnseenPersonalMention: [MessageId] = []
             var messageIdsWithUnseenReactions: [MessageId] = []
             var messageIdsWithInactiveExtendedMedia = Set<MessageId>()
             var downloadableResourceIds: [(messageId: MessageId, resourceId: String)] = []
             var allVisibleAnchorMessageIds: [(MessageId, Int)] = []
             var visibleAdOpaqueIds: [Data] = []
+            var peerIdsWithRefreshStories: [PeerId] = []
             
             if indexRange.0 <= indexRange.1 {
                 for i in (indexRange.0 ... indexRange.1) {
@@ -2055,6 +2081,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     
                     switch historyView.filteredEntries[i] {
                     case let .MessageEntry(message, _, _, _, _, _):
+                        if let author = message.author as? TelegramUser {
+                            peerIdsWithRefreshStories.append(author.id)
+                        }
+                        
                         var hasUnconsumedMention = false
                         var hasUnconsumedContent = false
                         if message.tags.contains(.unseenPersonalMessage) {
@@ -2067,6 +2097,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         var contentRequiredValidation = false
                         var mediaRequiredValidation = false
                         var hasUnseenReactions = false
+                        var storiesRequiredValidation = false
                         for attribute in message.attributes {
                             if attribute is ViewCountMessageAttribute {
                                 if message.id.namespace == Namespaces.Message.Cloud {
@@ -2086,6 +2117,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 if message.stableId != ChatHistoryListNode.fixedAdMessageStableId {
                                     visibleAdOpaqueIds.append(attribute.opaqueId)
                                 }
+                            } else if let _ = attribute as? ReplyStoryAttribute {
+                                storiesRequiredValidation = true
                             }
                         }
                         
@@ -2125,6 +2158,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 if invoice.version != TelegramMediaInvoice.lastVersion {
                                     contentRequiredValidation = true
                                 }
+                            } else if let _ = media as? TelegramMediaStory {
+                                storiesRequiredValidation = true
+                            } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, let _ = content.story {
+                                storiesRequiredValidation = true
                             }
                         }
                         if contentRequiredValidation {
@@ -2132,6 +2169,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         }
                         if mediaRequiredValidation {
                             messageIdsWithRefreshMedia.append(message.id)
+                        }
+                        if storiesRequiredValidation {
+                            messageIdsWithRefreshStories.append(message.id)
                         }
                         if hasUnconsumedMention && !hasUnconsumedContent {
                             messageIdsWithUnseenPersonalMention.append(message.id)
@@ -2152,6 +2192,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             allVisibleAnchorMessageIds.append((message.id, nodeIndex))
                         }
                     case let .MessageGroupEntry(_, messages, _):
+                        if let author = messages.first?.0.author as? TelegramUser {
+                            peerIdsWithRefreshStories.append(author.id)
+                        }
+                        
                         for (message, _, _, _, _) in messages {
                             var hasUnconsumedMention = false
                             var hasUnconsumedContent = false
@@ -2328,6 +2372,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             if !messageIdsWithRefreshMedia.isEmpty {
                 self.refreshMediaProcessingManager.add(messageIdsWithRefreshMedia)
             }
+            if !messageIdsWithRefreshStories.isEmpty {
+                self.refreshStoriesProcessingManager.add(messageIdsWithRefreshStories)
+            }
             if !messageIdsWithUnseenPersonalMention.isEmpty {
                 self.messageMentionProcessingManager.add(messageIdsWithUnseenPersonalMention)
             }
@@ -2354,6 +2401,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 for opaqueId in visibleAdOpaqueIds {
                     self.markAdAsSeen(opaqueId: opaqueId)
                 }
+            }
+            if !peerIdsWithRefreshStories.isEmpty {
+                self.context.account.viewTracker.refreshStoryStatsForPeerIds(peerIds: peerIdsWithRefreshStories)
             }
             
             self.currentEarlierPrefetchMessages = toEarlierMediaMessages

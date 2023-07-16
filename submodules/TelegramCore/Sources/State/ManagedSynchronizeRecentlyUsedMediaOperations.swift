@@ -65,7 +65,7 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOpera
         } |> switchToLatest
 }
 
-func managedSynchronizeRecentlyUsedMediaOperations(postbox: Postbox, network: Network, category: RecentlyUsedMediaCategory, revalidationContext: MediaReferenceRevalidationContext) -> Signal<Void, NoError> {
+func managedSynchronizeRecentlyUsedMediaOperations(accountPeerId: PeerId, postbox: Postbox, network: Network, category: RecentlyUsedMediaCategory, revalidationContext: MediaReferenceRevalidationContext) -> Signal<Void, NoError> {
     return Signal { _ in
         let tag: PeerOperationLogTag
         switch category {
@@ -88,7 +88,7 @@ func managedSynchronizeRecentlyUsedMediaOperations(postbox: Postbox, network: Ne
                 let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizeRecentlyUsedMediaOperation {
-                            return synchronizeRecentlyUsedMedia(transaction: transaction, postbox: postbox, network: network, revalidationContext: revalidationContext, operation: operation)
+                            return synchronizeRecentlyUsedMedia(transaction: transaction, accountPeerId: accountPeerId, postbox: postbox, network: network, revalidationContext: revalidationContext, operation: operation)
                         } else {
                             assertionFailure()
                         }
@@ -120,7 +120,7 @@ private enum SaveRecentlyUsedMediaError {
     case invalidReference
 }
 
-private func synchronizeRecentlyUsedMedia(transaction: Transaction, postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext, operation: SynchronizeRecentlyUsedMediaOperation) -> Signal<Void, NoError> {
+private func synchronizeRecentlyUsedMedia(transaction: Transaction, accountPeerId: PeerId, postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext, operation: SynchronizeRecentlyUsedMediaOperation) -> Signal<Void, NoError> {
     switch operation.content {
         case let .add(id, accessHash, fileReference):
             guard let fileReference = fileReference else {
@@ -150,7 +150,7 @@ private func synchronizeRecentlyUsedMedia(transaction: Transaction, postbox: Pos
                     case .generic:
                         return .fail(.generic)
                     case .invalidReference:
-                        return revalidateMediaResourceReference(postbox: postbox, network: network, revalidationContext: revalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: fileReference.resourceReference(fileReference.media.resource), preferBackgroundReferenceRevalidation: false, continueInBackground: false), resource: fileReference.media.resource)
+                        return revalidateMediaResourceReference(accountPeerId: accountPeerId, postbox: postbox, network: network, revalidationContext: revalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: fileReference.resourceReference(fileReference.media.resource), preferBackgroundReferenceRevalidation: false, continueInBackground: false), resource: fileReference.media.resource)
                         |> mapError { _ -> SaveRecentlyUsedMediaError in
                             return .generic
                         }

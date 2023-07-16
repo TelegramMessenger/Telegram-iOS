@@ -51,6 +51,8 @@ public enum EngineConfiguration {
         public let maxReactionsPerMessage: Int32
         public let maxSharedFolderInviteLinks: Int32
         public let maxSharedFolderJoin: Int32
+        public let maxStoryCaptionLength: Int32
+        public let maxExpiringStoriesCount: Int32
         
         public static var defaultValue: UserLimits {
             return UserLimits(UserLimitsConfiguration.defaultValue)
@@ -71,7 +73,9 @@ public enum EngineConfiguration {
             maxAnimatedEmojisInText: Int32,
             maxReactionsPerMessage: Int32,
             maxSharedFolderInviteLinks: Int32,
-            maxSharedFolderJoin: Int32
+            maxSharedFolderJoin: Int32,
+            maxStoryCaptionLength: Int32,
+            maxExpiringStoriesCount: Int32
         ) {
             self.maxPinnedChatCount = maxPinnedChatCount
             self.maxArchivedPinnedChatCount = maxArchivedPinnedChatCount
@@ -88,6 +92,8 @@ public enum EngineConfiguration {
             self.maxReactionsPerMessage = maxReactionsPerMessage
             self.maxSharedFolderInviteLinks = maxSharedFolderInviteLinks
             self.maxSharedFolderJoin = maxSharedFolderJoin
+            self.maxStoryCaptionLength = maxStoryCaptionLength
+            self.maxExpiringStoriesCount = maxExpiringStoriesCount
         }
     }
 }
@@ -139,7 +145,9 @@ public extension EngineConfiguration.UserLimits {
             maxAnimatedEmojisInText: userLimitsConfiguration.maxAnimatedEmojisInText,
             maxReactionsPerMessage: userLimitsConfiguration.maxReactionsPerMessage,
             maxSharedFolderInviteLinks: userLimitsConfiguration.maxSharedFolderInviteLinks,
-            maxSharedFolderJoin: userLimitsConfiguration.maxSharedFolderJoin
+            maxSharedFolderJoin: userLimitsConfiguration.maxSharedFolderJoin,
+            maxStoryCaptionLength: userLimitsConfiguration.maxStoryCaptionLength,
+            maxExpiringStoriesCount: userLimitsConfiguration.maxExpiringStoriesCount
         )
     }
 }
@@ -426,6 +434,27 @@ public extension TelegramEngine.EngineData.Item {
                     return EngineConfiguration.Links(LinksConfiguration.defaultValue)
                 }
                 return EngineConfiguration.Links(value)
+            }
+        }
+        
+        public struct GlobalPrivacy: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = GlobalPrivacySettings
+            
+            public init() {
+            }
+            
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.globalPrivacySettings]))
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let value = view.values[PreferencesKeys.globalPrivacySettings]?.get(GlobalPrivacySettings.self) else {
+                    return GlobalPrivacySettings.default
+                }
+                return value
             }
         }
     }

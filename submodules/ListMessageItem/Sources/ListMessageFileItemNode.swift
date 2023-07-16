@@ -878,7 +878,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 
                 if statusUpdated && item.displayFileInfo {
                     if let file = selectedMedia as? TelegramMediaFile {
-                        updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: file, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult, isDownloadList: item.isDownloadList)
+                        updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: file, message: EngineMessage(message), isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult, isDownloadList: item.isDownloadList)
                         |> mapToSignal { value -> Signal<FileMediaResourceStatus, NoError> in
                             if case .Fetching = value.fetchStatus, !item.isDownloadList {
                                 return .single(value) |> delay(0.1, queue: Queue.concurrentDefaultQueue())
@@ -905,10 +905,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             }
                         }
                         if isVoice {
-                            updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: item.context, file: file, message: message, isRecentActions: false, isGlobalSearch: item.isGlobalSearchResult, isDownloadList: item.isDownloadList)
+                            updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: item.context, file: file, message: EngineMessage(message), isRecentActions: false, isGlobalSearch: item.isGlobalSearchResult, isDownloadList: item.isDownloadList)
                         }
                     } else if let image = selectedMedia as? TelegramMediaImage {
-                        updatedStatusSignal = messageImageMediaResourceStatus(context: item.context, image: image, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult || item.isDownloadList)
+                        updatedStatusSignal = messageImageMediaResourceStatus(context: item.context, image: image, message: EngineMessage(message), isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult || item.isDownloadList)
                         |> mapToSignal { value -> Signal<FileMediaResourceStatus, NoError> in
                             if case .Fetching = value.fetchStatus, !item.isDownloadList {
                                 return .single(value) |> delay(0.1, queue: Queue.concurrentDefaultQueue())
@@ -1231,7 +1231,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         strongSelf.statusDisposable.set((updatedStatusSignal
                         |> deliverOnMainQueue).start(next: { [weak strongSelf] fileStatus in
                             if let strongSelf = strongSelf {
-                                strongSelf.fetchStatus = fileStatus.fetchStatus
+                                strongSelf.fetchStatus = fileStatus.fetchStatus._asStatus()
                                 strongSelf.resourceStatus = fileStatus.mediaStatus
                                 strongSelf.updateStatus(transition: .immediate)
                             }
@@ -1398,7 +1398,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
         }
     }
     
-    override public func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    override public func transitionNode(id: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let item = self.item, let message = item.message, message.id == id, self.iconImageNode.supernode != nil {
             let iconImageNode = self.iconImageNode
             return (self.iconImageNode, self.iconImageNode.bounds, { [weak iconImageNode] in
@@ -1436,7 +1436,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 case .playbackStatus:
                     break
                 case let .fetchStatus(fetchStatus):
-                    maybeFetchStatus = fetchStatus
+                    maybeFetchStatus = fetchStatus._asStatus()
             }
             
             if item.isDownloadList, let fetchStatus = self.fetchStatus {

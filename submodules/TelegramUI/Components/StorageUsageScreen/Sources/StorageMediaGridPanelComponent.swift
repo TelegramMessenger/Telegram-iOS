@@ -11,7 +11,6 @@ import AccountContext
 import TelegramCore
 import MultilineTextComponent
 import EmojiStatusComponent
-import Postbox
 import TelegramStringFormatting
 import CheckNode
 import AvatarNode
@@ -27,7 +26,7 @@ private final class MediaGridLayer: SimpleLayer {
         case editing(isSelected: Bool)
     }
     
-    private(set) var message: Message?
+    private(set) var message: EngineMessage?
     private var disposable: Disposable?
     
     private var size: CGSize?
@@ -77,7 +76,7 @@ private final class MediaGridLayer: SimpleLayer {
         }
     }
     
-    func setup(context: AccountContext, strings: PresentationStrings, message: Message, size: Int64) {
+    func setup(context: AccountContext, strings: PresentationStrings, message: EngineMessage, size: Int64) {
         self.message = message
         
         var isVideo = false
@@ -221,11 +220,11 @@ final class StorageMediaGridPanelComponent: Component {
     typealias EnvironmentType = StorageUsagePanelEnvironment
     
     final class Item: Equatable {
-        let message: Message
+        let message: EngineMessage
         let size: Int64
         
         init(
-            message: Message,
+            message: EngineMessage,
             size: Int64
         ) {
             self.message = message
@@ -478,7 +477,7 @@ final class StorageMediaGridPanelComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+        func transitionNodeForGallery(messageId: EngineMessage.Id, media: EngineMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
             var foundItemLayer: MediaGridLayer?
             for (_, itemLayer) in self.visibleLayers {
                 if let message = itemLayer.message, message.id == messageId {

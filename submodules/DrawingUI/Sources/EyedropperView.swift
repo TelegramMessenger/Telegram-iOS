@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
+import MediaEditor
 
 private let size = CGSize(width: 148.0, height: 148.0)
 private let outerWidth: CGFloat = 12.0
@@ -37,7 +38,7 @@ private func generateGridImage(size: CGSize, light: Bool) -> UIImage? {
     })
 }
 
-final class EyedropperView: UIView {
+public final class EyedropperView: UIView {
     private weak var drawingView: DrawingView?
     
     private let containerView: UIView
@@ -55,7 +56,7 @@ final class EyedropperView: UIView {
     
     var completed: (DrawingColor) -> Void = { _ in }
     var dismissed: () -> Void = { }
-    
+        
     init(containerSize: CGSize, drawingView: DrawingView, sourceImage: UIImage) {
         self.drawingView = drawingView
         

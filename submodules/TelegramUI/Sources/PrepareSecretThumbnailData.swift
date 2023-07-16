@@ -1,10 +1,10 @@
 import Foundation
 import UIKit
-import Postbox
 import Display
+import TelegramCore
 
-func prepareSecretThumbnailData(_ data: MediaResourceData) -> (CGSize, Data)? {
-    if data.complete, let image = UIImage(contentsOfFile: data.path) {
+func prepareSecretThumbnailData(_ data: EngineMediaResource.ResourceData) -> (CGSize, Data)? {
+    if data.isComplete, let image = UIImage(contentsOfFile: data.path) {
         if image.size.width < 100 && image.size.height < 100 {
             if let resultData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
                 return (image.size, resultData)

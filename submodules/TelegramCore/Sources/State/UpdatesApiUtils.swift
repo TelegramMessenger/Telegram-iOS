@@ -52,7 +52,7 @@ extension Api.MessageMedia {
                 } else {
                     return nil
                 }
-            case let .messageMediaDocument(_, document, _):
+            case let .messageMediaDocument(_, document, _, _):
                 if let document = document {
                     return collectPreCachedResources(for: document)
                 }
@@ -83,6 +83,19 @@ extension Api.MessageMedia {
                 return result
             default:
                 return nil
+        }
+    }
+    
+    var preCachedStories: [StoryId: Api.StoryItem]? {
+        switch self {
+        case let .messageMediaStory(_, userId, id, story):
+            if let story = story {
+                return [StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: id): story]
+            } else {
+                return nil
+            }
+        default:
+            return nil
         }
     }
 }
@@ -142,10 +155,19 @@ extension Api.Message {
     
     var preCachedResources: [(MediaResource, Data)]? {
         switch self {
-            case let .message(_, _, _, _, _, _, _, _, _, media, _, _, _, _, _, _, _, _, _, _, _):
-                return media?.preCachedResources
-            default:
-                return nil
+        case let .message(_, _, _, _, _, _, _, _, _, media, _, _, _, _, _, _, _, _, _, _, _):
+            return media?.preCachedResources
+        default:
+            return nil
+        }
+    }
+    
+    var preCachedStories: [StoryId: Api.StoryItem]? {
+        switch self {
+        case let .message(_, _, _, _, _, _, _, _, _, media, _, _, _, _, _, _, _, _, _, _, _):
+            return media?.preCachedStories
+        default:
+            return nil
         }
     }
 }
@@ -170,7 +192,7 @@ extension Api.Chat {
 extension Api.User {
     var peerId: PeerId {
         switch self {
-            case let .user(_, _, id, _, _, _, _, _, _, _, _, _, _, _, _, _):
+            case let .user(_, _, id, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
                 return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id))
             case let .userEmpty(id):
                 return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id))
@@ -586,6 +608,29 @@ extension Api.EncryptedMessage {
                 return PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt64Value(Int64(chatId)))
             case let .encryptedMessageService(_, chatId, _, _):
                 return PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt64Value(Int64(chatId)))
+        }
+    }
+}
+
+extension Api.InputMedia {
+    func withUpdatedStickers(_ stickers: [Api.InputDocument]?) -> Api.InputMedia {
+        switch self {
+        case let .inputMediaUploadedDocument(flags, file, thumb, mimeType, attributes, _, ttlSeconds):
+            var flags = flags
+            var attributes = attributes
+            if let _ = stickers {
+                flags |= (1 << 0)
+                attributes.append(.documentAttributeHasStickers)
+            }
+            return .inputMediaUploadedDocument(flags: flags, file: file, thumb: thumb, mimeType: mimeType, attributes: attributes, stickers: stickers, ttlSeconds: ttlSeconds)
+        case let .inputMediaUploadedPhoto(flags, file, _, ttlSeconds):
+            var flags = flags
+            if let _ = stickers {
+                flags |= (1 << 0)
+            }
+            return .inputMediaUploadedPhoto(flags: flags, file: file, stickers: stickers, ttlSeconds: ttlSeconds)
+        default:
+            return self
         }
     }
 }

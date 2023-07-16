@@ -912,6 +912,7 @@ public class Account {
     private var resetPeerHoleManagement: ((PeerId) -> Void)?
     
     public private(set) var pendingMessageManager: PendingMessageManager!
+    private(set) var pendingStoryManager: PendingStoryManager?
     public private(set) var pendingUpdateMessageManager: PendingUpdateMessageManager!
     private(set) var messageMediaPreuploadManager: MessageMediaPreuploadManager!
     private(set) var mediaReferenceRevalidationContext: MediaReferenceRevalidationContext!
@@ -973,6 +974,9 @@ public class Account {
     
     let networkStatsContext: NetworkStatsContext
     
+    public let filteredStorySubscriptionsContext: StorySubscriptionsContext?
+    public let hiddenStorySubscriptionsContext: StorySubscriptionsContext?
+    
     public init(accountManager: AccountManager<TelegramAccountManagerTypes>, id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods, supplementary: Bool) {
         self.accountManager = accountManager
         self.id = id
@@ -989,7 +993,16 @@ public class Account {
         self.networkStatsContext = NetworkStatsContext(postbox: postbox)
         
         self.peerInputActivityManager = PeerInputActivityManager()
-        self.callSessionManager = CallSessionManager(postbox: postbox, network: network, maxLayer: networkArguments.voipMaxLayer, versions: networkArguments.voipVersions, addUpdates: { [weak self] updates in
+        
+        if !supplementary {
+            self.filteredStorySubscriptionsContext = StorySubscriptionsContext(accountPeerId: peerId, postbox: postbox, network: network, isHidden: false)
+            self.hiddenStorySubscriptionsContext = StorySubscriptionsContext(accountPeerId: peerId, postbox: postbox, network: network, isHidden: true)
+        } else {
+            self.filteredStorySubscriptionsContext = nil
+            self.hiddenStorySubscriptionsContext = nil
+        }
+        
+        self.callSessionManager = CallSessionManager(postbox: postbox, network: network, accountPeerId: peerId, maxLayer: networkArguments.voipMaxLayer, versions: networkArguments.voipVersions, addUpdates: { [weak self] updates in
             self?.stateManager?.addUpdates(updates)
         })
         
@@ -1029,6 +1042,11 @@ public class Account {
         
         self.messageMediaPreuploadManager = MessageMediaPreuploadManager()
         self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, accountPeerId: peerId, auxiliaryMethods: auxiliaryMethods, stateManager: self.stateManager, localInputActivityManager: self.localInputActivityManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.mediaReferenceRevalidationContext)
+        if !supplementary {
+            self.pendingStoryManager = PendingStoryManager(postbox: postbox, network: network, accountPeerId: peerId, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.mediaReferenceRevalidationContext, auxiliaryMethods: self.auxiliaryMethods)
+        } else {
+            self.pendingStoryManager = nil
+        }
         self.pendingUpdateMessageManager = PendingUpdateMessageManager(postbox: postbox, network: network, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, mediaReferenceRevalidationContext: self.mediaReferenceRevalidationContext)
         self.pendingPeerMediaUploadManager = PendingPeerMediaUploadManager(postbox: postbox, network: network, stateManager: self.stateManager, accountPeerId: self.peerId)
         
@@ -1137,16 +1155,25 @@ public class Account {
         self.managedOperationsDisposable.add(managedCloudChatRemoveMessagesOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(network: self.network, postbox: self.postbox, isRemove: true).start())
         self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(network: self.network, postbox: self.postbox, isRemove: false).start())
+        self.managedOperationsDisposable.add(managedAutoexpireStoryOperations(network: self.network, postbox: self.postbox).start())
         self.managedOperationsDisposable.add(managedPeerTimestampAttributeOperations(network: self.network, postbox: self.postbox).start())
+        self.managedOperationsDisposable.add(managedSynchronizeViewStoriesOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedLocalTypingActivities(activities: self.localInputActivityManager.allActivities(), postbox: self.stateManager.postbox, network: self.stateManager.network, accountPeerId: self.stateManager.accountPeerId).start())
         
         let extractedExpr: [Signal<AccountRunningImportantTasks, NoError>] = [
             managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network) |> map { $0 ? AccountRunningImportantTasks.other : [] },
             self.pendingMessageManager.hasPendingMessages |> map { !$0.isEmpty ? AccountRunningImportantTasks.pendingMessages : [] },
-            self.pendingUpdateMessageManager.updatingMessageMedia |> map { !$0.isEmpty ? AccountRunningImportantTasks.pendingMessages : [] },
-            self.pendingPeerMediaUploadManager.uploadingPeerMedia |> map { !$0.isEmpty ? AccountRunningImportantTasks.pendingMessages : [] },
+            (self.pendingStoryManager?.hasPending ?? .single(false)) |> map {
+                hasPending in hasPending ? AccountRunningImportantTasks.pendingMessages : []
+            },
+            self.pendingUpdateMessageManager.updatingMessageMedia |> map {
+                !$0.isEmpty ? AccountRunningImportantTasks.pendingMessages : []
+            },
+            self.pendingPeerMediaUploadManager.uploadingPeerMedia |> map {
+                !$0.isEmpty ? AccountRunningImportantTasks.pendingMessages : []
+            },
             self.accountPresenceManager.isPerformingUpdate() |> map { $0 ? AccountRunningImportantTasks.other : [] },
-            self.notificationAutolockReportManager.isPerformingUpdate() |> map { $0 ? AccountRunningImportantTasks.other : [] }
+            //self.notificationAutolockReportManager.isPerformingUpdate() |> map { $0 ? AccountRunningImportantTasks.other : [] }
         ]
         let importantBackgroundOperations: [Signal<AccountRunningImportantTasks, NoError>] = extractedExpr
         let importantBackgroundOperationsRunning = combineLatest(queue: Queue(), importantBackgroundOperations)
@@ -1282,7 +1309,7 @@ public class Account {
         return _internal_reindexCacheInBackground(account: self, lowImpact: lowImpact)
         |> then(
             Signal { subscriber in
-                return postbox.mediaBox.updateResourceIndex(lowImpact: lowImpact, completion: {
+                return postbox.mediaBox.updateResourceIndex(otherResourceContentType: MediaResourceUserContentType.other.rawValue, lowImpact: lowImpact, completion: {
                     subscriber.putCompletion()
                 })
             }

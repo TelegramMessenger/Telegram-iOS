@@ -4,7 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 
-private let titleFont = Font.bold(13.0)
+private let titleFont = Font.regular(13.0)
 private let actionFont = Font.regular(13.0)
 
 public enum ListSectionHeaderActionType {

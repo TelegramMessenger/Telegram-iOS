@@ -4,6 +4,7 @@ import Lottie
 import AppBundle
 import HierarchyTrackingLayer
 import Display
+import GZip
 
 public final class LottieAnimationComponent: Component {
     public struct AnimationItem: Equatable {
@@ -21,11 +22,13 @@ public final class LottieAnimationComponent: Component {
         public var name: String
         public var mode: Mode
         public var range: (CGFloat, CGFloat)?
+        public var waitForCompletion: Bool
         
-        public init(name: String, mode: Mode, range: (CGFloat, CGFloat)? = nil) {
+        public init(name: String, mode: Mode, range: (CGFloat, CGFloat)? = nil, waitForCompletion: Bool = true) {
             self.name = name
             self.mode = mode
             self.range = range
+            self.waitForCompletion = waitForCompletion
         }
         
         public static func == (lhs: LottieAnimationComponent.AnimationItem, rhs: LottieAnimationComponent.AnimationItem) -> Bool {
@@ -125,14 +128,21 @@ public final class LottieAnimationComponent: Component {
         }
         
         public func playOnce() {
-            guard let animationView = self.animationView else {
+            guard let animationView = self.animationView, let component = self.component else {
                 return
             }
 
             animationView.stop()
             animationView.loopMode = .playOnce
-            animationView.play { [weak self] _ in
-                self?.currentCompletion?()
+            
+            if let range = component.animation.range {
+                animationView.play(fromProgress: range.0, toProgress: range.1, completion: { [weak self] _ in
+                    self?.currentCompletion?()
+                })
+            } else {
+                animationView.play { [weak self] _ in
+                    self?.currentCompletion?()
+                }
             }
         }
         
@@ -157,7 +167,7 @@ public final class LottieAnimationComponent: Component {
                     }
                 }
                 
-                if let animationView = self.animationView, animationView.isAnimationPlaying {
+                if let animationView = self.animationView, animationView.isAnimationPlaying && component.animation.waitForCompletion {
                     updateComponent = false
                     self.currentCompletion = { [weak self] in
                         guard let strongSelf = self else {
@@ -174,7 +184,14 @@ public final class LottieAnimationComponent: Component {
                     self.didPlayToCompletion = false
                     self.currentCompletion = nil
                     
-                    if let url = getAppBundle().url(forResource: component.animation.name, withExtension: "json"), let animation = Animation.filepath(url.path) {
+                    var animation: Animation?
+                    if let url = getAppBundle().url(forResource: component.animation.name, withExtension: "json"), let maybeAnimation = Animation.filepath(url.path) {
+                        animation = maybeAnimation
+                    } else if let url = getAppBundle().url(forResource: component.animation.name, withExtension: "tgs"), let data = try? Data(contentsOf: URL(fileURLWithPath: url.path)), let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) {
+                        animation = try? Animation.from(data: unpackedData, strategy: .codable)
+                    }
+                    
+                    if let animation {
                         let view = AnimationView(animation: animation, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
                         switch component.animation.mode {
                         case .still, .animateTransitionFromPrevious:

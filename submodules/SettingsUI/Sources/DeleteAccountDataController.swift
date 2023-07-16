@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import LegacyComponents
 import TelegramPresentationData
@@ -283,10 +282,7 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
                 return peers
             }
         
-            preloadedGroupPeers.set(context.engine.peers.adminedPublicChannels(scope: .all)
-            |> map { peers -> [EnginePeer] in
-                return peers.map { EnginePeer($0) }
-            })
+            preloadedGroupPeers.set(context.engine.peers.adminedPublicChannels(scope: .all))
         case let .groups(preloadedPeers):
             peers = .single(preloadedPeers.shuffled())
         default:

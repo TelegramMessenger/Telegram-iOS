@@ -76,6 +76,8 @@ private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {
     case cachedImageRecognizedContent = 6
     case pendingInAppPurchaseState = 7
     case translationState = 10
+    case storySource = 11
+    case mediaEditorState = 12
 }
 
 public struct ApplicationSpecificItemCacheCollectionId {
@@ -88,6 +90,8 @@ public struct ApplicationSpecificItemCacheCollectionId {
     public static let cachedImageRecognizedContent = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.cachedImageRecognizedContent.rawValue)
     public static let pendingInAppPurchaseState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.pendingInAppPurchaseState.rawValue)
     public static let translationState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.translationState.rawValue)
+    public static let storySource = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.storySource.rawValue)
+    public static let mediaEditorState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.mediaEditorState.rawValue)
 }
 
 private enum ApplicationSpecificOrderedItemListCollectionIdValues: Int32 {
@@ -95,6 +99,7 @@ private enum ApplicationSpecificOrderedItemListCollectionIdValues: Int32 {
     case wallpaperSearchRecentQueries = 1
     case settingsSearchRecentItems = 2
     case localThemes = 3
+    case storyDrafts = 4
 }
 
 public struct ApplicationSpecificOrderedItemListCollectionId {
@@ -102,4 +107,5 @@ public struct ApplicationSpecificOrderedItemListCollectionId {
     public static let wallpaperSearchRecentQueries = applicationSpecificOrderedItemListCollectionId(ApplicationSpecificOrderedItemListCollectionIdValues.wallpaperSearchRecentQueries.rawValue)
     public static let settingsSearchRecentItems = applicationSpecificOrderedItemListCollectionId(ApplicationSpecificOrderedItemListCollectionIdValues.settingsSearchRecentItems.rawValue)
     public static let localThemes = applicationSpecificOrderedItemListCollectionId(ApplicationSpecificOrderedItemListCollectionIdValues.localThemes.rawValue)
+    public static let storyDrafts = applicationSpecificOrderedItemListCollectionId(ApplicationSpecificOrderedItemListCollectionIdValues.storyDrafts.rawValue)
 }

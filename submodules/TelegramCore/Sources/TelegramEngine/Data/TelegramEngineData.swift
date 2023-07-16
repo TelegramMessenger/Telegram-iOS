@@ -254,6 +254,88 @@ public extension TelegramEngine {
             }
         }
         
+        public func subscribe<
+            T0: TelegramEngineDataItem,
+            T1: TelegramEngineDataItem,
+            T2: TelegramEngineDataItem,
+            T3: TelegramEngineDataItem,
+            T4: TelegramEngineDataItem
+        >(
+            _ t0: T0,
+            _ t1: T1,
+            _ t2: T2,
+            _ t3: T3,
+            _ t4: T4
+        ) -> Signal<
+            (
+                T0.Result,
+                T1.Result,
+                T2.Result,
+                T3.Result,
+                T4.Result
+            ),
+        NoError> {
+            return self._subscribe(items: [
+                t0 as! AnyPostboxViewDataItem,
+                t1 as! AnyPostboxViewDataItem,
+                t2 as! AnyPostboxViewDataItem,
+                t3 as! AnyPostboxViewDataItem,
+                t4 as! AnyPostboxViewDataItem
+            ])
+            |> map { results -> (T0.Result, T1.Result, T2.Result, T3.Result, T4.Result) in
+                return (
+                    results[0] as! T0.Result,
+                    results[1] as! T1.Result,
+                    results[2] as! T2.Result,
+                    results[3] as! T3.Result,
+                    results[4] as! T4.Result
+                )
+            }
+        }
+        
+        public func subscribe<
+            T0: TelegramEngineDataItem,
+            T1: TelegramEngineDataItem,
+            T2: TelegramEngineDataItem,
+            T3: TelegramEngineDataItem,
+            T4: TelegramEngineDataItem,
+            T5: TelegramEngineDataItem
+        >(
+            _ t0: T0,
+            _ t1: T1,
+            _ t2: T2,
+            _ t3: T3,
+            _ t4: T4,
+            _ t5: T5
+        ) -> Signal<
+            (
+                T0.Result,
+                T1.Result,
+                T2.Result,
+                T3.Result,
+                T4.Result,
+                T5.Result
+            ),
+        NoError> {
+            return self._subscribe(items: [
+                t0 as! AnyPostboxViewDataItem,
+                t1 as! AnyPostboxViewDataItem,
+                t2 as! AnyPostboxViewDataItem,
+                t3 as! AnyPostboxViewDataItem,
+                t4 as! AnyPostboxViewDataItem,
+                t5 as! AnyPostboxViewDataItem
+            ])
+            |> map { results -> (T0.Result, T1.Result, T2.Result, T3.Result, T4.Result, T5.Result) in
+                return (
+                    results[0] as! T0.Result,
+                    results[1] as! T1.Result,
+                    results[2] as! T2.Result,
+                    results[3] as! T3.Result,
+                    results[4] as! T4.Result,
+                    results[5] as! T5.Result
+                )
+            }
+        }
         
         public func get<
             T0: TelegramEngineDataItem,
@@ -307,6 +389,57 @@ public extension TelegramEngine {
             ),
         NoError> {
             return self.subscribe(t0, t1, t2, t3) |> take(1)
+        }
+        
+        public func get<
+            T0: TelegramEngineDataItem,
+            T1: TelegramEngineDataItem,
+            T2: TelegramEngineDataItem,
+            T3: TelegramEngineDataItem,
+            T4: TelegramEngineDataItem
+        >(
+            _ t0: T0,
+            _ t1: T1,
+            _ t2: T2,
+            _ t3: T3,
+            _ t4: T4
+        ) -> Signal<
+            (
+                T0.Result,
+                T1.Result,
+                T2.Result,
+                T3.Result,
+                T4.Result
+            ),
+        NoError> {
+            return self.subscribe(t0, t1, t2, t3, t4) |> take(1)
+        }
+        
+        public func get<
+            T0: TelegramEngineDataItem,
+            T1: TelegramEngineDataItem,
+            T2: TelegramEngineDataItem,
+            T3: TelegramEngineDataItem,
+            T4: TelegramEngineDataItem,
+            T5: TelegramEngineDataItem
+        >(
+            _ t0: T0,
+            _ t1: T1,
+            _ t2: T2,
+            _ t3: T3,
+            _ t4: T4,
+            _ t5: T5
+        ) -> Signal<
+            (
+                T0.Result,
+                T1.Result,
+                T2.Result,
+                T3.Result,
+                T4.Result,
+                T5.Result
+            ),
+        NoError> {
+            return self.subscribe(t0, t1, t2, t3, t4, t5) |> take(1)
         }
     }
 }

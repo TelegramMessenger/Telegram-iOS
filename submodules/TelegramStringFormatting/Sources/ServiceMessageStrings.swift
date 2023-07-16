@@ -235,7 +235,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                             } else {
                                 for attribute in file.attributes {
                                     switch attribute {
-                                    case let .Video(_, _, flags):
+                                    case let .Video(_, _, flags, _):
                                         if flags.contains(.instantRoundVideo) {
                                             type = .round
                                         } else {
@@ -900,6 +900,16 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             case .file:
                 attributedString = NSAttributedString(string: strings.Message_VideoExpired, font: titleFont, textColor: primaryTextColor)
             }
+        } else if let _ = media as? TelegramMediaStory {
+            let compactPeerName = message.peers[message.id.peerId].flatMap(EnginePeer.init)?.compactDisplayTitle ?? ""
+            
+            let resultTitleString: PresentationStrings.FormattedString
+            if message.flags.contains(.Incoming) {
+                resultTitleString = PresentationStrings.FormattedString(string: strings.Conversation_StoryExpiredMentionTextIncoming, ranges: [])
+            } else {
+                resultTitleString = strings.Conversation_StoryExpiredMentionTextOutgoing(compactPeerName)
+            }
+            attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
         }
     }
     

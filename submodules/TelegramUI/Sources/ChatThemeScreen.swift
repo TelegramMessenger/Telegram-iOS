@@ -1262,7 +1262,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
             if let strongSelf = self, count < 2 && currentTimestamp > timestamp + 24 * 60 * 60 {
                 strongSelf.displayedPreviewTooltip = true
                 
-                strongSelf.present?(TooltipScreen(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, text: isDark ? strongSelf.presentationData.strings.Conversation_Theme_PreviewLightShort : strongSelf.presentationData.strings.Conversation_Theme_PreviewDarkShort, style: .default, icon: nil, location: .point(frame.offsetBy(dx: 3.0, dy: 6.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _ in
+                strongSelf.present?(TooltipScreen(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, text: .plain(text: isDark ? strongSelf.presentationData.strings.Conversation_Theme_PreviewLightShort : strongSelf.presentationData.strings.Conversation_Theme_PreviewDarkShort), style: .default, icon: nil, location: .point(frame.offsetBy(dx: 3.0, dy: 6.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _, _ in
                     return .dismiss(consume: false)
                 }))
                 

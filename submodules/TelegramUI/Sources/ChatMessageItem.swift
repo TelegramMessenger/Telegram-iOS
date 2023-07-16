@@ -81,12 +81,15 @@ public enum ChatMessageItemContent: Sequence {
 }
 
 private func mediaMergeableStyle(_ media: Media) -> ChatMessageMerge {
+    if let story = media as? TelegramMediaStory, story.isMention {
+        return .none
+    }
     if let file = media as? TelegramMediaFile {
         for attribute in file.attributes {
             switch attribute {
                 case .Sticker:
                     return .semanticallyMerged
-                case let .Video(_, _, flags):
+                case let .Video(_, _, flags, _):
                     if flags.contains(.instantRoundVideo) {
                         return .none
                     }
@@ -338,7 +341,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                 if let forwardInfo = content.firstMessage.forwardInfo {
                     effectiveAuthor = forwardInfo.author
                     if effectiveAuthor == nil, let authorSignature = forwardInfo.authorSignature  {
-                        effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [])
+                        effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil)
                     }
                 }
                 displayAuthorInfo = incoming && effectiveAuthor != nil
@@ -403,7 +406,18 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             
             if hasAvatar {
                 if let effectiveAuthor = effectiveAuthor {
-                    avatarHeader = ChatMessageAvatarHeader(timestamp: content.index.timestamp, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), message: message, presentationData: presentationData, context: context, controllerInteraction: controllerInteraction)
+                    var storyStats: PeerStoryStats?
+                    if case .peer(id: context.account.peerId) = chatLocation {
+                    } else {
+                        switch content {
+                        case let .message(_, _, _, attributes, _):
+                            storyStats = attributes.authorStoryStats
+                        case let .group(messages):
+                            storyStats = messages.first?.3.authorStoryStats
+                        }
+                    }
+                    
+                    avatarHeader = ChatMessageAvatarHeader(timestamp: content.index.timestamp, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), message: message, presentationData: presentationData, context: context, controllerInteraction: controllerInteraction, storyStats: storyStats)
                 }
             }
         }
@@ -462,7 +476,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                                 viewClassName = ChatMessageStickerItemNode.self
                             }
                             break loop
-                        case let .Video(_, _, flags):
+                        case let .Video(_, _, flags, _):
                             if flags.contains(.instantRoundVideo) {
 //                                viewClassName = ChatMessageInstantVideoItemNode.self
                                 viewClassName = ChatMessageBubbleItemNode.self

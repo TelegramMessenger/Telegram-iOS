@@ -3,6 +3,17 @@ import UIKit
 import AsyncDisplayKit
 import Display
 
+private class LegacyTracingLayerView: UITracingLayerView {
+    var isSparse = false
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        if result === self && self.isSparse {
+            return nil
+        }
+        return result
+    }
+}
+
 final class LegacyControllerNode: ASDisplayNode {
     private var containerLayout: ContainerViewLayout?
     
@@ -15,14 +26,28 @@ final class LegacyControllerNode: ASDisplayNode {
         }
     }
     
+    public var hasSparseContainerView = false {
+        didSet {
+            if self.isNodeLoaded {
+                (self.view as? LegacyTracingLayerView)?.isSparse = self.hasSparseContainerView
+            }
+        }
+    }
+    
     override init() {
         super.init()
         
         self.setViewBlock({
-            return UITracingLayerView()
+            return LegacyTracingLayerView()
         })
         
 //        self.clipsToBounds = true
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        (self.view as? LegacyTracingLayerView)?.isSparse = self.hasSparseContainerView
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

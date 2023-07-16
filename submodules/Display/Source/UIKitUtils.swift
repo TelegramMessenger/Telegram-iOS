@@ -145,6 +145,20 @@ public extension UIColor {
         }
     }
     
+    var components: (r: CGFloat, g: CGFloat, b: CGFloat, a: CGFloat) {
+        var red: CGFloat = 0.0
+        var green: CGFloat = 0.0
+        var blue: CGFloat = 0.0
+        var alpha: CGFloat = 0.0
+        if self.getRed(&red, green: &green, blue: &blue, alpha: &alpha) {
+            return (red, green, blue, alpha)
+        } else if self.getWhite(&red, alpha: &alpha) {
+            return (red, red, red, alpha)
+        } else {
+            return (0.0, 0.0, 0.0, 0.0)
+        }
+    }
+    
     var lightness: CGFloat {
         var red: CGFloat = 0.0
         var green: CGFloat = 0.0
@@ -736,6 +750,12 @@ public extension CALayer {
         }
         
         return nil
+    }
+}
+
+public extension CALayer {
+    static func blur() -> NSObject? {
+        return makeBlurFilter()
     }
 }
 

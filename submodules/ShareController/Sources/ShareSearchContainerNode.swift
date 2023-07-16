@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import Display
@@ -14,7 +13,7 @@ private let subtitleFont = Font.regular(12.0)
 
 private enum ShareSearchRecentEntryStableId: Hashable {
     case topPeers
-    case peerId(PeerId)
+    case peerId(EnginePeer.Id)
     
     static func ==(lhs: ShareSearchRecentEntryStableId, rhs: ShareSearchRecentEntryStableId) -> Bool {
         switch lhs {
@@ -36,7 +35,7 @@ private enum ShareSearchRecentEntryStableId: Hashable {
 
 private enum ShareSearchRecentEntry: Comparable, Identifiable {
     case topPeers(PresentationTheme, PresentationStrings)
-    case peer(index: Int, theme: PresentationTheme, peer: Peer, associatedPeer: Peer?, presence: EnginePeer.Presence?, PresentationStrings)
+    case peer(index: Int, theme: PresentationTheme, peer: EnginePeer, associatedPeer: EnginePeer?, presence: EnginePeer.Presence?, PresentationStrings)
     
     var stableId: ShareSearchRecentEntryStableId {
         switch self {
@@ -62,7 +61,7 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
                     return false
                 }
             case let .peer(lhsIndex, lhsTheme, lhsPeer, lhsAssociatedPeer, lhsPresence, lhsStrings):
-                if case let .peer(rhsIndex, rhsTheme, rhsPeer, rhsAssociatedPeer, rhsPresence, rhsStrings) = rhs, lhsPeer.isEqual(rhsPeer) && arePeersEqual(lhsAssociatedPeer, rhsAssociatedPeer) && lhsIndex == rhsIndex && lhsStrings === rhsStrings && lhsTheme === rhsTheme && lhsPresence == rhsPresence {
+                if case let .peer(rhsIndex, rhsTheme, rhsPeer, rhsAssociatedPeer, rhsPresence, rhsStrings) = rhs, lhsPeer == rhsPeer && lhsAssociatedPeer == rhsAssociatedPeer && lhsIndex == rhsIndex && lhsStrings === rhsStrings && lhsTheme === rhsTheme && lhsPresence == rhsPresence {
                     return true
                 } else {
                     return false
@@ -89,11 +88,11 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
             case let .topPeers(theme, strings):
                 return ShareControllerRecentPeersGridItem(context: context, theme: theme, strings: strings, controllerInteraction: interfaceInteraction)
             case let .peer(_, theme, peer, associatedPeer, presence, strings):
-                var peers: [PeerId: Peer] = [peer.id: peer]
+                var peers: [EnginePeer.Id: EnginePeer] = [peer.id: peer]
                 if let associatedPeer = associatedPeer {
                     peers[associatedPeer.id] = associatedPeer
                 }
-                let peer = EngineRenderedPeer(RenderedPeer(peerId: peer.id, peers: SimpleDictionary(peers), associatedMedia: [:]))
+                let peer = EngineRenderedPeer(peerId: peer.id, peers: peers, associatedMedia: [:])
                 return ShareControllerPeerGridItem(context: context, theme: theme, strings: strings, peer: peer, presence: presence, topicId: nil, threadData: nil, controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent, search: true)
         }
     }
@@ -189,7 +188,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     
     var cancel: (() -> Void)?
     
-    private var ensurePeerVisibleOnLayout: PeerId?
+    private var ensurePeerVisibleOnLayout: EnginePeer.Id?
     private var validLayout: (CGSize, CGFloat)?
     private var overrideGridOffsetTransition: ContainedViewLayoutTransition?
     
@@ -198,7 +197,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let searchQuery = ValuePromise<String>("", ignoreRepeated: true)
     private let searchDisposable = MetaDisposable()
     
-    init(sharedContext: SharedAccountContext, context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ShareControllerInteraction, recentPeers recentPeerList: [RenderedPeer]) {
+    init(sharedContext: SharedAccountContext, context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ShareControllerInteraction, recentPeers recentPeerList: [EngineRenderedPeer]) {
         self.sharedContext = sharedContext
         self.context = context
         self.theme = theme
@@ -264,13 +263,13 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                     var entries: [ShareSearchPeerEntry] = []
                     var index: Int32 = 0
                     
-                    var existingPeerIds = Set<PeerId>()
+                    var existingPeerIds = Set<EnginePeer.Id>()
                     
                     let lowercasedQuery = query.lowercased()
                     if strings.DialogList_SavedMessages.lowercased().hasPrefix(lowercasedQuery) || "saved messages".hasPrefix(lowercasedQuery) {
                         if !existingPeerIds.contains(accountPeer.id) {
                             existingPeerIds.insert(accountPeer.id)
-                            entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(RenderedPeer(peer: accountPeer)), presence: nil, theme: theme, strings: strings))
+                            entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(accountPeer)), presence: nil, theme: theme, strings: strings))
                             index += 1
                         }
                     }
@@ -297,7 +296,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                             let peer = foundPeer.peer
                             if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
                                 existingPeerIds.insert(peer.id)
-                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(RenderedPeer(peer: foundPeer.peer)), presence: nil, theme: theme, strings: strings))
+                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(foundPeer.peer)), presence: nil, theme: theme, strings: strings))
                                 index += 1
                             }
                         }
@@ -306,7 +305,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                             let peer = foundPeer.peer
                             if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
                                 existingPeerIds.insert(peer.id)
-                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(RenderedPeer(peer: peer)), presence: nil, theme: theme, strings: strings))
+                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(peer)), presence: nil, theme: theme, strings: strings))
                                 index += 1
                             }
                         }
@@ -370,8 +369,8 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
             }
             var index = 0
             for peer in recentPeerList {
-                if let mainPeer = peer.peers[peer.peerId], canSendMessagesToPeer(mainPeer) {
-                    recentItemList.append(.peer(index: index, theme: theme, peer: mainPeer, associatedPeer: mainPeer.associatedPeerId.flatMap { peer.peers[$0] }, presence: nil, strings))
+                if let mainPeer = peer.peers[peer.peerId], canSendMessagesToPeer(mainPeer._asPeer()) {
+                    recentItemList.append(.peer(index: index, theme: theme, peer: mainPeer, associatedPeer: mainPeer._asPeer().associatedPeerId.flatMap { peer.peers[$0] }, presence: nil, strings))
                     index += 1
                 }
             }
@@ -396,7 +395,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.recentDisposable.dispose()
     }
     
-    func setEnsurePeerVisibleOnLayout(_ peerId: PeerId?) {
+    func setEnsurePeerVisibleOnLayout(_ peerId: EnginePeer.Id?) {
         self.ensurePeerVisibleOnLayout = peerId
     }
     

@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 
@@ -60,7 +59,7 @@ public func updateTranslationSettingsInteractively(accountManager: AccountManage
             } else {
                 currentSettings = TranslationSettings.defaultSettings
             }
-            return PreferencesEntry(f(currentSettings))
+            return SharedPreferencesEntry(f(currentSettings))
         })
     }
 }

@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
-import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramBaseController
@@ -18,6 +17,7 @@ public final class HashtagSearchController: TelegramBaseController {
     private let context: AccountContext
     private let peer: EnginePeer?
     private let query: String
+    let all: Bool
     private var transitionDisposable: Disposable?
     private let openMessageFromSearchDisposable = MetaDisposable()
     
@@ -31,10 +31,11 @@ public final class HashtagSearchController: TelegramBaseController {
         return self.displayNode as! HashtagSearchControllerNode
     }
     
-    public init(context: AccountContext, peer: EnginePeer?, query: String) {
+    public init(context: AccountContext, peer: EnginePeer?, query: String, all: Bool = false) {
         self.context = context
         self.peer = peer
         self.query = query
+        self.all = all
         
         self.animationCache = context.animationCache
         self.animationRenderer = context.animationRenderer
@@ -96,6 +97,7 @@ public final class HashtagSearchController: TelegramBaseController {
         }, openPremiumIntro: {
         }, openChatFolderUpdates: {
         }, hideChatFolderUpdates: {
+        }, openStories: { _, _ in
         })
         
         let previousSearchItems = Atomic<[ChatListSearchEntry]?>(value: nil)

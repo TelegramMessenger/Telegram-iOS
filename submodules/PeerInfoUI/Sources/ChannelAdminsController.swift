@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -20,13 +19,13 @@ private final class ChannelAdminsControllerArguments {
     let context: AccountContext
     
     let openRecentActions: () -> Void
-    let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
-    let removeAdmin: (PeerId) -> Void
+    let setPeerIdWithRevealedOptions: (EnginePeer.Id?, EnginePeer.Id?) -> Void
+    let removeAdmin: (EnginePeer.Id) -> Void
     let addAdmin: () -> Void
     let openAdmin: (ChannelParticipant) -> Void
     let updateAntiSpamEnabled: (Bool) -> Void
     
-    init(context: AccountContext, openRecentActions: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removeAdmin: @escaping (PeerId) -> Void, addAdmin: @escaping () -> Void, openAdmin: @escaping (ChannelParticipant) -> Void, updateAntiSpamEnabled: @escaping (Bool) -> Void) {
+    init(context: AccountContext, openRecentActions: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, removeAdmin: @escaping (EnginePeer.Id) -> Void, addAdmin: @escaping () -> Void, openAdmin: @escaping (ChannelParticipant) -> Void, updateAntiSpamEnabled: @escaping (Bool) -> Void) {
         self.context = context
         self.openRecentActions = openRecentActions
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
@@ -44,7 +43,7 @@ private enum ChannelAdminsSection: Int32 {
 
 private enum ChannelAdminsEntryStableId: Hashable {
     case index(Int32)
-    case peer(PeerId)
+    case peer(EnginePeer.Id)
 }
 
 private enum ChannelAdminsEntry: ItemListNodeEntry {
@@ -266,9 +265,9 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
 
 private struct ChannelAdminsControllerState: Equatable {
     let editing: Bool
-    let peerIdWithRevealedOptions: PeerId?
-    let removingPeerId: PeerId?
-    let removedPeerIds: Set<PeerId>
+    let peerIdWithRevealedOptions: EnginePeer.Id?
+    let removingPeerId: EnginePeer.Id?
+    let removedPeerIds: Set<EnginePeer.Id>
     let temporaryAdmins: [RenderedChannelParticipant]
     let searchingMembers: Bool
 
@@ -281,7 +280,7 @@ private struct ChannelAdminsControllerState: Equatable {
         self.searchingMembers = false
     }
     
-    init(editing: Bool, peerIdWithRevealedOptions: PeerId?, removingPeerId: PeerId?, removedPeerIds: Set<PeerId>, temporaryAdmins: [RenderedChannelParticipant], searchingMembers: Bool) {
+    init(editing: Bool, peerIdWithRevealedOptions: EnginePeer.Id?, removingPeerId: EnginePeer.Id?, removedPeerIds: Set<EnginePeer.Id>, temporaryAdmins: [RenderedChannelParticipant], searchingMembers: Bool) {
         self.editing = editing
         self.peerIdWithRevealedOptions = peerIdWithRevealedOptions
         self.removingPeerId = removingPeerId
@@ -321,15 +320,15 @@ private struct ChannelAdminsControllerState: Equatable {
         return ChannelAdminsControllerState(editing: editing, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, removingPeerId: self.removingPeerId, removedPeerIds: self.removedPeerIds, temporaryAdmins: self.temporaryAdmins, searchingMembers: self.searchingMembers)
     }
     
-    func withUpdatedPeerIdWithRevealedOptions(_ peerIdWithRevealedOptions: PeerId?) -> ChannelAdminsControllerState {
+    func withUpdatedPeerIdWithRevealedOptions(_ peerIdWithRevealedOptions: EnginePeer.Id?) -> ChannelAdminsControllerState {
         return ChannelAdminsControllerState(editing: self.editing, peerIdWithRevealedOptions: peerIdWithRevealedOptions, removingPeerId: self.removingPeerId, removedPeerIds: self.removedPeerIds, temporaryAdmins: self.temporaryAdmins, searchingMembers: self.searchingMembers)
     }
     
-    func withUpdatedRemovingPeerId(_ removingPeerId: PeerId?) -> ChannelAdminsControllerState {
+    func withUpdatedRemovingPeerId(_ removingPeerId: EnginePeer.Id?) -> ChannelAdminsControllerState {
         return ChannelAdminsControllerState(editing: self.editing, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, removingPeerId: removingPeerId, removedPeerIds: self.removedPeerIds, temporaryAdmins: self.temporaryAdmins, searchingMembers: self.searchingMembers)
     }
     
-    func withUpdatedRemovedPeerIds(_ removedPeerIds: Set<PeerId>) -> ChannelAdminsControllerState {
+    func withUpdatedRemovedPeerIds(_ removedPeerIds: Set<EnginePeer.Id>) -> ChannelAdminsControllerState {
         return ChannelAdminsControllerState(editing: self.editing, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, removingPeerId: self.removingPeerId, removedPeerIds: removedPeerIds, temporaryAdmins: self.temporaryAdmins, searchingMembers: self.searchingMembers)
     }
     
@@ -338,13 +337,13 @@ private struct ChannelAdminsControllerState: Equatable {
     }
 }
 
-private func channelAdminsControllerEntries(presentationData: PresentationData, accountPeerId: PeerId, view: PeerView, state: ChannelAdminsControllerState, participants: [RenderedChannelParticipant]?, antiSpamAvailable: Bool, antiSpamEnabled: Bool) -> [ChannelAdminsEntry] {
+private func channelAdminsControllerEntries(presentationData: PresentationData, accountPeerId: EnginePeer.Id, peer: EnginePeer?, state: ChannelAdminsControllerState, participants: [RenderedChannelParticipant]?, antiSpamAvailable: Bool, antiSpamEnabled: Bool) -> [ChannelAdminsEntry] {
     if participants == nil || participants?.count == nil {
         return []
     }
     
     var entries: [ChannelAdminsEntry] = []
-    if let peer = view.peers[view.peerId] as? TelegramChannel {
+    if case let .channel(peer) = peer {
         var isGroup = false
         if case .group = peer.info {
             isGroup = true
@@ -364,7 +363,7 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
             }
             
             var combinedParticipants: [RenderedChannelParticipant] = participants
-            var existingParticipantIds = Set<PeerId>()
+            var existingParticipantIds = Set<EnginePeer.Id>()
             for participant in participants {
                 existingParticipantIds.insert(participant.peer.id)
             }
@@ -431,7 +430,7 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
                 entries.append(.adminsInfo(presentationData.theme, info))
             }
         }
-    } else if let peer = view.peers[view.peerId] as? TelegramGroup {
+    } else if case let .legacyGroup(peer) = peer {
         let isGroup = true
         //entries.append(.recentActions(presentationData.theme, presentationData.strings.Group_Info_AdminLog))
         
@@ -443,7 +442,7 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
             }
             
             var combinedParticipants: [RenderedChannelParticipant] = participants
-            var existingParticipantIds = Set<PeerId>()
+            var existingParticipantIds = Set<EnginePeer.Id>()
             for participant in participants {
                 existingParticipantIds.insert(participant.peer.id)
             }
@@ -512,7 +511,7 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
     return entries
 }
 
-public func channelAdminsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId initialPeerId: PeerId, loadCompleted: @escaping () -> Void = {}) -> ViewController {
+public func channelAdminsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId initialPeerId: EnginePeer.Id, loadCompleted: @escaping () -> Void = {}) -> ViewController {
     let statePromise = ValuePromise(ChannelAdminsControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelAdminsControllerState())
     let updateState: ((ChannelAdminsControllerState) -> ChannelAdminsControllerState) -> Void = { f in
@@ -559,16 +558,16 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
         )
     }
     
-    var upgradedToSupergroupImpl: ((PeerId, @escaping () -> Void) -> Void)?
+    var upgradedToSupergroupImpl: ((EnginePeer.Id, @escaping () -> Void) -> Void)?
     
-    let currentPeerId = ValuePromise<PeerId>(initialPeerId)
+    let currentPeerId = ValuePromise<EnginePeer.Id>(initialPeerId)
     
-    let upgradedToSupergroup: (PeerId, @escaping () -> Void) -> Void = { upgradedPeerId, f in
+    let upgradedToSupergroup: (EnginePeer.Id, @escaping () -> Void) -> Void = { upgradedPeerId, f in
         currentPeerId.set(upgradedPeerId)
         upgradedToSupergroupImpl?(upgradedPeerId, f)
     }
     
-    let transferedOwnership: (PeerId) -> Void = { memberId in
+    let transferedOwnership: (EnginePeer.Id) -> Void = { memberId in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let _ = (currentPeerId.get()
         |> take(1)
@@ -586,21 +585,57 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
         })
     }
     
-    let peerView = Promise<PeerView>()
+    actionsDisposable.add((currentPeerId.get()
+    |> mapToSignal { peerId in
+        return context.engine.peers.keepPeerUpdated(id: peerId, forceUpdate: false)
+    }).start())
+    
+    struct PeerData: Equatable {
+        var peerId: EnginePeer.Id
+        var peer: EnginePeer?
+        var participantCount: Int?
+        
+        init(
+            peerId: EnginePeer.Id,
+            peer: EnginePeer?,
+            participantCount: Int?
+        ) {
+            self.peerId = peerId
+            self.peer = peer
+            self.participantCount = participantCount
+        }
+    }
+    
+    let peerView = Promise<PeerData>()
     peerView.set(currentPeerId.get()
     |> mapToSignal { peerId in
-        return context.account.viewTracker.peerView(peerId)
+        return context.engine.data.subscribe(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+            TelegramEngine.EngineData.Item.Peer.ParticipantCount(id: peerId)
+        )
+        |> map { peer, participantCount -> PeerData in
+            return PeerData(
+                peerId: peerId,
+                peer: peer,
+                participantCount: participantCount
+            )
+        }
     })
     
     let arguments = ChannelAdminsControllerArguments(context: context, openRecentActions: {
         let _ = (currentPeerId.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { peerId in
-            let _ = (context.account.postbox.loadedPeerWithId(peerId)
+            let _ = (context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+            )
             |> deliverOnMainQueue).start(next: { peer in
-                if peer is TelegramGroup {
+                guard let peer else {
+                    return
+                }
+                if case .legacyGroup = peer {
                 } else {
-                    pushControllerImpl?(context.sharedContext.makeChatRecentActionsController(context: context, peer: peer, adminPeerId: nil))
+                    pushControllerImpl?(context.sharedContext.makeChatRecentActionsController(context: context, peer: peer._asPeer(), adminPeerId: nil))
                 }
             })
         })
@@ -660,7 +695,7 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
                                     if banInfo.restrictedBy != context.account.peerId {
                                         canUnban = true
                                     }
-                                    if let channel = peerView.peers[peerId] as? TelegramChannel {
+                                    if case let .channel(channel) = peerView.peer {
                                         if channel.hasPermission(.banMembers) {
                                             canUnban = true
                                         }
@@ -723,42 +758,68 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
             membersDisposableValue.set(membersAndLoadMoreControl.0)
         } else {
             loadCompleted()
-            let membersDisposable = (peerView.get()
-            |> map { peerView -> [RenderedChannelParticipant]? in
-                guard let cachedData = peerView.cachedData as? CachedGroupData, let participants = cachedData.participants else {
-                    return nil
+            let membersDisposable = (currentPeerId.get()
+            |> mapToSignal { peerId -> Signal<[RenderedChannelParticipant]?, NoError> in
+                return context.engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.Peer.LegacyGroupParticipants(id: peerId)
+                )
+                |> mapToSignal { participants -> Signal<[(EngineLegacyGroupParticipant, EnginePeer?)]?, NoError> in
+                    guard case let .known(participants) = participants else {
+                        return .single(nil)
+                    }
+                    
+                    return context.engine.data.subscribe(
+                        EngineDataMap(participants.map { TelegramEngine.EngineData.Item.Peer.Peer(id: $0.peerId) })
+                    )
+                    |> map { peers -> [(EngineLegacyGroupParticipant, EnginePeer?)]? in
+                        var result: [(EngineLegacyGroupParticipant, EnginePeer?)] = []
+                        for participant in participants {
+                            var peer: EnginePeer?
+                            if let peerValue = peers[participant.peerId] {
+                                peer = peerValue
+                            }
+                            result.append((participant, peer))
+                        }
+                        return result
+                    }
                 }
-                var result: [RenderedChannelParticipant] = []
-                var creatorPeer: Peer?
-                for participant in participants.participants {
-                    if let peer = peerView.peers[participant.peerId] {
-                        switch participant {
+                |> map { participants -> [RenderedChannelParticipant]? in
+                    guard let participants else {
+                        return nil
+                    }
+                    
+                    var result: [RenderedChannelParticipant] = []
+                    var creatorPeer: EnginePeer?
+                    for (participant, peer) in participants {
+                        if let peer {
+                            switch participant {
                             case .creator:
                                 creatorPeer = peer
                             default:
                                 break
+                            }
                         }
                     }
-                }
-                guard let creator = creatorPeer else {
-                    return nil
-                }
-                for participant in participants.participants {
-                    if let peer = peerView.peers[participant.peerId] {
-                        switch participant {
+                    guard let creator = creatorPeer else {
+                        return nil
+                    }
+                    for (participant, peer) in participants {
+                        if let peer {
+                            switch participant {
                             case .creator:
-                                result.append(RenderedChannelParticipant(participant: .creator(id: peer.id, adminInfo: nil, rank: nil), peer: peer))
+                                result.append(RenderedChannelParticipant(participant: .creator(id: peer.id, adminInfo: nil, rank: nil), peer: peer._asPeer()))
                             case .admin:
-                                var peers: [PeerId: Peer] = [:]
+                                var peers: [EnginePeer.Id: EnginePeer] = [:]
                                 peers[creator.id] = creator
                                 peers[peer.id] = peer
-                                result.append(RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: .internal_groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers))
+                                result.append(RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: .internal_groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer._asPeer(), peers: peers.mapValues({ $0._asPeer() })))
                             case .member:
                                 break
+                            }
                         }
                     }
+                    return result
                 }
-                return result
             }).start(next: { members in
                 adminsPromise.set(.single(members))
             })
@@ -787,7 +848,7 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
         let peerId = view.peerId
         
         var antiSpamAvailable = false
-        if let cachedData = view.cachedData as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount, memberCount >= antiSpamConfiguration.minimumGroupParticipants {
+        if case .channel = view.peer, let participantCount = view.participantCount, participantCount >= antiSpamConfiguration.minimumGroupParticipants {
             antiSpamAvailable = true
         }
         
@@ -800,7 +861,7 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
                         return state.withUpdatedEditing(false)
                     }
                 })
-            } else if let peer = view.peers[peerId] as? TelegramChannel, peer.flags.contains(.isCreator) {
+            } else if case let .channel(peer) = view.peer, peer.flags.contains(.isCreator) {
                 rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                     updateState { state in
                         return state.withUpdatedEditing(true)
@@ -829,9 +890,9 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
         previousPeers = admins
         
         var isGroup = true
-        if let peer = view.peers[peerId] as? TelegramChannel, case .broadcast = peer.info {
+        if case let .channel(peer) = view.peer, case .broadcast = peer.info {
             isGroup = false
-        } else if let _ = view.peers[peerId] as? TelegramGroup {
+        } else if case .legacyGroup = view.peer {
             isGroup = true
         }
         
@@ -862,7 +923,7 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(isGroup ? presentationData.strings.ChatAdmins_Title : presentationData.strings.Channel_Management_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelAdminsControllerEntries(presentationData: presentationData, accountPeerId: context.account.peerId, view: view, state: state, participants: admins, antiSpamAvailable: antiSpamAvailable, antiSpamEnabled: antiSpamEnabled), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && admins != nil && previous!.count >= admins!.count)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelAdminsControllerEntries(presentationData: presentationData, accountPeerId: context.account.peerId, peer: view.peer, state: state, participants: admins, antiSpamAvailable: antiSpamAvailable, antiSpamEnabled: antiSpamEnabled), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && admins != nil && previous!.count >= admins!.count)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {

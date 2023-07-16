@@ -321,7 +321,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         internalId: firstState.2.id,
                         peerId: firstState.2.peerId,
                         isOutgoing: false,
-                        peer: firstState.1,
+                        peer: EnginePeer(firstState.1),
                         proxyServer: strongSelf.proxyServer,
                         auxiliaryServers: [],
                         currentNetworkType: firstState.4,

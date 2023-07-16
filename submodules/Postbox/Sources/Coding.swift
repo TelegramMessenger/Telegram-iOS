@@ -208,6 +208,14 @@ public final class ReadBuffer: MemoryBuffer {
         self.offset += length
     }
     
+    public func readData(length: Int) -> Data {
+        var result = Data(count: length)
+        result.withUnsafeMutableBytes { buffer in
+            self.read(buffer.baseAddress!, offset: 0, length: length)
+        }
+        return result
+    }
+    
     public func skip(_ length: Int) {
         self.offset += length
     }
@@ -1495,7 +1503,9 @@ public final class PostboxDecoder {
             var objectLength: Int32 = 0
             memcpy(&objectLength, self.buffer.memory + self.offset, 4)
             if objectLength < 0 || objectLength > 2 * 1024 * 1024 {
-                preconditionFailure()
+                assertionFailure()
+                self.offset = 0
+                break
             }
 
             let innerBuffer = ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(objectLength), freeWhenDone: false)

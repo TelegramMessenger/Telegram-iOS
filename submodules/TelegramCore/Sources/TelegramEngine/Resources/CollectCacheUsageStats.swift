@@ -62,6 +62,7 @@ public final class StorageUsageStats {
         case stickers
         case avatars
         case misc
+        case stories
     }
     
     public struct CategoryData {
@@ -127,6 +128,8 @@ private extension StorageUsageStats {
                 mappedCategory = .misc
             case MediaResourceUserContentType.audioVideoMessage.rawValue:
                 mappedCategory = .misc
+            case MediaResourceUserContentType.story.rawValue:
+                mappedCategory = .stories
             default:
                 mappedCategory = .misc
             }
@@ -211,81 +214,6 @@ public func collectRawStorageUsageReport(containerPath: String) -> String {
 }
 
 func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUsageStats, NoError> {
-    /*let additionalStats = Signal<Int64, NoError> { subscriber in
-        DispatchQueue.global().async {
-            var totalSize: Int64 = 0
-            
-            let additionalPaths: [String] = [
-                "cache",
-                "animation-cache",
-                "short-cache",
-            ]
-            
-            func statForDirectory(path: String) -> Int64 {
-                var s = darwin_dirstat()
-                var result = dirstat_np(path, 1, &s, MemoryLayout<darwin_dirstat>.size)
-                if result != -1 {
-                    return Int64(s.total_size)
-                } else {
-                    result = dirstat_np(path, 0, &s, MemoryLayout<darwin_dirstat>.size)
-                    if result != -1 {
-                        return Int64(s.total_size)
-                    } else {
-                        return 0
-                    }
-                }
-            }
-            
-            var delayedDirs: [String] = []
-            
-            for path in additionalPaths {
-                let fullPath: String
-                if path.isEmpty {
-                    fullPath = account.postbox.mediaBox.basePath
-                } else {
-                    fullPath = account.postbox.mediaBox.basePath + "/\(path)"
-                }
-                
-                if path == "animation-cache" {
-                    if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: fullPath), includingPropertiesForKeys: [.isDirectoryKey], options: .skipsSubdirectoryDescendants) {
-                        for url in enumerator {
-                            guard let url = url as? URL else {
-                                continue
-                            }
-                            delayedDirs.append(fullPath + "/" + url.lastPathComponent)
-                        }
-                    }
-                } else {
-                    totalSize += statForDirectory(path: fullPath)
-                }
-            }
-            
-            if !delayedDirs.isEmpty {
-                let concurrentSize = Atomic<[Int64]>(value: [])
-                
-                DispatchQueue.concurrentPerform(iterations: delayedDirs.count, execute: { index in
-                    let directorySize = statForDirectory(path: delayedDirs[index])
-                    let result = concurrentSize.modify { current in
-                        return current + [directorySize]
-                    }
-                    if result.count == delayedDirs.count {
-                        var aggregatedCount: Int64 = 0
-                        for item in result {
-                            aggregatedCount += item
-                        }
-                        subscriber.putNext(totalSize + aggregatedCount)
-                        subscriber.putCompletion()
-                    }
-                })
-            } else {
-                subscriber.putNext(totalSize)
-                subscriber.putCompletion()
-            }
-        }
-        
-        return EmptyDisposable
-    }*/
-    
     let additionalStats = account.postbox.mediaBox.cacheStorageBox.totalSize() |> take(1)
     
     return combineLatest(
@@ -425,6 +353,8 @@ func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories
                 
                 // Legacy value for Gif
                 mappedContentTypes.append(5)
+            case .stories:
+                mappedContentTypes.append(MediaResourceUserContentType.story.rawValue)
             }
         }
         

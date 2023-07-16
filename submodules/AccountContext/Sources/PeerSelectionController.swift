@@ -1,7 +1,6 @@
 import Foundation
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 
@@ -48,7 +47,7 @@ public final class PeerSelectionControllerParams {
     public let hasContactSelector: Bool
     public let hasGlobalSearch: Bool
     public let title: String?
-    public let attemptSelection: ((Peer, Int64?) -> Void)?
+    public let attemptSelection: ((EnginePeer, Int64?) -> Void)?
     public let createNewGroup: (() -> Void)?
     public let pretendPresentedInModal: Bool
     public let multipleSelection: Bool
@@ -57,7 +56,7 @@ public final class PeerSelectionControllerParams {
     public let selectForumThreads: Bool
     public let hasCreation: Bool
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filter: ChatListNodePeersFilter = [.onlyWriteable], requestPeerType: [ReplyMarkupButtonRequestPeerType]? = nil, forumPeerId: EnginePeer.Id? = nil, hasFilters: Bool = false, hasChatListSelector: Bool = true, hasContactSelector: Bool = true, hasGlobalSearch: Bool = true, title: String? = nil, attemptSelection: ((Peer, Int64?) -> Void)? = nil, createNewGroup: (() -> Void)? = nil, pretendPresentedInModal: Bool = false, multipleSelection: Bool = false, forwardedMessageIds: [EngineMessage.Id] = [], hasTypeHeaders: Bool = false, selectForumThreads: Bool = false, hasCreation: Bool = false) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filter: ChatListNodePeersFilter = [.onlyWriteable], requestPeerType: [ReplyMarkupButtonRequestPeerType]? = nil, forumPeerId: EnginePeer.Id? = nil, hasFilters: Bool = false, hasChatListSelector: Bool = true, hasContactSelector: Bool = true, hasGlobalSearch: Bool = true, title: String? = nil, attemptSelection: ((EnginePeer, Int64?) -> Void)? = nil, createNewGroup: (() -> Void)? = nil, pretendPresentedInModal: Bool = false, multipleSelection: Bool = false, forwardedMessageIds: [EngineMessage.Id] = [], hasTypeHeaders: Bool = false, selectForumThreads: Bool = false, hasCreation: Bool = false) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.filter = filter
@@ -87,8 +86,8 @@ public enum AttachmentTextInputPanelSendMode {
 }
 
 public protocol PeerSelectionController: ViewController {
-    var peerSelected: ((Peer, Int64?) -> Void)? { get set }
-    var multiplePeersSelected: (([Peer], [PeerId: Peer], NSAttributedString, AttachmentTextInputPanelSendMode, ChatInterfaceForwardOptionsState?) -> Void)? { get set }
+    var peerSelected: ((EnginePeer, Int64?) -> Void)? { get set }
+    var multiplePeersSelected: (([EnginePeer], [EnginePeer.Id: EnginePeer], NSAttributedString, AttachmentTextInputPanelSendMode, ChatInterfaceForwardOptionsState?) -> Void)? { get set }
     var inProgress: Bool { get set }
     var customDismiss: (() -> Void)? { get set }
 }

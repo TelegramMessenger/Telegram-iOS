@@ -14,6 +14,7 @@ import Markdown
 import ShimmerEffect
 import WallpaperBackgroundNode
 import ChatControllerInteraction
+import ChatMessageForwardInfoNode
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -624,6 +625,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             }
             
             var replyMessage: Message?
+            var replyStory: StoryId?
             for attribute in item.message.attributes {
                 if let attribute = attribute as? InlineBotMessageAttribute {
                     var inlineBotNameString: String?
@@ -650,12 +652,14 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     } else {
                         replyMessage = item.message.associatedMessages[replyAttribute.messageId]
                     }
+                } else if let attribute = attribute as? ReplyStoryAttribute {
+                    replyStory = attribute.storyId
                 } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
                     replyMarkup = attribute
                 }
             }
             
-            var hasReply = replyMessage != nil
+            var hasReply = replyMessage != nil || replyStory != nil
             if case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
                 if let threadId = item.message.threadId, let replyMessage = replyMessage, Int64(replyMessage.id.id) == threadId {
                     hasReply = false
@@ -675,13 +679,14 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 ))
             }
             
-            if let replyMessage = replyMessage, hasReply {
+            if hasReply, (replyMessage != nil || replyStory != nil) {
                 replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
                     presentationData: item.presentationData,
                     strings: item.presentationData.strings,
                     context: item.context,
                     type: .standalone,
                     message: replyMessage,
+                    story: replyStory,
                     parentMessage: item.message,
                     constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
                     animationCache: item.controllerInteraction.presentationContext.animationCache,
@@ -743,7 +748,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                 }
                 let availableForwardWidth = max(60.0, availableWidth + 6.0)
-                forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, forwardPsaType, CGSize(width: availableForwardWidth, height: CGFloat.greatestFiniteMagnitude))
+                forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, forwardPsaType, nil, CGSize(width: availableForwardWidth, height: CGFloat.greatestFiniteMagnitude))
             }
             
             var needsReplyBackground = false
@@ -1300,6 +1305,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                                 return .optionalAction({
                                     item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
                                 })
+                            } else if let attribute = attribute as? ReplyStoryAttribute {
+                                return .optionalAction({
+                                    item.controllerInteraction.navigateToStory(item.message, attribute.storyId)
+                                })
                             }
                         }
                     }
@@ -1826,6 +1835,22 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             return
         }
         item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil, nil)
+    }
+    
+    override func targetForStoryTransition(id: StoryId) -> UIView? {
+        guard let item = self.item else {
+            return nil
+        }
+        for attribute in item.message.attributes {
+            if let attribute = attribute as? ReplyStoryAttribute {
+                if attribute.storyId == id {
+                    if let replyInfoNode = self.replyInfoNode {
+                        return replyInfoNode.mediaTransitionView()
+                    }
+                }
+            }
+        }
+        return nil
     }
     
     override func targetReactionView(value: MessageReaction.Reaction) -> UIView? {

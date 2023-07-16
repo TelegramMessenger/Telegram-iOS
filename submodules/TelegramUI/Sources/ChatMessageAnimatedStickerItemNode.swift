@@ -25,10 +25,10 @@ import ShimmerEffect
 import WallpaperBackgroundNode
 import LocalMediaResources
 import AppBundle
-import LottieMeshSwift
 import ChatPresentationInterfaceState
 import TextNodeWithEntities
 import ChatControllerInteraction
+import ChatMessageForwardInfoNode
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -1222,6 +1222,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             
             var replyMessage: Message?
+            var replyStory: StoryId?
             for attribute in item.message.attributes {
                 if let attribute = attribute as? InlineBotMessageAttribute {
                     var inlineBotNameString: String?
@@ -1247,12 +1248,14 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     } else {
                         replyMessage = item.message.associatedMessages[replyAttribute.messageId]
                     }
+                } else if let attribute = attribute as? ReplyStoryAttribute {
+                    replyStory = attribute.storyId
                 } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
                     replyMarkup = attribute
                 }
             }
             
-            var hasReply = replyMessage != nil
+            var hasReply = replyMessage != nil || replyStory != nil
             if case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
                 if let threadId = item.message.threadId, let replyMessage = replyMessage, Int64(replyMessage.id.id) == threadId {
                     hasReply = false
@@ -1272,13 +1275,14 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 ))
             }
             
-            if let replyMessage = replyMessage, hasReply {
+            if hasReply, (replyMessage != nil || replyStory != nil) {
                 replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
                     presentationData: item.presentationData,
                     strings: item.presentationData.strings,
                     context: item.context,
                     type: .standalone,
                     message: replyMessage,
+                    story: replyStory,
                     parentMessage: item.message,
                     constrainedSize: CGSize(width: availableContentWidth, height: CGFloat.greatestFiniteMagnitude),
                     animationCache: item.controllerInteraction.presentationContext.animationCache,
@@ -1345,7 +1349,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 }
                 let availableWidth = max(60.0, availableContentWidth + 6.0)
-                forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, forwardPsaType, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, forwardPsaType, nil, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
             }
             
             if replyInfoApply != nil || viaBotApply != nil || forwardInfoSizeApply != nil {
@@ -2009,38 +2013,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         let incomingMessage = item.message.effectivelyIncoming(item.context.account.peerId)
 
-        if #available(iOS 13.0, *), !"".isEmpty, item.context.sharedContext.immediateExperimentalUISettings.acceleratedStickers, let meshAnimation = item.context.meshAnimationCache.get(resource: resource) {
-            var overlayMeshAnimationNode: ChatMessageTransitionNode.DecorationItemNode?
-            if let current = self.overlayMeshAnimationNode {
-                overlayMeshAnimationNode = current
-            } else {
-                if let animationView = MeshRenderer() {
-                    let animationFrame = animationNodeFrame.insetBy(dx: -animationNodeFrame.width, dy: -animationNodeFrame.height)
-                        .offsetBy(dx: incomingMessage ? animationNodeFrame.width - 10.0 : -animationNodeFrame.width + 10.0, dy: 0.0)
-                    animationView.frame = animationFrame
-
-                    animationView.allAnimationsCompleted = { [weak transitionNode, weak animationView, weak self] in
-                        guard let strongSelf = self, let animationView = animationView else {
-                            return
-                        }
-                        guard let overlayMeshAnimationNode = strongSelf.overlayMeshAnimationNode else {
-                            return
-                        }
-                        if overlayMeshAnimationNode.contentView !== animationView {
-                            return
-                        }
-                        strongSelf.overlayMeshAnimationNode = nil
-                        transitionNode?.remove(decorationNode: overlayMeshAnimationNode)
-                    }
-
-                    overlayMeshAnimationNode = transitionNode.add(decorationView: animationView, itemNode: self)
-                    self.overlayMeshAnimationNode = overlayMeshAnimationNode
-                }
-            }
-            if let meshRenderer = overlayMeshAnimationNode?.contentView as? MeshRenderer {
-                meshRenderer.add(mesh: meshAnimation, offset: CGPoint(x: CGFloat.random(in: -30.0 ... 30.0), y: CGFloat.random(in: -30.0 ... 30.0)))
-            }
-        } else {
+        do {
             let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(resource.id)
             let additionalAnimationNode = DefaultAnimatedStickerNodeImpl()
             additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 1.6), height: Int(animationSize.height * 1.6), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
@@ -2129,6 +2102,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         if let attribute = attribute as? ReplyMessageAttribute {
                             return .optionalAction({
                                 item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
+                            })
+                        } else if let attribute = attribute as? ReplyStoryAttribute {
+                            return .optionalAction({
+                                item.controllerInteraction.navigateToStory(item.message, attribute.storyId)
                             })
                         }
                     }
@@ -2886,6 +2863,22 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         if !self.dateAndStatusNode.isHidden {
             return self.dateAndStatusNode.reactionView(value: value)
+        }
+        return nil
+    }
+    
+    override func targetForStoryTransition(id: StoryId) -> UIView? {
+        guard let item = self.item else {
+            return nil
+        }
+        for attribute in item.message.attributes {
+            if let attribute = attribute as? ReplyStoryAttribute {
+                if attribute.storyId == id {
+                    if let replyInfoNode = self.replyInfoNode {
+                        return replyInfoNode.mediaTransitionView()
+                    }
+                }
+            }
         }
         return nil
     }

@@ -192,7 +192,7 @@ private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: 
                     updatedState = updatedState.withUpdatedEmbeddedState(.terminated)
                     transaction.setPeerChatState(peerId, state: updatedState)
                     if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
-                        updatePeers(transaction: transaction, peers: [peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
+                        updatePeersCustom(transaction: transaction, peers: [peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
                             return updated
                         })
                     }
@@ -266,7 +266,7 @@ private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: 
                     }
                     transaction.setPeerChatState(peerId, state: updatedState)
                     if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
-                        updatePeers(transaction: transaction, peers: [peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
+                        updatePeersCustom(transaction: transaction, peers: [peer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)], update: { _, updated in
                             return updated
                         })
                     }
@@ -538,7 +538,7 @@ private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute], t
                 result.append(.documentAttributeSticker(alt: displayText, stickerset: stickerSet))
             case let .ImageSize(size):
                 result.append(.documentAttributeImageSize(w: Int32(size.width), h: Int32(size.height)))
-            case let .Video(duration, size, _):
+            case let .Video(duration, size, _, _):
                 result.append(.documentAttributeVideo(duration: Int32(duration), w: Int32(size.width), h: Int32(size.height)))
             case let .Audio(isVoice, duration, title, performer, waveform):
                 var flags: Int32 = 0
@@ -597,7 +597,7 @@ private func decryptedAttributes73(_ attributes: [TelegramMediaFileAttribute], t
                 result.append(.documentAttributeSticker(alt: displayText, stickerset: stickerSet))
             case let .ImageSize(size):
                 result.append(.documentAttributeImageSize(w: Int32(size.width), h: Int32(size.height)))
-            case let .Video(duration, size, videoFlags):
+            case let .Video(duration, size, videoFlags, _):
                 var flags: Int32 = 0
                 if videoFlags.contains(.instantRoundVideo) {
                     flags |= 1 << 0
@@ -660,7 +660,7 @@ private func decryptedAttributes101(_ attributes: [TelegramMediaFileAttribute], 
                 result.append(.documentAttributeSticker(alt: displayText, stickerset: stickerSet))
             case let .ImageSize(size):
                 result.append(.documentAttributeImageSize(w: Int32(size.width), h: Int32(size.height)))
-            case let .Video(duration, size, videoFlags):
+            case let .Video(duration, size, videoFlags, _):
                 var flags: Int32 = 0
                 if videoFlags.contains(.instantRoundVideo) {
                     flags |= 1 << 0
@@ -723,7 +723,7 @@ private func decryptedAttributes144(_ attributes: [TelegramMediaFileAttribute], 
                 result.append(.documentAttributeSticker(alt: displayText, stickerset: stickerSet))
             case let .ImageSize(size):
                 result.append(.documentAttributeImageSize(w: Int32(size.width), h: Int32(size.height)))
-            case let .Video(duration, size, videoFlags):
+            case let .Video(duration, size, videoFlags, _):
                 var flags: Int32 = 0
                 if videoFlags.contains(.instantRoundVideo) {
                     flags |= 1 << 0

@@ -107,6 +107,7 @@ public enum PresentationResourceKey: Int32 {
     case chatListRecentStatusVoiceChatPanelIcon
     
     case chatListForwardedIcon
+    case chatListStoryReplyIcon
     
     case chatListGeneralTopicIcon
     case chatListGeneralTopicSmallIcon
@@ -235,6 +236,13 @@ public enum PresentationResourceKey: Int32 {
     case chatMessageAttachedContentHighlightedButtonIconInstantOutgoingWithWallpaper
     case chatMessageAttachedContentHighlightedButtonIconInstantOutgoingWithoutWallpaper
     
+    case chatMessageAttachedContentButtonIconLinkIncoming
+    case chatMessageAttachedContentHighlightedButtonIconLinkIncomingWithWallpaper
+    case chatMessageAttachedContentHighlightedButtonIconLinkIncomingWithoutWallpaper
+    case chatMessageAttachedContentButtonIconLinkOutgoing
+    case chatMessageAttachedContentHighlightedButtonIconLinkOutgoingWithWallpaper
+    case chatMessageAttachedContentHighlightedButtonIconLinkOutgoingWithoutWallpaper
+    
     case chatCommandPanelArrowImage
     
     case sharedMediaFileDownloadStartIcon
@@ -289,6 +297,12 @@ public enum PresentationResourceKey: Int32 {
     case uploadToneIcon
 }
 
+public enum ChatExpiredStoryIndicatorType: Hashable {
+    case incoming
+    case outgoing
+    case free
+}
+
 public enum PresentationResourceParameterKey: Hashable {
     case chatOutgoingFullCheck(CGFloat)
     case chatOutgoingPartialCheck(CGFloat)
@@ -325,4 +339,7 @@ public enum PresentationResourceParameterKey: Hashable {
     case chatInputMediaPanelGridDismissImage(color: UInt32)
     
     case statusAutoremoveIcon(isActive: Bool)
+    
+    case chatExpiredStoryIndicatorIcon(type: ChatExpiredStoryIndicatorType)
+    case chatReplyStoryIndicatorIcon(type: ChatExpiredStoryIndicatorType)
 }

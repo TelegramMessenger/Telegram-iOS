@@ -16,18 +16,8 @@ func _internal_clearCloudDraftsInteractively(postbox: Postbox, network: Network,
             var keys = Set<Key>()
             switch updates {
                 case let .updates(updates, users, chats, _, _):
-                    var peers: [Peer] = []
-                    var peerPresences: [PeerId: Api.User] = [:]
-                    for chat in chats {
-                        if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                            peers.append(groupOrChannel)
-                        }
-                    }
-                    for user in users {
-                        let telegramUser = TelegramUser(user: user)
-                        peers.append(telegramUser)
-                        peerPresences[telegramUser.id] = user
-                    }
+                    let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                    
                     for update in updates {
                         switch update {
                             case let .updateDraftMessage(_, peer, topMsgId, _):
@@ -40,11 +30,8 @@ func _internal_clearCloudDraftsInteractively(postbox: Postbox, network: Network,
                                 break
                         }
                     }
-                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                        return updated
-                    })
+                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                     
-                    updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
                     var signals: [Signal<Void, NoError>] = []
                     for key in keys {
                         _internal_updateChatInputState(transaction: transaction, peerId: key.peerId, threadId: key.threadId,  inputState: nil)

@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 
@@ -85,6 +84,7 @@ private final class ItemNode: ASDisplayNode {
     private var isDisabled: Bool = false
     
     private var theme: PresentationTheme?
+    private var currentTitle: (String, String)?
     
     private var pointerInteraction: PointerInteraction?
     
@@ -198,16 +198,34 @@ private final class ItemNode: ASDisplayNode {
         self.isEditing = isEditing
         self.isDisabled = isDisabled
         
+        var themeUpdated = false
         if self.theme !== presentationData.theme {
             self.theme = presentationData.theme
             
             self.badgeBackgroundActiveNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: presentationData.theme.chatList.unreadBadgeActiveBackgroundColor)
             self.badgeBackgroundInactiveNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor)
+            
+            themeUpdated = true
+        }
+        
+        var titleUpdated = false
+        if self.currentTitle?.0 != title || self.currentTitle?.1 != shortTitle {
+            self.currentTitle = (title, shortTitle)
+            
+            titleUpdated = true
+        }
+        
+        var unreadCountUpdated = false
+        if self.unreadCount != unreadCount {
+            unreadCountUpdated = true
+            self.unreadCount = unreadCount
         }
         
         self.buttonNode.accessibilityLabel = title
         if unreadCount > 0 {
-            self.buttonNode.accessibilityValue = strings.VoiceOver_Chat_UnreadMessages(Int32(unreadCount))
+            if self.buttonNode.accessibilityValue == nil || unreadCountUpdated {
+                self.buttonNode.accessibilityValue = strings.VoiceOver_Chat_UnreadMessages(Int32(unreadCount))
+            }
         } else {
             self.buttonNode.accessibilityValue = ""
         }
@@ -253,14 +271,19 @@ private final class ItemNode: ASDisplayNode {
         transition.updateAlpha(node: self.shortTitleNode, alpha: deselectionAlpha)
         transition.updateAlpha(node: self.shortTitleActiveNode, alpha: selectionAlpha)
         
-        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(14.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
-        self.titleActiveNode.attributedText = NSAttributedString(string: title, font: Font.medium(14.0), textColor: presentationData.theme.list.itemAccentColor)
-        self.shortTitleNode.attributedText = NSAttributedString(string: shortTitle, font: Font.medium(14.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
-        self.shortTitleActiveNode.attributedText = NSAttributedString(string: shortTitle, font: Font.medium(14.0), textColor: presentationData.theme.list.itemAccentColor)
+        if themeUpdated || titleUpdated {
+            self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(14.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
+            self.titleActiveNode.attributedText = NSAttributedString(string: title, font: Font.medium(14.0), textColor: presentationData.theme.list.itemAccentColor)
+            self.shortTitleNode.attributedText = NSAttributedString(string: shortTitle, font: Font.medium(14.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
+            self.shortTitleActiveNode.attributedText = NSAttributedString(string: shortTitle, font: Font.medium(14.0), textColor: presentationData.theme.list.itemAccentColor)
+        }
+        
         if unreadCount != 0 {
-            self.badgeTextNode.attributedText = NSAttributedString(string: "\(unreadCount)", font: Font.regular(14.0), textColor: presentationData.theme.list.itemCheckColors.foregroundColor)
-            let badgeSelectionFraction: CGFloat = unreadHasUnmuted ? 1.0 : selectionFraction
+            if themeUpdated || unreadCountUpdated || self.badgeTextNode.attributedText == nil {
+                self.badgeTextNode.attributedText = NSAttributedString(string: "\(unreadCount)", font: Font.regular(14.0), textColor: presentationData.theme.list.itemCheckColors.foregroundColor)
+            }
             
+            let badgeSelectionFraction: CGFloat = unreadHasUnmuted ? 1.0 : selectionFraction
             let badgeSelectionAlpha: CGFloat = badgeSelectionFraction
             //let badgeDeselectionAlpha: CGFloat = 1.0 - badgeSelectionFraction
             

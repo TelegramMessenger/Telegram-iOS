@@ -263,6 +263,12 @@
 
 "PUSH_CHAT_REQ_JOINED" = "%2$@|%1$@ was accepted into the group";
 
+"PUSH_STORY_NOTEXT" = "%1$@|posted a story";
+"PUSH_MESSAGE_STORY" = "%1$@|shared a story with you";
+"PUSH_MESSAGE_STORY_MENTION" = "%1$@|mentioned you in a story";
+"PUSH_CHANNEL_MESSAGE_STORY" = "%1$@|shared a story";
+"PUSH_CHAT_MESSAGE_STORY" = "%2$@|%1$@ shared a story to the group";
+
 "LOCAL_MESSAGE_FWDS" = "%1$@ forwarded you %2$d messages";
 "LOCAL_CHANNEL_MESSAGE_FWDS" = "%1$@ posted %2$d forwarded messages";
 "LOCAL_CHAT_MESSAGE_FWDS" = "%1$@ forwarded %2$d messages";
@@ -963,6 +969,8 @@
 "PrivacySettings.LastSeenContactsMinus" = "My Contacts (-%@)";
 "PrivacySettings.LastSeenContactsMinusPlus" = "My Contacts (-%@, +%@)";
 "PrivacySettings.LastSeenNobodyPlus" = "Nobody (+%@)";
+"PrivacySettings.LastSeenCloseFriendsPlus" = "Close Friends (+%@)";
+"PrivacySettings.LastSeenCloseFriends" = "Close Friends";
 
 "PrivacySettings.SecurityTitle" = "SECURITY";
 
@@ -2054,6 +2062,7 @@
 
 "StickerPack.Share" = "Share";
 "StickerPack.Send" = "Send Sticker";
+"StickerPack.AddSticker" = "Add Sticker";
 
 "StickerPack.RemoveStickerCount_1" = "Remove 1 Sticker";
 "StickerPack.RemoveStickerCount_2" = "Remove 2 Stickers";
@@ -5823,6 +5832,8 @@ Sorry for the inconvenience.";
 "VoiceChat.Audio" = "audio";
 "VoiceChat.Leave" = "leave";
 
+"LiveStream.Expand" = "expand";
+
 "VoiceChat.SpeakPermissionEveryone" = "New participants can speak";
 "VoiceChat.SpeakPermissionAdmin" = "New paricipants are muted";
 "VoiceChat.Share" = "Share Invite Link";
@@ -5959,7 +5970,9 @@ Sorry for the inconvenience.";
 "LiveStream.RecordingInProgress" = "Live stream is being recorded";
 
 "VoiceChat.StopRecordingTitle" = "Stop Recording?";
-"VoiceChat.StopRecordingStop" = "Stop";
+"VoiceChat.StopRecordingStop" = "Stop Recording";
+
+"LiveStream.StopLiveStream" = "Stop Live Stream";
 
 "VoiceChat.RecordingSaved" = "Audio saved to **Saved Messages**.";
 
@@ -6899,7 +6912,7 @@ Sorry for the inconvenience.";
 
 "SponsoredMessageMenu.Info" = "What are sponsored\nmessages?";
 "SponsoredMessageInfoScreen.Title" = "What are sponsored messages?";
-"SponsoredMessageInfoScreen.Text" = "Unlike other apps, Telegram never uses your private data to target ads. You are seeing this message only because someone chose this public one-to many channel as a space to promote their messages. This means that no user data is mined or analyzed to display ads, and every user viewing a channel on Telegram sees the same sponsored message.\n\nUnline other apps, Telegram doesn't track whether you tapped on a sponsored message and doesn't profile you based on your activity. We also prevent external links in sponsored messages to ensure that third parties can't spy on our users. We believe that everyone has the right to privacy, and technological platforms should respect that.\n\nTelegram offers free and unlimited service to hundreds of millions of users, which involves significant server and traffic costs. In order to remain independent and stay true to its values, Telegram developed a paid tool to promote messages with user privacy in mind. We welcome responsible adverticers at:\n[url]\nAds should no longer be synonymous with abuse of user privacy. Let us redefine how a tech compony should operate — together.";
+"SponsoredMessageInfoScreen.MarkdownText" = "Unlike other apps, Telegram never uses your private data to target ads. [Learn more in the Privacy Policy](https://telegram.org/privacy#5-6-no-ads-based-on-user-data)\nYou are seeing this message only because someone chose this public one-to many channel as a space to promote their messages. This means that no user data is mined or analyzed to display ads, and every user viewing a channel on Telegram sees the same sponsored message.\n\nUnline other apps, Telegram doesn't track whether you tapped on a sponsored message and doesn't profile you based on your activity. We also prevent external links in sponsored messages to ensure that third parties can't spy on our users. We believe that everyone has the right to privacy, and technological platforms should respect that.\n\nTelegram offers free and unlimited service to hundreds of millions of users, which involves significant server and traffic costs. In order to remain independent and stay true to its values, Telegram developed a paid tool to promote messages with user privacy in mind. We welcome responsible adverticers at:\n[url]\nAds should no longer be synonymous with abuse of user privacy. Let us redefine how a tech compony should operate — together.";
 "SponsoredMessageInfo.Action" = "Learn More";
 "SponsoredMessageInfo.Url" = "https://telegram.org/ads";
 
@@ -7078,6 +7091,7 @@ Sorry for the inconvenience.";
 "Time.HoursAgo_many" = "%@ hours ago";
 "Time.HoursAgo_0" = "%@ hours ago";
 "Time.AtDate" = "%@";
+"Time.AtPreciseDate" = "%@ at %@";
 
 "Stickers.ShowMore" = "Show More";
 
@@ -7420,6 +7434,7 @@ Sorry for the inconvenience.";
 "LiveStream.NoViewers" = "No viewers";
 "LiveStream.ViewerCount_1" = "1 viewer";
 "LiveStream.ViewerCount_any" = "%@ viewers";
+"LiveStream.Watching" = "watching";
 
 "LiveStream.NoSignalAdminText" = "Oops! Telegram doesn't see any stream\ncoming from your streaming app.\n\nPlease make sure you entered the right Server\nURL and Stream Key in your app.";
 "LiveStream.NoSignalUserText" = "%@ is currently not broadcasting live\nstream data to Telegram.";
@@ -7536,6 +7551,7 @@ Sorry for the inconvenience.";
 "PeerInfo.AutoDeleteSettingOther" = "Other...";
 "PeerInfo.AutoDeleteDisable" = "Disable";
 "PeerInfo.AutoDeleteInfo" = "Automatically delete messages sent in this chat after a certain period of time.";
+"PeerInfo.ChannelAutoDeleteInfo" = "Automatically delete messages sent in this channel after a certain period of time.";
 
 "PeerInfo.ClearMessages" = "Clear Messages";
 "PeerInfo.ClearConfirmationUser" = "Are you sure you want to delete all messages with %@?";
@@ -9106,11 +9122,6 @@ Sorry for the inconvenience.";
 "Wallpaper.ApplyForAll" = "Apply For All Chats";
 "Wallpaper.ApplyForChat" = "Apply For This Chat";
 
-"ChatList.ChatFolderUpdateCount_1" = "1 new chat";
-"ChatList.ChatFolderUpdateCount_any" = "%d new chats";
-"ChatList.ChatFolderUpdateHintTitle" = "You can join %@";
-"ChatList.ChatFolderUpdateHintText" = "Tap here to view them";
-
 "Premium.MaxSharedFolderMembershipText" = "You can only add **%1$@** shareable folders. Upgrade to **Telegram Premium** to increase this limit up to **%2$@**.";
 "Premium.MaxSharedFolderMembershipNoPremiumText" = "You can only add **%1$@** shareable folders. We are working to let you increase this limit in the future.";
 "Premium.MaxSharedFolderMembershipFinalText" = "Sorry, you can only add **%1$@** shareable folders.";
@@ -9342,3 +9353,240 @@ Sorry for the inconvenience.";
 
 "ChatList.PremiumRestoreDiscountTitle" = "Get Premium back with up to %@ off";
 "ChatList.PremiumRestoreDiscountText" = "Your Telegram Premium has recently expired. Tap here to extend it.";
+
+"Notification.LockScreenReactionPlaceholder" = "Reaction";
+
+"UserInfo.BotNamePlaceholder" = "Bot Name";
+
+"ChatList.PremiumRestoreDiscountTitle" = "Get Premium back with up to %@ off";
+"ChatList.PremiumRestoreDiscountText" = "Your Telegram Premium has recently expired. Tap here to extend it.";
+
+"Login.ErrorAppOutdated" = "Please update Telegram to the latest version to log in.";
+
+"Login.GetCodeViaFragment" = "Get a code via Fragment";
+
+"Privacy.Bio" = "Bio";
+"Privacy.Bio.WhoCanSeeMyBio" = "WHO CAN SEE MY BIO";
+"Privacy.Bio.CustomHelp" = "You can restrict who can see your profile bio with granular precision.";
+"Privacy.Bio.AlwaysShareWith.Title" = "Always Share With";
+"Privacy.Bio.NeverShareWith.Title" = "Never Share With";
+
+"Conversation.OpenLink" = "OPEN LINK";
+
+"Paint.Flip" = "Flip";
+
+"Message.ForwardedStoryShort" = "Forwarded Story\nFrom: %@";
+"Message.ForwardedExpiredStoryShort" = "Expired Story\nFrom: %@";
+
+"Conversation.StoryForwardTooltip.Chat.One" = "Story forwarded to **%@**";
+"Conversation.StoryForwardTooltip.TwoChats.One" = "Story forwarded to to **%@** and **%@**";
+"Conversation.StoryForwardTooltip.ManyChats.One" = "Story forwarded to to **%@** and %@ others";
+"Conversation.StoryForwardTooltip.SavedMessages.One" = "Story forwarded to to **Saved Messages**";
+
+"Conversation.StoryMentionTextOutgoing" = "You mentioned %@\nin a story";
+"Conversation.StoryMentionTextIncoming" = "%@ mentioned you\nin a story";
+"Conversation.StoryExpiredMentionTextOutgoing" = "The story where you mentioned %@\n is no longer available";
+"Conversation.StoryExpiredMentionTextIncoming" = "The story you were mentioned in\nis no longer available";
+
+"ChatList.ArchiveStoryCount_1" = "1 story";
+"ChatList.ArchiveStoryCount_any" = "%d stories";
+
+"Notification.Story" = "Story";
+
+"ChatList.StoryFeedTooltip" = "Tap above to view updates\nfrom %@";
+
+"StoryFeed.ContextAddStory" = "Add Story";
+"StoryFeed.ContextSavedStories" = "Saved Stories";
+"StoryFeed.ContextArchivedStories" = "Archived Stories";
+"StoryFeed.ContextOpenChat" = "Send Message";
+"StoryFeed.ContextOpenProfile" = "View Profile";
+"StoryFeed.ContextNotifyOn" = "Notify About Stories";
+"StoryFeed.ContextNotifyOff" = "Do Not Notify About Stories";
+"StoryFeed.ContextArchive" = "Hide Stories";
+"StoryFeed.ContextUnarchive" = "Unhide Stories";
+
+"StoryFeed.TooltipNotifyOn" = "You will now get a notification whenever **%@** posts a story.";
+"StoryFeed.TooltipNotifyOff" = "You will no longer receive a notification when **%@** posts a story.";
+"StoryFeed.TooltipArchive" = "Stories from **%@** will now be shown in Archived Chats.";
+"StoryFeed.TooltipUnarchive" = "Stories from **%@** will now be shown in Chats.";
+
+"ChatList.Archive.ContextSettings" = "Archive Settings";
+"ChatList.Archive.ContextInfo" = "How Does It Work?";
+"ChatList.ContextSelectChats" = "Select Chats";
+
+"StoryFeed.TooltipPremiumPosting" = "Posting stories is currently available only\nto subscribers of [Telegram Premium]().";
+"StoryFeed.TooltipStoryLimitValue_1" = "1 story";
+"StoryFeed.TooltipStoryLimitValue_any" = "%d stories";
+"StoryFeed.TooltipStoryLimit" = "You can't post more than **%@** stories in **24 hours**.";
+
+"StoryFeed.MyStory" = "My Story";
+"StoryFeed.MyUploading" = "Uploading...";
+
+"MediaPicker.AddImage" = "Add Image";
+
+"Premium.Stories" = "Story Posting";
+"Premium.StoriesInfo" = "Be one of the first to share your stories with your contacts or an unlimited audience.";
+"Premium.Stories.Proceed" = "Unlock Story Posting";
+
+"AutoDownloadSettings.OnForContacts" = "On for contacts";
+
+"AutoDownloadSettings.StoriesSectionHeader" = "AUTO-DOWNLOAD STORIES";
+"AutoDownloadSettings.StoriesArchivedContacts" = "Archived Contacts";
+
+"AutoDownloadSettings.StoriesTitle" = "Stories";
+
+"Notifications.TopChats" = "Top 5";
+"Notifications.Stories" = "Stories";
+
+"Settings.MyStories" = "My Stories";
+"Settings.StoriesArchive" = "Stories Archive";
+
+"ArchiveSettings.Title" = "Archive Settings";
+
+"ArchiveSettings.UnmutedChatsHeader" = "UNMUTED CHATS";
+"ArchiveSettings.UnmutedChatsFooter" = "Keep archived chats in the Archive even if they are unmuted and get a new message.";
+"ArchiveSettings.FolderChatsHeader" = "CHATS FROM FOLDERS";
+"ArchiveSettings.FolderChatsFooter" = "Keep archived chats from folders in the Archive even if they are unmuted and get a new message.";
+
+"ArchiveSettings.UnknownChatsHeader" = "NEW CHATS FROM UNKNOWN USERS";
+"ArchiveSettings.UnknownChatsFooter" = "Automatically archive and mute new private chats, groups and channels from non-contacts.";
+
+"ArchiveSettings.KeepArchived" = "Always Keep Archived";
+"ArchiveSettings.TooltipPremiumRequired" = "This setting is available only to the subscribers of [Telegram Premium]().";
+
+"NotificationSettings.Stories.ShowAll" = "Show All Notifications";
+"NotificationSettings.Stories.ShowImportant" = "Show Important Notifications";
+"NotificationSettings.Stories.ShowImportantFooter" = "Always on for top 5 contacts.";
+"NotificationSettings.Stories.DisplayAuthorName" = "Display Author Name";
+
+"NotificationSettings.Stories.AutomaticValue" = "%@ (automatic)";
+"NotificationSettings.Stories.CompactShowName" = "Show name";
+"NotificationSettings.Stories.CompactHideName" = "Hide name";
+
+"Notifications.StoriesTitle" = "Stories";
+
+"Message.Story" = "Story";
+
+"Notification.Exceptions.StoriesHeader" = "STORY NOTIFICATIONS";
+"Notification.Exceptions.StoriesDisplayAuthorName" = "DISPLAY AUTHOR NAME";
+
+"StorageManagement.SectionStories" = "Stories";
+
+"PeerInfo.PaneStories" = "Stories";
+
+"Story.TooltipExpired" = "This story is no longer available";
+
+"Chat.ReplyExpiredStory" = "Expired story";
+"Chat.ReplyStory" = "Story";
+
+"Chat.StoryMentionAction" = "View Story";
+
+"StoryList.ContextSaveToGallery" = "Save to Gallery";
+"StoryList.ContextShowArchive" = "Show Archive";
+
+"StoryList.TooltipStoriesDeleted_1" = "1 story deleted.";
+"StoryList.TooltipStoriesDeleted_any" = "%d stories deleted.";
+
+"Story.TooltipSaving" = "Saving";
+"Story.TooltipSaved" = "Saved";
+
+"StoryList.SaveToProfile" = "Save to Profile";
+"StoryList.TooltipStoriesSavedToProfile_1" = "Story saved to your profile";
+"StoryList.TooltipStoriesSavedToProfile_any" = "%d stories saved to your profile.";
+"StoryList.TooltipStoriesSavedToProfileText" = "Saved stories can be viewed by others on your profile until you remove them.";
+
+"StoryList.TitleSaved" = "My Stories";
+"StoryList.TitleArchive" = "Stories Archive";
+"StoryList.SubtitleSelected_1" = "1 story selected";
+"StoryList.SubtitleSelected_any" = "%d stories selected";
+
+"StoryList.SubtitleSaved_1" = "1 saved story";
+"StoryList.SubtitleSaved_any" = "%d saved stories";
+
+"StoryList.SubtitleCount_1" = "1 story";
+"StoryList.SubtitleCount_any" = "%d stories";
+
+"StoryList.ArchiveDescription" = "Only you can see archived stories unless you choose to save them to your profile.";
+
+"StoryList.SavedEmptyState.Title" = "No saved stories";
+"StoryList.SavedEmptyState.Text" = "Open the Archive to select stories you\nwant to be displayed in your profile.";
+"StoryList.ArchivedEmptyState.Title" = "No Archived Stories";
+"StoryList.ArchivedEmptyState.Text" = "Upload a new story to view it here";
+"StoryList.SavedEmptyAction" = "Open Archive";
+
+"ArchiveInfo.Title" = "This is Your Archive";
+
+"ArchiveInfo.TextKeepArchivedUnmuted" = "Archived chats will remain in the Archive when you receive a new message. [Tap to change >]()";
+"ArchiveInfo.TextKeepArchivedDefault" = "When you receive a new message, muted chats will remain in the Archive, while unmuted chats will be moved to Chats. [Tap to change >]()";
+
+"ArchiveInfo.ChatsTitle" = "Archived Chats";
+"ArchiveInfo.ChatsText" = "Move any chat into your Archive and back by swiping on it.";
+"ArchiveInfo.HideTitle" = "Hiding Archive";
+"ArchiveInfo.HideText" = "Hide the Archive from your Main screen by swiping on it.";
+"ArchiveInfo.StoriesTitle" = "Stories";
+"ArchiveInfo.StoriesText" = "Archive Stories from your contacts separately from chats with them.";
+"ArchiveInfo.CloseAction" = "Got it";
+
+"Story.HeaderYourStory" = "Your story";
+"Story.HeaderEdited" = "edited";
+"Story.CaptionShowMore" = "Show more";
+
+"Story.UnsupportedText" = "This story is not supported by\nyour version of Telegram.";
+"Story.UnsupportedAction" = "Update Telegram";
+
+"Story.ScreenshotBlockedTitle" = "Screenshot Blocked";
+"Story.ScreenshotBlockedText" = "The story you tried to take a\nscreenshot of is protected from\ncopying by its creator.";
+
+"Story.Footer.NoViews" = "No views";
+"Story.Footer.Views_1" = "1 view";
+"Story.Footer.Views_any" = "%d views";
+
+"Story.Footer.Uploading" = "Uploading...";
+
+"Story.FooterReplyUnavailable" = "You can't reply to this story";
+"Story.InputPlaceholderReplyPrivately" = "Reply Privately...";
+
+"Story.ContextDeleteStory" = "Delete Story";
+
+"Story.TooltipPrivacyCloseFriendsMy" = "Only people from your close friends list will see this story.";
+"Story.TooltipPrivacyCloseFriends" = "You are seeing this story because you have\nbeen added to %@'s list of close friends.";
+
+"Story.ToastViewInChat" = "View in Chat";
+"Story.ToastReactionSent" = "Reaction Sent.";
+
+"Story.PrivacyTooltipContacts" = "This story is shown to all your contacts.";
+"Story.PrivacyTooltipCloseFriends" = "This story is shown to your close friends.";
+"Story.PrivacyTooltipSelectedContacts" = "This story is shown to selected contacts.";
+"Story.PrivacyTooltipNobody" = "This story is shown only to you.";
+"Story.PrivacyTooltipEveryone" = "This story is shown to everyone.";
+
+"Story.ContextPrivacy.LabelCloseFriends" = "Close Friends";
+"Story.ContextPrivacy.LabelContactsExcept" = "Contacts (-%@)";
+"Story.ContextPrivacy.LabelContacts" = "Contacts";
+"Story.ContextPrivacy.LabelOnlySelected_1" = "1 Person";
+"Story.ContextPrivacy.LabelOnlySelected_any" = "%d People";
+"Story.ContextPrivacy.LabelOnlyMe" = "Only Me";
+"Story.ContextPrivacy.LabelEveryone" = "Everyone";
+"Story.Context.Privacy" = "Who Can See";
+"Story.Context.Edit" = "Edit Story";
+"Story.Context.SaveToProfile" = "Save to Profile";
+"Story.Context.RemoveFromProfile" = "Remove from Profile";
+"Story.ToastRemovedFromProfileText" = "Story removed from your profile";
+"Story.ToastSavedToProfileTitle" = "Story saved to your profile";
+"Story.ToastSavedToProfileText" = "Saved stories can be viewed by others on your profile until you remove them.";
+"Story.Context.SaveToGallery" = "Save to Gallery";
+"Story.Context.CopyLink" = "Copy Link";
+"Story.ToastLinkCopied" = "Link copied.";
+"Story.Context.Share" = "Share";
+"Story.Context.Report" = "Report";
+
+"Story.Context.EmbeddedStickersValue_1" = "1 pack";
+"Story.Context.EmbeddedStickersValue_any" = "%d packs";
+"Story.Context.EmbeddedStickers" = "This story contains stickers from [%@]().";
+"Story.Context.EmbeddedEmojiPack" = "This story contains\n#[%@]() emoji.";
+"Story.Context.EmbeddedStickerPack" = "This story contains\n#[%@]() stickers.";
+
+"Story.TooltipVideoHasNoSound" = "This video has no sound";
+
+"Story.TooltipMessageScheduled" = "Message Scheduled";
+"Story.TooltipMessageSent" = "Message Sent";

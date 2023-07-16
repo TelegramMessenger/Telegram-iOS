@@ -9,20 +9,24 @@ public final class Button: Component {
     public let isEnabled: Bool
     public let action: () -> Void
     public let holdAction: (() -> Void)?
+    public let highlightedAction: ActionSlot<Bool>?
 
     convenience public init(
         content: AnyComponent<Empty>,
         isEnabled: Bool = true,
-        action: @escaping () -> Void
+        automaticHighlight: Bool = true,
+        action: @escaping () -> Void,
+        highlightedAction: ActionSlot<Bool>? = nil
     ) {
         self.init(
             content: content,
             minSize: nil,
             tag: nil,
-            automaticHighlight: true,
+            automaticHighlight: automaticHighlight,
             isEnabled: isEnabled,
             action: action,
-            holdAction: nil
+            holdAction: nil,
+            highlightedAction: highlightedAction
         )
     }
     
@@ -33,7 +37,8 @@ public final class Button: Component {
         automaticHighlight: Bool = true,
         isEnabled: Bool = true,
         action: @escaping () -> Void,
-        holdAction: (() -> Void)?
+        holdAction: (() -> Void)?,
+        highlightedAction: ActionSlot<Bool>?
     ) {
         self.content = content
         self.minSize = minSize
@@ -42,6 +47,7 @@ public final class Button: Component {
         self.isEnabled = isEnabled
         self.action = action
         self.holdAction = holdAction
+        self.highlightedAction = highlightedAction
     }
     
     public func minSize(_ minSize: CGSize?) -> Button {
@@ -52,7 +58,8 @@ public final class Button: Component {
             automaticHighlight: self.automaticHighlight,
             isEnabled: self.isEnabled,
             action: self.action,
-            holdAction: self.holdAction
+            holdAction: self.holdAction,
+            highlightedAction: self.highlightedAction
         )
     }
     
@@ -64,7 +71,8 @@ public final class Button: Component {
             automaticHighlight: self.automaticHighlight,
             isEnabled: self.isEnabled,
             action: self.action,
-            holdAction: holdAction
+            holdAction: holdAction,
+            highlightedAction: self.highlightedAction
         )
     }
     
@@ -76,7 +84,8 @@ public final class Button: Component {
             automaticHighlight: self.automaticHighlight,
             isEnabled: self.isEnabled,
             action: self.action,
-            holdAction: self.holdAction
+            holdAction: self.holdAction,
+            highlightedAction: self.highlightedAction
         )
     }
     
@@ -102,14 +111,21 @@ public final class Button: Component {
     public final class View: UIButton, ComponentTaggedView {
         private let contentView: ComponentHostView<Empty>
         
+        public var content: UIView? {
+            return self.contentView.componentView
+        }
+        
         private var component: Button?
         private var currentIsHighlighted: Bool = false {
             didSet {
-                guard let component = self.component, component.automaticHighlight else {
+                guard let component = self.component else {
                     return
                 }
                 if self.currentIsHighlighted != oldValue {
-                    self.updateAlpha(transition: .immediate)
+                    if component.automaticHighlight {
+                        self.updateAlpha(transition: .immediate)
+                    }
+                    component.highlightedAction?.invoke(self.currentIsHighlighted)
                 }
             }
         }
@@ -137,8 +153,11 @@ public final class Button: Component {
         override init(frame: CGRect) {
             self.contentView = ComponentHostView<Empty>()
             self.contentView.isUserInteractionEnabled = false
+            self.contentView.layer.allowsGroupOpacity = true
             
             super.init(frame: frame)
+            
+            self.isExclusiveTouch = true
             
             self.addSubview(self.contentView)
             

@@ -119,6 +119,7 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         isLeftAligned: Bool,
         isMinimized: Bool,
         isCoveredByInput: Bool,
+        displayTail: Bool,
         transition: ContainedViewLayoutTransition
     ) {
         let shadowInset: CGFloat = 15.0
@@ -188,10 +189,10 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         transition.updateFrame(layer: self.backgroundShadowLayer, frame: backgroundFrame.insetBy(dx: -shadowInset, dy: -shadowInset), beginWithCurrentState: true)
         transition.updateFrame(layer: self.largeCircleShadowLayer, frame: largeCircleFrame.insetBy(dx: -shadowInset, dy: -shadowInset), beginWithCurrentState: true)
         
-        transition.updateAlpha(layer: self.largeCircleLayer, alpha: isCoveredByInput ? 0.0 : 1.0)
-        transition.updateAlpha(layer: self.largeCircleShadowLayer, alpha: isCoveredByInput ? 0.0 : 1.0)
-        transition.updateAlpha(layer: self.smallCircleLayer, alpha: isCoveredByInput ? 0.0 : 1.0)
-        transition.updateAlpha(layer: self.smallCircleShadowLayer, alpha: isCoveredByInput ? 0.0 : 1.0)
+        transition.updateAlpha(layer: self.largeCircleLayer, alpha: (isCoveredByInput || !displayTail) ? 0.0 : 1.0)
+        transition.updateAlpha(layer: self.largeCircleShadowLayer, alpha: (isCoveredByInput || !displayTail) ? 0.0 : 1.0)
+        transition.updateAlpha(layer: self.smallCircleLayer, alpha: (isCoveredByInput || !displayTail) ? 0.0 : 1.0)
+        transition.updateAlpha(layer: self.smallCircleShadowLayer, alpha: (isCoveredByInput || !displayTail) ? 0.0 : 1.0)
         
         transition.updateFrame(layer: self.smallCircleShadowLayer, frame: smallCircleFrame.insetBy(dx: -shadowInset, dy: -shadowInset), beginWithCurrentState: true)
         

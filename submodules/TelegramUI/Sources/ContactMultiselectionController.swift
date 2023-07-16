@@ -440,7 +440,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 return
             }
             var addedToken: EditableTokenListToken?
-            var removedTokenId: AnyHashable?
+            var removedTokenIds: [AnyHashable] = []
             switch strongSelf.contactsNode.contentNode {
             case .contacts:
                 break
@@ -458,12 +458,23 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 }
                 chatsNode.updateState { state in
                     var state = state
-                    if state.selectedAdditionalCategoryIds.contains(id) {
-                        state.selectedAdditionalCategoryIds.remove(id)
-                        removedTokenId = id
+                    if "".isEmpty {
+                        if !state.selectedAdditionalCategoryIds.contains(id) {
+                            for id in state.selectedAdditionalCategoryIds {
+                                removedTokenIds.append(id)
+                                state.selectedAdditionalCategoryIds.remove(id)
+                            }
+                            state.selectedAdditionalCategoryIds.insert(id)
+                            addedToken = categoryToken
+                        }
                     } else {
-                        state.selectedAdditionalCategoryIds.insert(id)
-                        addedToken = categoryToken
+                        if state.selectedAdditionalCategoryIds.contains(id) {
+                            state.selectedAdditionalCategoryIds.remove(id)
+                            removedTokenIds.append(id)
+                        } else {
+                            state.selectedAdditionalCategoryIds.insert(id)
+                            addedToken = categoryToken
+                        }
                     }
                     
                     return state
@@ -486,9 +497,13 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                     if !added {
                         strongSelf.contactsNode.editableTokens.append(addedToken)
                     }
-                } else if let removedTokenId = removedTokenId {
+                    
                     strongSelf.contactsNode.editableTokens = strongSelf.contactsNode.editableTokens.filter { token in
-                        return token.id != removedTokenId
+                        return !removedTokenIds.contains(token.id)
+                    }
+                } else if !removedTokenIds.isEmpty {
+                    strongSelf.contactsNode.editableTokens = strongSelf.contactsNode.editableTokens.filter { token in
+                        return !removedTokenIds.contains(token.id)
                     }
                 }
                 strongSelf.requestLayout(transition: ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring))

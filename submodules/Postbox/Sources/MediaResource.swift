@@ -49,25 +49,14 @@ public final class MediaResourceStorageLocation {
     }
 }
 
-public enum MediaResourceUserContentType: UInt8, Equatable {
-    case other = 0
-    case image = 1
-    case video = 2
-    case audio = 3
-    case file = 4
-    case sticker = 6
-    case avatar = 7
-    case audioVideoMessage = 8
-}
-
 public struct MediaResourceFetchParameters {
     public let tag: MediaResourceFetchTag?
     public let info: MediaResourceFetchInfo?
     public let location: MediaResourceStorageLocation?
-    public let contentType: MediaResourceUserContentType
+    public let contentType: UInt8
     public let isRandomAccessAllowed: Bool
     
-    public init(tag: MediaResourceFetchTag?, info: MediaResourceFetchInfo?, location: MediaResourceStorageLocation?, contentType: MediaResourceUserContentType, isRandomAccessAllowed: Bool) {
+    public init(tag: MediaResourceFetchTag?, info: MediaResourceFetchInfo?, location: MediaResourceStorageLocation?, contentType: UInt8, isRandomAccessAllowed: Bool) {
         self.tag = tag
         self.info = info
         self.location = location

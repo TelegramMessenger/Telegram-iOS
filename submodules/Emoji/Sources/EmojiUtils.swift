@@ -5,7 +5,7 @@ import AVFoundation
 extension Character {
     var isSimpleEmoji: Bool {
         guard let firstScalar = unicodeScalars.first else { return false }
-        if #available(iOS 10.2, *) {
+        if #available(iOS 10.2, macOS 10.12.2, *) {
             return (firstScalar.properties.isEmoji && firstScalar.value > 0x238C) || firstScalar.isEmoji
         } else {
             return firstScalar.isEmoji
@@ -13,7 +13,7 @@ extension Character {
     }
 
     var isCombinedIntoEmoji: Bool {
-        if #available(iOS 10.2, *) {
+        if #available(iOS 10.2, macOS 10.12.2, *) {
             return self.unicodeScalars.count > 1 && self.unicodeScalars.first?.properties.isEmoji ?? false
         } else {
             return self.unicodeScalars.count > 1 && self.unicodeScalars.first?.isEmoji ?? false
@@ -104,7 +104,7 @@ public extension String {
     var emojis: [String] {
         var emojis: [String] = []
         self.enumerateSubstrings(in: self.startIndex ..< self.endIndex, options: .byComposedCharacterSequences) { substring, _, _, _ in
-            if let substring = substring {
+            if let substring = substring, substring.isSingleEmoji {
                 emojis.append(substring)
             }
         }

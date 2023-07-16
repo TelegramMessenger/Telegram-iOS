@@ -186,7 +186,9 @@ public final class SharedDisplayLinkDriver {
         var removeIndices: [Int]?
         for i in 0 ..< self.requests.count {
             if let link = self.requests[i].link, link.isValid {
-                link.update()
+                if !link.isPaused {
+                    link.update()
+                }
             } else {
                 if removeIndices == nil {
                     removeIndices = [i]

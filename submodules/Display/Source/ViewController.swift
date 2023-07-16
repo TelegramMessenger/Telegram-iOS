@@ -155,6 +155,8 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
         return self.prefersOnScreenNavigationHidden
     }
     
+    public internal(set) var previousItem: NavigationPreviousAction?
+    
     open var navigationPresentation: ViewControllerNavigationPresentation = .default
     open var _presentedInModal: Bool = false
     
@@ -166,10 +168,12 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     
     public private(set) var modalStyleOverlayTransitionFactor: CGFloat = 0.0
     public var modalStyleOverlayTransitionFactorUpdated: ((ContainedViewLayoutTransition) -> Void)?
+    public var customModalStyleOverlayTransitionFactorUpdated: ((ContainedViewLayoutTransition) -> Void)?
     public func updateModalStyleOverlayTransitionFactor(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.modalStyleOverlayTransitionFactor != value {
             self.modalStyleOverlayTransitionFactor = value
             self.modalStyleOverlayTransitionFactorUpdated?(transition)
+            self.customModalStyleOverlayTransitionFactorUpdated?(transition)
         }
     }
     
@@ -416,11 +420,9 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
             if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode, !self.displayNavigationBar {
                 navigationBarFrame.origin.y -= navigationLayout.defaultContentHeight
                 navigationBarFrame.size.height += contentNode.height + navigationLayout.defaultContentHeight + statusBarHeight
-                //navigationBarFrame.origin.y += contentNode.height + statusBarHeight
             }
             if let _ = navigationBar.contentNode, let _ = navigationBar.secondaryContentNode, !self.displayNavigationBar {
-                navigationBarFrame.size.height += NavigationBar.defaultSecondaryContentHeight
-                //navigationBarFrame.origin.y += NavigationBar.defaultSecondaryContentHeight
+                navigationBarFrame.size.height += navigationBar.secondaryContentHeight
             }
             
             navigationBar.updateLayout(size: navigationBarFrame.size, defaultHeight: navigationLayout.defaultContentHeight, additionalTopHeight: statusBarHeight, additionalContentHeight: self.additionalNavigationBarHeight, additionalBackgroundHeight: additionalBackgroundHeight, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, appearsHidden: !self.displayNavigationBar, isLandscape: isLandscape, transition: transition)
@@ -452,10 +454,6 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
         if let scrollToTopView = self.scrollToTopView {
             scrollToTopView.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 10.0)
         }
-    }
-    
-    open func updateModalTransition(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
-        
     }
     
     open func navigationStackConfigurationUpdated(next: [ViewController]) {

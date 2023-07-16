@@ -555,7 +555,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if item is InstantPageWebEmbedItem {
                 embedIndex += 1
             }
-            if let imageItem = item as? InstantPageImageItem, imageItem.media.media is TelegramMediaWebpage {
+            if let imageItem = item as? InstantPageImageItem, case .webpage = imageItem.media.media {
                 embedIndex += 1
             }
             if item is InstantPageDetailsItem {
@@ -1003,17 +1003,17 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private func longPressMedia(_ media: InstantPageMedia) {
         let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.strings.Conversation_ContextMenuCopy), action: { [weak self] in
-            if let strongSelf = self, let image = media.media as? TelegramMediaImage {
+            if let strongSelf = self, case let .image(image) = media.media {
                 let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
                 let _ = copyToPasteboard(context: strongSelf.context, postbox: strongSelf.context.account.postbox, userLocation: strongSelf.sourceLocation.userLocation, mediaReference: .standalone(media: media)).start()
             }
         }), ContextMenuAction(content: .text(title: self.strings.Conversation_LinkDialogSave, accessibilityLabel: self.strings.Conversation_LinkDialogSave), action: { [weak self] in
-            if let strongSelf = self, let image = media.media as? TelegramMediaImage {
+            if let strongSelf = self, case let .image(image) = media.media {
                 let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: image.representations, immediateThumbnailData: image.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
                 let _ = saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.context.account.postbox, userLocation: strongSelf.sourceLocation.userLocation, mediaReference: .standalone(media: media)).start()
             }
         }), ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuShare, accessibilityLabel: self.strings.Conversation_ContextMenuShare), action: { [weak self] in
-            if let strongSelf = self, let webPage = strongSelf.webPage, let image = media.media as? TelegramMediaImage {
+            if let strongSelf = self, let webPage = strongSelf.webPage, case let .image(image) = media.media {
                 strongSelf.present(ShareController(context: strongSelf.context, subject: .image(image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.media(media: .webPage(webPage: WebpageReference(webPage), media: image), resource: $0.resource)) }))), nil)
             }
         })], catchTapsOutside: true)
@@ -1406,26 +1406,26 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return
         }
         
-        if let map = media.media as? TelegramMediaMap {
+        if case let .geo(map) = media.media {
             let controllerParams = LocationViewParams(sendLiveLocation: { _ in
             }, stopLiveLocation: { _ in
             }, openUrl: { _ in }, openPeer: { _ in
             }, showAll: false)
             
-            let peer = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [])
-            let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer, text: "", attributes: [], media: [map], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
+            let peer = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil)
+            let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer, text: "", attributes: [], media: [map], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
             
-            let controller = LocationViewController(context: self.context, subject: message, params: controllerParams)
+            let controller = LocationViewController(context: self.context, subject: EngineMessage(message), params: controllerParams)
             self.pushController(controller)
             return
         }
         
-        if let file = media.media as? TelegramMediaFile, (file.isVoice || file.isMusic) {
+        if case let .file(file) = media.media, (file.isVoice || file.isMusic) {
             var medias: [InstantPageMedia] = []
             var initialIndex = 0
             for item in items {
                 for itemMedia in item.medias {
-                    if let itemFile = itemMedia.media as? TelegramMediaFile, (itemFile.isVoice || itemFile.isMusic) {
+                    if case let .file(itemFile) = itemMedia.media, (itemFile.isVoice || itemFile.isMusic) {
                         if itemMedia.index == media.index {
                             initialIndex = medias.count
                         }
@@ -1440,16 +1440,21 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var fromPlayingVideo = false
         
         var entries: [InstantPageGalleryEntry] = []
-        if media.media is TelegramMediaWebpage {
+        if case let .webpage(webPage) = media.media {
             entries.append(InstantPageGalleryEntry(index: 0, pageId: webPage.webpageId, media: media, caption: nil, credit: nil, location: nil))
-        } else if let file = media.media as? TelegramMediaFile, file.isAnimated {
+        } else if case let .file(file) = media.media, file.isAnimated {
             fromPlayingVideo = true
             entries.append(InstantPageGalleryEntry(index: Int32(media.index), pageId: webPage.webpageId, media: media, caption: media.caption, credit: media.credit, location: nil))
         } else {
             fromPlayingVideo = true
             var medias: [InstantPageMedia] = mediasFromItems(items)
-            medias = medias.filter {
-                return $0.media is TelegramMediaImage || $0.media is TelegramMediaFile
+            medias = medias.filter { item in
+                switch item.media {
+                case .image, .file:
+                    return true
+                default:
+                    return false
+                }
             }
             
             for media in medias {

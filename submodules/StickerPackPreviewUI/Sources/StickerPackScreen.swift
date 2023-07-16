@@ -464,7 +464,16 @@ private final class StickerPackContainer: ASDisplayNode {
                             var menuItems: [ContextMenuItem] = []
                             if let (info, _, _) = strongSelf.currentStickerPack, info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
                                 if strongSelf.sendSticker != nil {
-                                    menuItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                    var iconName: String
+                                    let actionTitle: String
+                                    if let title = strongSelf.controller?.actionTitle {
+                                        actionTitle = title
+                                        iconName = "Chat/Context Menu/Add"
+                                    } else {
+                                        actionTitle = strongSelf.presentationData.strings.StickerPack_Send
+                                        iconName = "Chat/Context Menu/Resend"
+                                    }
+                                    menuItems.append(.action(ContextMenuActionItem(text: actionTitle, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: iconName), color: theme.contextMenu.primaryColor) }, action: { _, f in
                                         if let strongSelf = self, let peekController = strongSelf.peekController {
                                             if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
                                                 let _ = strongSelf.sendSticker?(.standalone(media: item.file), animationNode.view, animationNode.bounds)
@@ -621,7 +630,7 @@ private final class StickerPackContainer: ASDisplayNode {
                                             
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 
-                let undoController = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: presentationData.strings.EmojiStatus_AppliedText, undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
+                let undoController = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.EmojiStatus_AppliedText, undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
                 controller.present(undoController, in: .window(.root))
             }
             let copyEmoji: (TelegramMediaFile) -> Void = { file in
@@ -1901,12 +1910,15 @@ public final class StickerPackScreenImpl: ViewController {
     let animationCache: AnimationCache
     let animationRenderer: MultiAnimationRenderer
     
+    let actionTitle: String?
+    
     public init(
         context: AccountContext,
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
         stickerPacks: [StickerPackReference],
         loadedStickerPacks: [LoadedStickerPack],
         selectedStickerPackIndex: Int = 0,
+        actionTitle: String? = nil,
         parentNavigationController: NavigationController? = nil,
         sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil,
         sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?,
@@ -1918,6 +1930,7 @@ public final class StickerPackScreenImpl: ViewController {
         self.stickerPacks = stickerPacks
         self.loadedStickerPacks = loadedStickerPacks
         self.initialSelectedStickerPackIndex = selectedStickerPackIndex
+        self.actionTitle = actionTitle
         self.parentNavigationController = parentNavigationController
         self.sendSticker = sendSticker
         self.sendEmoji = sendEmoji
@@ -1998,7 +2011,7 @@ public final class StickerPackScreenImpl: ViewController {
                 
                 if let strongSelf = self, let file = attribute.file {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: file, title: nil, text: presentationData.strings.Conversation_EmojiCopied, undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                    strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: file, loop: true, title: nil, text: presentationData.strings.Conversation_EmojiCopied, undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                 }
             }))
             
@@ -2142,6 +2155,7 @@ public func StickerPackScreen(
     mainStickerPack: StickerPackReference,
     stickerPacks: [StickerPackReference],
     loadedStickerPacks: [LoadedStickerPack] = [],
+    actionTitle: String? = nil,
     parentNavigationController: NavigationController? = nil,
     sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil,
     sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)? = nil,
@@ -2151,9 +2165,11 @@ public func StickerPackScreen(
 ) -> ViewController {
     let controller = StickerPackScreenImpl(
         context: context,
+        updatedPresentationData: updatedPresentationData,
         stickerPacks: stickerPacks,
         loadedStickerPacks: loadedStickerPacks,
         selectedStickerPackIndex: stickerPacks.firstIndex(of: mainStickerPack) ?? 0,
+        actionTitle: actionTitle,
         parentNavigationController: parentNavigationController,
         sendSticker: sendSticker,
         sendEmoji: sendEmoji,

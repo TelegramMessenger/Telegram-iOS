@@ -471,7 +471,7 @@ private final class DemoSheetContent: CombinedComponent {
         self.context = context
         self.subject = subject
         self.source = source
-        self.order = order ?? [.moreUpload, .fasterDownload, .voiceToText, .noAds, .uniqueReactions, .premiumStickers, .animatedEmoji, .advancedChatManagement, .profileBadge, .animatedUserpics, .appIcons, .translation]
+        self.order = order ?? [.moreUpload, .fasterDownload, .voiceToText, .noAds, .uniqueReactions, .premiumStickers, .animatedEmoji, .advancedChatManagement, .profileBadge, .animatedUserpics, .appIcons, .translation, .stories]
         self.action = action
         self.dismiss = dismiss
     }
@@ -939,6 +939,24 @@ private final class DemoSheetContent: CombinedComponent {
                         )
                     )
                 )
+                availableItems[.stories] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.stories,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    videoFile: configuration.videos["voice_to_text"],
+                                    decoration: .badgeStars
+                                )),
+                                title: strings.Premium_Stories,
+                                text: strings.Premium_StoriesInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
                 
                 var items: [DemoPagerComponent.Item] = component.order.compactMap { availableItems[$0] }
                 let index: Int
@@ -1029,6 +1047,9 @@ private final class DemoSheetContent: CombinedComponent {
                                 buttonAnimationName = "premium_unlock"
                             case .translation:
                                 buttonText = strings.Premium_Translation_Proceed
+                            case .stories:
+                                buttonText = strings.Premium_Stories_Proceed
+                                buttonAnimationName = "premium_unlock"
                             default:
                                 buttonText = strings.Common_OK
                         }
@@ -1210,6 +1231,7 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case animatedEmoji
         case emojiStatus
         case translation
+        case stories
     }
     
     public enum Source: Equatable {
@@ -1218,7 +1240,7 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case other
     }
     
-    var disposed: () -> Void = {}
+    public var disposed: () -> Void = {}
     
     private var didSetReady = false
     private let _ready = Promise<Bool>()
