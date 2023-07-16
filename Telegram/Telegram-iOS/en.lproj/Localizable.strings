@@ -9401,6 +9401,7 @@ Sorry for the inconvenience.";
 "StoryFeed.TooltipNotifyOn" = "You will now get a notification whenever **%@** posts a story.";
 "StoryFeed.TooltipNotifyOff" = "You will no longer receive a notification when **%@** posts a story.";
 "StoryFeed.TooltipArchive" = "Stories from **%@** will now be shown in Archived Chats.";
+"StoryFeed.TooltipUnarchive" = "Stories from **%@** will now be shown in Chats.";
 
 "ChatList.Archive.ContextSettings" = "Archive Settings";
 "ChatList.Archive.ContextInfo" = "How Does It Work?";
@@ -9534,3 +9535,51 @@ Sorry for the inconvenience.";
 "Story.Footer.Views_any" = "%d views";
 
 "Story.Footer.Uploading" = "Uploading...";
+
+"Story.FooterReplyUnavailable" = "You can't reply to this story";
+"Story.InputPlaceholderReplyPrivately" = "Reply Privately...";
+
+"Story.ContextDeleteStory" = "Delete Story";
+
+"Story.TooltipPrivacyCloseFriendsMy" = "Only people from your close friends list will see this story.";
+"Story.TooltipPrivacyCloseFriends" = "You are seeing this story because you have\nbeen added to %@'s list of close friends.";
+
+"Story.ToastViewInChat" = "View in Chat";
+"Story.ToastReactionSent" = "Reaction Sent.";
+
+"Story.PrivacyTooltipContacts" = "This story is shown to all your contacts.";
+"Story.PrivacyTooltipCloseFriends" = "This story is shown to your close friends.";
+"Story.PrivacyTooltipSelectedContacts" = "This story is shown to selected contacts.";
+"Story.PrivacyTooltipNobody" = "This story is shown only to you.";
+"Story.PrivacyTooltipEveryone" = "This story is shown to everyone.";
+
+"Story.ContextPrivacy.LabelCloseFriends" = "Close Friends";
+"Story.ContextPrivacy.LabelContactsExcept" = "Contacts (-%@)";
+"Story.ContextPrivacy.LabelContacts" = "Contacts";
+"Story.ContextPrivacy.LabelOnlySelected_1" = "1 Person";
+"Story.ContextPrivacy.LabelOnlySelected_any" = "%d People";
+"Story.ContextPrivacy.LabelOnlyMe" = "Only Me";
+"Story.ContextPrivacy.LabelEveryone" = "Everyone";
+"Story.Context.Privacy" = "Who Can See";
+"Story.Context.Edit" = "Edit Story";
+"Story.Context.SaveToProfile" = "Save to Profile";
+"Story.Context.RemoveFromProfile" = "Remove from Profile";
+"Story.ToastRemovedFromProfileText" = "Story removed from your profile";
+"Story.ToastSavedToProfileTitle" = "Story saved to your profile";
+"Story.ToastSavedToProfileText" = "Saved stories can be viewed by others on your profile until you remove them.";
+"Story.Context.SaveToGallery" = "Save to Gallery";
+"Story.Context.CopyLink" = "Copy Link";
+"Story.ToastLinkCopied" = "Link copied.";
+"Story.Context.Share" = "Share";
+"Story.Context.Report" = "Report";
+
+"Story.Context.EmbeddedStickersValue_1" = "1 pack";
+"Story.Context.EmbeddedStickersValue_any" = "%d packs";
+"Story.Context.EmbeddedStickers" = "This story contains stickers from [%@]().";
+"Story.Context.EmbeddedEmojiPack" = "This story contains\n#[%@]() emoji.";
+"Story.Context.EmbeddedStickerPack" = "This story contains\n#[%@]() stickers.";
+
+"Story.TooltipVideoHasNoSound" = "This video has no sound";
+
+"Story.TooltipMessageScheduled" = "Message Scheduled";
+"Story.TooltipMessageSent" = "Message Sent";

@@ -31,13 +31,15 @@ final class StoryItemContentComponent: Component {
     let peer: EnginePeer
     let item: EngineStoryItem
     let audioMode: StoryContentItem.AudioMode
+    let isVideoBuffering: Bool
 
-    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer, item: EngineStoryItem, audioMode: StoryContentItem.AudioMode) {
+    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer, item: EngineStoryItem, audioMode: StoryContentItem.AudioMode, isVideoBuffering: Bool) {
 		self.context = context
         self.strings = strings
         self.peer = peer
 		self.item = item
         self.audioMode = audioMode
+        self.isVideoBuffering = isVideoBuffering
 	}
 
 	static func ==(lhs: StoryItemContentComponent, rhs: StoryItemContentComponent) -> Bool {
@@ -53,6 +55,9 @@ final class StoryItemContentComponent: Component {
 		if lhs.item != rhs.item {
 			return false
 		}
+        if lhs.isVideoBuffering != rhs.isVideoBuffering {
+            return false
+        }
 		return true
 	}
 
@@ -660,7 +665,7 @@ final class StoryItemContentComponent: Component {
                 #endif
             }
             
-            if !self.contentLoaded {
+            if !self.contentLoaded || component.isVideoBuffering {
                 let loadingEffectView: StoryItemLoadingEffectView
                 if let current = self.loadingEffectView {
                     loadingEffectView = current
@@ -670,7 +675,7 @@ final class StoryItemContentComponent: Component {
                     self.addSubview(loadingEffectView)
                 }
                 loadingEffectView.update(size: availableSize, transition: transition)
-            } else if let loadingEffectView = self.loadingEffectView{
+            } else if let loadingEffectView = self.loadingEffectView {
                 self.loadingEffectView = nil
                 loadingEffectView.layer.animateAlpha(from: loadingEffectView.alpha, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak loadingEffectView] _ in
                     loadingEffectView?.removeFromSuperview()
