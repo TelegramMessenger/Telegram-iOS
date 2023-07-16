@@ -2858,32 +2858,7 @@ public final class ChatListNode: ListView {
             strongSelf.scrolledAtTopValue = atTop
             strongSelf.contentOffsetChanged?(offset)
             if revealHiddenItems && !strongSelf.currentState.hiddenItemShouldBeTemporaryRevealed {
-                var isHiddenItemVisible = false
-                strongSelf.forEachItemNode({ itemNode in
-                    if let itemNode = itemNode as? ChatListItemNode, let item = itemNode.item {
-                        if case let .peer(peerData) = item.content, let threadInfo = peerData.threadInfo {
-                            if threadInfo.isHidden {
-                                isHiddenItemVisible = true
-                            }
-                        }
-                        if case let .groupReference(groupReference) = item.content {
-                            if groupReference.hiddenByDefault {
-                                isHiddenItemVisible = true
-                            }
-                        }
-                    }
-                })
-                if isHiddenItemVisible {
-                    if strongSelf.hapticFeedback == nil {
-                        strongSelf.hapticFeedback = HapticFeedback()
-                    }
-                    strongSelf.hapticFeedback?.impact(.medium)
-                    strongSelf.updateState { state in
-                        var state = state
-                        state.hiddenItemShouldBeTemporaryRevealed = true
-                        return state
-                    }
-                }
+                //strongSelf.revealScrollHiddenItem()
             }
         }
         
@@ -2912,6 +2887,35 @@ public final class ChatListNode: ListView {
         if filter?.id != self.chatListFilter?.id {
             self.chatListFilter = filter
             self.resetFilter()
+        }
+    }
+    
+    func revealScrollHiddenItem() {
+        var isHiddenItemVisible = false
+        self.forEachItemNode({ itemNode in
+            if let itemNode = itemNode as? ChatListItemNode, let item = itemNode.item {
+                if case let .peer(peerData) = item.content, let threadInfo = peerData.threadInfo {
+                    if threadInfo.isHidden {
+                        isHiddenItemVisible = true
+                    }
+                }
+                if case let .groupReference(groupReference) = item.content {
+                    if groupReference.hiddenByDefault {
+                        isHiddenItemVisible = true
+                    }
+                }
+            }
+        })
+        if isHiddenItemVisible {
+            if self.hapticFeedback == nil {
+                self.hapticFeedback = HapticFeedback()
+            }
+            self.hapticFeedback?.impact(.medium)
+            self.updateState { state in
+                var state = state
+                state.hiddenItemShouldBeTemporaryRevealed = true
+                return state
+            }
         }
     }
     

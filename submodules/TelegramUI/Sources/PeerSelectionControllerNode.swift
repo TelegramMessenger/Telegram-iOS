@@ -262,7 +262,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             }
         }
            
-        self.mainContainerNode?.contentOffsetChanged = { [weak self] offset in
+        self.mainContainerNode?.contentOffsetChanged = { [weak self] offset, _ in
             guard let strongSelf = self else {
                 return
             }
