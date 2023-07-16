@@ -6,6 +6,7 @@ import AccountContext
 import TelegramCore
 import TelegramStringFormatting
 import MultilineTextComponent
+import TelegramPresentationData
 
 final class StoryAuthorInfoComponent: Component {
     struct Counters: Equatable {
@@ -14,13 +15,15 @@ final class StoryAuthorInfoComponent: Component {
     }
     
 	let context: AccountContext
+    let strings: PresentationStrings
 	let peer: EnginePeer?
     let timestamp: Int32
     let counters: Counters?
     let isEdited: Bool
     
-    init(context: AccountContext, peer: EnginePeer?, timestamp: Int32, counters: Counters?, isEdited: Bool) {
+    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer?, timestamp: Int32, counters: Counters?, isEdited: Bool) {
         self.context = context
+        self.strings = strings
         self.peer = peer
         self.timestamp = timestamp
         self.counters = counters
@@ -31,6 +34,9 @@ final class StoryAuthorInfoComponent: Component {
 		if lhs.context !== rhs.context {
 			return false
 		}
+        if lhs.strings !== rhs.strings {
+            return false
+        }
 		if lhs.peer != rhs.peer {
 			return false
 		}
@@ -75,8 +81,7 @@ final class StoryAuthorInfoComponent: Component {
 
             let title: String
             if component.peer?.id == component.context.account.peerId {
-                //TODO:localize
-                title = "Your story"
+                title = component.strings.Story_HeaderYourStory
             } else {
                 title = component.peer?.debugDisplayTitle ?? ""
             }
@@ -86,7 +91,7 @@ final class StoryAuthorInfoComponent: Component {
             
             if component.isEdited {
                 subtitle.append(" • ")
-                subtitle.append("edited")
+                subtitle.append(component.strings.Story_HeaderEdited)
             }
             
             let titleSize = self.title.update(

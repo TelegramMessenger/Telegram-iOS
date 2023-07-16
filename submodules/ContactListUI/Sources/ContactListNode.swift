@@ -391,7 +391,6 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
     }
     
     if addHeader {
-        //TODO:localize
         commonHeader = ChatListSearchItemHeader(type: .text(strings.Contacts_SortedByPresence.uppercased(), AnyHashable(1)), theme: theme, strings: strings, actionTitle: nil, action: nil)
     }
     

@@ -2541,6 +2541,7 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 let centerInfoComponent = AnyComponent(StoryAuthorInfoComponent(
                     context: component.context,
+                    strings: component.strings,
                     peer: component.slice.peer,
                     timestamp: component.slice.item.storyItem.timestamp,
                     counters: counters,
@@ -2679,6 +2680,7 @@ public final class StoryItemSetContainerComponent: Component {
                     component: AnyComponent(StoryContentCaptionComponent(
                         externalState: captionItem.externalState,
                         context: component.context,
+                        strings: component.strings,
                         text: component.slice.item.storyItem.text,
                         entities: component.slice.item.storyItem.entities,
                         entityFiles: component.slice.item.entityFiles,

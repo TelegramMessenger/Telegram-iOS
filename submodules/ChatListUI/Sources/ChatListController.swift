@@ -2576,7 +2576,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         text = self.presentationData.strings.StoryFeed_TooltipPremiumPosting
                     } else if reachedCountLimit {
                         let valueText = self.presentationData.strings.StoryFeed_TooltipStoryLimitValue(Int32(storiesCountLimit))
-                        text = self.presentationData.strings.StoryFeed_TooltipStoryLimit
+                        text = self.presentationData.strings.StoryFeed_TooltipStoryLimit(valueText).string
                     } else {
                         text = ""
                     }

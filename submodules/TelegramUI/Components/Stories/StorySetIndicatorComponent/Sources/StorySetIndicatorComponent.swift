@@ -89,6 +89,7 @@ private final class ShapeImageView: UIView {
 
 public final class StorySetIndicatorComponent: Component {
     public let context: AccountContext
+    public let strings: PresentationStrings
     public let peer: EnginePeer
     public let items: [EngineStoryItem]
     public let hasUnseen: Bool
@@ -99,6 +100,7 @@ public final class StorySetIndicatorComponent: Component {
     
     public init(
         context: AccountContext,
+        strings: PresentationStrings,
         peer: EnginePeer,
         items: [EngineStoryItem],
         hasUnseen: Bool,
@@ -108,6 +110,7 @@ public final class StorySetIndicatorComponent: Component {
         action: @escaping () -> Void
     ) {
         self.context = context
+        self.strings = strings
         self.peer = peer
         self.items = items
         self.hasUnseen = hasUnseen
@@ -118,6 +121,9 @@ public final class StorySetIndicatorComponent: Component {
     }
     
     public static func ==(lhs: StorySetIndicatorComponent, rhs: StorySetIndicatorComponent) -> Bool {
+        if lhs.strings !== rhs.strings {
+            return false
+        }
         if lhs.items != rhs.items {
             return false
         }
@@ -378,14 +384,11 @@ public final class StorySetIndicatorComponent: Component {
                 self.imageView.setNeedsDisplay()
             }
             
-            //TODO:localize
             let textValue: String
             if component.totalCount == 0 {
                 textValue = ""
-            } else if component.totalCount == 1 {
-                textValue = "1 story"
             } else {
-                textValue = "\(component.totalCount) stories"
+                textValue = component.strings.Story_Footer_Views(Int32(component.totalCount))
             }
             let textSize = self.text.update(
                 transition: .immediate,

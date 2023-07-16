@@ -85,34 +85,33 @@ private enum ArchiveSettingsControllerEntry: ItemListNodeEntry {
     
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ArchiveSettingsControllerArguments
-        //TODO:localize
         switch self {
         case .unmutedHeader:
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: "UNMUTED CHATS", sectionId: self.section)
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: presentationData.strings.ArchiveSettings_UnmutedChatsHeader, sectionId: self.section)
         case let .unmutedValue(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Always Keep Archived", value: value, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: presentationData.strings.ArchiveSettings_KeepArchived, value: value, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.updateUnmuted(value)
             })
         case .unmutedFooter:
-            return ItemListTextItem(presentationData: presentationData, text: .markdown("Keep archived chats in the Archive even if they are unmuted and get a new message."), sectionId: self.section)
+            return ItemListTextItem(presentationData: presentationData, text: .markdown(presentationData.strings.ArchiveSettings_UnmutedChatsFooter), sectionId: self.section)
         case .foldersHeader:
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: "CHATS FROM FOLDERS", sectionId: self.section)
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: presentationData.strings.ArchiveSettings_FolderChatsHeader, sectionId: self.section)
         case let .foldersValue(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Always Keep Archived", value: value, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: presentationData.strings.ArchiveSettings_KeepArchived, value: value, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.updateFolders(value)
             })
         case .foldersFooter:
-            return ItemListTextItem(presentationData: presentationData, text: .markdown("Keep archived chats from folders in the Archive even if they are unmuted and get a new message."), sectionId: self.section)
+            return ItemListTextItem(presentationData: presentationData, text: .markdown(presentationData.strings.ArchiveSettings_FolderChatsFooter), sectionId: self.section)
         case .unknownHeader:
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: "NEW CHATS FROM UNKNOWN USERS", sectionId: self.section)
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: presentationData.strings.ArchiveSettings_UnknownChatsHeader, sectionId: self.section)
         case let .unknownValue(isOn, isLocked):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Always Keep Archived", value: isOn, enableInteractiveChanges: !isLocked, enabled: true, displayLocked: isLocked, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: presentationData.strings.ArchiveSettings_KeepArchived, value: isOn, enableInteractiveChanges: !isLocked, enabled: true, displayLocked: isLocked, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.updateUnknown(value)
             }, activatedWhileDisabled: {
                 arguments.updateUnknown(nil)
             })
         case .unknownFooter:
-            return ItemListTextItem(presentationData: presentationData, text: .markdown("Automatically archive and mute new private chats, groups and channels from non-contacts."), sectionId: self.section)
+            return ItemListTextItem(presentationData: presentationData, text: .markdown(presentationData.strings.ArchiveSettings_UnknownChatsFooter), sectionId: self.section)
         }
     }
 }
@@ -163,7 +162,8 @@ public func archiveSettingsController(context: AccountContext) -> ViewController
             if let value {
                 let _ = context.engine.privacy.updateAccountAutoArchiveChats(value: value).start()
             } else {
-                presentUndoImpl?(.premiumPaywall(title: nil, text: "This setting is available only to the subscribers of [Telegram Premium]().", customUndoText: nil, timeout: nil, linkAction: { _ in
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                presentUndoImpl?(.premiumPaywall(title: nil, text: presentationData.strings.ArchiveSettings_TooltipPremiumRequired, customUndoText: nil, timeout: nil, linkAction: { _ in
                     presentPremiumImpl?()
                 }))
             }
@@ -181,8 +181,7 @@ public func archiveSettingsController(context: AccountContext) -> ViewController
         let isPremium = accountPeer?.isPremium ?? false
         let isPremiumDisabled = PremiumConfiguration.with(appConfiguration: appConfiguration).isPremiumDisabled
         
-        //TODO:localize
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Archive Settings"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ArchiveSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: archiveSettingsControllerEntries(
             presentationData: presentationData,
             settings: settings,

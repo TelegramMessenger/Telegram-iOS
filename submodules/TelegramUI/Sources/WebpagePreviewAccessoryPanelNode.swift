@@ -141,8 +141,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
                     } else if content.type == "video" {
                         text = stringForMediaKind(.video, strings: self.strings).0.string
                     } else if content.type == "telegram_story" {
-                        //TODO:localize
-                        text = "Story"
+                        text = stringForMediaKind(.story, strings: self.strings).0.string
                     } else if let _ = content.image {
                         text = stringForMediaKind(.image, strings: self.strings).0.string
                     }

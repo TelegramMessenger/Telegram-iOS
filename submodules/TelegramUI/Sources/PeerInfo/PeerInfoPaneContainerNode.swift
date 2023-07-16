@@ -956,8 +956,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
             let title: String
             switch key {
             case .stories:
-                //TODO:localize
-                title = "Stories"
+                title = presentationData.strings.PeerInfo_PaneStories
             case .media:
                 title = presentationData.strings.PeerInfo_PaneMedia
             case .files:

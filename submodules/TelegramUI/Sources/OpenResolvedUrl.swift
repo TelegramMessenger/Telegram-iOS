@@ -833,12 +833,11 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         navigationController?.pushViewController(storyContainerScreen)
                     })
                 } else {
-                    //TODO:localize
                     var elevatedLayout = true
                     if case .chat = urlContext {
                         elevatedLayout = false
                     }
-                    present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "story_expired", scale: 0.066, colors: [:], title: nil, text: "This story does not exist", customUndoText: nil, timeout: nil), elevatedLayout: elevatedLayout, animateInAsReplacement: false, action: { _ in
+                    present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "story_expired", scale: 0.066, colors: [:], title: nil, text: presentationData.strings.Story_TooltipExpired, customUndoText: nil, timeout: nil), elevatedLayout: elevatedLayout, animateInAsReplacement: false, action: { _ in
                         return true
                     }), nil)
                 }

@@ -303,7 +303,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                 messageText = strings.Conversation_StoryMentionTextOutgoing(peer.compactDisplayTitle).string
                             }
                         } else {
-                            messageText = strongs.Notification_Story
+                            messageText = strings.Notification_Story
                         }
                     default:
                         break

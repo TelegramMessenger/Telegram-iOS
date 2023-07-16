@@ -283,7 +283,6 @@ public final class ChatListNavigationBar: Component {
                 placeholder = component.strings.Common_Search
                 compactPlaceholder = component.strings.Common_Search
                 
-                //TODO:localize
                 searchContentNode = NavigationBarSearchContentNode(
                     theme: component.theme,
                     placeholder: placeholder,

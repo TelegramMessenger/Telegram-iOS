@@ -778,13 +778,12 @@ public final class StoryPeerListItemComponent: Component {
             Transition.immediate.setShapeLayerPath(layer: self.indicatorShapeSeenLayer, path: calculateMergingCircleShape(center: indicatorCenter, leftCenter: mappedLeftCenter, rightCenter: mappedRightCenter, radius: indicatorRadius - indicatorLineUnseenWidth * 0.5, totalCount: component.totalCount, unseenCount: component.unseenCount, isSeen: true, segmentFraction: component.expandedAlphaFraction))
             Transition.immediate.setShapeLayerPath(layer: self.indicatorShapeUnseenLayer, path: calculateMergingCircleShape(center: indicatorCenter, leftCenter: mappedLeftCenter, rightCenter: mappedRightCenter, radius: indicatorRadius - indicatorLineUnseenWidth * 0.5, totalCount: component.totalCount, unseenCount: component.unseenCount, isSeen: false, segmentFraction: component.expandedAlphaFraction))
             
-            //TODO:localize
             let titleString: String
             if component.peer.id == component.context.account.peerId {
                 if let ringAnimation = component.ringAnimation, case .progress = ringAnimation {
-                    titleString = "Uploading..."
+                    titleString = component.strings.StoryFeed_MyUploading
                 } else {
-                    titleString = "My story"
+                    titleString = component.strings.StoryFeed_MyStory
                 }
             } else {
                 titleString = component.peer.compactDisplayTitle.trimmingCharacters(in: .whitespacesAndNewlines)

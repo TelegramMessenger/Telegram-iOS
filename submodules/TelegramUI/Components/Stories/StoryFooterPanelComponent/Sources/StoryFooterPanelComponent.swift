@@ -10,9 +10,11 @@ import TelegramCore
 import MoreHeaderButton
 import SemanticStatusNode
 import SwiftSignalKit
+import TelegramPresentationData
 
 public final class StoryFooterPanelComponent: Component {
     public let context: AccountContext
+    public let strings: PresentationStrings
     public let storyItem: EngineStoryItem?
     public let externalViews: EngineStoryItem.Views?
     public let expandFraction: CGFloat
@@ -22,6 +24,7 @@ public final class StoryFooterPanelComponent: Component {
     
     public init(
         context: AccountContext,
+        strings: PresentationStrings,
         storyItem: EngineStoryItem?,
         externalViews: EngineStoryItem.Views?,
         expandFraction: CGFloat,
@@ -30,6 +33,7 @@ public final class StoryFooterPanelComponent: Component {
         moreAction: @escaping (UIView, ContextGesture?) -> Void
     ) {
         self.context = context
+        self.strings = strings
         self.storyItem = storyItem
         self.externalViews = externalViews
         self.expandViewStats = expandViewStats
@@ -40,6 +44,9 @@ public final class StoryFooterPanelComponent: Component {
     
     public static func ==(lhs: StoryFooterPanelComponent, rhs: StoryFooterPanelComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
             return false
         }
         if lhs.storyItem != rhs.storyItem {
@@ -200,10 +207,9 @@ public final class StoryFooterPanelComponent: Component {
                 
                 statusNode.transitionToState(.progress(value: CGFloat(max(0.08, self.uploadProgress)), cancelEnabled: true, appearance: SemanticStatusNodeState.ProgressAppearance(inset: 0.0, lineWidth: 2.0)))
                 
-                //TODO:localize
                 let uploadingTextSize = uploadingText.update(
                     transition: .immediate,
-                    component: AnyComponent(Text(text: "Uploading...", font: Font.regular(15.0), color: .white)),
+                    component: AnyComponent(Text(text: component.strings.Story_Footer_Uploading, font: Font.regular(15.0), color: .white)),
                     environment: {},
                     containerSize: CGSize(width: 200.0, height: 100.0)
                 )
@@ -260,11 +266,9 @@ public final class StoryFooterPanelComponent: Component {
             
             let viewsText: String
             if viewCount == 0 {
-                viewsText = "No Views"
-            } else if viewCount == 1 {
-                viewsText = "1 view"
+                viewsText = component.strings.Story_Footer_NoViews
             } else {
-                viewsText = "\(viewCount) views"
+                viewsText = component.strings.Story_Footer_Views(Int32(viewCount))
             }
             
             self.viewStatsButton.isEnabled = viewCount != 0

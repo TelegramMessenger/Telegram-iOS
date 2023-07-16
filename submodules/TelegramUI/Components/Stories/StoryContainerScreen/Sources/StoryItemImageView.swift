@@ -34,11 +34,6 @@ final class StoryItemImageView: UIView {
         super.init(frame: frame)
         
         self.addSubview(self.contentView)
-        #if DEBUG
-        if "".isEmpty {
-            self.contentView.isHidden = true
-        }
-        #endif
     }
     
     required init?(coder: NSCoder) {
@@ -292,11 +287,10 @@ final class CaptureProtectedInfoComponent: Component {
                 environment: {},
                 containerSize: availableSize
             )
-            //TODO:localize
             let titleSize = self.title.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Screenshot Blocked", font: Font.semibold(20.0), textColor: .white)),
+                    text: .plain(NSAttributedString(string: component.strings.Story_ScreenshotBlockedTitle, font: Font.semibold(20.0), textColor: .white)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0
                 )),
@@ -306,7 +300,7 @@ final class CaptureProtectedInfoComponent: Component {
             let textSize = self.text.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "The story you tried to take a\nscreenshot of is protected from\ncopying by its creator.", font: Font.regular(17.0), textColor: UIColor(white: 1.0, alpha: 0.6))),
+                    text: .plain(NSAttributedString(string: component.strings.Story_ScreenshotBlockedText, font: Font.regular(17.0), textColor: UIColor(white: 1.0, alpha: 0.6))),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0
                 )),

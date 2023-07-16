@@ -68,7 +68,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
                                 "Bottom.Group 1.Fill 1": iconColor,
                                 "EXAMPLE.Group 1.Fill 1": iconColor,
                                 "Line.Group 1.Stroke 1": iconColor
-                            ], title: nil, text: presentationData.strings.StoryFeed.TooltipNotifyOn(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string, customUndoText: nil, timeout: nil),
+                            ], title: nil, text: presentationData.strings.StoryFeed_TooltipNotifyOn(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string, customUndoText: nil, timeout: nil),
                             elevatedLayout: false,
                             animateInAsReplacement: false,
                             action: { _ in return false }
@@ -82,7 +82,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
                                 "Bottom.Group 1.Fill 1": iconColor,
                                 "EXAMPLE.Group 1.Fill 1": iconColor,
                                 "Line.Group 1.Stroke 1": iconColor
-                            ], title: nil, text: presentationData.strings.StoryFeed.TooltipNotifyOff(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)), customUndoText: nil, timeout: nil),
+                            ], title: nil, text: presentationData.strings.StoryFeed_TooltipNotifyOff(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string, customUndoText: nil, timeout: nil),
                             elevatedLayout: false,
                             animateInAsReplacement: false,
                             action: { _ in return false }

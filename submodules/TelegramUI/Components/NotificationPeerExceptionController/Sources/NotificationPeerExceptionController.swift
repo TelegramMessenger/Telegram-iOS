@@ -726,8 +726,7 @@ private func notificationPeerExceptionEntries(presentationData: PresentationData
      
     if isStories == nil || isStories == true {
         if case .user = peer {
-            //TODO:localize
-            entries.append(.storyNotificationsHeader(index: index, theme: presentationData.theme, title: "STORY NOTIFICATIONS"))
+            entries.append(.storyNotificationsHeader(index: index, theme: presentationData.theme, title: presentationData.strings.Notification_Exceptions_StoriesHeader))
             index += 1
             entries.append(.storyNotifications(index: index, theme: presentationData.theme, strings: presentationData.strings, value: .alwaysOn, selected: state.storiesMuted == .alwaysOn))
             index += 1
@@ -735,7 +734,7 @@ private func notificationPeerExceptionEntries(presentationData: PresentationData
             index += 1
             
             if state.storiesMuted != .alwaysOff {
-                entries.append(.displayPreviewsHeader(index: index, theme: presentationData.theme, title: "DISPLAY AUTHOR NAME"))
+                entries.append(.displayPreviewsHeader(index: index, theme: presentationData.theme, title: presentationData.strings.Notification_Exceptions_StoriesDisplayAuthorName))
                 index += 1
                 entries.append(.showSender(index: index, theme: presentationData.theme, strings: presentationData.strings, value: .alwaysOn, selected: state.storiesHideSender == .alwaysOn))
                 index += 1

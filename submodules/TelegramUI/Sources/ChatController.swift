@@ -4524,8 +4524,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             if let story = message.associatedStories[storyId], story.data.isEmpty {
-                //TODO:localize
-                self.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: "This story is no longer available", timeout: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
+                self.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: self.presentationData.strings.Story_TooltipExpired, timeout: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
                 return
             }
             

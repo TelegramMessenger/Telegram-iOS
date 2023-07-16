@@ -9411,6 +9411,9 @@ Sorry for the inconvenience.";
 "StoryFeed.TooltipStoryLimitValue_any" = "%d stories";
 "StoryFeed.TooltipStoryLimit" = "You can't post more than **%@** stories in **24 hours**.";
 
+"StoryFeed.MyStory" = "My Story";
+"StoryFeed.MyUploading" = "Uploading...";
+
 "MediaPicker.AddImage" = "Add Image";
 
 "Premium.Stories" = "Story Posting";
@@ -9429,3 +9432,105 @@ Sorry for the inconvenience.";
 
 "Settings.MyStories" = "My Stories";
 "Settings.StoriesArchive" = "Stories Archive";
+
+"ArchiveSettings.Title" = "Archive Settings";
+
+"ArchiveSettings.UnmutedChatsHeader" = "UNMUTED CHATS";
+"ArchiveSettings.UnmutedChatsFooter" = "Keep archived chats in the Archive even if they are unmuted and get a new message.";
+"ArchiveSettings.FolderChatsHeader" = "CHATS FROM FOLDERS";
+"ArchiveSettings.FolderChatsFooter" = "Keep archived chats from folders in the Archive even if they are unmuted and get a new message.";
+
+"ArchiveSettings.UnknownChatsHeader" = "NEW CHATS FROM UNKNOWN USERS";
+"ArchiveSettings.UnknownChatsFooter" = "Automatically archive and mute new private chats, groups and channels from non-contacts.";
+
+"ArchiveSettings.KeepArchived" = "Always Keep Archived";
+"ArchiveSettings.TooltipPremiumRequired" = "This setting is available only to the subscribers of [Telegram Premium]().";
+
+"NotificationSettings.Stories.ShowAll" = "Show All Notifications";
+"NotificationSettings.Stories.ShowImportant" = "Show Important Notifications";
+"NotificationSettings.Stories.ShowImportantFooter" = "Always on for top 5 contacts.";
+"NotificationSettings.Stories.DisplayAuthorName" = "Display Author Name";
+
+"NotificationSettings.Stories.AutomaticValue" = "%@ (automatic)";
+"NotificationSettings.Stories.CompactShowName" = "Show name";
+"NotificationSettings.Stories.CompactHideName" = "Hide name";
+
+"Notifications.StoriesTitle" = "Stories";
+
+"Message.Story" = "Story";
+
+"Notification.Exceptions.StoriesHeader" = "STORY NOTIFICATIONS";
+"Notification.Exceptions.StoriesDisplayAuthorName" = "DISPLAY AUTHOR NAME";
+
+"StorageManagement.SectionStories" = "Stories";
+
+"PeerInfo.PaneStories" = "Stories";
+
+"Story.TooltipExpired" = "This story is no longer available";
+
+"Chat.ReplyExpiredStory" = "Expired story";
+"Chat.ReplyStory" = "Story";
+
+"Chat.StoryMentionAction" = "View Story";
+
+"StoryList.ContextSaveToGallery" = "Save to Gallery";
+"StoryList.ContextShowArchive" = "Show Archive";
+
+"StoryList.TooltipStoriesDeleted_1" = "1 story deleted.";
+"StoryList.TooltipStoriesDeleted_any" = "%d stories deleted.";
+
+"Story.TooltipSaving" = "Saving";
+"Story.TooltipSaved" = "Saved";
+
+"StoryList.SaveToProfile" = "Save to Profile";
+"StoryList.TooltipStoriesSavedToProfile_1" = "Story saved to your profile";
+"StoryList.TooltipStoriesSavedToProfile_any" = "%d stories saved to your profile.";
+"StoryList.TooltipStoriesSavedToProfileText" = "Saved stories can be viewed by others on your profile until you remove them.";
+
+"StoryList.TitleSaved" = "My Stories";
+"StoryList.TitleArchive" = "Stories Archive";
+"StoryList.SubtitleSelected_1" = "1 story selected";
+"StoryList.SubtitleSelected_any" = "%d stories selected";
+
+"StoryList.SubtitleSaved_1" = "1 saved story";
+"StoryList.SubtitleSaved_any" = "%d saved stories";
+
+"StoryList.SubtitleCount_1" = "1 story";
+"StoryList.SubtitleCount_any" = "%d stories";
+
+"StoryList.ArchiveDescription" = "Only you can see archived stories unless you choose to save them to your profile.";
+
+"StoryList.SavedEmptyState.Title" = "No saved stories";
+"StoryList.SavedEmptyState.Text" = "Open the Archive to select stories you\nwant to be displayed in your profile.";
+"StoryList.ArchivedEmptyState.Title" = "No Archived Stories";
+"StoryList.ArchivedEmptyState.Text" = "Upload a new story to view it here";
+"StoryList.SavedEmptyAction" = "Open Archive";
+
+"ArchiveInfo.Title" = "This is Your Archive";
+
+"ArchiveInfo.TextKeepArchivedUnmuted" = "Archived chats will remain in the Archive when you receive a new message. [Tap to change >]()";
+"ArchiveInfo.TextKeepArchivedDefault" = "When you receive a new message, muted chats will remain in the Archive, while unmuted chats will be moved to Chats. [Tap to change >]()";
+
+"ArchiveInfo.ChatsTitle" = "Archived Chats";
+"ArchiveInfo.ChatsText" = "Move any chat into your Archive and back by swiping on it.";
+"ArchiveInfo.HideTitle" = "Hiding Archive";
+"ArchiveInfo.HideText" = "Hide the Archive from your Main screen by swiping on it.";
+"ArchiveInfo.StoriesTitle" = "Stories";
+"ArchiveInfo.StoriesText" = "Archive Stories from your contacts separately from chats with them.";
+"ArchiveInfo.CloseAction" = "Got it";
+
+"Story.HeaderYourStory" = "Your story";
+"Story.HeaderEdited" = "edited";
+"Story.CaptionShowMore" = "Show more";
+
+"Story.UnsupportedText" = "This story is not supported by\nyour version of Telegram.";
+"Story.UnsupportedAction" = "Update Telegram";
+
+"Story.ScreenshotBlockedTitle" = "Screenshot Blocked";
+"Story.ScreenshotBlockedText" = "The story you tried to take a\nscreenshot of is protected from\ncopying by its creator.";
+
+"Story.Footer.NoViews" = "No views";
+"Story.Footer.Views_1" = "1 view";
+"Story.Footer.Views_any" = "%d views";
+
+"Story.Footer.Uploading" = "Uploading...";

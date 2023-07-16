@@ -137,15 +137,14 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 } else {
                     titleString = arguments.strings.User_DeletedAccount
                 }
-                //TODO:localize
                 isText = false
                 if let storyItem = arguments.parentMessage.associatedStories[story], storyItem.data.isEmpty {
                     isExpiredStory = true
-                    textString = NSAttributedString(string: "Expired story")
+                    textString = NSAttributedString(string: arguments.strings.Chat_ReplyExpiredStory)
                     isMedia = false
                 } else {
                     isStory = true
-                    textString = NSAttributedString(string: "Story")
+                    textString = NSAttributedString(string: arguments.strings.Chat_ReplyStory)
                     isMedia = true
                 }
             } else {

@@ -592,11 +592,10 @@ final class StoryItemContentComponent: Component {
                     self.unsupportedButton = unsupportedButton
                 }
                 
-                //TODO:localize
                 let unsupportedTextSize = unsupportedText.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: "This story is not supported by\nyour version of Telegram.", font: Font.regular(17.0), textColor: .white)),
+                        text: .plain(NSAttributedString(string: component.strings.Story_UnsupportedText, font: Font.regular(17.0), textColor: .white)),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 0
                     )),
@@ -611,7 +610,7 @@ final class StoryItemContentComponent: Component {
                             foreground: environment.theme.list.itemCheckColors.foregroundColor,
                             pressedColor: environment.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.7)
                         ),
-                        content: AnyComponentWithIdentity(id: AnyHashable(""), component: AnyComponent(Text(text: "Update Telegram", font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor
+                        content: AnyComponentWithIdentity(id: AnyHashable(""), component: AnyComponent(Text(text: component.strings.Story_UnsupportedAction, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor
                         ))),
                         isEnabled: true,
                         displaysProgress: false,
@@ -655,7 +654,10 @@ final class StoryItemContentComponent: Component {
             self.updateProgressMode(update: false)
             
             if reloadMedia && synchronousLoad {
+                let _ = startTime
+                #if DEBUG
                 print("\(CFAbsoluteTimeGetCurrent()) Synchronous: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+                #endif
             }
             
             if !self.contentLoaded {
