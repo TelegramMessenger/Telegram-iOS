@@ -9663,3 +9663,51 @@ Sorry for the inconvenience.";
 "Story.Editor.Curves.Green" = "Green";
 "Story.Editor.Curves.Blue" = "Blue";
 
+"Story.Privacy.AllowScreenshots" = "Allow Screenshots";
+"Story.Privacy.KeepOnMyPage" = "Keep on My Page";
+"Story.Privacy.KeepOnMyPageInfo" = "Keep this story on your page even after it expires in %@. Privacy settings will apply.";
+
+"Story.Privacy.KeepOnMyPageHours_1" = "1 hour";
+"Story.Privacy.KeepOnMyPageHours_any" = "%@ hours";
+
+"Story.Privacy.TooltipSharingEnabledPublic" = "Downloading, sharing and taking screenshots will be enabled for this story.";
+"Story.Privacy.TooltipSharingEnabled" = "Downloading and taking screenshots will be enabled for this story.";
+
+"Story.Privacy.TooltipSharingDisabledPublic" = "Downloading, sharing and taking screenshots will be disabled for this story.";
+"Story.Privacy.TooltipSharingDisabled" = "Downloading and taking screenshots will be disabled for this story.";
+
+"Story.Privacy.TooltipStoryArchived" = "Users allowed to view your story will see it on your page even after it expires.";
+"Story.Privacy.TooltipStoryExpires" = "The story will disappear after it expires.";
+
+"Story.Privacy.WhoCanViewHeader" = "WHO CAN VIEW";
+"Story.Privacy.ContactsHeader" = "CONTACTS";
+
+"Story.Privacy.SearchChats" = "Search Chats";
+"Story.Privacy.SearchContacts" = "Search Contacts";
+
+"Story.Privacy.MentionRestrictedTitle" = "Privacy Restrictions";
+"Story.Privacy.MentionRestrictedText" = "The privacy settings of your story will prevent some users you tagged (%@) from viewing it.";
+"Story.Privacy.MentionRestrictedProceed" = "Proceed Anyway";
+
+"Story.Privacy.CategoryEveryone" = "Everyone";
+"Story.Privacy.CategoryContacts" = "Contacts";
+"Story.Privacy.CategoryCloseFriends" = "Close Friends";
+"Story.Privacy.CategorySelectedContacts" = "Selected Contacts";
+"Story.Privacy.ExcludedPeople" = "ExcludedPeople";
+
+"Story.Privacy.ExcludePeople" = "exclude people";
+"Story.Privacy.ExcludePeopleExceptNames" = "except %@";
+"Story.Privacy.ExcludePeopleExcept_1" = "except 1 person";
+"Story.Privacy.ExcludePeopleExcept_any" = "except %@ people";
+
+"Story.Privacy.EditList" = "edit list";
+"Story.Privacy.People_1" = "1 person";
+"Story.Privacy.People_any" = "%@ people";
+
+"Story.Privacy.Choose" = "choose";
+
+"Story.Privacy.EditStory" = "Edit Story";
+"Story.Privacy.ShareStory" = "Share Story";
+
+"Story.Privacy.SaveSettings" = "Save Settings";
+"Story.Privacy.PostStory" = "Post Story";
