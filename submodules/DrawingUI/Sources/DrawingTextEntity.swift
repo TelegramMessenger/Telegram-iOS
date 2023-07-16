@@ -82,6 +82,10 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         self.displayLink?.invalidate()
     }
     
+    override func animateInsertion() {
+        
+    }
+    
     private var isSuspended = false
     private var _isEditing = false
     public var isEditing: Bool {

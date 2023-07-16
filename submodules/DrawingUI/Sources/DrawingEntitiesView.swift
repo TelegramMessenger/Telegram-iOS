@@ -617,10 +617,11 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         return intersectedViews.last
     }
     
-    public func selectEntity(_ entity: DrawingEntity?) {
+    public func selectEntity(_ entity: DrawingEntity?, animate: Bool = true) {
         if entity?.isMedia == true {
             return
         }
+        var selectionChanged = false
         if entity !== self.selectedEntityView?.entity {
             if let selectedEntityView = self.selectedEntityView {
                 if let textEntityView = selectedEntityView as? DrawingTextEntityView, textEntityView.isEditing {
@@ -634,9 +635,12 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                 self.selectedEntityView = nil
                 if let selectionView = selectedEntityView.selectionView {
                     selectedEntityView.selectionView = nil
-                    selectionView.removeFromSuperview()
+                    selectionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak selectionView] _ in
+                        selectionView?.removeFromSuperview()
+                    })
                 }
             }
+            selectionChanged = true
         }
         
         if let entity = entity, let entityView = self.getView(for: entity.uuid) {
@@ -653,6 +657,9 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                 self.selectionContainerView?.addSubview(selectionView)
             }
             entityView.update()
+            if selectionChanged && animate {
+                entityView.animateSelection()
+            }
         }
         
         self.selectionChanged(self.selectedEntityView?.entity)
@@ -725,6 +732,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                         selectedEntityView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
                             self.remove(uuid: selectedEntityView.entity.uuid)
                         })
+                        selectedEntityView.selectionView?.removeFromSuperview()
                         self.selectEntity(nil)
                         
                         Queue.mainQueue().after(0.3, {
@@ -776,7 +784,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             }
         }
         else if gestureRecognizer.numberOfTouches == 1, let viewToSelect = self.entity(at: location) {
-            self.selectEntity(viewToSelect.entity)
+            self.selectEntity(viewToSelect.entity, animate: false)
             self.onInteractionUpdated(true)
         }
         else if gestureRecognizer.numberOfTouches == 2, let mediaEntityView = self.subviews.first(where: { $0 is DrawingEntityMediaView }) as? DrawingEntityMediaView {
@@ -874,6 +882,31 @@ public class DrawingEntityView: UIView {
     
     var selectionBounds: CGRect {
         return self.bounds
+    }
+    
+    func animateInsertion() {
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        
+        let values = [0.0, self.entity.scale * 1.1, self.entity.scale]
+        let keyTimes = [0.0, 0.67, 1.0]
+        self.layer.animateKeyframes(values: values as [NSNumber], keyTimes: keyTimes as [NSNumber], duration: 0.35, keyPath: "transform.scale")
+        
+        if let selectionView = self.selectionView {
+            selectionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.3)
+        }
+    }
+    
+    func animateSelection() {
+        guard let selectionView = self.selectionView else {
+            return
+        }
+                
+        selectionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.1)
+        selectionView.layer.animateScale(from: 0.87, to: 1.0, duration: 0.2, delay: 0.1)
+        
+        let values = [self.entity.scale, self.entity.scale * 0.88, self.entity.scale]
+        let keyTimes = [0.0, 0.33, 1.0]
+        self.layer.animateKeyframes(values: values as [NSNumber], keyTimes: keyTimes as [NSNumber], duration: 0.3, keyPath: "transform.scale")
     }
     
     public func play() {

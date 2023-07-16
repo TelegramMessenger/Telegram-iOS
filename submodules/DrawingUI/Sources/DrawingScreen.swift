@@ -3122,7 +3122,7 @@ public final class DrawingToolsInteraction {
             entity.scale = scale
         }
         self.entitiesView.add(entity)
-        self.entitiesView.selectEntity(entity)
+        self.entitiesView.selectEntity(entity, animate: !(entity is DrawingTextEntity))
         
         if let entityView = self.entitiesView.getView(for: entity.uuid) {
             if let textEntityView = entityView as? DrawingTextEntityView {
@@ -3138,12 +3138,7 @@ public final class DrawingToolsInteraction {
                     entityView.seek(to: 0.0)
                 }
                 
-                entityView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                entityView.layer.animateScale(from: 0.1, to: entity.scale, duration: 0.2)
-                
-                if let selectionView = entityView.selectionView {
-                    selectionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.2)
-                }
+                entityView.animateInsertion()
             }
         }
     }
