@@ -240,13 +240,13 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.validLayout = (size, insets)
         
         let indicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
-        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((size.width - indicatorSize.width) / 2.0), y: floor((size.height - indicatorSize.height - 50.0) / 2.0)), size: indicatorSize))
+        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((size.width - indicatorSize.width) / 2.0), y: insets.top + floor((size.height - insets.top - insets.bottom - indicatorSize.height - 50.0) / 2.0)), size: indicatorSize))
         
         let animationSpacing: CGFloat = 24.0
         let descriptionSpacing: CGFloat = 8.0
         
-        let textSize = self.textNode.updateLayout(CGSize(width: size.width - 40.0, height: size.height))
-        let descriptionSize = self.descriptionNode.updateLayout(CGSize(width: size.width - 40.0, height: size.height))
+        let textSize = self.textNode.updateLayout(CGSize(width: size.width - 40.0, height: size.height - insets.top - insets.bottom))
+        let descriptionSize = self.descriptionNode.updateLayout(CGSize(width: size.width - 40.0, height: size.height - insets.top - insets.bottom))
                 
         let buttonSideInset: CGFloat = 32.0
         let buttonWidth = min(270.0, size.width - buttonSideInset * 2.0)
@@ -262,7 +262,7 @@ final class ChatListEmptyNode: ASDisplayNode {
         
         let contentHeight = self.animationSize.height + animationSpacing + textSize.height + buttonSize.height
         var contentOffset: CGFloat = 0.0
-        if size.height < contentHeight + threshold {
+        if size.height - insets.top - insets.bottom < contentHeight + threshold {
             contentOffset = -self.animationSize.height - animationSpacing + 44.0
             transition.updateAlpha(node: self.animationNode, alpha: 0.0)
         } else {
@@ -270,7 +270,7 @@ final class ChatListEmptyNode: ASDisplayNode {
             transition.updateAlpha(node: self.animationNode, alpha: 1.0)
         }
         
-        let animationFrame = CGRect(origin: CGPoint(x: floor((size.width - self.animationSize.width) / 2.0), y: floor((size.height - contentHeight) / 2.0) + contentOffset), size: self.animationSize)
+        let animationFrame = CGRect(origin: CGPoint(x: floor((size.width - self.animationSize.width) / 2.0), y: insets.top + floor((size.height - insets.top - insets.bottom - contentHeight) / 2.0) + contentOffset), size: self.animationSize)
         let textFrame = CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: animationFrame.maxY + animationSpacing), size: textSize)
         let descriptionFrame = CGRect(origin: CGPoint(x: floor((size.width - descriptionSize.width) / 2.0), y: textFrame.maxY + descriptionSpacing), size: descriptionSize)
         
@@ -284,7 +284,7 @@ final class ChatListEmptyNode: ASDisplayNode {
         
         var bottomInset: CGFloat = 16.0
         
-        let secondaryButtonFrame = CGRect(origin: CGPoint(x: floor((size.width - secondaryButtonSize.width) / 2.0), y: size.height - secondaryButtonSize.height - bottomInset), size: secondaryButtonSize)
+        let secondaryButtonFrame = CGRect(origin: CGPoint(x: floor((size.width - secondaryButtonSize.width) / 2.0), y: size.height - insets.bottom - secondaryButtonSize.height - bottomInset), size: secondaryButtonSize)
         transition.updateFrame(node: self.secondaryButtonNode, frame: secondaryButtonFrame)
         
         if secondaryButtonSize.height > 0.0 {
@@ -295,7 +295,7 @@ final class ChatListEmptyNode: ASDisplayNode {
         if case .forum = self.subject {
             buttonFrame = CGRect(origin: CGPoint(x: floor((size.width - buttonSize.width) / 2.0), y: descriptionFrame.maxY + 20.0), size: buttonSize)
         } else {
-            buttonFrame = CGRect(origin: CGPoint(x: floor((size.width - buttonSize.width) / 2.0), y: size.height - buttonHeight - bottomInset), size: buttonSize)
+            buttonFrame = CGRect(origin: CGPoint(x: floor((size.width - buttonSize.width) / 2.0), y: size.height - insets.bottom - buttonHeight - bottomInset), size: buttonSize)
         }
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
     }

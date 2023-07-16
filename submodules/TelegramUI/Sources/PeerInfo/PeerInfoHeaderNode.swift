@@ -656,7 +656,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                         markupNode = current
                     } else {
                         markupNode = AvatarVideoNode(context: self.context)
-                        self.containerNode.addSubnode(markupNode)
+                        self.avatarNode.contentNode.addSubnode(markupNode)
                         self.markupNode = markupNode
                     }
                     markupNode.update(markup: markup, size: CGSize(width: 320.0, height: 320.0))
@@ -743,8 +743,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             }
             
             if let markupNode = self.markupNode {
-                markupNode.frame = self.avatarNode.frame
-                markupNode.updateLayout(size: self.avatarNode.frame.size, cornerRadius: avatarCornerRadius, transition: .immediate)
+                markupNode.frame = self.avatarNode.bounds
+                markupNode.updateLayout(size: self.avatarNode.bounds.size, cornerRadius: avatarCornerRadius, transition: .immediate)
             }
             
             if let videoNode = self.videoNode {
