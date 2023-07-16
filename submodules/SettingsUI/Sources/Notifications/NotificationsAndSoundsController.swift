@@ -552,18 +552,17 @@ private func notificationsAndSoundsEntries(authorizationStatus: AccessType, warn
     entries.append(.groupChats(presentationData.theme, presentationData.strings.Notifications_GroupChats, !exceptions.groups.isEmpty ? presentationData.strings.Notifications_CategoryExceptions(Int32(exceptions.groups.peerIds.count)) : "", globalSettings.groupChats.enabled ? presentationData.strings.Notifications_On : presentationData.strings.Notifications_Off))
     entries.append(.channels(presentationData.theme, presentationData.strings.Notifications_Channels, !exceptions.channels.isEmpty ? presentationData.strings.Notifications_CategoryExceptions(Int32(exceptions.channels.peerIds.count)) : "", globalSettings.channels.enabled ? presentationData.strings.Notifications_On : presentationData.strings.Notifications_Off))
     
-    //TODO:localize
     let storiesValue: String
     switch globalSettings.privateChats.storySettings.mute {
     case .default:
-        storiesValue = "Top 5"
+        storiesValue = presentationData.strings.Notifications_TopChats
     case .muted:
         storiesValue = presentationData.strings.Notifications_Off
     case .unmuted:
         storiesValue = presentationData.strings.Notifications_On
     }
     
-    entries.append(.stories(presentationData.theme, "Stories", !exceptions.stories.isEmpty ? presentationData.strings.Notifications_CategoryExceptions(Int32(exceptions.stories.peerIds.count)) : "", storiesValue))
+    entries.append(.stories(presentationData.theme, presentationData.strings.Notifications_Stories, !exceptions.stories.isEmpty ? presentationData.strings.Notifications_CategoryExceptions(Int32(exceptions.stories.peerIds.count)) : "", storiesValue))
     
     entries.append(.inAppHeader(presentationData.theme, presentationData.strings.Notifications_InAppNotifications.uppercased()))
     entries.append(.inAppSounds(presentationData.theme, presentationData.strings.Notifications_InAppNotificationsSounds, inAppSettings.playSounds))

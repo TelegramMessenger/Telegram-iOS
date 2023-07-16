@@ -1445,8 +1445,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 case .wallpaper:
                     self.titleView.title = presentationData.strings.Conversation_Theme_ChooseWallpaperTitle
                 case .addImage:
-                    //TODO:localize
-                    self.titleView.title = "Add Image"
+                    self.titleView.title = presentationData.strings.MediaPicker_AddImage
                 }
             }
         } else {

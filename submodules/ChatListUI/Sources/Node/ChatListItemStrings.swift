@@ -303,8 +303,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                 messageText = strings.Conversation_StoryMentionTextOutgoing(peer.compactDisplayTitle).string
                             }
                         } else {
-                            //TODO:localize
-                            messageText = "Story"
+                            messageText = strongs.Notification_Story
                         }
                     default:
                         break

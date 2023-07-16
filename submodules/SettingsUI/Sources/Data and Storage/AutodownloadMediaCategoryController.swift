@@ -274,16 +274,14 @@ private func autodownloadMediaCategoryControllerEntries(presentationData: Presen
         downloadTitle = presentationData.strings.AutoDownloadSettings_AutodownloadFiles
         sizeTitle = presentationData.strings.AutoDownloadSettings_MaxFileSize
     case .story:
-        //TODO:localize
-        downloadTitle = "AUTO-DOWNLOAD STORIES"
+        downloadTitle = presentationData.strings.AutoDownloadSettings_StoriesSectionHeader
         sizeTitle = presentationData.strings.AutoDownloadSettings_MaxFileSize
     }
     
     if case .story = category {
         entries.append(.peerContacts(presentationData.theme, presentationData.strings.AutoDownloadSettings_Contacts, peers.contacts))
-        //TODO:localize
         if peers.contacts {
-            entries.append(.peerOtherPrivate(presentationData.theme, "Hidden Contacts", peers.otherPrivate))
+            entries.append(.peerOtherPrivate(presentationData.theme, presentationData.strings.AutoDownloadSettings_StoriesArchivedContacts, peers.otherPrivate))
         }
     } else {
         entries.append(.peerHeader(presentationData.theme, downloadTitle))
@@ -463,15 +461,14 @@ func autodownloadMediaCategoryController(context: AccountContext, connectionType
             
             let title: String
             switch category {
-                case .photo:
-                    title = presentationData.strings.AutoDownloadSettings_PhotosTitle
-                case .video:
-                    title = presentationData.strings.AutoDownloadSettings_VideosTitle
-                case .file:
-                    title = presentationData.strings.AutoDownloadSettings_DocumentsTitle
-                case .story:
-                    //TODO:localize
-                    title = "Stories"
+            case .photo:
+                title = presentationData.strings.AutoDownloadSettings_PhotosTitle
+            case .video:
+                title = presentationData.strings.AutoDownloadSettings_VideosTitle
+            case .file:
+                title = presentationData.strings.AutoDownloadSettings_DocumentsTitle
+            case .story:
+                title = presentationData.strings.AutoDownloadSettings_StoriesTitle
             }
             
             let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)

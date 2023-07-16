@@ -9380,3 +9380,52 @@ Sorry for the inconvenience.";
 "Conversation.StoryMentionTextIncoming" = "%@ mentioned you\nin a story";
 "Conversation.StoryExpiredMentionTextOutgoing" = "The story where you mentioned %@\n is no longer available";
 "Conversation.StoryExpiredMentionTextIncoming" = "The story you were mentioned in\nis no longer available";
+
+"ChatList.ArchiveStoryCount_1" = "1 story";
+"ChatList.ArchiveStoryCount_any" = "%d stories";
+
+"Notification.Story" = "Story";
+
+"ChatList.StoryFeedTooltip" = "Tap above to view updates\nfrom %@";
+
+"StoryFeed.ContextAddStory" = "Add Story";
+"StoryFeed.ContextSavedStories" = "Saved Stories";
+"StoryFeed.ContextArchivedStories" = "Archived Stories";
+"StoryFeed.ContextOpenChat" = "Send Message";
+"StoryFeed.ContextOpenProfile" = "View Profile";
+"StoryFeed.ContextNotifyOn" = "Notify About Stories";
+"StoryFeed.ContextNotifyOff" = "Do Not Notify About Stories";
+"StoryFeed.ContextArchive" = "Hide Stories";
+"StoryFeed.ContextUnarchive" = "Unhide Stories";
+
+"StoryFeed.TooltipNotifyOn" = "You will now get a notification whenever **%@** posts a story.";
+"StoryFeed.TooltipNotifyOff" = "You will no longer receive a notification when **%@** posts a story.";
+"StoryFeed.TooltipArchive" = "Stories from **%@** will now be shown in Archived Chats.";
+
+"ChatList.Archive.ContextSettings" = "Archive Settings";
+"ChatList.Archive.ContextInfo" = "How Does It Work?";
+"ChatList.ContextSelectChats" = "Select Chats";
+
+"StoryFeed.TooltipPremiumPosting" = "Posting stories is currently available only\nto subscribers of [Telegram Premium]().";
+"StoryFeed.TooltipStoryLimitValue_1" = "1 story";
+"StoryFeed.TooltipStoryLimitValue_any" = "%d stories";
+"StoryFeed.TooltipStoryLimit" = "You can't post more than **%@** stories in **24 hours**.";
+
+"MediaPicker.AddImage" = "Add Image";
+
+"Premium.Stories" = "Story Posting";
+"Premium.StoriesInfo" = "Be one of the first to share your stories with your contacts or an unlimited audience.";
+"Premium.Stories.Proceed" = "Unlock Story Posting";
+
+"AutoDownloadSettings.OnForContacts" = "On for contacts";
+
+"AutoDownloadSettings.StoriesSectionHeader" = "AUTO-DOWNLOAD STORIES";
+"AutoDownloadSettings.StoriesArchivedContacts" = "Archived Contacts";
+
+"AutoDownloadSettings.StoriesTitle" = "Stories";
+
+"Notifications.TopChats" = "Top 5";
+"Notifications.Stories" = "Stories";
+
+"Settings.MyStories" = "My Stories";
+"Settings.StoriesArchive" = "Stories Archive";
