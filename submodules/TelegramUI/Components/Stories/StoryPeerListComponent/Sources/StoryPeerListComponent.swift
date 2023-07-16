@@ -277,10 +277,15 @@ public final class StoryPeerListComponent: Component {
             self.bounce = bounce
         }
         
-        func interpolatedFraction(at timestamp: Double, effectiveFromFraction: CGFloat, toFraction: CGFloat) -> CGFloat {
+        func interpolatedFraction(at timestamp: Double, effectiveFromFraction: CGFloat, toFraction: CGFloat, linear: Bool = false) -> CGFloat {
             var rawProgress = CGFloat((timestamp - self.startTime) / self.duration)
             rawProgress = max(0.0, min(1.0, rawProgress))
-            let progress = listViewAnimationCurveSystem(rawProgress)
+            let progress: CGFloat
+            if linear {
+                progress = rawProgress
+            } else {
+                progress = listViewAnimationCurveSystem(rawProgress)
+            }
             
             return effectiveFromFraction * (1.0 - progress) + toFraction * progress
         }
@@ -708,7 +713,10 @@ public final class StoryPeerListComponent: Component {
                 rawProgress = max(0.0, min(1.0, rawProgress))
                 
                 if !animationState.fromIsUnlocked && animationState.bounce && itemLayout.itemCount > 3 {
-                    expandBoundsFraction = animationState.interpolatedFraction(at: timestamp, effectiveFromFraction: 1.0, toFraction: 0.0)
+                    let bounceStartFraction: CGFloat = 0.0
+                    let bounceGlobalFraction: CGFloat = animationState.interpolatedFraction(at: timestamp, effectiveFromFraction: 0.0, toFraction: 1.0, linear: true)
+                    let bounceFraction: CGFloat = 1.0 - max(0.0, min(1.0, bounceGlobalFraction - bounceStartFraction)) / (1.0 - bounceStartFraction)
+                    expandBoundsFraction = bounceFraction * bounceFraction
                 } else {
                     expandBoundsFraction = 0.0
                 }
@@ -783,7 +791,8 @@ public final class StoryPeerListComponent: Component {
             let overscrollStage1 = min(0.7, totalOverscrollFraction)
             let overscrollStage2 = max(0.0, totalOverscrollFraction - 0.7)
             
-            let realTimeOverscrollFraction: CGFloat = max(0.0, (1.0 - component.collapseFraction) - 1.0)
+            //let realTimeOverscrollFraction: CGFloat = max(0.0, (1.0 - component.collapseFraction) - 1.0)
+            let realTimeOverscrollFraction = totalOverscrollFraction
             
             var overscrollFocusIndex: Int?
             for i in 0 ..< self.sortedItems.count {
@@ -866,10 +875,14 @@ public final class StoryPeerListComponent: Component {
                     
                     itemPosition.y += realTimeOverscrollFraction * 83.0 * 0.5
                     
-                    let _ = expandBoundsFraction
-                    /*var bounceOffsetFraction = (adjustedRegularFrame.midX - itemLayout.frame(at: collapseStartIndex).midX) / itemLayout.containerSize.width
+                    var bounceOffsetFraction = (adjustedRegularFrame.midX - itemLayout.frame(at: collapseStartIndex).midX) / itemLayout.containerSize.width
                     bounceOffsetFraction = max(-1.0, min(1.0, bounceOffsetFraction))
-                    itemPosition.x += min(10.0, expandBoundsFraction * min(1.0, collapsedState.maxFraction) * 1200.0) * bounceOffsetFraction*/
+                    
+                    let _ = bounceOffsetFraction
+                    
+                    let bounceFactor = expandBoundsFraction * (1.0 + realTimeOverscrollFraction * 6.0)
+                    itemPosition.x += bounceFactor * (adjustedRegularFrame.midX - collapsedItemPosition.x) * 0.05
+                    itemPosition.y += bounceFactor * (adjustedRegularFrame.midY - collapsedItemPosition.y) * 0.01
                     
                     let itemSize = CGSize(width: adjustedRegularFrame.width * itemScale, height: adjustedRegularFrame.height)
                     
@@ -1409,7 +1422,7 @@ public final class StoryPeerListComponent: Component {
                 if let durationValue = animationHint?.duration {
                     duration = durationValue
                 } else if component.unlocked {
-                    duration = 0.3
+                    duration = 0.35
                 } else {
                     duration = 0.25
                 }
