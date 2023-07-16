@@ -2426,7 +2426,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                             self.currentOverscrollItemExpansionTimestamp = timestamp
                         }
                         
-                        if let currentOverscrollItemExpansionTimestamp = self.currentOverscrollItemExpansionTimestamp, currentOverscrollItemExpansionTimestamp <= timestamp - 0.1 {
+                        if let currentOverscrollItemExpansionTimestamp = self.currentOverscrollItemExpansionTimestamp, currentOverscrollItemExpansionTimestamp <= timestamp - 0.2 {
                             self.allowOverscrollItemExpansion = false
                             
                             if isPrimary {

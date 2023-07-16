@@ -789,8 +789,8 @@ public final class StoryPeerListComponent: Component {
             let expandedItemWidth: CGFloat = 60.0
             
             let totalOverscrollFraction: CGFloat = max(0.0, collapsedState.maxFraction - 1.0)
-            let overscrollStage1 = min(0.7, totalOverscrollFraction)
-            let overscrollStage2 = max(0.0, totalOverscrollFraction - 0.7)
+            let overscrollStage1 = min(0.5, totalOverscrollFraction)
+            let overscrollStage2 = max(0.0, totalOverscrollFraction - 0.5)
             
             //let realTimeOverscrollFraction: CGFloat = max(0.0, (1.0 - component.collapseFraction) - 1.0)
             let realTimeOverscrollFraction = totalOverscrollFraction
@@ -803,13 +803,13 @@ public final class StoryPeerListComponent: Component {
                 }
             }
             
-            if overscrollStage1 >= 0.6 {
+            if overscrollStage1 >= 0.5 {
                 self.overscrollHiddenChatItemsAllowed = true
             } else {
                 self.overscrollHiddenChatItemsAllowed = false
             }
             
-            if let overscrollFocusIndex, overscrollStage2 >= 0.6 {
+            if let overscrollFocusIndex, overscrollStage2 >= 0.5 {
                 self.overscrollSelectedId = self.sortedItems[overscrollFocusIndex].peer.id
             } else {
                 self.overscrollSelectedId = nil
