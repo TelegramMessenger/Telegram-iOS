@@ -1164,24 +1164,24 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
         self.applyItemNodeAsCurrent(id: .all, itemNode: itemNode)
         
         let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] _ in
-            guard let strongSelf = self, strongSelf.availableFilters.count > 1 || strongSelf.controller?.isStoryPostingAvailable == true else {
+            guard let self, self.availableFilters.count > 1 || (self.controller?.isStoryPostingAvailable == true && !(self.context.sharedContext.callManager?.hasActiveCall ?? false)) else {
                 return []
             }
-            guard case .chatList(.root) = strongSelf.location else {
+            guard case .chatList(.root) = self.location else {
                 return []
             }
-            switch strongSelf.currentItemNode.visibleContentOffset() {
+            switch self.currentItemNode.visibleContentOffset() {
             case let .known(value):
-                if value < -strongSelf.currentItemNode.tempTopInset {
+                if value < -self.currentItemNode.tempTopInset {
                     return []
                 }
             case .none, .unknown:
                 break
             }
-            if !strongSelf.currentItemNode.isNavigationInAFinalState {
+            if !self.currentItemNode.isNavigationInAFinalState {
                 return []
             }
-            if strongSelf.availableFilters.count > 1 {
+            if self.availableFilters.count > 1 {
                 return [.leftCenter, .rightCenter]
             } else {
                 return [.rightEdge]
@@ -1262,7 +1262,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                     return bandingStart + (1.0 - (1.0 / ((bandedOffset * coefficient / range) + 1.0))) * range
                 }
                      
-                if case .compact = layout.metrics.widthClass, self.controller?.isStoryPostingAvailable == true {
+                if case .compact = layout.metrics.widthClass, self.controller?.isStoryPostingAvailable == true && !(self.context.sharedContext.callManager?.hasActiveCall ?? false) {
                     let cameraIsAlreadyOpened = self.controller?.hasStoryCameraTransition ?? false
                     if selectedIndex <= 0 && translation.x > 0.0 {
                         transitionFraction = 0.0

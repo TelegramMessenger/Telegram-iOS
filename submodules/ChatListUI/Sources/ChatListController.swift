@@ -2537,6 +2537,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     fileprivate func openStoryCamera(fromList: Bool) {
         var reachedCountLimit = false
         var premiumNeeded = false
+        var hasActiveCall = false
+        var hasActiveGroupCall = false
         
         let storiesCountLimit = self.context.userLimits.maxExpiringStoriesCount
         if let rawStorySubscriptions = self.rawStorySubscriptions, let accountItem = rawStorySubscriptions.accountItem {
@@ -2556,7 +2558,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             break
         }
         
-        if reachedCountLimit || premiumNeeded {
+        if let callManager = self.context.sharedContext.callManager {
+            if callManager.hasActiveGroupCall {
+                hasActiveGroupCall = true
+            } else if callManager.hasActiveCall {
+                hasActiveCall = true
+            }
+        }
+        
+        if reachedCountLimit || premiumNeeded || hasActiveCall || hasActiveGroupCall {
             if let componentView = self.chatListHeaderView() {
                 var sourceFrame: CGRect?
                 if fromList {
@@ -2577,6 +2587,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         text = "Posting stories is currently available only\nto subscribers of [Telegram Premium]()."
                     } else if reachedCountLimit {
                         text = "You can't post more than **\(storiesCountLimit)** stories in **24 hours**."
+                    } else if hasActiveCall {
+                        text = "You can't post stories during a call."
+                    } else if hasActiveGroupCall {
+                        text = "You can't post stories during a voice chat."
                     } else {
                         text = ""
                     }
