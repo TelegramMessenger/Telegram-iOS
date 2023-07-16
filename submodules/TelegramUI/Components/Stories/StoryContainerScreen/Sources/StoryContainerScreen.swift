@@ -955,24 +955,44 @@ private final class StoryContainerScreenComponent: Component {
         private func updateVolumeButtonMonitoring() {
             if self.volumeButtonsListener == nil {
                 let buttonAction = { [weak self] in
-                    guard let self else {
+                    guard let self, let component = self.component else {
                         return
                     }
-                    switch self.audioMode {
-                    case .off, .ambient:
-                        break
-                    case .on:
+                    guard let slice = component.content.stateValue?.slice else {
                         return
                     }
-                    self.audioMode = .on
-                    
-                    for (_, itemSetView) in self.visibleItemSetViews {
-                        if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
-                            componentView.leaveAmbientMode()
+                    var isSilentVideo = false
+                    if case let .file(file) = slice.item.storyItem.media {
+                        for attribute in file.attributes {
+                            if case let .Video(_, _, flags, _) = attribute {
+                                if flags.contains(.isSilent) {
+                                    isSilentVideo = true
+                                }
+                            }
                         }
                     }
                     
-                    self.state?.updated(transition: .immediate)
+                    if isSilentVideo {
+                        if let slice = component.content.stateValue?.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let currentItemView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                            currentItemView.displayMutedVideoTooltip()
+                        }
+                    } else {
+                        switch self.audioMode {
+                        case .off, .ambient:
+                            break
+                        case .on:
+                            return
+                        }
+                        self.audioMode = .on
+                        
+                        for (_, itemSetView) in self.visibleItemSetViews {
+                            if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                                componentView.leaveAmbientMode()
+                            }
+                        }
+                        
+                        self.state?.updated(transition: .immediate)
+                    }
                 }
                 self.volumeButtonsListener = VolumeButtonsListener(
                     shouldBeActive: self.volumeButtonsListenerShouldBeActive.get(),

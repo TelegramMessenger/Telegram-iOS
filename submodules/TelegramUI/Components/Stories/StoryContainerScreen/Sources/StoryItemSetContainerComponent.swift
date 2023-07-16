@@ -414,6 +414,8 @@ public final class StoryItemSetContainerComponent: Component {
         
         private var verticalPanState: PanState?
         
+        private var isAnimatingOut: Bool = false
+        
         override init(frame: CGRect) {
             self.sendMessageContext = StoryItemSetContainerSendMessage()
             
@@ -1365,6 +1367,8 @@ public final class StoryItemSetContainerComponent: Component {
         
         func animateOut(transitionOut: StoryContainerScreen.TransitionOut, transitionCloneMasterView: UIView, completion: @escaping () -> Void) {
             var cleanups: [() -> Void] = []
+            
+            self.isAnimatingOut = true
             
             self.sendMessageContext.animateOut(bounds: self.bounds)
             
@@ -2409,26 +2413,7 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         
                         if isSilentVideo {
-                            guard let soundButtonView = self.soundButton.view else {
-                                return
-                            }
-                            let tooltipScreen = TooltipScreen(
-                                account: component.context.account,
-                                sharedContext: component.context.sharedContext,
-                                text: .plain(text: "This video has no sound"), style: .default, location: TooltipScreen.Location.point(soundButtonView.convert(soundButtonView.bounds, to: nil).offsetBy(dx: 1.0, dy: -10.0), .top), displayDuration: .infinite, shouldDismissOnTouch: { _, _ in
-                                    return .dismiss(consume: true)
-                                }
-                            )
-                            tooltipScreen.willBecomeDismissed = { [weak self] _ in
-                                guard let self else {
-                                    return
-                                }
-                                self.sendMessageContext.tooltipScreen = nil
-                                self.updateIsProgressPaused()
-                            }
-                            self.sendMessageContext.tooltipScreen = tooltipScreen
-                            self.updateIsProgressPaused()
-                            component.controller()?.present(tooltipScreen, in: .current)
+                            self.displayMutedVideoTooltip()
                         } else {
                             component.toggleAmbientMode()
                         }
@@ -2496,6 +2481,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 self.sendMessageContext.tooltipScreen = nil
                                 self.updateIsProgressPaused()
                             }
+                            self.sendMessageContext.tooltipScreen?.dismiss()
                             self.sendMessageContext.tooltipScreen = tooltipScreen
                             self.updateIsProgressPaused()
                             component.controller()?.present(tooltipScreen, in: .current)
@@ -2608,7 +2594,7 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
-            if let currentLeftInfoItem {
+            if let currentLeftInfoItem, !self.isAnimatingOut {
                 self.leftInfoItem = currentLeftInfoItem
                 
                 let leftInfoItemSize = currentLeftInfoItem.view.update(
@@ -2953,6 +2939,7 @@ public final class StoryItemSetContainerComponent: Component {
                                             return false
                                         }
                                     )
+                                    self.sendMessageContext.tooltipScreen?.dismiss()
                                     self.sendMessageContext.tooltipScreen = controller
                                     self.updateIsProgressPaused()
                                     presentController(controller, nil)
@@ -3951,6 +3938,7 @@ public final class StoryItemSetContainerComponent: Component {
                             self.sendMessageContext.tooltipScreen = nil
                             self.updateIsProgressPaused()
                         }
+                        self.sendMessageContext.tooltipScreen?.dismiss()
                         self.sendMessageContext.tooltipScreen = tooltipScreen
                         self.updateIsProgressPaused()
                         component.controller()?.present(tooltipScreen, in: .current)
@@ -4121,6 +4109,33 @@ public final class StoryItemSetContainerComponent: Component {
                 self.updateIsProgressPaused()
                 controller.present(contextController, in: .window(.root))
             })
+        }
+        
+        func displayMutedVideoTooltip() {
+            guard let component = self.component else {
+                return
+            }
+            guard let soundButtonView = self.soundButton.view else {
+                return
+            }
+            let tooltipScreen = TooltipScreen(
+                account: component.context.account,
+                sharedContext: component.context.sharedContext,
+                text: .plain(text: "This video has no sound"), style: .default, location: TooltipScreen.Location.point(soundButtonView.convert(soundButtonView.bounds, to: nil).offsetBy(dx: 1.0, dy: -10.0), .top), displayDuration: .infinite, shouldDismissOnTouch: { _, _ in
+                    return .dismiss(consume: true)
+                }
+            )
+            tooltipScreen.willBecomeDismissed = { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                self.sendMessageContext.tooltipScreen = nil
+                self.updateIsProgressPaused()
+            }
+            self.sendMessageContext.tooltipScreen?.dismiss()
+            self.sendMessageContext.tooltipScreen = tooltipScreen
+            self.updateIsProgressPaused()
+            component.controller()?.present(tooltipScreen, in: .current)
         }
     }
     
