@@ -1097,6 +1097,7 @@ public final class StoryItemSetContainerComponent: Component {
                         )),
                         component: AnyComponent(StoryItemContentComponent(
                             context: component.context,
+                            strings: component.strings,
                             peer: component.slice.peer,
                             item: item.storyItem,
                             audioMode: component.audioMode

@@ -27,12 +27,14 @@ final class StoryItemContentComponent: Component {
     }
     
 	let context: AccountContext
+    let strings: PresentationStrings
     let peer: EnginePeer
     let item: EngineStoryItem
     let audioMode: StoryContentItem.AudioMode
 
-    init(context: AccountContext, peer: EnginePeer, item: EngineStoryItem, audioMode: StoryContentItem.AudioMode) {
+    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer, item: EngineStoryItem, audioMode: StoryContentItem.AudioMode) {
 		self.context = context
+        self.strings = strings
         self.peer = peer
 		self.item = item
         self.audioMode = audioMode
@@ -42,6 +44,9 @@ final class StoryItemContentComponent: Component {
 		if lhs.context !== rhs.context {
 			return false
 		}
+        if lhs.strings !== rhs.strings {
+            return false
+        }
         if lhs.peer != rhs.peer {
             return false
         }
@@ -511,6 +516,7 @@ final class StoryItemContentComponent: Component {
                 }
                 self.imageView.update(
                     context: component.context,
+                    strings: component.strings,
                     peer: component.peer,
                     storyId: component.item.id,
                     media: component.item.media,
