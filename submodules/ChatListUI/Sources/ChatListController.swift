@@ -1991,7 +1991,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         self.displayedStoriesTooltip = true
                         
                         let absoluteFrame = anchorView.convert(anchorRect, to: self.view)
-                        //TODO:localize
                         
                         let itemList = orderedStorySubscriptions.items.prefix(3).map(\.peer.compactDisplayTitle)
                         var itemListString: String = itemList.joined(separator: ", ")
@@ -2003,7 +2002,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             }
                         }
                         
-                        let text: String = "Tap above to view updates\nfrom \(itemListString)"
+                        let text: String = self.presentationData.strings.ChatList_StoryFeedTooltip(itemListString).string
                         
                         let tooltipController = TooltipController(content: .text(text), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, timeout: 30.0, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true, padding: 6.0, innerPadding: UIEdgeInsets(top: 2.0, left: 3.0, bottom: 2.0, right: 3.0))
                         self.present(tooltipController, in: .current, with: TooltipControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
@@ -2584,13 +2583,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     let text: String
                     if premiumNeeded {
-                        text = "Posting stories is currently available only\nto subscribers of [Telegram Premium]()."
+                        text = self.presentationData.strings.StoryFeed_TooltipPremiumPosting
                     } else if reachedCountLimit {
-                        text = "You can't post more than **\(storiesCountLimit)** stories in **24 hours**."
+                        let valueText = self.presentationData.strings.StoryFeed_TooltipStoryLimitValue(Int32(storiesCountLimit))
+                        text = self.presentationData.strings.StoryFeed_TooltipStoryLimit(valueText).string
                     } else if hasActiveCall {
-                        text = "You can't post stories during a call."
+                        text = self.presentationData.strings.StoryFeed_TooltipPostingDuringCall
                     } else if hasActiveGroupCall {
-                        text = "You can't post stories during a voice chat."
+                        text = self.presentationData.strings.StoryFeed_TooltipPostingDuringGroupCall
                     } else {
                         text = ""
                     }
@@ -2730,9 +2730,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     var items: [ContextMenuItem] = []
                                     
-                    //TODO:localize
                     if peer.id == self.context.account.peerId {
-                        items.append(.action(ContextMenuActionItem(text: "Add Story", icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryFeed_ContextAddStory, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] c, _ in
                             c.dismiss(completion: {
@@ -2744,7 +2743,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             })
                         })))
                         
-                        items.append(.action(ContextMenuActionItem(text: "Saved Stories", icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryFeed_ContextSavedStories, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Stories"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] c, _ in
                             c.dismiss(completion: {
@@ -2756,7 +2755,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             })
                         })))
                         
-                        items.append(.action(ContextMenuActionItem(text: "Archived Stories", icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryFeed_ContextArchivedStories, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] c, _ in
                             c.dismiss(completion: {
@@ -2768,7 +2767,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             })
                         })))
                     } else {
-                        items.append(.action(ContextMenuActionItem(text: "Send Message", icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryFeed_ContextOpenChat, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MessageBubble"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] c, _ in
                             c.dismiss(completion: {
@@ -2780,7 +2779,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             })
                         })))
                         
-                        items.append(.action(ContextMenuActionItem(text: "View Profile", icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryFeed_ContextOpenProfile, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] c, _ in
                             c.dismiss(completion: {
@@ -2804,7 +2803,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         })))
                         
                         let isMuted = resolvedAreStoriesMuted(globalSettings: globalSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: notificationSettings._asNotificationSettings(), topSearchPeers: topSearchPeers)
-                        items.append(.action(ContextMenuActionItem(text: isMuted ? "Notify About Stories" : "Do Not Notify About Stories", icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: isMuted ? self.presentationData.strings.StoryFeed_ContextNotifyOn : self.presentationData.strings.StoryFeed_ContextNotifyOff, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
                             f(.default)
@@ -2825,7 +2824,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                         "Bottom.Group 1.Fill 1": iconColor,
                                         "EXAMPLE.Group 1.Fill 1": iconColor,
                                         "Line.Group 1.Stroke 1": iconColor
-                                ], title: nil, text: "You will now get a notification whenever **\(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))** posts a story.", customUndoText: nil, timeout: nil),
+                                    ], title: nil, text: presentationData.strings.StoryFeed_TooltipNotifyOn(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string, customUndoText: nil, timeout: nil),
                                     elevatedLayout: false,
                                     animateInAsReplacement: false,
                                     action: { _ in return false }
@@ -2839,7 +2838,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                         "Bottom.Group 1.Fill 1": iconColor,
                                         "EXAMPLE.Group 1.Fill 1": iconColor,
                                         "Line.Group 1.Stroke 1": iconColor
-                                    ], title: nil, text: "You will no longer receive a notification when **\(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))** posts a story.", customUndoText: nil, timeout: nil),
+                                    ], title: nil, text: presentationData.strings.StoryFeed_TooltipNotifyOff(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string, customUndoText: nil, timeout: nil),
                                     elevatedLayout: false,
                                     animateInAsReplacement: false,
                                     action: { _ in return false }
@@ -2849,9 +2848,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         
                         let hideText: String
                         if self.location == .chatList(groupId: .archive) {
-                            hideText = "Unhide Stories"
+                            hideText = self.presentationData.strings.StoryFeed_ContextUnarchive
                         } else {
-                            hideText = "Hide Stories"
+                            hideText = self.presentationData.strings.StoryFeed_ContextArchive
                         }
                         let iconName = self.location == .chatList(groupId: .archive) ? "Chat/Context Menu/Unarchive" : "Chat/Context Menu/Archive"
                         items.append(.action(ContextMenuActionItem(text: hideText, icon: { theme in
@@ -2871,9 +2870,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 undoValue = false
                             }
                             
-                            //TODO:localize
                             if self.location != .chatList(groupId: .archive) {
-                                self.present(UndoOverlayController(presentationData: self.presentationData, content: .archivedChat(peerId: peer.id.toInt64(), title: "", text: "Stories from **\(peer.compactDisplayTitle)** will now be shown in Archived Chats.", undo: true), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { [weak self] action in
+                                self.present(UndoOverlayController(presentationData: self.presentationData, content: .archivedChat(peerId: peer.id.toInt64(), title: "", text: self.presentationData.strings.StoryFeed_TooltipArchive(peer.compactDisplayTitle).string, undo: true), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { [weak self] action in
                                     if case .undo = action {
                                         if let self {
                                             self.context.engine.peers.updatePeerStoriesHidden(id: peer.id, isHidden: undoValue)
@@ -2882,30 +2880,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     return false
                                 }), in: .current)
                             }
-                            
-                            /*guard let parentController = self.parent as? TabBarController, let contactsController = (self.navigationController as? TelegramRootControllerInterface)?.getContactsController(), let sourceFrame = parentController.frameForControllerTab(controller: contactsController) else {
-                                return
-                            }
-                            
-                            let location = CGRect(origin: CGPoint(x: sourceFrame.midX, y: sourceFrame.minY + 1.0), size: CGSize())
-                            let tooltipController = TooltipScreen(
-                                context: self.context,
-                                account: self.context.account,
-                                sharedContext: self.context.sharedContext,
-                                text: .markdown(text: "Stories from **\(peer.compactDisplayTitle)** will now be shown in Contacts, not Chats."),
-                                icon: .peer(peer: peer, isStory: true),
-                                action: TooltipScreen.Action(
-                                    title: "Undo",
-                                    action: { [weak self] in
-                                        if let self {
-                                            self.context.engine.peers.updatePeerStoriesHidden(id: peer.id, isHidden: false)
-                                        }
-                                    }
-                                ),
-                                location: .point(location, .bottom),
-                                shouldDismissOnTouch: { _, _ in return .dismiss(consume: false) }
-                            )
-                            self.present(tooltipController, in: .window(.root))*/
                         })))
                     }
                     
@@ -3328,8 +3302,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             
             var items: [ContextMenuItem] = []
             
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Archive Settings", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChatList_Archive_ContextSettings, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Customize"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, a in
                 a(.default)
@@ -3341,7 +3314,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             })))
             
             if !archiveChatList.items.isEmpty {
-                items.append(.action(ContextMenuActionItem(text: "How Does It Work?", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChatList_Archive_ContextInfo, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/Question"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, a in
                     a(.default)
@@ -3359,7 +3332,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         self.push(ArchiveInfoScreen(context: self.context, settings: settings))
                     })
                 })))
-                items.append(.action(ContextMenuActionItem(text: "Select Chats", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChatList_ContextSelectChats, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, a in
                     a(.default)

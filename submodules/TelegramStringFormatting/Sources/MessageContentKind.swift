@@ -396,8 +396,7 @@ public func stringForMediaKind(_ kind: MessageContentKind, strings: Presentation
     case let .invoice(text):
         return (NSAttributedString(string: text), true)
     case .story:
-        //TODO:localize
-        return (NSAttributedString(string: "Story"), true)
+        return (NSAttributedString(string: strings.Message_Story), true)
     }
 }
 

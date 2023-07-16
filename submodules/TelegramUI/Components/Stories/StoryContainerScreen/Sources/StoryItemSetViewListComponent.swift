@@ -685,6 +685,7 @@ final class StoryItemSetViewListComponent: Component {
                 transition: transition,
                 component: AnyComponent(StoryFooterPanelComponent(
                     context: component.context,
+                    strings: component.strings,
                     storyItem: component.storyItem,
                     externalViews: externalViews,
                     expandFraction: dismissFraction,

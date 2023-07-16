@@ -1265,6 +1265,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 transition: indicatorTransition,
                 component: AnyComponent(StorySetIndicatorComponent(
                     context: self.context,
+                    strings: self.context.sharedContext.currentPresentationData.with({ $0 }).strings,
                     peer: storyParams.peer,
                     items: storyParams.items,
                     hasUnseen: storyParams.hasUnseen,

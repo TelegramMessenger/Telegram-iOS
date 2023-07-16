@@ -88,9 +88,7 @@ final class PeerInfoStoryGridScreenComponent: Component {
             let strings = presentationData.strings
             
             if self.selectedCount != 0 {
-                //TODO:localize
-                //TODO:update icon
-                items.append(.action(ContextMenuActionItem(text: "Save to Photos", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.StoryList_ContextSaveToGallery, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, a in
                     a(.default)
@@ -113,16 +111,10 @@ final class PeerInfoStoryGridScreenComponent: Component {
                         return
                     }
                     let _ = component.context.engine.messages.deleteStories(ids: Array(paneNode.selectedIds)).start()
-                    
-                    //TODO:localize
-                    let text: String
-                    if paneNode.selectedIds.count == 1 {
-                        text = "1 story deleted."
-                    } else {
-                        text = "\(paneNode.selectedIds.count) stories deleted."
-                    }
-                    
+            
                     let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
+                    let text: String = presentationData.strings.StoryList_TooltipStoriesDeleted(Int32(paneNode.selectedIds.count))
+                    
                     environment.controller()?.present(UndoOverlayController(
                         presentationData: presentationData,
                         content: .info(title: nil, text: text, timeout: nil),
@@ -163,8 +155,7 @@ final class PeerInfoStoryGridScreenComponent: Component {
                 
                 if component.peerId == component.context.account.peerId, case .saved = component.scope {
                     var ignoreNextActions = false
-                    //TODO:localize
-                    items.append(.action(ContextMenuActionItem(text: "Show Archive", icon: { theme in
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.StoryList_ContextShowArchive, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/StoryArchive"), color: theme.contextMenu.primaryColor)
                     }, action: { [weak self] _, a in
                         if ignoreNextActions {
@@ -305,8 +296,8 @@ final class PeerInfoStoryGridScreenComponent: Component {
                     return
                 }
                 
-                //TODO:localize
-                let saveScreen = SaveProgressScreen(context: component.context, content: .progress("Saving", 0.0))
+                let strings = (component.context.sharedContext.currentPresentationData.with { $0 }).strings
+                let saveScreen = SaveProgressScreen(context: component.context, content: .progress(strings.Story_TooltipSaving, 0.0))
                 self.environment?.controller()?.present(saveScreen, in: .current)
                 
                 let valueNorm: Float = 1.0 / Float(sortedItems.count)
@@ -330,12 +321,12 @@ final class PeerInfoStoryGridScreenComponent: Component {
                     guard let saveScreen else {
                         return
                     }
-                    saveScreen.content = .progress("Saving", progress)
+                    saveScreen.content = .progress(strings.Story_TooltipSaving, progress)
                 }, completed: { [weak saveScreen] in
                     guard let saveScreen else {
                         return
                     }
-                    saveScreen.content = .completion("Saved")
+                    saveScreen.content = .completion(strings.Story_TooltipSaved)
                     Queue.mainQueue().after(3.0, { [weak saveScreen] in
                         saveScreen?.dismiss()
                     })
@@ -376,12 +367,11 @@ final class PeerInfoStoryGridScreenComponent: Component {
                     self.selectionPanel = selectionPanel
                 }
                 
-                //TODO:localize
                 let selectionPanelSize = selectionPanel.update(
                     transition: selectionPanelTransition,
                     component: AnyComponent(BottomButtonPanelComponent(
                         theme: environment.theme,
-                        title: "Save to Profile",
+                        title: environment.strings.StoryList_SaveToProfile,
                         label: nil,
                         isEnabled: true,
                         insets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: environment.safeInsets.bottom, right: sideInset),
@@ -395,18 +385,12 @@ final class PeerInfoStoryGridScreenComponent: Component {
                             
                             let _ = component.context.engine.messages.updateStoriesArePinned(ids: paneNode.selectedItems, isPinned: true).start()
                             
-                            //TODO:localize
-                            let title: String
-                            if paneNode.selectedIds.count == 1 {
-                                title = "Story saved to your profile"
-                            } else {
-                                title = "\(paneNode.selectedIds.count) saved to your profile"
-                            }
-                            
                             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
+                            
+                            let title: String = presentationData.strings.StoryList_TooltipStoriesSavedToProfile(Int32(paneNode.selectedIds.count))
                             environment.controller()?.present(UndoOverlayController(
                                 presentationData: presentationData,
-                                content: .info(title: title, text: "Saved stories can be viewed by others on your profile until you remove them.", timeout: nil),
+                                content: .info(title: title, text: presentationData.strings.StoryList_TooltipStoriesSavedToProfileText, timeout: nil),
                                 elevatedLayout: false,
                                 animateInAsReplacement: false,
                                 action: { _ in return false }
@@ -596,7 +580,8 @@ public class PeerInfoStoryGridScreen: ViewControllerComponentContainer {
     }
     
     func updateTitle() {
-        //TODO:localize
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        
         switch self.scope {
         case .saved:
             guard let componentView = self.node.hostView.componentView as? PeerInfoStoryGridScreenComponent.View else {
@@ -608,16 +593,16 @@ public class PeerInfoStoryGridScreen: ViewControllerComponentContainer {
             } else {
                 title = nil
             }
-            self.titleView?.titleContent = .custom("My Stories", title, false)
+            self.titleView?.titleContent = .custom(presentationData.strings.StoryList_TitleSaved, title, false)
         case .archive:
             guard let componentView = self.node.hostView.componentView as? PeerInfoStoryGridScreenComponent.View else {
                 return
             }
             let title: String
             if componentView.selectedCount != 0 {
-                title = "\(componentView.selectedCount) Selected"
+                title = presentationData.strings.StoryList_SubtitleSelected(Int32(componentView.selectedCount))
             } else {
-                title = "Stories Archive"
+                title = presentationData.strings.StoryList_TitleArchive
             }
             self.titleView?.titleContent = .custom(title, nil, false)
         }

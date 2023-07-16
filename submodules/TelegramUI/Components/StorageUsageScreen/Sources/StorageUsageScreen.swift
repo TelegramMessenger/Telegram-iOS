@@ -310,8 +310,7 @@ final class StorageUsageScreenComponent: Component {
             case .misc:
                 return strings.StorageManagement_SectionMiscellaneous
             case .stories:
-                //TODO:localize
-                return "Stories"
+                return strings.StorageManagement_SectionStories
             }
         }
         
@@ -1810,8 +1809,7 @@ final class StorageUsageScreenComponent: Component {
                         mappedCategory = .groups
                     case 3:
                         iconName = "Settings/Menu/Stories"
-                        //TODO:localized
-                        title = "Stories"
+                        title = environment.strings.Notifications_Stories
                         mappedCategory = .stories
                     default:
                         iconName = "Settings/Menu/Channels"

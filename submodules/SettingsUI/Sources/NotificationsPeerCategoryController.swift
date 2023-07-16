@@ -345,17 +345,16 @@ private func notificationsPeerCategoryEntries(category: NotificationsPeerCategor
             importantEnabled = true
         }
         
-        //TODO:localize
-        entries.append(.enable(presentationData.theme, "Show All Notifications", allEnabled))
+        entries.append(.enable(presentationData.theme, presentationData.strings.NotificationSettings_Stories_ShowAll, allEnabled))
         if !allEnabled {
-            entries.append(.enableImportant(presentationData.theme, "Show Important Notifications", importantEnabled))
-            entries.append(.importantInfo(presentationData.theme, "Always on for top 5 contacts."))
+            entries.append(.enableImportant(presentationData.theme, presentationData.strings.NotificationSettings_Stories_ShowImportant, importantEnabled))
+            entries.append(.importantInfo(presentationData.theme, presentationData.strings.NotificationSettings_Stories_ShowImportantFooter))
         }
         
         if notificationSettings.enabled || !notificationExceptions.isEmpty {
             entries.append(.optionsHeader(presentationData.theme, presentationData.strings.Notifications_Options.uppercased()))
             
-            entries.append(.previews(presentationData.theme, "Display Author Name", notificationSettings.storySettings.hideSender != .hide))
+            entries.append(.previews(presentationData.theme, presentationData.strings.NotificationSettings_Stories_DisplayAuthorName, notificationSettings.storySettings.hideSender != .hide))
             entries.append(.sound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: filteredGlobalSound(notificationSettings.storySettings.sound)), filteredGlobalSound(notificationSettings.storySettings.sound)))
         }
     } else {
@@ -413,8 +412,7 @@ private func notificationsPeerCategoryEntries(category: NotificationsPeerCategor
             var title: String = ""
             
             if automaticSet.contains(value.peer.id) {
-                //TODO:localize
-                title = "\(presentationData.strings.Notification_Exceptions_AlwaysOn) (automatic)"
+                title = presentationData.strings.NotificationSettings_Stories_AutomaticValue(presentationData.strings.Notification_Exceptions_AlwaysOn).string
                 canRemove = false
             } else {
                 if case .stories = category {
@@ -443,11 +441,10 @@ private func notificationsPeerCategoryEntries(category: NotificationsPeerCategor
                             if !title.isEmpty {
                                 title += ", "
                             }
-                            //TODO:localize
                             if case .show = value.settings.storySettings.hideSender {
-                                title += "Show Name"
+                                title += presentationData.strings.NotificationSettings_Stories_CompactShowName
                             } else {
-                                title += "Hide Name"
+                                title += presentationData.strings.NotificationSettings_Stories_CompactHideName
                             }
                         }
                     }
@@ -1068,8 +1065,7 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
             case .channel:
                 title = presentationData.strings.Notifications_ChannelsTitle
             case .stories:
-                //TODO:localize
-                title = "Stories"
+                title = presentationData.strings.Notifications_StoriesTitle
         }
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, ensureVisibleItemTag: focusOnItemTag, initialScrollToItem: scrollToItem)

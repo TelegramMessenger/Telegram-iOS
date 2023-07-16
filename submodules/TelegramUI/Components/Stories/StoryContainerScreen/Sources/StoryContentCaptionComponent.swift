@@ -9,6 +9,7 @@ import TextNodeWithEntities
 import TextFormat
 import InvisibleInkDustNode
 import UrlEscaping
+import TelegramPresentationData
 
 final class StoryContentCaptionComponent: Component {
     enum Action {
@@ -41,6 +42,7 @@ final class StoryContentCaptionComponent: Component {
     
     let externalState: ExternalState
     let context: AccountContext
+    let strings: PresentationStrings
     let text: String
     let entities: [MessageTextEntity]
     let entityFiles: [EngineMedia.Id: TelegramMediaFile]
@@ -50,6 +52,7 @@ final class StoryContentCaptionComponent: Component {
     init(
         externalState: ExternalState,
         context: AccountContext,
+        strings: PresentationStrings,
         text: String,
         entities: [MessageTextEntity],
         entityFiles: [EngineMedia.Id: TelegramMediaFile],
@@ -58,6 +61,7 @@ final class StoryContentCaptionComponent: Component {
     ) {
         self.externalState = externalState
         self.context = context
+        self.strings = strings
         self.text = text
         self.entities = entities
         self.entityFiles = entityFiles
@@ -70,6 +74,9 @@ final class StoryContentCaptionComponent: Component {
             return false
         }
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
             return false
         }
         if lhs.text != rhs.text {
@@ -425,9 +432,8 @@ final class StoryContentCaptionComponent: Component {
             
             let truncationToken = NSMutableAttributedString()
             truncationToken.append(NSAttributedString(string: "\u{2026} ", font: Font.regular(16.0), textColor: .white))
-            truncationToken.append(NSAttributedString(string: "Show more", font: Font.semibold(16.0), textColor: .white))
+            truncationToken.append(NSAttributedString(string: component.strings.Story_CaptionShowMore, font: Font.semibold(16.0), textColor: .white))
             
-            //TODO:localize
             let collapsedTextLayout = TextNodeWithEntities.asyncLayout(self.collapsedText.textNode)(TextNodeLayoutArguments(
                 attributedString: attributedText,
                 maximumNumberOfLines: 3,

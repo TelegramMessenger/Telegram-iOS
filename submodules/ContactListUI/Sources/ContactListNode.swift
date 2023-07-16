@@ -207,20 +207,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     storyStats = (storyData.count, storyData.unseenCount, storyData.hasUnseenCloseFriends)
                     
                     let text: String
-                    //TODO:localize
-                    if storyData.unseenCount != 0 {
-                        if storyData.unseenCount == 1 {
-                            text = "1 unseen story"
-                        } else {
-                            text = "\(storyData.unseenCount) unseen stories"
-                        }
-                    } else {
-                        if storyData.count == 1 {
-                            text = "1 story"
-                        } else {
-                            text = "\(storyData.count) stories"
-                        }
-                    }
+                    text = presentationData.strings.ChatList_ArchiveStoryCount(Int32(storyData.count))
                     status = .custom(string: text, multiline: false, isActive: false, icon: nil)
                 }
                 
@@ -404,8 +391,7 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
     }
     
     if addHeader {
-        //TODO:localize
-        commonHeader = ChatListSearchItemHeader(type: .text("SORTED BY LAST SEEN TIME", AnyHashable(1)), theme: theme, strings: strings, actionTitle: nil, action: nil)
+        commonHeader = ChatListSearchItemHeader(type: .text(strings.Contacts_SortedByPresence.uppercased(), AnyHashable(1)), theme: theme, strings: strings, actionTitle: nil, action: nil)
     }
     
     switch presentation {
@@ -529,15 +515,15 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
     
     
     if let storySubscriptions {
-        var index: Int = 0
+        let _ = storySubscriptions
+        /*var index: Int = 0
         
-        //TODO:localize
         let header: ListViewItemHeader? = ChatListSearchItemHeader(type: .text("HIDDEN STORIES", AnyHashable(0)), theme: theme, strings: strings)
         
         for item in storySubscriptions.items {
             entries.append(.peer(index, .peer(peer: item.peer._asPeer(), isGlobal: false, participantCount: nil), nil, header, .none, theme, strings, dateTimeFormat, sortOrder, displayOrder, false, true, ContactListNodeEntry.StoryData(count: item.storyCount, unseenCount: item.unseenCount, hasUnseenCloseFriends: item.hasUnseenCloseFriends)))
             index += 1
-        }
+        }*/
     }
     
     var index: Int = 0

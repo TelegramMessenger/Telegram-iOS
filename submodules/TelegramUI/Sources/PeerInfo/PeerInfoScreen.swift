@@ -792,8 +792,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         }
     }
     
-    //TODO:localize
-    items[.stories]!.append(PeerInfoScreenDisclosureItem(id: 0, text: "My Stories", icon: PresentationResourcesSettings.stories, action: {
+    items[.stories]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.Settings_MyStories, icon: PresentationResourcesSettings.stories, action: {
         interaction.openSettings(.stories)
     }))
     

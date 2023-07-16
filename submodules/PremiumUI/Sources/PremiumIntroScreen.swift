@@ -395,8 +395,7 @@ enum PremiumPerk: CaseIterable {
         case .translation:
             return strings.Premium_Translation
         case .stories:
-            //TODO:localize
-            return "Story Posting"
+            return strings.Premium_Stories
         }
     }
     

@@ -192,7 +192,7 @@ final class MediaPickerGridItemNode: GridItemNode {
         } else if let (fetchResult, index) = self.currentAssetState {
             let asset = fetchResult.object(at: index)
             if let localTimestamp = asset.creationDate?.timeIntervalSince1970 {
-                let tag = Month(localTimestamp: Int32(localTimestamp)).packedValue
+                let tag = Month(localTimestamp: Int32(exactly: floor(localTimestamp)) ?? 0).packedValue
                 self._cachedTag = tag
                 return tag
             } else {

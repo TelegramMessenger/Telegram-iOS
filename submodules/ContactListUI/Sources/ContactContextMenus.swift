@@ -31,8 +31,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
         var items: [ContextMenuItem] = []
         
         if isStories {
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "View Profile", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: strings.StoryFeed_ContextOpenProfile, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.contextMenu.primaryColor)
             }, action: { c, _ in
                 c.dismiss(completion: {
@@ -50,7 +49,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
             
             let isMuted = resolvedAreStoriesMuted(globalSettings: globalSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: notificationSettings._asNotificationSettings(), topSearchPeers: topSearchPeers)
             
-            items.append(.action(ContextMenuActionItem(text: isMuted ? "Notify" : "Don't Notify", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: isMuted ? strings.StoryFeed_ContextNotifyOn : strings.StoryFeed_ContextNotifyOff, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
             }, action: { _, f in
                 f(.default)
@@ -69,7 +68,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
                                 "Bottom.Group 1.Fill 1": iconColor,
                                 "EXAMPLE.Group 1.Fill 1": iconColor,
                                 "Line.Group 1.Stroke 1": iconColor
-                            ], title: nil, text: "You will now get a notification whenever **\(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))** posts a story.", customUndoText: nil, timeout: nil),
+                            ], title: nil, text: presentationData.strings.StoryFeed_TooltipNotifyOn(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string, customUndoText: nil, timeout: nil),
                             elevatedLayout: false,
                             animateInAsReplacement: false,
                             action: { _ in return false }
@@ -83,7 +82,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
                                 "Bottom.Group 1.Fill 1": iconColor,
                                 "EXAMPLE.Group 1.Fill 1": iconColor,
                                 "Line.Group 1.Stroke 1": iconColor
-                            ], title: nil, text: "You will no longer receive a notification when **\(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))** posts a story.", customUndoText: nil, timeout: nil),
+                            ], title: nil, text: presentationData.strings.StoryFeed_TooltipNotifyOff(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string, customUndoText: nil, timeout: nil),
                             elevatedLayout: false,
                             animateInAsReplacement: false,
                             action: { _ in return false }
@@ -92,36 +91,12 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
                 }
             })))
             
-            items.append(.action(ContextMenuActionItem(text: "Move to Chats", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: strings.StoryFeed_ContextUnarchive, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MoveToChats"), color: theme.contextMenu.primaryColor)
             }, action: { _, f in
                 f(.dismissWithoutContent)
 
                 context.engine.peers.updatePeerStoriesHidden(id: peerId, isHidden: false)
-                
-                guard let parentController = contactsController?.parent as? TabBarController, let chatsController = (contactsController?.navigationController as? TelegramRootControllerInterface)?.getChatsController(), let sourceFrame = parentController.frameForControllerTab(controller: chatsController) else {
-                    return
-                }
-                
-                do {
-                    let location = CGRect(origin: CGPoint(x: sourceFrame.midX, y: sourceFrame.minY + 1.0), size: CGSize())
-                    let tooltipController = TooltipScreen(
-                        context: context,
-                        account: context.account,
-                        sharedContext: context.sharedContext,
-                        text: .markdown(text: "Stories from **\(peer.compactDisplayTitle)** will now be shown in Chats, not Contacts."),
-                        icon: .peer(peer: peer, isStory: true),
-                        action: TooltipScreen.Action(
-                            title: "Undo",
-                            action: {
-                                context.engine.peers.updatePeerStoriesHidden(id: peer.id, isHidden: true)
-                            }
-                        ),
-                        location: .point(location, .bottom),
-                        shouldDismissOnTouch: { _, _ in return .dismiss(consume: false) }
-                    )
-                    contactsController?.present(tooltipController, in: .window(.root))
-                }
             })))
             
             return items

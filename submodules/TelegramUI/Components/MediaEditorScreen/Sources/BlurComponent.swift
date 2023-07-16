@@ -4,6 +4,7 @@ import Display
 import ComponentFlow
 import LegacyComponents
 import MediaEditor
+import TelegramPresentationData
 
 private final class BlurModeComponent: Component {
     typealias EnvironmentType = Empty
@@ -115,17 +116,20 @@ private final class BlurModeComponent: Component {
 final class BlurComponent: Component {
     typealias EnvironmentType = Empty
     
+    let strings: PresentationStrings
     let value: BlurValue
     let hasPortrait: Bool
     let valueUpdated: (BlurValue) -> Void
     let isTrackingUpdated: (Bool) -> Void
     
     init(
+        strings: PresentationStrings,
         value: BlurValue,
         hasPortrait: Bool,
         valueUpdated: @escaping (BlurValue) -> Void,
         isTrackingUpdated: @escaping (Bool) -> Void
     ) {
+        self.strings = strings
         self.value = value
         self.hasPortrait = hasPortrait
         self.valueUpdated = valueUpdated
@@ -133,6 +137,9 @@ final class BlurComponent: Component {
     }
     
     static func ==(lhs: BlurComponent, rhs: BlurComponent) -> Bool {
+        if lhs.strings !== rhs.strings {
+            return false
+        }
         if lhs.value != rhs.value {
             return false
         }
@@ -190,7 +197,7 @@ final class BlurComponent: Component {
                 transition: transition,
                 component: AnyComponent(
                     Text(
-                        text: "Blur",
+                        text: component.strings.Story_Editor_Blur_Title,
                         font: Font.regular(14.0),
                         color: UIColor(rgb: 0x808080)
                     )
@@ -212,7 +219,7 @@ final class BlurComponent: Component {
                     Button(
                         content: AnyComponent(
                             BlurModeComponent(
-                                title: "Off",
+                                title: component.strings.Story_Editor_Blur_Off,
                                 icon: self.offImage,
                                 isSelected: state.value.mode == .off
                             )
@@ -233,7 +240,7 @@ final class BlurComponent: Component {
                     Button(
                         content: AnyComponent(
                             BlurModeComponent(
-                                title: "Radial",
+                                title: component.strings.Story_Editor_Blur_Radial,
                                 icon: self.radialImage,
                                 isSelected: state.value.mode == .radial
                             )
@@ -254,7 +261,7 @@ final class BlurComponent: Component {
                     Button(
                         content: AnyComponent(
                             BlurModeComponent(
-                                title: "Linear",
+                                title: component.strings.Story_Editor_Blur_Linear,
                                 icon: self.linearImage,
                                 isSelected: state.value.mode == .linear
                             )
@@ -275,7 +282,7 @@ final class BlurComponent: Component {
                     Button(
                         content: AnyComponent(
                             BlurModeComponent(
-                                title: "Portrait",
+                                title: component.strings.Story_Editor_Blur_Portrait,
                                 icon: self.portraitImage,
                                 isSelected: state.value.mode == .portrait
                             )

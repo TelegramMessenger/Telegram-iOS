@@ -55,9 +55,6 @@ final class PlaceholderComponent: Component {
             super.init(frame: frame)
             
             self.backgroundColor = UIColor(rgb: 0x1c1c1e)
-//            if #available(iOS 13.0, *) {
-//                self.layer.cornerCurve = .continuous
-//            }
         }
         
         required init?(coder: NSCoder) {
@@ -71,9 +68,10 @@ final class PlaceholderComponent: Component {
             let sideInset: CGFloat = 36.0
             let animationHeight: CGFloat = 120.0
             
-            let title: String = "Allow Telegram to access your camera and microphone"
-            let text: String = "This lets you share photos and record videos."
-            let buttonTitle: String = "Open Settings"
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            let title = presentationData.strings.Story_Camera_AccessPlaceholderTitle
+            let text = presentationData.strings.Story_Camera_AccessPlaceholderText
+            let buttonTitle = presentationData.strings.Story_Camera_AccessOpenSettings
             
             let animationSize = self.animation.update(
                 transition: .immediate,

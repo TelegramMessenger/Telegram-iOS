@@ -300,12 +300,11 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         let tabsNode: ASDisplayNode? = nil
         let tabsNodeIsSearch = false
         
-        //TODO:localize
         let primaryContent = ChatListHeaderComponent.Content(
-            title: "Contacts",
+            title: self.presentationData.strings.Contacts_Title,
             navigationBackTitle: nil,
             titleComponent: nil,
-            chatListTitle: NetworkStatusTitle(text: "Contacts", activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false, peerStatus: nil),
+            chatListTitle: NetworkStatusTitle(text: self.presentationData.strings.Contacts_Title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false, peerStatus: nil),
             leftButton: AnyComponentWithIdentity(id: "sort", component: AnyComponent(NavigationButtonComponent(
                 content: .text(title: self.presentationData.strings.Contacts_Sort, isBold: false),
                 pressed: { [weak self] sourceView in

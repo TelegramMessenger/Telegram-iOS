@@ -95,8 +95,8 @@ struct Month: Equatable {
         var timeinfo: tm = tm()
         gmtime_r(&time, &timeinfo)
 
-        let year = UInt32(timeinfo.tm_year)
-        let month = UInt32(timeinfo.tm_mon)
+        let year = UInt32(max(timeinfo.tm_year, 0))
+        let month = UInt32(max(timeinfo.tm_mon, 0))
 
         self.packedValue = Int32(bitPattern: year | (month << 16))
     }
@@ -1445,8 +1445,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 case .wallpaper:
                     self.titleView.title = presentationData.strings.Conversation_Theme_ChooseWallpaperTitle
                 case .addImage:
-                    //TODO:localize
-                    self.titleView.title = "Add Image"
+                    self.titleView.title = presentationData.strings.MediaPicker_AddImage
                 }
             }
         } else {

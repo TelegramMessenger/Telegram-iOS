@@ -939,7 +939,6 @@ private final class DemoSheetContent: CombinedComponent {
                         )
                     )
                 )
-                //TODO:localize
                 availableItems[.stories] = DemoPagerComponent.Item(
                     AnyComponentWithIdentity(
                         id: PremiumDemoScreen.Subject.stories,
@@ -951,8 +950,8 @@ private final class DemoSheetContent: CombinedComponent {
                                     videoFile: configuration.videos["voice_to_text"],
                                     decoration: .badgeStars
                                 )),
-                                title: "Story Posting",
-                                text: "Be one of the first to share your stories with your contacts or an unlimited audience.",
+                                title: strings.Premium_Stories,
+                                text: strings.Premium_StoriesInfo,
                                 textColor: textColor
                             )
                         )
@@ -1049,8 +1048,7 @@ private final class DemoSheetContent: CombinedComponent {
                             case .translation:
                                 buttonText = strings.Premium_Translation_Proceed
                             case .stories:
-                            //TODO:localize
-                                buttonText = "Unlock Story Posting"
+                                buttonText = strings.Premium_Stories_Proceed
                                 buttonAnimationName = "premium_unlock"
                             default:
                                 buttonText = strings.Common_OK

@@ -31,13 +31,15 @@ final class StoryItemContentComponent: Component {
     let peer: EnginePeer
     let item: EngineStoryItem
     let audioMode: StoryContentItem.AudioMode
+    let isVideoBuffering: Bool
 
-    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer, item: EngineStoryItem, audioMode: StoryContentItem.AudioMode) {
+    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer, item: EngineStoryItem, audioMode: StoryContentItem.AudioMode, isVideoBuffering: Bool) {
 		self.context = context
         self.strings = strings
         self.peer = peer
 		self.item = item
         self.audioMode = audioMode
+        self.isVideoBuffering = isVideoBuffering
 	}
 
 	static func ==(lhs: StoryItemContentComponent, rhs: StoryItemContentComponent) -> Bool {
@@ -53,6 +55,9 @@ final class StoryItemContentComponent: Component {
 		if lhs.item != rhs.item {
 			return false
 		}
+        if lhs.isVideoBuffering != rhs.isVideoBuffering {
+            return false
+        }
 		return true
 	}
 
@@ -592,11 +597,10 @@ final class StoryItemContentComponent: Component {
                     self.unsupportedButton = unsupportedButton
                 }
                 
-                //TODO:localize
                 let unsupportedTextSize = unsupportedText.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: "This story is not supported by\nyour version of Telegram.", font: Font.regular(17.0), textColor: .white)),
+                        text: .plain(NSAttributedString(string: component.strings.Story_UnsupportedText, font: Font.regular(17.0), textColor: .white)),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 0
                     )),
@@ -611,7 +615,7 @@ final class StoryItemContentComponent: Component {
                             foreground: environment.theme.list.itemCheckColors.foregroundColor,
                             pressedColor: environment.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.7)
                         ),
-                        content: AnyComponentWithIdentity(id: AnyHashable(""), component: AnyComponent(Text(text: "Update Telegram", font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor
+                        content: AnyComponentWithIdentity(id: AnyHashable(""), component: AnyComponent(Text(text: component.strings.Story_UnsupportedAction, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor
                         ))),
                         isEnabled: true,
                         displaysProgress: false,
@@ -655,10 +659,13 @@ final class StoryItemContentComponent: Component {
             self.updateProgressMode(update: false)
             
             if reloadMedia && synchronousLoad {
+                let _ = startTime
+                #if DEBUG
                 print("\(CFAbsoluteTimeGetCurrent()) Synchronous: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+                #endif
             }
             
-            if !self.contentLoaded {
+            if !self.contentLoaded || component.isVideoBuffering {
                 let loadingEffectView: StoryItemLoadingEffectView
                 if let current = self.loadingEffectView {
                     loadingEffectView = current
@@ -668,7 +675,7 @@ final class StoryItemContentComponent: Component {
                     self.addSubview(loadingEffectView)
                 }
                 loadingEffectView.update(size: availableSize, transition: transition)
-            } else if let loadingEffectView = self.loadingEffectView{
+            } else if let loadingEffectView = self.loadingEffectView {
                 self.loadingEffectView = nil
                 loadingEffectView.layer.animateAlpha(from: loadingEffectView.alpha, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak loadingEffectView] _ in
                     loadingEffectView?.removeFromSuperview()

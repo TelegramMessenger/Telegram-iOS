@@ -934,13 +934,13 @@ private final class CameraScreenComponent: CombinedComponent {
                     case .none:
                         hintText = " "
                     case .zoom:
-                        hintText = "Swipe up to zoom"
+                        hintText = environment.strings.Story_Camera_SwipeUpToZoom
                     case .lock:
-                        hintText = "Swipe left to lock"
+                        hintText = environment.strings.Story_Camera_SwipeLeftToLock
                     case .releaseLock:
-                        hintText = "Release to lock"
+                        hintText = environment.strings.Story_Camera_SwipeLeftRelease
                     case .flip:
-                        hintText = "Swipe right to flip"
+                        hintText = environment.strings.Story_Camera_SwipeRightToFlip
                     }
                     if let hintText {
                         let hintLabel = hintLabel.update(
@@ -967,6 +967,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 let modeControl = modeControl.update(
                     component: ModeComponent(
                         isTablet: isTablet,
+                        strings: environment.strings,
                         availableModes: [.photo, .video],
                         currentMode: component.cameraState.mode,
                         updatedMode: { [weak state] mode in
@@ -1948,7 +1949,7 @@ public class CameraScreen: ViewController {
             
             let location = CGRect(origin: CGPoint(x: absoluteLocation.x, y: absoluteLocation.y - 29.0), size: CGSize())
                         
-            let controller = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Draft Saved"), location: .point(location, .bottom), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _, _ in
+            let controller = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: self.presentationData.strings.Story_Camera_TooltipDraftSaved), location: .point(location, .bottom), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _, _ in
                 return .ignore
             })
             self.controller?.present(controller, in: .current)
@@ -1963,7 +1964,7 @@ public class CameraScreen: ViewController {
             let location = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
             
             let accountManager = self.context.sharedContext.accountManager
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Tap here to disable\nthe selfie camera"), textAlignment: .center, location: .point(location, .right), displayDuration: .custom(5.0), inset: 16.0, shouldDismissOnTouch: { point, containerFrame in
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: self.presentationData.strings.Story_Camera_TooltipDisableDual), textAlignment: .center, location: .point(location, .right), displayDuration: .custom(5.0), inset: 16.0, shouldDismissOnTouch: { point, containerFrame in
                 if containerFrame.contains(point) {
                     let _ = ApplicationSpecificNotice.incrementStoriesDualCameraTip(accountManager: accountManager, count: 2).start()
                     return .dismiss(consume: true)
@@ -1983,7 +1984,7 @@ public class CameraScreen: ViewController {
             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY + 3.0), size: CGSize())
             
             let accountManager = self.context.sharedContext.accountManager
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Take photos or videos to share with all\nyour contacts or close friends at once."), textAlignment: .center, location: .point(location, .bottom), displayDuration: .custom(4.5), inset: 16.0, shouldDismissOnTouch: { [weak self] point, containerFrame in
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: self.presentationData.strings.Story_Camera_TooltipTakePhotos), textAlignment: .center, location: .point(location, .bottom), displayDuration: .custom(4.5), inset: 16.0, shouldDismissOnTouch: { [weak self] point, containerFrame in
                 if containerFrame.contains(point) {
                     let _ = ApplicationSpecificNotice.incrementStoriesCameraTip(accountManager: accountManager).start()
                     Queue.mainQueue().justDispatch {

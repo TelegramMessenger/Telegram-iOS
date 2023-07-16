@@ -128,12 +128,11 @@ public final class ArchiveInfoContentComponent: Component {
             contentHeight += 15.0
             
             let titleString = NSMutableAttributedString()
-            titleString.append(NSAttributedString(string: "This is Your Archive", font: Font.semibold(19.0), textColor: component.theme.list.itemPrimaryTextColor))
+            titleString.append(NSAttributedString(string: component.strings.ArchiveInfo_Title, font: Font.semibold(19.0), textColor: component.theme.list.itemPrimaryTextColor))
             let imageAttachment = NSTextAttachment()
             imageAttachment.image = self.iconBackground.image
             titleString.append(NSAttributedString(attachment: imageAttachment))
             
-            //TODO:localize
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
@@ -153,11 +152,10 @@ public final class ArchiveInfoContentComponent: Component {
             contentHeight += 16.0
             
             let text: String
-            //TODO:localize
             if component.settings.keepArchivedUnmuted {
-                text = "Archived chats will remain in the Archive when you receive a new message. [Tap to change >]()"
+                text = component.strings.ArchiveInfo_TextKeepArchivedUnmuted
             } else {
-                text = "When you receive a new message, muted chats will remain in the Archive, while unmuted chats will be moved to Chats. [Tap to change >]()"
+                text = component.strings.ArchiveInfo_TextKeepArchivedDefault
             }
             
             let mainText = NSMutableAttributedString()
@@ -229,18 +227,18 @@ public final class ArchiveInfoContentComponent: Component {
             let itemDescs: [ItemDesc] = [
                 ItemDesc(
                     icon: "Chat List/Archive/IconArchived",
-                    title: "Archived Chats",
-                    text: "Move any chat into your Archive and back by swiping on it."
+                    title: component.strings.ArchiveInfo_ChatsTitle,
+                    text: component.strings.ArchiveInfo_ChatsText
                 ),
                 ItemDesc(
                     icon: "Chat List/Archive/IconHide",
-                    title: "Hiding Archive",
-                    text: "Hide the Archive from your Main screen by swiping on it."
+                    title: component.strings.ArchiveInfo_HideTitle,
+                    text: component.strings.ArchiveInfo_HideText
                 ),
                 ItemDesc(
                     icon: "Chat List/Archive/IconStories",
-                    title: "Stories",
-                    text: "Archive Stories from your contacts separately from chats with them."
+                    title: component.strings.ArchiveInfo_StoriesTitle,
+                    text: component.strings.ArchiveInfo_StoriesText
                 )
             ]
             for i in 0 ..< itemDescs.count {

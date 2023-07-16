@@ -335,6 +335,7 @@ private final class MediaToolsScreenComponent: Component {
             self.component = component
             self.state = state
             
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let isTablet: Bool
             if case .regular = environment.metrics.widthClass {
                 isTablet = true
@@ -577,7 +578,7 @@ private final class MediaToolsScreenComponent: Component {
                 var tools: [AdjustmentTool] = [
                     AdjustmentTool(
                         key: .enhance,
-                        title: "Enhance",
+                        title: presentationData.strings.Story_Editor_Tool_Enhance,
                         value: mediaEditor?.getToolValue(.enhance) as? Float ?? 0.0,
                         minValue: 0.0,
                         maxValue: 1.0,
@@ -585,7 +586,7 @@ private final class MediaToolsScreenComponent: Component {
                     ),
                     AdjustmentTool(
                         key: .brightness,
-                        title: "Brightness",
+                        title: presentationData.strings.Story_Editor_Tool_Brightness,
                         value: mediaEditor?.getToolValue(.brightness) as? Float ?? 0.0,
                         minValue: -1.0,
                         maxValue: 1.0,
@@ -593,7 +594,7 @@ private final class MediaToolsScreenComponent: Component {
                     ),
                     AdjustmentTool(
                         key: .contrast,
-                        title: "Contrast",
+                        title: presentationData.strings.Story_Editor_Tool_Contrast,
                         value: mediaEditor?.getToolValue(.contrast) as? Float ?? 0.0,
                         minValue: -1.0,
                         maxValue: 1.0,
@@ -601,7 +602,7 @@ private final class MediaToolsScreenComponent: Component {
                     ),
                     AdjustmentTool(
                         key: .saturation,
-                        title: "Saturation",
+                        title: presentationData.strings.Story_Editor_Tool_Saturation,
                         value: mediaEditor?.getToolValue(.saturation) as? Float ?? 0.0,
                         minValue: -1.0,
                         maxValue: 1.0,
@@ -609,7 +610,7 @@ private final class MediaToolsScreenComponent: Component {
                     ),
                     AdjustmentTool(
                         key: .warmth,
-                        title: "Warmth",
+                        title: presentationData.strings.Story_Editor_Tool_Warmth,
                         value: mediaEditor?.getToolValue(.warmth) as? Float ?? 0.0,
                         minValue: -1.0,
                         maxValue: 1.0,
@@ -617,7 +618,7 @@ private final class MediaToolsScreenComponent: Component {
                     ),
                     AdjustmentTool(
                         key: .fade,
-                        title: "Fade",
+                        title: presentationData.strings.Story_Editor_Tool_Fade,
                         value: mediaEditor?.getToolValue(.fade) as? Float ?? 0.0,
                         minValue: 0.0,
                         maxValue: 1.0,
@@ -625,7 +626,7 @@ private final class MediaToolsScreenComponent: Component {
                     ),
                     AdjustmentTool(
                         key: .highlights,
-                        title: "Highlights",
+                        title: presentationData.strings.Story_Editor_Tool_Highlights,
                         value: mediaEditor?.getToolValue(.highlights) as? Float ?? 0.0,
                         minValue: -1.0,
                         maxValue: 1.0,
@@ -633,7 +634,7 @@ private final class MediaToolsScreenComponent: Component {
                     ),
                     AdjustmentTool(
                         key: .shadows,
-                        title: "Shadows",
+                        title: presentationData.strings.Story_Editor_Tool_Shadows,
                         value: mediaEditor?.getToolValue(.shadows) as? Float ?? 0.0,
                         minValue: -1.0,
                         maxValue: 1.0,
@@ -641,7 +642,7 @@ private final class MediaToolsScreenComponent: Component {
                     ),
                     AdjustmentTool(
                         key: .vignette,
-                        title: "Vignette",
+                        title: presentationData.strings.Story_Editor_Tool_Vignette,
                         value: mediaEditor?.getToolValue(.vignette) as? Float ?? 0.0,
                         minValue: 0.0,
                         maxValue: 1.0,
@@ -660,7 +661,7 @@ private final class MediaToolsScreenComponent: Component {
                 if !component.mediaEditor.sourceIsVideo {
                     tools.insert(AdjustmentTool(
                         key: .grain,
-                        title: "Grain",
+                        title: presentationData.strings.Story_Editor_Tool_Grain,
                         value: mediaEditor?.getToolValue(.grain) as? Float ?? 0.0,
                         minValue: 0.0,
                         maxValue: 1.0,
@@ -721,6 +722,7 @@ private final class MediaToolsScreenComponent: Component {
                 optionsSize = self.toolOptions.update(
                     transition: optionsTransition,
                     component: AnyComponent(TintComponent(
+                        strings: presentationData.strings,
                         shadowsValue: mediaEditor?.getToolValue(.shadowsTint) as? TintValue ?? TintValue.initial,
                         highlightsValue: mediaEditor?.getToolValue(.highlightsTint) as? TintValue ?? TintValue.initial,
                         shadowsValueUpdated: { [weak state] value in
@@ -778,6 +780,7 @@ private final class MediaToolsScreenComponent: Component {
                 optionsSize = self.toolOptions.update(
                     transition: optionsTransition,
                     component: AnyComponent(BlurComponent(
+                        strings: presentationData.strings,
                         value: mediaEditor?.getToolValue(.blur) as? BlurValue ?? BlurValue.initial,
                         hasPortrait: mediaEditor?.hasPortraitMask ?? false,
                         valueUpdated: { [weak state] value in
@@ -853,6 +856,7 @@ private final class MediaToolsScreenComponent: Component {
                 optionsSize = self.toolOptions.update(
                     transition: optionsTransition,
                     component: AnyComponent(CurvesComponent(
+                        strings: presentationData.strings,
                         histogram: state.histogram,
                         internalState: internalState
                     )),

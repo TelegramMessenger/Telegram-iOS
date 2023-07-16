@@ -76,7 +76,6 @@ private final class ArchiveInfoSheetContentComponent: Component {
             contentHeight += contentSize.height
             contentHeight += 30.0
             
-            //TODO:localize
             let buttonSize = self.button.update(
                 transition: transition,
                 component: AnyComponent(ButtonComponent(
@@ -86,7 +85,7 @@ private final class ArchiveInfoSheetContentComponent: Component {
                         pressedColor: environment.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
                     ),
                     content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(
-                        Text(text: "Got it", font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
+                        Text(text: environment.strings.ArchiveInfo_CloseAction, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
                     )),
                     isEnabled: true,
                     displaysProgress: false,

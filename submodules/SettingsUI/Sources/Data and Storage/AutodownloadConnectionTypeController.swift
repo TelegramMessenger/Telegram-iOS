@@ -207,8 +207,7 @@ private func stringForAutomaticDownloadPeers(strings: PresentationStrings, decim
         if peers.contacts && peers.otherPrivate {
             return strings.AutoDownloadSettings_OnForAll
         } else if peers.contacts {
-            //TODO:localize
-            return "On for contacts"
+            return strings.AutoDownloadSettings_OnForContacts
         } else {
             return strings.AutoDownloadSettings_OffForAll
         }

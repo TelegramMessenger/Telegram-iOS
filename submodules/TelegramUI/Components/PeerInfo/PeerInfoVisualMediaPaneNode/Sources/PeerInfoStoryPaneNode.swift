@@ -1560,17 +1560,11 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             let title: String
             if state.totalCount == 0 {
                 title = ""
-            } else if state.totalCount == 1 {
-                if self.isSaved {
-                    title = "1 saved story"
-                } else {
-                    title = "1 story"
-                }
             } else {
                 if self.isSaved {
-                    title = "\(state.totalCount) saved stories"
+                    title = self.presentationData.strings.StoryList_SubtitleSaved(Int32(state.totalCount))
                 } else {
-                    title = "\(state.totalCount) stories"
+                    title = self.presentationData.strings.StoryList_SubtitleCount(Int32(state.totalCount))
                 }
             }
             self.statusPromise.set(.single(PeerInfoStatusData(text: title, isActivity: false, key: .stories)))
@@ -1607,8 +1601,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 
                 var headerText: String?
                 if strongSelf.isArchive && !mappedItems.isEmpty {
-                    //TODO:localize
-                    headerText = "Only you can see archived stories unless you choose to save them to your profile."
+                    headerText = strongSelf.presentationData.strings.StoryList_ArchiveDescription
                 }
 
                 let items = SparseItemGrid.Items(
@@ -1914,16 +1907,15 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 emptyStateView = ComponentView()
                 self.emptyStateView = emptyStateView
             }
-            //TODO:localize
             let emptyStateSize = emptyStateView.update(
                 transition: emptyStateTransition,
                 component: AnyComponent(EmptyStateIndicatorComponent(
                     context: self.context,
                     theme: presentationData.theme,
                     animationName: "StoryListEmpty",
-                    title: self.isArchive ? "No Archived Stories" : "No saved stories",
-                    text: self.isArchive ? "Upload a new story to view it here" : "Open the Archive to select stories you\nwant to be displayed in your profile.",
-                    actionTitle: self.isArchive ? nil : "Open Archive",
+                    title: self.isArchive ? presentationData.strings.StoryList_ArchivedEmptyState_Title : presentationData.strings.StoryList_SavedEmptyState_Title,
+                    text: self.isArchive ? presentationData.strings.StoryList_ArchivedEmptyState_Text : presentationData.strings.StoryList_SavedEmptyState_Text,
+                    actionTitle: self.isArchive ? nil : presentationData.strings.StoryList_SavedEmptyAction,
                     action: { [weak self] in
                         guard let self else {
                             return

@@ -344,11 +344,11 @@ final class StoryItemSetContainerSendMessage {
         
         let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
         
-        let text = isScheduled ? "Message Scheduled" : "Message Sent"
+        let text = isScheduled ? presentationData.strings.Story_TooltipMessageScheduled : presentationData.strings.Story_TooltipMessageSent
         
         let tooltipScreen = UndoOverlayController(
             presentationData: presentationData,
-            content: .actionSucceeded(title: "", text: text, cancel: messageId != nil ? "View in Chat" : "", destructive: false),
+            content: .actionSucceeded(title: "", text: text, cancel: messageId != nil ? presentationData.strings.Story_ToastViewInChat : "", destructive: false),
             elevatedLayout: false,
             animateInAsReplacement: false,
             action: { [weak view, weak self] action in
@@ -881,7 +881,7 @@ final class StoryItemSetContainerSendMessage {
             
             actionSheet.setItemGroups([
                 ActionSheetItemGroup(items: [
-                    ActionSheetButtonItem(title: "Copy Link", color: .accent, action: { [weak self, weak view, weak actionSheet] in
+                    ActionSheetButtonItem(title: presentationData.strings.Story_Context_CopyLink, color: .accent, action: { [weak self, weak view, weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         
                         guard let self, let view else {
@@ -911,7 +911,7 @@ final class StoryItemSetContainerSendMessage {
         } else {
             var preferredAction: ShareControllerPreferredAction?
             if focusedItem.storyItem.isPublic && !component.slice.peer.isService {
-                preferredAction = .custom(action: ShareControllerAction(title: "Copy Link", action: {
+                preferredAction = .custom(action: ShareControllerAction(title: component.strings.Story_Context_CopyLink, action: {
                     let _ = ((component.context.engine.messages.exportStoryLink(peerId: peerId, id: focusedItem.storyItem.id))
                              |> deliverOnMainQueue).start(next: { link in
                         if let link {
@@ -920,7 +920,7 @@ final class StoryItemSetContainerSendMessage {
                             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                             component.presentController(UndoOverlayController(
                                 presentationData: presentationData,
-                                content: .linkCopied(text: "Link copied."),
+                                content: .linkCopied(text: presentationData.strings.Story_ToastLinkCopied),
                                 elevatedLayout: false,
                                 animateInAsReplacement: false,
                                 action: { _ in return false }
@@ -1025,7 +1025,7 @@ final class StoryItemSetContainerSendMessage {
                 let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                 component.presentController(UndoOverlayController(
                     presentationData: presentationData,
-                    content: .linkCopied(text: "Link copied."),
+                    content: .linkCopied(text: presentationData.strings.Story_ToastLinkCopied),
                     elevatedLayout: false,
                     animateInAsReplacement: false,
                     action: { _ in return false }

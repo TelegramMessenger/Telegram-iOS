@@ -1050,7 +1050,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
                     markupNode = current
                 } else {
                     markupNode = AvatarVideoNode(context: self.context)
-                    self.insertSubnode(markupNode, aboveSubnode: self.avatarNode)
+                    self.avatarNode.contentNode.addSubnode(markupNode)
                     self.markupNode = markupNode
                 }
                 markupNode.update(markup: markup, size: CGSize(width: 320.0, height: 320.0))
@@ -1083,7 +1083,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
                     shape.path = maskPath.cgPath
                     videoNode.layer.mask = shape
                     
-                    self.insertSubnode(videoNode, aboveSubnode: self.avatarNode)
+                    self.avatarNode.contentNode.addSubnode(videoNode)
                 }
             } else {
                 if let markupNode = self.markupNode {
@@ -1107,15 +1107,15 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         }
         
         if let markupNode = self.markupNode {
-            markupNode.frame = self.avatarNode.frame
-            markupNode.updateLayout(size: self.avatarNode.frame.size, cornerRadius: avatarCornerRadius, transition: .immediate)
+            markupNode.frame = self.avatarNode.bounds
+            markupNode.updateLayout(size: self.avatarNode.bounds.size, cornerRadius: avatarCornerRadius, transition: .immediate)
         }
         
         if let videoNode = self.videoNode {
             if self.canAttachVideo {
-                videoNode.updateLayout(size: self.avatarNode.frame.size, transition: .immediate)
+                videoNode.updateLayout(size: self.avatarNode.bounds.size, transition: .immediate)
             }
-            videoNode.frame = self.avatarNode.contentNode.bounds
+            videoNode.frame = self.avatarNode.bounds
             
             if isEditing != videoNode.canAttachContent {
                 videoNode.canAttachContent = isEditing && self.canAttachVideo
