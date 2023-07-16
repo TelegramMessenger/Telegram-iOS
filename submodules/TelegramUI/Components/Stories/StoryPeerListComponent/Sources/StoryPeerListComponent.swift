@@ -881,8 +881,9 @@ public final class StoryPeerListComponent: Component {
                     let _ = bounceOffsetFraction
                     
                     let bounceFactor = expandBoundsFraction * (1.0 + realTimeOverscrollFraction * 6.0)
-                    itemPosition.x += bounceFactor * (adjustedRegularFrame.midX - collapsedItemPosition.x) * 0.05
-                    itemPosition.y += bounceFactor * (adjustedRegularFrame.midY - collapsedItemPosition.y) * 0.01
+                    let verticalBounceFactor = expandBoundsFraction * (1.0 + realTimeOverscrollFraction * 12.0)
+                    itemPosition.x += bounceFactor * (adjustedRegularFrame.midX - collapsedItemPosition.x) * 0.04
+                    itemPosition.y += verticalBounceFactor * (adjustedRegularFrame.midY - collapsedItemPosition.y) * 0.05
                     
                     let itemSize = CGSize(width: adjustedRegularFrame.width * itemScale, height: adjustedRegularFrame.height)
                     
