@@ -158,6 +158,7 @@ public extension StoryContainerScreen {
         context: AccountContext,
         peerId: EnginePeer.Id,
         isHidden: Bool,
+        initialOrder: [EnginePeer.Id] = [],
         singlePeer: Bool,
         parentController: ViewController,
         transitionIn: @escaping () -> StoryContainerScreen.TransitionIn?,
@@ -165,7 +166,7 @@ public extension StoryContainerScreen {
         setFocusedItem: @escaping (Signal<StoryId?, NoError>) -> Void,
         setProgress: @escaping (Signal<Never, NoError>) -> Void
     ) {
-        let storyContent = StoryContentContextImpl(context: context, isHidden: isHidden, focusedPeerId: peerId, singlePeer: singlePeer)
+        let storyContent = StoryContentContextImpl(context: context, isHidden: isHidden, focusedPeerId: peerId, singlePeer: singlePeer, fixedOrder: initialOrder)
         let signal = storyContent.state
         |> take(1)
         |> mapToSignal { state -> Signal<StoryContentContextState, NoError> in
