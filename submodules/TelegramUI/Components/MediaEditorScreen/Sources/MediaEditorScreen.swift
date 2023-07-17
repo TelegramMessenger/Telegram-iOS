@@ -3365,7 +3365,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 timeout: privacy.timeout,
                 mentions: mentions,
                 stateContext: stateContext,
-                completion: { [weak self] privacy, allowScreenshots, pin in
+                completion: { [weak self] privacy, allowScreenshots, pin, _ in
                     guard let self else {
                         return
                     }
@@ -3408,12 +3408,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 allowScreenshots: !isForwardingDisabled,
                 pin: pin,
                 stateContext: stateContext,
-                completion: { [weak self] result, isForwardingDisabled, pin in
+                completion: { [weak self] result, isForwardingDisabled, pin, peers in
                     guard let self else {
                         return
                     }
                     if case .closeFriends = privacy.base {
                         let _ = self.context.engine.privacy.updateCloseFriends(peerIds: result.additionallyIncludePeers).start()
+                        self.closeFriends.set(.single(peers))
                         completion(EngineStoryPrivacy(base: .closeFriends, additionallyIncludePeers: []))
                     } else {
                         completion(result)

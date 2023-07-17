@@ -35,7 +35,7 @@ final class ShareWithPeersScreenComponent: Component {
     let mentions: [String]
     let categoryItems: [CategoryItem]
     let optionItems: [OptionItem]
-    let completion: (EngineStoryPrivacy, Bool, Bool) -> Void
+    let completion: (EngineStoryPrivacy, Bool, Bool, [EnginePeer]) -> Void
     let editCategory: (EngineStoryPrivacy, Bool, Bool) -> Void
     
     init(
@@ -48,7 +48,7 @@ final class ShareWithPeersScreenComponent: Component {
         mentions: [String],
         categoryItems: [CategoryItem],
         optionItems: [OptionItem],
-        completion: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void,
+        completion: @escaping (EngineStoryPrivacy, Bool, Bool, [EnginePeer]) -> Void,
         editCategory: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void
     ) {
         self.context = context
@@ -1552,7 +1552,8 @@ final class ShareWithPeersScreenComponent: Component {
                                     additionallyIncludePeers: self.selectedPeers
                                 ),
                                 self.selectedOptions.contains(.screenshot),
-                                self.selectedOptions.contains(.pin)
+                                self.selectedOptions.contains(.pin),
+                                self.component?.stateContext.stateValue?.peers.filter { self.selectedPeers.contains($0.id) } ?? []
                             )
 
                             controller.dismissAllTooltips()
@@ -1918,9 +1919,13 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
             case let .search(query, onlyContacts):
                 let signal: Signal<[EngineRenderedPeer], NoError>
                 if onlyContacts {
-                    signal = context.engine.contacts.searchContacts(query: query)
-                    |> map { result in
-                        return result.0.map { EngineRenderedPeer(peer: $0) }
+                    signal = combineLatest(
+                        context.engine.contacts.searchLocalPeers(query: query),
+                        context.engine.contacts.searchContacts(query: query)
+                    )
+                    |> map { peers, contacts in
+                        let contactIds = Set(contacts.0.map { $0.id })
+                        return peers.filter { contactIds.contains($0.peerId) }
                     }
                 } else {
                     signal = context.engine.contacts.searchLocalPeers(query: query)
@@ -1975,7 +1980,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         timeout: Int = 0,
         mentions: [String] = [],
         stateContext: StateContext,
-        completion: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void,
+        completion: @escaping (EngineStoryPrivacy, Bool, Bool, [EnginePeer]) -> Void,
         editCategory: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void
     ) {
         self.context = context

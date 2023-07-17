@@ -1425,7 +1425,7 @@ private final class StoryContainerScreenComponent: Component {
                                     self.state?.updated(transition: .immediate)
                                 },
                                 keyboardInputData: self.inputMediaNodeDataPromise.get(),
-                                closeFriends: self.closeFriendsPromise.get(),
+                                closeFriends: self.closeFriendsPromise,
                                 sharedViewListsContext: self.sharedViewListsContext
                             )),
                             environment: {},

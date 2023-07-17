@@ -111,7 +111,7 @@ public final class StoryItemSetContainerComponent: Component {
     public let controller: () -> ViewController?
     public let toggleAmbientMode: () -> Void
     public let keyboardInputData: Signal<ChatEntityKeyboardInputNode.InputData, NoError>
-    public let closeFriends: Signal<[EnginePeer], NoError>
+    public let closeFriends: Promise<[EnginePeer]>
     let sharedViewListsContext: StoryItemSetViewListComponent.SharedListsContext
     
     init(
@@ -144,7 +144,7 @@ public final class StoryItemSetContainerComponent: Component {
         controller: @escaping () -> ViewController?,
         toggleAmbientMode: @escaping () -> Void,
         keyboardInputData: Signal<ChatEntityKeyboardInputNode.InputData, NoError>,
-        closeFriends: Signal<[EnginePeer], NoError>,
+        closeFriends: Promise<[EnginePeer]>,
         sharedViewListsContext: StoryItemSetViewListComponent.SharedListsContext
     ) {
         self.context = context
@@ -3202,7 +3202,7 @@ public final class StoryItemSetContainerComponent: Component {
                 context: context,
                 subject: .stories(editing: true),
                 initialPeerIds: Set(privacy.additionallyIncludePeers),
-                closeFriends: component.closeFriends
+                closeFriends: component.closeFriends.get()
             )
             let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
                 guard let self else {
@@ -3212,7 +3212,7 @@ public final class StoryItemSetContainerComponent: Component {
                     context: context,
                     initialPrivacy: privacy,
                     stateContext: stateContext,
-                    completion: { [weak self] privacy, _, _ in
+                    completion: { [weak self] privacy, _, _, _ in
                         guard let self, let component = self.component else {
                             return
                         }
@@ -3262,9 +3262,12 @@ public final class StoryItemSetContainerComponent: Component {
                     context: context,
                     initialPrivacy: privacy,
                     stateContext: stateContext,
-                    completion: { result, _, _ in
+                    completion: { [weak self] result, _, _, peers in
                         if case .closeFriends = privacy.base {
                             let _ = context.engine.privacy.updateCloseFriends(peerIds: result.additionallyIncludePeers).start()
+                            if let component = self?.component {
+                                component.closeFriends.set(.single(peers))
+                            }
                             completion(EngineStoryPrivacy(base: .closeFriends, additionallyIncludePeers: []))
                         } else {
                             completion(result)
@@ -3632,6 +3635,132 @@ public final class StoryItemSetContainerComponent: Component {
             }
         }
         
+        private func getLinkedStickerPacks() -> (ContextController.Tip?, Signal<ContextController.Tip?, NoError>?) {
+            guard let component = self.component else {
+                return (nil, nil)
+            }
+            var tip: ContextController.Tip?
+            var tipSignal: Signal<ContextController.Tip?, NoError>?
+            
+            var hasLinkedStickers = false
+            let media = component.slice.item.storyItem.media._asMedia()
+            if let image = media as? TelegramMediaImage {
+                hasLinkedStickers = image.flags.contains(.hasStickers)
+            } else if let file = media as? TelegramMediaFile {
+                hasLinkedStickers = file.hasLinkedStickers
+            }
+            
+            var emojiFileIds: [Int64] = []
+            for entity in component.slice.item.storyItem.entities {
+                if case let .CustomEmoji(_, fileId) = entity.type {
+                    emojiFileIds.append(fileId)
+                }
+            }
+            
+            if !emojiFileIds.isEmpty || hasLinkedStickers, let peerReference = PeerReference(component.slice.peer._asPeer()) {
+                let context = component.context
+                
+                tip = .animatedEmoji(text: nil, arguments: nil, file: nil, action: nil)
+                
+                let packsPromise = Promise<[StickerPackReference]>()
+                if hasLinkedStickers {
+                    packsPromise.set(context.engine.stickers.stickerPacksAttachedToMedia(media: .story(peer: peerReference, id: component.slice.item.storyItem.id, media: media)))
+                } else {
+                    packsPromise.set(.single([]))
+                }
+                
+                let customEmojiPacksPromise = Promise<[StickerPackReference]>()
+                if !emojiFileIds.isEmpty {
+                    customEmojiPacksPromise.set( context.engine.stickers.resolveInlineStickers(fileIds: emojiFileIds)
+                    |> map { files -> [StickerPackReference] in
+                        var packReferences: [StickerPackReference] = []
+                        var existingIds = Set<Int64>()
+                        for (_, file) in files {
+                        loop: for attribute in file.attributes {
+                                if case let .CustomEmoji(_, _, _, packReference) = attribute, let packReference = packReference {
+                                    if case let .id(id, _) = packReference, !existingIds.contains(id) {
+                                        packReferences.append(packReference)
+                                        existingIds.insert(id)
+                                    }
+                                    break loop
+                                }
+                            }
+                        }
+                        return packReferences
+                    })
+                } else {
+                    customEmojiPacksPromise.set(.single([]))
+                }
+                
+                let action: () -> Void = { [weak self] in
+                    if let self {
+                        let combinedPacks = combineLatest(packsPromise.get(), customEmojiPacksPromise.get())
+                        |> map { embeddedPackReferences, customEmojiPackReferences in
+                            var packReferences: [StickerPackReference] = []
+                            for packReference in embeddedPackReferences {
+                                packReferences.append(packReference)
+                            }
+                            for packReference in customEmojiPackReferences {
+                                if !packReferences.contains(packReference) {
+                                    packReferences.append(packReference)
+                                }
+                            }
+                            return packReferences
+                        }
+                        self.sendMessageContext.openAttachedStickers(view: self, packs: combinedPacks |> take(1))
+                    }
+                }
+                tipSignal = combineLatest(packsPromise.get(), customEmojiPacksPromise.get())
+                |> mapToSignal { embeddedPackReferences, customEmojiPackReferences -> Signal<ContextController.Tip?, NoError> in
+                    var packReferences: [StickerPackReference] = []
+                    for packReference in embeddedPackReferences {
+                        packReferences.append(packReference)
+                    }
+                    for packReference in customEmojiPackReferences {
+                        if !packReferences.contains(packReference) {
+                            packReferences.append(packReference)
+                        }
+                    }
+                    if packReferences.count > 1 {
+                        let valueText = component.strings.Story_Context_EmbeddedStickersValue(Int32(packReferences.count))
+                        return .single(.animatedEmoji(text: component.strings.Story_Context_EmbeddedStickers(valueText).string, arguments: nil, file: nil, action: action))
+                    } else if let reference = packReferences.first {
+                        return context.engine.stickers.loadedStickerPack(reference: reference, forceActualized: false)
+                        |> filter { result in
+                            if case .result = result {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
+                        |> mapToSignal { result -> Signal<ContextController.Tip?, NoError> in
+                            if case let .result(info, items, _) = result {
+                                let isEmoji = info.flags.contains(.isEmoji)
+                                let tip: ContextController.Tip = .animatedEmoji(
+                                    text: isEmoji ? component.strings.Story_Context_EmbeddedEmojiPack(info.title).string : component.strings.Story_Context_EmbeddedStickerPack(info.title).string,
+                                    arguments: TextNodeWithEntities.Arguments(
+                                        context: context,
+                                        cache: context.animationCache,
+                                        renderer: context.animationRenderer,
+                                        placeholderColor: .clear,
+                                        attemptSynchronous: true
+                                    ),
+                                    file: items.first?.file,
+                                    action: action)
+                                return .single(tip)
+                            } else {
+                                return .complete()
+                            }
+                        }
+                    } else {
+                        return .complete()
+                    }
+                }
+            }
+            
+            return (tip, tipSignal)
+        }
+        
         private func performMyMoreAction(sourceView: UIView, gesture: ContextGesture?) {
             guard let component = self.component, let controller = component.controller() else {
                 return
@@ -3770,66 +3899,7 @@ public final class StoryItemSetContainerComponent: Component {
                 })))
             }
             
-            var hasLinkedStickers = false
-            let media = component.slice.item.storyItem.media._asMedia()
-            if let image = media as? TelegramMediaImage {
-                hasLinkedStickers = image.flags.contains(.hasStickers)
-            } else if let file = media as? TelegramMediaFile {
-                hasLinkedStickers = file.hasLinkedStickers
-            }
-            
-            var tip: ContextController.Tip?
-            var tipSignal: Signal<ContextController.Tip?, NoError>?
-            if hasLinkedStickers, let peerReference = PeerReference(component.slice.peer._asPeer()) {
-                let context = component.context
-                tip = .animatedEmoji(text: nil, arguments: nil, file: nil, action: nil)
-                
-                let packsPromise = Promise<[StickerPackReference]>()
-                packsPromise.set(context.engine.stickers.stickerPacksAttachedToMedia(media: .story(peer: peerReference, id: component.slice.item.storyItem.id, media: media)))
-                
-                let action: () -> Void = { [weak self] in
-                    if let self {
-                        self.sendMessageContext.openAttachedStickers(view: self, packs: packsPromise.get() |> take(1))
-                    }
-                }
-                tipSignal = packsPromise.get()
-                |> mapToSignal { packReferences -> Signal<ContextController.Tip?, NoError> in
-                    if packReferences.count > 1 {
-                        let valueText = component.strings.Story_Context_EmbeddedStickersValue(Int32(packReferences.count))
-                        return .single(.animatedEmoji(text: component.strings.Story_Context_EmbeddedStickers(valueText).string, arguments: nil, file: nil, action: action))
-                    } else if let reference = packReferences.first {
-                        return context.engine.stickers.loadedStickerPack(reference: reference, forceActualized: false)
-                        |> filter { result in
-                            if case .result = result {
-                                return true
-                            } else {
-                                return false
-                            }
-                        }
-                        |> mapToSignal { result -> Signal<ContextController.Tip?, NoError> in
-                            if case let .result(info, items, _) = result {
-                                let isEmoji = info.flags.contains(.isEmoji)
-                                let tip: ContextController.Tip = .animatedEmoji(
-                                    text: isEmoji ? component.strings.Story_Context_EmbeddedEmojiPack(info.title).string : component.strings.Story_Context_EmbeddedStickerPack(info.title).string,
-                                    arguments: TextNodeWithEntities.Arguments(
-                                        context: context,
-                                        cache: context.animationCache,
-                                        renderer: context.animationRenderer,
-                                        placeholderColor: .clear,
-                                        attemptSynchronous: true
-                                    ),
-                                    file: items.first?.file,
-                                    action: action)
-                                return .single(tip)
-                            } else {
-                                return .complete()
-                            }
-                        }
-                    } else {
-                        return .complete()
-                    }
-                }
-            }
+            let (tip, tipSignal) = getLinkedStickerPacks()
             
             let contextItems = ContextController.Items(content: .list(items), tip: tip, tipSignal: tipSignal)
             
@@ -4039,66 +4109,7 @@ public final class StoryItemSetContainerComponent: Component {
                     })))
                 }
                 
-                var hasLinkedStickers = false
-                let media = component.slice.item.storyItem.media._asMedia()
-                if let image = media as? TelegramMediaImage {
-                    hasLinkedStickers = image.flags.contains(.hasStickers)
-                } else if let file = media as? TelegramMediaFile {
-                    hasLinkedStickers = file.hasLinkedStickers
-                }
-                
-                var tip: ContextController.Tip?
-                var tipSignal: Signal<ContextController.Tip?, NoError>?
-                if hasLinkedStickers {
-                    let context = component.context
-                    tip = .animatedEmoji(text: nil, arguments: nil, file: nil, action: nil)
-                    
-                    let packsPromise = Promise<[StickerPackReference]>()
-                    packsPromise.set(context.engine.stickers.stickerPacksAttachedToMedia(media: .standalone(media: media)))
-                    
-                    let action: () -> Void = { [weak self] in
-                        if let self {
-                            self.sendMessageContext.openAttachedStickers(view: self, packs: packsPromise.get() |> take(1))
-                        }
-                    }
-                    tipSignal = packsPromise.get()
-                    |> mapToSignal { packReferences -> Signal<ContextController.Tip?, NoError> in
-                        if packReferences.count > 1 {
-                            let valueText = component.strings.Story_Context_EmbeddedStickersValue(Int32(packReferences.count))
-                            return .single(.animatedEmoji(text: component.strings.Story_Context_EmbeddedStickers(valueText).string, arguments: nil, file: nil, action: action))
-                        } else if let reference = packReferences.first {
-                            return context.engine.stickers.loadedStickerPack(reference: reference, forceActualized: false)
-                            |> filter { result in
-                                if case .result = result {
-                                    return true
-                                } else {
-                                    return false
-                                }
-                            }
-                            |> mapToSignal { result -> Signal<ContextController.Tip?, NoError> in
-                                if case let .result(info, items, _) = result {
-                                    let isEmoji = info.flags.contains(.isEmoji)
-                                    let tip: ContextController.Tip = .animatedEmoji(
-                                        text: isEmoji ? component.strings.Story_Context_EmbeddedEmojiPack(info.title).string : component.strings.Story_Context_EmbeddedStickerPack(info.title).string,
-                                        arguments: TextNodeWithEntities.Arguments(
-                                            context: context,
-                                            cache: context.animationCache,
-                                            renderer: context.animationRenderer,
-                                            placeholderColor: .clear,
-                                            attemptSynchronous: true
-                                        ),
-                                        file: items.first?.file,
-                                        action: action)
-                                    return .single(tip)
-                                } else {
-                                    return .complete()
-                                }
-                            }
-                        } else {
-                            return .complete()
-                        }
-                    }
-                }
+                let (tip, tipSignal) = getLinkedStickerPacks()
                 
                 let contextItems = ContextController.Items(content: .list(items), tip: tip, tipSignal: tipSignal)
                                 
