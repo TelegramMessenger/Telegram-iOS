@@ -363,7 +363,7 @@ public final class StoryItemSetContainerComponent: Component {
         
         let moreButton = ComponentView<Empty>()
         let soundButton = ComponentView<Empty>()
-        var closeFriendIcon: ComponentView<Empty>?
+        var privacyIcon: ComponentView<Empty>?
         
         var captionItem: CaptionItem?
         
@@ -1314,7 +1314,7 @@ public final class StoryItemSetContainerComponent: Component {
                 if let soundButtonView = self.soundButton.view {
                     soundButtonView.layer.animateAlpha(from: 0.0, to: soundButtonView.alpha, duration: 0.25)
                 }
-                if let closeFriendIcon = self.closeFriendIcon?.view {
+                if let closeFriendIcon = self.privacyIcon?.view {
                     closeFriendIcon.layer.animateAlpha(from: 0.0, to: closeFriendIcon.alpha, duration: 0.25)
                 }
                 self.closeButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
@@ -1455,7 +1455,7 @@ public final class StoryItemSetContainerComponent: Component {
                 if let soundButtonView = self.soundButton.view {
                     soundButtonView.layer.animateAlpha(from: soundButtonView.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false)
                 }
-                if let closeFriendIconView = self.closeFriendIcon?.view {
+                if let closeFriendIconView = self.privacyIcon?.view {
                     closeFriendIconView.layer.animateAlpha(from: closeFriendIconView.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false)
                 }
                 if let captionView = self.captionItem?.view.view {
@@ -2443,38 +2443,62 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
+            let storyPrivacyIcon: StoryPrivacyIconComponent.Privacy?
             if component.slice.item.storyItem.isCloseFriends {
-                let closeFriendIcon: ComponentView<Empty>
-                var closeFriendIconTransition = transition
-                if let current = self.closeFriendIcon {
-                    closeFriendIcon = current
+                storyPrivacyIcon = .closeFriends
+            } else if component.slice.item.storyItem.isContacts {
+                storyPrivacyIcon = .contacts
+            } else if component.slice.item.storyItem.isSelectedContacts {
+                storyPrivacyIcon = .selectedContacts
+            } else if component.slice.peer.id == component.context.account.peerId {
+                storyPrivacyIcon = .everyone
+            } else {
+                storyPrivacyIcon = nil
+            }
+            
+            if let storyPrivacyIcon {
+                let privacyIcon: ComponentView<Empty>
+                var privacyIconTransition = transition
+                if let current = self.privacyIcon {
+                    privacyIcon = current
                 } else {
-                    closeFriendIconTransition = .immediate
-                    closeFriendIcon = ComponentView()
-                    self.closeFriendIcon = closeFriendIcon
+                    privacyIconTransition = .immediate
+                    privacyIcon = ComponentView()
+                    self.privacyIcon = privacyIcon
                 }
-                let closeFriendIconSize = closeFriendIcon.update(
-                    transition: closeFriendIconTransition,
+                let closeFriendIconSize = privacyIcon.update(
+                    transition: privacyIconTransition,
                     component: AnyComponent(PlainButtonComponent(
-                        content: AnyComponent(BundleIconComponent(
-                            name: "Stories/CloseStoryIcon",
-                            tintColor: nil,
-                            maxSize: nil
-                        )),
+                        content: AnyComponent(
+                            StoryPrivacyIconComponent(
+                                privacy: storyPrivacyIcon,
+                                isEditable: component.slice.peer.id == component.context.account.peerId
+                            )
+                        ),
                         effectAlignment: .center,
                         action: { [weak self] in
                             guard let self, let component = self.component else {
                                 return
                             }
-                            guard let closeFriendIconView = self.closeFriendIcon?.view else {
+                            if component.slice.peer.id == component.context.account.peerId {
+                                self.openItemPrivacySettings()
+                                return
+                            }
+                            guard let closeFriendIconView = self.privacyIcon?.view else {
                                 return
                             }
                             let tooltipText: String
-                            if component.slice.peer.id == component.context.account.peerId {
-                                tooltipText = component.strings.Story_TooltipPrivacyCloseFriendsMy
-                            } else {
+                            switch storyPrivacyIcon {
+                            case .closeFriends:
                                 tooltipText = component.strings.Story_TooltipPrivacyCloseFriends(component.slice.peer.compactDisplayTitle).string
+                            case .contacts:
+                                tooltipText = component.strings.Story_TooltipPrivacyContacts(component.slice.peer.compactDisplayTitle).string
+                            case .selectedContacts:
+                                tooltipText = component.strings.Story_TooltipPrivacySelectedContacts(component.slice.peer.compactDisplayTitle).string
+                            case .everyone:
+                                tooltipText = ""
                             }
+                            
                             let tooltipScreen = TooltipScreen(
                                 account: component.context.account,
                                 sharedContext: component.context.sharedContext,
@@ -2499,16 +2523,16 @@ public final class StoryItemSetContainerComponent: Component {
                     containerSize: CGSize(width: 44.0, height: 44.0)
                 )
                 let closeFriendIconFrame = CGRect(origin: CGPoint(x: headerRightOffset - closeFriendIconSize.width - 8.0, y: 23.0), size: closeFriendIconSize)
-                if let closeFriendIconView = closeFriendIcon.view {
+                if let closeFriendIconView = privacyIcon.view {
                     if closeFriendIconView.superview == nil {
                         self.controlsContainerView.addSubview(closeFriendIconView)
                     }
                     
-                    closeFriendIconTransition.setFrame(view: closeFriendIconView, frame: closeFriendIconFrame)
+                    privacyIconTransition.setFrame(view: closeFriendIconView, frame: closeFriendIconFrame)
                     headerRightOffset -= 44.0
                 }
-            } else if let closeFriendIcon = self.closeFriendIcon {
-                self.closeFriendIcon = nil
+            } else if let closeFriendIcon = self.privacyIcon {
+                self.privacyIcon = nil
                 closeFriendIcon.view?.removeFromSuperview()
             }
             

@@ -9552,8 +9552,9 @@ Sorry for the inconvenience.";
 
 "Story.ContextDeleteStory" = "Delete Story";
 
-"Story.TooltipPrivacyCloseFriendsMy" = "Only people from your close friends list will see this story.";
 "Story.TooltipPrivacyCloseFriends" = "You are seeing this story because you have\nbeen added to %@'s list of close friends.";
+"Story.TooltipPrivacyContacts" = "Only %@'s contacts can view this story.";
+"Story.TooltipPrivacySelectedContacts" = "Only some contacts %@ selected can view this story.";
 
 "Story.ToastViewInChat" = "View in Chat";
 "Story.ToastReactionSent" = "Reaction Sent.";
