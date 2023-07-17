@@ -1170,7 +1170,7 @@ func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32, asPi
                 ).postboxRepresentation)
             }
             
-            #if DEBUG && true
+            #if DEBUG && false
             #else
             _internal_addSynchronizeViewStoriesOperation(peerId: peerId, storyId: id, transaction: transaction)
             #endif
