@@ -98,9 +98,7 @@ public final class MediaAssetsContext: NSObject, PHPhotoLibraryChangeObserver {
     public func requestMediaAccess(completion: @escaping () -> Void = {}) -> Void {
         PHPhotoLibrary.requestAuthorization { [weak self] status in
             Queue.mainQueue().async {
-                if case .authorized = status {
-                    completion()
-                }
+                completion()
             }
             self?.mediaAccessSink.putNext(status)
         }

@@ -1333,8 +1333,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         
             if case let .noAccess(cameraAccess) = self.state {
                 var hasCamera = cameraAccess == .authorized
+                var story = false
                 if let subject = self.controller?.subject, case .assets(_, .story) = subject {
                     hasCamera = false
+                    story = true
                     
                     self.controller?.navigationItem.rightBarButtonItem = nil
                 }
@@ -1344,7 +1346,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 if let current = self.placeholderNode {
                     placeholderNode = current
                 } else {
-                    placeholderNode = MediaPickerPlaceholderNode(content: .intro)
+                    placeholderNode = MediaPickerPlaceholderNode(content: .intro(story: story))
                     placeholderNode.settingsPressed = { [weak self] in
                         self?.controller?.context.sharedContext.applicationBindings.openSettings()
                     }

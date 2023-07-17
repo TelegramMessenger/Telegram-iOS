@@ -30,6 +30,7 @@ import UndoUI
 import ChatEntityKeyboardInputNode
 import ChatPresentationInterfaceState
 import TextFormat
+import DeviceAccess
 
 enum DrawingScreenType {
     case drawing
@@ -3953,7 +3954,20 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     
     fileprivate var isSavingAvailable = false
     private var previousSavedValues: MediaEditorValues?
+    
     func requestSave() {
+        let context = self.context
+        DeviceAccess.authorizeAccess(to: .mediaLibrary(.save), presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: { c, a in
+            context.sharedContext.presentGlobalController(c, a)
+        }, openSettings: context.sharedContext.applicationBindings.openSettings, { [weak self] authorized in
+            if !authorized {
+                return
+            }
+            self?.performSave()
+        })
+    }
+    
+    private func performSave() {
         guard let mediaEditor = self.node.mediaEditor, let subject = self.node.subject, self.isSavingAvailable else {
             return
         }
