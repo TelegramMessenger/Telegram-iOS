@@ -3118,6 +3118,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 isReorderingTabs: .single(false),
                 storyPostingAvailable: .single(false)
             )
+            
             self.pendingSecondaryContext = pendingSecondaryContext
             let _ = (pendingSecondaryContext.ready.get()
             |> filter { $0 }

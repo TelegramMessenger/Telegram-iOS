@@ -2640,6 +2640,13 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 if let _ = self.containerLayout {
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.5, curve: .spring)
                     
+                    if let contentOffset = self.mainContainerNode.contentOffset, case let .known(offset) = contentOffset, offset < 0.0 {
+                        if let containerLayout = self.containerLayout {
+                            self.updateNavigationScrolling(navigationHeight: containerLayout.navigationBarHeight, transition: transition)
+                            self.mainContainerNode.scrollToTop(animated: true, adjustForTempInset: false)
+                        }
+                    }
+                    
                     if let previousInlineStackContainerNode {
                         transition.updatePosition(node: previousInlineStackContainerNode, position: CGPoint(x: previousInlineStackContainerNode.position.x + previousInlineStackContainerNode.bounds.width + UIScreenPixel, y: previousInlineStackContainerNode.position.y), completion: { [weak previousInlineStackContainerNode] _ in
                             previousInlineStackContainerNode?.removeFromSupernode()
