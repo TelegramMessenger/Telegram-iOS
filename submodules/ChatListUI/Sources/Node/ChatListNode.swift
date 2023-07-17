@@ -2890,6 +2890,29 @@ public final class ChatListNode: ListView {
         }
     }
     
+    func hasItemsToBeRevealed() -> Bool {
+        if self.currentState.hiddenItemShouldBeTemporaryRevealed {
+            return false
+        }
+        var isHiddenItemVisible = false
+        self.forEachItemNode({ itemNode in
+            if let itemNode = itemNode as? ChatListItemNode, let item = itemNode.item {
+                if case let .peer(peerData) = item.content, let threadInfo = peerData.threadInfo {
+                    if threadInfo.isHidden {
+                        isHiddenItemVisible = true
+                    }
+                }
+                if case let .groupReference(groupReference) = item.content {
+                    if groupReference.hiddenByDefault {
+                        isHiddenItemVisible = true
+                    }
+                }
+            }
+        })
+        
+        return isHiddenItemVisible
+    }
+    
     func revealScrollHiddenItem() {
         var isHiddenItemVisible = false
         self.forEachItemNode({ itemNode in
@@ -2906,7 +2929,7 @@ public final class ChatListNode: ListView {
                 }
             }
         })
-        if isHiddenItemVisible {
+        if isHiddenItemVisible && !self.currentState.hiddenItemShouldBeTemporaryRevealed {
             if self.hapticFeedback == nil {
                 self.hapticFeedback = HapticFeedback()
             }

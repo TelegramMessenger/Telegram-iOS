@@ -815,7 +815,8 @@ public final class StoryPeerListComponent: Component {
                 self.overscrollHiddenChatItemsAllowed = false
             }
             
-            if let overscrollFocusIndex, overscrollStage2 >= 0.7 {
+            //print("overscrollStage2: \(overscrollStage2)")
+            if let overscrollFocusIndex, overscrollStage2 >= 1.25 {
                 self.overscrollSelectedId = self.sortedItems[overscrollFocusIndex].peer.id
             } else {
                 self.overscrollSelectedId = nil
@@ -1000,11 +1001,13 @@ public final class StoryPeerListComponent: Component {
                 var leftNeighborDistance: CGPoint?
                 var rightNeighborDistance: CGPoint?
                 
-                if let leftItemFrame {
-                    leftNeighborDistance = CGPoint(x: abs(leftItemFrame.midX - measuredItem.itemFrame.midX), y: leftItemFrame.minY - measuredItem.itemFrame.minY)
-                }
-                if let rightItemFrame {
-                    rightNeighborDistance = CGPoint(x: abs(rightItemFrame.midX - measuredItem.itemFrame.midX), y: rightItemFrame.minY - measuredItem.itemFrame.minY)
+                if collapsedState.maxFraction < 0.5 {
+                    if let leftItemFrame {
+                        leftNeighborDistance = CGPoint(x: abs(leftItemFrame.midX - measuredItem.itemFrame.midX), y: leftItemFrame.minY - measuredItem.itemFrame.minY)
+                    }
+                    if let rightItemFrame {
+                        rightNeighborDistance = CGPoint(x: abs(rightItemFrame.midX - measuredItem.itemFrame.midX), y: rightItemFrame.minY - measuredItem.itemFrame.minY)
+                    }
                 }
                 
                 let totalCount: Int
@@ -1138,11 +1141,13 @@ public final class StoryPeerListComponent: Component {
                 var leftNeighborDistance: CGPoint?
                 var rightNeighborDistance: CGPoint?
                 
-                if let leftItemFrame {
-                    leftNeighborDistance = CGPoint(x: abs(leftItemFrame.midX - measuredItem.itemFrame.midX), y: leftItemFrame.minY - measuredItem.itemFrame.minY)
-                }
-                if let rightItemFrame {
-                    rightNeighborDistance = CGPoint(x: abs(rightItemFrame.midX - measuredItem.itemFrame.midX), y: rightItemFrame.minY - measuredItem.itemFrame.minY)
+                if collapsedState.maxFraction < 0.5 {
+                    if let leftItemFrame {
+                        leftNeighborDistance = CGPoint(x: abs(leftItemFrame.midX - measuredItem.itemFrame.midX), y: leftItemFrame.minY - measuredItem.itemFrame.minY)
+                    }
+                    if let rightItemFrame {
+                        rightNeighborDistance = CGPoint(x: abs(rightItemFrame.midX - measuredItem.itemFrame.midX), y: rightItemFrame.minY - measuredItem.itemFrame.minY)
+                    }
                 }
                 
                 let _ = visibleItem.view.update(
@@ -1405,6 +1410,10 @@ public final class StoryPeerListComponent: Component {
                     return nil
                 }
             } else {
+                if !self.scrollView.frame.contains(point) {
+                    return nil
+                }
+                
                 if !result.isDescendant(of: self.scrollContainerView) {
                     return nil
                 }

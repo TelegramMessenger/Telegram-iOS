@@ -1170,7 +1170,10 @@ func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32, asPi
                 ).postboxRepresentation)
             }
             
+            #if DEBUG && false
+            #else
             _internal_addSynchronizeViewStoriesOperation(peerId: peerId, storyId: id, transaction: transaction)
+            #endif
             
             return transaction.getPeer(peerId).flatMap(apiInputUser)
         }
@@ -1178,12 +1181,6 @@ func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32, asPi
             account.stateManager.injectStoryUpdates(updates: [.read(peerId: peerId, maxId: id)])
             
             return .complete()
-            
-            /*return account.network.request(Api.functions.stories.readStories(userId: inputUser, maxId: id))
-            |> `catch` { _ -> Signal<[Int32], NoError> in
-                return .single([])
-            }
-            |> ignoreValues*/
         }
     }
 }

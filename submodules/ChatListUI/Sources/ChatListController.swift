@@ -3663,10 +3663,23 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     if let componentView = self.chatListHeaderView(), let storyPeerListView = componentView.storyPeerListView() {
                         let _ = storyPeerListView
                         
+                        var initialOrder: [EnginePeer.Id] = []
+                        if let orderedStorySubscriptions = self.orderedStorySubscriptions {
+                            if let accountItem = orderedStorySubscriptions.accountItem {
+                                if accountItem.hasPending || accountItem.storyCount != 0 {
+                                    initialOrder.append(self.context.account.peerId)
+                                }
+                            }
+                            for item in orderedStorySubscriptions.items {
+                                initialOrder.append(item.peer.id)
+                            }
+                        }
+                        
                         StoryContainerScreen.openPeerStoriesCustom(
                             context: self.context,
                             peerId: peerId,
                             isHidden: self.location == .chatList(groupId: .archive),
+                            initialOrder: initialOrder,
                             singlePeer: false,
                             parentController: self,
                             transitionIn: { [weak self] in
