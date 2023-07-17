@@ -191,33 +191,6 @@ final class StickerPackEmojisItemNode: GridItemNode {
             self?.standaloneShimmerEffect?.updateLayer()
         }
         self.boundsChangeTrackerLayer =  boundsChangeTrackerLayer
-        
-        /*let gestureRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
-        gestureRecognizer.longTap = { [weak self] point, _ in
-            guard let strongSelf = self else {
-                return
-            }
-
-            if let (item, itemFrame) = strongSelf.item(atPoint: point), let file = item.itemFile {
-                var text = "."
-                var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
-                loop: for attribute in file.attributes {
-                    switch attribute {
-                    case let .CustomEmoji(_, _, displayText, _):
-                        text = displayText
-                        emojiAttribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file)
-                        break loop
-                    default:
-                        break
-                    }
-                }
-                
-                if let emojiAttribute = emojiAttribute {
-                    strongSelf.item?.interaction.emojiLongPressed(text, emojiAttribute, strongSelf.containerNode, itemFrame)
-                }
-            }
-        }
-        self.containerNode.view.addGestureRecognizer(gestureRecognizer)*/
     }
     
     func targetItem(at point: CGPoint) -> (TelegramMediaFile, CALayer)? {
@@ -410,7 +383,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
                                         size: itemNativeFitSize
                                     )
                                     strongSelf.visibleItemPlaceholderViews[itemId] = placeholderView
-                                    strongSelf.view.insertSubview(placeholderView, at: 0)
+                                    strongSelf.containerNode.view.insertSubview(placeholderView, at: 0)
                                 }
                                 placeholderView.frame = itemLayer.frame
                                 placeholderView.update(size: placeholderView.bounds.size)
@@ -420,7 +393,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
                         } else {
                             if let placeholderView = strongSelf.visibleItemPlaceholderViews[itemId] {
                                 strongSelf.visibleItemPlaceholderViews.removeValue(forKey: itemId)
-                                
+
                                 if duration > 0.0 {
                                     placeholderView.layer.opacity = 0.0
                                     placeholderView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, completion: { [weak self, weak placeholderView] _ in

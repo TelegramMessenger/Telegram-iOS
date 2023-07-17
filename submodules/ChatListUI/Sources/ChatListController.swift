@@ -2540,7 +2540,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         var hasActiveGroupCall = false
         
         let storiesCountLimit = self.context.userLimits.maxExpiringStoriesCount
+        var storiesCount = 0
         if let rawStorySubscriptions = self.rawStorySubscriptions, let accountItem = rawStorySubscriptions.accountItem {
+            storiesCount = accountItem.storyCount
             if accountItem.storyCount >= self.context.userLimits.maxExpiringStoriesCount {
                 reachedCountLimit = true
             }
@@ -2570,7 +2572,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 var sourceFrame: CGRect?
                 if fromList {
                     if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
-                        sourceFrame = transitionView.convert(transitionView.bounds, to: nil).offsetBy(dx: 18.0 - UIScreenPixel, dy: 1.0)
+                        if storiesCount == 0 {
+                            sourceFrame = transitionView.convert(transitionView.bounds, to: nil).offsetBy(dx: 18.0 - UIScreenPixel, dy: 1.0)
+                        } else {
+                            sourceFrame = transitionView.convert(transitionView.bounds, to: nil).offsetBy(dx: 0.0, dy: 5.0)
+                        }
                     }
                 } else {
                     if let rightButtonView = componentView.rightButtonViews["story"] {
@@ -2604,7 +2610,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         icon: .none,
                         location: .point(location, .top),
                         shouldDismissOnTouch: { [weak self] point, containerFrame in
-                            if containerFrame.contains(point) {
+                            if containerFrame.contains(point), premiumNeeded {
                                 let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories)
                                 self?.push(controller)
                                 return .dismiss(consume: true)
