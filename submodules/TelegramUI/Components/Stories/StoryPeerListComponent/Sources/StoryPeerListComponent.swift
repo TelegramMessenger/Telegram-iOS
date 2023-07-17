@@ -373,6 +373,7 @@ public final class StoryPeerListComponent: Component {
             self.scrollView.clipsToBounds = false
             
             self.scrollContainerView = UIView()
+            self.scrollContainerView.clipsToBounds = true
             
             self.titleView = UIImageView()
             self.titleView.layer.anchorPoint = CGPoint(x: 0.0, y: 0.5)
@@ -500,7 +501,8 @@ public final class StoryPeerListComponent: Component {
                 return nil
             }
             if let visibleItem = self.visibleItems[peerId], let itemView = visibleItem.view.view as? StoryPeerListItemComponent.View {
-                if !self.bounds.intersects(itemView.frame) {
+                let effectiveVisibleBounds = self.bounds.insetBy(dx: 0.0, dy: -10000.0)
+                if !effectiveVisibleBounds.intersects(itemView.frame) {
                     return nil
                 }
                 
@@ -774,7 +776,7 @@ public final class StoryPeerListComponent: Component {
             self.currentActivityFraction = collapsedState.activityFraction
             
             let effectiveVisibleBounds = self.scrollView.bounds
-            let visibleBounds = effectiveVisibleBounds.insetBy(dx: -200.0, dy: 0.0)
+            let visibleBounds = effectiveVisibleBounds.insetBy(dx: -200.0, dy: -10000.0)
             
             var effectiveFirstVisibleIndex = 0
             for i in 0 ..< self.sortedItems.count {
@@ -1586,7 +1588,12 @@ public final class StoryPeerListComponent: Component {
             self.ignoreScrolling = true
             
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: -4.0), size: CGSize(width: availableSize.width, height: availableSize.height + 4.0)))
-            transition.setFrame(view: self.scrollContainerView, frame: CGRect(origin: CGPoint(x: 0.0, y: -4.0), size: CGSize(width: availableSize.width, height: availableSize.height + 4.0)))
+            
+            let scrollContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: -4.0), size: CGSize(width: availableSize.width, height: availableSize.height + 4.0))
+            let scrollContainerExpandedFrame = scrollContainerFrame.insetBy(dx: 0.0, dy: -500.0)
+            transition.setPosition(view: self.scrollContainerView, position: scrollContainerExpandedFrame.center)
+            transition.setBounds(view: self.scrollContainerView, bounds: CGRect(origin: CGPoint(x: 0.0, y: scrollContainerExpandedFrame.minY - scrollContainerFrame.minY), size: scrollContainerExpandedFrame.size))
+            
             if self.scrollView.contentSize != itemLayout.contentSize {
                 self.scrollView.contentSize = itemLayout.contentSize
             }
