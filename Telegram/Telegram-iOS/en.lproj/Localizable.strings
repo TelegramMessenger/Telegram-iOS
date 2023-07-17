@@ -7390,6 +7390,7 @@ Sorry for the inconvenience.";
 
 "Attachment.MediaAccessTitle" = "Access Your Photos and Videos";
 "Attachment.MediaAccessText" = "Share an unlimited number of photos and videos of up to 2 GB each.";
+"Attachment.MediaAccessStoryText" = "Share an unlimited number of photos and videos of up to 2 GB each.";
 
 "Attachment.LimitedMediaAccessText" = "You have limited Telegram from accessing all of your photos.";
 "Attachment.CameraAccessText" = "Telegram needs camera access so that you can take photos and videos.";
@@ -9420,7 +9421,7 @@ Sorry for the inconvenience.";
 "StoryFeed.TooltipStoryLimit" = "You can't post more than **%@** stories in **24 hours**.";
 
 "StoryFeed.TooltipPostingDuringCall" = "You can't post stories during a call.";
-"StoryFeed.TooltipPostingDuringGroupCall" = "You can't post stories during a voice chat.";
+"StoryFeed.TooltipPostingDuringGroupCall" = "You can't post stories during a video chat.";
 
 "StoryFeed.MyStory" = "My Story";
 "StoryFeed.MyUploading" = "Uploading...";

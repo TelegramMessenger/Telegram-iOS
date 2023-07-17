@@ -41,6 +41,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ShareWithPeersScreen",
         "//submodules/TelegramUI/Components/CameraButtonComponent",
         "//submodules/ChatPresentationInterfaceState",
+        "//submodules/DeviceAccess",
     ],
     visibility = [
         "//visibility:public",
