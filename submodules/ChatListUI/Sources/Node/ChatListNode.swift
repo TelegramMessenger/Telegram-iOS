@@ -2929,7 +2929,7 @@ public final class ChatListNode: ListView {
                 }
             }
         })
-        if isHiddenItemVisible {
+        if isHiddenItemVisible && !self.currentState.hiddenItemShouldBeTemporaryRevealed {
             if self.hapticFeedback == nil {
                 self.hapticFeedback = HapticFeedback()
             }
