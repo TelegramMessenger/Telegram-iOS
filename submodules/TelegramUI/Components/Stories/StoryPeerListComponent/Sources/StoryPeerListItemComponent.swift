@@ -640,8 +640,9 @@ public final class StoryPeerListItemComponent: Component {
             
             let minimizedLineWidth: CGFloat = 4.3
             
-            let indicatorLineSeenWidth: CGFloat = baseLineSeenWidth * component.scale + minimizedLineWidth * (1.0 - component.scale)
-            let indicatorLineUnseenWidth: CGFloat = baseLineUnseenWidth * component.scale + minimizedLineWidth * (1.0 - component.scale)
+            let normalizedScale = max(0.0, min(1.0, component.scale))
+            let indicatorLineSeenWidth: CGFloat = baseLineSeenWidth * normalizedScale + minimizedLineWidth * (1.0 - normalizedScale)
+            let indicatorLineUnseenWidth: CGFloat = baseLineUnseenWidth * normalizedScale + minimizedLineWidth * (1.0 - normalizedScale)
             
             avatarNode.setPeer(
                 context: component.context,
@@ -715,7 +716,10 @@ public final class StoryPeerListItemComponent: Component {
             
             let baseRadius: CGFloat = 30.66
             let collapsedRadius: CGFloat = 35.0
-            let indicatorRadius: CGFloat = baseRadius * component.scale + collapsedRadius * (1.0 - component.scale)
+            var indicatorRadius: CGFloat = baseRadius * normalizedScale + collapsedRadius * (1.0 - normalizedScale)
+            if component.scale > 1.0 {
+                indicatorRadius += max(0.0, component.scale - 1.0) * 0.0
+            }
             
             self.indicatorShapeSeenLayer.lineWidth = indicatorLineSeenWidth
             self.indicatorShapeUnseenLayer.lineWidth = indicatorLineUnseenWidth
