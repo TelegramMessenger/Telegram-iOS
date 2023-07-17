@@ -87,7 +87,7 @@ final class StoryAuthorInfoComponent: Component {
             }
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-            var subtitle = stringForRelativeActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, preciseTime: true, relativeTimestamp: component.timestamp, relativeTo: timestamp)
+            var subtitle = stringForStoryActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, preciseTime: true, relativeTimestamp: component.timestamp, relativeTo: timestamp)
             
             if component.isEdited {
                 subtitle.append(" • ")
