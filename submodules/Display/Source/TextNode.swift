@@ -72,8 +72,9 @@ private final class TextNodeLine {
     let spoilerWords: [TextNodeSpoiler]
     let embeddedItems: [TextNodeEmbeddedItem]
     let attachments: [TextNodeAttachment]
+    let additionalTrailingLine: (CTLine, Double)?
     
-    init(line: CTLine, frame: CGRect, range: NSRange, isRTL: Bool, strikethroughs: [TextNodeStrikethrough], spoilers: [TextNodeSpoiler], spoilerWords: [TextNodeSpoiler], embeddedItems: [TextNodeEmbeddedItem], attachments: [TextNodeAttachment]) {
+    init(line: CTLine, frame: CGRect, range: NSRange, isRTL: Bool, strikethroughs: [TextNodeStrikethrough], spoilers: [TextNodeSpoiler], spoilerWords: [TextNodeSpoiler], embeddedItems: [TextNodeEmbeddedItem], attachments: [TextNodeAttachment], additionalTrailingLine: (CTLine, Double)?) {
         self.line = line
         self.frame = frame
         self.range = range
@@ -83,6 +84,7 @@ private final class TextNodeLine {
         self.spoilerWords = spoilerWords
         self.embeddedItems = embeddedItems
         self.attachments = attachments
+        self.additionalTrailingLine = additionalTrailingLine
     }
 }
 
@@ -1253,12 +1255,17 @@ open class TextNode: ASDisplayNode {
                         truncatedTokenString = NSAttributedString(string: tokenString, attributes: truncationTokenAttributes)
                     }
                     let truncationToken = CTLineCreateWithAttributedString(truncatedTokenString)
+                    let truncationTokenWidth = CTLineGetTypographicBounds(truncationToken, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(truncationToken)
                     
                     var effectiveLineRange = brokenLineRange
+                    var additionalTrailingLine: (CTLine, Double)?
                     
-                    if lineRange.length == 0 || CTLineGetTypographicBounds(originalLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(originalLine) < Double(lineConstrainedSize.width) {
+                    if lineRange.length == 0 || (CTLineGetTypographicBounds(originalLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(originalLine) + truncationTokenWidth) < Double(lineConstrainedSize.width) {
                         if didClipLinebreak {
-                            let mergedLine = NSMutableAttributedString()
+                            coreTextLine = originalLine
+                            additionalTrailingLine = (truncationToken, truncationTokenWidth)
+                            
+                            /*let mergedLine = NSMutableAttributedString()
                             mergedLine.append(attributedString.attributedSubstring(from: NSRange(location: lineRange.location, length: lineRange.length)))
                             mergedLine.append(truncatedTokenString)
                             
@@ -1272,10 +1279,14 @@ open class TextNode: ASDisplayNode {
                                     break
                                 }
                             }
+                            if brokenLineRange.location + brokenLineRange.length > lineRange.location + lineRange.length {
+                                brokenLineRange.location = lineRange.location
+                                brokenLineRange.length = lineRange.length
+                            }
                             if brokenLineRange.location + brokenLineRange.length > attributedString.length {
                                 brokenLineRange.length = attributedString.length - brokenLineRange.location
                             }
-                            effectiveLineRange = brokenLineRange
+                            effectiveLineRange = brokenLineRange*/
                             
                             truncated = true
                         } else {
@@ -1376,6 +1387,11 @@ open class TextNode: ASDisplayNode {
                     let lineWidth = min(lineConstrainedSize.width, ceil(CGFloat(CTLineGetTypographicBounds(coreTextLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(coreTextLine))))
                     let lineFrame = CGRect(x: lineCutoutOffset + headIndent, y: lineOriginY, width: lineWidth, height: fontLineHeight)
                     layoutSize.height += fontLineHeight + fontLineSpacing
+                    
+                    if let (_, additionalTrailingLineWidth) = additionalTrailingLine {
+                        lineAdditionalWidth += additionalTrailingLineWidth
+                    }
+                    
                     layoutSize.width = max(layoutSize.width, lineWidth + lineAdditionalWidth)
                     
                     if headIndent > 0.0 {
@@ -1391,7 +1407,7 @@ open class TextNode: ASDisplayNode {
                         }
                     }
                     
-                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(effectiveLineRange.location, effectiveLineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: embeddedItems, attachments: attachments))
+                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(effectiveLineRange.location, effectiveLineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: embeddedItems, attachments: attachments, additionalTrailingLine: additionalTrailingLine))
                     break
                 } else {
                     if lineCharacterCount > 0 {
@@ -1489,7 +1505,7 @@ open class TextNode: ASDisplayNode {
                             }
                         }
                         
-                        lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: embeddedItems, attachments: attachments))
+                        lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: embeddedItems, attachments: attachments, additionalTrailingLine: nil))
                     } else {
                         if !lines.isEmpty {
                             layoutSize.height += fontLineSpacing
@@ -1688,6 +1704,51 @@ open class TextNode: ASDisplayNode {
                             var spoilerClearRect = spoiler.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY - UIScreenPixel)
                             spoilerClearRect.size.height += 1.0 + UIScreenPixel
                             clearRects.append(spoilerClearRect)
+                        }
+                    }
+                }
+                
+                if let (additionalTrailingLine, _) = line.additionalTrailingLine {
+                    context.textPosition = CGPoint(x: lineFrame.maxX, y: lineFrame.minY)
+                    
+                    let glyphRuns = CTLineGetGlyphRuns(additionalTrailingLine) as NSArray
+                    if glyphRuns.count != 0 {
+                        for run in glyphRuns {
+                            let run = run as! CTRun
+                            let glyphCount = CTRunGetGlyphCount(run)
+                            let attributes = CTRunGetAttributes(run) as NSDictionary
+                            if attributes["Attribute__EmbeddedItem"] != nil {
+                                continue
+                            }
+                            
+                            var fixDoubleEmoji = false
+                            if glyphCount == 2, let font = attributes["NSFont"] as? UIFont, font.fontName.contains("ColorEmoji"), let string = layout.attributedString {
+                                let range = CTRunGetStringRange(run)
+                                
+                                if range.location < string.length && (range.location + range.length) <= string.length {
+                                    let substring = string.attributedSubstring(from: NSMakeRange(range.location, range.length)).string
+                                    
+                                    let heart = Unicode.Scalar(0x2764)!
+                                    let man = Unicode.Scalar(0x1F468)!
+                                    let woman = Unicode.Scalar(0x1F469)!
+                                    let leftHand = Unicode.Scalar(0x1FAF1)!
+                                    let rightHand = Unicode.Scalar(0x1FAF2)!
+                                    
+                                    if substring.unicodeScalars.contains(heart) && (substring.unicodeScalars.contains(man) || substring.unicodeScalars.contains(woman)) {
+                                        fixDoubleEmoji = true
+                                    } else if substring.unicodeScalars.contains(leftHand) && substring.unicodeScalars.contains(rightHand) {
+                                        fixDoubleEmoji = true
+                                    }
+                                }
+                            }
+                            
+                            if fixDoubleEmoji {
+                                context.setBlendMode(.normal)
+                            }
+                            CTRunDraw(run, context, CFRangeMake(0, glyphCount))
+                            if fixDoubleEmoji {
+                                context.setBlendMode(blendMode)
+                            }
                         }
                     }
                 }
@@ -2126,7 +2187,7 @@ open class TextView: UIView {
                         }
                     }
                     
-                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: [], attachments: attachments))
+                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: [], attachments: attachments, additionalTrailingLine: nil))
                     break
                 } else {
                     if lineCharacterCount > 0 {
@@ -2214,7 +2275,7 @@ open class TextView: UIView {
                             }
                         }
                         
-                        lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: [], attachments: attachments))
+                        lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: [], attachments: attachments, additionalTrailingLine: nil))
                     } else {
                         if !lines.isEmpty {
                             layoutSize.height += fontLineSpacing
