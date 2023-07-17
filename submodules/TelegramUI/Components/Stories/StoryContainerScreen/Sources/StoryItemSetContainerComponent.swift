@@ -3899,7 +3899,7 @@ public final class StoryItemSetContainerComponent: Component {
                 })))
             }
             
-            let (tip, tipSignal) = getLinkedStickerPacks()
+            let (tip, tipSignal) = self.getLinkedStickerPacks()
             
             let contextItems = ContextController.Items(content: .list(items), tip: tip, tipSignal: tipSignal)
             
@@ -4109,7 +4109,7 @@ public final class StoryItemSetContainerComponent: Component {
                     })))
                 }
                 
-                let (tip, tipSignal) = getLinkedStickerPacks()
+                let (tip, tipSignal) = self.getLinkedStickerPacks()
                 
                 let contextItems = ContextController.Items(content: .list(items), tip: tip, tipSignal: tipSignal)
                                 
