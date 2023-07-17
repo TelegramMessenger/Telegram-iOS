@@ -505,6 +505,10 @@ public final class TextFieldComponent: Component {
             self.textView.resignFirstResponder()
         }
         
+        public var isActive: Bool {
+            return self.textView.isFirstResponder
+        }
+        
         private var spoilersRevealed = false
         private var spoilerIsDisappearing = false
         private func updateSpoilersRevealed(animated: Bool = true) {

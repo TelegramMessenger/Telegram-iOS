@@ -400,6 +400,14 @@ public final class MessageInputPanelComponent: Component {
             }
         }
         
+        public var isActive: Bool {
+            if let textFieldView = self.textField.view as? TextFieldComponent.View {
+                return textFieldView.isActive
+            } else {
+                return false
+            }
+        }
+        
         public func deactivateInput() {
             if self.canDeactivateInput() {
                 if let textFieldView = self.textField.view as? TextFieldComponent.View {

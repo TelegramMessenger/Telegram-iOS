@@ -370,7 +370,7 @@ public final class StoryItemSetContainerComponent: Component {
         var videoRecordingBackgroundView: UIVisualEffectView?
         let inputPanel = ComponentView<Empty>()
         let inputPanelExternalState = MessageInputPanelComponent.ExternalState()
-        private let inputPanelContainer = UIView()
+        let inputPanelContainer = SparseContainerView()
         private let inputPanelBackground = ComponentView<Empty>()
         
         var preparingToDisplayViewList: Bool = false
@@ -451,8 +451,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             self.transitionCloneContainerView = UIView()
             
-            self.inputPanelContainer.isUserInteractionEnabled = false
-            self.inputPanelContainer.layer.cornerRadius = 11.0
+            self.inputPanelContainer.clipsToBounds = true
             
             self.viewListsContainer = SparseContainerView()
             self.viewListsContainer.clipsToBounds = true
@@ -1944,16 +1943,18 @@ public final class StoryItemSetContainerComponent: Component {
                 containerSize: CGSize(width: inputPanelAvailableWidth, height: 200.0)
             )
             
+            var inputPanelInset: CGFloat = component.containerInsets.bottom
             var inputHeight = component.inputHeight
             if self.inputPanelExternalState.isEditing {
                 if self.sendMessageContext.currentInputMode == .media || (inputHeight.isZero && keyboardWasHidden) {
                     inputHeight = component.deviceMetrics.standardInputHeight(inLandscape: false)
                 }
             }
-                        
-            let inputMediaNodeHeight = self.sendMessageContext.updateInputMediaNode(inputPanel: self.inputPanel, availableSize: availableSize, bottomInset: component.safeInsets.bottom, bottomContainerInset: component.containerInsets.bottom, inputHeight: component.inputHeight, effectiveInputHeight: inputHeight, metrics: component.metrics, deviceMetrics: component.deviceMetrics, transition: transition)
+
+            let inputMediaNodeHeight = self.sendMessageContext.updateInputMediaNode(view: self, availableSize: availableSize, bottomInset: component.safeInsets.bottom, bottomContainerInset: component.containerInsets.bottom, inputHeight: component.inputHeight, effectiveInputHeight: inputHeight, metrics: component.metrics, deviceMetrics: component.deviceMetrics, transition: transition)
             if inputMediaNodeHeight > 0.0 {
                 inputHeight = inputMediaNodeHeight
+                inputPanelInset = 0.0
             }
             keyboardHeight = inputHeight
             
@@ -1982,16 +1983,17 @@ public final class StoryItemSetContainerComponent: Component {
                 })
             }
             
+            let inputPanelBackgroundHeight = keyboardHeight + 60.0 - inputPanelInset
             let inputPanelBackgroundSize = self.inputPanelBackground.update(
                 transition: transition,
                 component: AnyComponent(BlurredGradientComponent(position: .bottom, dark: true, tag: nil)),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width, height: max(0.0, keyboardHeight + 100.0 - component.containerInsets.bottom))
+                containerSize: CGSize(width: availableSize.width, height: max(0.0, inputPanelBackgroundHeight))
             )
             if let inputPanelBackgroundView = self.inputPanelBackground.view {
                 if inputPanelBackgroundView.superview == nil {
                     self.addSubview(self.inputPanelContainer)
-                    self.inputPanelContainer.addSubview(inputPanelBackgroundView)
+                    self.inputPanelContainer.insertSubview(inputPanelBackgroundView, at: 0)
                 }
                 let isVisible = inputHeight > 44.0 && !hasRecordingBlurBackground
                 transition.setFrame(view: inputPanelBackgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: isVisible ? availableSize.height - inputPanelBackgroundSize.height : availableSize.height), size: inputPanelBackgroundSize))
@@ -2012,7 +2014,7 @@ public final class StoryItemSetContainerComponent: Component {
                 inputPanelIsOverlay = false
             } else {
                 bottomContentInset += 44.0
-                inputPanelBottomInset = inputHeight - component.containerInsets.bottom
+                inputPanelBottomInset = inputHeight - inputPanelInset
                 inputPanelIsOverlay = true
             }
             
@@ -2280,7 +2282,7 @@ public final class StoryItemSetContainerComponent: Component {
             }
             transition.setCornerRadius(layer: self.viewListsContainer.layer, cornerRadius: viewListsRadius)
             
-            transition.setFrame(view: self.inputPanelContainer, frame: contentFrame)
+            transition.setFrame(view: self.inputPanelContainer, frame: CGRect(origin: .zero, size: availableSize))
             
             let itemLayout = ItemLayout(
                 containerSize: availableSize,
@@ -3841,7 +3843,7 @@ public final class StoryItemSetContainerComponent: Component {
             items.append(.separator)
                                         
             items.append(.action(ContextMenuActionItem(text: component.slice.item.storyItem.isPinned ? component.strings.Story_Context_RemoveFromProfile : component.strings.Story_Context_SaveToProfile, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: component.slice.item.storyItem.isPinned ? "Chat/Context Menu/Check" : "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
+                return generateTintedImage(image: UIImage(bundleImageName: component.slice.item.storyItem.isPinned ? "Stories/Context Menu/Unpin" : "Stories/Context Menu/Pin"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, a in
                 a(.default)
                 

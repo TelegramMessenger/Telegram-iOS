@@ -392,6 +392,7 @@ final class MediaEditorScreenComponent: Component {
             }
         }
         
+        private var nextTransitionUserData: Any?
         @objc private func deactivateInput() {
             guard let view = self.inputPanel.view as? MessageInputPanelComponent.View else {
                 return
@@ -400,7 +401,12 @@ final class MediaEditorScreenComponent: Component {
                 self.currentInputMode = .text
                 if hasFirstResponder(self) {
                     if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
-                        view.deactivateInput()
+                        self.nextTransitionUserData = TextFieldComponent.AnimationHint(kind: .textFocusChanged)
+                        if view.isActive {
+                            view.deactivateInput()
+                        } else {
+                            self.endEditing(true)
+                        }
                     }
                 } else {
                     self.state?.updated(transition: .spring(duration: 0.4).withUserData(TextFieldComponent.AnimationHint(kind: .textFocusChanged)))
@@ -643,6 +649,12 @@ final class MediaEditorScreenComponent: Component {
             }
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             self.environment = environment
+            
+            var transition = transition
+            if let nextTransitionUserData = self.nextTransitionUserData {
+                self.nextTransitionUserData = nil
+                transition = transition.withUserData(nextTransitionUserData)
+            }
             
             var isEditingStory = false
             if let controller = environment.controller() as? MediaEditorScreen {
@@ -1077,8 +1089,6 @@ final class MediaEditorScreenComponent: Component {
                 })
             }
             
-            keyboardHeight = inputHeight
-            
             let nextInputMode: MessageInputPanelComponent.InputMode
             switch self.currentInputMode {
             case .text:
@@ -1209,6 +1219,7 @@ final class MediaEditorScreenComponent: Component {
                     inputHeight = max(inputHeight, environment.deviceMetrics.standardInputHeight(inLandscape: false))
                 }
             }
+            keyboardHeight = inputHeight
             
             let fadeTransition = Transition(animation: .curve(duration: 0.3, curve: .easeInOut))
             if self.inputPanelExternalState.isEditing {
@@ -2806,7 +2817,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
             self.containerLayoutUpdated(layout: layout, forceUpdate: forceUpdate, hasAppeared: self.hasAppeared, transition: transition)
         }
-        
+                
         func containerLayoutUpdated(layout: ContainerViewLayout, forceUpdate: Bool = false, hasAppeared: Bool = false, transition: Transition) {
             guard let controller = self.controller, !self.isDismissed else {
                 return

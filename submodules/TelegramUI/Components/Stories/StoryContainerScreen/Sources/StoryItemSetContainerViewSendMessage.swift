@@ -203,11 +203,11 @@ final class StoryItemSetContainerSendMessage {
         }
     }
     
-    func updateInputMediaNode(inputPanel: ComponentView<Empty>, availableSize: CGSize, bottomInset: CGFloat, bottomContainerInset: CGFloat, inputHeight: CGFloat, effectiveInputHeight: CGFloat, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, transition: Transition) -> CGFloat {
-        guard let context = self.context, let inputPanelView = inputPanel.view as? MessageInputPanelComponent.View else {
+    func updateInputMediaNode(view: StoryItemSetContainerComponent.View, availableSize: CGSize, bottomInset: CGFloat, bottomContainerInset: CGFloat, inputHeight: CGFloat, effectiveInputHeight: CGFloat, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, transition: Transition) -> CGFloat {
+        guard let context = self.context, let inputPanelView = view.inputPanel.view as? MessageInputPanelComponent.View else {
             return 0.0
         }
-               
+                       
         var height: CGFloat = 0.0
         if let component = self.view?.component, case .media = self.currentInputMode, let inputData = self.inputMediaNodeData {
             let inputMediaNode: ChatEntityKeyboardInputNode
@@ -229,7 +229,7 @@ final class StoryItemSetContainerSendMessage {
                 if inputMediaNode.view.superview == nil {
                     self.inputMediaNodeBackground.removeAllAnimations()
                     self.inputMediaNodeBackground.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.7).cgColor
-                    inputPanelView.superview?.insertSubview(inputMediaNode.view, belowSubview: inputPanelView)
+                    view.inputPanelContainer.addSubview(inputMediaNode.view)
                 }
                 self.inputMediaNode = inputMediaNode
             }
@@ -2466,7 +2466,7 @@ final class StoryItemSetContainerSendMessage {
         })
     }
     
-    func openPeerMention(view: StoryItemSetContainerComponent.View, name: String, navigation: ChatControllerInteractionNavigateToPeer = .default, sourceMessageId: MessageId? = nil) {
+    func openPeerMention(view: StoryItemSetContainerComponent.View, name: String, sourceMessageId: MessageId? = nil) {
         guard let component = view.component, let parentController = component.controller() else {
             return
         }
@@ -2512,11 +2512,11 @@ final class StoryItemSetContainerSendMessage {
                 return
             }
             if let peer = peer {
-                var navigation = navigation
-                if case .default = navigation {
-                    if let peer = peer as? TelegramUser, peer.botInfo != nil {
-                        navigation = .chat(textInputState: nil, subject: nil, peekData: nil)
-                    }
+                var navigation: ChatControllerInteractionNavigateToPeer
+                if let peer = peer as? TelegramUser, peer.botInfo == nil {
+                    navigation = .info
+                } else {
+                    navigation = .chat(textInputState: nil, subject: nil, peekData: nil)
                 }
                 self.openResolved(view: view, result: .peer(peer, navigation))
             } else {
