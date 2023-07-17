@@ -3481,22 +3481,18 @@ public final class StoryItemSetContainerComponent: Component {
                     let entities = generateChatInputTextEntities(caption)
                     var updatedText: String?
                     var updatedEntities: [MessageTextEntity]?
-                    var updatedPrivacy: EngineStoryPrivacy?
                     if caption.string != item.text || entities != item.entities {
                         updatedText = caption.string
                         updatedEntities = entities
                     }
-                    if privacy.privacy != item.privacy {
-                        updatedPrivacy = privacy.privacy
-                    }
-           
+                    
                     if let mediaResult {
                         switch mediaResult {
                         case let .image(image, dimensions):
                             updateProgressImpl?(0.0)
                             
                             if let imageData = compressImageToJPEG(image, quality: 0.7) {
-                                updateDisposable.set((context.engine.messages.editStory(id: id, media: .image(dimensions: dimensions, data: imageData, stickers: stickers), text: updatedText, entities: updatedEntities, privacy: updatedPrivacy)
+                                updateDisposable.set((context.engine.messages.editStory(id: id, media: .image(dimensions: dimensions, data: imageData, stickers: stickers), text: updatedText, entities: updatedEntities, privacy: nil)
                                 |> deliverOnMainQueue).start(next: { [weak self] result in
                                     guard let self else {
                                         return
@@ -3544,7 +3540,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     }
                                 }
                                 
-                                updateDisposable.set((context.engine.messages.editStory(id: id, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), text: updatedText, entities: updatedEntities, privacy: updatedPrivacy)
+                                updateDisposable.set((context.engine.messages.editStory(id: id, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), text: updatedText, entities: updatedEntities, privacy: nil)
                                 |> deliverOnMainQueue).start(next: { [weak self] result in
                                     guard let self else {
                                         return
@@ -3565,7 +3561,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 }))
                             }
                         }
-                    } else if updatedText != nil || updatedPrivacy != nil {
+                    } else if updatedText != nil {
                         let _ = (context.engine.messages.editStory(id: id, media: nil, text: updatedText, entities: updatedEntities, privacy: updatedPrivacy)
                         |> deliverOnMainQueue).start(next: { [weak self] result in
                             switch result {
