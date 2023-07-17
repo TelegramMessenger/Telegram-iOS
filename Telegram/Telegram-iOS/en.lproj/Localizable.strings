@@ -9590,3 +9590,6 @@ Sorry for the inconvenience.";
 
 "Story.TooltipMessageScheduled" = "Message Scheduled";
 "Story.TooltipMessageSent" = "Message Sent";
+
+"Profile.AvatarStoryCount_1" = "1 Story";
+"Profile.AvatarStoryCount_any" = "%d Stories";

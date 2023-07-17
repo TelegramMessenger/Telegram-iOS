@@ -388,7 +388,7 @@ public final class StorySetIndicatorComponent: Component {
             if component.totalCount == 0 {
                 textValue = ""
             } else {
-                textValue = component.strings.Story_Footer_Views(Int32(component.totalCount))
+                textValue = component.strings.Profile_AvatarStoryCount(Int32(component.totalCount))
             }
             let textSize = self.text.update(
                 transition: .immediate,
