@@ -380,29 +380,32 @@ public final class PeerListItemComponent: Component {
                     statusIcon = .premium(color: component.theme.list.itemAccentColor)
                 }
             }
-            
-            let labelSize = self.label.update(
-                transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: labelData.0, font: subtitleFont, textColor: labelData.1 ? component.theme.list.itemAccentColor : component.theme.list.itemSecondaryTextColor))
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - leftInset - rightInset, height: 100.0)
-            )
-            
+                        
             let previousTitleFrame = self.title.view?.frame
             var previousTitleContents: UIView?
             if hasSelectionUpdated && !"".isEmpty {
                 previousTitleContents = self.title.view?.snapshotView(afterScreenUpdates: false)
             }
             
+            let availableTextWidth = availableSize.width - leftInset - rightInset
+            let titleAvailableWidth = component.style == .compact ? availableTextWidth * 0.7 : availableSize.width - leftInset - rightInset
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(string: component.title, font: titleFont, textColor: component.theme.list.itemPrimaryTextColor))
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - leftInset - rightInset, height: 100.0)
+                containerSize: CGSize(width: titleAvailableWidth, height: 100.0)
+            )
+            
+            let labelAvailableWidth = component.style == .compact ? availableTextWidth - titleSize.width : availableSize.width - leftInset - rightInset
+            let labelSize = self.label.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: labelData.0, font: subtitleFont, textColor: labelData.1 ? component.theme.list.itemAccentColor : component.theme.list.itemSecondaryTextColor))
+                )),
+                environment: {},
+                containerSize: CGSize(width: labelAvailableWidth, height: 100.0)
             )
             
             let titleSpacing: CGFloat = 2.0
@@ -414,7 +417,6 @@ public final class PeerListItemComponent: Component {
             } else {
                 centralContentHeight = titleSize.height
             }
-            
             
             let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: titleVerticalOffset + floor((height - verticalInset * 2.0 - centralContentHeight) / 2.0)), size: titleSize)
             if let titleView = self.title.view {
