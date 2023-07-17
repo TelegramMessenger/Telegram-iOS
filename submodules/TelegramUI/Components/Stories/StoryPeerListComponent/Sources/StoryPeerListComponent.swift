@@ -797,7 +797,11 @@ public final class StoryPeerListComponent: Component {
             
             var overscrollFocusIndex: Int?
             for i in 0 ..< self.sortedItems.count {
-                if self.sortedItems[i].peer.id != component.context.account.peerId {
+                if self.sortedItems[i].peer.id == component.context.account.peerId {
+                    continue
+                }
+                let itemFrame = itemLayout.frame(at: i)
+                if effectiveVisibleBounds.contains(itemFrame) {
                     overscrollFocusIndex = i
                     break
                 }
