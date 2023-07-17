@@ -2466,7 +2466,7 @@ final class StoryItemSetContainerSendMessage {
         })
     }
     
-    func openPeerMention(view: StoryItemSetContainerComponent.View, name: String, navigation: ChatControllerInteractionNavigateToPeer = .default, sourceMessageId: MessageId? = nil) {
+    func openPeerMention(view: StoryItemSetContainerComponent.View, name: String, sourceMessageId: MessageId? = nil) {
         guard let component = view.component, let parentController = component.controller() else {
             return
         }
@@ -2512,11 +2512,11 @@ final class StoryItemSetContainerSendMessage {
                 return
             }
             if let peer = peer {
-                var navigation = navigation
-                if case .default = navigation {
-                    if let peer = peer as? TelegramUser, peer.botInfo != nil {
-                        navigation = .chat(textInputState: nil, subject: nil, peekData: nil)
-                    }
+                var navigation: ChatControllerInteractionNavigateToPeer
+                if let peer = peer as? TelegramUser, peer.botInfo == nil {
+                    navigation = .info
+                } else {
+                    navigation = .chat(textInputState: nil, subject: nil, peekData: nil)
                 }
                 self.openResolved(view: view, result: .peer(peer, navigation))
             } else {

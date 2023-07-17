@@ -1944,6 +1944,7 @@ public final class StoryItemSetContainerComponent: Component {
                 containerSize: CGSize(width: inputPanelAvailableWidth, height: 200.0)
             )
             
+            var inputPanelInset: CGFloat = component.containerInsets.bottom
             var inputHeight = component.inputHeight
             if self.inputPanelExternalState.isEditing {
                 if self.sendMessageContext.currentInputMode == .media || (inputHeight.isZero && keyboardWasHidden) {
@@ -1954,6 +1955,7 @@ public final class StoryItemSetContainerComponent: Component {
             let inputMediaNodeHeight = self.sendMessageContext.updateInputMediaNode(inputPanel: self.inputPanel, availableSize: availableSize, bottomInset: component.safeInsets.bottom, bottomContainerInset: component.containerInsets.bottom, inputHeight: component.inputHeight, effectiveInputHeight: inputHeight, metrics: component.metrics, deviceMetrics: component.deviceMetrics, transition: transition)
             if inputMediaNodeHeight > 0.0 {
                 inputHeight = inputMediaNodeHeight
+                inputPanelInset = 0.0
             }
             keyboardHeight = inputHeight
             
@@ -1982,11 +1984,12 @@ public final class StoryItemSetContainerComponent: Component {
                 })
             }
             
+            let inputPanelBackgroundHeight = keyboardHeight + 60.0 - inputPanelInset
             let inputPanelBackgroundSize = self.inputPanelBackground.update(
                 transition: transition,
                 component: AnyComponent(BlurredGradientComponent(position: .bottom, dark: true, tag: nil)),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width, height: max(0.0, keyboardHeight + 100.0 - component.containerInsets.bottom))
+                containerSize: CGSize(width: availableSize.width, height: max(0.0, inputPanelBackgroundHeight))
             )
             if let inputPanelBackgroundView = self.inputPanelBackground.view {
                 if inputPanelBackgroundView.superview == nil {
@@ -2012,7 +2015,7 @@ public final class StoryItemSetContainerComponent: Component {
                 inputPanelIsOverlay = false
             } else {
                 bottomContentInset += 44.0
-                inputPanelBottomInset = inputHeight - component.containerInsets.bottom
+                inputPanelBottomInset = inputHeight - inputPanelInset
                 inputPanelIsOverlay = true
             }
             
