@@ -44,10 +44,12 @@ public final class EngineStoryItem: Equatable {
     public let isPublic: Bool
     public let isPending: Bool
     public let isCloseFriends: Bool
+    public let isContacts: Bool
+    public let isSelectedContacts: Bool
     public let isForwardingDisabled: Bool
     public let isEdited: Bool
     
-    public init(id: Int32, timestamp: Int32, expirationTimestamp: Int32, media: EngineMedia, text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?, isPinned: Bool, isExpired: Bool, isPublic: Bool, isPending: Bool, isCloseFriends: Bool, isForwardingDisabled: Bool, isEdited: Bool) {
+    public init(id: Int32, timestamp: Int32, expirationTimestamp: Int32, media: EngineMedia, text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?, isPinned: Bool, isExpired: Bool, isPublic: Bool, isPending: Bool, isCloseFriends: Bool, isContacts: Bool, isSelectedContacts: Bool, isForwardingDisabled: Bool, isEdited: Bool) {
         self.id = id
         self.timestamp = timestamp
         self.expirationTimestamp = expirationTimestamp
@@ -61,6 +63,8 @@ public final class EngineStoryItem: Equatable {
         self.isPublic = isPublic
         self.isPending = isPending
         self.isCloseFriends = isCloseFriends
+        self.isContacts = isContacts
+        self.isSelectedContacts = isSelectedContacts
         self.isForwardingDisabled = isForwardingDisabled
         self.isEdited = isEdited
     }
@@ -105,6 +109,12 @@ public final class EngineStoryItem: Equatable {
         if lhs.isCloseFriends != rhs.isCloseFriends {
             return false
         }
+        if lhs.isContacts != rhs.isContacts {
+            return false
+        }
+        if lhs.isSelectedContacts != rhs.isSelectedContacts {
+            return false
+        }
         if lhs.isForwardingDisabled != rhs.isForwardingDisabled {
             return false
         }
@@ -140,6 +150,8 @@ extension EngineStoryItem {
             isExpired: self.isExpired,
             isPublic: self.isPublic,
             isCloseFriends: self.isCloseFriends,
+            isContacts: self.isContacts,
+            isSelectedContacts: self.isSelectedContacts,
             isForwardingDisabled: self.isForwardingDisabled,
             isEdited: self.isEdited
         )
@@ -493,6 +505,8 @@ public final class PeerStoryListContext {
                             isPublic: item.isPublic,
                             isPending: false,
                             isCloseFriends: item.isCloseFriends,
+                            isContacts: item.isContacts,
+                            isSelectedContacts: item.isSelectedContacts,
                             isForwardingDisabled: item.isForwardingDisabled,
                             isEdited: item.isEdited
                         )
@@ -615,6 +629,8 @@ public final class PeerStoryListContext {
                                             isPublic: item.isPublic,
                                             isPending: false,
                                             isCloseFriends: item.isCloseFriends,
+                                            isContacts: item.isContacts,
+                                            isSelectedContacts: item.isSelectedContacts,
                                             isForwardingDisabled: item.isForwardingDisabled,
                                             isEdited: item.isEdited
                                         )
@@ -760,6 +776,8 @@ public final class PeerStoryListContext {
                                                                 isPublic: item.isPublic,
                                                                 isPending: false,
                                                                 isCloseFriends: item.isCloseFriends,
+                                                                isContacts: item.isContacts,
+                                                                isSelectedContacts: item.isSelectedContacts,
                                                                 isForwardingDisabled: item.isForwardingDisabled,
                                                                 isEdited: item.isEdited
                                                             )
@@ -800,6 +818,8 @@ public final class PeerStoryListContext {
                                                                 isPublic: item.isPublic,
                                                                 isPending: false,
                                                                 isCloseFriends: item.isCloseFriends,
+                                                                isContacts: item.isContacts,
+                                                                isSelectedContacts: item.isSelectedContacts,
                                                                 isForwardingDisabled: item.isForwardingDisabled,
                                                                 isEdited: item.isEdited
                                                             ))
@@ -957,6 +977,8 @@ public final class PeerExpiringStoryListContext {
                                         isPublic: item.isPublic,
                                         isPending: false,
                                         isCloseFriends: item.isCloseFriends,
+                                        isContacts: item.isContacts,
+                                        isSelectedContacts: item.isSelectedContacts,
                                         isForwardingDisabled: item.isForwardingDisabled,
                                         isEdited: item.isEdited
                                     )

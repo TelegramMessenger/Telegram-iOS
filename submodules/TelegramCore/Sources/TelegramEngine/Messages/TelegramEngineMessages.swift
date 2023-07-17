@@ -1016,6 +1016,8 @@ public extension TelegramEngine {
                                     isExpired: item.isExpired,
                                     isPublic: item.isPublic,
                                     isCloseFriends: item.isCloseFriends,
+                                    isContacts: item.isContacts,
+                                    isSelectedContacts: item.isSelectedContacts,
                                     isForwardingDisabled: item.isForwardingDisabled,
                                     isEdited: item.isEdited
                                 ))

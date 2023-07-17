@@ -168,6 +168,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                         isPublic: item.isPublic,
                         isPending: false,
                         isCloseFriends: item.isCloseFriends,
+                        isContacts: item.isContacts,
+                        isSelectedContacts: item.isSelectedContacts,
                         isForwardingDisabled: item.isForwardingDisabled,
                         isEdited: item.isEdited
                     )
@@ -186,9 +188,11 @@ public final class StoryContentContextImpl: StoryContentContext {
                             privacy: item.privacy,
                             isPinned: item.pin,
                             isExpired: false,
-                            isPublic: false,
+                            isPublic: item.privacy.base == .everyone,
                             isPending: true,
                             isCloseFriends: item.privacy.base == .closeFriends,
+                            isContacts: item.privacy.base == .contacts && item.privacy.additionallyIncludePeers.isEmpty,
+                            isSelectedContacts: item.privacy.base == .contacts && !item.privacy.additionallyIncludePeers.isEmpty,
                             isForwardingDisabled: false,
                             isEdited: false
                         ))
@@ -1029,6 +1033,8 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                     isPublic: itemValue.isPublic,
                     isPending: false,
                     isCloseFriends: itemValue.isCloseFriends,
+                    isContacts: itemValue.isContacts,
+                    isSelectedContacts: itemValue.isSelectedContacts,
                     isForwardingDisabled: itemValue.isForwardingDisabled,
                     isEdited: itemValue.isEdited
                 )

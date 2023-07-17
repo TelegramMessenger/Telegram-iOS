@@ -132,6 +132,8 @@ public enum Stories {
             case isExpired
             case isPublic
             case isCloseFriends
+            case isContacts
+            case isSelectedContacts
             case isForwardingDisabled
             case isEdited
         }
@@ -148,6 +150,8 @@ public enum Stories {
         public let isExpired: Bool
         public let isPublic: Bool
         public let isCloseFriends: Bool
+        public let isContacts: Bool
+        public let isSelectedContacts: Bool
         public let isForwardingDisabled: Bool
         public let isEdited: Bool
         
@@ -164,6 +168,8 @@ public enum Stories {
             isExpired: Bool,
             isPublic: Bool,
             isCloseFriends: Bool,
+            isContacts: Bool,
+            isSelectedContacts: Bool,
             isForwardingDisabled: Bool,
             isEdited: Bool
         ) {
@@ -179,6 +185,8 @@ public enum Stories {
             self.isExpired = isExpired
             self.isPublic = isPublic
             self.isCloseFriends = isCloseFriends
+            self.isContacts = isContacts
+            self.isSelectedContacts = isSelectedContacts
             self.isForwardingDisabled = isForwardingDisabled
             self.isEdited = isEdited
         }
@@ -204,6 +212,8 @@ public enum Stories {
             self.isExpired = try container.decodeIfPresent(Bool.self, forKey: .isExpired) ?? false
             self.isPublic = try container.decodeIfPresent(Bool.self, forKey: .isPublic) ?? false
             self.isCloseFriends = try container.decodeIfPresent(Bool.self, forKey: .isCloseFriends) ?? false
+            self.isContacts = try container.decodeIfPresent(Bool.self, forKey: .isContacts) ?? false
+            self.isSelectedContacts = try container.decodeIfPresent(Bool.self, forKey: .isSelectedContacts) ?? false
             self.isForwardingDisabled = try container.decodeIfPresent(Bool.self, forKey: .isForwardingDisabled) ?? false
             self.isEdited = try container.decodeIfPresent(Bool.self, forKey: .isEdited) ?? false
         }
@@ -230,6 +240,8 @@ public enum Stories {
             try container.encode(self.isExpired, forKey: .isExpired)
             try container.encode(self.isPublic, forKey: .isPublic)
             try container.encode(self.isCloseFriends, forKey: .isCloseFriends)
+            try container.encode(self.isContacts, forKey: .isContacts)
+            try container.encode(self.isSelectedContacts, forKey: .isSelectedContacts)
             try container.encode(self.isForwardingDisabled, forKey: .isForwardingDisabled)
             try container.encode(self.isEdited, forKey: .isEdited)
         }
@@ -277,6 +289,12 @@ public enum Stories {
                 return false
             }
             if lhs.isCloseFriends != rhs.isCloseFriends {
+                return false
+            }
+            if lhs.isContacts != rhs.isContacts {
+                return false
+            }
+            if lhs.isSelectedContacts != rhs.isSelectedContacts {
                 return false
             }
             if lhs.isForwardingDisabled != rhs.isForwardingDisabled {
@@ -902,6 +920,8 @@ func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId
                                                         isExpired: item.isExpired,
                                                         isPublic: item.isPublic,
                                                         isCloseFriends: item.isCloseFriends,
+                                                        isContacts: item.isContacts,
+                                                        isSelectedContacts: item.isSelectedContacts,
                                                         isForwardingDisabled: item.isForwardingDisabled,
                                                         isEdited: item.isEdited
                                                     )
@@ -1056,6 +1076,8 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
                 isExpired: item.isExpired,
                 isPublic: item.isPublic,
                 isCloseFriends: item.isCloseFriends,
+                isContacts: item.isContacts,
+                isSelectedContacts: item.isSelectedContacts,
                 isForwardingDisabled: item.isForwardingDisabled,
                 isEdited: item.isEdited
             )
@@ -1080,6 +1102,8 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
                 isExpired: item.isExpired,
                 isPublic: item.isPublic,
                 isCloseFriends: item.isCloseFriends,
+                isContacts: item.isContacts,
+                isSelectedContacts: item.isSelectedContacts,
                 isForwardingDisabled: item.isForwardingDisabled,
                 isEdited: item.isEdited
             )
@@ -1204,6 +1228,8 @@ func _internal_updateStoriesArePinned(account: Account, ids: [Int32: EngineStory
                     isExpired: item.isExpired,
                     isPublic: item.isPublic,
                     isCloseFriends: item.isCloseFriends,
+                    isContacts: item.isContacts,
+                    isSelectedContacts: item.isSelectedContacts,
                     isForwardingDisabled: item.isForwardingDisabled,
                     isEdited: item.isEdited
                 )
@@ -1227,6 +1253,8 @@ func _internal_updateStoriesArePinned(account: Account, ids: [Int32: EngineStory
                     isExpired: item.isExpired,
                     isPublic: item.isPublic,
                     isCloseFriends: item.isCloseFriends,
+                    isContacts: item.isContacts,
+                    isSelectedContacts: item.isSelectedContacts,
                     isForwardingDisabled: item.isForwardingDisabled,
                     isEdited: item.isEdited
                 )
@@ -1326,6 +1354,8 @@ extension Stories.StoredItem {
                 let isCloseFriends = (flags & (1 << 8)) != 0
                 let isForwardingDisabled = (flags & (1 << 10)) != 0
                 let isEdited = (flags & (1 << 11)) != 0
+                let isContacts = (flags & (1 << 12)) != 0
+                let isSelectedContacts = (flags & (1 << 13)) != 0
                 
                 let item = Stories.Item(
                     id: id,
@@ -1340,6 +1370,8 @@ extension Stories.StoredItem {
                     isExpired: isExpired,
                     isPublic: isPublic,
                     isCloseFriends: isCloseFriends,
+                    isContacts: isContacts,
+                    isSelectedContacts: isSelectedContacts,
                     isForwardingDisabled: isForwardingDisabled,
                     isEdited: isEdited
                 )
@@ -1650,6 +1682,8 @@ public final class EngineStoryViewListContext {
                                     isExpired: item.isExpired,
                                     isPublic: item.isPublic,
                                     isCloseFriends: item.isCloseFriends,
+                                    isContacts: item.isContacts,
+                                    isSelectedContacts: item.isSelectedContacts,
                                     isForwardingDisabled: item.isForwardingDisabled,
                                     isEdited: item.isEdited
                                 ))
@@ -1675,6 +1709,8 @@ public final class EngineStoryViewListContext {
                                             isExpired: item.isExpired,
                                             isPublic: item.isPublic,
                                             isCloseFriends: item.isCloseFriends,
+                                            isContacts: item.isContacts,
+                                            isSelectedContacts: item.isSelectedContacts,
                                             isForwardingDisabled: item.isForwardingDisabled,
                                             isEdited: item.isEdited
                                         ))
