@@ -3562,7 +3562,7 @@ public final class StoryItemSetContainerComponent: Component {
                             }
                         }
                     } else if updatedText != nil {
-                        let _ = (context.engine.messages.editStory(id: id, media: nil, text: updatedText, entities: updatedEntities, privacy: updatedPrivacy)
+                        let _ = (context.engine.messages.editStory(id: id, media: nil, text: updatedText, entities: updatedEntities, privacy: nil)
                         |> deliverOnMainQueue).start(next: { [weak self] result in
                             switch result {
                             case .completed:
