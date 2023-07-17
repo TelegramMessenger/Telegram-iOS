@@ -803,13 +803,11 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
     var ignoreStoryUnlockedScrolling: Bool = false
     var tempTopInset: CGFloat = 0.0 {
         didSet {
-            if self.tempTopInset != oldValue {
-                for (_, itemNode) in self.itemNodes {
-                    itemNode.listNode.tempTopInset = self.tempTopInset
-                }
-                if let pendingItemNode = self.pendingItemNode {
-                    pendingItemNode.1.listNode.tempTopInset = self.tempTopInset
-                }
+            for (_, itemNode) in self.itemNodes {
+                itemNode.listNode.tempTopInset = self.tempTopInset
+            }
+            if let pendingItemNode = self.pendingItemNode {
+                pendingItemNode.1.listNode.tempTopInset = self.tempTopInset
             }
         }
     }
