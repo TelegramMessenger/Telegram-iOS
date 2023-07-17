@@ -2536,6 +2536,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     fileprivate func openStoryCamera(fromList: Bool) {
         var reachedCountLimit = false
         var premiumNeeded = false
+        var hasActiveCall = false
+        var hasActiveGroupCall = false
         
         let storiesCountLimit = self.context.userLimits.maxExpiringStoriesCount
         if let rawStorySubscriptions = self.rawStorySubscriptions, let accountItem = rawStorySubscriptions.accountItem {
@@ -2555,7 +2557,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             break
         }
         
-        if reachedCountLimit || premiumNeeded {
+        if let callManager = self.context.sharedContext.callManager {
+            if callManager.hasActiveGroupCall {
+                hasActiveGroupCall = true
+            } else if callManager.hasActiveCall {
+                hasActiveCall = true
+            }
+        }
+        
+        if reachedCountLimit || premiumNeeded || hasActiveCall || hasActiveGroupCall {
             if let componentView = self.chatListHeaderView() {
                 var sourceFrame: CGRect?
                 if fromList {
@@ -2577,6 +2587,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     } else if reachedCountLimit {
                         let valueText = self.presentationData.strings.StoryFeed_TooltipStoryLimitValue(Int32(storiesCountLimit))
                         text = self.presentationData.strings.StoryFeed_TooltipStoryLimit(valueText).string
+                    } else if hasActiveCall {
+                        text = self.presentationData.strings.StoryFeed_TooltipPostingDuringCall
+                    } else if hasActiveGroupCall {
+                        text = self.presentationData.strings.StoryFeed_TooltipPostingDuringGroupCall
                     } else {
                         text = ""
                     }

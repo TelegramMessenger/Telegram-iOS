@@ -3,14 +3,15 @@ import UIKit
 import Display
 import ComponentFlow
 import MultilineTextComponent
+import TelegramPresentationData
 
 extension CameraMode {
-    var title: String {
+    func title(strings: PresentationStrings) -> String {
         switch self {
         case .photo:
-            return "Photo"
+            return strings.Story_Camera_Photo
         case .video:
-            return "Video"
+            return strings.Story_Camera_Video
         }
     }
 }
@@ -19,6 +20,7 @@ private let buttonSize = CGSize(width: 55.0, height: 44.0)
 
 final class ModeComponent: Component {
     let isTablet: Bool
+    let strings: PresentationStrings
     let availableModes: [CameraMode]
     let currentMode: CameraMode
     let updatedMode: (CameraMode) -> Void
@@ -26,12 +28,14 @@ final class ModeComponent: Component {
     
     init(
         isTablet: Bool,
+        strings: PresentationStrings,
         availableModes: [CameraMode],
         currentMode: CameraMode,
         updatedMode: @escaping (CameraMode) -> Void,
         tag: AnyObject?
     ) {
         self.isTablet = isTablet
+        self.strings = strings
         self.availableModes = availableModes
         self.currentMode = currentMode
         self.updatedMode = updatedMode
@@ -40,6 +44,9 @@ final class ModeComponent: Component {
     
     static func ==(lhs: ModeComponent, rhs: ModeComponent) -> Bool {
         if lhs.isTablet != rhs.isTablet {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
             return false
         }
         if lhs.availableModes != rhs.availableModes {
@@ -145,7 +152,7 @@ final class ModeComponent: Component {
                     updatedMode(mode)
                 }
                
-                itemView.update(value: mode.title, selected: mode == component.currentMode)
+                itemView.update(value: mode.title(strings: component.strings), selected: mode == component.currentMode)
                 itemView.bounds = CGRect(origin: .zero, size: itemFrame.size)
                 
                 if isTablet {

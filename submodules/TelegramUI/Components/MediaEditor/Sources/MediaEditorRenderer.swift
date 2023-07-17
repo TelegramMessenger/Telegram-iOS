@@ -87,6 +87,9 @@ final class MediaEditorRenderer: TextureConsumer {
     private var textureCache: CVMetalTextureCache?
     
     private var currentTexture: MTLTexture?
+    private var currentAdditionalTexture: MTLTexture?
+    private var currentTime: CMTime = .zero
+    
     private var currentPixelBuffer: VideoPixelBuffer?
     private var currentAdditionalPixelBuffer: VideoPixelBuffer?
     
@@ -174,8 +177,8 @@ final class MediaEditorRenderer: TextureConsumer {
         self.renderPasses.forEach { $0.setup(device: device, library: library) }
     }
     
+    public var displayEnabled = true
     var renderPassedEnabled = true
-    
     var needsDisplay = false
     
     func renderFrame() {
@@ -200,7 +203,13 @@ final class MediaEditorRenderer: TextureConsumer {
         }
         
         var texture: MTLTexture
-        if let currentTexture = self.currentTexture {
+        if let currentAdditionalTexture = self.currentAdditionalTexture, let currentTexture = self.currentTexture {
+            if let result = self.videoFinishPass.process(input: currentTexture, secondInput: currentAdditionalTexture, timestamp: self.currentTime, device: device, commandBuffer: commandBuffer) {
+                texture = result
+            } else {
+                texture = currentTexture
+            }
+        } else if let currentTexture = self.currentTexture {
             texture = currentTexture
         } else if let currentPixelBuffer = self.currentPixelBuffer, let currentAdditionalPixelBuffer = self.currentAdditionalPixelBuffer, let videoTexture = self.videoInputPass.processPixelBuffer(currentPixelBuffer, textureCache: textureCache, device: device, commandBuffer: commandBuffer), let additionalVideoTexture = self.additionalVideoInputPass.processPixelBuffer(currentAdditionalPixelBuffer, textureCache: textureCache, device: device, commandBuffer: commandBuffer) {
             if let result = self.videoFinishPass.process(input: videoTexture, secondInput: additionalVideoTexture, timestamp: currentPixelBuffer.timestamp, device: device, commandBuffer: commandBuffer) {
@@ -237,7 +246,7 @@ final class MediaEditorRenderer: TextureConsumer {
         }
         commandBuffer.commit()
         
-        if let renderTarget = self.renderTarget {
+        if let renderTarget = self.renderTarget, self.displayEnabled {
             if self.needsDisplay {
                 self.didRenderFrame()
             } else {
@@ -294,6 +303,19 @@ final class MediaEditorRenderer: TextureConsumer {
         }
         
         self.currentTexture = texture
+        if render {
+            self.renderFrame()
+        }
+    }
+    
+    func consumeTexture(_ texture: MTLTexture, additionalTexture: MTLTexture?, time: CMTime, render: Bool) {
+        if render {
+            self.willRenderFrame()
+        }
+        
+        self.currentTexture = texture
+        self.currentAdditionalTexture = additionalTexture
+        self.currentTime = time
         if render {
             self.renderFrame()
         }

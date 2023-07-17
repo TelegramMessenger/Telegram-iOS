@@ -346,26 +346,26 @@ public final class MediaRecordingPanelComponent: Component {
             
             let cancelTextSize = self.cancelText.update(
                 transition: .immediate,
-                component: AnyComponent(Text(text: "Slide to cancel", font: Font.regular(15.0), color: UIColor(rgb: 0xffffff, alpha: 0.3))),
+                component: AnyComponent(Text(text: component.strings.Conversation_SlideToCancel, font: Font.regular(15.0), color: UIColor(rgb: 0xffffff, alpha: 0.3))),
                 environment: {},
                 containerSize: CGSize(width: max(30.0, availableSize.width - 100.0), height: 44.0)
             )
             let _ = self.vibrancyCancelText.update(
                 transition: .immediate,
-                component: AnyComponent(Text(text: "Slide to cancel", font: Font.regular(15.0), color: .white)),
+                component: AnyComponent(Text(text: component.strings.Conversation_SlideToCancel, font: Font.regular(15.0), color: .white)),
                 environment: {},
                 containerSize: CGSize(width: max(30.0, availableSize.width - 100.0), height: 44.0)
             )
             
             let cancelButtonTextSize = self.cancelButtonText.update(
                 transition: .immediate,
-                component: AnyComponent(Text(text: "Cancel", font: Font.regular(17.0), color: .white)),
+                component: AnyComponent(Text(text: component.strings.Common_Cancel, font: Font.regular(17.0), color: .white)),
                 environment: {},
                 containerSize: CGSize(width: max(30.0, availableSize.width - 100.0), height: 44.0)
             )
             let _ = self.vibrancyCancelButtonText.update(
                 transition: .immediate,
-                component: AnyComponent(Text(text: "Cancel", font: Font.regular(17.0), color: .clear)),
+                component: AnyComponent(Text(text: component.strings.Common_Cancel, font: Font.regular(17.0), color: .clear)),
                 environment: {},
                 containerSize: CGSize(width: max(30.0, availableSize.width - 100.0), height: 44.0)
             )

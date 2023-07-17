@@ -725,9 +725,9 @@ final class MediaEditorScreenComponent: Component {
                 transition.setAlpha(view: cancelButtonView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
             }
             
-            var doneButtonTitle = "NEXT"
+            var doneButtonTitle = environment.strings.Story_Editor_Next
             if let controller = environment.controller() as? MediaEditorScreen, controller.isEditingStory {
-                doneButtonTitle = "DONE"
+                doneButtonTitle = environment.strings.Story_Editor_Done
             }
             
             let doneButtonSize = self.doneButton.update(
@@ -736,7 +736,7 @@ final class MediaEditorScreenComponent: Component {
                     content: AnyComponent(DoneButtonComponent(
                         backgroundColor: UIColor(rgb: 0x007aff),
                         icon: UIImage(bundleImageName: "Media Editor/Next")!,
-                        title: doneButtonTitle)),
+                        title: doneButtonTitle.uppercased())),
                     action: {
                         guard let controller = environment.controller() as? MediaEditorScreen else {
                             return
@@ -1097,7 +1097,7 @@ final class MediaEditorScreenComponent: Component {
                     theme: environment.theme,
                     strings: environment.strings,
                     style: .editor,
-                    placeholder: "Add a caption...",
+                    placeholder: environment.strings.Story_Editor_InputPlaceholderAddCaption,
                     maxLength: Int(component.context.userLimits.maxStoryCaptionLength),
                     queryTypes: [.mention],
                     alwaysDarkWhenHasText: false,
@@ -1274,20 +1274,20 @@ final class MediaEditorScreenComponent: Component {
             var privacyText: String
             switch component.privacy.privacy.base {
             case .everyone:
-                privacyText = "Everyone"
+                privacyText = environment.strings.Story_ContextPrivacy_LabelEveryone
             case .closeFriends:
-                privacyText = "Close Friends"
+                privacyText = environment.strings.Story_ContextPrivacy_LabelCloseFriends
             case .contacts:
-                privacyText = "Contacts"
                 if additionalPeersCount > 0 {
-                    privacyText += " (-\(additionalPeersCount))"
+                    privacyText = environment.strings.Story_ContextPrivacy_LabelContactsExcept("\(additionalPeersCount)").string
+                } else {
+                    privacyText = environment.strings.Story_ContextPrivacy_LabelContacts
                 }
             case .nobody:
-                privacyText = "Selected Contacts"
                 if additionalPeersCount > 0 {
-                    privacyText += " (\(additionalPeersCount))"
+                    privacyText = environment.strings.Story_ContextPrivacy_LabelOnlySelected(Int32(additionalPeersCount))
                 } else {
-                    privacyText = "Only You"
+                    privacyText = environment.strings.Story_ContextPrivacy_LabelOnlyMe
                 }
             }
             
@@ -2641,7 +2641,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY + 3.0), size: CGSize())
             
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: isMuted ? "The story will have no sound" : "The story will have sound"), location: .point(location, .top), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _, _ in
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: isMuted ? self.presentationData.strings.Story_Editor_TooltipMuted : self.presentationData.strings.Story_Editor_TooltipUnmuted), location: .point(location, .top), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _, _ in
                 return .ignore
             })
             self.muteTooltip = tooltipController
@@ -2664,9 +2664,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let text: String
             let isVideo = self.mediaEditor?.resultIsVideo ?? false
             if isVideo {
-                text = "Video saved to Photos."
+                text = self.presentationData.strings.Story_Editor_TooltipVideoSavedToPhotos
             } else {
-                text = "Image saved to Photos."
+                text = self.presentationData.strings.Story_Editor_TooltipImageSavedToPhotos
             }
             
             if let tooltipController = self.saveTooltip {
@@ -2690,8 +2690,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
             }
             
-            let text = "Uploading..."
-            
+            let text = self.presentationData.strings.Story_Editor_Uploading
             if let tooltipController = self.saveTooltip {
                 tooltipController.content = .progress(text, progress)
             } else {
@@ -2718,8 +2717,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
             }
             
-            let text = "Preparing video..."
-            
+            let text = self.presentationData.strings.Story_Editor_PreparingVideo
             if let tooltipController = self.saveTooltip {
                 tooltipController.content = .progress(text, progress)
             } else {
@@ -3081,7 +3079,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 transition: transition,
                 component: AnyComponent(
                     ToolValueComponent(
-                        title: "Enhance",
+                        title: environment.strings.Story_Editor_Tool_Enhance,
                         value: "\(Int(abs(enhanceValue) * 100.0))"
                     )
                 ),
@@ -3441,14 +3439,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.state.privacy = MediaEditorResultPrivacy(privacy: self.state.privacy.privacy, timeout: timeout ?? 86400, isForwardingDisabled: self.state.privacy.isForwardingDisabled, pin: self.state.privacy.pin)
         }
                 
-        let title = "Choose how long the story will be visible."
+        let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme)
+        let title = presentationData.strings.Story_Editor_ExpirationText
         let currentValue = self.state.privacy.timeout
         let currentArchived = self.state.privacy.pin
         let emptyAction: ((ContextMenuActionItem.Action) -> Void)? = nil
         
         items.append(.action(ContextMenuActionItem(text: title, textLayout: .multiline, textFont: .small, icon: { _ in return nil }, action: emptyAction)))
         
-        items.append(.action(ContextMenuActionItem(text: "6 Hours", icon: { theme in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Story_Editor_ExpirationValue(6), icon: { theme in
             if !hasPremium {
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: theme.contextMenu.secondaryColor)
             } else {
@@ -3463,7 +3462,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 self?.presentTimeoutPremiumSuggestion(3600 * 6)
             }
         })))
-        items.append(.action(ContextMenuActionItem(text: "12 Hours", icon: { theme in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Story_Editor_ExpirationValue(12), icon: { theme in
             if !hasPremium {
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: theme.contextMenu.secondaryColor)
             } else {
@@ -3478,14 +3477,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 self?.presentTimeoutPremiumSuggestion(3600 * 12)
             }
         })))
-        items.append(.action(ContextMenuActionItem(text: "24 Hours", icon: { theme in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Story_Editor_ExpirationValue(24), icon: { theme in
             return currentValue == 86400 && !currentArchived ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
         }, action: { _, a in
             a(.default)
             
             updateTimeout(86400)
         })))
-        items.append(.action(ContextMenuActionItem(text: "48 Hours", icon: { theme in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Story_Editor_ExpirationValue(48), icon: { theme in
             if !hasPremium {
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: theme.contextMenu.secondaryColor)
             } else {
@@ -3501,7 +3500,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         })))
         
-        let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme)
         let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
         self.present(contextController, in: .window(.root))
     }
@@ -3510,10 +3508,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         
         let timeoutString = presentationData.strings.MuteExpires_Hours(max(1, timeout / (60 * 60)))
-        let text = "Subscribe to **Telegram Premium** to make your stories disappear \(timeoutString)."
+        let text = presentationData.strings.Story_Editor_TooltipPremiumCustomExpiration(timeoutString).string
         
         let context = self.context
-        let controller = UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: true, title: nil, text: text, customUndoText: "More"), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
+        let controller = UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: true, title: nil, text: text, customUndoText: presentationData.strings.Story_Editor_TooltipPremiumMore), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
             if case .undo = action, let self {
                 let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings)
                 self.push(controller)
@@ -3549,23 +3547,24 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             return
         }
         
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let title: String
         let save: String
         if case .draft = self.node.subject {
-            title = "Discard Draft?"
-            save = "Keep Draft"
+            title = presentationData.strings.Story_Editor_DraftDiscardDraft
+            save = presentationData.strings.Story_Editor_DraftKeepDraft
         } else {
-            title = "Discard Media?"
-            save = "Save Draft"
+            title = presentationData.strings.Story_Editor_DraftDiscardMedia
+            save = presentationData.strings.Story_Editor_DraftKeepMedia
         }
         let theme = defaultDarkPresentationTheme
         let controller = textAlertController(
             context: self.context,
             forceTheme: theme,
             title: title,
-            text: "If you go back now, you will lose any changes that you've made.",
+            text: presentationData.strings.Story_Editor_DraftDiscaedText,
             actions: [
-                TextAlertAction(type: .destructiveAction, title: "Discard", action: { [weak self] in
+                TextAlertAction(type: .destructiveAction, title: presentationData.strings.Story_Editor_DraftDiscard, action: { [weak self] in
                     if let self {
                         self.requestDismiss(saveDraft: false, animated: true)
                     }
@@ -3575,7 +3574,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         self.requestDismiss(saveDraft: true, animated: true)
                     }
                 }),
-                TextAlertAction(type: .genericAction, title: "Cancel", action: {
+                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
                     
                 })
             ],
@@ -3715,8 +3714,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         self.dismissAllTooltips()
         
-        mediaEditor.seek(mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0, andPlay: false)
-        mediaEditor.requestRenderFrame()
+        mediaEditor.stop()
         mediaEditor.invalidate()
         self.node.entitiesView.invalidate()
         
@@ -3777,7 +3775,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         if mediaEditor.resultIsVideo {
-            var firstFrame: Signal<UIImage?, NoError>
+            var firstFrame: Signal<(UIImage?, UIImage?), NoError>
             let firstFrameTime = CMTime(seconds: mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0, preferredTimescale: CMTimeScale(60))
 
             let videoResult: Result.VideoResult
@@ -3791,8 +3789,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 videoResult = .imageFile(path: tempImagePath)
                 duration = 5.0
                 
-                firstFrame = .single(image)
-            case let .video(path, _, _, _, _, _, durationValue, _, _):
+                firstFrame = .single((image, nil))
+            case let .video(path, _, _, additionalPath, _, _, durationValue, _, _):
                 videoResult = .videoFile(path: path)
                 if let videoTrimRange = mediaEditor.values.videoTrimRange {
                     duration = videoTrimRange.upperBound - videoTrimRange.lowerBound
@@ -3800,12 +3798,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     duration = durationValue
                 }
                 
-                firstFrame = Signal<UIImage?, NoError> { subscriber in
+                let _ = additionalPath
+                
+                firstFrame = Signal<(UIImage?, UIImage?), NoError> { subscriber in
                     let avAsset = AVURLAsset(url: URL(fileURLWithPath: path))
                     let avAssetGenerator = AVAssetImageGenerator(asset: avAsset)
+                    avAssetGenerator.appliesPreferredTrackTransform = true
                     avAssetGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: firstFrameTime)], completionHandler: { _, cgImage, _, _, _ in
                         if let cgImage {
-                            subscriber.putNext(UIImage(cgImage: cgImage))
+                            subscriber.putNext((UIImage(cgImage: cgImage), nil))
                             subscriber.putCompletion()
                         }
                     })
@@ -3824,14 +3825,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 } else {
                     duration = 5.0
                 }
-                firstFrame = Signal<UIImage?, NoError> { subscriber in
+                firstFrame = Signal<(UIImage?, UIImage?), NoError> { subscriber in
                     if asset.mediaType == .video {
                         PHImageManager.default().requestAVAsset(forVideo: asset, options: nil) { avAsset, _, _ in
                             if let avAsset {
                                 let avAssetGenerator = AVAssetImageGenerator(asset: avAsset)
+                                avAssetGenerator.appliesPreferredTrackTransform = true
                                 avAssetGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: firstFrameTime)], completionHandler: { _, cgImage, _, _, _ in
                                     if let cgImage {
-                                        subscriber.putNext(UIImage(cgImage: cgImage))
+                                        subscriber.putNext((UIImage(cgImage: cgImage), nil))
                                         subscriber.putCompletion()
                                     }
                                 })
@@ -3842,7 +3844,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         options.deliveryMode = .highQualityFormat
                         PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { image, _ in
                             if let image {
-                                subscriber.putNext(image)
+                                subscriber.putNext((image, nil))
                                 subscriber.putCompletion()
                             }
                         }
@@ -3857,12 +3859,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     } else {
                         duration = min(draft.duration ?? 5.0, storyMaxVideoDuration)
                     }
-                    firstFrame = Signal<UIImage?, NoError> { subscriber in
+                    firstFrame = Signal<(UIImage?, UIImage?), NoError> { subscriber in
                         let avAsset = AVURLAsset(url: URL(fileURLWithPath: draft.fullPath()))
                         let avAssetGenerator = AVAssetImageGenerator(asset: avAsset)
+                        avAssetGenerator.appliesPreferredTrackTransform = true
                         avAssetGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: firstFrameTime)], completionHandler: { _, cgImage, _, _, _ in
                             if let cgImage {
-                                subscriber.putNext(UIImage(cgImage: cgImage))
+                                subscriber.putNext((UIImage(cgImage: cgImage), nil))
                                 subscriber.putCompletion()
                             }
                         })
@@ -3875,21 +3878,34 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     duration = 5.0
                     
                     if let image = UIImage(contentsOfFile: draft.fullPath()) {
-                        firstFrame = .single(image)
+                        firstFrame = .single((image, nil))
                     } else {
-                        firstFrame = .single(UIImage())
+                        firstFrame = .single((UIImage(), nil))
                     }
                 }
             }
             
-            if let resultImage = mediaEditor.resultImage {
-                firstFrame = .single(resultImage)
-            }
-            
             let _ = (firstFrame
-            |> deliverOnMainQueue).start(next: { [weak self] image in
+            |> deliverOnMainQueue).start(next: { [weak self] image, additionalImage in
                 if let self {
-                    makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image ?? UIImage(), dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] coverImage in
+                    var currentImage = mediaEditor.resultImage
+                    if let image {
+                        mediaEditor.replaceSource(image, additionalImage: additionalImage, time: firstFrameTime)
+                        if let updatedImage = mediaEditor.resultImage {
+                            currentImage = updatedImage
+                        }
+                    }
+                    
+                    var inputImage: UIImage
+                    if let currentImage {
+                        inputImage = currentImage
+                    } else if let image {
+                        inputImage = image
+                    } else {
+                        inputImage = UIImage()
+                    }
+
+                    makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: inputImage, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] coverImage in
                         if let self {
                             Logger.shared.log("MediaEditor", "Completed with video \(videoResult)")
                             self.completion(randomId, .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions), caption, self.state.privacy, stickers, { [weak self] finished in

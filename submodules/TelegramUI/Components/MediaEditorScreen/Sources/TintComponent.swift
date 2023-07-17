@@ -4,6 +4,7 @@ import Display
 import ComponentFlow
 import LegacyComponents
 import MediaEditor
+import TelegramPresentationData
 
 private final class TintColorComponent: Component {
     typealias EnvironmentType = Empty
@@ -106,6 +107,7 @@ final class TintComponent: Component {
     
     typealias EnvironmentType = Empty
     
+    let strings: PresentationStrings
     let shadowsValue: TintValue
     let highlightsValue: TintValue
     let shadowsValueUpdated: (TintValue) -> Void
@@ -113,12 +115,14 @@ final class TintComponent: Component {
     let isTrackingUpdated: (Bool) -> Void
     
     init(
+        strings: PresentationStrings,
         shadowsValue: TintValue,
         highlightsValue: TintValue,
         shadowsValueUpdated: @escaping (TintValue) -> Void,
         highlightsValueUpdated: @escaping (TintValue) -> Void,
         isTrackingUpdated: @escaping (Bool) -> Void
     ) {
+        self.strings = strings
         self.shadowsValue = shadowsValue
         self.highlightsValue = highlightsValue
         self.shadowsValueUpdated = shadowsValueUpdated
@@ -127,6 +131,9 @@ final class TintComponent: Component {
     }
     
     static func ==(lhs: TintComponent, rhs: TintComponent) -> Bool {
+        if lhs.strings !== rhs.strings {
+            return false
+        }
         if lhs.highlightsValue != rhs.highlightsValue {
             return false
         }
@@ -185,7 +192,7 @@ final class TintComponent: Component {
                     Button(
                         content: AnyComponent(
                             Text(
-                                text: "Shadows",
+                                text: component.strings.Story_Editor_Tint_Shadows,
                                 font: Font.regular(14.0),
                                 color: state.section == .shadows ? .white : UIColor(rgb: 0x808080)
                             )
@@ -213,7 +220,7 @@ final class TintComponent: Component {
                     Button(
                         content: AnyComponent(
                             Text(
-                                text: "Highlights",
+                                text: component.strings.Story_Editor_Tint_Highlights,
                                 font: Font.regular(14.0),
                                 color: state.section == .highlights ? .white : UIColor(rgb: 0x808080)
                             )

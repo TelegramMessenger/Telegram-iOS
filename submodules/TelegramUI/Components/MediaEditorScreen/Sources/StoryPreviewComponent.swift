@@ -218,10 +218,12 @@ final class StoryPreviewComponent: Component {
                 }
             }
             
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            
             let titleSize = self.title.update(
                 transition: transition,
                 component: AnyComponent(Text(
-                    text: "My story",
+                    text: presentationData.strings.Story_HeaderYourStory,
                     font: Font.medium(14.0),
                     color: .white
                 )),
@@ -240,7 +242,6 @@ final class StoryPreviewComponent: Component {
                 transition.setBounds(view: titleView, bounds: CGRect(origin: .zero, size: titleFrame.size))
             }
             
-            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let inputPanelSize = self.inputPanel.update(
                 transition: transition,
                 component: AnyComponent(MessageInputPanelComponent(
@@ -249,7 +250,7 @@ final class StoryPreviewComponent: Component {
                     theme: presentationData.theme,
                     strings: presentationData.strings,
                     style: .story,
-                    placeholder: "Reply Privately...",
+                    placeholder: presentationData.strings.Story_InputPlaceholderReplyPrivately,
                     maxLength: nil,
                     queryTypes: [],
                     alwaysDarkWhenHasText: false,

@@ -5,6 +5,7 @@ import ComponentFlow
 import LegacyComponents
 import MediaEditor
 import MultilineTextComponent
+import TelegramPresentationData
 
 private class HistogramView: UIView {
     private var size: CGSize?
@@ -75,18 +76,24 @@ class CurvesInternalState {
 final class CurvesComponent: Component {
     typealias EnvironmentType = Empty
     
+    let strings: PresentationStrings
     let histogram: MediaEditorHistogram?
     let internalState: CurvesInternalState
     
     init(
+        strings: PresentationStrings,
         histogram: MediaEditorHistogram?,
         internalState: CurvesInternalState
     ) {
+        self.strings = strings
         self.histogram = histogram
         self.internalState = internalState
     }
     
     static func ==(lhs: CurvesComponent, rhs: CurvesComponent) -> Bool {
+        if lhs.strings !== rhs.strings {
+            return false
+        }
         if lhs.histogram != rhs.histogram {
             return false
         }
@@ -145,7 +152,7 @@ final class CurvesComponent: Component {
                     Button(
                         content: AnyComponent(
                             Text(
-                                text: "All",
+                                text: component.strings.Story_Editor_Curves_All,
                                 font: Font.regular(14.0),
                                 color: state.section == .all ? .white : UIColor(rgb: 0x808080)
                             )
@@ -173,7 +180,7 @@ final class CurvesComponent: Component {
                     Button(
                         content: AnyComponent(
                             Text(
-                                text: "Red",
+                                text: component.strings.Story_Editor_Curves_Red,
                                 font: Font.regular(14.0),
                                 color: state.section == .red ? .white : UIColor(rgb: 0x808080)
                             )
@@ -201,7 +208,7 @@ final class CurvesComponent: Component {
                     Button(
                         content: AnyComponent(
                             Text(
-                                text: "Green",
+                                text: component.strings.Story_Editor_Curves_Green,
                                 font: Font.regular(14.0),
                                 color: state.section == .green ? .white : UIColor(rgb: 0x808080)
                             )
@@ -229,7 +236,7 @@ final class CurvesComponent: Component {
                     Button(
                         content: AnyComponent(
                             Text(
-                                text: "Blue",
+                                text: component.strings.Story_Editor_Curves_Blue,
                                 font: Font.regular(14.0),
                                 color: state.section == .blue ? .white : UIColor(rgb: 0x808080)
                             )

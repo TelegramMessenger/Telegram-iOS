@@ -309,6 +309,25 @@ public final class MediaEditor {
         }
     }
     
+    public func replaceSource(_ image: UIImage, additionalImage: UIImage?, time: CMTime) {
+        func fixImageOrientation(_ image: UIImage) -> UIImage {
+            UIGraphicsBeginImageContext(image.size)
+            image.draw(at: .zero)
+            let newImage = UIGraphicsGetImageFromCurrentImageContext()
+            UIGraphicsEndImageContext()
+            return newImage ?? image
+        }
+        let image = fixImageOrientation(image)
+        
+        guard let renderTarget = self.previewView, let device = renderTarget.mtlDevice, let texture = loadTexture(image: image, device: device) else {
+            return
+        }
+        
+        let additionalImage = additionalImage.flatMap { fixImageOrientation($0) }
+        let additionalTexture = additionalImage.flatMap { loadTexture(image: $0, device: device) }
+        self.renderer.consumeTexture(texture, additionalTexture: additionalTexture, time: time, render: true)
+    }
+    
     private var volumeFade: SwiftSignalKit.Timer?
     private func setupSource() {
         guard let renderTarget = self.previewView else {
@@ -631,6 +650,23 @@ public final class MediaEditor {
             self.additionalPlayer?.play()
             self.onPlaybackAction(.play)
         }
+    }
+    
+    public func seek(_ position: Double, completion: @escaping () -> Void) {
+        guard let player = self.player else {
+            completion()
+            return
+        }
+        player.pause()
+        self.additionalPlayer?.pause()
+        
+        let targetPosition = CMTime(seconds: position, preferredTimescale: CMTimeScale(60.0))
+        player.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero, completionHandler: {  _ in
+            Queue.mainQueue().async {
+                completion()
+            }
+        })
+        self.additionalPlayer?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero)
     }
     
     public var isPlaying: Bool {

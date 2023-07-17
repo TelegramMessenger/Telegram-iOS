@@ -504,32 +504,33 @@ final class ShareWithPeersScreenComponent: Component {
             let animationName: String
             let text: String
             
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             switch optionId {
             case .screenshot:
                 if self.selectedOptions.contains(.screenshot) {
                     if self.selectedCategories.contains(.everyone) {
                         animationName = "anim_savemedia"
-                        text = "Downloading, sharing and taking screenshots will be enabled for this story."
+                        text = presentationData.strings.Story_Privacy_TooltipSharingEnabledPublic
                     } else {
                         animationName = "anim_savemedia"
-                        text = "Downloading and taking screenshots will be enabled for this story."
+                        text = presentationData.strings.Story_Privacy_TooltipSharingEnabled
                     }
                 } else {
                     if self.selectedCategories.contains(.everyone) {
                         animationName = "premium_unlock"
-                        text = "Downloading, sharing and taking screenshots will be disabled for this story."
+                        text = presentationData.strings.Story_Privacy_TooltipSharingDisabledPublic
                     } else {
                         animationName = "premium_unlock"
-                        text = "Downloading and taking screenshots will be disabled for this story."
+                        text = presentationData.strings.Story_Privacy_TooltipSharingDisabled
                     }
                 }
             case .pin:
                 if self.selectedOptions.contains(.pin) {
                     animationName = "anim_profileadd"
-                    text = "Users allowed to view your story will see it on your page event after it expires."
+                    text = presentationData.strings.Story_Privacy_TooltipStoryArchived
                 } else {
                     animationName = "anim_autoremove_on"
-                    text = "The story will disappear after it expires."
+                    text = presentationData.strings.Story_Privacy_TooltipStoryExpires
                 }
             }
             
@@ -563,7 +564,7 @@ final class ShareWithPeersScreenComponent: Component {
             guard let stateValue = self.effectiveStateValue else {
                 return
             }
-            
+                        
             var topOffset = -self.scrollView.bounds.minY + itemLayout.topInset
             topOffset = max(0.0, topOffset)
             transition.setTransform(layer: self.backgroundView.layer, transform: CATransform3DMakeTranslation(0.0, topOffset + itemLayout.containerInset, 0.0))
@@ -652,9 +653,9 @@ final class ShareWithPeersScreenComponent: Component {
                         
                         let sectionTitle: String
                         if section.id == 0 {
-                            sectionTitle = "WHO CAN VIEW"
+                            sectionTitle = environment.strings.Story_Privacy_WhoCanViewHeader
                         } else if section.id == 1 {
-                            sectionTitle = "CONTACTS"
+                            sectionTitle = environment.strings.Story_Privacy_ContactsHeader
                         } else {
                             sectionTitle = ""
                         }
@@ -927,10 +928,12 @@ final class ShareWithPeersScreenComponent: Component {
                         self.visibleSectionFooters[section.id] = sectionFooter
                     }
                     
+                    let footerValue = environment.strings.Story_Privacy_KeepOnMyPageHours(Int32(component.timeout / 3600))
+                    let footerText = environment.strings.Story_Privacy_KeepOnMyPageInfo(footerValue).string
                     let footerSize = sectionFooter.update(
                         transition: sectionFooterTransition,
                         component: AnyComponent(MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: "Keep this story on your page even after it expires in \( component.timeout / 3600 ) hours. Privacy settings will apply.", font: Font.regular(13.0), textColor: environment.theme.list.freeTextColor)),
+                            text: .plain(NSAttributedString(string: footerText, font: Font.regular(13.0), textColor: environment.theme.list.freeTextColor)),
                             maximumNumberOfLines: 0,
                             lineSpacing: 0.2
                         )),
@@ -1255,9 +1258,9 @@ final class ShareWithPeersScreenComponent: Component {
                 let placeholder: String
                 switch component.stateContext.subject {
                 case .chats:
-                    placeholder = "Search Chats"
+                    placeholder = environment.strings.Story_Privacy_SearchChats
                 default:
-                    placeholder = "Search Contacts"
+                    placeholder = environment.strings.Story_Privacy_SearchContacts
                 }
                 self.navigationTextField.parentState = state
                 navigationTextFieldSize = self.navigationTextField.update(
@@ -1406,7 +1409,7 @@ final class ShareWithPeersScreenComponent: Component {
             let navigationLeftButtonSize = self.navigationLeftButton.update(
                 transition: transition,
                 component: AnyComponent(Button(
-                    content: AnyComponent(Text(text: "Cancel", font: Font.regular(17.0), color: environment.theme.rootController.navigationBar.accentTextColor)),
+                    content: AnyComponent(Text(text: environment.strings.Common_Cancel, font: Font.regular(17.0), color: environment.theme.rootController.navigationBar.accentTextColor)),
                     action: { [weak self] in
                         guard let self, let environment = self.environment, let controller = environment.controller() as? ShareWithPeersScreen else {
                             return
@@ -1426,26 +1429,26 @@ final class ShareWithPeersScreenComponent: Component {
             }
             navigationButtonsWidth += navigationLeftButtonSize.width + navigationSideInset
             
-            var actionButtonTitle = "Save Settings"
+            var actionButtonTitle = environment.strings.Story_Privacy_SaveSettings
             let title: String
             switch component.stateContext.subject {
             case let .stories(editing):
                 if editing {
-                    title = "Edit Story"
+                    title = environment.strings.Story_Privacy_EditStory
                 } else {
-                    title = "Share Story"
-                    actionButtonTitle = "Post Story"
+                    title = environment.strings.Story_Privacy_ShareStory
+                    actionButtonTitle = environment.strings.Story_Privacy_PostStory
                 }
             case .chats:
-                title = "Send as a Message"
+                title = ""
             case let .contacts(category):
                 switch category {
                 case .closeFriends:
-                    title = "Close Friends"
+                    title = environment.strings.Story_Privacy_CategoryCloseFriends
                 case .contacts:
-                    title = "Excluded People"
+                    title = environment.strings.Story_Privacy_ExcludePeople
                 case .nobody:
-                    title = "Selected Contacts"
+                    title = environment.strings.Story_Privacy_CategorySelectedContacts
                 case .everyone:
                     title = ""
                 }
@@ -1525,7 +1528,7 @@ final class ShareWithPeersScreenComponent: Component {
                     isEnabled: true,
                     displaysProgress: false,
                     action: { [weak self] in
-                        guard let self, let component = self.component, let controller = self.environment?.controller() as? ShareWithPeersScreen else {
+                        guard let self, let component = self.component, let environment = self.environment, let controller = self.environment?.controller() as? ShareWithPeersScreen else {
                             return
                         }
                                                                         
@@ -1561,13 +1564,13 @@ final class ShareWithPeersScreenComponent: Component {
                             let alertController = textAlertController(
                                 context: component.context,
                                 forceTheme: defaultDarkColorPresentationTheme,
-                                title: "Privacy Restrictions",
-                                text: "The privacy settings of your story will prevent some users you tagged (\( usernamesString )) from viewing it.",
+                                title: environment.strings.Story_Privacy_MentionRestrictedTitle,
+                                text: environment.strings.Story_Privacy_MentionRestrictedText(usernamesString).string,
                                 actions: [
-                                    TextAlertAction(type: .defaultAction, title: "Proceed Anyway", action: {
+                                    TextAlertAction(type: .defaultAction, title: environment.strings.Story_Privacy_MentionRestrictedProceed, action: {
                                         proceed()
                                     }),
-                                    TextAlertAction(type: .genericAction, title: "Cancel", action: {})
+                                    TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {})
                                 ],
                                 actionLayout: .vertical
                             )
@@ -1984,7 +1987,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         if case let .stories(editing) = stateContext.subject {
             categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
                 id: .everyone,
-                title: "Everyone",
+                title: presentationData.strings.Story_Privacy_CategoryEveryone,
                 icon: "Chat List/Filters/Channel",
                 iconColor: .blue,
                 actionTitle: nil
@@ -1995,65 +1998,65 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                 peerNames = String(peers.map { $0.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) }.joined(separator: ", "))
             }
             
-            var contactsSubtitle = "exclude people"
+            var contactsSubtitle = presentationData.strings.Story_Privacy_ExcludePeople
             if initialPrivacy.base == .contacts, initialPrivacy.additionallyIncludePeers.count > 0 {
                 if initialPrivacy.additionallyIncludePeers.count == 1 {
                     if !peerNames.isEmpty {
-                        contactsSubtitle = "except \(peerNames)"
+                        contactsSubtitle = presentationData.strings.Story_Privacy_ExcludePeopleExceptNames(peerNames).string
                     } else {
-                        contactsSubtitle = "except 1 person"
+                        contactsSubtitle = presentationData.strings.Story_Privacy_ExcludePeopleExcept(1)
                     }
                 } else {
                     if !peerNames.isEmpty {
-                        contactsSubtitle = "except \(peerNames)"
+                        contactsSubtitle = presentationData.strings.Story_Privacy_ExcludePeopleExceptNames(peerNames).string
                     } else {
-                        contactsSubtitle = "except \(initialPrivacy.additionallyIncludePeers.count) people"
+                        contactsSubtitle = presentationData.strings.Story_Privacy_ExcludePeopleExcept(Int32(initialPrivacy.additionallyIncludePeers.count))
                     }
                 }
             }
             categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
                 id: .contacts,
-                title: "Contacts",
+                title: presentationData.strings.Story_Privacy_CategoryContacts,
                 icon: "Chat List/Tabs/IconContacts",
                 iconColor: .yellow,
                 actionTitle: contactsSubtitle
             ))
             
-            var closeFriendsSubtitle = "edit list"
+            var closeFriendsSubtitle = presentationData.strings.Story_Privacy_EditList
             if let peers = stateContext.stateValue?.closeFriendsPeers, !peers.isEmpty {
                 if peers.count > 2 {
-                    closeFriendsSubtitle = "\(peers.count) people"
+                    closeFriendsSubtitle = presentationData.strings.Story_Privacy_People(Int32(peers.count))
                 } else {
                     closeFriendsSubtitle = String(peers.map { $0.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) }.joined(separator: ", "))
                 }
             }
             categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
                 id: .closeFriends,
-                title: "Close Friends",
+                title: presentationData.strings.Story_Privacy_CategoryCloseFriends,
                 icon: "Call/StarHighlighted",
                 iconColor: .green,
                 actionTitle: closeFriendsSubtitle
             ))
             
-            var selectedContactsSubtitle = "choose"
+            var selectedContactsSubtitle = presentationData.strings.Story_Privacy_Choose
             if initialPrivacy.base == .nobody, initialPrivacy.additionallyIncludePeers.count > 0 {
                 if initialPrivacy.additionallyIncludePeers.count == 1 {
                     if !peerNames.isEmpty {
                         selectedContactsSubtitle = peerNames
                     } else {
-                        selectedContactsSubtitle = "1 person"
+                        selectedContactsSubtitle = presentationData.strings.Story_Privacy_People(1)
                     }
                 } else {
                     if !peerNames.isEmpty {
                         selectedContactsSubtitle = peerNames
                     } else {
-                        selectedContactsSubtitle = "\(initialPrivacy.additionallyIncludePeers.count) people"
+                        selectedContactsSubtitle = presentationData.strings.Story_Privacy_People(Int32(initialPrivacy.additionallyIncludePeers.count))
                     }
                 }
             }
             categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
                 id: .selectedContacts,
-                title: "Selected Contacts",
+                title: presentationData.strings.Story_Privacy_CategorySelectedContacts,
                 icon: "Chat List/Filters/Group",
                 iconColor: .violet,
                 actionTitle: selectedContactsSubtitle
@@ -2062,12 +2065,12 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
             if !editing {
                 optionItems.append(ShareWithPeersScreenComponent.OptionItem(
                     id: .screenshot,
-                    title: "Allow Screenshots"
+                    title: presentationData.strings.Story_Privacy_AllowScreenshots
                 ))
                 
                 optionItems.append(ShareWithPeersScreenComponent.OptionItem(
                     id: .pin,
-                    title: "Keep on My Page"
+                    title: presentationData.strings.Story_Privacy_KeepOnMyPage
                 ))
             }
         }
