@@ -2611,7 +2611,7 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                     })),
                     environment: {},
-                    containerSize: CGSize(width: max(10.0, headerRightOffset), height: 44.0)
+                    containerSize: CGSize(width: headerRightOffset - 10.0, height: 44.0)
                 )
                 if let view = currentCenterInfoItem.view.view {
                     var animateIn = false
@@ -3203,13 +3203,15 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-            self.component?.presentController(UndoOverlayController(
+            let controller = UndoOverlayController(
                 presentationData: presentationData,
                 content: .info(title: nil, text: text, timeout: nil),
                 elevatedLayout: false,
                 animateInAsReplacement: false,
                 action: { _ in return false }
-            ), nil)
+            )
+            self.sendMessageContext.tooltipScreen = controller
+            self.component?.presentController(controller, nil)
         }
         
         private func openItemPrivacySettings(initialPrivacy: EngineStoryPrivacy? = nil) {
@@ -3460,7 +3462,8 @@ public final class StoryItemSetContainerComponent: Component {
                     )
                 }
             }
-                        
+             
+            let updateDisposable = MetaDisposable()
             var updateProgressImpl: ((Float) -> Void)?
             let controller = MediaEditorScreen(
                 context: context,
@@ -3493,7 +3496,7 @@ public final class StoryItemSetContainerComponent: Component {
                             updateProgressImpl?(0.0)
                             
                             if let imageData = compressImageToJPEG(image, quality: 0.7) {
-                                let _ = (context.engine.messages.editStory(id: id, media: .image(dimensions: dimensions, data: imageData, stickers: stickers), text: updatedText, entities: updatedEntities, privacy: updatedPrivacy)
+                                updateDisposable.set((context.engine.messages.editStory(id: id, media: .image(dimensions: dimensions, data: imageData, stickers: stickers), text: updatedText, entities: updatedEntities, privacy: updatedPrivacy)
                                 |> deliverOnMainQueue).start(next: { [weak self] result in
                                     guard let self else {
                                         return
@@ -3511,7 +3514,7 @@ public final class StoryItemSetContainerComponent: Component {
                                             commit({})
                                         }
                                     }
-                                })
+                                }))
                             }
                         case let .video(content, firstFrameImage, values, duration, dimensions):
                             updateProgressImpl?(0.0)
@@ -3541,7 +3544,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     }
                                 }
                                 
-                                let _ = (context.engine.messages.editStory(id: id, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), text: updatedText, entities: updatedEntities, privacy: updatedPrivacy)
+                                updateDisposable.set((context.engine.messages.editStory(id: id, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), text: updatedText, entities: updatedEntities, privacy: updatedPrivacy)
                                 |> deliverOnMainQueue).start(next: { [weak self] result in
                                     guard let self else {
                                         return
@@ -3559,7 +3562,7 @@ public final class StoryItemSetContainerComponent: Component {
                                             commit({})
                                         }
                                     }
-                                })
+                                }))
                             }
                         }
                     } else if updatedText != nil || updatedPrivacy != nil {
@@ -3599,7 +3602,9 @@ public final class StoryItemSetContainerComponent: Component {
             }
             self.component?.controller()?.push(controller)
             updateProgressImpl = { [weak controller] progress in
-                controller?.updateEditProgress(progress)
+                controller?.updateEditProgress(progress, cancel: {
+                    updateDisposable.dispose()
+                })
             }
         }
         

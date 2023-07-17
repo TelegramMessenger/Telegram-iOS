@@ -76,6 +76,7 @@ final class StoryAuthorInfoComponent: Component {
             
             let size = availableSize
             let spacing: CGFloat = 0.0
+            let leftInset: CGFloat = 54.0
             
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
 
@@ -83,7 +84,11 @@ final class StoryAuthorInfoComponent: Component {
             if component.peer?.id == component.context.account.peerId {
                 title = component.strings.Story_HeaderYourStory
             } else {
-                title = component.peer?.debugDisplayTitle ?? ""
+                if let _ = component.counters {
+                    title = component.peer?.compactDisplayTitle ?? ""
+                } else {
+                    title = component.peer?.debugDisplayTitle ?? ""
+                }
             }
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
@@ -102,7 +107,7 @@ final class StoryAuthorInfoComponent: Component {
                     maximumNumberOfLines: 1
                 )),
                 environment: {},
-                containerSize: availableSize
+                containerSize: CGSize(width: availableSize.width - leftInset, height: availableSize.height)
             )
             let subtitleSize = self.subtitle.update(
                 transition: .immediate,
@@ -112,12 +117,12 @@ final class StoryAuthorInfoComponent: Component {
                     maximumNumberOfLines: 1
                 )),
                 environment: {},
-                containerSize: availableSize
+                containerSize: CGSize(width: availableSize.width - leftInset, height: availableSize.height)
             )
             
             let contentHeight: CGFloat = titleSize.height + spacing + subtitleSize.height
-            let titleFrame = CGRect(origin: CGPoint(x: 54.0, y: 2.0 + floor((availableSize.height - contentHeight) * 0.5)), size: titleSize)
-            let subtitleFrame = CGRect(origin: CGPoint(x: 54.0, y: titleFrame.maxY + spacing + UIScreenPixel), size: subtitleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: 2.0 + floor((availableSize.height - contentHeight) * 0.5)), size: titleSize)
+            let subtitleFrame = CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + spacing + UIScreenPixel), size: subtitleSize)
             
             if let titleView = self.title.view {
                 if titleView.superview == nil {

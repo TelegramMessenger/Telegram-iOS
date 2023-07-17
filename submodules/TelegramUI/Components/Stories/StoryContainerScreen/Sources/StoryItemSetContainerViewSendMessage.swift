@@ -94,10 +94,6 @@ final class StoryItemSetContainerSendMessage {
         self.navigationActionDisposable.dispose()
         self.resolvePeerByNameDisposable.dispose()
         self.inputMediaNodeDataDisposable?.dispose()
-        
-        if let tooltipScreen = self.tooltipScreen {
-            tooltipScreen.dismiss()
-        }
     }
     
     func setup(context: AccountContext, view: StoryItemSetContainerComponent.View, inputPanelExternalState: MessageInputPanelComponent.ExternalState, keyboardInputData: Signal<ChatEntityKeyboardInputNode.InputData, NoError>) {
