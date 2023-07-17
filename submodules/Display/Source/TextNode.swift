@@ -557,7 +557,9 @@ public final class TextNodeLayout: NSObject {
                         }
                     }
                     if index >= 0 && index < attributedString.length {
-                        return (index, attributedString.attributes(at: index, effectiveRange: nil))
+                        if index < line.range.location + line.range.length {
+                            return (index, attributedString.attributes(at: index, effectiveRange: nil))
+                        }
                     }
                     break
                 }
@@ -632,7 +634,9 @@ public final class TextNodeLayout: NSObject {
                         }
                     }
                     if index >= 0 && index < attributedString.length {
-                        return (index, attributedString.attributes(at: index, effectiveRange: nil))
+                        if index < line.range.location + line.range.length {
+                            return (index, attributedString.attributes(at: index, effectiveRange: nil))
+                        }
                     }
                     break
                 }
@@ -1250,7 +1254,9 @@ open class TextNode: ASDisplayNode {
                     }
                     let truncationToken = CTLineCreateWithAttributedString(truncatedTokenString)
                     
-                    if CTLineGetTypographicBounds(originalLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(originalLine) < Double(lineConstrainedSize.width) {
+                    var effectiveLineRange = brokenLineRange
+                    
+                    if lineRange.length == 0 || CTLineGetTypographicBounds(originalLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(originalLine) < Double(lineConstrainedSize.width) {
                         if didClipLinebreak {
                             let mergedLine = NSMutableAttributedString()
                             mergedLine.append(attributedString.attributedSubstring(from: NSRange(location: lineRange.location, length: lineRange.length)))
@@ -1269,6 +1275,7 @@ open class TextNode: ASDisplayNode {
                             if brokenLineRange.location + brokenLineRange.length > attributedString.length {
                                 brokenLineRange.length = attributedString.length - brokenLineRange.location
                             }
+                            effectiveLineRange = brokenLineRange
                             
                             truncated = true
                         } else {
@@ -1284,8 +1291,23 @@ open class TextNode: ASDisplayNode {
                                 break
                             }
                         }
+                        if customTruncationToken != nil {
+                            assert(true)
+                        }
+                        effectiveLineRange = CFRange(location: effectiveLineRange.location, length: 0)
+                        for run in runs {
+                            let runRange = CTRunGetStringRange(run)
+                            if runRange.location + runRange.length > brokenLineRange.location + brokenLineRange.length {
+                                continue
+                            }
+                            effectiveLineRange.length = max(effectiveLineRange.length, (runRange.location + runRange.length) - effectiveLineRange.location)
+                        }
+                        
                         if brokenLineRange.location + brokenLineRange.length > attributedString.length {
                             brokenLineRange.length = attributedString.length - brokenLineRange.location
+                        }
+                        if effectiveLineRange.location + effectiveLineRange.length > attributedString.length {
+                            effectiveLineRange.length = attributedString.length - effectiveLineRange.location
                         }
                         truncated = true
                     }
@@ -1369,7 +1391,7 @@ open class TextNode: ASDisplayNode {
                         }
                     }
                     
-                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: embeddedItems, attachments: attachments))
+                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(effectiveLineRange.location, effectiveLineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: embeddedItems, attachments: attachments))
                     break
                 } else {
                     if lineCharacterCount > 0 {
