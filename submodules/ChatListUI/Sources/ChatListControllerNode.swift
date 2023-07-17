@@ -803,13 +803,11 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
     var ignoreStoryUnlockedScrolling: Bool = false
     var tempTopInset: CGFloat = 0.0 {
         didSet {
-            if self.tempTopInset != oldValue {
-                for (_, itemNode) in self.itemNodes {
-                    itemNode.listNode.tempTopInset = self.tempTopInset
-                }
-                if let pendingItemNode = self.pendingItemNode {
-                    pendingItemNode.1.listNode.tempTopInset = self.tempTopInset
-                }
+            for (_, itemNode) in self.itemNodes {
+                itemNode.listNode.tempTopInset = self.tempTopInset
+            }
+            if let pendingItemNode = self.pendingItemNode {
+                pendingItemNode.1.listNode.tempTopInset = self.tempTopInset
             }
         }
     }
@@ -2022,6 +2020,8 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         var effectiveStorySubscriptions: EngineStorySubscriptions?
         if let controller = self.controller, let storySubscriptions = controller.orderedStorySubscriptions, shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions, isHidden: controller.location == .chatList(groupId: .archive)) {
             effectiveStorySubscriptions = controller.orderedStorySubscriptions
+        } else {
+            effectiveStorySubscriptions = EngineStorySubscriptions(accountItem: nil, items: [], hasMoreToken: nil)
         }
         
         let navigationBarSize = self.navigationBarView.update(
@@ -2699,6 +2699,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     func scrollToTopIfStoriesAreExpanded() {
         if let contentOffset = self.mainContainerNode.contentOffset, case let .known(offset) = contentOffset, offset < 0.0 {
             self.mainContainerNode.scrollToTop(animated: true, adjustForTempInset: false)
+            self.mainContainerNode.tempTopInset = 0.0
         }
     }
 }

@@ -368,17 +368,38 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                             }
                         }
                         
-                        if let chatListController = self.chatListController as? ChatListControllerImpl {
-                            chatListController.scrollToStories()
+                        let completionImpl: () -> Void = { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            
+                            if let chatListController = self.chatListController as? ChatListControllerImpl {
+                                let _ = (chatListController.hasPendingStories
+                                |> filter { $0 }
+                                |> take(1)
+                                |> timeout(0.25, queue: .mainQueue(), alternate: .single(true))
+                                |> deliverOnMainQueue).start(completed: { [weak chatListController] in
+                                    chatListController?.scrollToStories()
+                                    Queue.mainQueue().justDispatch {
+                                        commit({})
+                                    }
+                                })
+                            } else {
+                                Queue.mainQueue().justDispatch {
+                                    commit({})
+                                }
+                            }
+                        }
+                        
+                        if let _ = self.chatListController as? ChatListControllerImpl {
                             switch mediaResult {
                             case let .image(image, dimensions):
                                 if let imageData = compressImageToJPEG(image, quality: 0.7) {
                                     let entities = generateChatInputTextEntities(caption)
                                     Logger.shared.log("MediaEditor", "Calling uploadStory for image, randomId \(randomId)")
                                     self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData, stickers: stickers), text: caption.string, entities: entities, pin: privacy.pin, privacy: privacy.privacy, isForwardingDisabled: privacy.isForwardingDisabled, period: privacy.timeout, randomId: randomId)
-                                    Queue.mainQueue().justDispatch {
-                                        commit({})
-                                    }
+                                    
+                                    completionImpl()
                                 }
                             case let .video(content, firstFrameImage, values, duration, dimensions):
                                 let adjustments: VideoMediaResourceAdjustments
@@ -408,9 +429,8 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                     Logger.shared.log("MediaEditor", "Calling uploadStory for video, randomId \(randomId)")
                                     let entities = generateChatInputTextEntities(caption)
                                     self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), text: caption.string, entities: entities, pin: privacy.pin, privacy: privacy.privacy, isForwardingDisabled: privacy.isForwardingDisabled, period: privacy.timeout, randomId: randomId)
-                                    Queue.mainQueue().justDispatch {
-                                        commit({})
-                                    }
+                                    
+                                    completionImpl()
                                 }
                             }
                         }

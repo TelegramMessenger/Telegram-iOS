@@ -197,6 +197,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     
+    private let hasPendingStoriesPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    public var hasPendingStories: Signal<Bool, NoError> {
+        return self.hasPendingStoriesPromise.get()
+    }
+    
     private var storyProgressDisposable: Disposable?
     private var storySubscriptionsDisposable: Disposable?
     private var preloadStorySubscriptionsDisposable: Disposable?
@@ -1956,6 +1961,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         }
                         self.maybeDisplayStoryTooltip()
                     })
+                    
+                    self.hasPendingStoriesPromise.set(rawStoryArchiveSubscriptions.accountItem?.hasPending ?? false)
                 })
             }
         }
