@@ -2022,6 +2022,8 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         var effectiveStorySubscriptions: EngineStorySubscriptions?
         if let controller = self.controller, let storySubscriptions = controller.orderedStorySubscriptions, shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions, isHidden: controller.location == .chatList(groupId: .archive)) {
             effectiveStorySubscriptions = controller.orderedStorySubscriptions
+        } else {
+            effectiveStorySubscriptions = EngineStorySubscriptions(accountItem: nil, items: [], hasMoreToken: nil)
         }
         
         let navigationBarSize = self.navigationBarView.update(
@@ -2699,6 +2701,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     func scrollToTopIfStoriesAreExpanded() {
         if let contentOffset = self.mainContainerNode.contentOffset, case let .known(offset) = contentOffset, offset < 0.0 {
             self.mainContainerNode.scrollToTop(animated: true, adjustForTempInset: false)
+            self.mainContainerNode.tempTopInset = 0.0
         }
     }
 }
