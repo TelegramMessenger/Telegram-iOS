@@ -2690,7 +2690,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         }
         
-        func updateEditProgress(_ progress: Float) {
+        func updateEditProgress(_ progress: Float, cancel: @escaping () -> Void) {
             guard let controller = self.controller else {
                 return
             }
@@ -2708,6 +2708,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             } else {
                 let tooltipController = SaveProgressScreen(context: self.context, content: .progress(text, 0.0))
                 tooltipController.cancelled = { [weak self] in
+                    cancel()
                     if let self, let controller = self.controller {
                         controller.cancelVideoExport()
                     }
@@ -4134,8 +4135,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
     }
     
-    public func updateEditProgress(_ progress: Float) {
-        self.node.updateEditProgress(progress)
+    public func updateEditProgress(_ progress: Float, cancel: @escaping () -> Void) {
+        self.node.updateEditProgress(progress, cancel: cancel)
     }
     
     fileprivate func dismissAllTooltips() {

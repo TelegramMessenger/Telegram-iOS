@@ -613,6 +613,8 @@ private final class StoryContainerScreenComponent: Component {
         }
         
         private func beginHorizontalPan(translation: CGPoint) {
+            self.dismissAllTooltips()
+            
             if self.layer.animation(forKey: "panState") != nil {
                 self.layer.removeAnimation(forKey: "panState")
             }
@@ -876,6 +878,8 @@ private final class StoryContainerScreenComponent: Component {
             controller.forEachController { controller in
                 if let controller = controller as? UndoOverlayController {
                     controller.dismissWithCommitAction()
+                } else if let controller = controller as? TooltipScreen {
+                    controller.dismiss()
                 }
                 return true
             }
