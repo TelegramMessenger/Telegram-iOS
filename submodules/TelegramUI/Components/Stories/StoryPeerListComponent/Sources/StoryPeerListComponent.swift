@@ -815,7 +815,8 @@ public final class StoryPeerListComponent: Component {
                 self.overscrollHiddenChatItemsAllowed = false
             }
             
-            if let overscrollFocusIndex, overscrollStage2 >= 1.2 {
+            //print("overscrollStage2: \(overscrollStage2)")
+            if let overscrollFocusIndex, overscrollStage2 >= 1.15 {
                 self.overscrollSelectedId = self.sortedItems[overscrollFocusIndex].peer.id
             } else {
                 self.overscrollSelectedId = nil
