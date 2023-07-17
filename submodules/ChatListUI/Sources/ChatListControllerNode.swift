@@ -2019,6 +2019,11 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             tabsNode = value
         }
         
+        var effectiveStorySubscriptions: EngineStorySubscriptions?
+        if let controller = self.controller, let storySubscriptions = controller.orderedStorySubscriptions, shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions, isHidden: controller.location == .chatList(groupId: .archive)) {
+            effectiveStorySubscriptions = controller.orderedStorySubscriptions
+        }
+        
         let navigationBarSize = self.navigationBarView.update(
             transition: transition,
             component: AnyComponent(ChatListNavigationBar(
@@ -2031,7 +2036,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 primaryContent: headerContent?.primaryContent,
                 secondaryContent: headerContent?.secondaryContent,
                 secondaryTransition: self.inlineStackContainerTransitionFraction,
-                storySubscriptions: self.controller?.orderedStorySubscriptions,
+                storySubscriptions: effectiveStorySubscriptions,
                 storiesIncludeHidden: self.location == .chatList(groupId: .archive),
                 uploadProgress: self.controller?.storyUploadProgress,
                 tabsNode: tabsNode,
@@ -2685,8 +2690,10 @@ func shouldDisplayStoriesInChatListHeader(storySubscriptions: EngineStorySubscri
     if !storySubscriptions.items.isEmpty {
         return true
     }
-    if !isHidden, let _ = storySubscriptions.accountItem {
-        return true
+    if !isHidden, let accountItem = storySubscriptions.accountItem {
+        if accountItem.hasPending || accountItem.storyCount != 0 {
+            return true
+        }
     }
     return false
 }

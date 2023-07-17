@@ -3321,7 +3321,16 @@ public final class StoryItemSetContainerComponent: Component {
             guard let navigationController = controller.navigationController as? NavigationController else {
                 return
             }
-            if subject != nil || chat {
+            
+            var chat = chat
+            switch peer {
+            case .channel, .legacyGroup:
+                chat = true
+            default:
+                break
+            }
+            
+            if subject != nil || chat  {
                 component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peer), subject: subject, keepStack: .always, animated: true, pushController: { [weak controller, weak navigationController] chatController, animated, completion in
                     guard let controller, let navigationController else {
                         return
