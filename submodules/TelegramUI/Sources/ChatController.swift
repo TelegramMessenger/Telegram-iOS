@@ -5001,6 +5001,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             if storyStats.totalCount == 0 {
                                                 return nil
                                             }
+                                            if storyStats.unseenCount == 0 {
+                                                return nil
+                                            }
                                             return AvatarNode.StoryStats(
                                                 totalCount: storyStats.totalCount,
                                                 unseenCount: storyStats.unseenCount,
