@@ -816,7 +816,7 @@ public final class StoryPeerListComponent: Component {
             }
             
             //print("overscrollStage2: \(overscrollStage2)")
-            if let overscrollFocusIndex, overscrollStage2 >= 1.15 {
+            if let overscrollFocusIndex, overscrollStage2 >= 1.25 {
                 self.overscrollSelectedId = self.sortedItems[overscrollFocusIndex].peer.id
             } else {
                 self.overscrollSelectedId = nil
