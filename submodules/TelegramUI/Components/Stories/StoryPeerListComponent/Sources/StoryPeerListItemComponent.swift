@@ -134,6 +134,7 @@ private final class StoryProgressLayer: HierarchyTrackingLayer {
     private struct Params: Equatable {
         var size: CGSize
         var lineWidth: CGFloat
+        var radius: CGFloat
         var value: Value
     }
     private var currentParams: Params?
@@ -246,10 +247,15 @@ private final class StoryProgressLayer: HierarchyTrackingLayer {
         let params = Params(
             size: size,
             lineWidth: lineWidth,
+            radius: radius,
             value: value
         )
         if self.currentParams == params {
             return
+        }
+        if self.currentParams?.radius != params.radius {
+            self.uploadProgressLayer.path = nil
+            self.indefiniteDashLayer.path = nil
         }
         self.currentParams = params
         
