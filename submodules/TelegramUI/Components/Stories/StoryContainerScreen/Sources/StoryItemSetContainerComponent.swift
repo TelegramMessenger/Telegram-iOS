@@ -2468,7 +2468,7 @@ public final class StoryItemSetContainerComponent: Component {
                     privacyIcon = ComponentView()
                     self.privacyIcon = privacyIcon
                 }
-                let closeFriendIconSize = privacyIcon.update(
+                let privacyIconSize = privacyIcon.update(
                     transition: privacyIconTransition,
                     component: AnyComponent(PlainButtonComponent(
                         content: AnyComponent(
@@ -2504,7 +2504,7 @@ public final class StoryItemSetContainerComponent: Component {
                             let tooltipScreen = TooltipScreen(
                                 account: component.context.account,
                                 sharedContext: component.context.sharedContext,
-                                text: .plain(text: tooltipText), style: .default, location: TooltipScreen.Location.point(closeFriendIconView.convert(closeFriendIconView.bounds, to: self).offsetBy(dx: 1.0, dy: 6.0), .top), displayDuration: .infinite, shouldDismissOnTouch: { _, _ in
+                                text: .plain(text: tooltipText), style: .default, location: TooltipScreen.Location.point(closeFriendIconView.convert(closeFriendIconView.bounds, to: nil).offsetBy(dx: 1.0, dy: 6.0), .top), displayDuration: .infinite, shouldDismissOnTouch: { _, _ in
                                     return .dismiss(consume: true)
                                 }
                             )
@@ -2524,7 +2524,7 @@ public final class StoryItemSetContainerComponent: Component {
                     environment: {},
                     containerSize: CGSize(width: 44.0, height: 44.0)
                 )
-                let closeFriendIconFrame = CGRect(origin: CGPoint(x: headerRightOffset - closeFriendIconSize.width - 8.0, y: 23.0), size: closeFriendIconSize)
+                let closeFriendIconFrame = CGRect(origin: CGPoint(x: headerRightOffset - privacyIconSize.width - 8.0, y: 22.0), size: privacyIconSize)
                 if let closeFriendIconView = privacyIcon.view {
                     if closeFriendIconView.superview == nil {
                         self.controlsContainerView.addSubview(closeFriendIconView)

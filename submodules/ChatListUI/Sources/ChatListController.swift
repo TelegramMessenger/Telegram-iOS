@@ -2540,6 +2540,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         return nil
     }
     
+    private weak var storyCameraTooltip: TooltipScreen?
     fileprivate func openStoryCamera(fromList: Bool) {
         var reachedCountLimit = false
         var premiumNeeded = false
@@ -2575,6 +2576,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         
         if reachedCountLimit || premiumNeeded || hasActiveCall || hasActiveGroupCall {
+            if let storyCameraTooltip = self.storyCameraTooltip {
+                self.storyCameraTooltip = nil
+                storyCameraTooltip.dismiss()
+            }
             if let componentView = self.chatListHeaderView() {
                 var sourceFrame: CGRect?
                 if fromList {
@@ -2626,6 +2631,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             }
                         }
                     )
+                    self.storyCameraTooltip = tooltipController
                     self.present(tooltipController, in: .window(.root))
                 }
             }
