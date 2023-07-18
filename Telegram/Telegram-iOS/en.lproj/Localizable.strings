@@ -9698,7 +9698,7 @@ Sorry for the inconvenience.";
 "Story.Privacy.CategoryContacts" = "Contacts";
 "Story.Privacy.CategoryCloseFriends" = "Close Friends";
 "Story.Privacy.CategorySelectedContacts" = "Selected Contacts";
-"Story.Privacy.ExcludedPeople" = "ExcludedPeople";
+"Story.Privacy.ExcludedPeople" = "Excluded People";
 
 "Story.Privacy.ExcludePeople" = "exclude people";
 "Story.Privacy.ExcludePeopleExceptNames" = "except %@";
