@@ -1260,7 +1260,12 @@ open class TextNode: ASDisplayNode {
                     var effectiveLineRange = brokenLineRange
                     var additionalTrailingLine: (CTLine, Double)?
                     
-                    if lineRange.length == 0 || (CTLineGetTypographicBounds(originalLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(originalLine) + truncationTokenWidth) < Double(lineConstrainedSize.width) {
+                    var measureFitWidth = CTLineGetTypographicBounds(originalLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(originalLine)
+                    if customTruncationToken != nil {
+                        measureFitWidth += truncationTokenWidth
+                    }
+                    
+                    if lineRange.length == 0 || measureFitWidth < Double(lineConstrainedSize.width) {
                         if didClipLinebreak {
                             if lineRange.length == 0 {
                                 coreTextLine = CTLineCreateWithAttributedString(NSAttributedString())
