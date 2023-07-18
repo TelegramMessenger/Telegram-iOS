@@ -1022,7 +1022,6 @@ private final class MediaPlayerContext {
             if isPaused && self.fadeTimer != nil {
                 playbackStatus = .paused
             } else if reportRate.isZero {
-                //playbackStatus = .buffering(initial: false, whilePlaying: true)
                 playbackStatus = .playing
                 statusTimestamp = 0.0
             } else {
