@@ -1274,7 +1274,7 @@ open class TextNode: ASDisplayNode {
                             coreTextLine = originalLine
                         }
                     } else {
-                        coreTextLine = CTLineCreateTruncatedLine(originalLine, Double(lineConstrainedSize.width), truncationType, truncationToken) ?? truncationToken
+                        coreTextLine = CTLineCreateTruncatedLine(originalLine, max(1.0, Double(lineConstrainedSize.width) - truncationTokenWidth), truncationType, truncationToken) ?? truncationToken
                         let runs = (CTLineGetGlyphRuns(coreTextLine) as [AnyObject]) as! [CTRun]
                         for run in runs {
                             let runAttributes: NSDictionary = CTRunGetAttributes(run)
