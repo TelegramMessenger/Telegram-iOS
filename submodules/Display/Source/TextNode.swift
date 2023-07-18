@@ -1264,36 +1264,18 @@ open class TextNode: ASDisplayNode {
                         if didClipLinebreak {
                             coreTextLine = originalLine
                             additionalTrailingLine = (truncationToken, truncationTokenWidth)
-                            
-                            /*let mergedLine = NSMutableAttributedString()
-                            mergedLine.append(attributedString.attributedSubstring(from: NSRange(location: lineRange.location, length: lineRange.length)))
-                            mergedLine.append(truncatedTokenString)
-                            
-                            coreTextLine = CTLineCreateWithAttributedString(mergedLine)
-                            
-                            let runs = (CTLineGetGlyphRuns(coreTextLine) as [AnyObject]) as! [CTRun]
-                            for run in runs {
-                                let runAttributes: NSDictionary = CTRunGetAttributes(run)
-                                if let _ = runAttributes["CTForegroundColorFromContext"] {
-                                    brokenLineRange.length = CTRunGetStringRange(run).location - brokenLineRange.location
-                                    break
-                                }
-                            }
-                            if brokenLineRange.location + brokenLineRange.length > lineRange.location + lineRange.length {
-                                brokenLineRange.location = lineRange.location
-                                brokenLineRange.length = lineRange.length
-                            }
-                            if brokenLineRange.location + brokenLineRange.length > attributedString.length {
-                                brokenLineRange.length = attributedString.length - brokenLineRange.location
-                            }
-                            effectiveLineRange = brokenLineRange*/
-                            
                             truncated = true
                         } else {
                             coreTextLine = originalLine
                         }
                     } else {
-                        coreTextLine = CTLineCreateTruncatedLine(originalLine, Double(lineConstrainedSize.width), truncationType, truncationToken) ?? truncationToken
+                        var availableLineConstrainedWidth = lineConstrainedSize.width
+                        if customTruncationToken != nil {
+                            availableLineConstrainedWidth -= truncationTokenWidth
+                        }
+                        
+                        coreTextLine = CTLineCreateTruncatedLine(originalLine, Double(availableLineConstrainedWidth), truncationType, truncationToken) ?? truncationToken
+                        
                         let runs = (CTLineGetGlyphRuns(coreTextLine) as [AnyObject]) as! [CTRun]
                         for run in runs {
                             let runAttributes: NSDictionary = CTRunGetAttributes(run)
@@ -1301,9 +1283,6 @@ open class TextNode: ASDisplayNode {
                                 brokenLineRange.length = CTRunGetStringRange(run).location - brokenLineRange.location
                                 break
                             }
-                        }
-                        if customTruncationToken != nil {
-                            assert(true)
                         }
                         effectiveLineRange = CFRange(location: effectiveLineRange.location, length: 0)
                         for run in runs {

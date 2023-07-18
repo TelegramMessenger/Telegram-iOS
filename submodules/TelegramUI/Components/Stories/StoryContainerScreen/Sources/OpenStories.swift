@@ -171,6 +171,13 @@ public extension StoryContainerScreen {
         |> take(1)
         |> mapToSignal { state -> Signal<StoryContentContextState, NoError> in
             if let slice = state.slice {
+                #if DEBUG && true
+                if "".isEmpty {
+                    return .single(state)
+                    |> delay(4.0, queue: .mainQueue())
+                }
+                #endif
+                
                 return waitUntilStoryMediaPreloaded(context: context, peerId: slice.peer.id, storyItem: slice.item.storyItem)
                 |> timeout(4.0, queue: .mainQueue(), alternate: .complete())
                 |> map { _ -> StoryContentContextState in
