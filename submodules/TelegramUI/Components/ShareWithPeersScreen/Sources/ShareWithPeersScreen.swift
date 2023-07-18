@@ -2023,7 +2023,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                 id: .contacts,
                 title: presentationData.strings.Story_Privacy_CategoryContacts,
                 icon: "Chat List/Tabs/IconContacts",
-                iconColor: .yellow,
+                iconColor: .violet,
                 actionTitle: contactsSubtitle
             ))
             
@@ -2063,7 +2063,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                 id: .selectedContacts,
                 title: presentationData.strings.Story_Privacy_CategorySelectedContacts,
                 icon: "Chat List/Filters/Group",
-                iconColor: .violet,
+                iconColor: .yellow,
                 actionTitle: selectedContactsSubtitle
             ))
             
