@@ -215,13 +215,17 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                 context.draw(image.cgImage!, in: imageRect)
             }
             
+            var synchronous = false
+            if case let .image(_, type) = self.stickerEntity.content {
+                synchronous = type == .dualPhoto
+            }
             self.imageNode.setSignal(.single({ arguments -> DrawingContext? in
                 let context = DrawingContext(size: arguments.drawingSize, opaque: false, clear: true)
                 context?.withFlippedContext({ ctx in
                     drawImageWithOrientation(image, size: arguments.drawingSize, in: ctx)
                 })
                 return context
-            }))
+            }), attemptSynchronously: synchronous)
             self.setNeedsLayout()
         } else if case let .video(videoPath, image, _) = self.stickerEntity.content {
             let url = URL(fileURLWithPath: videoPath)

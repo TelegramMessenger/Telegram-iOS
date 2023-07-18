@@ -1974,25 +1974,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 }
             }
-#if targetEnvironment(simulator)
-            if case let .asset(asset) = subject, asset.mediaType == .video {
-                let videoEntity = DrawingStickerEntity(content: .dualVideoReference)
-                videoEntity.referenceDrawingSize = storyDimensions
-                videoEntity.scale = 1.625
-                videoEntity.position = PIPPosition.topRight.getPosition(storyDimensions)
-                self.entitiesView.add(videoEntity, announce: false)
-
-                mediaEditor.setAdditionalVideo("", positionChanges: [VideoPositionChange(additional: false, timestamp: 0.0), VideoPositionChange(additional: true, timestamp: 3.0)])
-                mediaEditor.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
-                if let entityView = self.entitiesView.getView(for: videoEntity.uuid) as? DrawingStickerEntityView {
-                    entityView.updated = { [weak videoEntity, weak self] in
-                        if let self, let videoEntity {
-                            self.mediaEditor?.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
-                        }
-                    }
-                }
-        }
-#endif
             
             self.gradientColorsDisposable = mediaEditor.gradientColors.start(next: { [weak self] colors in
                 if let self, let colors {
