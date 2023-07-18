@@ -374,6 +374,7 @@ public final class StoryPeerListComponent: Component {
             
             self.scrollContainerView = UIView()
             self.scrollContainerView.clipsToBounds = true
+            self.scrollContainerView.isExclusiveTouch = true
             
             self.titleView = UIImageView()
             self.titleView.layer.anchorPoint = CGPoint(x: 0.0, y: 0.5)
