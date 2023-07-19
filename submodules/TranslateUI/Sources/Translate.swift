@@ -148,11 +148,20 @@ public func canTranslateText(context: AccountContext, text: String, showTranslat
             return (true, nil)
         }
         
-        var dontTranslateLanguages: [String] = []
+        var baseLang = context.sharedContext.currentPresentationData.with { $0 }.strings.baseLanguageCode
+        let rawSuffix = "-raw"
+        if baseLang.hasSuffix(rawSuffix) {
+            baseLang = String(baseLang.dropLast(rawSuffix.count))
+        }
+        
+        var dontTranslateLanguages = Set<String>()
         if let ignoredLanguages = ignoredLanguages {
-            dontTranslateLanguages = ignoredLanguages
+            dontTranslateLanguages = Set(ignoredLanguages)
         } else {
-            dontTranslateLanguages = [context.sharedContext.currentPresentationData.with { $0 }.strings.baseLanguageCode]
+            dontTranslateLanguages.insert(baseLang)
+            for language in systemLanguageCodes() {
+                dontTranslateLanguages.insert(language)
+            }
         }
         
         let text = String(text.prefix(64))

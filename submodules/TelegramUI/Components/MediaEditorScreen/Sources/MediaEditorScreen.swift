@@ -3454,7 +3454,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if hasPremium {
                 updateTimeout(3600 * 6)
             } else {
-                self?.presentTimeoutPremiumSuggestion(3600 * 6)
+                self?.presentTimeoutPremiumSuggestion()
             }
         })))
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Story_Editor_ExpirationValue(12), icon: { theme in
@@ -3469,7 +3469,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if hasPremium {
                 updateTimeout(3600 * 12)
             } else {
-                self?.presentTimeoutPremiumSuggestion(3600 * 12)
+                self?.presentTimeoutPremiumSuggestion()
             }
         })))
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Story_Editor_ExpirationValue(24), icon: { theme in
@@ -3491,7 +3491,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if hasPremium {
                 updateTimeout(86400 * 2)
             } else {
-                self?.presentTimeoutPremiumSuggestion(86400 * 2)
+                self?.presentTimeoutPremiumSuggestion()
             }
         })))
         
@@ -3499,14 +3499,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         self.present(contextController, in: .window(.root))
     }
     
-    private func presentTimeoutPremiumSuggestion(_ timeout: Int32) {
+    private func presentTimeoutPremiumSuggestion() {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         
-        let timeoutString = presentationData.strings.MuteExpires_Hours(max(1, timeout / (60 * 60)))
-        let text = presentationData.strings.Story_Editor_TooltipPremiumCustomExpiration(timeoutString).string
+        let text = presentationData.strings.Story_Editor_TooltipPremiumExpiration
         
         let context = self.context
-        let controller = UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: true, title: nil, text: text, customUndoText: presentationData.strings.Story_Editor_TooltipPremiumMore), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
+        let controller = UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: true, title: nil, text: text, customUndoText: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
             if case .undo = action, let self {
                 let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings)
                 self.push(controller)
