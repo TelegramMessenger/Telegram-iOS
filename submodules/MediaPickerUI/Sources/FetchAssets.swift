@@ -141,7 +141,7 @@ final class AssetDownloadManager {
             } else {
                 return EmptyDisposable
             }
-        }
+        } |> runOn(self.queue)
     }
 }
 

@@ -516,40 +516,45 @@ final class MediaPickerGridItemNode: GridItemNode {
                 self.currentDraftState = nil
             }
             
+            var typeIcon: UIImage?
+            var duration: String?
             if asset.isFavorite {
-                self.typeIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Favorite"), color: .white)
-                if self.typeIconNode.supernode == nil {
-                    self.addSubnode(self.gradientNode)
-                    self.addSubnode(self.typeIconNode)
-                    self.setNeedsLayout()
+                typeIcon = generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Favorite"), color: .white)
+            } else if asset.mediaType == .video {
+                if asset.mediaSubtypes.contains(.videoHighFrameRate) {
+                    typeIcon = UIImage(bundleImageName: "Media Editor/MediaSlomo")
+                } else if asset.mediaSubtypes.contains(.videoTimelapse) {
+                    typeIcon = UIImage(bundleImageName: "Media Editor/MediaTimelapse")
+                } else {
+                    typeIcon = UIImage(bundleImageName: "Media Editor/MediaVideo")
                 }
+                duration = stringForDuration(Int32(asset.duration))
             }
             
-            if asset.mediaType == .video {
-                if !asset.isFavorite {
-                    if asset.mediaSubtypes.contains(.videoHighFrameRate) {
-                        self.typeIconNode.image = UIImage(bundleImageName: "Media Editor/MediaSlomo")
-                    } else if asset.mediaSubtypes.contains(.videoTimelapse) {
-                        self.typeIconNode.image = UIImage(bundleImageName: "Media Editor/MediaTimelapse")
-                    } else {
-                        self.typeIconNode.image = UIImage(bundleImageName: "Media Editor/MediaVideo")
-                    }
-                }
-                
-                self.durationNode.attributedText = NSAttributedString(string: stringForDuration(Int32(asset.duration)), font: Font.semibold(12.0), textColor: .white)
-                
-                if self.durationNode.supernode == nil {
+            if typeIcon != nil || duration != nil {
+                if self.gradientNode.supernode == nil {
                     self.addSubnode(self.gradientNode)
+                }
+            } else if self.gradientNode.supernode != nil {
+                self.gradientNode.removeFromSupernode()
+            }
+            
+            if let typeIcon {
+                self.typeIconNode.image = typeIcon
+                if self.typeIconNode.supernode == nil {
                     self.addSubnode(self.typeIconNode)
+                }
+            } else if self.typeIconNode.supernode != nil {
+                self.typeIconNode.removeFromSupernode()
+            }
+            
+            if let duration {
+                self.durationNode.attributedText = NSAttributedString(string: duration, font: Font.semibold(12.0), textColor: .white)
+                if self.durationNode.supernode == nil {
                     self.addSubnode(self.durationNode)
-                    self.setNeedsLayout()
                 }
-            } else {
-                if self.typeIconNode.supernode != nil {
-                    self.gradientNode.removeFromSupernode()
-                    self.typeIconNode.removeFromSupernode()
-                    self.durationNode.removeFromSupernode()
-                }
+            } else if self.durationNode.supernode != nil {
+                self.durationNode.removeFromSupernode()
             }
             
             self.currentAssetState = (fetchResult, index)
