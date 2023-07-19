@@ -82,6 +82,8 @@ final class StoryItemContentComponent: Component {
         private var currentProgressTimerValue: Double = 0.0
         private var videoProgressDisposable: Disposable?
         
+        private var ignoreBufferingTimestamp: Double = 0.0
+        
         private var markedAsSeen: Bool = false
         private var contentLoaded: Bool = false
         
@@ -252,6 +254,7 @@ final class StoryItemContentComponent: Component {
         
         override func leaveAmbientMode() {
             if let videoNode = self.videoNode {
+                self.ignoreBufferingTimestamp = CFAbsoluteTimeGetCurrent()
                 videoNode.setSoundEnabled(true)
                 videoNode.continueWithOverridingAmbientMode(isAmbient: false)
             }
@@ -259,6 +262,7 @@ final class StoryItemContentComponent: Component {
         
         override func enterAmbientMode(ambient: Bool) {
             if let videoNode = self.videoNode {
+                self.ignoreBufferingTimestamp = CFAbsoluteTimeGetCurrent()
                 if ambient {
                     videoNode.continueWithOverridingAmbientMode(isAmbient: true)
                 } else {
@@ -367,6 +371,16 @@ final class StoryItemContentComponent: Component {
             var isBuffering = false
             if case .buffering(false, true, _, _) = videoPlaybackStatus.status {
                 isBuffering = true
+            }
+            
+            if isBuffering {
+                if CFAbsoluteTimeGetCurrent() - self.ignoreBufferingTimestamp < 0.3 {
+                    isBuffering = false
+                } else {
+                    self.ignoreBufferingTimestamp = 0.0
+                }
+            } else {
+                self.ignoreBufferingTimestamp = 0.0
             }
             
             if case .buffering(true, _, _, _) = videoPlaybackStatus.status {
