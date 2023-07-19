@@ -4214,8 +4214,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: true, fromAttachMenu: false, isInline: false, isSimple: false)
-                    let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url in
-                        self?.openUrl(url, concealed: true, forceExternal: true)
+                    let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
+                        self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
                     }, getInputContainerNode: { [weak self] in
                         if let strongSelf = self, let layout = strongSelf.validLayout, case .compact = layout.metrics.widthClass {
                             return (strongSelf.chatDisplayNode.getWindowInputAccessoryHeight(), strongSelf.chatDisplayNode.inputPanelContainerNode, {
@@ -4269,8 +4269,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return
                         }
                         let params = WebAppParameters(peerId: peerId, botId: botId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: false, fromAttachMenu: false, isInline: isInline, isSimple: true)
-                        let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url in
-                            self?.openUrl(url, concealed: true, forceExternal: true)
+                        let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
+                            self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
                         }, requestSwitchInline: { [weak self] query, chatTypes, completion in
                             if let strongSelf = self {
                                 if let chatTypes {
@@ -4309,8 +4309,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return
                         }
                         let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, payload: nil, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, fromMenu: false, fromAttachMenu: false, isInline: false, isSimple: false)
-                        let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url in
-                            self?.openUrl(url, concealed: true, forceExternal: true)
+                        let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
+                            self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
                         }, completion: { [weak self] in
                             self?.chatDisplayNode.historyNode.scrollToEndOfHistory()
                         }, getNavigationController: { [weak self] in
@@ -4341,7 +4341,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if value {
                     openWebView()
                 } else {
-                    let controller = webAppLaunchConfirmationController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: botPeer, commit: {
+                    let controller = webAppLaunchConfirmationController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: botPeer, completion: { _ in
                         let _ = ApplicationSpecificNotice.setBotGameNotice(accountManager: strongSelf.context.sharedContext.accountManager, peerId: botPeer.id).start()
                         openWebView()
                     }, showMore: nil)
@@ -8837,7 +8837,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak self] searchResult in
                         if let strongSelf = self, let (searchResult, searchState, searchLocation) = searchResult {
-                            
                             let controller = ChatSearchResultsController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, location: searchLocation, searchQuery: searchData.query, searchResult: searchResult, searchState: searchState, navigateToMessageIndex: { index in
                                 guard let strongSelf = self else {
                                     return
@@ -12948,7 +12947,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.presentAttachmentMenu(subject: .bot(id: botId, payload: payload, justInstalled: justInstalled))
     }
     
-    public func presentBotApp(botApp: BotApp, botPeer: EnginePeer, payload: String?, concealed: Bool = false) {
+    public func presentBotApp(botApp: BotApp, botPeer: EnginePeer, payload: String?, concealed: Bool = false, commit: @escaping () -> Void = {}) {
         guard let peerId = self.chatLocation.peerId else {
             return
         }
@@ -12958,6 +12957,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
+            commit()
+            
             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                 return $0.updatedTitlePanelContext {
                     if !$0.contains(where: {
@@ -13010,8 +13011,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botApp.title, url: url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, fromMenu: false, fromAttachMenu: false, isInline: false, isSimple: false)
-                let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url in
-                    self?.openUrl(url, concealed: true, forceExternal: true)
+                let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
+                    self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
                 }, requestSwitchInline: { [weak self] query, chatTypes, completion in
                     if let strongSelf = self {
                         if let chatTypes {
@@ -13043,19 +13044,29 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }))
         }
-    
-        if concealed || botApp.flags.contains(.notActivated) {
-            let controller = webAppLaunchConfirmationController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: botPeer, commit: {
+        
+        let _ = (ApplicationSpecificNotice.getBotGameNotice(accountManager: self.context.sharedContext.accountManager, peerId: botPeer.id)
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let self else {
+                return
+            }
+
+            if !value || concealed || botApp.flags.contains(.notActivated) {
+                let context = self.context
+                                
+                let controller = webAppLaunchConfirmationController(context: context, updatedPresentationData: self.updatedPresentationData, peer: botPeer, requestWriteAccess: !botApp.flags.contains(.notActivated) && botApp.flags.contains(.requiresWriteAccess), completion: { allowWrite in
+                    let _ = ApplicationSpecificNotice.setBotGameNotice(accountManager: context.sharedContext.accountManager, peerId: botPeer.id).start()
+                    openBotApp(allowWrite)
+                }, showMore: { [weak self] in
+                    if let self {
+                        self.openResolved(result: .peer(botPeer._asPeer(), .info), sourceMessageId: nil)
+                    }
+                })
+                self.present(controller, in: .window(.root))
+            } else {
                 openBotApp(false)
-            }, showMore: { [weak self] in
-                if let strongSelf = self {
-                    strongSelf.openResolved(result: .peer(botPeer._asPeer(), .info), sourceMessageId: nil)
-                }
-            })
-            self.present(controller, in: .window(.root))
-        } else {
-            openBotApp(false)
-        }
+            }
+        })
     }
     
     private func presentAttachmentPremiumGift() {
@@ -13572,8 +13583,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let params = WebAppParameters(peerId: peer.id, botId: bot.id, botName: botName, url: nil, queryId: nil, payload: payload, buttonText: nil, keepAliveSignal: nil, fromMenu: false, fromAttachMenu: fromAttachMenu, isInline: false, isSimple: false)
                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                     let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, replyToMessageId: replyMessageId, threadId: strongSelf.chatLocation.threadId)
-                    controller.openUrl = { [weak self] url in
-                        self?.openUrl(url, concealed: true, forceExternal: true)
+                    controller.openUrl = { [weak self] url, concealed, commit in
+                        self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
                     }
                     controller.getNavigationController = { [weak self] in
                         return self?.effectiveNavigationController
@@ -17400,7 +17411,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }))
     }
     
-    private func openResolved(result: ResolvedUrl, sourceMessageId: MessageId?, forceExternal: Bool = false, concealed: Bool = false) {
+    private func openResolved(result: ResolvedUrl, sourceMessageId: MessageId?, forceExternal: Bool = false, concealed: Bool = false, commit: @escaping () -> Void = {}) {
         guard let peerId = self.chatLocation.peerId else {
             return
         }
@@ -17409,16 +17420,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            if let currentWebAppController = strongSelf.currentWebAppController {
-                strongSelf.currentWebAppController = nil
-                currentWebAppController.dismiss(animated: true, completion: nil)
-            } else if let currentWebAppController = strongSelf.currentMenuWebAppController {
-                strongSelf.currentMenuWebAppController = nil
-                currentWebAppController.dismiss(animated: true, completion: nil)
+            let dismissWebAppContollers: () -> Void = {
+                if let currentWebAppController = strongSelf.currentWebAppController {
+                    strongSelf.currentWebAppController = nil
+                    currentWebAppController.dismiss(animated: true, completion: nil)
+                } else if let currentWebAppController = strongSelf.currentMenuWebAppController {
+                    strongSelf.currentMenuWebAppController = nil
+                    currentWebAppController.dismiss(animated: true, completion: nil)
+                }
             }
             
             switch navigation {
                 case let .chat(_, subject, peekData):
+                    dismissWebAppContollers()
                     if case .peer(peerId.id) = strongSelf.chatLocation {
                         if let subject = subject, case let .message(messageSubject, _, timecode) = subject {
                             if case let .id(messageId) = messageSubject {
@@ -17434,31 +17448,41 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: subject, keepStack: .always, peekData: peekData))
                         }
                     }
+                    commit()
                 case .info:
+                    dismissWebAppContollers()
                     strongSelf.navigationActionDisposable.set((strongSelf.context.account.postbox.loadedPeerWithId(peerId.id)
-                        |> take(1)
-                        |> deliverOnMainQueue).start(next: { [weak self] peer in
-                            if let strongSelf = self, peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil {
-                                if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
-                                    strongSelf.effectiveNavigationController?.pushViewController(infoController)
-                                }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self] peer in
+                        if let strongSelf = self, peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil {
+                            if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                                strongSelf.effectiveNavigationController?.pushViewController(infoController)
                             }
-                        }))
+                        }
+                    }))
+                    commit()
                 case let .withBotStartPayload(startPayload):
+                    dismissWebAppContollers()
                     if case .peer(peerId.id) = strongSelf.chatLocation {
                         strongSelf.startBot(startPayload.payload)
                     } else if let navigationController = strongSelf.effectiveNavigationController {
                         strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), botStart: startPayload, keepStack: .always))
                     }
+                    commit()
                 case let .withAttachBot(attachBotStart):
+                    dismissWebAppContollers()
                     if let navigationController = strongSelf.effectiveNavigationController {
                         strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), attachBotStart: attachBotStart))
                     }
+                    commit()
                 case let .withBotApp(botAppStart):
                     let _ =  (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId.id))
                     |> deliverOnMainQueue).start(next: { [weak self] peer in
                         if let strongSelf = self, let peer {
-                            strongSelf.presentBotApp(botApp: botAppStart.botApp, botPeer: peer, payload: botAppStart.payload, concealed: concealed)
+                            strongSelf.presentBotApp(botApp: botAppStart.botApp, botPeer: peer, payload: botAppStart.payload, concealed: concealed, commit: {
+                                dismissWebAppContollers()
+                                commit()
+                            })
                         }
                     })
                 default:
@@ -17483,14 +17507,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, contentContext: nil)
     }
     
-    private func openUrl(_ url: String, concealed: Bool, forceExternal: Bool = false, skipUrlAuth: Bool = false, skipConcealedAlert: Bool = false, message: Message? = nil) {
+    private func openUrl(_ url: String, concealed: Bool, forceExternal: Bool = false, skipUrlAuth: Bool = false, skipConcealedAlert: Bool = false, message: Message? = nil, commit: @escaping () -> Void = {}) {
         self.commitPurposefulAction()
         
         let _ = self.presentVoiceMessageDiscardAlert(action: {
             openUserGeneratedUrl(context: self.context, peerId: self.peerView?.peerId, url: url, concealed: concealed, skipUrlAuth: skipUrlAuth, skipConcealedAlert: skipConcealedAlert, present: { [weak self] c in
                 self?.present(c, in: .window(.root))
             }, openResolved: { [weak self] resolved in
-                self?.openResolved(result: resolved, sourceMessageId: message?.id, forceExternal: forceExternal, concealed: concealed)
+                self?.openResolved(result: resolved, sourceMessageId: message?.id, forceExternal: forceExternal, concealed: concealed, commit: commit)
             })
         }, performAction: true)
     }
