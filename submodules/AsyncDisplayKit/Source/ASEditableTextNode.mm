@@ -376,7 +376,7 @@
     __strong ASEditableTextNode *strongSelf = weakSelf;
     if (strongSelf != nil) {
       if ([strongSelf->_delegate respondsToSelector:@selector(editableTextNodeShouldCopy:)]) {
-        return [strongSelf->_delegate editableTextNodeShouldCopy:self];
+        return [strongSelf->_delegate editableTextNodeShouldCopy:strongSelf];
       }
     }
     return true;
@@ -385,7 +385,7 @@
     __strong ASEditableTextNode *strongSelf = weakSelf;
     if (strongSelf != nil) {
       if ([strongSelf->_delegate respondsToSelector:@selector(editableTextNodeShouldPaste:)]) {
-        return [strongSelf->_delegate editableTextNodeShouldPaste:self];
+        return [strongSelf->_delegate editableTextNodeShouldPaste:strongSelf];
       }
     }
     return true;

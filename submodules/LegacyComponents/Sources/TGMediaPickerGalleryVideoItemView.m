@@ -1198,7 +1198,7 @@
         
         [strongSelf->_entitiesView updateVisibility:strongSelf.isPlaying];
         
-        strongSelf->_positionTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(positionTimerEvent) interval:0.25 repeat:true];
+        strongSelf->_positionTimer = [TGTimerTarget scheduledMainThreadTimerWithTarget:strongSelf action:@selector(positionTimerEvent) interval:0.25 repeat:true];
         [strongSelf positionTimerEvent];
         
         [strongSelf _mutePlayer:strongSelf->_sendAsGif];

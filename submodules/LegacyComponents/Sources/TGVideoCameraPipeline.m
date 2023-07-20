@@ -889,7 +889,7 @@ static CGFloat angleOffsetFromPortraitOrientationToOrientation(AVCaptureVideoOri
         if (strongSelf == nil)
             return;
         
-        [self _reconfigureDevice:_videoDevice withBlock:^(AVCaptureDevice *device) {
+        [strongSelf _reconfigureDevice:_videoDevice withBlock:^(AVCaptureDevice *device) {
             device.videoZoomFactor = MAX(1.0f, MIN([strongSelf _maximumZoomFactor], 1.0f + ([strongSelf _maximumZoomFactor] - 1.0f) * zoomLevel));
         }];
     }];
@@ -903,7 +903,7 @@ static CGFloat angleOffsetFromPortraitOrientationToOrientation(AVCaptureVideoOri
         if (strongSelf == nil)
             return;
         
-        [self _reconfigureDevice:_videoDevice withBlock:^(AVCaptureDevice *device) {
+        [strongSelf _reconfigureDevice:_videoDevice withBlock:^(AVCaptureDevice *device) {
             [device rampToVideoZoomFactor:1.0 withRate:8.0];
         }];
     }];

@@ -314,7 +314,7 @@
                 if (isActive && strongSelf->_currentAdditionalNavigationBarHeight < FLT_EPSILON)
                 {
                     strongSelf->_minimizePlayer = false;
-                    [(TGNavigationBar *)self.navigationBar setMinimizedMusicPlayer:_minimizePlayer];
+                    [(TGNavigationBar *)strongSelf.navigationBar setMinimizedMusicPlayer:_minimizePlayer];
                 }
                 
                 CGFloat currentAdditionalNavigationBarHeight = !isActive ? 0.0f : (strongSelf->_minimizePlayer ? 2.0f : 37.0f);
