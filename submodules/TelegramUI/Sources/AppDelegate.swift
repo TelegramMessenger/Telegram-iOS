@@ -2035,9 +2035,6 @@ extension UserDefaults {
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedApplicationContext in
             sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0)
-            
-            // take a chance to deactivate secret passcodes if app was waken up to process push-notification
-            let _ = sharedApplicationContext.sharedContext.appLockContext.secretPasscodesTimeoutCheck().start()
         })
         
         var redactedPayload = userInfo
@@ -2120,13 +2117,6 @@ extension UserDefaults {
     
     private func pushRegistryImpl(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
         Logger.shared.log("App \(self.episodeId) PushRegistry", "pushRegistry processing push notification")
-        
-        let _ = (self.sharedContextPromise.get()
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
-            // take a chance to deactivate secret passcodes if app was waken up to process push-notification
-            let _ = sharedApplicationContext.sharedContext.appLockContext.secretPasscodesTimeoutCheck().start()
-        })
         
         let decryptedPayloadAndAccountId: ([AnyHashable: Any], AccountRecordId)?
         

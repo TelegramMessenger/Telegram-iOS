@@ -743,8 +743,6 @@ public protocol AppLockContext: AnyObject {
     func lock()
     func unlock()
     func failedUnlockAttempt()
-    
-    func secretPasscodesTimeoutCheck() -> Signal<Void, NoError>
 }
 
 public protocol RecentSessionsController: AnyObject {

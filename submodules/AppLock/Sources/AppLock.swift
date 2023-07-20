@@ -540,7 +540,7 @@ public final class AppLockContextImpl: AppLockContext {
             }
             
             if self.secretPasscodesTimeoutCheckTimer == nil && self.applicationBindings.isMainApp {
-                // set timer to check for secret passcodes timeout when the app is locked or in background while playing audio or video in picture-in-picture mode
+                // set timer to check for secret passcodes timeout when the app is locked or in background while playing audio or video in picture-in-picture mode, or resumed from background to handle push notifications
                 
                 weak var weakSelf = self
                 
@@ -701,7 +701,7 @@ public final class AppLockContextImpl: AppLockContext {
     }
     
     // passing state (and not getting through self.currentState.get()) so we have value before it could be changed for instance by following updateApplicationActivityTimestamp() calls
-    public func secretPasscodesTimeoutCheck() -> Signal<Void, NoError> {
+    private func secretPasscodesTimeoutCheck() -> Signal<Void, NoError> {
         assert(Queue.mainQueue().isCurrent())
         let state = self.currentStateValue
         return self.secretPasscodesDeactivateOnCondition { sp in
