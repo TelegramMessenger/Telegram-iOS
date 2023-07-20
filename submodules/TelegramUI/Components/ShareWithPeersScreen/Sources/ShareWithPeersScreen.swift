@@ -1446,7 +1446,7 @@ final class ShareWithPeersScreenComponent: Component {
                 case .closeFriends:
                     title = environment.strings.Story_Privacy_CategoryCloseFriends
                 case .contacts:
-                    title = environment.strings.Story_Privacy_ExcludePeople
+                    title = environment.strings.Story_Privacy_ExcludedPeople
                 case .nobody:
                     title = environment.strings.Story_Privacy_CategorySelectedContacts
                 case .everyone:

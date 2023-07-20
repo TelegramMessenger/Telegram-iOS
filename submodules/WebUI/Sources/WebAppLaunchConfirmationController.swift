@@ -10,9 +10,19 @@ import TelegramUIPreferences
 import AccountContext
 import AppBundle
 import AvatarNode
+import CheckNode
+import Markdown
+
+private let textFont = Font.regular(13.0)
+private let boldTextFont = Font.semibold(13.0)
+
+private func formattedText(_ text: String, color: UIColor, textAlignment: NSTextAlignment = .natural) -> NSAttributedString {
+    return parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: color), bold: MarkdownAttributeSet(font: boldTextFont, textColor: color), link: MarkdownAttributeSet(font: textFont, textColor: color), linkAttribute: { _ in return nil}), textAlignment: textAlignment)
+}
 
 private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings
+    private let peer: EnginePeer
     private let title: String
     private let text: String
     private let showMore: Bool
@@ -23,6 +33,9 @@ private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
     
     private let moreButton: HighlightableButtonNode
     private let arrowNode: ASImageNode
+    
+    private let allowWriteCheckNode: InteractiveCheckNode
+    private let allowWriteLabelNode: ASTextNode
     
     private let actionNodesSeparator: ASDisplayNode
     private let actionNodes: [TextAlertContentActionNode]
@@ -36,8 +49,15 @@ private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
         return self.isUserInteractionEnabled
     }
     
-    init(context: AccountContext, theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, peer: EnginePeer, title: String, text: String, showMore: Bool, actions: [TextAlertAction], morePressed: @escaping () -> Void) {
+    var allowWriteAccess: Bool = true {
+        didSet {
+            self.allowWriteCheckNode.setSelected(self.allowWriteAccess, animated: true)
+        }
+    }
+    
+    init(context: AccountContext, theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, peer: EnginePeer, title: String, text: String, showMore: Bool, requestWriteAccess: Bool, actions: [TextAlertAction], morePressed: @escaping () -> Void) {
         self.strings = strings
+        self.peer = peer
         self.title = title
         self.text = text
         self.showMore = showMore
@@ -62,6 +82,12 @@ private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
         self.arrowNode.isHidden = !showMore
         self.arrowNode.contentMode = .scaleAspectFit
         
+        self.allowWriteCheckNode = InteractiveCheckNode(theme: CheckNodeTheme(backgroundColor: theme.accentColor, strokeColor: theme.contrastColor, borderColor: theme.controlBorderColor, overlayBorder: false, hasInset: false, hasShadow: false))
+        self.allowWriteCheckNode.setSelected(true, animated: false)
+        self.allowWriteLabelNode = ASTextNode()
+        self.allowWriteLabelNode.maximumNumberOfLines = 4
+        self.allowWriteLabelNode.isUserInteractionEnabled = true
+       
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
         
@@ -86,6 +112,11 @@ private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.moreButton)
         self.moreButton.addSubnode(self.arrowNode)
+        
+        if requestWriteAccess {
+            self.addSubnode(self.allowWriteCheckNode)
+            self.addSubnode(self.allowWriteLabelNode)
+        }
     
         self.addSubnode(self.actionNodesSeparator)
         
@@ -97,11 +128,29 @@ private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
             self.addSubnode(separatorNode)
         }
         
+        self.allowWriteCheckNode.valueChanged = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.allowWriteAccess = !strongSelf.allowWriteAccess
+            }
+        }
+        
         self.updateTheme(theme)
         
         self.avatarNode.setPeer(context: context, theme: ptheme, peer: peer)
         
         self.moreButton.addTarget(self, action: #selector(self.moreButtonPressed), forControlEvents: .touchUpInside)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.allowWriteLabelNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.allowWriteTap(_:))))
+    }
+    
+    @objc private func allowWriteTap(_ gestureRecognizer: UITapGestureRecognizer) {
+        if self.allowWriteCheckNode.isUserInteractionEnabled {
+            self.allowWriteAccess = !self.allowWriteAccess
+        }
     }
     
     @objc private func moreButtonPressed() {
@@ -114,6 +163,8 @@ private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
         
         self.moreButton.setAttributedTitle(NSAttributedString(string: self.strings.WebApp_LaunchMoreInfo, font: Font.regular(13.0), textColor: theme.accentColor), for: .normal)
         self.arrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Peer Info/AlertArrow"), color: theme.accentColor)
+        
+        self.allowWriteLabelNode.attributedText = formattedText(strings.WebApp_AddToAttachmentAllowMessages(self.peer.compactDisplayTitle).string, color: theme.primaryColor)
         
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {
@@ -153,15 +204,32 @@ private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: origin.y), size: titleSize))
         origin.y += titleSize.height + 6.0
         
+        var entriesHeight: CGFloat = 0.0
         if self.showMore {
             let moreButtonSize = self.moreButton.measure(CGSize(width: size.width - 32.0, height: size.height))
             transition.updateFrame(node: self.moreButton, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - moreButtonSize.width) / 2.0) - 5.0, y: origin.y), size: moreButtonSize))
             transition.updateFrame(node: self.arrowNode, frame: CGRect(origin: CGPoint(x: moreButtonSize.width + 3.0, y: 4.0), size: CGSize(width: 9.0, height: 9.0)))
             origin.y += moreButtonSize.height + 22.0
+            entriesHeight += 37.0
         }
         
         let textSize = self.textNode.measure(CGSize(width: size.width - 32.0, height: size.height))
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: origin.y), size: textSize))
+        origin.y += textSize.height
+        
+        if self.allowWriteLabelNode.supernode != nil {
+            origin.y += 16.0
+            entriesHeight += 16.0
+            
+            let checkSize = CGSize(width: 22.0, height: 22.0)
+            let condensedSize = CGSize(width: size.width - 76.0, height: size.height)
+            
+            let allowWriteSize = self.allowWriteLabelNode.measure(condensedSize)
+            transition.updateFrame(node: self.allowWriteLabelNode, frame: CGRect(origin: CGPoint(x: 46.0, y: origin.y), size: allowWriteSize))
+            transition.updateFrame(node: self.allowWriteCheckNode, frame: CGRect(origin: CGPoint(x: 12.0, y: origin.y - 2.0), size: checkSize))
+            origin.y += allowWriteSize.height
+            entriesHeight += allowWriteSize.height
+        }
         
         let actionButtonHeight: CGFloat = 44.0
         var minActionsWidth: CGFloat = 0.0
@@ -194,10 +262,7 @@ private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
                 actionsHeight = actionButtonHeight * CGFloat(self.actionNodes.count)
         }
         
-        var resultSize = CGSize(width: contentWidth, height: avatarSize.height + titleSize.height + textSize.height + actionsHeight + 25.0 + insets.top + insets.bottom)
-        if self.showMore {
-            resultSize.height += 37.0
-        }
+        let resultSize = CGSize(width: contentWidth, height: avatarSize.height + titleSize.height + textSize.height + entriesHeight + actionsHeight + 25.0 + insets.top + insets.bottom)
         
         transition.updateFrame(node: self.actionNodesSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
         
@@ -248,7 +313,7 @@ private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
     }
 }
 
-public func webAppLaunchConfirmationController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peer: EnginePeer, commit: @escaping () -> Void, showMore: (() -> Void)?) -> AlertController {
+public func webAppLaunchConfirmationController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peer: EnginePeer, requestWriteAccess: Bool = false, completion: @escaping (Bool) -> Void, showMore: (() -> Void)?) -> AlertController {
     let theme = defaultDarkColorPresentationTheme
     let presentationData: PresentationData
     if let updatedPresentationData {
@@ -259,10 +324,14 @@ public func webAppLaunchConfirmationController(context: AccountContext, updatedP
     let strings = presentationData.strings
     
     var dismissImpl: ((Bool) -> Void)?
-    var contentNode: WebAppLaunchConfirmationAlertContentNode?
+    var getContentNodeImpl: (() -> WebAppLaunchConfirmationAlertContentNode?)?
     let actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: presentationData.strings.WebApp_LaunchOpenApp, action: {
+        if requestWriteAccess, let allowWriteAccess = getContentNodeImpl?()?.allowWriteAccess {
+            completion(allowWriteAccess)
+        } else {
+            completion(false)
+        }
         dismissImpl?(true)
-        commit()
     }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?(true)
     })]
@@ -270,12 +339,15 @@ public func webAppLaunchConfirmationController(context: AccountContext, updatedP
     let title = peer.compactDisplayTitle
     let text = presentationData.strings.WebApp_LaunchConfirmation
     
-    contentNode = WebAppLaunchConfirmationAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, peer: peer, title: title, text: text, showMore: showMore != nil, actions: actions, morePressed: {
+    let contentNode = WebAppLaunchConfirmationAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, peer: peer, title: title, text: text, showMore: showMore != nil, requestWriteAccess: requestWriteAccess, actions: actions, morePressed: {
         dismissImpl?(true)
         showMore?()
     })
+    getContentNodeImpl = { [weak contentNode] in
+        return contentNode
+    }
     
-    let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode!)
+    let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
     dismissImpl = { [weak controller] animated in
         if animated {
             controller?.dismissAnimated()

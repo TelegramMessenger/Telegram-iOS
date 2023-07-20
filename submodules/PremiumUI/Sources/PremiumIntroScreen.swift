@@ -395,7 +395,7 @@ enum PremiumPerk: CaseIterable {
         case .translation:
             return strings.Premium_Translation
         case .stories:
-            return strings.Premium_Stories
+            return ""
         }
     }
     

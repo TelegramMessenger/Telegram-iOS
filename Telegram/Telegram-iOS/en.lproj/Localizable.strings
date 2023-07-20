@@ -9428,10 +9428,6 @@ Sorry for the inconvenience.";
 
 "MediaPicker.AddImage" = "Add Image";
 
-"Premium.Stories" = "Story Posting";
-"Premium.StoriesInfo" = "Be one of the first to share your stories with your contacts or an unlimited audience.";
-"Premium.Stories.Proceed" = "Unlock Story Posting";
-
 "AutoDownloadSettings.OnForContacts" = "On for contacts";
 
 "AutoDownloadSettings.StoriesSectionHeader" = "AUTO-DOWNLOAD STORIES";
@@ -9553,10 +9549,9 @@ Sorry for the inconvenience.";
 
 "Story.ContextDeleteStory" = "Delete Story";
 
-"Story.TooltipPrivacyCloseFriends" = "You are seeing this story because %@ added you\nto their list of Close Friends.";
-"Story.TooltipPrivacyContacts" = "Only %@'s contacts can view this story.";
-"Story.TooltipPrivacySelectedContacts" = "Only some contacts %@ selected can view this story.";
-
+"Story.TooltipPrivacyCloseFriends" = "You are seeing this story because **%@** added you\nto their list of Close Friends.";
+"Story.TooltipPrivacyContacts" = "Only **%@'s** contacts can view this story.";
+"Story.TooltipPrivacySelectedContacts" = "Only some contacts **%@** selected can view this story.";
 "Story.ToastViewInChat" = "View in Chat";
 "Story.ToastReactionSent" = "Reaction Sent.";
 
@@ -9630,8 +9625,7 @@ Sorry for the inconvenience.";
 "Story.Editor.ExpirationValue_1" = "1 Hour";
 "Story.Editor.ExpirationValue_any" = "%d Hours";
 
-"Story.Editor.TooltipPremiumCustomExpiration" = "Subscribe to **Telegram Premium** to make your stories disappear %@.";
-"Story.Editor.TooltipPremiumMore" = "More";
+"Story.Editor.TooltipPremiumExpiration" = "Subscribe to **Telegram Premium** to make your stories disappear after 6, 12 or 48 hours.";
 
 "Story.Editor.InputPlaceholderAddCaption" = "Add a caption...";
 
@@ -9699,7 +9693,7 @@ Sorry for the inconvenience.";
 "Story.Privacy.CategoryContacts" = "Contacts";
 "Story.Privacy.CategoryCloseFriends" = "Close Friends";
 "Story.Privacy.CategorySelectedContacts" = "Selected Contacts";
-"Story.Privacy.ExcludedPeople" = "ExcludedPeople";
+"Story.Privacy.ExcludedPeople" = "Excluded People";
 
 "Story.Privacy.ExcludePeople" = "exclude people";
 "Story.Privacy.ExcludePeopleExceptNames" = "except %@";

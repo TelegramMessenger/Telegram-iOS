@@ -939,24 +939,6 @@ private final class DemoSheetContent: CombinedComponent {
                         )
                     )
                 )
-                availableItems[.stories] = DemoPagerComponent.Item(
-                    AnyComponentWithIdentity(
-                        id: PremiumDemoScreen.Subject.stories,
-                        component: AnyComponent(
-                            PageComponent(
-                                content: AnyComponent(PhoneDemoComponent(
-                                    context: component.context,
-                                    position: .top,
-                                    videoFile: configuration.videos["voice_to_text"],
-                                    decoration: .badgeStars
-                                )),
-                                title: strings.Premium_Stories,
-                                text: strings.Premium_StoriesInfo,
-                                textColor: textColor
-                            )
-                        )
-                    )
-                )
                 
                 var items: [DemoPagerComponent.Item] = component.order.compactMap { availableItems[$0] }
                 let index: Int
@@ -1048,7 +1030,7 @@ private final class DemoSheetContent: CombinedComponent {
                             case .translation:
                                 buttonText = strings.Premium_Translation_Proceed
                             case .stories:
-                                buttonText = strings.Premium_Stories_Proceed
+                                buttonText = strings.Common_OK
                                 buttonAnimationName = "premium_unlock"
                             default:
                                 buttonText = strings.Common_OK
