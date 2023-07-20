@@ -5,8 +5,9 @@
 "Settings.Version" = "Vartagram %1$@ (%2$@)\nНа основі оригінального Telegram %3$@";
 
 "PtgSettings.Title" = "Vartagram";
-"PtgSettings.ShowPeerId" = "Показувати ID";
+"PtgSettings.ShowPeerId" = "Показувати ID профілів";
 "PtgSettings.ShowPeerIdHelp" = "Показувати ID у профілях користувачів, груп, каналів, ботів.";
+"PtgSettings.ShowChannelCreationDate" = "Показувати дату створення каналів";
 "PtgSettings.ForeignAgentNoticeHeader" = "Маркування іноагентів РФ";
 "PtgSettings.SuppressForeignAgentNotice" = "Приховувати в повідомленнях";
 "PtgSettings.EnableForeignAgentNoticeSearchFiltering" = "Фільтрувати результати пошуку";
@@ -19,6 +20,7 @@
 "Profile.Id" = "ID";
 "Conversation.IdCopied" = "ID скопійовано.";
 "Settings.CopyId" = "Копіювати ID";
+"Profile.CreationDate" = "Створено";
 
 "SiriAndDictationAreDisabledAlert" = "Для перекладу в текст голосових повідомлень потрібно увімкнути Диктовку (Налаштування системи > Основні > Клавіатура) або Siri (Налаштування системи > Siri і Пошук).";
 

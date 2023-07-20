@@ -1300,7 +1300,7 @@ public class Account {
     // it is safe because messages can be redownloaded from cloud if needed (except secret chats)
     public func cleanOldCloudMessages() -> Signal<Never, NoError> {
         let postbox = self.postbox
-        return combineLatest(self.postbox.transaction { transaction in
+        return combineLatest(self.postbox.transaction { transaction -> ([PeerId], [PeerId: PeerId]) in
             let allPeerIds = transaction.chatListGetAllPeerIds()
             
             // sometimes group's cachedData.linkedDiscussionPeerId also contains its parent channel but for some reason this is not always the case
@@ -1350,7 +1350,9 @@ public class Account {
                             if topIndices.count > 0 {
                                 if transaction.getPeerChatListIndex(peerId) != nil || discussionGroupChannels[peerId].flatMap({ transaction.getPeerChatListIndex($0) }) != nil {
                                     if topIndices.count > limit {
-                                        var indicesToRemove = Set(transaction.allEarlierMessageIndices(index: topIndices[limit - 1]))
+                                        let allEarlierIndices = transaction.allEarlierMessageIndices(index: topIndices[limit - 1])
+                                        // do not remove channel message with id == 1, because it is used to get its creation date
+                                        var indicesToRemove = Set(peerId.namespace == Namespaces.Peer.CloudChannel && allEarlierIndices.last?.id.id == 1 ? allEarlierIndices.dropLast() : allEarlierIndices)
                                         
                                         let everywhereHoleUpperId = topIndices[limit].id.id
                                         

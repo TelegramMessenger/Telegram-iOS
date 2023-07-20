@@ -70,8 +70,9 @@
 "AccountActions.SessionsToTerminate.24hWarningMessage" = "This feature will not work if less than 24 hours have passed since you signed in to your account on this device.";
 
 "PtgSettings.Title" = "Vartagram";
-"PtgSettings.ShowPeerId" = "Show ID";
+"PtgSettings.ShowPeerId" = "Show Profile ID";
 "PtgSettings.ShowPeerIdHelp" = "Show ID in user, group, channel, bot profiles.";
+"PtgSettings.ShowChannelCreationDate" = "Show Channel Creation Date";
 "PtgSettings.ForeignAgentNoticeHeader" = "Russian foreign agent notice";
 "PtgSettings.SuppressForeignAgentNotice" = "Suppress in Messages";
 "PtgSettings.EnableForeignAgentNoticeSearchFiltering" = "Filter Search Results";
@@ -84,6 +85,7 @@
 "Profile.Id" = "ID";
 "Conversation.IdCopied" = "ID copied to clipboard.";
 "Settings.CopyId" = "Copy ID";
+"Profile.CreationDate" = "Created";
 
 "SiriAndDictationAreDisabledAlert" = "To convert voice messages to text, either Dictation (System Settings > General > Keyboard) or Siri (System Settings > Siri & Search) needs to be enabled.";
 

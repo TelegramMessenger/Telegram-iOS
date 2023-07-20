@@ -1,5 +1,3 @@
-import PtgSettings
-
 import Foundation
 import UIKit
 import Postbox
@@ -198,7 +196,7 @@ final class PeerInfoScreenData {
     let invitations: PeerExportedInvitationsState?
     let requests: PeerInvitationImportersState?
     let requestsContext: PeerInvitationImportersContext?
-    let showPeerId: Bool
+    let channelCreationTimestamp: Int32?
     let threadData: MessageHistoryThreadData?
     let appConfiguration: AppConfiguration?
     let isPowerSavingEnabled: Bool?
@@ -221,7 +219,7 @@ final class PeerInfoScreenData {
         invitations: PeerExportedInvitationsState?,
         requests: PeerInvitationImportersState?,
         requestsContext: PeerInvitationImportersContext?,
-        showPeerId: Bool,
+        channelCreationTimestamp: Int32?,
         threadData: MessageHistoryThreadData?,
         appConfiguration: AppConfiguration?,
         isPowerSavingEnabled: Bool?
@@ -243,7 +241,7 @@ final class PeerInfoScreenData {
         self.invitations = invitations
         self.requests = requests
         self.requestsContext = requestsContext
-        self.showPeerId = showPeerId
+        self.channelCreationTimestamp = channelCreationTimestamp
         self.threadData = threadData
         self.appConfiguration = appConfiguration
         self.isPowerSavingEnabled = isPowerSavingEnabled
@@ -480,10 +478,9 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         |> mapToSignal { settings -> Signal<Bool, NoError> in
             return automaticEnergyUsageShouldBeOn(settings: settings)
         }
-        |> distinctUntilChanged,
-        context.sharedContext.ptgSettings
+        |> distinctUntilChanged
     )
-    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled, ptgSettings -> PeerInfoScreenData in
+    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled -> PeerInfoScreenData in
         let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
         let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
         
@@ -545,7 +542,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             invitations: nil,
             requests: nil,
             requestsContext: nil,
-            showPeerId: ptgSettings.showPeerId,
+            channelCreationTimestamp: nil,
             threadData: nil,
             appConfiguration: appConfiguration,
             isPowerSavingEnabled: isPowerSavingEnabled
@@ -578,7 +575,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 invitations: nil,
                 requests: nil,
                 requestsContext: nil,
-                showPeerId: false,
+                channelCreationTimestamp: nil,
                 threadData: nil,
                 appConfiguration: nil,
                 isPowerSavingEnabled: nil
@@ -685,10 +682,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 peerInfoAvailableMediaPanes(context: context, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder),
                 context.engine.data.subscribe(TelegramEngine.EngineData.Item.NotificationSettings.Global()),
                 secretChatKeyFingerprint,
-                status,
-                context.sharedContext.ptgSettings
+                status
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, ptgSettings -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status -> PeerInfoScreenData in
                 var availablePanes = availablePanes
                 if availablePanes != nil, groupsInCommon != nil, let cachedData = peerView.cachedData as? CachedUserData {
                     if cachedData.commonGroupCount != 0 {
@@ -714,7 +710,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     invitations: nil,
                     requests: nil,
                     requestsContext: nil,
-                    showPeerId: ptgSettings.showPeerId,
+                    channelCreationTimestamp: nil,
                     threadData: nil,
                     appConfiguration: nil,
                     isPowerSavingEnabled: nil
@@ -749,9 +745,13 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 invitationsStatePromise.get(),
                 requestsContextPromise.get(),
                 requestsStatePromise.get(),
-                context.sharedContext.ptgSettings
+                Signal<Message?, NoError>.single(nil)
+                |> then (
+                    context.engine.messages.getMessagesLoadIfNecessary([MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: 1)])
+                    |> map { $0.first }
+                )
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, status, currentInvitationsContext, invitations, currentRequestsContext, requests, ptgSettings -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, status, currentInvitationsContext, invitations, currentRequestsContext, requests, firstMessage -> PeerInfoScreenData in
                 var discussionPeer: Peer?
                 if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer
@@ -795,7 +795,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     invitations: invitations,
                     requests: requests,
                     requestsContext: currentRequestsContext,
-                    showPeerId: ptgSettings.showPeerId,
+                    channelCreationTimestamp: firstMessage?.timestamp,
                     threadData: nil,
                     appConfiguration: nil,
                     isPowerSavingEnabled: nil
@@ -927,11 +927,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 invitationsStatePromise.get(),
                 requestsContextPromise.get(),
                 requestsStatePromise.get(),
-                context.sharedContext.ptgSettings,
                 threadData,
                 context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
             )
-            |> mapToSignal { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests, ptgSettings, threadData, preferencesView -> Signal<PeerInfoScreenData, NoError> in
+            |> mapToSignal { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests, threadData, preferencesView -> Signal<PeerInfoScreenData, NoError> in
                 var discussionPeer: Peer?
                 if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer
@@ -1000,7 +999,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     invitations: invitations,
                     requests: requests,
                     requestsContext: currentRequestsContext,
-                    showPeerId: ptgSettings.showPeerId,
+                    channelCreationTimestamp: nil,
                     threadData: threadData,
                     appConfiguration: appConfiguration,
                     isPowerSavingEnabled: nil

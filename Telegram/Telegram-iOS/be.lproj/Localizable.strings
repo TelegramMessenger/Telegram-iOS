@@ -70,8 +70,9 @@
 "AccountActions.SessionsToTerminate.24hWarningMessage" = "Гэта функцыя не будзе працавать, калі пасля увахода ў аккаўнт на гэтым дэвайсе прайшло менш за 24 гадзіны.";
 
 "PtgSettings.Title" = "Vartagram";
-"PtgSettings.ShowPeerId" = "Паказваць ID";
+"PtgSettings.ShowPeerId" = "Паказваць ID профіляў";
 "PtgSettings.ShowPeerIdHelp" = "Паказваць ID у профілях карыстальнікаў, суполак, каналаў, ботаў.";
+"PtgSettings.ShowChannelCreationDate" = "Паказваць дату стварэння каналаў";
 "PtgSettings.ForeignAgentNoticeHeader" = "Маркіроўка замежных агентаў РФ";
 "PtgSettings.SuppressForeignAgentNotice" = "Хаваць у паведамленнях";
 "PtgSettings.EnableForeignAgentNoticeSearchFiltering" = "Фільтраваць вынікі пошуку";
@@ -84,6 +85,7 @@
 "Profile.Id" = "ID";
 "Conversation.IdCopied" = "ID скапіяваны ў буфер абмену.";
 "Settings.CopyId" = "Капіяваць ID";
+"Profile.CreationDate" = "Створаны";
 
 "SiriAndDictationAreDisabledAlert" = "Каб перакладаць ў тэкст галасавыя паведамленні, неабходна ўключыць дыктоўку (Налады сістэмы > Агульныя > Клавіятура) або Siri (Налады сістэмы > Siri і пошук).";
 
