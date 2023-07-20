@@ -1484,6 +1484,11 @@ public final class StoryPeerListComponent: Component {
                     )
                 }
                 
+                var allowBounce = !previousComponent.unlocked && component.unlocked
+                if let animationHint, !animationHint.bounce {
+                    allowBounce = false
+                }
+                
                 self.animationState = AnimationState(
                     duration: duration * UIView.animationDurationFactor(),
                     fromIsUnlocked: previousComponent.unlocked,
@@ -1491,7 +1496,7 @@ public final class StoryPeerListComponent: Component {
                     fromTitleWidth: self.currentTitleWidth,
                     fromActivityFraction: self.currentActivityFraction,
                     startTime: timestamp,
-                    bounce: animationHint?.bounce ?? true
+                    bounce: allowBounce
                 )
             }
             
