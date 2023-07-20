@@ -61,8 +61,8 @@ private struct MediaPickerGridEntry: Comparable, Identifiable {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(context: AccountContext, interaction: MediaPickerInteraction, theme: PresentationTheme) -> MediaPickerGridItem {
-        return MediaPickerGridItem(content: self.content, interaction: interaction, theme: theme, selectable: self.selectable, enableAnimations: context.sharedContext.energyUsageSettings.fullTranslucency, stories: self.stories)
+    func item(context: AccountContext, interaction: MediaPickerInteraction, theme: PresentationTheme, strings: PresentationStrings) -> MediaPickerGridItem {
+        return MediaPickerGridItem(content: self.content, interaction: interaction, theme: theme, strings: strings, selectable: self.selectable, enableAnimations: context.sharedContext.energyUsageSettings.fullTranslucency, stories: self.stories)
     }
 }
 
@@ -72,12 +72,12 @@ private struct MediaPickerGridTransaction {
     let updates: [GridNodeUpdateItem]
     let scrollToItem: GridNodeScrollToItem?
     
-    init(previousList: [MediaPickerGridEntry], list: [MediaPickerGridEntry], context: AccountContext, interaction: MediaPickerInteraction, theme: PresentationTheme, scrollToItem: GridNodeScrollToItem?) {
+    init(previousList: [MediaPickerGridEntry], list: [MediaPickerGridEntry], context: AccountContext, interaction: MediaPickerInteraction, theme: PresentationTheme, strings: PresentationStrings, scrollToItem: GridNodeScrollToItem?) {
          let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: previousList, rightList: list)
         
         self.deletions = deleteIndices
-        self.insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(context: context, interaction: interaction, theme: theme), previousIndex: $0.2) }
-        self.updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interaction: interaction, theme: theme)) }
+        self.insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(context: context, interaction: interaction, theme: theme, strings: strings), previousIndex: $0.2) }
+        self.updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interaction: interaction, theme: theme, strings: strings)) }
         
         self.scrollToItem = scrollToItem
     }
@@ -671,7 +671,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 scrollToItem = GridNodeScrollToItem(index: entries.count - 1, position: .bottom(0.0), transition: .immediate, directionHint: .down, adjustForSection: false)
             }
             
-            let transaction = MediaPickerGridTransaction(previousList: previousEntries, list: entries, context: controller.context, interaction: interaction, theme: self.presentationData.theme, scrollToItem: scrollToItem)
+            let transaction = MediaPickerGridTransaction(previousList: previousEntries, list: entries, context: controller.context, interaction: interaction, theme: self.presentationData.theme, strings: self.presentationData.strings, scrollToItem: scrollToItem)
             self.enqueueTransaction(transaction)
             
             if !self.didSetReady {

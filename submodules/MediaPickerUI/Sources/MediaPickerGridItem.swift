@@ -28,16 +28,18 @@ final class MediaPickerGridItem: GridItem {
     let content: MediaPickerGridItemContent
     let interaction: MediaPickerInteraction
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let selectable: Bool
     let enableAnimations: Bool
     let stories: Bool
     
     let section: GridSection? = nil
     
-    init(content: MediaPickerGridItemContent, interaction: MediaPickerInteraction, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool, stories: Bool) {
+    init(content: MediaPickerGridItemContent, interaction: MediaPickerInteraction, theme: PresentationTheme, strings: PresentationStrings, selectable: Bool, enableAnimations: Bool, stories: Bool) {
         self.content = content
         self.interaction = interaction
         self.theme = theme
+        self.strings = strings
         self.selectable = selectable
         self.enableAnimations = enableAnimations
         self.stories = stories
@@ -55,7 +57,7 @@ final class MediaPickerGridItem: GridItem {
             return node
         case let .draft(draft, index):
             let node = MediaPickerGridItemNode()
-            node.setup(interaction: self.interaction, draft: draft, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations, stories: self.stories)
+            node.setup(interaction: self.interaction, draft: draft, index: index, theme: self.theme, strings: self.strings, selectable: self.selectable, enableAnimations: self.enableAnimations, stories: self.stories)
             return node
         }
     }
@@ -71,7 +73,7 @@ final class MediaPickerGridItem: GridItem {
         case let .media(media, index):
             node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations, stories: self.stories)
         case let .draft(draft, index):
-            node.setup(interaction: self.interaction, draft: draft, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations, stories: self.stories)
+            node.setup(interaction: self.interaction, draft: draft, index: index, theme: self.theme, strings: self.strings, selectable: self.selectable, enableAnimations: self.enableAnimations, stories: self.stories)
         }
     }
 }
@@ -287,7 +289,7 @@ final class MediaPickerGridItemNode: GridItemNode {
         }
     }
     
-    func setup(interaction: MediaPickerInteraction, draft: MediaEditorDraft, index: Int, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool, stories: Bool) {
+    func setup(interaction: MediaPickerInteraction, draft: MediaEditorDraft, index: Int, theme: PresentationTheme, strings: PresentationStrings, selectable: Bool, enableAnimations: Bool, stories: Bool) {
         self.interaction = interaction
         self.theme = theme
         self.selectable = selectable
@@ -310,7 +312,7 @@ final class MediaPickerGridItemNode: GridItemNode {
             }
             
             if self.draftNode.supernode == nil {
-                self.draftNode.attributedText = NSAttributedString(string: "Draft", font: Font.semibold(12.0), textColor: .white)
+                self.draftNode.attributedText = NSAttributedString(string: strings.MediaEditor_Draft, font: Font.semibold(12.0), textColor: .white)
                 self.addSubnode(self.draftNode)
             }
             

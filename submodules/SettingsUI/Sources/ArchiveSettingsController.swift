@@ -105,7 +105,7 @@ private enum ArchiveSettingsControllerEntry: ItemListNodeEntry {
         case .unknownHeader:
             return ItemListSectionHeaderItem(presentationData: presentationData, text: presentationData.strings.ArchiveSettings_UnknownChatsHeader, sectionId: self.section)
         case let .unknownValue(isOn, isLocked):
-            return ItemListSwitchItem(presentationData: presentationData, title: presentationData.strings.ArchiveSettings_KeepArchived, value: isOn, enableInteractiveChanges: !isLocked, enabled: true, displayLocked: isLocked, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: presentationData.strings.ArchiveSettings_AutomaticallyArchive, value: isOn, enableInteractiveChanges: !isLocked, enabled: true, displayLocked: isLocked, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.updateUnknown(value)
             }, activatedWhileDisabled: {
                 arguments.updateUnknown(nil)

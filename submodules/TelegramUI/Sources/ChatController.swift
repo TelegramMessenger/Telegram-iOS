@@ -12247,7 +12247,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     @objc func rightNavigationButtonAction() {
         if let button = self.rightNavigationButton {
-            if case let .peer(peerId) = self.chatLocation, case .openChatInfo(expandAvatar: true) = button.action, let storyStats = self.storyStats, storyStats.totalCount != 0, let avatarNode = self.avatarNode {
+            if case let .peer(peerId) = self.chatLocation, case .openChatInfo(expandAvatar: true) = button.action, let storyStats = self.storyStats, storyStats.unseenCount != 0, let avatarNode = self.avatarNode {
                 self.openStories(peerId: peerId, avatarHeaderNode: nil, avatarNode: avatarNode.avatarNode)
             } else {
                 self.navigationButtonAction(button.action)
