@@ -198,6 +198,13 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
             options.append(OpenInOption(identifier: "alook", application: .other(title: "Alook Browser", identifier: 1261944766, scheme: "alook", store: nil), action: {
                 return .openUrl(url: "alook://\(url)")
             }))
+        
+            options.append(OpenInOption(identifier: "orion", application: .other(title: "Orion Browser", identifier: 1484498200, scheme: "orion", store: nil), action: {
+                if let escapedUrl = url.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed) {
+                    return .openUrl(url: "orion://open-url?url=\(escapedUrl)")
+                }
+                return .none
+            }))
         case let .location(location, directions):
             let lat = location.latitude
             let lon = location.longitude
