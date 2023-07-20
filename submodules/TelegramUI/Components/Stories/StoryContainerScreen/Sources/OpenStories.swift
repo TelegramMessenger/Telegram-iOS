@@ -171,7 +171,7 @@ public extension StoryContainerScreen {
         |> take(1)
         |> mapToSignal { state -> Signal<StoryContentContextState, NoError> in
             if let slice = state.slice {
-                #if DEBUG && true
+                #if DEBUG && false
                 if "".isEmpty {
                     return .single(state)
                     |> delay(4.0, queue: .mainQueue())

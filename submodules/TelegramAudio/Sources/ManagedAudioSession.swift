@@ -120,7 +120,7 @@ public enum AudioSessionOutputMode: Equatable {
 
 private final class HolderRecord {
     let id: Int32
-    let audioSessionType: ManagedAudioSessionType
+    var audioSessionType: ManagedAudioSessionType
     let control: ManagedAudioSessionControl
     let activate: (ManagedAudioSessionControl) -> Void
     let deactivate: (Bool) -> Signal<Void, NoError>
@@ -161,12 +161,14 @@ public class ManagedAudioSessionControl {
     private let activateImpl: (ManagedAudioSessionControlActivate) -> Void
     private let setupAndActivateImpl: (Bool, ManagedAudioSessionControlActivate) -> Void
     private let setOutputModeImpl: (AudioSessionOutputMode) -> Void
+    private let setTypeImpl: (ManagedAudioSessionType, @escaping () -> Void) -> Void
     
-    fileprivate init(setupImpl: @escaping (Bool) -> Void, activateImpl: @escaping (ManagedAudioSessionControlActivate) -> Void, setOutputModeImpl: @escaping (AudioSessionOutputMode) -> Void, setupAndActivateImpl: @escaping (Bool, ManagedAudioSessionControlActivate) -> Void) {
+    fileprivate init(setupImpl: @escaping (Bool) -> Void, activateImpl: @escaping (ManagedAudioSessionControlActivate) -> Void, setOutputModeImpl: @escaping (AudioSessionOutputMode) -> Void, setupAndActivateImpl: @escaping (Bool, ManagedAudioSessionControlActivate) -> Void, setTypeImpl: @escaping (ManagedAudioSessionType, @escaping () -> Void) -> Void) {
         self.setupImpl = setupImpl
         self.activateImpl = activateImpl
         self.setOutputModeImpl = setOutputModeImpl
         self.setupAndActivateImpl = setupAndActivateImpl
+        self.setTypeImpl = setTypeImpl
     }
     
     public func setup(synchronous: Bool = false) {
@@ -183,6 +185,10 @@ public class ManagedAudioSessionControl {
     
     public func setOutputMode(_ mode: AudioSessionOutputMode) {
         self.setOutputModeImpl(mode)
+    }
+    
+    public func setType(_ audioSessionType: ManagedAudioSessionType, completion: @escaping () -> Void) {
+        self.setTypeImpl(audioSessionType, completion)
     }
 }
 
@@ -548,6 +554,24 @@ public final class ManagedAudioSession: NSObject {
                         queue.async(f)
                     }
                 }
+            }, setTypeImpl: { [weak self] audioSessionType, completion in
+                queue.async {
+                    if let strongSelf = self {
+                        for holder in strongSelf.holders {
+                            if holder.id == id {
+                                if holder.audioSessionType != audioSessionType {
+                                    holder.audioSessionType = audioSessionType
+                                }
+                                
+                                if holder.active {
+                                    strongSelf.updateAudioSessionType(audioSessionType)
+                                }
+                            }
+                        }
+                    }
+                    
+                    completion()
+                }
             }), activate: { [weak self] state in
                 manualActivate(state)
                 queue.async {
@@ -801,7 +825,11 @@ public final class ManagedAudioSession: NSObject {
                 
                 switch type {
                 case .play(mixWithOthers: true), .ambient:
-                    try AVAudioSession.sharedInstance().setActive(false)
+                    do {
+                        try AVAudioSession.sharedInstance().setActive(false)
+                    } catch let error {
+                        managedAudioSessionLog("ManagedAudioSession setActive error \(error)")
+                    }
                 default:
                     break
                 }
@@ -1001,6 +1029,12 @@ public final class ManagedAudioSession: NSObject {
             } catch let error {
                 managedAudioSessionLog("ManagedAudioSession activate error \(error)")
             }
+        }
+    }
+    
+    private func updateAudioSessionType(_ audioSessionType: ManagedAudioSessionType) {
+        if let (_, outputMode) = self.currentTypeAndOutputMode {
+            self.setup(type: audioSessionType, outputMode: outputMode, activateNow: true)
         }
     }
     

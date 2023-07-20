@@ -363,6 +363,8 @@ final class StoryItemSetContainerSendMessage {
         controller.present(tooltipScreen, in: .current)
         self.tooltipScreen = tooltipScreen
         view.updateIsProgressPaused()
+        
+        HapticFeedback().success()
     }
     
     func presentSendMessageOptions(view: StoryItemSetContainerComponent.View, sourceView: UIView, gesture: ContextGesture?) {

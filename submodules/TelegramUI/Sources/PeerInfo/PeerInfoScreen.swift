@@ -2140,6 +2140,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private var expiringStoryListState: PeerExpiringStoryListContext.State?
     private var expiringStoryListDisposable: Disposable?
     
+    private let storiesReady = ValuePromise<Bool>(true, ignoreRepeated: true)
+    
     private let _ready = Promise<Bool>()
     var ready: Promise<Bool> {
         return self._ready
@@ -3863,6 +3865,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 self?.translationState = translationState
             })
         } else if peerId.namespace == Namespaces.Peer.CloudUser {
+            self.storiesReady.set(false)
             let expiringStoryList = PeerExpiringStoryListContext(account: context.account, peerId: peerId)
             self.expiringStoryList = expiringStoryList
             self.expiringStoryListDisposable = (combineLatest(queue: .mainQueue(),
@@ -3896,6 +3899,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         }
                     }, state.items.count, state.hasUnseen, state.hasUnseenCloseFriends)
                 }
+                
+                self.storiesReady.set(true)
                 
                 self.requestLayout(animated: false)
                 
@@ -9515,10 +9520,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let avatarReady = self.headerNode.avatarListNode.isReady.get()
             let combinedSignal = combineLatest(queue: .mainQueue(),
                 avatarReady,
+                self.storiesReady.get(),
                 self.paneContainerNode.isReady.get()
             )
-            |> map { lhs, rhs in
-                return lhs && rhs
+            |> map { a, b, c in
+                return a && b && c
             }
             self._ready.set(combinedSignal
             |> filter { $0 }

@@ -153,7 +153,8 @@ final class StoryItemContentComponent: Component {
                             imageReference: nil,
                             streamVideo: .story,
                             loopVideo: true,
-                            enableSound: component.audioMode != .off,
+                            enableSound: true,
+                            soundMuted: component.audioMode == .off,
                             beginWithAmbientSound: component.audioMode == .ambient,
                             mixWithOthers: true,
                             useLargeThumbnail: false,
@@ -255,7 +256,7 @@ final class StoryItemContentComponent: Component {
         override func leaveAmbientMode() {
             if let videoNode = self.videoNode {
                 self.ignoreBufferingTimestamp = CFAbsoluteTimeGetCurrent()
-                videoNode.setSoundEnabled(true)
+                videoNode.setSoundMuted(soundMuted: false)
                 videoNode.continueWithOverridingAmbientMode(isAmbient: false)
             }
         }
@@ -266,7 +267,7 @@ final class StoryItemContentComponent: Component {
                 if ambient {
                     videoNode.continueWithOverridingAmbientMode(isAmbient: true)
                 } else {
-                    videoNode.setSoundEnabled(false)
+                    videoNode.setSoundMuted(soundMuted: true)
                 }
             }
         }

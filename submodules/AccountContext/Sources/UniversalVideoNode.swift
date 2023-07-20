@@ -23,6 +23,7 @@ public protocol UniversalVideoContentNode: AnyObject {
     func setSoundEnabled(_ value: Bool)
     func seek(_ timestamp: Double)
     func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd)
+    func setSoundMuted(soundMuted: Bool)
     func continueWithOverridingAmbientMode(isAmbient: Bool)
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool)
     func continuePlayingWithoutSound(actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd)
@@ -280,6 +281,14 @@ public final class UniversalVideoNode: ASDisplayNode {
         self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
             if let contentNode = contentNode {
                 contentNode.playOnceWithSound(playAndRecord: playAndRecord, seek: seek, actionAtEnd: actionAtEnd)
+            }
+        })
+    }
+    
+    public func setSoundMuted(soundMuted: Bool) {
+        self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
+            if let contentNode = contentNode {
+                contentNode.setSoundMuted(soundMuted: soundMuted)
             }
         })
     }

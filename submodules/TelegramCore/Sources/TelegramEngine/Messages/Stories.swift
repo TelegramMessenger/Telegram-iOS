@@ -724,7 +724,7 @@ private func apiInputPrivacyRules(privacy: EngineStoryPrivacy, transaction: Tran
         privacyRules = [.inputPrivacyValueAllowCloseFriends]
     case .nobody:
         if privacy.additionallyIncludePeers.isEmpty {
-            privacyRules = [.inputPrivacyValueDisallowAll]
+            privacyRules = [.inputPrivacyValueAllowUsers(users: [.inputUserSelf])]
         } else {
             privacyRules = []
         }

@@ -9714,3 +9714,5 @@ Sorry for the inconvenience.";
 
 "AutoDownloadSettings.Stories" = "Stories";
 "MediaEditor.Draft" = "Draft";
+
+"Notification.LockScreenStoryPlaceholder" = "New Story";

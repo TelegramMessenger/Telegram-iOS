@@ -4524,7 +4524,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             if let story = message.associatedStories[storyId], story.data.isEmpty {
-                self.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: self.presentationData.strings.Story_TooltipExpired, timeout: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
+                self.present(UndoOverlayController(presentationData: self.presentationData, content:  .universal(animation: "story_expired", scale: 0.066, colors: [:], title: nil, text: self.presentationData.strings.Story_TooltipExpired, customUndoText: nil, timeout: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
                 return
             }
             
@@ -19170,6 +19170,10 @@ func canAddMessageReactions(message: Message) -> Bool {
     for media in message.media {
         if let _ = media as? TelegramMediaAction {
             return false
+        } else if let story = media as? TelegramMediaStory {
+            if story.isMention {
+                return false
+            }
         }
     }
     return true
