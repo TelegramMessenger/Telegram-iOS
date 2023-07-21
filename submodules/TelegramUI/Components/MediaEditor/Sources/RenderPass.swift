@@ -11,6 +11,7 @@ struct VertexData {
 
 enum TextureRotation: Int {
     case rotate0Degrees
+    case rotate0DegreesMirrored
     case rotate90Degrees
     case rotate180Degrees
     case rotate270Degrees
@@ -29,6 +30,11 @@ func verticesDataForRotation(_ rotation: TextureRotation, rect: CGRect = CGRect(
         topRight = simd_float2(1.0, 1.0)
         bottomLeft = simd_float2(0.0, 0.0)
         bottomRight = simd_float2(1.0, 0.0)
+    case .rotate0DegreesMirrored:
+        topLeft = simd_float2(1.0, 1.0)
+        topRight = simd_float2(0.0, 1.0)
+        bottomLeft = simd_float2(1.0, 0.0)
+        bottomRight = simd_float2(0.0, 0.0)
     case .rotate180Degrees:
         topLeft = simd_float2(1.0, 0.0)
         topRight = simd_float2(0.0, 0.0)

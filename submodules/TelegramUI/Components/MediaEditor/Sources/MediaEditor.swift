@@ -112,6 +112,10 @@ public final class MediaEditor {
     public var resultImage: UIImage? {
         return self.renderer.finalRenderedImage()
     }
+    
+    public func getResultImage(mirror: Bool) -> UIImage? {
+        return self.renderer.finalRenderedImage(mirror: mirror)
+    }
         
     private let playerPromise = Promise<AVPlayer?>()
     private var playerPlaybackState: (Double, Double, Bool, Bool) = (0.0, 0.0, false, false) {
@@ -311,20 +315,9 @@ public final class MediaEditor {
     }
     
     public func replaceSource(_ image: UIImage, additionalImage: UIImage?, time: CMTime) {
-        func fixImageOrientation(_ image: UIImage) -> UIImage {
-            UIGraphicsBeginImageContext(image.size)
-            image.draw(at: .zero)
-            let newImage = UIGraphicsGetImageFromCurrentImageContext()
-            UIGraphicsEndImageContext()
-            return newImage ?? image
-        }
-        let image = fixImageOrientation(image)
-        
         guard let renderTarget = self.previewView, let device = renderTarget.mtlDevice, let texture = loadTexture(image: image, device: device) else {
             return
         }
-        
-        let additionalImage = additionalImage.flatMap { fixImageOrientation($0) }
         let additionalTexture = additionalImage.flatMap { loadTexture(image: $0, device: device) }
         self.renderer.consumeTexture(texture, additionalTexture: additionalTexture, time: time, render: true)
     }

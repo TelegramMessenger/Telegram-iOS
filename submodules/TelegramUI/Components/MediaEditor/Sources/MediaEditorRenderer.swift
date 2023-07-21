@@ -204,6 +204,8 @@ final class MediaEditorRenderer: TextureConsumer {
         
         var texture: MTLTexture
         if let currentAdditionalTexture = self.currentAdditionalTexture, let currentTexture = self.currentTexture {
+            self.videoFinishPass.mainTextureRotation = .rotate0Degrees
+            self.videoFinishPass.additionalTextureRotation = .rotate0DegreesMirrored
             if let result = self.videoFinishPass.process(input: currentTexture, secondInput: currentAdditionalTexture, timestamp: self.currentTime, device: device, commandBuffer: commandBuffer) {
                 texture = result
             } else {
@@ -309,6 +311,8 @@ final class MediaEditorRenderer: TextureConsumer {
     }
     
     func consumeTexture(_ texture: MTLTexture, additionalTexture: MTLTexture?, time: CMTime, render: Bool) {
+        self.displayEnabled = false
+        
         if render {
             self.willRenderFrame()
         }
@@ -349,9 +353,9 @@ final class MediaEditorRenderer: TextureConsumer {
         self.renderTarget?.redraw()
     }
     
-    func finalRenderedImage() -> UIImage? {
+    func finalRenderedImage(mirror: Bool = false) -> UIImage? {
         if let finalTexture = self.finalTexture, let device = self.renderTarget?.mtlDevice {
-            return getTextureImage(device: device, texture: finalTexture)
+            return getTextureImage(device: device, texture: finalTexture, mirror: mirror)
         } else {
             return nil
         }
