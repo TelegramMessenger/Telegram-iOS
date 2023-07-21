@@ -2190,7 +2190,8 @@ public final class StoryItemSetContainerComponent: Component {
                                     return
                                 }
                                 self.openPeerStories(peer: peer, avatarNode: avatarNode)
-                            }
+                            },
+                            openPremiumIntro: {}
                         )),
                         environment: {},
                         containerSize: availableSize
