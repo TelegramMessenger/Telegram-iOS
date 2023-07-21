@@ -57,6 +57,7 @@ final class StoryItemSetContainerSendMessage {
     weak var shareController: ShareController?
     weak var tooltipScreen: ViewController?
     weak var actionSheet: ViewController?
+    weak var statusController: ViewController?
     var isViewingAttachedStickers = false
     
     var currentInputMode: InputMode = .text
@@ -2473,14 +2474,21 @@ final class StoryItemSetContainerSendMessage {
         
         var cancelImpl: (() -> Void)?
         let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-        let progressSignal = Signal<Never, NoError> { [weak parentController] subscriber in
+        let progressSignal = Signal<Never, NoError> { [weak self, weak view, weak parentController] subscriber in
             let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                 cancelImpl?()
             }))
             parentController?.present(controller, in: .window(.root))
+            
+            self?.statusController = controller
+            view?.updateIsProgressPaused()
+            
             return ActionDisposable { [weak controller] in
                 Queue.mainQueue().async() {
                     controller?.dismiss()
+                    
+                    self?.statusController = nil
+                    view?.updateIsProgressPaused()
                 }
             }
         }
@@ -2547,14 +2555,21 @@ final class StoryItemSetContainerSendMessage {
         }
         var cancelImpl: (() -> Void)?
         let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-        let progressSignal = Signal<Never, NoError> { [weak parentController] subscriber in
+        let progressSignal = Signal<Never, NoError> { [weak parentController, weak self, weak view] subscriber in
             let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
                 cancelImpl?()
             }))
             parentController?.present(controller, in: .window(.root))
+            
+            self?.statusController = controller
+            view?.updateIsProgressPaused()
+            
             return ActionDisposable { [weak controller] in
                 Queue.mainQueue().async() {
                     controller?.dismiss()
+                    
+                    self?.statusController = nil
+                    view?.updateIsProgressPaused()
                 }
             }
         }
@@ -2739,12 +2754,19 @@ final class StoryItemSetContainerSendMessage {
         }
         let context = component.context
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
-        let progressSignal = Signal<Never, NoError> { [weak parentController] subscriber in
+        let progressSignal = Signal<Never, NoError> { [weak parentController, weak self, weak view] subscriber in
             let progressController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
             parentController?.present(progressController, in: .window(.root), with: nil)
+            
+            self?.statusController = progressController
+            view?.updateIsProgressPaused()
+            
             return ActionDisposable { [weak progressController] in
                 Queue.mainQueue().async() {
                     progressController?.dismiss()
+                    
+                    self?.statusController = nil
+                    view?.updateIsProgressPaused()
                 }
             }
         }

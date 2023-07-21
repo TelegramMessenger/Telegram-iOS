@@ -270,6 +270,13 @@ final class PeerInfoStoryGridScreenComponent: Component {
             })
         }
         
+        func scrollToTop() {
+            guard let paneNode = self.paneNode else {
+                return
+            }
+            let _ = paneNode.scrollToTop()
+        }
+        
         func update(component: PeerInfoStoryGridScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             self.component = component
             self.state = state
@@ -500,6 +507,13 @@ public class PeerInfoStoryGridScreen: ViewControllerComponentContainer {
         self.navigationItem.titleView = self.titleView
         
         self.updateTitle()
+        
+        self.scrollToTop = { [weak self] in
+            guard let self, let componentView = self.node.hostView.componentView as? PeerInfoStoryGridScreenComponent.View else {
+                return
+            }
+            componentView.scrollToTop()
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {

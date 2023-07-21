@@ -1187,9 +1187,9 @@ public final class PeerExpiringStoryListContext {
     }
 }
 
-public func _internal_pollPeerStories(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId) -> Signal<Never, NoError> {
+public func _internal_pollPeerStories(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, peerReference: PeerReference? = nil) -> Signal<Never, NoError> {
     return postbox.transaction { transaction -> Api.InputUser? in
-        return transaction.getPeer(peerId).flatMap(apiInputUser)
+        return transaction.getPeer(peerId).flatMap(apiInputUser) ?? peerReference?.inputUser
     }
     |> mapToSignal { inputUser -> Signal<Never, NoError> in
         guard let inputUser = inputUser else {
@@ -1236,7 +1236,7 @@ public func _internal_pollPeerStories(postbox: Postbox, network: Network, accoun
                 
                 transaction.setStoryItems(peerId: peerId, items: updatedPeerEntries)
                 
-                if !updatedPeerEntries.isEmpty {
+                if !updatedPeerEntries.isEmpty, shouldKeepUserStoriesInFeed(peerId: peerId, isContact: transaction.isPeerContact(peerId: peerId)) {
                     if let user = transaction.getPeer(peerId) as? TelegramUser, let storiesHidden = user.storiesHidden {
                         if storiesHidden {
                             if !transaction.storySubscriptionsContains(key: .hidden, peerId: peerId) {

@@ -271,6 +271,7 @@ public final class StoryItemSetContainerComponent: Component {
     final class VisibleItem {
         let externalState = StoryContentItem.ExternalState()
         let contentContainerView: UIView
+        let contentTintLayer = SimpleLayer()
         let view = ComponentView<StoryContentItem.Environment>()
         var currentProgress: Double = 0.0
         var isBuffering: Bool = false
@@ -282,6 +283,8 @@ public final class StoryItemSetContainerComponent: Component {
             if #available(iOS 13.0, *) {
                 self.contentContainerView.layer.cornerCurve = .continuous
             }
+            
+            self.contentTintLayer.backgroundColor = UIColor(white: 0.0, alpha: 1.0).cgColor
         }
     }
     
@@ -952,6 +955,9 @@ public final class StoryItemSetContainerComponent: Component {
             if self.sendMessageContext.shareController != nil {
                 return .pause
             }
+            if self.sendMessageContext.statusController != nil {
+                return .pause
+            }
             if let navigationController = component.controller()?.navigationController as? NavigationController {
                 let topViewController = navigationController.topViewController
                 if !(topViewController is StoryContainerScreen) && !(topViewController is MediaEditorScreen) && !(topViewController is ShareWithPeersScreen) && !(topViewController is AttachmentController) {
@@ -1119,6 +1125,7 @@ public final class StoryItemSetContainerComponent: Component {
                     if let view = visibleItem.view.view {
                         if visibleItem.contentContainerView.superview == nil {
                             self.itemsContainerView.addSubview(visibleItem.contentContainerView)
+                            self.itemsContainerView.layer.addSublayer(visibleItem.contentTintLayer)
                             visibleItem.contentContainerView.addSubview(view)
                         }
                         
@@ -1137,6 +1144,9 @@ public final class StoryItemSetContainerComponent: Component {
                         })
                         itemTransition.setBounds(view: visibleItem.contentContainerView, bounds: CGRect(origin: CGPoint(), size: itemLayout.contentFrame.size))
                         
+                        itemTransition.setPosition(layer: visibleItem.contentTintLayer, position: CGPoint(x: itemPositionX, y: itemLayout.contentFrame.center.y))
+                        itemTransition.setBounds(layer: visibleItem.contentTintLayer, bounds: CGRect(origin: CGPoint(), size: itemLayout.contentFrame.size))
+                        
                         var transform = CATransform3DMakeScale(itemScale, itemScale, 1.0)
                         if let pinchState = component.pinchState {
                             let pinchOffset = CGPoint(
@@ -1154,6 +1164,8 @@ public final class StoryItemSetContainerComponent: Component {
                         itemTransition.setTransform(view: visibleItem.contentContainerView, transform: transform)
                         itemTransition.setCornerRadius(layer: visibleItem.contentContainerView.layer, cornerRadius: 12.0 * (1.0 / itemScale))
                         
+                        itemTransition.setTransform(layer: visibleItem.contentTintLayer, transform: transform)
+                        
                         let countedFractionDistanceToCenter: CGFloat = max(0.0, min(1.0, unboundFractionDistanceToCenter / 3.0))
                         var itemAlpha: CGFloat = 1.0 * (1.0 - countedFractionDistanceToCenter) + 0.0 * countedFractionDistanceToCenter
                         itemAlpha = max(0.0, min(1.0, itemAlpha))
@@ -1161,7 +1173,7 @@ public final class StoryItemSetContainerComponent: Component {
                         let collapsedAlpha = itemAlpha * itemLayout.contentScaleFraction + 0.0 * (1.0 - itemLayout.contentScaleFraction)
                         itemAlpha = (1.0 - fractionDistanceToCenter) * itemAlpha + fractionDistanceToCenter * collapsedAlpha
                         
-                        itemTransition.setAlpha(view: visibleItem.contentContainerView, alpha: itemAlpha)
+                        itemTransition.setAlpha(layer: visibleItem.contentTintLayer, alpha: 1.0 - itemAlpha)
                         
                         var itemProgressMode = self.itemProgressMode()
                         if index != centralIndex {
@@ -1182,6 +1194,7 @@ public final class StoryItemSetContainerComponent: Component {
                 if !validIds.contains(id) {
                     removeIds.append(id)
                     visibleItem.contentContainerView.removeFromSuperview()
+                    visibleItem.contentTintLayer.removeFromSuperlayer()
                 }
             }
             for id in removeIds {

@@ -914,7 +914,9 @@ public final class StoryContentContextImpl: StoryContentContext {
     }
     
     public func markAsSeen(id: StoryId) {
-        let _ = self.context.engine.messages.markStoryAsSeen(peerId: id.peerId, id: id.id, asPinned: false).start()
+        if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+            let _ = self.context.engine.messages.markStoryAsSeen(peerId: id.peerId, id: id.id, asPinned: false).start()
+        }
     }
 }
 
@@ -1094,7 +1096,9 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
     
     public func markAsSeen(id: StoryId) {
         if self.readGlobally {
-            let _ = self.context.engine.messages.markStoryAsSeen(peerId: id.peerId, id: id.id, asPinned: false).start()
+            if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                let _ = self.context.engine.messages.markStoryAsSeen(peerId: id.peerId, id: id.id, asPinned: false).start()
+            }
         }
     }
 }
@@ -1397,7 +1401,9 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
     }
     
     public func markAsSeen(id: StoryId) {
-        let _ = self.context.engine.messages.markStoryAsSeen(peerId: id.peerId, id: id.id, asPinned: true).start()
+        if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+            let _ = self.context.engine.messages.markStoryAsSeen(peerId: id.peerId, id: id.id, asPinned: true).start()
+        }
     }
 }
 

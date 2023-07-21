@@ -338,7 +338,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                                 title = EnginePeer(peer).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                                 subtitle = nil
                             }
-                            actionTitle = "OPEN STORY"
+                            actionTitle = item.presentationData.strings.Chat_OpenStory
                         default:
                             break
                     }
