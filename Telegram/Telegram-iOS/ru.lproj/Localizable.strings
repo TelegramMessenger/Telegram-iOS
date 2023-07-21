@@ -71,12 +71,8 @@
 
 "PtgSettings.Title" = "Vartagram";
 "PtgSettings.ShowPeerId" = "Показывать ID профилей";
-"PtgSettings.ShowPeerIdHelp" = "Показывать ID в профилях пользователей, групп, каналов, ботов.";
 "PtgSettings.ShowChannelCreationDate" = "Показывать дату создания каналов";
-"PtgSettings.ForeignAgentNoticeHeader" = "Маркировка иноагентов РФ";
-"PtgSettings.SuppressForeignAgentNotice" = "Скрывать в сообщениях";
-"PtgSettings.EnableForeignAgentNoticeSearchFiltering" = "Фильтровать результаты поиска";
-"PtgSettings.EnableForeignAgentNoticeSearchFilteringHelp" = "Отфильтровывать из результатов поиска сообщения, которые были включены только из-за текста маркировки иноагентов РФ.";
+"PtgSettings.SuppressForeignAgentNotice" = "Скрывать метки иноагентов РФ";
 "PtgSettings.EnableLiveText" = "Сканер текста";
 "PtgSettings.EnableLiveTextHelp" = "Автоматически выполнять распознавание текста и штрих-кодов (например, QR-кода) на каждом изображении, которое вы просматриваете в полноэкранном режиме. Отключите, чтобы сэкономить заряд батареи.";
 "PtgSettings.PreferAppleVoiceToText" = "Перевод голоса в текст от Apple";

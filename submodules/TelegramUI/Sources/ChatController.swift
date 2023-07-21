@@ -15694,7 +15694,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 guard let currentId = resultsState.currentId else {
                     // need to load more if all results were filtered out and hence currentId is nil
-                    return self.context.sharedContext.currentPtgSettings.with { $0.effectiveEnableForeignAgentNoticeSearchFiltering } && !resultsState.messageIndices.isEmpty && !resultsState.completed ? resultsState.state : nil
+                    return self.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } && !resultsState.messageIndices.isEmpty && !resultsState.completed ? resultsState.state : nil
                 }
                 if let index = resultsState.messageIndices.firstIndex(where: { $0.id == currentId }) {
                     if index <= limit / 2 {
@@ -15774,7 +15774,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         |> deliverOn(Queue()) // offload rather cpu-intensive findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice to separate queue
                         // queue must be serial because of signal 'completed' handler
                         |> map { [weak self] results, updatedState -> (SearchMessagesResult, SearchMessagesState, Set<MessageId>) in
-                            let matchesOnlyBcOfFAN = self?.context.sharedContext.currentPtgSettings.with { $0.effectiveEnableForeignAgentNoticeSearchFiltering } ?? false ? findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: results.messages, query: searchState.query) : []
+                            let matchesOnlyBcOfFAN = self?.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ?? false ? findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: results.messages, query: searchState.query) : []
                             return (results, updatedState, matchesOnlyBcOfFAN)
                         }
                         |> deliverOnMainQueue).start(next: { [weak self] results, updatedState, matchesOnlyBcOfFAN in
@@ -15835,7 +15835,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             
                             var matchesOnlyBcOfFAN = strongSelf.presentationInterfaceState.search?.resultsState?.matchesOnlyBcOfFAN ?? []
                             
-                            if strongSelf.context.sharedContext.currentPtgSettings.with({ $0.effectiveEnableForeignAgentNoticeSearchFiltering }) {
+                            if strongSelf.context.sharedContext.currentPtgSettings.with({ $0.suppressForeignAgentNotice }) {
                                 let alreadyKnownIds = Set(strongSelf.presentationInterfaceState.search?.resultsState?.messageIndices.lazy.map { $0.id } ?? [])
                                 
                                 let newMatchesOnlyBcOfFAN = findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: results.messages.filter { !alreadyKnownIds.contains($0.id) }, query: searchState.query)

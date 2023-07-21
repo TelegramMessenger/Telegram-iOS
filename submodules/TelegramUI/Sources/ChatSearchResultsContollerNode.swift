@@ -329,7 +329,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
             var matchesOnlyBcOfFAN = strongSelf.matchesOnlyBcOfFAN
             
             let shouldTryLoadMore: Bool
-            if strongSelf.context.sharedContext.currentPtgSettings.with({ $0.effectiveEnableForeignAgentNoticeSearchFiltering }) {
+            if strongSelf.context.sharedContext.currentPtgSettings.with({ $0.suppressForeignAgentNotice }) {
                 let alreadyKnownIds = Set(strongSelf.searchResult.messages.lazy.map { $0.id })
                 
                 let newMatchesOnlyBcOfFAN = findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: updatedResult.messages.filter { !alreadyKnownIds.contains($0.id) }, query: strongSelf.searchQuery)

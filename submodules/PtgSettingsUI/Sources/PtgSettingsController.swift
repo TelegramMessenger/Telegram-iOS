@@ -15,15 +15,13 @@ private final class PtgSettingsControllerArguments {
     let switchShowPeerId: (Bool) -> Void
     let switchShowChannelCreationDate: (Bool) -> Void
     let switchSuppressForeignAgentNotice: (Bool) -> Void
-    let switchEnableForeignAgentNoticeSearchFiltering: (Bool) -> Void
     let switchEnableLiveText: (Bool) -> Void
     let switchPreferAppleVoiceToText: (Bool) -> Void
     
-    init(switchShowPeerId: @escaping (Bool) -> Void, switchShowChannelCreationDate: @escaping (Bool) -> Void, switchSuppressForeignAgentNotice: @escaping (Bool) -> Void, switchEnableForeignAgentNoticeSearchFiltering: @escaping (Bool) -> Void, switchEnableLiveText: @escaping (Bool) -> Void, switchPreferAppleVoiceToText: @escaping (Bool) -> Void) {
+    init(switchShowPeerId: @escaping (Bool) -> Void, switchShowChannelCreationDate: @escaping (Bool) -> Void, switchSuppressForeignAgentNotice: @escaping (Bool) -> Void, switchEnableLiveText: @escaping (Bool) -> Void, switchPreferAppleVoiceToText: @escaping (Bool) -> Void) {
         self.switchShowPeerId = switchShowPeerId
         self.switchShowChannelCreationDate = switchShowChannelCreationDate
         self.switchSuppressForeignAgentNotice = switchSuppressForeignAgentNotice
-        self.switchEnableForeignAgentNoticeSearchFiltering = switchEnableForeignAgentNoticeSearchFiltering
         self.switchEnableLiveText = switchEnableLiveText
         self.switchPreferAppleVoiceToText = switchPreferAppleVoiceToText
     }
@@ -38,13 +36,9 @@ private enum PtgSettingsSection: Int32 {
 
 private enum PtgSettingsEntry: ItemListNodeEntry {
     case showPeerId(String, Bool)
-    case showPeerIdInfo(String)
     case showChannelCreationDate(String, Bool)
     
-    case foreignAgentNoticeHeader(String)
     case suppressForeignAgentNotice(String, Bool)
-    case enableForeignAgentNoticeSearchFiltering(String, Bool, Bool)
-    case enableForeignAgentNoticeSearchFilteringInfo(String)
 
     case enableLiveText(String, Bool)
     case enableLiveTextInfo(String)
@@ -54,9 +48,9 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
 
     var section: ItemListSectionId {
         switch self {
-        case .showPeerId, .showPeerIdInfo, .showChannelCreationDate:
+        case .showPeerId, .showChannelCreationDate:
             return PtgSettingsSection.showProfileData.rawValue
-        case .foreignAgentNoticeHeader, .suppressForeignAgentNotice, .enableForeignAgentNoticeSearchFiltering, .enableForeignAgentNoticeSearchFilteringInfo:
+        case .suppressForeignAgentNotice:
             return PtgSettingsSection.foreignAgentNotice.rawValue
         case .enableLiveText, .enableLiveTextInfo:
             return PtgSettingsSection.liveText.rawValue
@@ -69,26 +63,18 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
         switch self {
         case .showPeerId:
             return 0
-        case .showPeerIdInfo:
-            return 1
         case .showChannelCreationDate:
-            return 2
+            return 1
         case .enableLiveText:
-            return 3
+            return 2
         case .enableLiveTextInfo:
-            return 4
+            return 3
         case .preferAppleVoiceToText:
-            return 5
+            return 4
         case .preferAppleVoiceToTextInfo:
-            return 6
-        case .foreignAgentNoticeHeader:
-            return 7
+            return 5
         case .suppressForeignAgentNotice:
-            return 8
-        case .enableForeignAgentNoticeSearchFiltering:
-            return 9
-        case .enableForeignAgentNoticeSearchFilteringInfo:
-            return 10
+            return 6
         }
     }
     
@@ -107,21 +93,15 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                 arguments.switchShowChannelCreationDate(updatedValue)
             })
-        case let .foreignAgentNoticeHeader(text):
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .suppressForeignAgentNotice(title, value):
             return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                 arguments.switchSuppressForeignAgentNotice(updatedValue)
-            })
-        case let .enableForeignAgentNoticeSearchFiltering(title, value, enabled):
-            return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, enabled: enabled, sectionId: self.section, style: .blocks, updated: { updatedValue in
-                arguments.switchEnableForeignAgentNoticeSearchFiltering(updatedValue)
             })
         case let .enableLiveText(title, value):
             return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                 arguments.switchEnableLiveText(updatedValue)
             })
-        case let .showPeerIdInfo(text), let .enableForeignAgentNoticeSearchFilteringInfo(text), let .enableLiveTextInfo(text), let .preferAppleVoiceToTextInfo(text):
+        case let .enableLiveTextInfo(text), let .preferAppleVoiceToTextInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
         case let .preferAppleVoiceToText(title, value, enabled):
             return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, enabled: enabled, sectionId: self.section, style: .blocks, updated: { updatedValue in
@@ -143,7 +123,6 @@ private func ptgSettingsControllerEntries(presentationData: PresentationData, se
     var entries: [PtgSettingsEntry] = []
     
     entries.append(.showPeerId(presentationData.strings.PtgSettings_ShowPeerId, settings.showPeerId))
-    entries.append(.showPeerIdInfo(presentationData.strings.PtgSettings_ShowPeerIdHelp))
     entries.append(.showChannelCreationDate(presentationData.strings.PtgSettings_ShowChannelCreationDate, settings.showChannelCreationDate))
     
     entries.append(.enableLiveText(presentationData.strings.PtgSettings_EnableLiveText, !experimentalSettings.disableImageContentAnalysis))
@@ -154,10 +133,7 @@ private func ptgSettingsControllerEntries(presentationData: PresentationData, se
         entries.append(.preferAppleVoiceToTextInfo(presentationData.strings.PtgSettings_PreferAppleVoiceToTextHelp))
     }
     
-    entries.append(.foreignAgentNoticeHeader(presentationData.strings.PtgSettings_ForeignAgentNoticeHeader.uppercased()))
     entries.append(.suppressForeignAgentNotice(presentationData.strings.PtgSettings_SuppressForeignAgentNotice, settings.suppressForeignAgentNotice))
-    entries.append(.enableForeignAgentNoticeSearchFiltering(presentationData.strings.PtgSettings_EnableForeignAgentNoticeSearchFiltering, settings.enableForeignAgentNoticeSearchFiltering, settings.suppressForeignAgentNotice))
-    entries.append(.enableForeignAgentNoticeSearchFilteringInfo(presentationData.strings.PtgSettings_EnableForeignAgentNoticeSearchFilteringHelp))
     
     return entries
 }
@@ -179,10 +155,6 @@ public func ptgSettingsController(context: AccountContext) -> ViewController {
     }, switchSuppressForeignAgentNotice: { value in
         updateSettings(context, statePromise) { settings in
             return settings.withUpdated(suppressForeignAgentNotice: value)
-        }
-    }, switchEnableForeignAgentNoticeSearchFiltering: { value in
-        updateSettings(context, statePromise) { settings in
-            return settings.withUpdated(enableForeignAgentNoticeSearchFiltering: value)
         }
     }, switchEnableLiveText: { value in
         let _ = context.sharedContext.accountManager.transaction({ transaction in
@@ -242,27 +214,23 @@ private func updateSettings(_ context: AccountContext, _ statePromise: Promise<P
 
 extension PtgSettings {
     public func withUpdated(showPeerId: Bool) -> PtgSettings {
-        return PtgSettings(showPeerId: showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, preferAppleVoiceToText: self.preferAppleVoiceToText, testToolsEnabled: self.testToolsEnabled)
+        return PtgSettings(showPeerId: showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, testToolsEnabled: self.testToolsEnabled)
     }
     
     public func withUpdated(showChannelCreationDate: Bool) -> PtgSettings {
-        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, preferAppleVoiceToText: self.preferAppleVoiceToText, testToolsEnabled: self.testToolsEnabled)
+        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, testToolsEnabled: self.testToolsEnabled)
     }
     
     public func withUpdated(suppressForeignAgentNotice: Bool) -> PtgSettings {
-        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, preferAppleVoiceToText: self.preferAppleVoiceToText, testToolsEnabled: self.testToolsEnabled)
-    }
-    
-    public func withUpdated(enableForeignAgentNoticeSearchFiltering: Bool) -> PtgSettings {
-        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: enableForeignAgentNoticeSearchFiltering, preferAppleVoiceToText: self.preferAppleVoiceToText, testToolsEnabled: self.testToolsEnabled)
+        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, testToolsEnabled: self.testToolsEnabled)
     }
     
     public func withUpdated(preferAppleVoiceToText: Bool) -> PtgSettings {
-        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, preferAppleVoiceToText: preferAppleVoiceToText, testToolsEnabled: self.testToolsEnabled)
+        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: preferAppleVoiceToText, testToolsEnabled: self.testToolsEnabled)
     }
     
     public func withUpdated(testToolsEnabled: Bool?) -> PtgSettings {
-        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, preferAppleVoiceToText: self.preferAppleVoiceToText, testToolsEnabled: testToolsEnabled)
+        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, testToolsEnabled: testToolsEnabled)
     }
 }
 

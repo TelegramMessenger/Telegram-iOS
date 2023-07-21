@@ -1557,7 +1557,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     for resultData in results {
                         let (result, updatedState) = resultData
                         
-                        let matchesOnlyBcOfFAN = context.sharedContext.currentPtgSettings.with { $0.effectiveEnableForeignAgentNoticeSearchFiltering } ? findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: result.messages, query: finalQuery) : []
+                        let matchesOnlyBcOfFAN = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: result.messages, query: finalQuery) : []
                         
                         mappedResults.append(ChatListSearchMessagesResult(query: finalQuery, messages: result.messages.map({ EngineMessage($0) }).sorted(by: { $0.index > $1.index }), readStates: result.readStates.mapValues { EnginePeerReadCounters(state: $0, isMuted: false) }, threadInfo: result.threadInfo, hasMore: !result.completed, totalCount: result.totalCount, state: updatedState, matchesOnlyBcOfFAN: matchesOnlyBcOfFAN))
                     }
@@ -1583,7 +1583,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                     var matchesOnlyBcOfFAN = searchContext.result.matchesOnlyBcOfFAN
                                     
                                     let shouldTryLoadMore: Bool
-                                    if context.sharedContext.currentPtgSettings.with({ $0.effectiveEnableForeignAgentNoticeSearchFiltering }) {
+                                    if context.sharedContext.currentPtgSettings.with({ $0.suppressForeignAgentNotice }) {
                                         let alreadyKnownIds = Set(searchContext.result.messages.lazy.map { $0.id })
                                         
                                         let newMatchesOnlyBcOfFAN = findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: result.messages.filter { !alreadyKnownIds.contains($0.id) }, query: finalQuery)
