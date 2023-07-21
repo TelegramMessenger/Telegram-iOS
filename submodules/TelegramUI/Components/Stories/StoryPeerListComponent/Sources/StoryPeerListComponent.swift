@@ -677,12 +677,13 @@ public final class StoryPeerListComponent: Component {
             
             let calculateOverscrollEffectFraction: (CGFloat, CGFloat) -> CGFloat = { maxFraction, bounceFraction in
                 var expandEffectFraction: CGFloat = max(0.0, min(1.0, maxFraction))
-                expandEffectFraction = 1.0 - pow(1.0 - expandEffectFraction, 2.0)
+                expandEffectFraction = pow(expandEffectFraction, 1.0)
                 
                 let overscrollEffectFraction = max(0.0, maxFraction - 1.0)
-                expandEffectFraction += overscrollEffectFraction * 0.1
+                expandEffectFraction += overscrollEffectFraction * 0.12
                 
-                expandEffectFraction += pow(bounceFraction, 1.4) * 0.2 * maxFraction
+                let reverseBounceFraction = 1.0 - pow(1.0 - bounceFraction, 2.4)
+                expandEffectFraction += reverseBounceFraction * 0.09 * maxFraction
                 
                 return expandEffectFraction
             }
@@ -1268,6 +1269,8 @@ public final class StoryPeerListComponent: Component {
             } else {
                 titleContentOffset = titleMinContentOffset.interpolate(to: ((itemLayout.containerSize.width - collapsedState.titleWidth) * 0.5) as CGFloat, amount: min(1.0, collapsedState.maxFraction) * (1.0 - collapsedState.activityFraction))
             }
+            
+            titleContentOffset += -expandBoundsFraction * 4.0
             
             var titleIndicatorSize: CGSize?
             if collapsedState.activityFraction != 0.0 {

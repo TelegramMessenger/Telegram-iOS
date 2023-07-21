@@ -1850,7 +1850,12 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         let isSelecting = self._itemInteraction?.selectedIds != nil
         self.itemGrid.pinchEnabled = !isSelecting
         
-        self.view.disablesInteractiveTransitionGestureRecognizer = isSelecting
+        var enableDismissGesture = true
+        if let items = self.items, items.items.isEmpty {
+        } else if isSelecting {
+            enableDismissGesture = false
+        }
+        self.view.disablesInteractiveTransitionGestureRecognizer = enableDismissGesture
         
         if isSelecting {
             if self.gridSelectionGesture == nil {
