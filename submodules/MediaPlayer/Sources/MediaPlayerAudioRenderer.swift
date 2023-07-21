@@ -237,7 +237,9 @@ private final class AudioPlayerRendererContext {
     let audioSessionDisposable = MetaDisposable()
     var audioSessionControl: ManagedAudioSessionControl?
     let playAndRecord: Bool
-    let ambient: Bool
+    var soundMuted: Bool
+    var ambient: Bool
+    var volume: Double = 1.0
     let mixWithOthers: Bool
     var forceAudioToSpeaker: Bool {
         didSet {
@@ -252,7 +254,7 @@ private final class AudioPlayerRendererContext {
         }
     }
     
-    init(controlTimebase: CMTimebase, audioSession: MediaPlayerAudioSessionControl, forAudioVideoMessage: Bool, playAndRecord: Bool, useVoiceProcessingMode: Bool, ambient: Bool, mixWithOthers: Bool, forceAudioToSpeaker: Bool, baseRate: Double, audioLevelPipe: ValuePipe<Float>, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
+    init(controlTimebase: CMTimebase, audioSession: MediaPlayerAudioSessionControl, forAudioVideoMessage: Bool, playAndRecord: Bool, useVoiceProcessingMode: Bool, soundMuted: Bool, ambient: Bool, mixWithOthers: Bool, forceAudioToSpeaker: Bool, baseRate: Double, audioLevelPipe: ValuePipe<Float>, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
         assert(audioPlayerRendererQueue.isCurrent())
         
         self.audioSession = audioSession
@@ -267,6 +269,7 @@ private final class AudioPlayerRendererContext {
         
         self.playAndRecord = playAndRecord
         self.useVoiceProcessingMode = useVoiceProcessingMode
+        self.soundMuted = soundMuted
         self.ambient = ambient
         self.mixWithOthers = mixWithOthers
         
@@ -318,8 +321,10 @@ private final class AudioPlayerRendererContext {
     }
     
     fileprivate func setVolume(_ volume: Double) {
+        self.volume = volume
+        
         if let mixerAudioUnit = self.mixerAudioUnit {
-            AudioUnitSetParameter(mixerAudioUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 0, Float32(volume), 0)
+            AudioUnitSetParameter(mixerAudioUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 0, Float32(volume) * (self.soundMuted ? 0.0 : 1.0), 0)
         }
     }
     
@@ -343,6 +348,36 @@ private final class AudioPlayerRendererContext {
                 CMTimebaseSetRate(context.timebase, rate: 0.0)
             }
         }
+    }
+    
+    fileprivate func setSoundMuted(soundMuted: Bool) {
+        self.soundMuted = soundMuted
+        
+        if let mixerAudioUnit = self.mixerAudioUnit {
+            AudioUnitSetParameter(mixerAudioUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 0, Float32(self.volume) * (self.soundMuted ? 0.0 : 1.0), 0)
+        }
+    }
+    
+    fileprivate func reconfigureAudio(ambient: Bool) {
+        self.ambient = ambient
+        
+        if let audioGraph = self.audioGraph {
+            var isRunning: DarwinBoolean = false
+            AUGraphIsRunning(audioGraph, &isRunning)
+            if isRunning.boolValue {
+                AUGraphStop(audioGraph)
+            }
+        }
+        self.audioSessionControl?.setType(self.ambient ? .ambient : (self.playAndRecord ? .playWithPossiblePortOverride : .play(mixWithOthers: self.mixWithOthers)), completion: { [weak self] in
+            audioPlayerRendererQueue.async {
+                guard let self else {
+                    return
+                }
+                if let audioGraph = self.audioGraph {
+                    AUGraphStart(audioGraph)
+                }
+            }
+        })
     }
     
     fileprivate func flushBuffers(at timestamp: CMTime, completion: () -> Void) {
@@ -554,6 +589,8 @@ private final class AudioPlayerRendererContext {
   
             if self.forAudioVideoMessage && !self.ambient {
                 AudioUnitSetParameter(equalizerAudioUnit, kAUNBandEQParam_GlobalGain, kAudioUnitScope_Global, 0, self.forceAudioToSpeaker ? 0.0 : 12.0, 0)
+            } else if self.soundMuted {
+                AudioUnitSetParameter(equalizerAudioUnit, kAUNBandEQParam_GlobalGain, kAudioUnitScope_Global, 0, 0.0, 0)
             }
             
             var maybeOutputAudioUnit: AudioComponentInstance?
@@ -590,6 +627,8 @@ private final class AudioPlayerRendererContext {
             AudioUnitSetProperty(mixerAudioUnit, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Global, 0, &maximumFramesPerSlice, 4)
             AudioUnitSetProperty(equalizerAudioUnit, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Global, 0, &maximumFramesPerSlice, 4)
             AudioUnitSetProperty(outputAudioUnit, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Global, 0, &maximumFramesPerSlice, 4)
+            
+            AudioUnitSetParameter(mixerAudioUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 0, Float32(self.volume) * (self.soundMuted ? 0.0 : 1.0), 0)
                         
             guard AUGraphInitialize(audioGraph) == noErr else {
                 return
@@ -827,7 +866,7 @@ public final class MediaPlayerAudioRenderer {
     private let audioClock: CMClock
     public let audioTimebase: CMTimebase
     
-    public init(audioSession: MediaPlayerAudioSessionControl, forAudioVideoMessage: Bool = false, playAndRecord: Bool, useVoiceProcessingMode: Bool = false, ambient: Bool, mixWithOthers: Bool, forceAudioToSpeaker: Bool, baseRate: Double, audioLevelPipe: ValuePipe<Float>, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
+    public init(audioSession: MediaPlayerAudioSessionControl, forAudioVideoMessage: Bool = false, playAndRecord: Bool, useVoiceProcessingMode: Bool = false, soundMuted: Bool, ambient: Bool, mixWithOthers: Bool, forceAudioToSpeaker: Bool, baseRate: Double, audioLevelPipe: ValuePipe<Float>, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
         var audioClock: CMClock?
         CMAudioClockCreate(allocator: nil, clockOut: &audioClock)
         if audioClock == nil {
@@ -840,7 +879,7 @@ public final class MediaPlayerAudioRenderer {
         self.audioTimebase = audioTimebase!
         
         audioPlayerRendererQueue.async {
-            let context = AudioPlayerRendererContext(controlTimebase: audioTimebase!, audioSession: audioSession, forAudioVideoMessage: forAudioVideoMessage, playAndRecord: playAndRecord, useVoiceProcessingMode: useVoiceProcessingMode, ambient: ambient, mixWithOthers: mixWithOthers, forceAudioToSpeaker: forceAudioToSpeaker, baseRate: baseRate, audioLevelPipe: audioLevelPipe, updatedRate: updatedRate, audioPaused: audioPaused)
+            let context = AudioPlayerRendererContext(controlTimebase: audioTimebase!, audioSession: audioSession, forAudioVideoMessage: forAudioVideoMessage, playAndRecord: playAndRecord, useVoiceProcessingMode: useVoiceProcessingMode, soundMuted: soundMuted, ambient: ambient, mixWithOthers: mixWithOthers, forceAudioToSpeaker: forceAudioToSpeaker, baseRate: baseRate, audioLevelPipe: audioLevelPipe, updatedRate: updatedRate, audioPaused: audioPaused)
             self.contextRef = Unmanaged.passRetained(context)
         }
     }
@@ -866,6 +905,24 @@ public final class MediaPlayerAudioRenderer {
             if let contextRef = self.contextRef {
                 let context = contextRef.takeUnretainedValue()
                 context.stop()
+            }
+        }
+    }
+    
+    public func setSoundMuted(soundMuted: Bool) {
+        audioPlayerRendererQueue.async {
+            if let contextRef = self.contextRef {
+                let context = contextRef.takeUnretainedValue()
+                context.setSoundMuted(soundMuted: soundMuted)
+            }
+        }
+    }
+    
+    public func reconfigureAudio(ambient: Bool) {
+        audioPlayerRendererQueue.async {
+            if let contextRef = self.contextRef {
+                let context = contextRef.takeUnretainedValue()
+                context.reconfigureAudio(ambient: ambient)
             }
         }
     }

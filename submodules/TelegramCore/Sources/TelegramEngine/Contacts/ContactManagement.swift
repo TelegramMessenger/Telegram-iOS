@@ -108,6 +108,10 @@ func _internal_deleteContactPeerInteractively(account: Account, peerId: PeerId) 
                     account.stateManager.addUpdates(updates)
                 }
                 return account.postbox.transaction { transaction -> Void in
+                    if let user = peer as? TelegramUser {
+                        _internal_updatePeerIsContact(transaction: transaction, user: user, isContact: false)
+                    }
+                    
                     var peerIds = transaction.getContactPeerIds()
                     if peerIds.contains(peerId) {
                         peerIds.remove(peerId)

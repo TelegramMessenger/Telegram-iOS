@@ -329,10 +329,14 @@ private final class GenericItemLayer: CALayer, ItemLayer {
         return !self.hasContents
     }
 
-    func update(size: CGSize) {
-        /*if let durationLayer = self.durationLayer {
+    func update(size: CGSize, insets: UIEdgeInsets, displayItem: SparseItemGridDisplayItem, binding: SparseItemGridBinding, item: SparseItemGrid.Item?) {
+        if let durationLayer = self.durationLayer {
             durationLayer.frame = CGRect(origin: CGPoint(x: size.width - 3.0, y: size.height - 3.0), size: CGSize())
-        }*/
+        }
+        
+        if let binding = binding as? SparseItemGridBindingImpl, let item = item as? VisualMediaItem, let previousItem = self.item, previousItem.story.media.id != item.story.media.id {
+            binding.bindLayers(items: [item], layers: [displayItem], size: size, insets: insets, synchronous: .none)
+        }
     }
 }
 
@@ -469,10 +473,10 @@ private final class CaptureProtectedItemLayer: AVSampleBufferDisplayLayer, ItemL
         return !self.hasContents
     }
 
-    func update(size: CGSize) {
-        /*if let durationLayer = self.durationLayer {
+    func update(size: CGSize, insets: UIEdgeInsets, displayItem: SparseItemGridDisplayItem, binding: SparseItemGridBinding, item: SparseItemGrid.Item?) {
+        if let durationLayer = self.durationLayer {
             durationLayer.frame = CGRect(origin: CGPoint(x: size.width - 3.0, y: size.height - 3.0), size: CGSize())
-        }*/
+        }
     }
 }
 
@@ -1229,7 +1233,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         }
         self.itemGridBinding.itemInteraction = self._itemInteraction
 
-        self.contextGestureContainerNode.isGestureEnabled = true
+        self.contextGestureContainerNode.isGestureEnabled = false
         self.contextGestureContainerNode.addSubnode(self.itemGrid)
         self.addSubnode(self.contextGestureContainerNode)
 
@@ -1631,6 +1635,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 gridSnapshot = self.itemGrid.view.snapshotView(afterScreenUpdates: false)
             }
             self.update(size: size, topInset: topInset, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: false, transition: .immediate)
+            self.updateSelectedItems(animated: false)
             if let gridSnapshot = gridSnapshot {
                 self.view.addSubview(gridSnapshot)
                 gridSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak gridSnapshot] _ in
@@ -1733,16 +1738,16 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         self.itemGrid.addToTransitionSurface(view: view)
     }
     
-    private var gridSelectionGesture: MediaPickerGridSelectionGesture<EngineMessage.Id>?
+    private var gridSelectionGesture: MediaPickerGridSelectionGesture<Int32>?
     
     override public func didLoad() {
         super.didLoad()
         
-        let selectionRecognizer = MediaListSelectionRecognizer(target: self, action: #selector(self.selectionPanGesture(_:)))
+        /*let selectionRecognizer = MediaListSelectionRecognizer(target: self, action: #selector(self.selectionPanGesture(_:)))
         selectionRecognizer.shouldBegin = {
             return true
         }
-        self.view.addGestureRecognizer(selectionRecognizer)
+        self.view.addGestureRecognizer(selectionRecognizer)*/
     }
     
     private var selectionPanState: (selecting: Bool, initialMessageId: EngineMessage.Id, toggledMessageIds: [[EngineMessage.Id]])?
@@ -1807,17 +1812,18 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     }
     
     override public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        let location = gestureRecognizer.location(in: gestureRecognizer.view)
+        /*let location = gestureRecognizer.location(in: gestureRecognizer.view)
         if location.x < 44.0 {
             return false
-        }
+        }*/
         return true
     }
     
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         if gestureRecognizer.state != .failed, let otherGestureRecognizer = otherGestureRecognizer as? UIPanGestureRecognizer {
-            otherGestureRecognizer.isEnabled = false
-            otherGestureRecognizer.isEnabled = true
+            let _ = otherGestureRecognizer
+            //otherGestureRecognizer.isEnabled = false
+            //otherGestureRecognizer.isEnabled = true
             return true
         } else {
             return false
@@ -1841,27 +1847,34 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             itemLayer.updateSelection(theme: self.itemGridBinding.checkNodeTheme, isSelected: self.itemInteraction.selectedIds?.contains(item.story.id), animated: animated)
         }
 
-        /*let isSelecting = self.chatControllerInteraction.selectionState != nil
+        let isSelecting = self._itemInteraction?.selectedIds != nil
         self.itemGrid.pinchEnabled = !isSelecting
+        
+        var enableDismissGesture = true
+        if let items = self.items, items.items.isEmpty {
+        } else if isSelecting {
+            enableDismissGesture = false
+        }
+        self.view.disablesInteractiveTransitionGestureRecognizer = enableDismissGesture
         
         if isSelecting {
             if self.gridSelectionGesture == nil {
-                let selectionGesture = MediaPickerGridSelectionGesture<EngineMessage.Id>()
+                let selectionGesture = MediaPickerGridSelectionGesture<Int32>()
                 selectionGesture.delegate = self
                 selectionGesture.sideInset = 44.0
                 selectionGesture.updateIsScrollEnabled = { [weak self] isEnabled in
                     self?.itemGrid.isScrollEnabled = isEnabled
                 }
                 selectionGesture.itemAt = { [weak self] point in
-                    if let strongSelf = self, let itemLayer = strongSelf.itemGrid.item(at: point)?.layer as? ItemLayer, let messageId = itemLayer.item?.message.id {
-                        return (messageId, strongSelf.chatControllerInteraction.selectionState?.selectedIds.contains(messageId) ?? false)
+                    if let strongSelf = self, let itemLayer = strongSelf.itemGrid.item(at: point)?.layer as? ItemLayer, let storyId = itemLayer.item?.story.id {
+                        return (storyId, strongSelf._itemInteraction?.selectedIds?.contains(storyId) ?? false)
                     } else {
                         return nil
                     }
                 }
-                selectionGesture.updateSelection = { [weak self] messageId, selected in
+                selectionGesture.updateSelection = { [weak self] storyId, selected in
                     if let strongSelf = self {
-                        strongSelf.chatControllerInteraction.toggleMessagesSelection([messageId], selected)
+                        strongSelf._itemInteraction?.toggleSelection(storyId, selected)
                     }
                 }
                 self.itemGrid.view.addGestureRecognizer(selectionGesture)
@@ -1870,7 +1883,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         } else if let gridSelectionGesture = self.gridSelectionGesture {
             self.itemGrid.view.removeGestureRecognizer(gridSelectionGesture)
             self.gridSelectionGesture = nil
-        }*/
+        }
     }
     
     private func updateHiddenItems() {

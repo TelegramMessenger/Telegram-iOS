@@ -9400,7 +9400,7 @@ Sorry for the inconvenience.";
 "StoryFeed.ContextSavedStories" = "Saved Stories";
 "StoryFeed.ContextArchivedStories" = "Archived Stories";
 "StoryFeed.ContextOpenChat" = "Send Message";
-"StoryFeed.ContextOpenProfile" = "View Profile";
+"StoryFeed.ContextOpenProfile" = "Open Profile";
 "StoryFeed.ContextNotifyOn" = "Notify About Stories";
 "StoryFeed.ContextNotifyOff" = "Do Not Notify About Stories";
 "StoryFeed.ContextArchive" = "Hide Stories";
@@ -9452,6 +9452,7 @@ Sorry for the inconvenience.";
 "ArchiveSettings.UnknownChatsFooter" = "Automatically archive and mute new private chats, groups and channels from non-contacts.";
 
 "ArchiveSettings.KeepArchived" = "Always Keep Archived";
+"ArchiveSettings.AutomaticallyArchive" = "Automatically Archive";
 "ArchiveSettings.TooltipPremiumRequired" = "This setting is available only to the subscribers of [Telegram Premium]().";
 
 "NotificationSettings.Stories.ShowAll" = "Show All Notifications";
@@ -9548,10 +9549,9 @@ Sorry for the inconvenience.";
 
 "Story.ContextDeleteStory" = "Delete Story";
 
-"Story.TooltipPrivacyCloseFriends" = "You are seeing this story because you have\nbeen added to **%@'s** list of close friends.";
+"Story.TooltipPrivacyCloseFriends" = "You are seeing this story because **%@** added you\nto their list of Close Friends.";
 "Story.TooltipPrivacyContacts" = "Only **%@'s** contacts can view this story.";
 "Story.TooltipPrivacySelectedContacts" = "Only some contacts **%@** selected can view this story.";
-
 "Story.ToastViewInChat" = "View in Chat";
 "Story.ToastReactionSent" = "Reaction Sent.";
 
@@ -9618,7 +9618,7 @@ Sorry for the inconvenience.";
 "Story.Editor.DraftDiscardDraft" = "Discard Draft?";
 "Story.Editor.DraftKeepMedia" = "Save Draft";
 "Story.Editor.DraftKeepDraft" = "Keep Draft";
-"Story.Editor.DraftDiscaedText" = "If you go back now, you will lose any changes that you've made.";
+"Story.Editor.DraftDiscaedText" = "If you go back now, you will lose any changes you made.";
 "Story.Editor.DraftDiscard" = "Discard";
 
 "Story.Editor.ExpirationText" = "Choose how long the story will be visible.";
@@ -9679,7 +9679,7 @@ Sorry for the inconvenience.";
 "Story.Privacy.TooltipStoryArchived" = "Users allowed to view your story will see it on your page even after it expires.";
 "Story.Privacy.TooltipStoryExpires" = "The story will disappear after it expires.";
 
-"Story.Privacy.WhoCanViewHeader" = "WHO CAN VIEW";
+"Story.Privacy.WhoCanViewHeader" = "WHO CAN VIEW THIS STORY";
 "Story.Privacy.ContactsHeader" = "CONTACTS";
 
 "Story.Privacy.SearchChats" = "Search Chats";
@@ -9712,6 +9712,19 @@ Sorry for the inconvenience.";
 "Story.Privacy.SaveSettings" = "Save Settings";
 "Story.Privacy.PostStory" = "Post Story";
 
-"Story.Editor.Draft" = "Draft";
 "Story.Views.ViewsExpired" = "List of viewers becomes unavailable **24 hours** after the story expires.";
 "Story.Views.NoViews" = "Nobody has viewed\nyour story yet.";
+
+"AutoDownloadSettings.Stories" = "Stories";
+"MediaEditor.Draft" = "Draft";
+
+"Notification.LockScreenStoryPlaceholder" = "New Story";
+
+"Chat.OpenStory" = "OPEN STORY";
+
+"Story.Editor.TooltipPremiumCaptionLimitTitle" = "Maximum Length Reached";
+"Story.Editor.TooltipPremiumCaptionLimitText" = "Increase this limit 10 times to 2048 symbols by subscribing to [Telegram Premium]().";
+
+"Story.Editor.TooltipPremiumCaptionEntities" = "Subscribe to [Telegram Premium]() to add links and formatting in captions to your stories.";
+
+"Story.Context.TooltipPremiumSaveStories" = "Subscribe to [Telegram Premium]() to save other people's unprotected stories to your Gallery.";

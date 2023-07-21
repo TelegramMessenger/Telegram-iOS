@@ -356,6 +356,8 @@ public final class StoryPeerListComponent: Component {
         public private(set) var overscrollSelectedId: EnginePeer.Id?
         public private(set) var overscrollHiddenChatItemsAllowed: Bool = false
         
+        private var anchorForTooltipRect: CGRect?
+        
         private var sharedBlurEffect: NSObject?
         
         public override init(frame: CGRect) {
@@ -482,7 +484,11 @@ public final class StoryPeerListComponent: Component {
         }
         
         public func anchorForTooltip() -> (UIView, CGRect)? {
-            return (self.collapsedButton, self.collapsedButton.bounds)
+            if let anchorForTooltipRect = self.anchorForTooltipRect {
+                return (self, anchorForTooltipRect)
+            } else {
+                return nil
+            }
         }
         
         public func titleFrame() -> CGRect {
@@ -631,6 +637,7 @@ public final class StoryPeerListComponent: Component {
                 var minFraction: CGFloat
                 var maxFraction: CGFloat
                 var sideAlphaFraction: CGFloat
+                var expandEffectFraction: CGFloat
                 var titleWidth: CGFloat
                 var activityFraction: CGFloat
             }
@@ -668,6 +675,19 @@ public final class StoryPeerListComponent: Component {
             
             let timestamp = CACurrentMediaTime()
             
+            let calculateOverscrollEffectFraction: (CGFloat, CGFloat) -> CGFloat = { maxFraction, bounceFraction in
+                var expandEffectFraction: CGFloat = max(0.0, min(1.0, maxFraction))
+                expandEffectFraction = pow(expandEffectFraction, 1.0)
+                
+                let overscrollEffectFraction = max(0.0, maxFraction - 1.0)
+                expandEffectFraction += overscrollEffectFraction * 0.12
+                
+                let reverseBounceFraction = 1.0 - pow(1.0 - bounceFraction, 2.4)
+                expandEffectFraction += reverseBounceFraction * 0.09 * maxFraction
+                
+                return expandEffectFraction
+            }
+            
             let collapsedState: CollapseState
             let expandBoundsFraction: CGFloat
             if let animationState = self.animationState {
@@ -703,16 +723,6 @@ public final class StoryPeerListComponent: Component {
                 let animatedTitleWidth = animationState.interpolatedFraction(at: timestamp, effectiveFromFraction: animationState.fromTitleWidth, toFraction: realTitleContentWidth)
                 let animatedActivityFraction = animationState.interpolatedFraction(at: timestamp, effectiveFromFraction: animationState.fromActivityFraction, toFraction: targetActivityFraction)
                 
-                collapsedState = CollapseState(
-                    globalFraction: animatedGlobalFraction,
-                    scaleFraction: animatedScaleFraction,
-                    minFraction: animatedMinFraction,
-                    maxFraction: animatedMaxFraction,
-                    sideAlphaFraction: animatedSideAlphaFraction,
-                    titleWidth: animatedTitleWidth,
-                    activityFraction: animatedActivityFraction
-                )
-                
                 var rawProgress = CGFloat((timestamp - animationState.startTime) / animationState.duration)
                 rawProgress = max(0.0, min(1.0, rawProgress))
                 
@@ -724,6 +734,17 @@ public final class StoryPeerListComponent: Component {
                 } else {
                     expandBoundsFraction = 0.0
                 }
+                
+                collapsedState = CollapseState(
+                    globalFraction: animatedGlobalFraction,
+                    scaleFraction: animatedScaleFraction,
+                    minFraction: animatedMinFraction,
+                    maxFraction: animatedMaxFraction,
+                    sideAlphaFraction: animatedSideAlphaFraction,
+                    expandEffectFraction: calculateOverscrollEffectFraction(animatedMaxFraction, expandBoundsFraction),
+                    titleWidth: animatedTitleWidth,
+                    activityFraction: animatedActivityFraction
+                )
             } else {
                 collapsedState = CollapseState(
                     globalFraction: targetFraction,
@@ -731,6 +752,7 @@ public final class StoryPeerListComponent: Component {
                     minFraction: targetMinFraction,
                     maxFraction: targetMaxFraction,
                     sideAlphaFraction: targetSideAlphaFraction,
+                    expandEffectFraction: calculateOverscrollEffectFraction(targetMaxFraction, 0.0),
                     titleWidth: realTitleContentWidth,
                     activityFraction: targetActivityFraction
                 )
@@ -817,7 +839,7 @@ public final class StoryPeerListComponent: Component {
             }
             
             //print("overscrollStage2: \(overscrollStage2)")
-            if let overscrollFocusIndex, overscrollStage2 >= 1.25 {
+            if let overscrollFocusIndex, overscrollStage2 >= 1.19 {
                 self.overscrollSelectedId = self.sortedItems[overscrollFocusIndex].peer.id
             } else {
                 self.overscrollSelectedId = nil
@@ -1031,6 +1053,7 @@ public final class StoryPeerListComponent: Component {
                         scale: itemScale,
                         fullWidth: expandedItemWidth,
                         expandedAlphaFraction: collapsedState.sideAlphaFraction,
+                        expandEffectFraction: collapsedState.expandEffectFraction,
                         leftNeighborDistance: leftNeighborDistance,
                         rightNeighborDistance: rightNeighborDistance,
                         action: component.peerAction,
@@ -1166,6 +1189,7 @@ public final class StoryPeerListComponent: Component {
                         scale: itemScale,
                         fullWidth: expandedItemWidth,
                         expandedAlphaFraction: collapsedState.sideAlphaFraction,
+                        expandEffectFraction: collapsedState.expandEffectFraction,
                         leftNeighborDistance: leftNeighborDistance,
                         rightNeighborDistance: rightNeighborDistance,
                         action: component.peerAction,
@@ -1229,6 +1253,7 @@ public final class StoryPeerListComponent: Component {
             }
             
             transition.setFrame(view: self.collapsedButton, frame: CGRect(origin: CGPoint(x: component.minTitleX, y: 6.0 - 59.0), size: CGSize(width: max(0.0, component.maxTitleX - component.minTitleX), height: 44.0)))
+            self.anchorForTooltipRect = CGRect(origin: CGPoint(x: collapsedContentOrigin, y: -59.0 + 6.0 + 2.0), size: CGSize(width: collapsedContentWidth, height: 44.0))
             
             let defaultCollapsedTitleOffset: CGFloat = 0.0
             
@@ -1244,6 +1269,8 @@ public final class StoryPeerListComponent: Component {
             } else {
                 titleContentOffset = titleMinContentOffset.interpolate(to: ((itemLayout.containerSize.width - collapsedState.titleWidth) * 0.5) as CGFloat, amount: min(1.0, collapsedState.maxFraction) * (1.0 - collapsedState.activityFraction))
             }
+            
+            titleContentOffset += -expandBoundsFraction * 4.0
             
             var titleIndicatorSize: CGSize?
             if collapsedState.activityFraction != 0.0 {
@@ -1484,6 +1511,11 @@ public final class StoryPeerListComponent: Component {
                     )
                 }
                 
+                var allowBounce = !previousComponent.unlocked && component.unlocked
+                if let animationHint, !animationHint.bounce {
+                    allowBounce = false
+                }
+                
                 self.animationState = AnimationState(
                     duration: duration * UIView.animationDurationFactor(),
                     fromIsUnlocked: previousComponent.unlocked,
@@ -1491,7 +1523,7 @@ public final class StoryPeerListComponent: Component {
                     fromTitleWidth: self.currentTitleWidth,
                     fromActivityFraction: self.currentActivityFraction,
                     startTime: timestamp,
-                    bounce: animationHint?.bounce ?? true
+                    bounce: allowBounce
                 )
             }
             

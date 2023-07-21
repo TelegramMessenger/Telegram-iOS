@@ -197,6 +197,7 @@ private var declaredEncodables: Void = {
     declareEncodable(SynchronizeAutosaveItemOperation.self, f: { SynchronizeAutosaveItemOperation(decoder: $0) })
     declareEncodable(TelegramMediaStory.self, f: { TelegramMediaStory(decoder: $0) })
     declareEncodable(SynchronizeViewStoriesOperation.self, f: { SynchronizeViewStoriesOperation(decoder: $0) })
+    declareEncodable(SynchronizePeerStoriesOperation.self, f: { SynchronizePeerStoriesOperation(decoder: $0) })
     return
 }()
 

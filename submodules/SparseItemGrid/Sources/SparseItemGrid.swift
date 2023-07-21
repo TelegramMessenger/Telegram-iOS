@@ -8,7 +8,7 @@ import ComponentFlow
 import MultilineTextComponent
 
 public protocol SparseItemGridLayer: CALayer {
-    func update(size: CGSize)
+    func update(size: CGSize, insets: UIEdgeInsets, displayItem: SparseItemGridDisplayItem, binding: SparseItemGridBinding, item: SparseItemGrid.Item?)
     func needsShimmer() -> Bool
     
     func getContents() -> Any?
@@ -967,7 +967,7 @@ public final class SparseItemGrid: ASDisplayNode {
             
             var bindItems: [Item] = []
             var bindLayers: [SparseItemGridDisplayItem] = []
-            var updateLayers: [SparseItemGridDisplayItem] = []
+            var updateLayers: [(SparseItemGridDisplayItem, Int)] = []
             
             let addBlur = layout.centerItems
 
@@ -980,7 +980,7 @@ public final class SparseItemGrid: ASDisplayNode {
                         let itemLayer: VisibleItem
                         if let current = self.visibleItems[item.id] {
                             itemLayer = current
-                            updateLayers.append(itemLayer)
+                            updateLayers.append((itemLayer, index))
                         } else {
                             itemLayer = VisibleItem(layer: items.itemBinding.createLayer(), view: items.itemBinding.createView())
                             self.visibleItems[item.id] = itemLayer
@@ -1057,10 +1057,11 @@ public final class SparseItemGrid: ASDisplayNode {
                 items.itemBinding.bindLayers(items: bindItems, layers: bindLayers, size: layout.containerLayout.size, insets: layout.containerLayout.insets, synchronous: synchronous)
             }
 
-            for item in updateLayers {
+            for (item, index) in updateLayers {
                 let item = item as! VisibleItem
+                let contentItem = items.item(at: index)
                 if let layer = item.layer {
-                    layer.update(size: layer.frame.size)
+                    layer.update(size: layer.frame.size, insets: layout.containerLayout.insets, displayItem: item, binding: items.itemBinding, item: contentItem)
                 } else if let view = item.view {
                     view.update(size: view.layer.frame.size, insets: layout.containerLayout.insets)
                 }

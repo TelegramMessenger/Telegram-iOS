@@ -1261,7 +1261,7 @@ open class TextNode: ASDisplayNode {
                     var additionalTrailingLine: (CTLine, Double)?
                     
                     var measureFitWidth = CTLineGetTypographicBounds(originalLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(originalLine)
-                    if customTruncationToken != nil {
+                    if customTruncationToken != nil && lineRange.location + lineRange.length < attributedString.length {
                         measureFitWidth += truncationTokenWidth
                     }
                     

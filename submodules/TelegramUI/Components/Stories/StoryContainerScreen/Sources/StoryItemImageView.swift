@@ -25,8 +25,6 @@ final class StoryItemImageView: UIView {
     private(set) var isContentLoaded: Bool = false
     var didLoadContents: (() -> Void)?
     
-    private var isCaptureProtected: Bool = false
-    
     override init(frame: CGRect) {
         self.contentView = UIImageView()
         self.contentView.contentMode = .scaleAspectFill
@@ -44,8 +42,8 @@ final class StoryItemImageView: UIView {
         self.disposable?.dispose()
     }
     
-    private func updateImage(image: UIImage) {
-        if self.isCaptureProtected {
+    private func updateImage(image: UIImage, isCaptureProtected: Bool) {
+        if isCaptureProtected {
             let captureProtectedContentLayer: CaptureProtectedContentLayer
             if let current = self.captureProtectedContentLayer {
                 captureProtectedContentLayer = current
@@ -71,8 +69,6 @@ final class StoryItemImageView: UIView {
     }
     
     func update(context: AccountContext, strings: PresentationStrings, peer: EnginePeer, storyId: Int32, media: EngineMedia, size: CGSize, isCaptureProtected: Bool, attemptSynchronous: Bool, transition: Transition) {
-        self.isCaptureProtected = isCaptureProtected
-        
         self.backgroundColor = isCaptureProtected ? UIColor(rgb: 0x181818) : nil
         
         var dimensions: CGSize?
@@ -90,14 +86,28 @@ final class StoryItemImageView: UIView {
                 dimensions = representation.dimensions.cgSize
                 
                 if isMediaUpdated {
+                    if isCaptureProtected {
+                        if let thumbnailData = image.immediateThumbnailData.flatMap(decodeTinyThumbnail), let thumbnailImage = UIImage(data: thumbnailData) {
+                            if let image = blurredImage(thumbnailImage, radius: 10.0, iterations: 3) {
+                                self.updateImage(image: image, isCaptureProtected: false)
+                                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.contentView.image = nil
+                                })
+                            }
+                        }
+                    }
+                    
                     if attemptSynchronous, let path = context.account.postbox.mediaBox.completedResourcePath(id: representation.resource.id, pathExtension: nil) {
                         if #available(iOS 15.0, *) {
                             if let image = UIImage(contentsOfFile: path)?.preparingForDisplay() {
-                                self.updateImage(image: image)
+                                self.updateImage(image: image, isCaptureProtected: isCaptureProtected)
                             }
                         } else {
                             if let image = UIImage(contentsOfFile: path)?.precomposed() {
-                                self.updateImage(image: image)
+                                self.updateImage(image: image, isCaptureProtected: isCaptureProtected)
                             }
                         }
                         self.isContentLoaded = true
@@ -105,7 +115,7 @@ final class StoryItemImageView: UIView {
                     } else {
                         if let thumbnailData = image.immediateThumbnailData.flatMap(decodeTinyThumbnail), let thumbnailImage = UIImage(data: thumbnailData) {
                             if let image = blurredImage(thumbnailImage, radius: 10.0, iterations: 3) {
-                                self.updateImage(image: image)
+                                self.updateImage(image: image, isCaptureProtected: isCaptureProtected)
                             }
                         }
                         
@@ -137,7 +147,7 @@ final class StoryItemImageView: UIView {
                                 return
                             }
                             if let image {
-                                self.updateImage(image: image)
+                                self.updateImage(image: image, isCaptureProtected: isCaptureProtected)
                                 self.isContentLoaded = true
                                 self.didLoadContents?()
                             }
@@ -149,16 +159,30 @@ final class StoryItemImageView: UIView {
             dimensions = file.dimensions?.cgSize
             
             if isMediaUpdated {
+                if isCaptureProtected {
+                    if let thumbnailData = file.immediateThumbnailData.flatMap(decodeTinyThumbnail), let thumbnailImage = UIImage(data: thumbnailData) {
+                        if let image = blurredImage(thumbnailImage, radius: 10.0, iterations: 3) {
+                            self.updateImage(image: image, isCaptureProtected: false)
+                            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.contentView.image = nil
+                            })
+                        }
+                    }
+                }
+                
                 let cachedPath = context.account.postbox.mediaBox.cachedRepresentationCompletePath(file.resource.id, representation: CachedVideoFirstFrameRepresentation())
                 
                 if attemptSynchronous, FileManager.default.fileExists(atPath: cachedPath) {
                     if #available(iOS 15.0, *) {
                         if let image = UIImage(contentsOfFile: cachedPath)?.preparingForDisplay() {
-                            self.updateImage(image: image)
+                            self.updateImage(image: image, isCaptureProtected: isCaptureProtected)
                         }
                     } else {
                         if let image = UIImage(contentsOfFile: cachedPath)?.precomposed() {
-                            self.updateImage(image: image)
+                            self.updateImage(image: image, isCaptureProtected: isCaptureProtected)
                         }
                     }
                     self.isContentLoaded = true
@@ -166,7 +190,7 @@ final class StoryItemImageView: UIView {
                 } else {
                     if let thumbnailData = file.immediateThumbnailData.flatMap(decodeTinyThumbnail), let thumbnailImage = UIImage(data: thumbnailData) {
                         if let image = blurredImage(thumbnailImage, radius: 10.0, iterations: 3) {
-                            self.updateImage(image: image)
+                            self.updateImage(image: image, isCaptureProtected: isCaptureProtected)
                         }
                     }
                     
@@ -195,7 +219,7 @@ final class StoryItemImageView: UIView {
                             return
                         }
                         if let image {
-                            self.updateImage(image: image)
+                            self.updateImage(image: image, isCaptureProtected: isCaptureProtected)
                             self.isContentLoaded = true
                             self.didLoadContents?()
                         }
@@ -217,7 +241,7 @@ final class StoryItemImageView: UIView {
             }
         }
         
-        if self.isCaptureProtected {
+        if isCaptureProtected {
             let captureProtectedInfo: ComponentView<Empty>
             var captureProtectedInfoTransition = transition
             if let current = self.captureProtectedInfo {

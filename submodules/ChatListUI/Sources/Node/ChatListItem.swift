@@ -3601,6 +3601,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         strongSelf.view.accessibilityCustomActions = nil
                     }
+                    
+                    strongSelf.avatarTapRecognizer?.isEnabled = item.interaction.inlineNavigationLocation == nil
                 }
             })
         }

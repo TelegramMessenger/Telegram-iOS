@@ -2392,7 +2392,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }))
     }
     
-    @available(iOS 10.0, *)
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         let _ = (accountIdFromNotification(response.notification, sharedContext: self.sharedContextPromise.get())
         |> deliverOnMainQueue).start(next: { accountId in
@@ -2493,11 +2492,11 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             return settings.displayNameOnLockscreen
         }
         |> deliverOnMainQueue).start(next: { displayNames in
-            self.registerForNotifications(replyString: presentationData.strings.Notification_Reply, messagePlaceholderString: presentationData.strings.Conversation_InputTextPlaceholder, hiddenContentString: presentationData.strings.Watch_MessageView_Title, hiddenReactionContentString: presentationData.strings.Notification_LockScreenReactionPlaceholder, includeNames: displayNames, authorize: authorize, completion: completion)
+            self.registerForNotifications(replyString: presentationData.strings.Notification_Reply, messagePlaceholderString: presentationData.strings.Conversation_InputTextPlaceholder, hiddenContentString: presentationData.strings.Watch_MessageView_Title, hiddenReactionContentString: presentationData.strings.Notification_LockScreenReactionPlaceholder, hiddenStoryContentString: presentationData.strings.Notification_LockScreenStoryPlaceholder, includeNames: displayNames, authorize: authorize, completion: completion)
         })
     }
 
-    private func registerForNotifications(replyString: String, messagePlaceholderString: String, hiddenContentString: String, hiddenReactionContentString: String, includeNames: Bool, authorize: Bool = true, completion: @escaping (Bool) -> Void = { _ in }) {
+    private func registerForNotifications(replyString: String, messagePlaceholderString: String, hiddenContentString: String, hiddenReactionContentString: String, hiddenStoryContentString: String, includeNames: Bool, authorize: Bool = true, completion: @escaping (Bool) -> Void = { _ in }) {
         let notificationCenter = UNUserNotificationCenter.current()
         Logger.shared.log("App \(self.episodeId)", "register for notifications: get settings (authorize: \(authorize))")
         notificationCenter.getNotificationSettings(completionHandler: { settings in
@@ -2527,37 +2526,27 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                                 let groupRepliableMediaMessageCategory: UNNotificationCategory
                                 let channelMessageCategory: UNNotificationCategory
                                 let reactionMessageCategory: UNNotificationCategory
+                                let storyCategory: UNNotificationCategory
                                 
-                                if #available(iOS 11.0, *) {
-                                    var options: UNNotificationCategoryOptions = []
-                                    if includeNames {
-                                        options.insert(.hiddenPreviewsShowTitle)
-                                    }
-                                    
-                                    var carPlayOptions = options
-                                    carPlayOptions.insert(.allowInCarPlay)
-                                    if #available(iOS 13.2, *) {
-                                        carPlayOptions.insert(.allowAnnouncement)
-                                    }
-                                    
-                                    unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                                    repliableMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: carPlayOptions)
-                                    repliableMediaMessageCategory = UNNotificationCategory(identifier: "m", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: carPlayOptions)
-                                    groupRepliableMessageCategory = UNNotificationCategory(identifier: "gr", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                                    groupRepliableMediaMessageCategory = UNNotificationCategory(identifier: "gm", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                                    channelMessageCategory = UNNotificationCategory(identifier: "c", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                                    reactionMessageCategory = UNNotificationCategory(identifier: "t", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenReactionContentString, options: options)
-                                } else {
-                                    let carPlayOptions: UNNotificationCategoryOptions = [.allowInCarPlay]
-                                
-                                    unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], options: [])
-                                    repliableMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], options: carPlayOptions)
-                                    repliableMediaMessageCategory = UNNotificationCategory(identifier: "m", actions: [reply], intentIdentifiers: [], options: [])
-                                    groupRepliableMessageCategory = UNNotificationCategory(identifier: "gr", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], options: [])
-                                    groupRepliableMediaMessageCategory = UNNotificationCategory(identifier: "gm", actions: [reply], intentIdentifiers: [], options: [])
-                                    channelMessageCategory = UNNotificationCategory(identifier: "c", actions: [], intentIdentifiers: [], options: [])
-                                    reactionMessageCategory = UNNotificationCategory(identifier: "t", actions: [], intentIdentifiers: [], options: [])
+                                var options: UNNotificationCategoryOptions = []
+                                if includeNames {
+                                    options.insert(.hiddenPreviewsShowTitle)
                                 }
+                                
+                                var carPlayOptions = options
+                                carPlayOptions.insert(.allowInCarPlay)
+                                if #available(iOS 13.2, *) {
+                                    carPlayOptions.insert(.allowAnnouncement)
+                                }
+                                
+                                unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                repliableMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: carPlayOptions)
+                                repliableMediaMessageCategory = UNNotificationCategory(identifier: "m", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: carPlayOptions)
+                                groupRepliableMessageCategory = UNNotificationCategory(identifier: "gr", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                groupRepliableMediaMessageCategory = UNNotificationCategory(identifier: "gm", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                channelMessageCategory = UNNotificationCategory(identifier: "c", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                reactionMessageCategory = UNNotificationCategory(identifier: "t", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenReactionContentString, options: options)
+                                storyCategory = UNNotificationCategory(identifier: "st", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenStoryContentString, options: options)
                                 
                                 UNUserNotificationCenter.current().setNotificationCategories([
                                     unknownMessageCategory,
@@ -2566,7 +2555,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                                     channelMessageCategory,
                                     reactionMessageCategory,
                                     groupRepliableMessageCategory,
-                                    groupRepliableMediaMessageCategory
+                                    groupRepliableMediaMessageCategory,
+                                    storyCategory
                                 ])
                                 
                                 Logger.shared.log("App \(self.episodeId)", "register for notifications: invoke registerForRemoteNotifications")

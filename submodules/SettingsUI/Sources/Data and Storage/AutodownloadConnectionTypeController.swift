@@ -292,7 +292,7 @@ private func autodownloadMediaConnectionTypeControllerEntries(presentationData: 
     
     entries.append(.typesHeader(presentationData.theme, presentationData.strings.AutoDownloadSettings_MediaTypes))
     entries.append(.photos(presentationData.theme, presentationData.strings.AutoDownloadSettings_Photos, stringForAutomaticDownloadPeers(strings: presentationData.strings, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, peers: photo, category: .photo), master))
-    entries.append(.stories(presentationData.theme, "Stories", stringForAutomaticDownloadPeers(strings: presentationData.strings, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, peers: stories, category: .story), master))
+    entries.append(.stories(presentationData.theme, presentationData.strings.AutoDownloadSettings_Stories, stringForAutomaticDownloadPeers(strings: presentationData.strings, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, peers: stories, category: .story), master))
     entries.append(.videos(presentationData.theme, presentationData.strings.AutoDownloadSettings_Videos, stringForAutomaticDownloadPeers(strings: presentationData.strings, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, peers: video, category: .video), master))
     entries.append(.files(presentationData.theme, presentationData.strings.AutoDownloadSettings_Files, stringForAutomaticDownloadPeers(strings: presentationData.strings, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, peers: file, category: .file), master))
     entries.append(.voiceMessagesInfo(presentationData.theme, presentationData.strings.AutoDownloadSettings_VoiceMessagesInfo))

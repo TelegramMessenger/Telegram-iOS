@@ -473,7 +473,7 @@ private final class GenericItemLayer: CALayer, ItemLayer {
         return !self.hasContents
     }
 
-    func update(size: CGSize) {
+    func update(size: CGSize, insets: UIEdgeInsets, displayItem: SparseItemGridDisplayItem, binding: SparseItemGridBinding, item: SparseItemGrid.Item?) {
         /*if let durationLayer = self.durationLayer {
             durationLayer.frame = CGRect(origin: CGPoint(x: size.width - 3.0, y: size.height - 3.0), size: CGSize())
         }*/
@@ -613,7 +613,7 @@ private final class CaptureProtectedItemLayer: AVSampleBufferDisplayLayer, ItemL
         return !self.hasContents
     }
 
-    func update(size: CGSize) {
+    func update(size: CGSize, insets: UIEdgeInsets, displayItem: SparseItemGridDisplayItem, binding: SparseItemGridBinding, item: SparseItemGrid.Item?) {
         /*if let durationLayer = self.durationLayer {
             durationLayer.frame = CGRect(origin: CGPoint(x: size.width - 3.0, y: size.height - 3.0), size: CGSize())
         }*/

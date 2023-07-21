@@ -4489,6 +4489,11 @@ func replayFinalState(
                             updatedPeerEntries.append(StoryItemsTableEntry(value: codedEntry, id: storedItem.id, expirationTimestamp: storedItem.expirationTimestamp, isCloseFriends: storedItem.isCloseFriends))
                         }
                     }
+                    if case .item = storedItem {
+                        if let codedEntry = CodableEntry(storedItem) {
+                            transaction.setStory(id: StoryId(peerId: peerId, id: storedItem.id), value: codedEntry)
+                        }
+                    }
                 } else {
                     if case let .storyItemDeleted(id) = story {
                         if let index = updatedPeerEntries.firstIndex(where: { $0.id == id }) {
@@ -4979,6 +4984,19 @@ func replayFinalState(
     
     if syncChatListFilters {
         requestChatListFiltersSync(transaction: transaction)
+    }
+    
+    for update in storyUpdates {
+        switch update {
+        case let .added(peerId, _):
+            if shouldKeepUserStoriesInFeed(peerId: peerId, isContact: transaction.isPeerContact(peerId: peerId)) {
+                if !transaction.storySubscriptionsContains(key: .hidden, peerId: peerId) && !transaction.storySubscriptionsContains(key: .filtered, peerId: peerId) {
+                    _internal_addSynchronizePeerStoriesOperation(peerId: peerId, transaction: transaction)
+                }
+            }
+        default:
+            break
+        }
     }
     
     return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, addedReactionEvents: addedReactionEvents, wasScheduledMessageIds: wasScheduledMessageIds, addedSecretMessageIds: addedSecretMessageIds, deletedMessageIds: deletedMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, addedCallSignalingData: addedCallSignalingData, updatedGroupCallParticipants: updatedGroupCallParticipants, storyUpdates: storyUpdates, updatedPeersNearby: updatedPeersNearby, isContactUpdates: isContactUpdates, delayNotificatonsUntil: delayNotificatonsUntil, updatedIncomingThreadReadStates: updatedIncomingThreadReadStates, updatedOutgoingThreadReadStates: updatedOutgoingThreadReadStates, updateConfig: updateConfig, isPremiumUpdated: isPremiumUpdated)

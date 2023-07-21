@@ -57,7 +57,7 @@ private func calculateCircleIntersection(center: CGPoint, otherCenter: CGPoint, 
     return (point1Angle, point2Angle)
 }
 
-private func calculateMergingCircleShape(center: CGPoint, leftCenter: CGPoint?, rightCenter: CGPoint?, radius: CGFloat, totalCount: Int, unseenCount: Int, isSeen: Bool, segmentFraction: CGFloat) -> CGPath {
+private func calculateMergingCircleShape(center: CGPoint, leftCenter: CGPoint?, rightCenter: CGPoint?, radius: CGFloat, totalCount: Int, unseenCount: Int, isSeen: Bool, segmentFraction: CGFloat, rotationFraction: CGFloat) -> CGPath {
     let leftAngles = leftCenter.flatMap { calculateCircleIntersection(center: center, otherCenter: $0, radius: radius) }
     let rightAngles = rightCenter.flatMap { calculateCircleIntersection(center: center, otherCenter: $0, radius: radius) }
     
@@ -113,7 +113,7 @@ private func calculateMergingCircleShape(center: CGPoint, leftCenter: CGPoint?, 
                 }
                 
                 var startAngle = segmentSpacingAngle * 0.5 - CGFloat.pi * 0.5 + CGFloat(i) * (segmentSpacingAngle + segmentAngle)
-                startAngle += (1.0 - segmentFraction) * CGFloat.pi * 2.0 * (-0.25)
+                startAngle += -1.0 * (1.0 - rotationFraction) * CGFloat.pi * 2.0 * 0.25
                 
                 let endAngle = startAngle + segmentAngle
                 path.move(to: CGPoint(x: center.x + cos(startAngle) * radius, y: center.y + sin(startAngle) * radius))
@@ -343,6 +343,7 @@ public final class StoryPeerListItemComponent: Component {
     public let scale: CGFloat
     public let fullWidth: CGFloat
     public let expandedAlphaFraction: CGFloat
+    public let expandEffectFraction: CGFloat
     public let leftNeighborDistance: CGPoint?
     public let rightNeighborDistance: CGPoint?
     public let action: (EnginePeer) -> Void
@@ -361,6 +362,7 @@ public final class StoryPeerListItemComponent: Component {
         scale: CGFloat,
         fullWidth: CGFloat,
         expandedAlphaFraction: CGFloat,
+        expandEffectFraction: CGFloat,
         leftNeighborDistance: CGPoint?,
         rightNeighborDistance: CGPoint?,
         action: @escaping (EnginePeer) -> Void,
@@ -378,6 +380,7 @@ public final class StoryPeerListItemComponent: Component {
         self.scale = scale
         self.fullWidth = fullWidth
         self.expandedAlphaFraction = expandedAlphaFraction
+        self.expandEffectFraction = expandEffectFraction
         self.leftNeighborDistance = leftNeighborDistance
         self.rightNeighborDistance = rightNeighborDistance
         self.action = action
@@ -419,6 +422,9 @@ public final class StoryPeerListItemComponent: Component {
             return false
         }
         if lhs.expandedAlphaFraction != rhs.expandedAlphaFraction {
+            return false
+        }
+        if lhs.expandEffectFraction != rhs.expandEffectFraction {
             return false
         }
         if lhs.leftNeighborDistance != rhs.leftNeighborDistance {
@@ -785,8 +791,8 @@ public final class StoryPeerListItemComponent: Component {
             }
             Transition.immediate.setShapeLayerPath(layer: self.avatarShapeLayer, path: avatarPath)
             
-            Transition.immediate.setShapeLayerPath(layer: self.indicatorShapeSeenLayer, path: calculateMergingCircleShape(center: indicatorCenter, leftCenter: mappedLeftCenter, rightCenter: mappedRightCenter, radius: indicatorRadius - indicatorLineUnseenWidth * 0.5, totalCount: component.totalCount, unseenCount: component.unseenCount, isSeen: true, segmentFraction: component.expandedAlphaFraction))
-            Transition.immediate.setShapeLayerPath(layer: self.indicatorShapeUnseenLayer, path: calculateMergingCircleShape(center: indicatorCenter, leftCenter: mappedLeftCenter, rightCenter: mappedRightCenter, radius: indicatorRadius - indicatorLineUnseenWidth * 0.5, totalCount: component.totalCount, unseenCount: component.unseenCount, isSeen: false, segmentFraction: component.expandedAlphaFraction))
+            Transition.immediate.setShapeLayerPath(layer: self.indicatorShapeSeenLayer, path: calculateMergingCircleShape(center: indicatorCenter, leftCenter: mappedLeftCenter, rightCenter: mappedRightCenter, radius: indicatorRadius - indicatorLineUnseenWidth * 0.5, totalCount: component.totalCount, unseenCount: component.unseenCount, isSeen: true, segmentFraction: component.expandedAlphaFraction, rotationFraction: component.expandEffectFraction))
+            Transition.immediate.setShapeLayerPath(layer: self.indicatorShapeUnseenLayer, path: calculateMergingCircleShape(center: indicatorCenter, leftCenter: mappedLeftCenter, rightCenter: mappedRightCenter, radius: indicatorRadius - indicatorLineUnseenWidth * 0.5, totalCount: component.totalCount, unseenCount: component.unseenCount, isSeen: false, segmentFraction: component.expandedAlphaFraction, rotationFraction: component.expandEffectFraction))
             
             let titleString: String
             if component.peer.id == component.context.account.peerId {

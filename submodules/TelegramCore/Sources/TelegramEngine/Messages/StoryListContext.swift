@@ -790,6 +790,44 @@ public final class PeerStoryListContext {
                                                         finalUpdatedState = updatedState
                                                     }
                                                 }
+                                            } else {
+                                                if case let .item(item) = item {
+                                                    if let media = item.media {
+                                                        var updatedState = finalUpdatedState ?? self.stateValue
+                                                        updatedState.items[index] = EngineStoryItem(
+                                                            id: item.id,
+                                                            timestamp: item.timestamp,
+                                                            expirationTimestamp: item.expirationTimestamp,
+                                                            media: EngineMedia(media),
+                                                            text: item.text,
+                                                            entities: item.entities,
+                                                            views: item.views.flatMap { views in
+                                                                return EngineStoryItem.Views(
+                                                                    seenCount: views.seenCount,
+                                                                    seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
+                                                                        return peers[id].flatMap(EnginePeer.init)
+                                                                    }
+                                                                )
+                                                            },
+                                                            privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
+                                                            isPinned: item.isPinned,
+                                                            isExpired: item.isExpired,
+                                                            isPublic: item.isPublic,
+                                                            isPending: false,
+                                                            isCloseFriends: item.isCloseFriends,
+                                                            isContacts: item.isContacts,
+                                                            isSelectedContacts: item.isSelectedContacts,
+                                                            isForwardingDisabled: item.isForwardingDisabled,
+                                                            isEdited: item.isEdited
+                                                        )
+                                                        finalUpdatedState = updatedState
+                                                    } else {
+                                                        var updatedState = finalUpdatedState ?? self.stateValue
+                                                        updatedState.items.remove(at: index)
+                                                        updatedState.totalCount = max(0, updatedState.totalCount - 1)
+                                                        finalUpdatedState = updatedState
+                                                    }
+                                                }
                                             }
                                         } else {
                                             if !self.isArchived {
@@ -828,6 +866,42 @@ public final class PeerStoryListContext {
                                                             })
                                                             finalUpdatedState = updatedState
                                                         }
+                                                    }
+                                                }
+                                            } else {
+                                                if case let .item(item) = item {
+                                                    if let media = item.media {
+                                                        var updatedState = finalUpdatedState ?? self.stateValue
+                                                        updatedState.items.append(EngineStoryItem(
+                                                            id: item.id,
+                                                            timestamp: item.timestamp,
+                                                            expirationTimestamp: item.expirationTimestamp,
+                                                            media: EngineMedia(media),
+                                                            text: item.text,
+                                                            entities: item.entities,
+                                                            views: item.views.flatMap { views in
+                                                                return EngineStoryItem.Views(
+                                                                    seenCount: views.seenCount,
+                                                                    seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
+                                                                        return peers[id].flatMap(EnginePeer.init)
+                                                                    }
+                                                                )
+                                                            },
+                                                            privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
+                                                            isPinned: item.isPinned,
+                                                            isExpired: item.isExpired,
+                                                            isPublic: item.isPublic,
+                                                            isPending: false,
+                                                            isCloseFriends: item.isCloseFriends,
+                                                            isContacts: item.isContacts,
+                                                            isSelectedContacts: item.isSelectedContacts,
+                                                            isForwardingDisabled: item.isForwardingDisabled,
+                                                            isEdited: item.isEdited
+                                                        ))
+                                                        updatedState.items.sort(by: { lhs, rhs in
+                                                            return lhs.timestamp > rhs.timestamp
+                                                        })
+                                                        finalUpdatedState = updatedState
                                                     }
                                                 }
                                             }
@@ -1187,9 +1261,9 @@ public final class PeerExpiringStoryListContext {
     }
 }
 
-public func _internal_pollPeerStories(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId) -> Signal<Never, NoError> {
+public func _internal_pollPeerStories(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, peerReference: PeerReference? = nil) -> Signal<Never, NoError> {
     return postbox.transaction { transaction -> Api.InputUser? in
-        return transaction.getPeer(peerId).flatMap(apiInputUser)
+        return transaction.getPeer(peerId).flatMap(apiInputUser) ?? peerReference?.inputUser
     }
     |> mapToSignal { inputUser -> Signal<Never, NoError> in
         guard let inputUser = inputUser else {
@@ -1236,7 +1310,7 @@ public func _internal_pollPeerStories(postbox: Postbox, network: Network, accoun
                 
                 transaction.setStoryItems(peerId: peerId, items: updatedPeerEntries)
                 
-                if !updatedPeerEntries.isEmpty {
+                if !updatedPeerEntries.isEmpty, shouldKeepUserStoriesInFeed(peerId: peerId, isContact: transaction.isPeerContact(peerId: peerId)) {
                     if let user = transaction.getPeer(peerId) as? TelegramUser, let storiesHidden = user.storiesHidden {
                         if storiesHidden {
                             if !transaction.storySubscriptionsContains(key: .hidden, peerId: peerId) {
