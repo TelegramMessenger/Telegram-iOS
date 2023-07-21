@@ -207,13 +207,10 @@ final class CameraOutput: NSObject {
     }
     
     func configureVideoStabilization() {
-        if let videoDataOutputConnection = self.videoOutput.connection(with: .video), videoDataOutputConnection.isVideoStabilizationSupported {
-            videoDataOutputConnection.preferredVideoStabilizationMode = .standard
-//            if #available(iOS 13.0, *) {
-//                videoDataOutputConnection.preferredVideoStabilizationMode = .cinematicExtended
-//            } else {
-//                videoDataOutputConnection.preferredVideoStabilizationMode = .cinematic
-//            }
+        if let videoDataOutputConnection = self.videoOutput.connection(with: .video) {
+            if videoDataOutputConnection.isVideoStabilizationSupported {
+                videoDataOutputConnection.preferredVideoStabilizationMode = .standard
+            }
         }
     }
     

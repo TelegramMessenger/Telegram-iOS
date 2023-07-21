@@ -1650,6 +1650,8 @@ private final class DrawingScreenComponent: CombinedComponent {
                         .position(CGPoint(x: context.availableSize.width / 2.0 - (hasFlip ? 46.0 : 0.0), y: topInset))
                         .appear(.default(scale: true))
                         .disappear(.default(scale: true))
+                        .opacity(!controlsAreVisible ? 0.0 : 1.0)
+                        .shadow(component.sourceHint == .storyEditor ? Shadow(color: UIColor(rgb: 0x000000, alpha: 0.35), radius: 2.0, offset: .zero) : nil)
                     )
                 }
                 
@@ -1682,6 +1684,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         .position(CGPoint(x: context.availableSize.width / 2.0 + (isFilled != nil ? 46.0 : 0.0), y: topInset))
                         .appear(.default(scale: true))
                         .disappear(.default(scale: true))
+                        .opacity(!controlsAreVisible ? 0.0 : 1.0)
                         .shadow(component.sourceHint == .storyEditor ? Shadow(color: UIColor(rgb: 0x000000, alpha: 0.35), radius: 2.0, offset: .zero) : nil)
                     )
                 }

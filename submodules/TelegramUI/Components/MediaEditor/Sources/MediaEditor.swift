@@ -253,6 +253,7 @@ public final class MediaEditor {
         self.subject = subject
         if let values {
             self.values = values
+            self.updateRenderChain()
         } else {
             self.values = MediaEditorValues(
                 originalDimensions: subject.dimensions,

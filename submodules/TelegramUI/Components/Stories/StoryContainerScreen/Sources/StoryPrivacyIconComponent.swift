@@ -56,7 +56,7 @@ final class StoryPrivacyIconComponent: Component {
             let colors: [CGColor]
             var icon: UIImage?
             
-            if let previousPrivacy, previousPrivacy != component.privacy {
+            if let previousPrivacy, previousPrivacy != component.privacy, !transition.animation.isImmediate {
                 let disappearingBackgroundView = UIImageView(image: self.image)
                 disappearingBackgroundView.frame = self.bounds
                 self.insertSubview(disappearingBackgroundView, at: 0)

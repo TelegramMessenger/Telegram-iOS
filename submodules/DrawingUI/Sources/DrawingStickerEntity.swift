@@ -205,13 +205,6 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                     break
                 }
                 
-//                switch image.imageOrientation {
-//                case .leftMirrored, .rightMirrored:
-//                    context.scaleBy(x: -1, y: 1)
-//                default:
-//                    context.scaleBy(x: 1, y: -1)
-//                }
-                
                 context.draw(image.cgImage!, in: imageRect)
             }
             

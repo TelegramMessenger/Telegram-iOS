@@ -146,26 +146,26 @@ final class CategoryListItemComponent: Component {
             }
             
             if (self.component?.iconName != component.iconName || self.component?.color != component.color), let iconName = component.iconName {
-                let mappedColor: AvatarBackgroundColor
+                let colors: [UIColor]
                 var iconScale: CGFloat = 1.0
                 switch component.color {
                 case .blue:
-                    mappedColor = .blue
+                    colors = [UIColor(rgb: 0x4faaff), UIColor(rgb: 0x017aff)]
                 case .yellow:
-                    mappedColor = .yellow
+                    colors = [UIColor(rgb: 0xffb643), UIColor(rgb: 0xf69a36)]
                 case .green:
-                    mappedColor = .green
+                    colors = [UIColor(rgb: 0x87d93a), UIColor(rgb: 0x31b73b)]
                 case .purple:
-                    mappedColor = .purple
+                    colors = [UIColor(rgb: 0xc36eff), UIColor(rgb: 0x8c61fa)]
                 case .red:
-                    mappedColor = .red
+                    colors = [UIColor(rgb: 0xc36eff), UIColor(rgb: 0x8c61fa)]
                 case .violet:
-                    mappedColor = .violet
+                    colors = [UIColor(rgb: 0xc36eff), UIColor(rgb: 0x8c61fa)]
                 }
                 
                 iconScale = 1.0
                 
-                self.iconView.image = generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: iconName), color: .white), iconScale: iconScale, cornerRadius: 20.0, color: mappedColor)
+                self.iconView.image = generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: iconName), color: .white), iconScale: iconScale, cornerRadius: 20.0, color: .blue, customColors: colors.reversed())
             }
             
             self.component = component

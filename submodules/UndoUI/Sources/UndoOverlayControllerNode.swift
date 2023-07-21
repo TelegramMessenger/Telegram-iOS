@@ -82,8 +82,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         
         var displayUndo = true
         var undoText = presentationData.strings.Undo_Undo
-        var undoTextColor = UIColor(rgb: 0x5ac8fa)
-        undoTextColor = presentationData.theme.list.itemAccentColor.withMultiplied(hue: 1.0, saturation: 0.64, brightness: 1.08)
+        var undoTextColor = presentationData.theme.list.itemAccentColor.withMultiplied(hue: 0.933, saturation: 0.61, brightness: 1.0)
         
         if presentationData.theme.overallDarkAppearance {
             self.animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
@@ -174,16 +173,20 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
-                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                let link = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: undoTextColor)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return nil }), textAlignment: .natural)
                 self.textNode.attributedText = attributedText
                 if let customUndoText {
-                    
                     undoText = customUndoText
                     displayUndo = true
                 } else {
                     displayUndo = false
                 }
                 self.originalRemainingSeconds = 4.5
+            
+                if text.contains("](") {
+                    isUserInteractionEnabled = true
+                }
             case let .succeed(text):
                 self.avatarNode = nil
                 self.iconNode = nil
@@ -211,7 +214,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
-                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+                let link = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: undoTextColor)
                 let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { contents in
                     return ("URL", contents)
                 }), textAlignment: .natural)
@@ -257,11 +260,16 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
-                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                let link = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: undoTextColor)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return nil }), textAlignment: .natural)
                 self.textNode.attributedText = attributedText
                 self.textNode.maximumNumberOfLines = 2
                 displayUndo = false
                 self.originalRemainingSeconds = 3
+            
+                if text.contains("](") {
+                    isUserInteractionEnabled = true
+                }
             case let .banned(text):
                 self.avatarNode = nil
                 self.iconNode = nil
@@ -820,12 +828,17 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
-                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                let link = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: undoTextColor)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return nil }), textAlignment: .natural)
                 self.textNode.attributedText = attributedText
                 self.textNode.maximumNumberOfLines = 2
                 
                 displayUndo = false
                 self.originalRemainingSeconds = 3
+            
+                if text.contains("](") {
+                    isUserInteractionEnabled = true
+                }
             case let .inviteRequestSent(title, text):
                 self.avatarNode = nil
                 self.iconNode = nil
@@ -897,7 +910,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     
                     let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                     let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
-                    let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+                    let link = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: undoTextColor)
                     let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { contents in
                         return ("URL", contents)
                     }), textAlignment: .natural)

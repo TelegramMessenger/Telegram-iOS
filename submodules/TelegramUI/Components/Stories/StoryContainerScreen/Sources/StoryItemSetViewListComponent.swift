@@ -15,6 +15,8 @@ import StoryFooterPanelComponent
 import PeerListItemComponent
 import AnimatedStickerComponent
 import AvatarNode
+import Markdown
+import ButtonComponent
 
 final class StoryItemSetViewListComponent: Component {
     final class AnimationHint {
@@ -58,6 +60,7 @@ final class StoryItemSetViewListComponent: Component {
     let moreAction: (UIView, ContextGesture?) -> Void
     let openPeer: (EnginePeer) -> Void
     let openPeerStories: (EnginePeer, AvatarNode) -> Void
+    let openPremiumIntro: () -> Void
     
     init(
         externalState: ExternalState,
@@ -76,7 +79,8 @@ final class StoryItemSetViewListComponent: Component {
         deleteAction: @escaping () -> Void,
         moreAction: @escaping (UIView, ContextGesture?) -> Void,
         openPeer: @escaping (EnginePeer) -> Void,
-        openPeerStories: @escaping (EnginePeer, AvatarNode) -> Void
+        openPeerStories: @escaping (EnginePeer, AvatarNode) -> Void,
+        openPremiumIntro: @escaping () -> Void
     ) {
         self.externalState = externalState
         self.context = context
@@ -95,6 +99,7 @@ final class StoryItemSetViewListComponent: Component {
         self.moreAction = moreAction
         self.openPeer = openPeer
         self.openPeerStories = openPeerStories
+        self.openPremiumIntro = openPremiumIntro
     }
 
     static func ==(lhs: StoryItemSetViewListComponent, rhs: StoryItemSetViewListComponent) -> Bool {
@@ -826,32 +831,39 @@ final class StoryItemSetViewListComponent: Component {
                     transition: emptyTransition,
                     component: AnyComponent(AnimatedStickerComponent(
                         account: component.context.account,
-                        animation: AnimatedStickerComponent.Animation(source: .bundle(name: "ChatListNoResults"), loop: true),
+                        animation: AnimatedStickerComponent.Animation(source: .bundle(name: "Burn"), loop: true),
                         size: CGSize(width: 140.0, height: 140.0)
                     )),
                     environment: {},
                     containerSize: CGSize(width: 140.0, height: 140.0)
                 )
                 
+                let fontSize: CGFloat = 16.0
+                let body = MarkdownAttributeSet(font: Font.regular(fontSize), textColor: component.theme.list.itemSecondaryTextColor)
+                let bold = MarkdownAttributeSet(font: Font.semibold(fontSize), textColor: component.theme.list.itemSecondaryTextColor)
+                let link = MarkdownAttributeSet(font: Font.semibold(fontSize), textColor: component.theme.list.itemAccentColor)
+                let attributes = MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in nil })
+                
                 let text: String
                 if component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
-                    text = "List of viewers isn’t available after\n24 hours of story expiration."
+                    text = component.strings.Story_Views_ViewsExpired
                 } else {
-                    text = "Nobody has viewed\nyour story yet."
+                    text = component.strings.Story_Views_NoViews
                 }
                 let textSize = emptyText.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: text, font: Font.regular(17.0), textColor: component.theme.list.itemSecondaryTextColor)),
+                        text: .markdown(text: text, attributes: attributes),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 0
                     )),
                     environment: {},
-                    containerSize: CGSize(width: min(300.0, availableSize.width - 16.0 * 2.0), height: 1000.0)
+                    containerSize: CGSize(width: min(330.0, availableSize.width - 16.0 * 2.0), height: 1000.0)
                 )
-                
+                 
                 let emptyContentSpacing: CGFloat = 20.0
-                var emptyContentY = navigationBarFrame.minY + floor((availableSize.height - navigationBarFrame.minY - (emptyIconSize.height - emptyContentSpacing - textSize.height)) * 0.5) - 60.0
+                let emptyContentHeight = emptyIconSize.height + emptyContentSpacing + textSize.height
+                var emptyContentY = navigationBarFrame.minY + floor((availableSize.height - navigationBarFrame.minY - emptyContentHeight) * 0.5)
                 
                 if let emptyIconView = emptyIcon.view {
                     if emptyIconView.superview == nil {
@@ -866,6 +878,7 @@ final class StoryItemSetViewListComponent: Component {
                         self.insertSubview(emptyTextView, belowSubview: self.scrollView)
                     }
                     emptyTransition.setFrame(view: emptyTextView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - textSize.width) * 0.5), y: emptyContentY), size: textSize))
+                    emptyContentY += textSize.height + emptyContentSpacing * 2.0
                 }
             } else {
                 if let emptyIcon = self.emptyIcon {

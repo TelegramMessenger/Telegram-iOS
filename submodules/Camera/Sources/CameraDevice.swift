@@ -131,6 +131,10 @@ final class CameraDevice {
                 device.activeVideoMinFrameDuration = targetFPS.duration
                 device.activeVideoMaxFrameDuration = targetFPS.duration
             }
+            
+            if device.isLowLightBoostSupported {
+                device.automaticallyEnablesLowLightBoostWhenAvailable = true
+            }
         }
     }
     

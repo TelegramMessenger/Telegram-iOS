@@ -249,7 +249,7 @@ public final class AccountContextImpl: AccountContext {
         self.account = account
         self.engine = TelegramEngine(account: account)
         
-        self.userLimits = EngineConfiguration.UserLimits(UserLimitsConfiguration.defaultValue)
+        self.userLimits = EngineConfiguration.UserLimits(UserLimitsConfiguration.defaultValue, isPremium: false)
         
         self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
         

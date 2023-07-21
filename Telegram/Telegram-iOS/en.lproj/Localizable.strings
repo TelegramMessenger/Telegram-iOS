@@ -9711,3 +9711,7 @@ Sorry for the inconvenience.";
 
 "Story.Privacy.SaveSettings" = "Save Settings";
 "Story.Privacy.PostStory" = "Post Story";
+
+"Story.Editor.Draft" = "Draft";
+"Story.Views.ViewsExpired" = "List of viewers becomes unavailable **24 hours** after the story expires.";
+"Story.Views.NoViews" = "Nobody has viewed\nyour story yet.";

@@ -2740,7 +2740,27 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { [weak self] image, _ in
                     if let self, let image {
                         Queue.mainQueue().async {
-                            self.interaction?.insertEntity(DrawingStickerEntity(content: .image(image, .rectangle)), scale: 2.5)
+                            func roundedImageWithTransparentCorners(image: UIImage, cornerRadius: CGFloat) -> UIImage? {
+                                let rect = CGRect(origin: .zero, size: image.size)
+                                UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
+                                let context = UIGraphicsGetCurrentContext()
+                                
+                                if let context = context {
+                                    let path = UIBezierPath(roundedRect: rect, cornerRadius: cornerRadius)
+                                    
+                                    context.addPath(path.cgPath)
+                                    context.clip()
+                                    
+                                    image.draw(in: rect)
+                                }
+                                
+                                let newImage = UIGraphicsGetImageFromCurrentImageContext()
+                                UIGraphicsEndImageContext()
+                                
+                                return newImage
+                            }
+                            let updatedImage = roundedImageWithTransparentCorners(image: image, cornerRadius: 180.0)!
+                            self.interaction?.insertEntity(DrawingStickerEntity(content: .image(updatedImage, .rectangle)), scale: 2.5)
                         }
                     }
                 }

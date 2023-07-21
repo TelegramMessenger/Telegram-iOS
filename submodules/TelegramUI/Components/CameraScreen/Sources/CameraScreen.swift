@@ -1956,7 +1956,7 @@ public class CameraScreen: ViewController {
         }
         
         func presentDualCameraTooltip() {
-            guard let sourceView = self.componentHost.findTaggedView(tag: dualButtonTag) else {
+            guard let sourceView = self.componentHost.findTaggedView(tag: dualButtonTag), self.cameraState.isDualCameraEnabled else {
                 return
             }
             
@@ -2130,6 +2130,8 @@ public class CameraScreen: ViewController {
                 if self.camera != nil {
                     self.maybePresentTooltips()
                 } else if case .notDetermined = self.cameraAuthorizationStatus {
+                    self.requestDeviceAccess()
+                } else if case .notDetermined = self.microphoneAuthorizationStatus {
                     self.requestDeviceAccess()
                 }
             }

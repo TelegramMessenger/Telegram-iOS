@@ -1678,7 +1678,9 @@ public final class StoryItemSetContainerComponent: Component {
                 self.sendMessageContext.setup(context: component.context, view: self, inputPanelExternalState: self.inputPanelExternalState, keyboardInputData: component.keyboardInputData)
             }
             
+            var itemChanged = false
             if self.component?.slice.item.storyItem.id != component.slice.item.storyItem.id {
+                itemChanged = self.component != nil
                 self.initializedOffset = false
                 
                 if let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View {
@@ -2441,7 +2443,7 @@ public final class StoryItemSetContainerComponent: Component {
                 transition.setAlpha(view: soundButtonView, alpha: soundAlpha)
                 
                 if isVideo {
-                    headerRightOffset -= soundButtonSize.width + 16.0
+                    headerRightOffset -= soundButtonSize.width + 13.0
                 }
             }
             
@@ -2460,7 +2462,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             if let storyPrivacyIcon {
                 let privacyIcon: ComponentView<Empty>
-                var privacyIconTransition = transition
+                var privacyIconTransition: Transition = itemChanged ? .immediate : .easeInOut(duration: 0.2)
                 if let current = self.privacyIcon {
                     privacyIcon = current
                 } else {
@@ -3026,7 +3028,6 @@ public final class StoryItemSetContainerComponent: Component {
                             }
                             component.controller()?.push(controller)
                         }), elevatedLayout: false, animateInAsReplacement: false, action: { _ in true })
-                        //strongSelf.currentUndoController = undoController
                         component.controller()?.present(undoController, in: .current)
                     }
                 }
