@@ -2759,7 +2759,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 
                                 return newImage
                             }
-                            let updatedImage = roundedImageWithTransparentCorners(image: image, cornerRadius: 180.0)!
+                            let updatedImage = roundedImageWithTransparentCorners(image: image, cornerRadius: floor(image.size.width * 0.03))!
                             self.interaction?.insertEntity(DrawingStickerEntity(content: .image(updatedImage, .rectangle)), scale: 2.5)
                         }
                     }
