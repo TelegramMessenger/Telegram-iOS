@@ -69,6 +69,7 @@ final class CameraDevice {
             var maxHeight: Int32 = 0
             var hasSecondaryZoomLevels = false
             var candidates: [AVCaptureDevice.Format] = []
+            var photoCandidates: [AVCaptureDevice.Format] = []
      outer: for format in device.formats {
                 if format.mediaType != .video || format.value(forKey: "isPhotoFormat") as? Bool == true {
                     continue
@@ -94,8 +95,14 @@ final class CameraDevice {
                         if #available(iOS 16.0, *), !format.secondaryNativeResolutionZoomFactors.isEmpty {
                             hasSecondaryZoomLevels = true
                             candidates.append(format)
+                            if format.isHighPhotoQualitySupported {
+                                photoCandidates.append(format)
+                            }
                         } else if !hasSecondaryZoomLevels {
                             candidates.append(format)
+                            if #available(iOS 15.0, *), format.isHighPhotoQualitySupported {
+                                photoCandidates.append(format)
+                            }
                         }
                     }
                 }
@@ -103,12 +110,22 @@ final class CameraDevice {
             
             if !candidates.isEmpty {
                 var bestFormat: AVCaptureDevice.Format?
-         outer: for format in candidates {
+    photoOuter: for format in photoCandidates {
                     for range in format.videoSupportedFrameRateRanges {
                         if range.maxFrameRate > maxFramerate {
-                            continue outer
+                            continue photoOuter
                         }
                         bestFormat = format
+                    }
+                }
+                if bestFormat == nil {
+             outer: for format in candidates {
+                        for range in format.videoSupportedFrameRateRanges {
+                            if range.maxFrameRate > maxFramerate {
+                                continue outer
+                            }
+                            bestFormat = format
+                        }
                     }
                 }
                 if bestFormat == nil {

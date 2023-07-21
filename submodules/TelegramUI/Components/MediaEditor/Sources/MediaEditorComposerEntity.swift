@@ -27,6 +27,7 @@ private func prerenderTextTransformations(entity: DrawingTextEntity, image: UIIm
     let newImage = generateImage(newSize, contextGenerator: { size, context in
         context.setAllowsAntialiasing(true)
         context.setShouldAntialias(true)
+        context.interpolationQuality = .high
         context.clear(CGRect(origin: .zero, size: size))
         context.translateBy(x: newSize.width * 0.5, y: newSize.height * 0.5)
         context.rotate(by: angle)

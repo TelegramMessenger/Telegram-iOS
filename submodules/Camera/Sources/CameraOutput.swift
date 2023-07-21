@@ -96,6 +96,10 @@ final class CameraOutput: NSObject {
         
         super.init()
 
+        if #available(iOS 13.0, *) {
+            self.photoOutput.maxPhotoQualityPrioritization = .balanced
+        }
+        
         self.videoOutput.alwaysDiscardsLateVideoFrames = false
         self.videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange] as [String : Any]
     }
@@ -246,12 +250,8 @@ final class CameraOutput: NSObject {
             settings.previewPhotoFormat = [kCVPixelBufferPixelFormatTypeKey as String: previewPhotoPixelFormatType]
         }
         if #available(iOS 13.0, *) {
-            if self.exclusive {
-                if self.photoOutput.maxPhotoQualityPrioritization != .speed  {
-                    settings.photoQualityPrioritization = .balanced
-                } else {
-                    settings.photoQualityPrioritization = .speed
-                }
+            if self.photoOutput.maxPhotoQualityPrioritization != .speed  {
+                settings.photoQualityPrioritization = .balanced
             } else {
                 settings.photoQualityPrioritization = .speed
             }
