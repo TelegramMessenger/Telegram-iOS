@@ -3963,9 +3963,10 @@ public final class StoryItemSetContainerComponent: Component {
             let _ = (component.context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: component.slice.peer.id),
                 TelegramEngine.EngineData.Item.NotificationSettings.Global(),
-                TelegramEngine.EngineData.Item.Contacts.Top()
+                TelegramEngine.EngineData.Item.Contacts.Top(),
+                TelegramEngine.EngineData.Item.Peer.IsContact(id: component.slice.peer.id)
             )
-            |> deliverOnMainQueue).start(next: { [weak self] settings, globalSettings, topSearchPeers in
+            |> deliverOnMainQueue).start(next: { [weak self] settings, globalSettings, topSearchPeers, isContact in
                 guard let self, let component = self.component, let controller = component.controller() else {
                     return
                 }
@@ -3977,7 +3978,7 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 let isMuted = resolvedAreStoriesMuted(globalSettings: globalSettings._asGlobalNotificationSettings(), peer: component.slice.peer._asPeer(), peerSettings: settings._asNotificationSettings(), topSearchPeers: topSearchPeers)
                 
-                if !component.slice.peer.isService {
+                if !component.slice.peer.isService && isContact {
                     items.append(.action(ContextMenuActionItem(text: isMuted ? component.strings.StoryFeed_ContextNotifyOn : component.strings.StoryFeed_ContextNotifyOff, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: component.slice.additionalPeerData.isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
                     }, action: { [weak self] _, a in
