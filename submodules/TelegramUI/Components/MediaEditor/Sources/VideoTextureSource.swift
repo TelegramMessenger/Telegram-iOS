@@ -319,6 +319,11 @@ private func verticesData(
         topRight = simd_float2(1.0, 1.0)
         bottomLeft = simd_float2(0.0, 0.0)
         bottomRight = simd_float2(1.0, 0.0)
+    case .rotate0DegreesMirrored:
+        topLeft = simd_float2(1.0, 1.0)
+        topRight = simd_float2(0.0, 1.0)
+        bottomLeft = simd_float2(1.0, 0.0)
+        bottomRight = simd_float2(0.0, 0.0)
     case .rotate180Degrees:
         topLeft = simd_float2(1.0, 0.0)
         topRight = simd_float2(0.0, 0.0)
@@ -463,17 +468,6 @@ final class VideoInputScalePass: RenderPass {
         }
     }
     
-    func setupMainVerticesBuffer(device: MTLDevice, rotation: TextureRotation = .rotate0Degrees) {
-        if self.mainVerticesBuffer == nil || rotation != self.mainTextureRotation {
-            self.mainTextureRotation = rotation
-            let vertices = verticesDataForRotation(rotation)
-            self.mainVerticesBuffer = device.makeBuffer(
-                bytes: vertices,
-                length: MemoryLayout<VertexData>.stride * vertices.count,
-                options: [])
-        }
-    }
-    
     func encodeVideo(
         using encoder: MTLRenderCommandEncoder,
         containerSize: CGSize,
@@ -514,15 +508,6 @@ final class VideoInputScalePass: RenderPass {
         encoder.setFragmentBytes(&alpha, length: MemoryLayout<simd_float1>.size, index: 2)
         
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
-    }
-    
-    func setupAdditionalVerticesBuffer(device: MTLDevice, rotation: TextureRotation = .rotate0Degrees) {
-        self.additionalTextureRotation = rotation
-        let vertices = verticesDataForRotation(rotation, rect: CGRect(x: -0.5, y: -0.5, width: 0.5, height: 0.5), z: 0.5)
-        self.additionalVerticesBuffer = device.makeBuffer(
-            bytes: vertices,
-            length: MemoryLayout<VertexData>.stride * vertices.count,
-            options: [])
     }
     
     func update(values: MediaEditorValues) {

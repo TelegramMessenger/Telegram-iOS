@@ -2381,9 +2381,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 backgroundImage = additionalTransitionImage
                                 foregroundImage = mainTransitionImage
                             }
-                            if let combinedTransitionImage = generateImage(backgroundImage.size, scale: 1.0, rotatedContext: { size, context in
+                            if let combinedTransitionImage = generateImage(CGSize(width: 1080, height: 1920), scale: 1.0, rotatedContext: { size, context in
                                 UIGraphicsPushContext(context)
-                                backgroundImage.draw(in: CGRect(origin: .zero, size: size))
+                                backgroundImage.draw(in: CGRect(origin: CGPoint(x: (size.width - backgroundImage.size.width) / 2.0, y: (size.height - backgroundImage.size.height) / 2.0), size: backgroundImage.size))
                                 
                                 let ellipsePosition =  pipPosition.getPosition(storyDimensions)
                                 let ellipseSize = CGSize(width: 439.0, height: 439.0)
@@ -3793,6 +3793,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let firstFrameTime = CMTime(seconds: mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0, preferredTimescale: CMTimeScale(60))
 
             let videoResult: Result.VideoResult
+            var videoIsMirrored = false
             let duration: Double
             switch subject {
             case let .image(image, _, _, _):
@@ -3804,7 +3805,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 duration = 5.0
                 
                 firstFrame = .single((image, nil))
-            case let .video(path, _, _, additionalPath, _, _, durationValue, _, _):
+            case let .video(path, _, mirror, additionalPath, _, _, durationValue, _, _):
+                videoIsMirrored = mirror
                 videoResult = .videoFile(path: path)
                 if let videoTrimRange = mediaEditor.values.videoTrimRange {
                     duration = videoTrimRange.upperBound - videoTrimRange.lowerBound
@@ -3820,8 +3822,23 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     avAssetGenerator.appliesPreferredTrackTransform = true
                     avAssetGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: firstFrameTime)], completionHandler: { _, cgImage, _, _, _ in
                         if let cgImage {
-                            subscriber.putNext((UIImage(cgImage: cgImage), nil))
-                            subscriber.putCompletion()
+                            if let additionalPath {
+                                let avAsset = AVURLAsset(url: URL(fileURLWithPath: additionalPath))
+                                let avAssetGenerator = AVAssetImageGenerator(asset: avAsset)
+                                avAssetGenerator.appliesPreferredTrackTransform = true
+                                avAssetGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: firstFrameTime)], completionHandler: { _, additionalCGImage, _, _, _ in
+                                    if let additionalCGImage {
+                                        subscriber.putNext((UIImage(cgImage: cgImage), UIImage(cgImage: additionalCGImage)))
+                                        subscriber.putCompletion()
+                                    } else {
+                                        subscriber.putNext((UIImage(cgImage: cgImage), nil))
+                                        subscriber.putCompletion()
+                                    }
+                                })
+                            } else {
+                                subscriber.putNext((UIImage(cgImage: cgImage), nil))
+                                subscriber.putCompletion()
+                            }
                         }
                     })
                     return ActionDisposable {
@@ -3905,7 +3922,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     var currentImage = mediaEditor.resultImage
                     if let image {
                         mediaEditor.replaceSource(image, additionalImage: additionalImage, time: firstFrameTime)
-                        if let updatedImage = mediaEditor.resultImage {
+                        if let updatedImage = mediaEditor.getResultImage(mirror: videoIsMirrored) {
                             currentImage = updatedImage
                         }
                     }
