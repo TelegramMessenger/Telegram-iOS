@@ -1855,7 +1855,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         } else if isSelecting {
             enableDismissGesture = false
         }
-        self.view.disablesInteractiveTransitionGestureRecognizer = enableDismissGesture
+        self.view.disablesInteractiveTransitionGestureRecognizer = !enableDismissGesture
         
         if isSelecting {
             if self.gridSelectionGesture == nil {
