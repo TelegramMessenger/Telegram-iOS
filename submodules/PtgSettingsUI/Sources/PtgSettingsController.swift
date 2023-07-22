@@ -17,13 +17,15 @@ private final class PtgSettingsControllerArguments {
     let switchSuppressForeignAgentNotice: (Bool) -> Void
     let switchEnableLiveText: (Bool) -> Void
     let switchPreferAppleVoiceToText: (Bool) -> Void
+    let changeDefaultCameraForVideos: () -> Void
     
-    init(switchShowPeerId: @escaping (Bool) -> Void, switchShowChannelCreationDate: @escaping (Bool) -> Void, switchSuppressForeignAgentNotice: @escaping (Bool) -> Void, switchEnableLiveText: @escaping (Bool) -> Void, switchPreferAppleVoiceToText: @escaping (Bool) -> Void) {
+    init(switchShowPeerId: @escaping (Bool) -> Void, switchShowChannelCreationDate: @escaping (Bool) -> Void, switchSuppressForeignAgentNotice: @escaping (Bool) -> Void, switchEnableLiveText: @escaping (Bool) -> Void, switchPreferAppleVoiceToText: @escaping (Bool) -> Void, changeDefaultCameraForVideos: @escaping () -> Void) {
         self.switchShowPeerId = switchShowPeerId
         self.switchShowChannelCreationDate = switchShowChannelCreationDate
         self.switchSuppressForeignAgentNotice = switchSuppressForeignAgentNotice
         self.switchEnableLiveText = switchEnableLiveText
         self.switchPreferAppleVoiceToText = switchPreferAppleVoiceToText
+        self.changeDefaultCameraForVideos = changeDefaultCameraForVideos
     }
 }
 
@@ -32,6 +34,7 @@ private enum PtgSettingsSection: Int32 {
     case foreignAgentNotice
     case liveText
     case preferAppleVoiceToText
+    case defaultCameraForVideos
 }
 
 private enum PtgSettingsEntry: ItemListNodeEntry {
@@ -46,6 +49,8 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
     case preferAppleVoiceToText(String, Bool, Bool)
     case preferAppleVoiceToTextInfo(String)
 
+    case defaultCameraForVideos(String, String)
+    
     var section: ItemListSectionId {
         switch self {
         case .showPeerId, .showChannelCreationDate:
@@ -56,6 +61,8 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
             return PtgSettingsSection.liveText.rawValue
         case .preferAppleVoiceToText, .preferAppleVoiceToTextInfo:
             return PtgSettingsSection.preferAppleVoiceToText.rawValue
+        case .defaultCameraForVideos:
+            return PtgSettingsSection.defaultCameraForVideos.rawValue
         }
     }
     
@@ -65,16 +72,18 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
             return 0
         case .showChannelCreationDate:
             return 1
-        case .enableLiveText:
+        case .defaultCameraForVideos:
             return 2
-        case .enableLiveTextInfo:
+        case .enableLiveText:
             return 3
-        case .preferAppleVoiceToText:
+        case .enableLiveTextInfo:
             return 4
-        case .preferAppleVoiceToTextInfo:
+        case .preferAppleVoiceToText:
             return 5
-        case .suppressForeignAgentNotice:
+        case .preferAppleVoiceToTextInfo:
             return 6
+        case .suppressForeignAgentNotice:
+            return 7
         }
     }
     
@@ -107,6 +116,10 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, enabled: enabled, sectionId: self.section, style: .blocks, updated: { updatedValue in
                 arguments.switchPreferAppleVoiceToText(updatedValue)
             })
+        case let .defaultCameraForVideos(title, value):
+            return ItemListDisclosureItem(presentationData: presentationData, title: title, label: value, sectionId: self.section, style: .blocks, action: {
+                arguments.changeDefaultCameraForVideos()
+            })
         }
     }
 }
@@ -124,6 +137,8 @@ private func ptgSettingsControllerEntries(presentationData: PresentationData, se
     
     entries.append(.showPeerId(presentationData.strings.PtgSettings_ShowPeerId, settings.showPeerId))
     entries.append(.showChannelCreationDate(presentationData.strings.PtgSettings_ShowChannelCreationDate, settings.showChannelCreationDate))
+    
+    entries.append(.defaultCameraForVideos(presentationData.strings.PtgSettings_DefaultCameraForVideos, settings.useRearCameraByDefault ? presentationData.strings.PtgSettings_DefaultCameraForVideos_Rear : presentationData.strings.PtgSettings_DefaultCameraForVideos_Front))
     
     entries.append(.enableLiveText(presentationData.strings.PtgSettings_EnableLiveText, !experimentalSettings.disableImageContentAnalysis))
     entries.append(.enableLiveTextInfo(presentationData.strings.PtgSettings_EnableLiveTextHelp))
@@ -143,6 +158,8 @@ public func ptgSettingsController(context: AccountContext) -> ViewController {
     statePromise.set(context.sharedContext.accountManager.transaction { transaction in
         return PtgSettingsState(settings: PtgSettings(transaction))
     })
+    
+    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments) -> Void)?
     
     let arguments = PtgSettingsControllerArguments(switchShowPeerId: { value in
         updateSettings(context, statePromise) { settings in
@@ -168,6 +185,28 @@ public func ptgSettingsController(context: AccountContext) -> ViewController {
         updateSettings(context, statePromise) { settings in
             return settings.withUpdated(preferAppleVoiceToText: value)
         }
+    }, changeDefaultCameraForVideos: {
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let actionSheet = ActionSheetController(presentationData: presentationData)
+        var items: [ActionSheetItem] = []
+        
+        for value in [false, true] {
+            items.append(ActionSheetButtonItem(title: value ? presentationData.strings.PtgSettings_DefaultCameraForVideos_Rear : presentationData.strings.PtgSettings_DefaultCameraForVideos_Front, color: .accent, action: { [weak actionSheet] in
+                actionSheet?.dismissAnimated()
+                
+                updateSettings(context, statePromise) { settings in
+                    return settings.withUpdated(useRearCameraByDefault: value)
+                }
+            }))
+        }
+        
+        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                actionSheet?.dismissAnimated()
+            })
+        ])])
+        
+        presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
     let hasPremiumAccounts = combineLatest(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)), activeAccountsAndPeers(context: context))
@@ -196,6 +235,10 @@ public func ptgSettingsController(context: AccountContext) -> ViewController {
     
     let controller = ItemListController(context: context, state: signal)
     
+    presentControllerImpl = { [weak controller] c, p in
+        controller?.present(c, in: .window(.root), with: p)
+    }
+    
     return controller
 }
 
@@ -214,23 +257,27 @@ private func updateSettings(_ context: AccountContext, _ statePromise: Promise<P
 
 extension PtgSettings {
     public func withUpdated(showPeerId: Bool) -> PtgSettings {
-        return PtgSettings(showPeerId: showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, testToolsEnabled: self.testToolsEnabled)
+        return PtgSettings(showPeerId: showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, useRearCameraByDefault: self.useRearCameraByDefault, testToolsEnabled: self.testToolsEnabled)
     }
     
     public func withUpdated(showChannelCreationDate: Bool) -> PtgSettings {
-        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, testToolsEnabled: self.testToolsEnabled)
+        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, useRearCameraByDefault: self.useRearCameraByDefault, testToolsEnabled: self.testToolsEnabled)
     }
     
     public func withUpdated(suppressForeignAgentNotice: Bool) -> PtgSettings {
-        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, testToolsEnabled: self.testToolsEnabled)
+        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, useRearCameraByDefault: self.useRearCameraByDefault, testToolsEnabled: self.testToolsEnabled)
     }
     
     public func withUpdated(preferAppleVoiceToText: Bool) -> PtgSettings {
-        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: preferAppleVoiceToText, testToolsEnabled: self.testToolsEnabled)
+        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: preferAppleVoiceToText, useRearCameraByDefault: self.useRearCameraByDefault, testToolsEnabled: self.testToolsEnabled)
+    }
+    
+    public func withUpdated(useRearCameraByDefault: Bool) -> PtgSettings {
+        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, useRearCameraByDefault: useRearCameraByDefault, testToolsEnabled: self.testToolsEnabled)
     }
     
     public func withUpdated(testToolsEnabled: Bool?) -> PtgSettings {
-        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, testToolsEnabled: testToolsEnabled)
+        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, useRearCameraByDefault: self.useRearCameraByDefault, testToolsEnabled: testToolsEnabled)
     }
 }
 

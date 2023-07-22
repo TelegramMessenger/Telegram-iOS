@@ -77,6 +77,9 @@
 "PtgSettings.EnableLiveTextHelp" = "Automatically perform text recognition and bar code detection (e.g. QR-code) on each image you preview in fullscreen. Turn it off to save battery life.";
 "PtgSettings.PreferAppleVoiceToText" = "Voice-to-Text Conversion by Apple";
 "PtgSettings.PreferAppleVoiceToTextHelp" = "This setting affects only Premium accounts. It determines which services are used for voice-to-text conversion. If turned off (default), Telegram servers are used. If turned on, Apple services are used. **For non-Premium accounts, Apple services are always used.**";
+"PtgSettings.DefaultCameraForVideos" = "Default Camera for Videos";
+"PtgSettings.DefaultCameraForVideos.Front" = "Front";
+"PtgSettings.DefaultCameraForVideos.Rear" = "Rear";
 
 "Profile.Id" = "ID";
 "Conversation.IdCopied" = "ID copied to clipboard.";

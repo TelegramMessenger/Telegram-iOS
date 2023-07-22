@@ -11,17 +11,19 @@ public struct PtgSettings: Codable, Equatable {
     public let showChannelCreationDate: Bool
     public let suppressForeignAgentNotice: Bool
     public let preferAppleVoiceToText: Bool
+    public let useRearCameraByDefault: Bool
     public let testToolsEnabled: Bool?
     
     public static var defaultSettings: PtgSettings {
-        return PtgSettings(showPeerId: true, showChannelCreationDate: true, suppressForeignAgentNotice: true, preferAppleVoiceToText: false, testToolsEnabled: nil)
+        return PtgSettings(showPeerId: true, showChannelCreationDate: true, suppressForeignAgentNotice: true, preferAppleVoiceToText: false, useRearCameraByDefault: false, testToolsEnabled: nil)
     }
     
-    public init(showPeerId: Bool, showChannelCreationDate: Bool, suppressForeignAgentNotice: Bool, preferAppleVoiceToText: Bool, testToolsEnabled: Bool?) {
+    public init(showPeerId: Bool, showChannelCreationDate: Bool, suppressForeignAgentNotice: Bool, preferAppleVoiceToText: Bool, useRearCameraByDefault: Bool, testToolsEnabled: Bool?) {
         self.showPeerId = showPeerId
         self.showChannelCreationDate = showChannelCreationDate
         self.suppressForeignAgentNotice = suppressForeignAgentNotice
         self.preferAppleVoiceToText = preferAppleVoiceToText
+        self.useRearCameraByDefault = useRearCameraByDefault
         self.testToolsEnabled = testToolsEnabled
     }
     
@@ -32,6 +34,7 @@ public struct PtgSettings: Codable, Equatable {
         self.showChannelCreationDate = (try container.decodeIfPresent(Int32.self, forKey: "sccd") ?? 1) != 0
         self.suppressForeignAgentNotice = (try container.decodeIfPresent(Int32.self, forKey: "sfan") ?? 1) != 0
         self.preferAppleVoiceToText = (try container.decodeIfPresent(Int32.self, forKey: "pavtt") ?? 0) != 0
+        self.useRearCameraByDefault = (try container.decodeIfPresent(Int32.self, forKey: "urcbd") ?? 0) != 0
         self.testToolsEnabled = try container.decodeIfPresent(Int32.self, forKey: "test").flatMap({ $0 != 0 })
     }
     
@@ -42,6 +45,7 @@ public struct PtgSettings: Codable, Equatable {
         try container.encode((self.showChannelCreationDate ? 1 : 0) as Int32, forKey: "sccd")
         try container.encode((self.suppressForeignAgentNotice ? 1 : 0) as Int32, forKey: "sfan")
         try container.encode((self.preferAppleVoiceToText ? 1 : 0) as Int32, forKey: "pavtt")
+        try container.encode((self.useRearCameraByDefault ? 1 : 0) as Int32, forKey: "urcbd")
         try container.encodeIfPresent(self.testToolsEnabled.flatMap({ ($0 ? 1 : 0) as Int32 }), forKey: "test")
     }
     

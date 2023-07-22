@@ -77,6 +77,9 @@
 "PtgSettings.EnableLiveTextHelp" = "Автоматически выполнять распознавание текста и штрих-кодов (например, QR-кода) на каждом изображении, которое вы просматриваете в полноэкранном режиме. Отключите, чтобы сэкономить заряд батареи.";
 "PtgSettings.PreferAppleVoiceToText" = "Перевод голоса в текст от Apple";
 "PtgSettings.PreferAppleVoiceToTextHelp" = "Этот параметр влияет только на Premium-аккаунты. Он определяет, какие сервисы используются для перевода голоса в текст. Если отключен (по умолчанию), используются серверы Telegram. Если включен, используются сервисы Apple. **Для не Premium-аккаунтов всегда используются сервисы Apple.**";
+"PtgSettings.DefaultCameraForVideos" = "Камера по умолчанию для видео";
+"PtgSettings.DefaultCameraForVideos.Front" = "Фронтальная";
+"PtgSettings.DefaultCameraForVideos.Rear" = "Задняя";
 
 "Profile.Id" = "ID";
 "Conversation.IdCopied" = "ID скопирован.";
