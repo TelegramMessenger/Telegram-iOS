@@ -69,9 +69,9 @@ func composerEntitiesForDrawingEntity(account: Account, entity: DrawingEntity, c
             return [MediaEditorComposerStaticEntity(image: image, position: CGPoint(x: entity.drawingSize.width * 0.5, y: entity.drawingSize.height * 0.5), scale: 1.0, rotation: 0.0, baseSize: entity.drawingSize, baseScale: nil, mirrored: false)]
         } else if let entity = entity as? DrawingTextEntity {
             var entities: [MediaEditorComposerEntity] = []
-            entities.append(prerenderTextTransformations(entity: entity, image: renderImage, colorSpace: colorSpace))
+//            entities.append(prerenderTextTransformations(entity: entity, image: renderImage, colorSpace: colorSpace))
             
-//            entities.append(MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: nil, baseScale: 0.5, mirrored: false))
+            entities.append(MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: nil, baseScale: 0.5, mirrored: false))
             if let renderSubEntities = entity.renderSubEntities {
                 for subEntity in renderSubEntities {
                     entities.append(contentsOf: composerEntitiesForDrawingEntity(account: account, entity: subEntity, colorSpace: colorSpace, tintColor: entity.color.toUIColor()))
