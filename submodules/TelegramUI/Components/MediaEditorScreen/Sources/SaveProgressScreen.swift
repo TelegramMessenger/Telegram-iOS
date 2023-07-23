@@ -383,8 +383,6 @@ public final class SaveProgressScreenComponent: Component {
     }
 }
 
-private let storyDimensions = CGSize(width: 1080.0, height: 1920.0)
-
 public final class SaveProgressScreen: ViewController {
     fileprivate final class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
         private weak var controller: SaveProgressScreen?

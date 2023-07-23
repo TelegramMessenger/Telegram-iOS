@@ -35,6 +35,16 @@ public struct LayoutMetrics: Equatable {
     }
 }
 
+public extension LayoutMetrics {
+    var isTablet: Bool {
+        if case .regular = self.widthClass {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
 public enum LayoutOrientation {
     case portrait
     case landscape
