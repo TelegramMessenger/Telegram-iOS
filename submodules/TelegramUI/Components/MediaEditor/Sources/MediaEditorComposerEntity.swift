@@ -41,9 +41,9 @@ private func prerenderTextTransformations(entity: DrawingTextEntity, image: UIIm
         if let cgImage = image.cgImage {
             context.draw(cgImage, in: drawRect)
         }
-    })!
+    }, scale: 1.0)!
     
-    return MediaEditorComposerStaticEntity(image: CIImage(image: newImage, options: [.colorSpace: colorSpace])!, position: entity.position, scale: 1.0, rotation: 0.0, baseSize: nil, baseScale: 0.333, mirrored: false)
+    return MediaEditorComposerStaticEntity(image: CIImage(image: newImage, options: [.colorSpace: colorSpace])!, position: entity.position, scale: 1.0, rotation: 0.0, baseSize: nil, baseScale: 1.0, mirrored: false)
 }
 
 func composerEntitiesForDrawingEntity(account: Account, entity: DrawingEntity, colorSpace: CGColorSpace, tintColor: UIColor? = nil) -> [MediaEditorComposerEntity] {
