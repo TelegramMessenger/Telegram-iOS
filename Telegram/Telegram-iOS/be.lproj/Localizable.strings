@@ -132,3 +132,8 @@
 "StorageKeepMedia.AllChatTypes" = "Усе тыпы чатаў";
 
 "StorageManagement.DescriptionAppUsageAllAccounts" = "Кэш усіх акаўнтаў займае %1$@% свабоднай памяці вашай прылады.";
+
+"Appearance.AppIcon.Primary" = "Асноўны";
+"Appearance.AppIcon.Yellow" = "Жоўты";
+"Appearance.AppIcon.Orange" = "Аранжавы";
+"Appearance.AppIcon.Red" = "Чырвоны";

@@ -893,7 +893,15 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         interaction.openSettings(.tips)
     }))
     
-    items[.ptgSettings]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.PtgSettings_Title, icon: PresentationResourcesSettings.cloudballon, action: {
+    let currentAppIcon: PresentationAppIcon?
+    let appIcons = context.sharedContext.applicationBindings.getAvailableAlternateIcons()
+    if let alternateIconName = context.sharedContext.applicationBindings.getAlternateIconName() {
+        currentAppIcon = appIcons.filter { $0.name == alternateIconName }.first ?? appIcons.filter { $0.isDefault }.first
+    } else {
+        currentAppIcon = appIcons.filter { $0.isDefault }.first
+    }
+    
+    items[.ptgSettings]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.PtgSettings_Title, icon: renderIcon(name: currentAppIcon!.imageName, mask: PresentationResourcesSettings.savedMessages?.cgImage), action: {
         interaction.openSettings(.ptgSettings)
     }))
 

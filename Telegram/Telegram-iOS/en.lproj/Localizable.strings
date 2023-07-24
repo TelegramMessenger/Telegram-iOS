@@ -133,6 +133,11 @@
 
 "StorageManagement.DescriptionAppUsageAllAccounts" = "Cache of all accounts use %1$@% of your free disk space.";
 
+"Appearance.AppIcon.Primary" = "Primary";
+"Appearance.AppIcon.Yellow" = "Yellow";
+"Appearance.AppIcon.Orange" = "Orange";
+"Appearance.AppIcon.Red" = "Red";
+
 ////////////////////////////////////////////////////////////////////////////////
 
 // Notifications
@@ -4674,7 +4679,6 @@ Sorry for the inconvenience.";
 "Appearance.AppIconFilledX" = "Filled X";
 "Appearance.AppIconNew1" = "Sunset";
 "Appearance.AppIconNew2" = "Aqua";
-"Appearance.AppIconCloudballon" = "Cloudballon";
 
 "Appearance.ThemeCarouselClassic" = "Classic";
 "Appearance.ThemeCarouselDay" = "Day";

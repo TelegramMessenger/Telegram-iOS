@@ -782,20 +782,13 @@ extension UserDefaults {
         }, getAvailableAlternateIcons: {
             if #available(iOS 10.3, *) {
                 var icons = [
-                    PresentationAppIcon(name: "Cloudballon", imageName: "Cloudballon", isDefault: true),
-                    PresentationAppIcon(name: "BlueIcon", imageName: "BlueIcon"),
-                    PresentationAppIcon(name: "New2", imageName: "New2"),
-                    PresentationAppIcon(name: "New1", imageName: "New1"),
-                    PresentationAppIcon(name: "BlackIcon", imageName: "BlackIcon"),
-                    PresentationAppIcon(name: "BlueClassicIcon", imageName: "BlueClassicIcon"),
-                    PresentationAppIcon(name: "BlackClassicIcon", imageName: "BlackClassicIcon"),
-                    PresentationAppIcon(name: "BlueFilledIcon", imageName: "BlueFilledIcon"),
-                    PresentationAppIcon(name: "BlackFilledIcon", imageName: "BlackFilledIcon")
+                    PresentationAppIcon(name: "PrimaryIcon", imageName: "AppIconLLC60x60", isDefault: true),
+                    PresentationAppIcon(name: "YellowIcon", imageName: "YellowIcon"),
+                    PresentationAppIcon(name: "OrangeIcon", imageName: "OrangeIcon"),
+                    PresentationAppIcon(name: "RedIcon", imageName: "RedIcon"),
                 ]
-                if buildConfig.isInternalBuild {
-                    icons.append(PresentationAppIcon(name: "WhiteFilledIcon", imageName: "WhiteFilledIcon"))
-                }
                 
+                // premium icons are used only in premium demo screens
                 icons.append(PresentationAppIcon(name: "Premium", imageName: "Premium", isPremium: true))
                 icons.append(PresentationAppIcon(name: "PremiumBlack", imageName: "PremiumBlack", isPremium: true))
                 icons.append(PresentationAppIcon(name: "PremiumTurbo", imageName: "PremiumTurbo", isPremium: true))

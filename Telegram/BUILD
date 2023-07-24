@@ -309,19 +309,10 @@ filegroup(
 )
 
 alternate_icon_folders = [
-    "BlackIcon",
-    "BlackClassicIcon",
-    "BlackFilledIcon",
+    "YellowIcon",
+    "OrangeIcon",
+    "RedIcon",
     "BlueIcon",
-    "BlueClassicIcon",
-    "BlueFilledIcon",
-    "WhiteFilledIcon",
-    "New1",
-    "New2",
-    "Premium",
-    "PremiumBlack",
-    "PremiumTurbo",
-    "Cloudballon",
 ]
 
 [

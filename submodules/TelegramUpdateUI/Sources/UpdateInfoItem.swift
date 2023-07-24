@@ -244,13 +244,9 @@ class UpdateInfoItemNode: ListViewItemNode {
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
                         
-                        var bordered = true
+                        let bordered = false
                         if let appIcon = item.appIcon {
                             switch appIcon.name {
-                                case "BlueFilled":
-                                    bordered = false
-                                case "BlackFilled":
-                                    bordered = false
                                 default:
                                     break
                             }
