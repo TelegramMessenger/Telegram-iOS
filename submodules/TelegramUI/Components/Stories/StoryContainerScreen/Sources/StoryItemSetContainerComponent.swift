@@ -1392,6 +1392,12 @@ public final class StoryItemSetContainerComponent: Component {
             
             self.sendMessageContext.animateOut(bounds: self.bounds)
             
+            self.sendMessageContext.tooltipScreen?.dismiss()
+            self.sendMessageContext.tooltipScreen = nil
+            
+            self.contextController?.dismiss()
+            self.contextController = nil
+            
             if let inputPanelView = self.inputPanel.view {
                 inputPanelView.layer.animatePosition(
                     from: CGPoint(),
@@ -2508,7 +2514,7 @@ public final class StoryItemSetContainerComponent: Component {
                             let tooltipText: String
                             switch storyPrivacyIcon {
                             case .closeFriends:
-                                tooltipText = component.strings.Story_TooltipPrivacyCloseFriends(component.slice.peer.compactDisplayTitle).string
+                                tooltipText = component.strings.Story_TooltipPrivacyCloseFriends2(component.slice.peer.compactDisplayTitle).string
                             case .contacts:
                                 tooltipText = component.strings.Story_TooltipPrivacyContacts(component.slice.peer.compactDisplayTitle).string
                             case .selectedContacts:
@@ -2520,7 +2526,10 @@ public final class StoryItemSetContainerComponent: Component {
                             let tooltipScreen = TooltipScreen(
                                 account: component.context.account,
                                 sharedContext: component.context.sharedContext,
-                                text: .markdown(text: tooltipText), style: .default, location: TooltipScreen.Location.point(closeFriendIconView.convert(closeFriendIconView.bounds, to: nil).offsetBy(dx: 1.0, dy: 6.0), .top), displayDuration: .infinite, shouldDismissOnTouch: { _, _ in
+                                text: .markdown(text: tooltipText),
+                                balancedTextLayout: true,
+                                style: .default,
+                                location: TooltipScreen.Location.point(closeFriendIconView.convert(closeFriendIconView.bounds, to: nil).offsetBy(dx: 1.0, dy: 6.0), .top), displayDuration: .infinite, shouldDismissOnTouch: { _, _ in
                                     return .dismiss(consume: true)
                                 }
                             )
@@ -3376,23 +3385,41 @@ public final class StoryItemSetContainerComponent: Component {
                 break
             }
             
-            if subject != nil || chat  {
-                component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peer), subject: subject, keepStack: .always, animated: true, pushController: { [weak controller, weak navigationController] chatController, animated, completion in
-                    guard let controller, let navigationController else {
-                        return
-                    }
-                    if "".isEmpty {
-                        navigationController.pushViewController(chatController)
+            if subject != nil || chat {
+                if let index = navigationController.viewControllers.firstIndex(where: { c in
+                    if let c = c as? ChatController, case .peer(peer.id) = c.chatLocation {
+                        return true
                     } else {
-                        var viewControllers = navigationController.viewControllers
-                        if let index = viewControllers.firstIndex(where: { $0 === controller }) {
-                            viewControllers.insert(chatController, at: index)
-                        } else {
-                            viewControllers.append(chatController)
-                        }
-                        navigationController.setViewControllers(viewControllers, animated: animated)
+                        return false
                     }
-                }))
+                }) {
+                    var viewControllers = navigationController.viewControllers
+                    for i in ((index + 1) ..< viewControllers.count).reversed() {
+                        if viewControllers[i] !== controller {
+                            viewControllers.remove(at: i)
+                        }
+                    }
+                    navigationController.setViewControllers(viewControllers, animated: true)
+                    
+                    controller.dismissWithoutTransitionOut()
+                } else {
+                    component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peer), subject: subject, keepStack: .always, animated: true, pushController: { [weak controller, weak navigationController] chatController, animated, completion in
+                        guard let controller, let navigationController else {
+                            return
+                        }
+                        if "".isEmpty {
+                            navigationController.pushViewController(chatController)
+                        } else {
+                            var viewControllers = navigationController.viewControllers
+                            if let index = viewControllers.firstIndex(where: { $0 === controller }) {
+                                viewControllers.insert(chatController, at: index)
+                            } else {
+                                viewControllers.append(chatController)
+                            }
+                            navigationController.setViewControllers(viewControllers, animated: animated)
+                        }
+                    }))
+                }
             } else {
                 var currentViewControllers = navigationController.viewControllers
                 if let index = currentViewControllers.firstIndex(where: { c in
@@ -3652,6 +3679,10 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         private func performMoreAction(sourceView: UIView, gesture: ContextGesture?) {
+            if self.isAnimatingOut {
+                return
+            }
+            
             guard let component = self.component else {
                 return
             }

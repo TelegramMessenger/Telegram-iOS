@@ -1452,7 +1452,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             }
         }
         
-        let state: SemanticStatusNodeState
+        var state: SemanticStatusNodeState
         var streamingState: SemanticStatusNodeState = .none
         
         let isSending = message.flags.isSending
@@ -1561,6 +1561,20 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             }
         } else {
             streamingState = .none
+        }
+        
+        if isSending {
+            if case .progress = streamingState {
+            } else {
+                let adjustedProgress: CGFloat = 0.027
+                streamingState = .progress(value: CGFloat(adjustedProgress), cancelEnabled: true, appearance: .init(inset: 1.0, lineWidth: 2.0))
+            }
+            
+            if case .progress = state {
+            } else {
+                let adjustedProgress: CGFloat = 0.027
+                state = .progress(value: CGFloat(adjustedProgress), cancelEnabled: true, appearance: .init(inset: 1.0, lineWidth: 2.0))
+            }
         }
         
         let backgroundNodeColor: UIColor

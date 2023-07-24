@@ -1684,11 +1684,11 @@ final class StoryItemSetContainerSendMessage {
                 done(time)
             })
         }
-        controller.getCaptionPanelView = { [weak self, weak view] in
-            guard let self, let view else {
+        controller.getCaptionPanelView = { [weak self, weak controller, weak view] in
+            guard let self, let view, let controller else {
                 return nil
             }
-            return self.getCaptionPanelView(view: view, peer: peer)
+            return self.getCaptionPanelView(view: view, peer: peer, mediaPicker: controller)
         }
         controller.legacyCompletion = { signals, silently, scheduleTime, getAnimatedTransitionSource, sendCompletion in
             completion(signals, silently, scheduleTime, getAnimatedTransitionSource, sendCompletion)
@@ -2067,7 +2067,7 @@ final class StoryItemSetContainerSendMessage {
         })
     }
     
-    private func getCaptionPanelView(view: StoryItemSetContainerComponent.View, peer: EnginePeer) -> TGCaptionPanelView? {
+    private func getCaptionPanelView(view: StoryItemSetContainerComponent.View, peer: EnginePeer, mediaPicker: MediaPickerScreen? = nil) -> TGCaptionPanelView? {
         guard let component = view.component else {
             return nil
         }
@@ -2081,7 +2081,27 @@ final class StoryItemSetContainerSendMessage {
             guard let view else {
                 return
             }
-            view.component?.controller()?.presentInGlobalOverlay(c)
+            if let c = c as? PremiumIntroScreen {
+                view.endEditing(true)
+                if let mediaPicker {
+                    mediaPicker.closeGalleryController()
+                }
+                if let attachmentController = self.attachmentController {
+                    self.attachmentController = nil
+                    attachmentController.dismiss(animated: false, completion: nil)
+                }
+                c.wasDismissed = { [weak view] in
+                    guard let view else {
+                        return
+                    }
+                    view.updateIsProgressPaused()
+                }
+                view.component?.controller()?.push(c)
+                
+                view.updateIsProgressPaused()
+            } else {
+                view.component?.controller()?.presentInGlobalOverlay(c)
+            }
         }) as? TGCaptionPanelView
     }
     

@@ -19,6 +19,7 @@ import GZip
 import TelegramUniversalVideoContent
 import GradientBackground
 import Svg
+import UniversalMediaPlayer
 
 public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedStickerAJpegRepresentation {
@@ -38,7 +39,33 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
             return fetchCachedScaledImageRepresentation(resource: resource, resourceData: data, representation: representation)
         }
     } else if let _ = representation as? CachedVideoFirstFrameRepresentation {
-        return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
+        return Signal { subscriber in
+            if let size = resource.size {
+                let videoSource = UniversalSoftwareVideoSource(mediaBox: account.postbox.mediaBox, source: .direct(resource: resource, size: size), automaticallyFetchHeader: false, hintVP9: false)
+                let disposable = videoSource.takeFrame(at: 0.0).start(next: { value in
+                    switch value {
+                    case let .image(image):
+                        if let image {
+                            if let imageData = image.jpegData(compressionQuality: 0.6) {
+                                subscriber.putNext(.data(imageData))
+                                subscriber.putNext(.done)
+                                subscriber.putCompletion()
+                            }
+                        }
+                    case .waitingForData:
+                        break
+                    }
+                })
+                return ActionDisposable {
+                    // keep the reference
+                    let _ = videoSource.takeFrame(at: 0.0)
+                    disposable.dispose()
+                }
+            } else {
+                return EmptyDisposable
+            }
+        }
+        /*return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
         |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
             if data.complete {
                 return fetchCachedVideoFirstFrameRepresentation(account: account, resource: resource, resourceData: data)
@@ -50,7 +77,7 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
             } else {
                 return .complete()
             }
-        }
+        }*/
     } else if let representation = representation as? CachedScaledVideoFirstFrameRepresentation {
         return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
         |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in

@@ -223,6 +223,8 @@ open class ViewControllerComponentContainer: ViewController {
     private var presentationDataDisposable: Disposable?
     public private(set) var validLayout: ContainerViewLayout?
     
+    public var wasDismissed: (() -> Void)?
+    
     public init<C: Component>(context: AccountContext, component: C, navigationBarAppearance: NavigationBarAppearance, statusBarStyle: StatusBarStyle = .default, presentationMode: PresentationMode = .default, theme: Theme = .default) where C.EnvironmentType == ViewControllerComponentContainer.Environment {
         self.context = context
         self.component = AnyComponent(component)
@@ -304,7 +306,11 @@ open class ViewControllerComponentContainer: ViewController {
     }
     
     open override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
-        super.dismiss(animated: flag, completion: completion)
+        let wasDismissed = self.wasDismissed
+        super.dismiss(animated: flag, completion: {
+            completion?()
+            wasDismissed?()
+        })
     }
     
     fileprivate var forceNextUpdate = false

@@ -1279,7 +1279,27 @@ open class TextNode: ASDisplayNode {
                             coreTextLine = originalLine
                         }
                     } else {
-                        coreTextLine = CTLineCreateTruncatedLine(originalLine, max(1.0, Double(lineConstrainedSize.width) - truncationTokenWidth), truncationType, truncationToken) ?? truncationToken
+                        if customTruncationToken != nil {
+                            let coreTextLine1 = CTLineCreateTruncatedLine(originalLine, max(1.0, Double(lineConstrainedSize.width)), truncationType, truncationToken) ?? truncationToken
+                            let runs = (CTLineGetGlyphRuns(coreTextLine1) as [AnyObject]) as! [CTRun]
+                            var hasTruncationToken = false
+                            for run in runs {
+                                let runRange = CTRunGetStringRange(run)
+                                if runRange.location + runRange.length >= nsString.length {
+                                    hasTruncationToken = true
+                                    break
+                                }
+                            }
+                            
+                            if hasTruncationToken {
+                                coreTextLine = coreTextLine1
+                            } else {
+                                let coreTextLine2 = CTLineCreateTruncatedLine(originalLine, max(1.0, Double(lineConstrainedSize.width) - truncationTokenWidth), truncationType, truncationToken) ?? truncationToken
+                                coreTextLine = coreTextLine2
+                            }
+                        } else {
+                            coreTextLine = CTLineCreateTruncatedLine(originalLine, max(1.0, Double(lineConstrainedSize.width)), truncationType, truncationToken) ?? truncationToken
+                        }
                         let runs = (CTLineGetGlyphRuns(coreTextLine) as [AnyObject]) as! [CTRun]
                         for run in runs {
                             let runAttributes: NSDictionary = CTRunGetAttributes(run)

@@ -2425,7 +2425,18 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
                                         replaceImpl?(controller)
                                     })
                                     replaceImpl = { [weak controller] c in
-                                        controller?.replace(with: c)
+                                        guard let controller else {
+                                            return
+                                        }
+                                        if controller.navigationController != nil {
+                                            controller.replace(with: c)
+                                        } else {
+                                            controller.dismiss()
+                                            
+                                            if let self {
+                                                self.presentController?(c)
+                                            }
+                                        }
                                     }
                                     strongSelf.presentController?(controller)
                                 }), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
