@@ -407,7 +407,7 @@ final class StoryItemContentComponent: Component {
                 }
                 progress = min(1.0, progress)
                 
-                if actualTimestamp < 0.1 {
+                if actualTimestamp < 0.3 {
                     isBuffering = false
                 }
                 

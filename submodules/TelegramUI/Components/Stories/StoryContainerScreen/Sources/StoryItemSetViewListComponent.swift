@@ -831,7 +831,7 @@ final class StoryItemSetViewListComponent: Component {
                     transition: emptyTransition,
                     component: AnyComponent(AnimatedStickerComponent(
                         account: component.context.account,
-                        animation: AnimatedStickerComponent.Animation(source: .bundle(name: "Burn"), loop: true),
+                        animation: AnimatedStickerComponent.Animation(source: .bundle(name: "ChatListNoResults"), loop: true),
                         size: CGSize(width: 140.0, height: 140.0)
                     )),
                     environment: {},

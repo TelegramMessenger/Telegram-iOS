@@ -16,6 +16,7 @@ import ComponentFlow
 import AvatarStoryIndicatorComponent
 import AccountContext
 import Markdown
+import BalancedTextComponent
 
 public enum TooltipActiveTextItem {
     case url(String, Bool)
@@ -107,6 +108,9 @@ private class DownArrowsIconNode: ASDisplayNode {
 }
 
 private final class TooltipScreenNode: ViewControllerTracingNode {
+    private let text: TooltipScreen.Text
+    private let textAlignment: TooltipScreen.Alignment
+    private let balancedTextLayout: Bool
     private let tooltipStyle: TooltipScreen.Style
     private let icon: TooltipScreen.Icon?
     private let action: TooltipScreen.Action?
@@ -136,12 +140,13 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     private var downArrowsNode: DownArrowsIconNode?
     private var avatarNode: AvatarNode?
     private var avatarStoryIndicator: ComponentView<Empty>?
-    private let textNode: ImmediateTextNode
+    private let textView = ComponentView<Empty>()
     private var closeButtonNode: HighlightableButtonNode?
     private var actionButtonNode: HighlightableButtonNode?
     
     private var isArrowInverted: Bool = false
     
+    private let fontSize: CGFloat
     private let inset: CGFloat
     
     private var validLayout: ContainerViewLayout?
@@ -152,6 +157,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         sharedContext: SharedAccountContext,
         text: TooltipScreen.Text,
         textAlignment: TooltipScreen.Alignment,
+        balancedTextLayout: Bool,
         style: TooltipScreen.Style,
         icon: TooltipScreen.Icon? = nil,
         action: TooltipScreen.Action? = nil,
@@ -337,39 +343,10 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             self.backgroundMaskNode.layer.rasterizationScale = UIScreen.main.scale
         }
         
-        self.textNode = ImmediateTextNode()
-        self.textNode.displaysAsynchronously = false
-        self.textNode.maximumNumberOfLines = 0
-            
-        let baseFont = Font.regular(fontSize)
-        let boldFont = Font.semibold(14.0)
-        let italicFont = Font.italic(fontSize)
-        let boldItalicFont = Font.semiboldItalic(fontSize)
-        let fixedFont = Font.monospace(fontSize)
-        
-        let textColor: UIColor = .white
-        
-        let attributedText: NSAttributedString
-            switch text {
-            case let .plain(text):
-                attributedText = NSAttributedString(string: text, font: baseFont, textColor: textColor)
-            case let .entities(text, entities):
-                attributedText = stringWithAppliedEntities(text, entities: entities, baseColor: textColor, linkColor: textColor, baseFont: baseFont, linkFont: baseFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: fixedFont, blockQuoteFont: baseFont, underlineLinks: true, external: false, message: nil)
-            case let .markdown(text):
-                let linkColor = UIColor(rgb: 0x64d2ff)
-                let markdownAttributes = MarkdownAttributes(
-                    body: MarkdownAttributeSet(font: baseFont, textColor: textColor),
-                    bold: MarkdownAttributeSet(font: boldFont, textColor: textColor),
-                    link: MarkdownAttributeSet(font: boldFont, textColor: linkColor),
-                    linkAttribute: { _ in
-                        return nil
-                    }
-                )
-                attributedText = parseMarkdownIntoAttributedString(text, attributes: markdownAttributes)
-            }
-            
-        self.textNode.attributedText = attributedText
-        self.textNode.textAlignment = textAlignment == .center ? .center : .natural
+        self.fontSize = fontSize
+        self.text = text
+        self.textAlignment = textAlignment
+        self.balancedTextLayout = balancedTextLayout
         
         self.animatedStickerNode = DefaultAnimatedStickerNodeImpl()
         switch icon {
@@ -403,7 +380,6 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             self.backgroundContainerNode.addSubnode(effectNode)
             self.backgroundContainerNode.layer.mask = self.backgroundMaskNode.layer
         }
-        self.containerNode.addSubnode(self.textNode)
         self.containerNode.addSubnode(self.animatedStickerNode)
         
         if let closeButtonNode = self.closeButtonNode {
@@ -426,65 +402,6 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             actionButtonNode.setAttributedTitle(NSAttributedString(string: action.title, font: Font.regular(17.0), textColor: actionColor), for: .normal)
             self.containerNode.addSubnode(actionButtonNode)
             self.actionButtonNode = actionButtonNode
-        }
-        
-        self.textNode.linkHighlightColor = UIColor.white.withAlphaComponent(0.5)
-        self.textNode.highlightAttributeAction = { attributes in
-            let highlightedAttributes = [
-                TelegramTextAttributes.URL,
-                TelegramTextAttributes.PeerMention,
-                TelegramTextAttributes.PeerTextMention,
-                TelegramTextAttributes.BotCommand,
-                TelegramTextAttributes.Hashtag
-            ]
-            
-            for attribute in highlightedAttributes {
-                if let _ = attributes[NSAttributedString.Key(rawValue: attribute)] {
-                    return NSAttributedString.Key(rawValue: attribute)
-                }
-            }
-            return nil
-        }
-        self.textNode.tapAttributeAction = { [weak self] attributes, index in
-            guard let strongSelf = self else {
-                return
-            }
-            if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
-                var concealed = true
-                if let (attributeText, fullText) = strongSelf.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
-                    concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
-                }
-                openActiveTextItem?(.url(url, concealed), .tap)
-            } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
-                openActiveTextItem?(.mention(mention.peerId, mention.mention), .tap)
-            } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
-                openActiveTextItem?(.textMention(mention), .tap)
-            } else if let command = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
-                openActiveTextItem?(.botCommand(command), .tap)
-            } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
-                openActiveTextItem?(.hashtag(hashtag.hashtag), .tap)
-            }
-        }
-        
-        self.textNode.longTapAttributeAction = { [weak self] attributes, index in
-            guard let strongSelf = self else {
-                return
-            }
-            if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
-                var concealed = true
-                if let (attributeText, fullText) = strongSelf.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
-                    concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
-                }
-                openActiveTextItem?(.url(url, concealed), .longTap)
-            } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
-                openActiveTextItem?(.mention(mention.peerId, mention.mention), .longTap)
-            } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
-                openActiveTextItem?(.textMention(mention), .longTap)
-            } else if let command = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
-                openActiveTextItem?(.botCommand(command), .longTap)
-            } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
-                openActiveTextItem?(.hashtag(hashtag.hashtag), .longTap)
-            }
         }
         
         self.actionButtonNode?.addTarget(self, action: #selector(self.actionPressed), forControlEvents: .touchUpInside)
@@ -555,7 +472,105 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             buttonInset += 24.0
         }
         
-        let textSize = self.textNode.updateLayout(CGSize(width: containerWidth - contentInset * 2.0 - animationSize.width - animationSpacing - buttonInset, height: .greatestFiniteMagnitude))
+        let baseFont = Font.regular(self.fontSize)
+        let boldFont = Font.semibold(14.0)
+        let italicFont = Font.italic(self.fontSize)
+        let boldItalicFont = Font.semiboldItalic(self.fontSize)
+        let fixedFont = Font.monospace(self.fontSize)
+        
+        let textColor: UIColor = .white
+        let attributedText: NSAttributedString
+        switch self.text {
+        case let .plain(text):
+            attributedText = NSAttributedString(string: text, font: baseFont, textColor: textColor)
+        case let .entities(text, entities):
+            attributedText = stringWithAppliedEntities(text, entities: entities, baseColor: textColor, linkColor: textColor, baseFont: baseFont, linkFont: baseFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: fixedFont, blockQuoteFont: baseFont, underlineLinks: true, external: false, message: nil)
+        case let .markdown(text):
+            let linkColor = UIColor(rgb: 0x64d2ff)
+            let markdownAttributes = MarkdownAttributes(
+                body: MarkdownAttributeSet(font: baseFont, textColor: textColor),
+                bold: MarkdownAttributeSet(font: boldFont, textColor: textColor),
+                link: MarkdownAttributeSet(font: boldFont, textColor: linkColor),
+                linkAttribute: { _ in
+                    return nil
+                }
+            )
+            attributedText = parseMarkdownIntoAttributedString(text, attributes: markdownAttributes)
+        }
+        
+        let highlightColor: UIColor? = UIColor.white.withAlphaComponent(0.5)
+        let highlightAction: (([NSAttributedString.Key: Any]) -> NSAttributedString.Key?)? = { attributes in
+            let highlightedAttributes = [
+                TelegramTextAttributes.URL,
+                TelegramTextAttributes.PeerMention,
+                TelegramTextAttributes.PeerTextMention,
+                TelegramTextAttributes.BotCommand,
+                TelegramTextAttributes.Hashtag
+            ]
+            
+            for attribute in highlightedAttributes {
+                if let _ = attributes[NSAttributedString.Key(rawValue: attribute)] {
+                    return NSAttributedString.Key(rawValue: attribute)
+                }
+            }
+            return nil
+        }
+        let tapAction: (([NSAttributedString.Key: Any], Int) -> Void)? = { [weak self] attributes, index in
+            guard let strongSelf = self else {
+                return
+            }
+            if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
+                var concealed = true
+                if let (attributeText, fullText) = (strongSelf.textView.view as? BalancedTextComponent.View)?.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
+                    concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
+                }
+                strongSelf.openActiveTextItem?(.url(url, concealed), .tap)
+            } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
+                strongSelf.openActiveTextItem?(.mention(mention.peerId, mention.mention), .tap)
+            } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+                strongSelf.openActiveTextItem?(.textMention(mention), .tap)
+            } else if let command = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
+                strongSelf.openActiveTextItem?(.botCommand(command), .tap)
+            } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
+                strongSelf.openActiveTextItem?(.hashtag(hashtag.hashtag), .tap)
+            }
+        }
+        let longTapAction: (([NSAttributedString.Key: Any], Int) -> Void)? = { [weak self] attributes, index in
+            guard let strongSelf = self else {
+                return
+            }
+            if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
+                var concealed = true
+                if let (attributeText, fullText) = (strongSelf.textView.view as? BalancedTextComponent.View)?.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
+                    concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
+                }
+                strongSelf.openActiveTextItem?(.url(url, concealed), .longTap)
+            } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
+                strongSelf.openActiveTextItem?(.mention(mention.peerId, mention.mention), .longTap)
+            } else if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+                strongSelf.openActiveTextItem?(.textMention(mention), .longTap)
+            } else if let command = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
+                strongSelf.openActiveTextItem?(.botCommand(command), .longTap)
+            } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
+                strongSelf.openActiveTextItem?(.hashtag(hashtag.hashtag), .longTap)
+            }
+        }
+        
+        let textSize = self.textView.update(
+            transition: .immediate,
+            component: AnyComponent(BalancedTextComponent(
+                text: .plain(attributedText),
+                balanced: self.balancedTextLayout,
+                horizontalAlignment: self.textAlignment == .center ? .center : .left,
+                maximumNumberOfLines: 0,
+                highlightColor: highlightColor,
+                highlightAction: highlightAction,
+                tapAction: tapAction,
+                longTapAction: longTapAction
+            )),
+            environment: {},
+            containerSize: CGSize(width: containerWidth - contentInset * 2.0 - animationSize.width - animationSpacing - buttonInset, height: 1000000.0)
+        )
         
         var backgroundFrame: CGRect
         
@@ -668,7 +683,15 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         }
         
         let textFrame = CGRect(origin: CGPoint(x: contentInset + animationSize.width + animationSpacing, y: floor((backgroundHeight - textSize.height) / 2.0)), size: textSize)
-        transition.updateFrame(node: self.textNode, frame: textFrame)
+        
+        if let textComponentView = self.textView.view {
+            if textComponentView.superview == nil {
+                textComponentView.layer.anchorPoint = CGPoint()
+                self.containerNode.view.addSubview(textComponentView)
+            }
+            transition.updatePosition(layer: textComponentView.layer, position: textFrame.origin)
+            transition.updateBounds(layer: textComponentView.layer, bounds: CGRect(origin: CGPoint(), size: textFrame.size))
+        }
         
         if let closeButtonNode = self.closeButtonNode {
             let closeSize = CGSize(width: 44.0, height: 44.0)
@@ -746,7 +769,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     private var didRequestDismiss = false
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let event = event {
-            if let _ = self.openActiveTextItem, let result = self.textNode.hitTest(self.view.convert(point, to: self.textNode.view), with: event) {
+            if let _ = self.openActiveTextItem, let textComponentView = self.textView.view, let result = textComponentView.hitTest(self.view.convert(point, to: textComponentView), with: event) {
                 return result
             }
             
@@ -940,6 +963,7 @@ public final class TooltipScreen: ViewController {
     private let sharedContext: SharedAccountContext
     public let text: TooltipScreen.Text
     public let textAlignment: TooltipScreen.Alignment
+    private let balancedTextLayout: Bool
     private let style: TooltipScreen.Style
     private let icon: TooltipScreen.Icon?
     private let action: TooltipScreen.Action?
@@ -976,6 +1000,7 @@ public final class TooltipScreen: ViewController {
         sharedContext: SharedAccountContext,
         text: TooltipScreen.Text,
         textAlignment: TooltipScreen.Alignment = .natural,
+        balancedTextLayout: Bool = false,
         style: TooltipScreen.Style = .default,
         icon: TooltipScreen.Icon? = nil,
         action: TooltipScreen.Action? = nil,
@@ -991,6 +1016,7 @@ public final class TooltipScreen: ViewController {
         self.sharedContext = sharedContext
         self.text = text
         self.textAlignment = textAlignment
+        self.balancedTextLayout = balancedTextLayout
         self.style = style
         self.icon = icon
         self.action = action
@@ -1057,7 +1083,7 @@ public final class TooltipScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = TooltipScreenNode(context: self.context, account: self.account, sharedContext: self.sharedContext, text: self.text, textAlignment: self.textAlignment, style: self.style, icon: self.icon, action: self.action, location: self.location, displayDuration: self.displayDuration, inset: self.inset, cornerRadius: self.cornerRadius, shouldDismissOnTouch: self.shouldDismissOnTouch, requestDismiss: { [weak self] in
+        self.displayNode = TooltipScreenNode(context: self.context, account: self.account, sharedContext: self.sharedContext, text: self.text, textAlignment: self.textAlignment, balancedTextLayout: self.balancedTextLayout, style: self.style, icon: self.icon, action: self.action, location: self.location, displayDuration: self.displayDuration, inset: self.inset, cornerRadius: self.cornerRadius, shouldDismissOnTouch: self.shouldDismissOnTouch, requestDismiss: { [weak self] in
             guard let strongSelf = self else {
                 return
             }

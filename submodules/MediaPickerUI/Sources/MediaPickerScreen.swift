@@ -781,8 +781,18 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         }
         
         private weak var currentGalleryController: TGModernGalleryController?
+        private weak var currentGalleryParentController: ViewController?
         
         fileprivate var currentAssetDownloadDisposable = MetaDisposable()
+        
+        fileprivate func closeGalleryController() {
+            if let _ = self.currentGalleryController, let currentGalleryParentController = self.currentGalleryParentController {
+                self.currentGalleryController = nil
+                self.currentGalleryParentController = nil
+                
+                currentGalleryParentController.dismiss(completion: nil)
+            }
+        }
         
         fileprivate func cancelAssetDownloads() {
             guard let downloadManager = self.controller?.downloadManager else {
@@ -868,6 +878,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     strongSelf.controller?.interaction?.sendSelected(result, silently, scheduleTime, false, completion)
                 }
             }, presentSchedulePicker: controller.presentSchedulePicker, presentTimerPicker: controller.presentTimerPicker, getCaptionPanelView: controller.getCaptionPanelView, present: { [weak self] c, a in
+                self?.currentGalleryParentController = c
                 self?.controller?.present(c, in: .window(.root), with: a)
             }, finishedTransitionIn: { [weak self] in
                 self?.openingMedia = false
@@ -906,6 +917,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     strongSelf.controller?.interaction?.sendSelected(result, silently, scheduleTime, false, completion)
                 }
             }, presentSchedulePicker: controller.presentSchedulePicker, presentTimerPicker: controller.presentTimerPicker, getCaptionPanelView: controller.getCaptionPanelView, present: { [weak self] c, a in
+                self?.currentGalleryParentController = c
                 self?.controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
             }, finishedTransitionIn: { [weak self] in
                 self?.openingMedia = false
@@ -1684,6 +1696,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         }
         
         super.displayNodeDidLoad()
+    }
+    
+    public func closeGalleryController() {
+        self.controllerNode.closeGalleryController()
     }
     
     private weak var undoOverlayController: UndoOverlayController?

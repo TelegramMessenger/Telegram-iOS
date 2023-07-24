@@ -2792,6 +2792,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
     
     @objc private func cancelPressed() {
         self.dismiss()
+        self.wasDismissed?()
     }
     
     public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

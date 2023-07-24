@@ -9394,8 +9394,6 @@ Sorry for the inconvenience.";
 
 "Notification.Story" = "Story";
 
-"ChatList.StoryFeedTooltip" = "Tap above to view updates\nfrom %@";
-
 "StoryFeed.ContextAddStory" = "Add Story";
 "StoryFeed.ContextSavedStories" = "Saved Stories";
 "StoryFeed.ContextArchivedStories" = "Archived Stories";
@@ -9549,7 +9547,6 @@ Sorry for the inconvenience.";
 
 "Story.ContextDeleteStory" = "Delete Story";
 
-"Story.TooltipPrivacyCloseFriends" = "You are seeing this story because **%@** added you\nto their list of Close Friends.";
 "Story.TooltipPrivacyContacts" = "Only **%@'s** contacts can view this story.";
 "Story.TooltipPrivacySelectedContacts" = "Only some contacts **%@** selected can view this story.";
 "Story.ToastViewInChat" = "View in Chat";
@@ -9728,3 +9725,7 @@ Sorry for the inconvenience.";
 "Story.Editor.TooltipPremiumCaptionEntities" = "Subscribe to [Telegram Premium]() to add links and formatting in captions to your stories.";
 
 "Story.Context.TooltipPremiumSaveStories" = "Subscribe to [Telegram Premium]() to save other people's unprotected stories to your Gallery.";
+
+"ChatList.StoryFeedTooltipUsers" = "Tap above to view stories from %@";
+
+"Story.TooltipPrivacyCloseFriends2" = "You are seeing this story because **%@** added you to their list of Close Friends.";

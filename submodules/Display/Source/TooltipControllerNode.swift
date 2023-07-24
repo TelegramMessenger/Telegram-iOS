@@ -4,6 +4,7 @@ import AsyncDisplayKit
 
 final class TooltipControllerNode: ASDisplayNode {
     private let baseFontSize: CGFloat
+    private let balancedTextLayout: Bool
     
     private let dismiss: (Bool) -> Void
     
@@ -25,8 +26,9 @@ final class TooltipControllerNode: ASDisplayNode {
     private var dismissedByTouchOutside = false
     private var dismissByTapOutsideSource = false
     
-    init(content: TooltipControllerContent, baseFontSize: CGFloat, dismiss: @escaping (Bool) -> Void, dismissByTapOutside: Bool, dismissByTapOutsideSource: Bool) {
+    init(content: TooltipControllerContent, baseFontSize: CGFloat, balancedTextLayout: Bool, dismiss: @escaping (Bool) -> Void, dismissByTapOutside: Bool, dismissByTapOutsideSource: Bool) {
         self.baseFontSize = baseFontSize
+        self.balancedTextLayout = balancedTextLayout
         
         self.dismissByTapOutside = dismissByTapOutside
         self.dismissByTapOutsideSource = dismissByTapOutsideSource

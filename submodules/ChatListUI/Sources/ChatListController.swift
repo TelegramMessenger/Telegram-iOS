@@ -2013,15 +2013,19 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             }
                         }
                         
-                        let text: String = self.presentationData.strings.ChatList_StoryFeedTooltip(itemListString).string
+                        let text: String = self.presentationData.strings.ChatList_StoryFeedTooltipUsers(itemListString).string
                         
-                        let tooltipController = TooltipController(content: .text(text), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, timeout: 30.0, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true, padding: 6.0, innerPadding: UIEdgeInsets(top: 2.0, left: 3.0, bottom: 2.0, right: 3.0))
-                        self.present(tooltipController, in: .current, with: TooltipControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
-                            guard let self else {
-                                return nil
+                        let tooltipScreen = TooltipScreen(
+                            account: self.context.account,
+                            sharedContext: self.context.sharedContext,
+                            text: .markdown(text: text),
+                            balancedTextLayout: true,
+                            style: .default,
+                            location: TooltipScreen.Location.point(self.displayNode.view.convert(absoluteFrame.insetBy(dx: 0.0, dy: 0.0).offsetBy(dx: 0.0, dy: 4.0), to: nil).offsetBy(dx: 1.0, dy: 2.0), .top), displayDuration: .infinite, shouldDismissOnTouch: { _, _ in
+                                return .dismiss(consume: false)
                             }
-                            return (self.displayNode, absoluteFrame.insetBy(dx: 0.0, dy: 0.0).offsetBy(dx: 0.0, dy: 4.0))
-                        }))
+                        )
+                        self.present(tooltipScreen, in: .current)
                         
                         #if !DEBUG
                         let _ = ApplicationSpecificNotice.setDisplayChatListStoriesTooltip(accountManager: self.context.sharedContext.accountManager).start()
