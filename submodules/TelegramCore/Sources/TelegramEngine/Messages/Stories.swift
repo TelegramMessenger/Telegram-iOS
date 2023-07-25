@@ -688,6 +688,7 @@ private func uploadedStoryContent(postbox: Postbox, network: Network, media: Med
         forceReupload: true,
         isGrouped: false,
         passFetchProgress: passFetchProgress,
+        forceNoBigParts: true,
         peerId: accountPeerId,
         messageId: nil,
         attributes: attributes,

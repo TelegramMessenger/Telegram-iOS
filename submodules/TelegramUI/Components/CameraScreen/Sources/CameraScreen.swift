@@ -1651,9 +1651,15 @@ public class CameraScreen: ViewController {
             guard let camera = self.camera else {
                 return
             }
-            let location = gestureRecognizer.location(in: self.mainPreviewView)
-            let point = self.mainPreviewView.cameraPoint(for: location)
-            camera.focus(at: point, autoFocus: false)
+            
+            let location = gestureRecognizer.location(in: gestureRecognizer.view)
+            if self.cameraState.isDualCameraEnabled && self.additionalPreviewContainerView.frame.contains(location) {
+                self.toggleCameraPositionAction.invoke(Void())
+            } else {
+                let location = gestureRecognizer.location(in: self.mainPreviewView)
+                let point = self.mainPreviewView.cameraPoint(for: location)
+                camera.focus(at: point, autoFocus: false)
+            }
         }
 
         @objc private func handleDoubleTap(_ gestureRecognizer: UITapGestureRecognizer) {

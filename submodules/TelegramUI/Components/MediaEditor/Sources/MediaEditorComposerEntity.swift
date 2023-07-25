@@ -12,11 +12,11 @@ import TelegramAnimatedStickerNode
 import YuvConversion
 import StickerResources
 
-private func prerenderTextTransformations(entity: DrawingTextEntity, image: UIImage, colorSpace: CGColorSpace) -> MediaEditorComposerStaticEntity {
+private func prerenderTextTransformations(entity: DrawingTextEntity, image: UIImage, textScale: CGFloat, colorSpace: CGColorSpace) -> MediaEditorComposerStaticEntity {
     let imageSize = image.size
     
     let angle = -entity.rotation
-    let scale = entity.scale
+    let scale = entity.scale * 0.5 * textScale
     
     let rotatedSize = CGSize(
         width: abs(imageSize.width * cos(angle)) + abs(imageSize.height * sin(angle)),
@@ -43,10 +43,10 @@ private func prerenderTextTransformations(entity: DrawingTextEntity, image: UIIm
         }
     }, scale: 1.0)!
     
-    return MediaEditorComposerStaticEntity(image: CIImage(image: newImage, options: [.colorSpace: colorSpace])!, position: entity.position, scale: 1.0, rotation: 0.0, baseSize: nil, baseScale: 1.0, mirrored: false)
+    return MediaEditorComposerStaticEntity(image: CIImage(image: newImage, options: [.colorSpace: colorSpace])!, position: entity.position, scale: 1.0, rotation: 0.0, baseSize: nil, baseDrawingSize: CGSize(width: 1080, height: 1920), mirrored: false)
 }
 
-func composerEntitiesForDrawingEntity(account: Account, entity: DrawingEntity, colorSpace: CGColorSpace, tintColor: UIColor? = nil) -> [MediaEditorComposerEntity] {
+func composerEntitiesForDrawingEntity(account: Account, textScale: CGFloat, entity: DrawingEntity, colorSpace: CGColorSpace, tintColor: UIColor? = nil) -> [MediaEditorComposerEntity] {
     if let entity = entity as? DrawingStickerEntity {
         let content: MediaEditorComposerStickerEntity.Content
         switch entity.content {
@@ -62,19 +62,18 @@ func composerEntitiesForDrawingEntity(account: Account, entity: DrawingEntity, c
         return [MediaEditorComposerStickerEntity(account: account, content: content, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: entity.mirrored, colorSpace: colorSpace, tintColor: tintColor, isStatic: entity.isExplicitlyStatic)]
     } else if let renderImage = entity.renderImage, let image = CIImage(image: renderImage, options: [.colorSpace: colorSpace]) {
         if let entity = entity as? DrawingBubbleEntity {
-            return [MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: 1.0, rotation: entity.rotation, baseSize: entity.size, baseScale: nil, mirrored: false)]
+            return [MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: 1.0, rotation: entity.rotation, baseSize: entity.size, mirrored: false)]
         } else if let entity = entity as? DrawingSimpleShapeEntity {
-            return [MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: 1.0, rotation: entity.rotation, baseSize: entity.size, baseScale: nil, mirrored: false)]
+            return [MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: 1.0, rotation: entity.rotation, baseSize: entity.size, mirrored: false)]
         } else if let entity = entity as? DrawingVectorEntity {
-            return [MediaEditorComposerStaticEntity(image: image, position: CGPoint(x: entity.drawingSize.width * 0.5, y: entity.drawingSize.height * 0.5), scale: 1.0, rotation: 0.0, baseSize: entity.drawingSize, baseScale: nil, mirrored: false)]
+            return [MediaEditorComposerStaticEntity(image: image, position: CGPoint(x: entity.drawingSize.width * 0.5, y: entity.drawingSize.height * 0.5), scale: 1.0, rotation: 0.0, baseSize: entity.drawingSize, mirrored: false)]
         } else if let entity = entity as? DrawingTextEntity {
             var entities: [MediaEditorComposerEntity] = []
-//            entities.append(prerenderTextTransformations(entity: entity, image: renderImage, colorSpace: colorSpace))
+            entities.append(prerenderTextTransformations(entity: entity, image: renderImage, textScale: textScale, colorSpace: colorSpace))
             
-            entities.append(MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: nil, baseScale: 0.5, mirrored: false))
             if let renderSubEntities = entity.renderSubEntities {
                 for subEntity in renderSubEntities {
-                    entities.append(contentsOf: composerEntitiesForDrawingEntity(account: account, entity: subEntity, colorSpace: colorSpace, tintColor: entity.color.toUIColor()))
+                    entities.append(contentsOf: composerEntitiesForDrawingEntity(account: account, textScale: textScale, entity: subEntity, colorSpace: colorSpace, tintColor: entity.color.toUIColor()))
                 }
             }
             return entities
@@ -90,15 +89,26 @@ private class MediaEditorComposerStaticEntity: MediaEditorComposerEntity {
     let rotation: CGFloat
     let baseSize: CGSize?
     let baseScale: CGFloat?
+    let baseDrawingSize: CGSize?
     let mirrored: Bool
     
-    init(image: CIImage, position: CGPoint, scale: CGFloat, rotation: CGFloat, baseSize: CGSize?, baseScale: CGFloat?, mirrored: Bool) {
+    init(
+        image: CIImage,
+        position: CGPoint,
+        scale: CGFloat,
+        rotation: CGFloat,
+        baseSize: CGSize?,
+        baseScale: CGFloat? = nil,
+        baseDrawingSize: CGSize? = nil,
+        mirrored: Bool
+    ) {
         self.image = image
         self.position = position
         self.scale = scale
         self.rotation = rotation
         self.baseSize = baseSize
         self.baseScale = baseScale
+        self.baseDrawingSize = baseDrawingSize
         self.mirrored = mirrored
     }
     
@@ -127,6 +137,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
     let rotation: CGFloat
     let baseSize: CGSize?
     let baseScale: CGFloat? = nil
+    let baseDrawingSize: CGSize? = nil
     let mirrored: Bool
     let colorSpace: CGColorSpace
     let tintColor: UIColor?
@@ -475,6 +486,7 @@ protocol MediaEditorComposerEntity {
     var rotation: CGFloat { get }
     var baseSize: CGSize? { get }
     var baseScale: CGFloat? { get }
+    var baseDrawingSize: CGSize? { get }
     var mirrored: Bool { get }
     
     func image(for time: CMTime, frameRate: Float, context: CIContext, completion: @escaping (CIImage?) -> Void)

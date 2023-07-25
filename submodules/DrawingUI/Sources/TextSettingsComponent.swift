@@ -579,12 +579,13 @@ final class TextSettingsComponent: CombinedComponent {
                 )
             }
                  
+            let presentFontPicker = component.presentFontPicker
             let font = font.update(
                 component: TextFontComponent(
                     selectedValue: component.font,
                     tag: component.fontTag,
                     tapped: {
-                        component.presentFontPicker()
+                        presentFontPicker()
                     }
                 ),
                 availableSize: CGSize(width: fontAvailableWidth, height: 30.0),

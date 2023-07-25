@@ -9728,3 +9728,6 @@ Sorry for the inconvenience.";
 "Story.Editor.TooltipPremiumCaptionEntities" = "Subscribe to [Telegram Premium]() to add links and formatting in captions to your stories.";
 
 "Story.Context.TooltipPremiumSaveStories" = "Subscribe to [Telegram Premium]() to save other people's unprotected stories to your Gallery.";
+
+"Story.Privacy.GroupTooLarge" = "Group Too Large";
+"Story.Privacy.GroupParticipantsLimit" = "You can select groups that are up to 200 members.";

@@ -3320,7 +3320,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     }
     
     private func openEditCategory(privacy: EngineStoryPrivacy, isForwardingDisabled: Bool, pin: Bool, completion: @escaping (EngineStoryPrivacy) -> Void) {
-        let stateContext = ShareWithPeersScreen.StateContext(context: self.context, subject: .contacts(privacy.base), initialPeerIds: Set(privacy.additionallyIncludePeers))
+        let subject: ShareWithPeersScreen.StateContext.Subject
+        if privacy.base == .nobody {
+            subject = .chats
+        } else {
+            subject = .contacts(privacy.base)
+        }
+        let stateContext = ShareWithPeersScreen.StateContext(context: self.context, subject: subject, initialPeerIds: Set(privacy.additionallyIncludePeers))
         let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
             guard let self else {
                 return
@@ -3561,7 +3567,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         if let resultImage = mediaEditor.resultImage {
             mediaEditor.seek(0.0, andPlay: false)
-            makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: resultImage, dimensions: storyDimensions, values: values, time: .zero, completion: { resultImage in
+            makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: resultImage, dimensions: storyDimensions, values: values, time: .zero, textScale: 2.0, completion: { resultImage in
                 guard let resultImage else {
                     return
                 }
@@ -3844,7 +3850,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         inputImage = UIImage()
                     }
 
-                    makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: inputImage, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] coverImage in
+                    makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: inputImage, dimensions: storyDimensions, values: mediaEditor.values, time: firstFrameTime, textScale: 2.0, completion: { [weak self] coverImage in
                         if let self {
                             Logger.shared.log("MediaEditor", "Completed with video \(videoResult)")
                             self.completion(randomId, .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions), caption, self.state.privacy, stickers, { [weak self] finished in
@@ -3867,7 +3873,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if let image = mediaEditor.resultImage {
                 self.saveDraft(id: randomId)
                 
-                makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] resultImage in
+                makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, textScale: 2.0, completion: { [weak self] resultImage in
                     if let self, let resultImage {
                         Logger.shared.log("MediaEditor", "Completed with image \(resultImage)")
                         self.completion(randomId, .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), caption, self.state.privacy, stickers, { [weak self] finished in
@@ -3995,7 +4001,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
                 let configuration = recommendedVideoExportConfiguration(values: mediaEditor.values, duration: duration, forceFullHd: true, frameRate: 60.0)
                 let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).mp4"
-                let videoExport = MediaEditorVideoExport(account: self.context.account, subject: exportSubject, configuration: configuration, outputPath: outputPath)
+                let videoExport = MediaEditorVideoExport(account: self.context.account, subject: exportSubject, configuration: configuration, outputPath: outputPath, textScale: 2.0)
                 self.videoExport = videoExport
                 
                 videoExport.start()
@@ -4028,7 +4034,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         } else {
             if let image = mediaEditor.resultImage {
                 Queue.concurrentDefaultQueue().async {
-                    makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { resultImage in
+                    makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, textScale: 2.0, completion: { resultImage in
                         if let data = resultImage?.jpegData(compressionQuality: 0.8) {
                             let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).jpg"
                             try? data.write(to: URL(fileURLWithPath: outputPath))
