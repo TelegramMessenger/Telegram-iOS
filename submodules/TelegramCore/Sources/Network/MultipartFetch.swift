@@ -103,14 +103,14 @@ private struct DownloadWrapper {
         self.useMainConnection = useMainConnection
     }
     
-    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: MediaResourceFetchTag?, continueInBackground: Bool) -> Signal<(T, NetworkResponseInfo), MTRpcError> {
+    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: MediaResourceFetchTag?, continueInBackground: Bool, expectedResponseSize: Int32?) -> Signal<(T, NetworkResponseInfo), MTRpcError> {
         let target: MultiplexedRequestTarget
         if self.isCdn {
             target = .cdn(Int(self.datacenterId))
         } else {
             target = .main(Int(self.datacenterId))
         }
-        return network.multiplexedRequestManager.requestWithAdditionalInfo(to: target, consumerId: self.consumerId, resourceId: self.resourceId, data: data, tag: tag, continueInBackground: continueInBackground)
+        return network.multiplexedRequestManager.requestWithAdditionalInfo(to: target, consumerId: self.consumerId, resourceId: self.resourceId, data: data, tag: tag, continueInBackground: continueInBackground, expectedResponseSize: expectedResponseSize)
         |> mapError { error, _ -> MTRpcError in
             return error
         }
@@ -191,7 +191,7 @@ private final class MultipartCdnHashSource {
             clusterContext = ClusterContext(disposable: disposable)
             self.clusterContexts[offset] = clusterContext
 
-            disposable.set((self.masterDownload.request(Api.functions.upload.getCdnFileHashes(fileToken: Buffer(data: self.fileToken), offset: offset), tag: nil, continueInBackground: self.continueInBackground)
+            disposable.set((self.masterDownload.request(Api.functions.upload.getCdnFileHashes(fileToken: Buffer(data: self.fileToken), offset: offset), tag: nil, continueInBackground: self.continueInBackground, expectedResponseSize: nil)
             |> map { partHashes, _ -> [Int64: Data] in
                 var parsedPartHashes: [Int64: Data] = [:]
                 for part in partHashes {
@@ -347,7 +347,7 @@ private enum MultipartFetchSource {
                             case .revalidate:
                                 return .fail(.revalidateMediaReference)
                             case let .location(parsedLocation):                            
-                                return download.request(Api.functions.upload.getFile(flags: 0, location: parsedLocation, offset: offset, limit: Int32(limit)), tag: tag, continueInBackground: continueInBackground)
+                                return download.request(Api.functions.upload.getFile(flags: 0, location: parsedLocation, offset: offset, limit: Int32(limit)), tag: tag, continueInBackground: continueInBackground, expectedResponseSize: Int32(limit))
                                 |> mapError { error -> MultipartFetchDownloadError in
                                     if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_")  {
                                         return .revalidateMediaReference
@@ -377,7 +377,7 @@ private enum MultipartFetchSource {
                                 }
                         }
                     case let .web(_, location):
-                        return download.request(Api.functions.upload.getWebFile(location: location, offset: Int32(offset), limit: Int32(limit)), tag: tag, continueInBackground: continueInBackground)
+                        return download.request(Api.functions.upload.getWebFile(location: location, offset: Int32(offset), limit: Int32(limit)), tag: tag, continueInBackground: continueInBackground, expectedResponseSize: Int32(limit))
                         |> mapError { error -> MultipartFetchDownloadError in
                             return .fatal
                         }
@@ -398,7 +398,7 @@ private enum MultipartFetchSource {
                     updatedLength += 1
                 }
                 
-                let part = download.request(Api.functions.upload.getCdnFile(fileToken: Buffer(data: fileToken), offset: offset, limit: Int32(updatedLength)), tag: nil, continueInBackground: continueInBackground)
+                let part = download.request(Api.functions.upload.getCdnFile(fileToken: Buffer(data: fileToken), offset: offset, limit: Int32(updatedLength)), tag: nil, continueInBackground: continueInBackground, expectedResponseSize: Int32(updatedLength))
                 |> mapError { _ -> MultipartFetchDownloadError in
                     return .generic
                 }
@@ -913,7 +913,7 @@ private final class MultipartFetchManager {
                             case let .cdn(_, _, fileToken, _, _, _, masterDownload, _):
                                 if !strongSelf.reuploadingToCdn {
                                     strongSelf.reuploadingToCdn = true
-                                    let reupload: Signal<[Api.FileHash], NoError> = masterDownload.request(Api.functions.upload.reuploadCdnFile(fileToken: Buffer(data: fileToken), requestToken: Buffer(data: token)), tag: nil, continueInBackground: strongSelf.continueInBackground)
+                                    let reupload: Signal<[Api.FileHash], NoError> = masterDownload.request(Api.functions.upload.reuploadCdnFile(fileToken: Buffer(data: fileToken), requestToken: Buffer(data: token)), tag: nil, continueInBackground: strongSelf.continueInBackground, expectedResponseSize: nil)
                                     |> map { result, _ -> [Api.FileHash] in
                                         return result
                                     }

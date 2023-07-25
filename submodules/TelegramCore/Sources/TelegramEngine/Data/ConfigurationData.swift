@@ -457,5 +457,26 @@ public extension TelegramEngine.EngineData.Item {
                 return value
             }
         }
+        
+        public struct StoryConfigurationState: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = Stories.ConfigurationState
+            
+            public init() {
+            }
+            
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.storiesConfiguration]))
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let value = view.values[PreferencesKeys.storiesConfiguration]?.get(Stories.ConfigurationState.self) else {
+                    return Stories.ConfigurationState.default
+                }
+                return value
+            }
+        }
     }
 }

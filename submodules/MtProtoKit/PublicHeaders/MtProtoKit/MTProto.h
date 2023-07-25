@@ -71,7 +71,7 @@
 - (MTQueue *)messageServiceQueue;
 - (void)requestTransportTransaction;
 - (void)requestSecureTransportReset;
-- (void)resetSessionInfo;
+- (void)resetSessionInfo:(bool)ifActive;
 - (void)requestTimeResync;
 
 - (void)_messageResendRequestFailed:(int64_t)messageId;

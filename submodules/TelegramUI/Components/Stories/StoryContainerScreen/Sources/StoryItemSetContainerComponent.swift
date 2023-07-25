@@ -34,6 +34,7 @@ import PremiumUI
 import AttachmentUI
 import StickerPackPreviewUI
 import TextNodeWithEntities
+import TelegramStringFormatting
 
 public final class StoryAvailableReactions: Equatable {
     let reactionItems: [ReactionItem]
@@ -113,6 +114,7 @@ public final class StoryItemSetContainerComponent: Component {
     public let keyboardInputData: Signal<ChatEntityKeyboardInputNode.InputData, NoError>
     public let closeFriends: Promise<[EnginePeer]>
     let sharedViewListsContext: StoryItemSetViewListComponent.SharedListsContext
+    let stealthModeTimeout: Int32?
     
     init(
         context: AccountContext,
@@ -145,7 +147,8 @@ public final class StoryItemSetContainerComponent: Component {
         toggleAmbientMode: @escaping () -> Void,
         keyboardInputData: Signal<ChatEntityKeyboardInputNode.InputData, NoError>,
         closeFriends: Promise<[EnginePeer]>,
-        sharedViewListsContext: StoryItemSetViewListComponent.SharedListsContext
+        sharedViewListsContext: StoryItemSetViewListComponent.SharedListsContext,
+        stealthModeTimeout: Int32?
     ) {
         self.context = context
         self.externalState = externalState
@@ -178,6 +181,7 @@ public final class StoryItemSetContainerComponent: Component {
         self.keyboardInputData = keyboardInputData
         self.closeFriends = closeFriends
         self.sharedViewListsContext = sharedViewListsContext
+        self.stealthModeTimeout = stealthModeTimeout
     }
     
     public static func ==(lhs: StoryItemSetContainerComponent, rhs: StoryItemSetContainerComponent) -> Bool {
@@ -230,6 +234,9 @@ public final class StoryItemSetContainerComponent: Component {
             return false
         }
         if lhs.pinchState != rhs.pinchState {
+            return false
+        }
+        if lhs.stealthModeTimeout != rhs.stealthModeTimeout {
             return false
         }
         return true
@@ -1794,6 +1801,14 @@ public final class StoryItemSetContainerComponent: Component {
                 isUnsupported = true
                 disabledPlaceholder = component.strings.Story_FooterReplyUnavailable
             }
+            
+            let inputPlaceholder: String
+            if let stealthModeTimeout = component.stealthModeTimeout {
+                //TODO:localize
+                inputPlaceholder = "Stealth Mode active – \(stringForDuration(stealthModeTimeout))"
+            } else {
+                inputPlaceholder = component.strings.Story_InputPlaceholderReplyPrivately
+            }
              
             var keyboardHeight = component.deviceMetrics.standardInputHeight(inLandscape: false)
             let keyboardWasHidden = self.inputPanelExternalState.isKeyboardHidden
@@ -1807,7 +1822,7 @@ public final class StoryItemSetContainerComponent: Component {
                     theme: component.theme,
                     strings: component.strings,
                     style: .story,
-                    placeholder: component.strings.Story_InputPlaceholderReplyPrivately,
+                    placeholder: inputPlaceholder,
                     maxLength: 4096,
                     queryTypes: [.mention, .emoji],
                     alwaysDarkWhenHasText: component.metrics.widthClass == .regular,
@@ -3997,10 +4012,14 @@ public final class StoryItemSetContainerComponent: Component {
                 TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: component.slice.peer.id),
                 TelegramEngine.EngineData.Item.NotificationSettings.Global(),
                 TelegramEngine.EngineData.Item.Contacts.Top(),
-                TelegramEngine.EngineData.Item.Peer.IsContact(id: component.slice.peer.id)
+                TelegramEngine.EngineData.Item.Peer.IsContact(id: component.slice.peer.id),
+                TelegramEngine.EngineData.Item.Peer.Peer(id: component.context.account.peerId)
             )
-            |> deliverOnMainQueue).start(next: { [weak self] settings, globalSettings, topSearchPeers, isContact in
+            |> deliverOnMainQueue).start(next: { [weak self] settings, globalSettings, topSearchPeers, isContact, accountPeer in
                 guard let self, let component = self.component, let controller = component.controller() else {
+                    return
+                }
+                guard case let .user(accountUser) = accountPeer else {
                     return
                 }
                 
@@ -4106,16 +4125,39 @@ public final class StoryItemSetContainerComponent: Component {
                 if !component.slice.item.storyItem.isForwardingDisabled {
                     let saveText: String = component.strings.Story_Context_SaveToGallery
                     items.append(.action(ContextMenuActionItem(text: saveText, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.contextMenu.primaryColor)
+                        return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/Download" : "Chat/Context Menu/DownloadLocked"), color: theme.contextMenu.primaryColor)
                     }, action: { [weak self] _, a in
                         a(.default)
                         
-                        guard let self else {
+                        guard let self, let component = self.component else {
                             return
                         }
-                        self.requestSave()
+                        
+                        if accountUser.isPremium {
+                            self.requestSave()
+                        } else {
+                            let premiumScreen = PremiumIntroScreen(context: component.context, source: .stories)
+                            component.controller()?.push(premiumScreen)
+                        }
                     })))
                 }
+                
+                //TODO:localize
+                items.append(.action(ContextMenuActionItem(text: "Stealth Mode", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/Eye" : "Chat/Context Menu/EyeLocked"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, a in
+                    a(.default)
+                    
+                    guard let self, let component = self.component else {
+                        return
+                    }
+                    if accountUser.isPremium {
+                        self.sendMessageContext.requestStealthMode(view: self)
+                    } else {
+                        let premiumScreen = PremiumIntroScreen(context: component.context, source: .stories)
+                        component.controller()?.push(premiumScreen)
+                    }
+                })))
                 
                 if !component.slice.peer.isService && component.slice.item.storyItem.isPublic && (component.slice.peer.addressName != nil || !component.slice.peer._asPeer().usernames.isEmpty) {
                     items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_CopyLink, icon: { theme in

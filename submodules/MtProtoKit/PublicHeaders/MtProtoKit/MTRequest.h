@@ -33,6 +33,7 @@
 @property (nonatomic) bool dependsOnPasswordEntry;
 @property (nonatomic) bool passthroughPasswordEntryError;
 @property (nonatomic) bool needsTimeoutTimer;
+@property (nonatomic) int32_t expectedResponseSize;
 
 @property (nonatomic, copy) void (^completed)(id result, MTRequestResponseInfo *info, MTRpcError *error);
 @property (nonatomic, copy) void (^progressUpdated)(float progress, NSUInteger packetLength);

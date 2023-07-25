@@ -333,6 +333,10 @@ private final class StoryContainerScreenComponent: Component {
         private let focusedItem = ValuePromise<StoryId?>(nil, ignoreRepeated: true)
         private var contentUpdatedDisposable: Disposable?
         
+        private var stealthModeActiveUntilTimestamp: Int32?
+        private var stealthModeDisposable: Disposable?
+        private var stealthModeTimer: Foundation.Timer?
+        
         private let storyItemSharedState = StoryContentItem.SharedState()
         private var visibleItemSetViews: [EnginePeer.Id: ItemSetView] = [:]
         
@@ -587,6 +591,8 @@ private final class StoryContainerScreenComponent: Component {
             self.contentUpdatedDisposable?.dispose()
             self.volumeButtonsListenerShouldBeActiveDisposable?.dispose()
             self.headphonesDisposable?.dispose()
+            self.stealthModeDisposable?.dispose()
+            self.stealthModeTimer?.invalidate()
         }
         
         override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -1073,6 +1079,21 @@ private final class StoryContainerScreenComponent: Component {
                         }
                     }
                 })
+                
+                self.stealthModeDisposable = (component.context.engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.Configuration.StoryConfigurationState()
+                )
+                |> deliverOnMainQueue).start(next: { [weak self] state in
+                    guard let self else {
+                        return
+                    }
+                    if self.stealthModeActiveUntilTimestamp != state.stealthModeState.activeUntilTimestamp {
+                        self.stealthModeActiveUntilTimestamp = state.stealthModeState.activeUntilTimestamp
+                        if update {
+                            self.state?.updated(transition: .immediate)
+                        }
+                    }
+                })
                 update = true
             }
             
@@ -1159,6 +1180,32 @@ private final class StoryContainerScreenComponent: Component {
             
             self.component = component
             self.state = state
+            
+            var stealthModeTimeout: Int32?
+            if let stealthModeActiveUntilTimestamp = self.stealthModeActiveUntilTimestamp {
+                let timestamp = Int32(Date().timeIntervalSince1970)
+                if stealthModeActiveUntilTimestamp > timestamp {
+                    stealthModeTimeout = stealthModeActiveUntilTimestamp - timestamp
+                    
+                    if self.stealthModeTimer == nil {
+                        self.stealthModeTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true, block: { [weak self] _ in
+                            self?.state?.updated(transition: .immediate)
+                        })
+                    }
+                } else {
+                    stealthModeTimeout = nil
+                    if let stealthModeTimer = self.stealthModeTimer {
+                        self.stealthModeTimer = nil
+                        stealthModeTimer.invalidate()
+                    }
+                }
+            } else {
+                stealthModeTimeout = nil
+                if let stealthModeTimer = self.stealthModeTimer {
+                    self.stealthModeTimer = nil
+                    stealthModeTimer.invalidate()
+                }
+            }
             
             if let pendingNavigationToItemId = self.pendingNavigationToItemId {
                 if let slice = component.content.stateValue?.slice, slice.peer.id == pendingNavigationToItemId.peerId {
@@ -1430,7 +1477,8 @@ private final class StoryContainerScreenComponent: Component {
                                 },
                                 keyboardInputData: self.inputMediaNodeDataPromise.get(),
                                 closeFriends: self.closeFriendsPromise,
-                                sharedViewListsContext: self.sharedViewListsContext
+                                sharedViewListsContext: self.sharedViewListsContext,
+                                stealthModeTimeout: stealthModeTimeout
                             )),
                             environment: {},
                             containerSize: itemSetContainerSize

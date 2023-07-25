@@ -110,6 +110,7 @@
     {
         bool anyNewDropRequests = false;
         bool removedAnyRequest = false;
+        bool mergedAskForReconnectionOnDrop = askForReconnectionOnDrop;
         
         int index = -1;
         for (MTRequest *request in _requests)
@@ -122,6 +123,9 @@
                 {
                     [_dropReponseContexts addObject:[[MTDropResponseContext alloc] initWithDropMessageId:request.requestContext.messageId]];
                     anyNewDropRequests = true;
+                    if (request.expectedResponseSize >= 512 * 1024) {
+                        mergedAskForReconnectionOnDrop = true;
+                    }
                 }
                 
                 if (request.requestContext.messageId != 0) {
@@ -142,8 +146,9 @@
         {
             MTProto *mtProto = _mtProto;
             
-            if (askForReconnectionOnDrop)
-                [mtProto requestSecureTransportReset];
+            if (mergedAskForReconnectionOnDrop) {
+                [mtProto resetSessionInfo:true];
+            }
 
             [mtProto requestTransportTransaction];
         }

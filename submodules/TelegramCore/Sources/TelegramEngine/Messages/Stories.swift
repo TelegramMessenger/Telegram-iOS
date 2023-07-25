@@ -478,6 +478,27 @@ public enum Stories {
         }
     }
     
+    public struct StealthModeState: Equatable, Codable {
+        public var activeUntilTimestamp: Int32?
+        public var cooldownUntilTimestamp: Int32?
+        
+        public init(
+            activeUntilTimestamp: Int32?,
+            cooldownUntilTimestamp: Int32?
+        ) {
+            self.activeUntilTimestamp = activeUntilTimestamp
+            self.cooldownUntilTimestamp = cooldownUntilTimestamp
+        }
+    }
+    
+    public struct ConfigurationState: Equatable, Codable {
+        public var stealthModeState: StealthModeState
+        
+        public init(stealthModeState: StealthModeState) {
+            self.stealthModeState = stealthModeState
+        }
+    }
+    
     public final class SubscriptionsState: Equatable, Codable {
         private enum CodingKeys: CodingKey {
             case opaqueState
@@ -1944,6 +1965,94 @@ func _internal_refreshSeenStories(postbox: Postbox, network: Network) -> Signal<
                     }
                 default:
                     break
+                }
+            }
+        }
+        |> ignoreValues
+    }
+}
+
+extension Stories.ConfigurationState {
+    static var `default`: Stories.ConfigurationState {
+        return Stories.ConfigurationState(
+            stealthModeState: Stories.StealthModeState(
+                activeUntilTimestamp: nil,
+                cooldownUntilTimestamp: nil
+            )
+        )
+    }
+}
+
+extension Stories.StealthModeState {
+    init(apiMode: Api.StoriesStealthMode) {
+        switch apiMode {
+        case let .storiesStealthMode(_, activeUntilDate, cooldownUntilDate):
+            self.init(
+                activeUntilTimestamp: activeUntilDate,
+                cooldownUntilTimestamp: cooldownUntilDate
+            )
+        }
+    }
+}
+
+public extension Stories.StealthModeState {
+    func actualizedNow() -> Stories.StealthModeState {
+        let timestamp = Int32(Date().timeIntervalSince1970)
+        
+        var activeUntilTimestamp = self.activeUntilTimestamp
+        var cooldownUntilTimestamp = self.cooldownUntilTimestamp
+        
+        if let activeUntilTimestampValue = activeUntilTimestamp, activeUntilTimestampValue < timestamp {
+            activeUntilTimestamp = nil
+        }
+        if let cooldownUntilTimestampValue = cooldownUntilTimestamp, cooldownUntilTimestampValue < timestamp {
+            cooldownUntilTimestamp = nil
+        }
+        
+        return Stories.StealthModeState(
+            activeUntilTimestamp: activeUntilTimestamp,
+            cooldownUntilTimestamp: cooldownUntilTimestamp
+        )
+    }
+}
+
+func _internal_getStoryConfigurationState(transaction: Transaction) -> Stories.ConfigurationState {
+    return transaction.getPreferencesEntry(key: PreferencesKeys.storiesConfiguration)?.get(Stories.ConfigurationState.self) ?? .default
+}
+
+func _internal_setStoryConfigurationState(transaction: Transaction, state: Stories.ConfigurationState, force: Bool = false) {
+    transaction.setPreferencesEntry(key: PreferencesKeys.storiesConfiguration, value: PreferencesEntry(state))
+}
+
+func _internal_enableStoryStealthMode(account: Account) -> Signal<Never, NoError> {
+    var flags: Int32 = 0
+    flags |= 1 << 0
+    flags |= 1 << 1
+    return account.network.request(Api.functions.stories.activateStealthMode(flags: flags))
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .single(.boolFalse)
+    }
+    |> mapToSignal { result -> Signal<Never, NoError> in
+        return account.postbox.transaction { transaction in
+            let appConfig = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? .defaultValue
+            
+            if let data = appConfig.data {
+                if let futurePeriod = data["stories_stealth_future_period"] as? Double, let cooldownPeriod = data["stories_stealth_cooldown_period"] as? Double {
+                    
+                    var futurePeriodInt32: Int32
+                    futurePeriodInt32 = Int32(futurePeriod)
+                    var cooldownPeriodInt32: Int32
+                    cooldownPeriodInt32 = Int32(cooldownPeriod)
+                    
+                    #if DEBUG && false
+                    futurePeriodInt32 = 30
+                    cooldownPeriodInt32 = 60
+                    #endif
+                    
+                    var config = _internal_getStoryConfigurationState(transaction: transaction)
+                    config.stealthModeState.activeUntilTimestamp = Int32(Date().timeIntervalSince1970) + futurePeriodInt32
+                    config.stealthModeState.cooldownUntilTimestamp = Int32(Date().timeIntervalSince1970) + cooldownPeriodInt32
+                    _internal_setStoryConfigurationState(transaction: transaction, state: config, force: true)
                 }
             }
         }
