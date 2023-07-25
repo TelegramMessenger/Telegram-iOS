@@ -363,6 +363,50 @@ public extension Api {
     }
 }
 public extension Api {
+    enum StoriesStealthMode: TypeConstructorDescription {
+        case storiesStealthMode(flags: Int32, activeUntilDate: Int32?, cooldownUntilDate: Int32?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .storiesStealthMode(let flags, let activeUntilDate, let cooldownUntilDate):
+                    if boxed {
+                        buffer.appendInt32(1898850301)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(activeUntilDate!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(cooldownUntilDate!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .storiesStealthMode(let flags, let activeUntilDate, let cooldownUntilDate):
+                return ("storiesStealthMode", [("flags", flags as Any), ("activeUntilDate", activeUntilDate as Any), ("cooldownUntilDate", cooldownUntilDate as Any)])
+    }
+    }
+    
+        public static func parse_storiesStealthMode(_ reader: BufferReader) -> StoriesStealthMode? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_3 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.StoriesStealthMode.storiesStealthMode(flags: _1!, activeUntilDate: _2, cooldownUntilDate: _3)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     indirect enum StoryItem: TypeConstructorDescription {
         case storyItem(flags: Int32, id: Int32, date: Int32, expireDate: Int32, caption: String?, entities: [Api.MessageEntity]?, media: Api.MessageMedia, privacy: [Api.PrivacyRule]?, views: Api.StoryViews?)
         case storyItemDeleted(id: Int32)
@@ -1086,6 +1130,8 @@ public extension Api {
         case updateServiceNotification(flags: Int32, inboxDate: Int32?, type: String, message: String, media: Api.MessageMedia, entities: [Api.MessageEntity])
         case updateStickerSets(flags: Int32)
         case updateStickerSetsOrder(flags: Int32, order: [Int64])
+        case updateStoriesStealth(expireDate: Int32)
+        case updateStoriesStealthMode(stealthMode: Api.StoriesStealthMode)
         case updateStory(userId: Int64, story: Api.StoryItem)
         case updateStoryID(id: Int32, randomId: Int64)
         case updateTheme(theme: Api.Theme)
@@ -1987,6 +2033,18 @@ public extension Api {
                         serializeInt64(item, buffer: buffer, boxed: false)
                     }
                     break
+                case .updateStoriesStealth(let expireDate):
+                    if boxed {
+                        buffer.appendInt32(-719158423)
+                    }
+                    serializeInt32(expireDate, buffer: buffer, boxed: false)
+                    break
+                case .updateStoriesStealthMode(let stealthMode):
+                    if boxed {
+                        buffer.appendInt32(738741697)
+                    }
+                    stealthMode.serialize(buffer, true)
+                    break
                 case .updateStory(let userId, let story):
                     if boxed {
                         buffer.appendInt32(542785843)
@@ -2287,6 +2345,10 @@ public extension Api {
                 return ("updateStickerSets", [("flags", flags as Any)])
                 case .updateStickerSetsOrder(let flags, let order):
                 return ("updateStickerSetsOrder", [("flags", flags as Any), ("order", order as Any)])
+                case .updateStoriesStealth(let expireDate):
+                return ("updateStoriesStealth", [("expireDate", expireDate as Any)])
+                case .updateStoriesStealthMode(let stealthMode):
+                return ("updateStoriesStealthMode", [("stealthMode", stealthMode as Any)])
                 case .updateStory(let userId, let story):
                 return ("updateStory", [("userId", userId as Any), ("story", story as Any)])
                 case .updateStoryID(let id, let randomId):
@@ -4073,6 +4135,30 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.Update.updateStickerSetsOrder(flags: _1!, order: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateStoriesStealth(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateStoriesStealth(expireDate: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateStoriesStealthMode(_ reader: BufferReader) -> Update? {
+            var _1: Api.StoriesStealthMode?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.StoriesStealthMode
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateStoriesStealthMode(stealthMode: _1!)
             }
             else {
                 return nil

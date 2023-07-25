@@ -310,8 +310,9 @@ public final class StorySubscriptionsContext {
                 }
                 
                 let _ = (self.postbox.transaction { transaction -> Void in
+                    var updatedStealthMode: Api.StoriesStealthMode?
                     switch result {
-                    case let .allStoriesNotModified(state):
+                    case let .allStoriesNotModified(_, state, stealthMode):
                         self.loadedStateMark = .value(state)
                         let (currentStateValue, _) = transaction.getAllStorySubscriptions(key: subscriptionsKey)
                         let currentState = currentStateValue.flatMap { $0.get(Stories.SubscriptionsState.self) }
@@ -326,9 +327,11 @@ public final class StorySubscriptionsContext {
                             refreshId: currentState?.refreshId ?? UInt64.random(in: 0 ... UInt64.max),
                             hasMore: hasMore
                         )))
-                    case let .allStories(flags, _, state, userStories, users):
-                        //TODO:count
                         
+                        if isRefresh && !isHidden {
+                            updatedStealthMode = stealthMode
+                        }
+                    case let .allStories(flags, _, state, userStories, users, stealthMode):
                         let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [], users: users)
                         
                         let hasMore: Bool = (flags & (1 << 0)) != 0
@@ -378,6 +381,10 @@ public final class StorySubscriptionsContext {
                             }
                         }
                         
+                        if isRefresh && !isHidden {
+                            updatedStealthMode = stealthMode
+                        }
+                        
                         transaction.replaceAllStorySubscriptions(key: subscriptionsKey, state: CodableEntry(Stories.SubscriptionsState(
                             opaqueState: state,
                             refreshId: UInt64.random(in: 0 ... UInt64.max),
@@ -385,6 +392,12 @@ public final class StorySubscriptionsContext {
                         )), peerIds: peerEntries)
                         
                         updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                    }
+                    
+                    if let updatedStealthMode = updatedStealthMode {
+                        var configuration = _internal_getStoryConfigurationState(transaction: transaction)
+                        configuration.stealthModeState = Stories.StealthModeState(apiMode: updatedStealthMode)
+                        _internal_setStoryConfigurationState(transaction: transaction, state: configuration)
                     }
                 }
                 |> deliverOn(self.queue)).start(completed: { [weak self] in

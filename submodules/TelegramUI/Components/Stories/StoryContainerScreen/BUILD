@@ -77,6 +77,7 @@ swift_library(
         "//submodules/MediaPasteboardUI",
         "//submodules/WebPBinding",
         "//submodules/Utils/RangeSet",
+        "//submodules/TelegramUI/Components/Stories/StoryStealthModeSheetScreen",
     ],
     visibility = [
         "//visibility:public",

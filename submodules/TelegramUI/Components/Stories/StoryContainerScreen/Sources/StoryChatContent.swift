@@ -1144,7 +1144,6 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
             listContext.state,
             self.focusedIdUpdated.get()
         )
-        //|> delay(0.4, queue: .mainQueue())
         |> deliverOnMainQueue).start(next: { [weak self] data, state, _ in
             guard let self else {
                 return

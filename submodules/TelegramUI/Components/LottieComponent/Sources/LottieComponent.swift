@@ -67,15 +67,18 @@ public final class LottieComponent: Component {
     public let content: Content
     public let color: UIColor?
     public let startingPosition: StartingPosition
+    public let size: CGSize?
     
     public init(
         content: Content,
         color: UIColor? = nil,
-        startingPosition: StartingPosition = .end
+        startingPosition: StartingPosition = .end,
+        size: CGSize? = nil
     ) {
         self.content = content
         self.color = color
         self.startingPosition = startingPosition
+        self.size = size
     }
     
     public static func ==(lhs: LottieComponent, rhs: LottieComponent) -> Bool {
@@ -86,6 +89,9 @@ public final class LottieComponent: Component {
             return false
         }
         if lhs.startingPosition != rhs.startingPosition {
+            return false
+        }
+        if lhs.size != rhs.size {
             return false
         }
         return true
@@ -170,6 +176,7 @@ public final class LottieComponent: Component {
                 return
             }
             if !self.isVisible {
+                self.scheduledPlayOnce = true
                 return
             }
             
@@ -296,9 +303,11 @@ public final class LottieComponent: Component {
             self.component = component
             self.state = state
             
+            let size = component.size ?? availableSize
+            
             var redrawImage = false
             
-            let displaySize = CGSize(width: availableSize.width * UIScreenScale, height: availableSize.height * UIScreenScale)
+            let displaySize = CGSize(width: size.width * UIScreenScale, height: size.height * UIScreenScale)
             if self.currentDisplaySize != displaySize {
                 self.currentDisplaySize = displaySize
                 redrawImage = true
@@ -323,7 +332,7 @@ public final class LottieComponent: Component {
                 transition.setTintColor(view: self, color: color)
             }
             
-            return availableSize
+            return size
         }
     }
 

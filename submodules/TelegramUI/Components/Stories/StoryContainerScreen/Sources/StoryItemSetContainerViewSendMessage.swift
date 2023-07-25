@@ -42,6 +42,7 @@ import MediaPasteboardUI
 import WebPBinding
 import ContextUI
 import ChatScheduleTimeController
+import StoryStealthModeSheetScreen
 
 final class StoryItemSetContainerSendMessage {
     enum InputMode {
@@ -59,6 +60,8 @@ final class StoryItemSetContainerSendMessage {
     weak var actionSheet: ViewController?
     weak var statusController: ViewController?
     var isViewingAttachedStickers = false
+    
+    var currentTooltipUpdateTimer: Foundation.Timer?
     
     var currentInputMode: InputMode = .text
     private var needsInputActivation = false
@@ -95,6 +98,7 @@ final class StoryItemSetContainerSendMessage {
         self.navigationActionDisposable.dispose()
         self.resolvePeerByNameDisposable.dispose()
         self.inputMediaNodeDataDisposable?.dispose()
+        self.currentTooltipUpdateTimer?.invalidate()
     }
     
     func setup(context: AccountContext, view: StoryItemSetContainerComponent.View, inputPanelExternalState: MessageInputPanelComponent.ExternalState, keyboardInputData: Signal<ChatEntityKeyboardInputNode.InputData, NoError>) {
@@ -1684,11 +1688,11 @@ final class StoryItemSetContainerSendMessage {
                 done(time)
             })
         }
-        controller.getCaptionPanelView = { [weak self, weak view] in
-            guard let self, let view else {
+        controller.getCaptionPanelView = { [weak self, weak controller, weak view] in
+            guard let self, let view, let controller else {
                 return nil
             }
-            return self.getCaptionPanelView(view: view, peer: peer)
+            return self.getCaptionPanelView(view: view, peer: peer, mediaPicker: controller)
         }
         controller.legacyCompletion = { signals, silently, scheduleTime, getAnimatedTransitionSource, sendCompletion in
             completion(signals, silently, scheduleTime, getAnimatedTransitionSource, sendCompletion)
@@ -2067,7 +2071,7 @@ final class StoryItemSetContainerSendMessage {
         })
     }
     
-    private func getCaptionPanelView(view: StoryItemSetContainerComponent.View, peer: EnginePeer) -> TGCaptionPanelView? {
+    private func getCaptionPanelView(view: StoryItemSetContainerComponent.View, peer: EnginePeer, mediaPicker: MediaPickerScreen? = nil) -> TGCaptionPanelView? {
         guard let component = view.component else {
             return nil
         }
@@ -2081,7 +2085,27 @@ final class StoryItemSetContainerSendMessage {
             guard let view else {
                 return
             }
-            view.component?.controller()?.presentInGlobalOverlay(c)
+            if let c = c as? PremiumIntroScreen {
+                view.endEditing(true)
+                if let mediaPicker {
+                    mediaPicker.closeGalleryController()
+                }
+                if let attachmentController = self.attachmentController {
+                    self.attachmentController = nil
+                    attachmentController.dismiss(animated: false, completion: nil)
+                }
+                c.wasDismissed = { [weak view] in
+                    guard let view else {
+                        return
+                    }
+                    view.updateIsProgressPaused()
+                }
+                view.component?.controller()?.push(c)
+                
+                view.updateIsProgressPaused()
+            } else {
+                view.component?.controller()?.presentInGlobalOverlay(c)
+            }
         }) as? TGCaptionPanelView
     }
     
@@ -2814,5 +2838,126 @@ final class StoryItemSetContainerSendMessage {
         
         self.isViewingAttachedStickers = true
         view.updateIsProgressPaused()
+    }
+    
+    func requestStealthMode(view: StoryItemSetContainerComponent.View) {
+        guard let component = view.component else {
+            return
+        }
+        
+        let _ = (component.context.engine.data.get(
+            TelegramEngine.EngineData.Item.Configuration.StoryConfigurationState(),
+            TelegramEngine.EngineData.Item.Configuration.App()
+        )
+        |> deliverOnMainQueue).start(next: { [weak self, weak view] config, appConfig in
+            guard let self, let view, let component = view.component, let controller = component.controller() else {
+                return
+            }
+            
+            let timestamp = Int32(Date().timeIntervalSince1970)
+            if let activeUntilTimestamp = config.stealthModeState.actualizedNow().activeUntilTimestamp, activeUntilTimestamp > timestamp {
+                let remainingActiveSeconds = activeUntilTimestamp - timestamp
+                
+                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
+                //TODO:localize
+                let text = "The creators of stories you will view in the next \(timeIntervalString(strings: presentationData.strings, value: remainingActiveSeconds)) won't see you in the viewers' lists."
+                let tooltipScreen = UndoOverlayController(
+                    presentationData: presentationData,
+                    content: .actionSucceeded(title: "You are in Stealth Mode", text: text, cancel: "", destructive: false),
+                    elevatedLayout: false,
+                    animateInAsReplacement: false,
+                    action: { _ in
+                        return false
+                    }
+                )
+                weak var tooltipScreenValue: UndoOverlayController? = tooltipScreen
+                self.currentTooltipUpdateTimer?.invalidate()
+                self.currentTooltipUpdateTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true, block: { [weak self, weak view] _ in
+                    guard let self, let view, let component = view.component else {
+                        return
+                    }
+                    guard let tooltipScreenValue else {
+                        self.currentTooltipUpdateTimer?.invalidate()
+                        self.currentTooltipUpdateTimer = nil
+                        return
+                    }
+                    
+                    let timestamp = Int32(Date().timeIntervalSince1970)
+                    let remainingActiveSeconds = max(1, activeUntilTimestamp - timestamp)
+                    
+                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
+                    //TODO:localize
+                    let text = "The creators of stories you will view in the next \(timeIntervalString(strings: presentationData.strings, value: remainingActiveSeconds)) won't see you in the viewers' lists."
+                    tooltipScreenValue.content = .actionSucceeded(title: "You are in Stealth Mode", text: text, cancel: "", destructive: false)
+                })
+                
+                self.tooltipScreen?.dismiss(animated: true)
+                self.tooltipScreen = tooltipScreen
+                controller.present(tooltipScreen, in: .current)
+                
+                view.updateIsProgressPaused()
+                
+                return
+            }
+            
+            let pastPeriod: Int32
+            let futurePeriod: Int32
+            if let data = appConfig.data, let futurePeriodF = data["stories_stealth_future_period"] as? Double, let pastPeriodF = data["stories_stealth_past_period"] as? Double {
+                futurePeriod = Int32(futurePeriodF)
+                pastPeriod = Int32(pastPeriodF)
+            } else {
+                pastPeriod = 5 * 60
+                futurePeriod = 25 * 60
+            }
+            
+            let sheet = StoryStealthModeSheetScreen(
+                context: component.context,
+                cooldownUntilTimestamp: config.stealthModeState.actualizedNow().cooldownUntilTimestamp,
+                backwardDuration: pastPeriod,
+                forwardDuration: futurePeriod,
+                buttonAction: { [weak self, weak view] in
+                    guard let self, let view, let component = view.component else {
+                        return
+                    }
+                    
+                    let _ = (component.context.engine.messages.enableStoryStealthMode()
+                    |> deliverOnMainQueue).start(completed: { [weak self, weak view] in
+                        guard let self, let view, let component = view.component, let controller = component.controller() else {
+                            return
+                        }
+                        
+                        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
+                        //TODO:localize
+                        let text = "The creators of stories you viewed in the last \(timeIntervalString(strings: presentationData.strings, value: pastPeriod)) or will view in the next \(timeIntervalString(strings: presentationData.strings, value: futurePeriod)) won’t see you in the viewers’ lists."
+                        let tooltipScreen = UndoOverlayController(
+                            presentationData: presentationData,
+                            content: .actionSucceeded(title: "Stealth Mode On", text: text, cancel: "", destructive: false),
+                            elevatedLayout: false,
+                            animateInAsReplacement: false,
+                            action: { _ in
+                                return false
+                            }
+                        )
+                        self.tooltipScreen?.dismiss(animated: true)
+                        self.tooltipScreen = tooltipScreen
+                        controller.present(tooltipScreen, in: .current)
+                        
+                        view.updateIsProgressPaused()
+                        
+                        HapticFeedback().success()
+                    })
+                }
+            )
+            sheet.wasDismissed = { [weak self, weak view] in
+                guard let self, let view else {
+                    return
+                }
+                self.actionSheet = nil
+                view.updateIsProgressPaused()
+            }
+            self.actionSheet = sheet
+            view.updateIsProgressPaused()
+            controller.push(sheet)
+        })
     }
 }

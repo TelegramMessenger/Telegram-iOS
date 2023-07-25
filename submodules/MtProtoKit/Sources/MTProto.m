@@ -354,13 +354,21 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     }];
 }
 
-- (void)resetSessionInfo
+- (void)resetSessionInfo:(bool)ifActive
 {
     [[MTProto managerQueue] dispatchOnQueue:^
     {
         if (MTLogEnabled()) {
             MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p resetting session]", self, _context);
         }
+        
+        if (ifActive) {
+            if (![self canAskForTransactions]) {
+                MTShortLog(@"[MTProto#%p@%p not resetting session: !canAskForTransactions]", self, _context);
+                return;
+            }
+        }
+        
         MTShortLog(@"[MTProto#%p@%p resetting session]", self, _context);
         
         _sessionInfo = [[MTSessionInfo alloc] initWithRandomSessionIdAndContext:_context];
@@ -1143,7 +1151,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                     }
                     MTShortLog(@"[MTProto#%p@%p client message id monotonity violated]", self, _context);
                     
-                    [self resetSessionInfo];
+                    [self resetSessionInfo:false];
                 }
                 else if (saltSetEmpty)
                     [self initiateTimeSync];
@@ -2090,7 +2098,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
                 }
                 [self transportTransactionsMayHaveFailed:transport transactionIds:@[transactionId]];
                 
-                [self resetSessionInfo];
+                [self resetSessionInfo:false];
             } else {
                 [_context reportTransportSchemeSuccessForDatacenterId:_datacenterId transportScheme:scheme];
                 [self transportTransactionsSucceeded:@[transactionId]];
@@ -2496,7 +2504,7 @@ static bool isDataEqualToDataConstTime(NSData *data1, NSData *data2) {
                 case 32:
                 case 33:
                 {
-                    [self resetSessionInfo];
+                    [self resetSessionInfo:false];
                     [self initiateTimeSync];
                     
                     break;

@@ -34,6 +34,7 @@ import PremiumUI
 import AttachmentUI
 import StickerPackPreviewUI
 import TextNodeWithEntities
+import TelegramStringFormatting
 
 public final class StoryAvailableReactions: Equatable {
     let reactionItems: [ReactionItem]
@@ -113,6 +114,7 @@ public final class StoryItemSetContainerComponent: Component {
     public let keyboardInputData: Signal<ChatEntityKeyboardInputNode.InputData, NoError>
     public let closeFriends: Promise<[EnginePeer]>
     let sharedViewListsContext: StoryItemSetViewListComponent.SharedListsContext
+    let stealthModeTimeout: Int32?
     
     init(
         context: AccountContext,
@@ -145,7 +147,8 @@ public final class StoryItemSetContainerComponent: Component {
         toggleAmbientMode: @escaping () -> Void,
         keyboardInputData: Signal<ChatEntityKeyboardInputNode.InputData, NoError>,
         closeFriends: Promise<[EnginePeer]>,
-        sharedViewListsContext: StoryItemSetViewListComponent.SharedListsContext
+        sharedViewListsContext: StoryItemSetViewListComponent.SharedListsContext,
+        stealthModeTimeout: Int32?
     ) {
         self.context = context
         self.externalState = externalState
@@ -178,6 +181,7 @@ public final class StoryItemSetContainerComponent: Component {
         self.keyboardInputData = keyboardInputData
         self.closeFriends = closeFriends
         self.sharedViewListsContext = sharedViewListsContext
+        self.stealthModeTimeout = stealthModeTimeout
     }
     
     public static func ==(lhs: StoryItemSetContainerComponent, rhs: StoryItemSetContainerComponent) -> Bool {
@@ -230,6 +234,9 @@ public final class StoryItemSetContainerComponent: Component {
             return false
         }
         if lhs.pinchState != rhs.pinchState {
+            return false
+        }
+        if lhs.stealthModeTimeout != rhs.stealthModeTimeout {
             return false
         }
         return true
@@ -1392,6 +1399,12 @@ public final class StoryItemSetContainerComponent: Component {
             
             self.sendMessageContext.animateOut(bounds: self.bounds)
             
+            self.sendMessageContext.tooltipScreen?.dismiss()
+            self.sendMessageContext.tooltipScreen = nil
+            
+            self.contextController?.dismiss()
+            self.contextController = nil
+            
             if let inputPanelView = self.inputPanel.view {
                 inputPanelView.layer.animatePosition(
                     from: CGPoint(),
@@ -1788,6 +1801,14 @@ public final class StoryItemSetContainerComponent: Component {
                 isUnsupported = true
                 disabledPlaceholder = component.strings.Story_FooterReplyUnavailable
             }
+            
+            let inputPlaceholder: String
+            if let stealthModeTimeout = component.stealthModeTimeout {
+                //TODO:localize
+                inputPlaceholder = "Stealth Mode active – \(stringForDuration(stealthModeTimeout))"
+            } else {
+                inputPlaceholder = component.strings.Story_InputPlaceholderReplyPrivately
+            }
              
             var keyboardHeight = component.deviceMetrics.standardInputHeight(inLandscape: false)
             let keyboardWasHidden = self.inputPanelExternalState.isKeyboardHidden
@@ -1801,7 +1822,7 @@ public final class StoryItemSetContainerComponent: Component {
                     theme: component.theme,
                     strings: component.strings,
                     style: .story,
-                    placeholder: component.strings.Story_InputPlaceholderReplyPrivately,
+                    placeholder: inputPlaceholder,
                     maxLength: 4096,
                     queryTypes: [.mention, .emoji],
                     alwaysDarkWhenHasText: component.metrics.widthClass == .regular,
@@ -2508,7 +2529,7 @@ public final class StoryItemSetContainerComponent: Component {
                             let tooltipText: String
                             switch storyPrivacyIcon {
                             case .closeFriends:
-                                tooltipText = component.strings.Story_TooltipPrivacyCloseFriends(component.slice.peer.compactDisplayTitle).string
+                                tooltipText = component.strings.Story_TooltipPrivacyCloseFriends2(component.slice.peer.compactDisplayTitle).string
                             case .contacts:
                                 tooltipText = component.strings.Story_TooltipPrivacyContacts(component.slice.peer.compactDisplayTitle).string
                             case .selectedContacts:
@@ -2520,7 +2541,10 @@ public final class StoryItemSetContainerComponent: Component {
                             let tooltipScreen = TooltipScreen(
                                 account: component.context.account,
                                 sharedContext: component.context.sharedContext,
-                                text: .markdown(text: tooltipText), style: .default, location: TooltipScreen.Location.point(closeFriendIconView.convert(closeFriendIconView.bounds, to: nil).offsetBy(dx: 1.0, dy: 6.0), .top), displayDuration: .infinite, shouldDismissOnTouch: { _, _ in
+                                text: .markdown(text: tooltipText),
+                                balancedTextLayout: true,
+                                style: .default,
+                                location: TooltipScreen.Location.point(closeFriendIconView.convert(closeFriendIconView.bounds, to: nil).offsetBy(dx: 1.0, dy: 6.0), .top), displayDuration: .infinite, shouldDismissOnTouch: { _, _ in
                                     return .dismiss(consume: true)
                                 }
                             )
@@ -3376,23 +3400,41 @@ public final class StoryItemSetContainerComponent: Component {
                 break
             }
             
-            if subject != nil || chat  {
-                component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peer), subject: subject, keepStack: .always, animated: true, pushController: { [weak controller, weak navigationController] chatController, animated, completion in
-                    guard let controller, let navigationController else {
-                        return
-                    }
-                    if "".isEmpty {
-                        navigationController.pushViewController(chatController)
+            if subject != nil || chat {
+                if let index = navigationController.viewControllers.firstIndex(where: { c in
+                    if let c = c as? ChatController, case .peer(peer.id) = c.chatLocation {
+                        return true
                     } else {
-                        var viewControllers = navigationController.viewControllers
-                        if let index = viewControllers.firstIndex(where: { $0 === controller }) {
-                            viewControllers.insert(chatController, at: index)
-                        } else {
-                            viewControllers.append(chatController)
-                        }
-                        navigationController.setViewControllers(viewControllers, animated: animated)
+                        return false
                     }
-                }))
+                }) {
+                    var viewControllers = navigationController.viewControllers
+                    for i in ((index + 1) ..< viewControllers.count).reversed() {
+                        if viewControllers[i] !== controller {
+                            viewControllers.remove(at: i)
+                        }
+                    }
+                    navigationController.setViewControllers(viewControllers, animated: true)
+                    
+                    controller.dismissWithoutTransitionOut()
+                } else {
+                    component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peer), subject: subject, keepStack: .always, animated: true, pushController: { [weak controller, weak navigationController] chatController, animated, completion in
+                        guard let controller, let navigationController else {
+                            return
+                        }
+                        if "".isEmpty {
+                            navigationController.pushViewController(chatController)
+                        } else {
+                            var viewControllers = navigationController.viewControllers
+                            if let index = viewControllers.firstIndex(where: { $0 === controller }) {
+                                viewControllers.insert(chatController, at: index)
+                            } else {
+                                viewControllers.append(chatController)
+                            }
+                            navigationController.setViewControllers(viewControllers, animated: animated)
+                        }
+                    }))
+                }
             } else {
                 var currentViewControllers = navigationController.viewControllers
                 if let index = currentViewControllers.firstIndex(where: { c in
@@ -3652,6 +3694,10 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         private func performMoreAction(sourceView: UIView, gesture: ContextGesture?) {
+            if self.isAnimatingOut {
+                return
+            }
+            
             guard let component = self.component else {
                 return
             }
@@ -3966,10 +4012,14 @@ public final class StoryItemSetContainerComponent: Component {
                 TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: component.slice.peer.id),
                 TelegramEngine.EngineData.Item.NotificationSettings.Global(),
                 TelegramEngine.EngineData.Item.Contacts.Top(),
-                TelegramEngine.EngineData.Item.Peer.IsContact(id: component.slice.peer.id)
+                TelegramEngine.EngineData.Item.Peer.IsContact(id: component.slice.peer.id),
+                TelegramEngine.EngineData.Item.Peer.Peer(id: component.context.account.peerId)
             )
-            |> deliverOnMainQueue).start(next: { [weak self] settings, globalSettings, topSearchPeers, isContact in
+            |> deliverOnMainQueue).start(next: { [weak self] settings, globalSettings, topSearchPeers, isContact, accountPeer in
                 guard let self, let component = self.component, let controller = component.controller() else {
+                    return
+                }
+                guard case let .user(accountUser) = accountPeer else {
                     return
                 }
                 
@@ -4075,16 +4125,39 @@ public final class StoryItemSetContainerComponent: Component {
                 if !component.slice.item.storyItem.isForwardingDisabled {
                     let saveText: String = component.strings.Story_Context_SaveToGallery
                     items.append(.action(ContextMenuActionItem(text: saveText, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.contextMenu.primaryColor)
+                        return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/Download" : "Chat/Context Menu/DownloadLocked"), color: theme.contextMenu.primaryColor)
                     }, action: { [weak self] _, a in
                         a(.default)
                         
-                        guard let self else {
+                        guard let self, let component = self.component else {
                             return
                         }
-                        self.requestSave()
+                        
+                        if accountUser.isPremium {
+                            self.requestSave()
+                        } else {
+                            let premiumScreen = PremiumIntroScreen(context: component.context, source: .stories)
+                            component.controller()?.push(premiumScreen)
+                        }
                     })))
                 }
+                
+                //TODO:localize
+                items.append(.action(ContextMenuActionItem(text: "Stealth Mode", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/Eye" : "Chat/Context Menu/EyeLocked"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, a in
+                    a(.default)
+                    
+                    guard let self, let component = self.component else {
+                        return
+                    }
+                    if accountUser.isPremium {
+                        self.sendMessageContext.requestStealthMode(view: self)
+                    } else {
+                        let premiumScreen = PremiumIntroScreen(context: component.context, source: .stories)
+                        component.controller()?.push(premiumScreen)
+                    }
+                })))
                 
                 if !component.slice.peer.isService && component.slice.item.storyItem.isPublic && (component.slice.peer.addressName != nil || !component.slice.peer._asPeer().usernames.isEmpty) {
                     items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_CopyLink, icon: { theme in

@@ -459,7 +459,8 @@ private final class FetchImpl {
                             requestToken: Buffer(data: state.refreshToken)
                         ),
                         tag: nil,
-                        continueInBackground: self.continueInBackground
+                        continueInBackground: self.continueInBackground,
+                        expectedResponseSize: nil
                     )
                     
                     let cdnData = state.cdnData
@@ -573,7 +574,8 @@ private final class FetchImpl {
                         limit: Int32(requestedLength)
                     ),
                     tag: self.parameters?.tag,
-                    continueInBackground: self.continueInBackground
+                    continueInBackground: self.continueInBackground,
+                    expectedResponseSize: Int32(requestedLength)
                 )
                 |> map { result -> FilePartResult in
                     switch result {
@@ -617,7 +619,8 @@ private final class FetchImpl {
                                 offset: part.fetchRange.lowerBound,
                                 limit: Int32(requestedLength)),
                             tag: self.parameters?.tag,
-                            continueInBackground: self.continueInBackground
+                            continueInBackground: self.continueInBackground,
+                            expectedResponseSize: Int32(requestedLength)
                         )
                         |> map { result -> FilePartResult in
                             switch result {

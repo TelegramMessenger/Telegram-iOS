@@ -793,6 +793,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1087454222] = { return Api.StickerSetCovered.parse_stickerSetFullCovered($0) }
     dict[872932635] = { return Api.StickerSetCovered.parse_stickerSetMultiCovered($0) }
     dict[2008112412] = { return Api.StickerSetCovered.parse_stickerSetNoCovered($0) }
+    dict[1898850301] = { return Api.StoriesStealthMode.parse_storiesStealthMode($0) }
     dict[1445635639] = { return Api.StoryItem.parse_storyItem($0) }
     dict[1374088783] = { return Api.StoryItem.parse_storyItemDeleted($0) }
     dict[-5388013] = { return Api.StoryItem.parse_storyItemSkipped($0) }
@@ -913,6 +914,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-337352679] = { return Api.Update.parse_updateServiceNotification($0) }
     dict[834816008] = { return Api.Update.parse_updateStickerSets($0) }
     dict[196268545] = { return Api.Update.parse_updateStickerSetsOrder($0) }
+    dict[-719158423] = { return Api.Update.parse_updateStoriesStealth($0) }
+    dict[738741697] = { return Api.Update.parse_updateStoriesStealthMode($0) }
     dict[542785843] = { return Api.Update.parse_updateStory($0) }
     dict[468923833] = { return Api.Update.parse_updateStoryID($0) }
     dict[-2112423005] = { return Api.Update.parse_updateTheme($0) }
@@ -1164,8 +1167,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[172975040] = { return Api.storage.FileType.parse_filePng($0) }
     dict[-1432995067] = { return Api.storage.FileType.parse_fileUnknown($0) }
     dict[276907596] = { return Api.storage.FileType.parse_fileWebp($0) }
-    dict[-2086796248] = { return Api.stories.AllStories.parse_allStories($0) }
-    dict[1205903486] = { return Api.stories.AllStories.parse_allStoriesNotModified($0) }
+    dict[1369278878] = { return Api.stories.AllStories.parse_allStories($0) }
+    dict[291044926] = { return Api.stories.AllStories.parse_allStoriesNotModified($0) }
     dict[1340440049] = { return Api.stories.Stories.parse_stories($0) }
     dict[-560009955] = { return Api.stories.StoryViews.parse_storyViews($0) }
     dict[-79726676] = { return Api.stories.StoryViewsList.parse_storyViewsList($0) }
@@ -1726,6 +1729,8 @@ public extension Api {
             case let _1 as Api.StickerSet:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StickerSetCovered:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.StoriesStealthMode:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StoryItem:
                 _1.serialize(buffer, boxed)

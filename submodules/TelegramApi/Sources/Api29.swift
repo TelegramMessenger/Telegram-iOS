@@ -360,14 +360,14 @@ public extension Api.storage {
 }
 public extension Api.stories {
     enum AllStories: TypeConstructorDescription {
-        case allStories(flags: Int32, count: Int32, state: String, userStories: [Api.UserStories], users: [Api.User])
-        case allStoriesNotModified(state: String)
+        case allStories(flags: Int32, count: Int32, state: String, userStories: [Api.UserStories], users: [Api.User], stealthMode: Api.StoriesStealthMode)
+        case allStoriesNotModified(flags: Int32, state: String, stealthMode: Api.StoriesStealthMode)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .allStories(let flags, let count, let state, let userStories, let users):
+                case .allStories(let flags, let count, let state, let userStories, let users, let stealthMode):
                     if boxed {
-                        buffer.appendInt32(-2086796248)
+                        buffer.appendInt32(1369278878)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(count, buffer: buffer, boxed: false)
@@ -382,22 +382,25 @@ public extension Api.stories {
                     for item in users {
                         item.serialize(buffer, true)
                     }
+                    stealthMode.serialize(buffer, true)
                     break
-                case .allStoriesNotModified(let state):
+                case .allStoriesNotModified(let flags, let state, let stealthMode):
                     if boxed {
-                        buffer.appendInt32(1205903486)
+                        buffer.appendInt32(291044926)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(state, buffer: buffer, boxed: false)
+                    stealthMode.serialize(buffer, true)
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .allStories(let flags, let count, let state, let userStories, let users):
-                return ("allStories", [("flags", flags as Any), ("count", count as Any), ("state", state as Any), ("userStories", userStories as Any), ("users", users as Any)])
-                case .allStoriesNotModified(let state):
-                return ("allStoriesNotModified", [("state", state as Any)])
+                case .allStories(let flags, let count, let state, let userStories, let users, let stealthMode):
+                return ("allStories", [("flags", flags as Any), ("count", count as Any), ("state", state as Any), ("userStories", userStories as Any), ("users", users as Any), ("stealthMode", stealthMode as Any)])
+                case .allStoriesNotModified(let flags, let state, let stealthMode):
+                return ("allStoriesNotModified", [("flags", flags as Any), ("state", state as Any), ("stealthMode", stealthMode as Any)])
     }
     }
     
@@ -416,24 +419,37 @@ public extension Api.stories {
             if let _ = reader.readInt32() {
                 _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
+            var _6: Api.StoriesStealthMode?
+            if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.StoriesStealthMode
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.stories.AllStories.allStories(flags: _1!, count: _2!, state: _3!, userStories: _4!, users: _5!)
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.stories.AllStories.allStories(flags: _1!, count: _2!, state: _3!, userStories: _4!, users: _5!, stealthMode: _6!)
             }
             else {
                 return nil
             }
         }
         public static func parse_allStoriesNotModified(_ reader: BufferReader) -> AllStories? {
-            var _1: String?
-            _1 = parseString(reader)
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Api.StoriesStealthMode?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.StoriesStealthMode
+            }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.stories.AllStories.allStoriesNotModified(state: _1!)
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.stories.AllStories.allStoriesNotModified(flags: _1!, state: _2!, stealthMode: _3!)
             }
             else {
                 return nil

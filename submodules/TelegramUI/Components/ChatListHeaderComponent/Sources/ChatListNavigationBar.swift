@@ -322,10 +322,9 @@ public final class ChatListNavigationBar: Component {
             let storiesUnlocked: Bool
             if allowAvatarsExpansion {
                 storiesOffsetFraction = max(0.0, min(4.0, -offset / ChatListNavigationBar.storiesScrollHeight))
-                
-                if offset <= -60.0 {
+                if offset <= -65.0 {
                     storiesUnlocked = true
-                } else if offset >= -58.0 {
+                } else if offset >= -61.0 {
                     storiesUnlocked = false
                 } else {
                     storiesUnlocked = self.storiesUnlocked

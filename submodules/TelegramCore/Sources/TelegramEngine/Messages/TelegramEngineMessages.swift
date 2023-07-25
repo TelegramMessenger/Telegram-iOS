@@ -1090,5 +1090,9 @@ public extension TelegramEngine {
         public func exportStoryLink(peerId: EnginePeer.Id, id: Int32) -> Signal<String?, NoError> {
             return _internal_exportStoryLink(account: self.account, peerId: peerId, id: id)
         }
+        
+        public func enableStoryStealthMode() -> Signal<Never, NoError> {
+            return _internal_enableStoryStealthMode(account: self.account)
+        }
     }
 }

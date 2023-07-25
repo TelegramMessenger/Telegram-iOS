@@ -110,6 +110,7 @@
     {
         bool anyNewDropRequests = false;
         bool removedAnyRequest = false;
+        bool mergedAskForReconnectionOnDrop = askForReconnectionOnDrop;
         
         int index = -1;
         for (MTRequest *request in _requests)
@@ -120,8 +121,11 @@
             {
                 if (request.requestContext != nil)
                 {
-                    //[_dropReponseContexts addObject:[[MTDropResponseContext alloc] initWithDropMessageId:request.requestContext.messageId]];
-                    //anyNewDropRequests = true;
+                    [_dropReponseContexts addObject:[[MTDropResponseContext alloc] initWithDropMessageId:request.requestContext.messageId]];
+                    anyNewDropRequests = true;
+                    if (request.expectedResponseSize >= 512 * 1024) {
+                        mergedAskForReconnectionOnDrop = true;
+                    }
                 }
                 
                 if (request.requestContext.messageId != 0) {
@@ -142,8 +146,9 @@
         {
             MTProto *mtProto = _mtProto;
             
-            if (askForReconnectionOnDrop)
-                [mtProto requestSecureTransportReset];
+            if (mergedAskForReconnectionOnDrop) {
+                [mtProto resetSessionInfo:true];
+            }
 
             [mtProto requestTransportTransaction];
         }
@@ -902,7 +907,7 @@
             
             if (!requestFound) {
                 if (MTLogEnabled()) {
-                    MTLog(@"[MTRequestMessageService#%p response %" PRId64 " didn't match any request]", self, message.messageId);
+                    MTLog(@"[MTRequestMessageService#%p response %" PRId64 " for % " PRId64 " didn't match any request]", self, message.messageId, rpcResultMessage.requestMessageId);
                 }
             }
             else if (_requests.count == 0)

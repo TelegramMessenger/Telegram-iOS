@@ -124,9 +124,11 @@ private final class FrameSequenceThumbnailNode: ASDisplayNode {
             
             let source = UniversalSoftwareVideoSource(
                 mediaBox: self.context.account.postbox.mediaBox,
-                userLocation: userLocation,
-                userContentType: .other,
-                fileReference: self.file,
+                source: .file(
+                    userLocation: userLocation,
+                    userContentType: .other,
+                    fileReference: self.file
+                ),
                 automaticallyFetchHeader: true
             )
             self.sources.append(source)
