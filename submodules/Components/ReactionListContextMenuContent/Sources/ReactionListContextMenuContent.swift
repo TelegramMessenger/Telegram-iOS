@@ -275,9 +275,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             self.scrollNode.view.delaysContentTouches = false
             self.scrollNode.view.showsVerticalScrollIndicator = false
             self.scrollNode.view.showsHorizontalScrollIndicator = false
-            if #available(iOS 11.0, *) {
-                self.scrollNode.view.contentInsetAdjustmentBehavior = .never
-            }
+            self.scrollNode.view.contentInsetAdjustmentBehavior = .never
             self.scrollNode.view.disablesInteractiveTransitionGestureRecognizer = true
             
             self.itemNodes = reactions.map { reaction, count in
@@ -795,9 +793,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             self.scrollNode.canCancelAllTouchesInViews = true
             self.scrollNode.view.delaysContentTouches = false
             self.scrollNode.view.showsVerticalScrollIndicator = false
-            if #available(iOS 11.0, *) {
-                self.scrollNode.view.contentInsetAdjustmentBehavior = .never
-            }
+            self.scrollNode.view.contentInsetAdjustmentBehavior = .never
             self.scrollNode.clipsToBounds = false
             
             super.init()

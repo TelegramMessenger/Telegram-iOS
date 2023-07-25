@@ -207,11 +207,7 @@ public func watchCommunicationManager(context: Signal<WatchCommunicationManagerC
     return Signal { subscriber in
         let queue = Queue()
         queue.async {
-            if #available(iOSApplicationExtension 9.0, *) {
-                subscriber.putNext(WatchCommunicationManager(queue: queue, context: context, allowBackgroundTimeExtension: allowBackgroundTimeExtension))
-            } else {
-                subscriber.putNext(nil)
-            }
+            subscriber.putNext(WatchCommunicationManager(queue: queue, context: context, allowBackgroundTimeExtension: allowBackgroundTimeExtension))
             subscriber.putCompletion()
         }
         return EmptyDisposable

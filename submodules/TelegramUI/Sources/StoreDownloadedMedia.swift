@@ -184,9 +184,7 @@ private final class DownloadedMediaStoreContext {
                 }
                 
                 let options = PHFetchOptions()
-                if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-                    options.fetchLimit = 11
-                }
+                options.fetchLimit = 11
                 
                 options.predicate = NSPredicate(format: "creationDate == %@", creationDate as CVarArg)
                 var alreadyStored = false

@@ -327,14 +327,10 @@ public final class DeviceContactExtendedData: Equatable {
 
 public extension DeviceContactExtendedData {
     convenience init?(vcard: Data) {
-        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-            guard let contact = (try? CNContactVCardSerialization.contacts(with: vcard))?.first else {
-                return nil
-            }
-            self.init(contact: contact)
-        } else {
+        guard let contact = (try? CNContactVCardSerialization.contacts(with: vcard))?.first else {
             return nil
         }
+        self.init(contact: contact)
     }
     
     @available(iOSApplicationExtension 9.0, iOS 9.0, *)

@@ -751,9 +751,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             }
             
             var eventIsPresses = false
-            if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-                eventIsPresses = event.type == .presses
-            }
+            eventIsPresses = event.type == .presses
             if event.type == .touches || eventIsPresses {
                 if let actionButtonNode = self.actionButtonNode, let result = actionButtonNode.hitTest(self.convert(point, to: actionButtonNode), with: event) {
                     return result

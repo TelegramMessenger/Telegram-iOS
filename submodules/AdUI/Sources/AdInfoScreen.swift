@@ -81,9 +81,7 @@ public final class AdInfoScreen: ViewController {
             self.scrollNode.view.scrollsToTop = true
             self.scrollNode.view.delaysContentTouches = false
             self.scrollNode.view.canCancelContentTouches = true
-            if #available(iOS 11.0, *) {
-                self.scrollNode.view.contentInsetAdjustmentBehavior = .never
-            }
+            self.scrollNode.view.contentInsetAdjustmentBehavior = .never
 
             var openUrl: ((String) -> Void)?
 

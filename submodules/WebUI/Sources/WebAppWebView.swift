@@ -66,11 +66,7 @@ final class WebAppWebView: WKWebView {
         
         configuration.allowsInlineMediaPlayback = true
         configuration.allowsPictureInPictureMediaPlayback = false
-        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            configuration.mediaTypesRequiringUserActionForPlayback = .all
-        } else {
-            configuration.mediaPlaybackRequiresUserAction = true
-        }
+        configuration.mediaTypesRequiringUserActionForPlayback = .all
         
         super.init(frame: CGRect(), configuration: configuration)
         
@@ -78,9 +74,7 @@ final class WebAppWebView: WKWebView {
         
         self.isOpaque = false
         self.backgroundColor = .clear
-        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-            self.allowsLinkPreview = false
-        }
+        self.allowsLinkPreview = false
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.scrollView.contentInsetAdjustmentBehavior = .never
         }
@@ -103,20 +97,18 @@ final class WebAppWebView: WKWebView {
     override func didMoveToSuperview() {
         super.didMoveToSuperview()
         
-        if #available(iOS 11.0, *) {
-            let webScrollView = self.subviews.compactMap { $0 as? UIScrollView }.first
-            Queue.mainQueue().after(0.1, {
-                let contentView = webScrollView?.subviews.first(where: { $0.interactions.count > 1 })
-                guard let dragInteraction = (contentView?.interactions.compactMap { $0 as? UIDragInteraction }.first) else {
-                    return
-                }
-                contentView?.removeInteraction(dragInteraction)
-            })
-            
-            NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
-            NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
-            NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
-        }
+        let webScrollView = self.subviews.compactMap { $0 as? UIScrollView }.first
+        Queue.mainQueue().after(0.1, {
+            let contentView = webScrollView?.subviews.first(where: { $0.interactions.count > 1 })
+            guard let dragInteraction = (contentView?.interactions.compactMap { $0 as? UIDragInteraction }.first) else {
+                return
+            }
+            contentView?.removeInteraction(dragInteraction)
+        })
+        
+        NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
     }
     
     func sendEvent(name: String, data: String?) {
