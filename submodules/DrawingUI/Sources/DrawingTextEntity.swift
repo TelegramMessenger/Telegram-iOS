@@ -1064,15 +1064,16 @@ private class DrawingTextLayoutManager: NSLayoutManager {
         
         self.radius = cur.height * 0.18
         
-        let t1 = ((cur.minX - last.minX < 2.0 * self.radius) && (cur.minX > last.minX)) || ((cur.maxX - last.maxX > -2.0 * self.radius) && (cur.maxX < last.maxX))
-        let t2 = ((last.minX - cur.minX < 2.0 * self.radius) && (last.minX > cur.minX)) || ((last.maxX - cur.maxX > -2.0 * self.radius) && (last.maxX < cur.maxX))
+        let doubleRadius = self.radius * 2.5
+        
+        let t1 = ((cur.minX - last.minX < doubleRadius) && (cur.minX > last.minX)) || ((cur.maxX - last.maxX > -doubleRadius) && (cur.maxX < last.maxX))
+        let t2 = ((last.minX - cur.minX < doubleRadius) && (last.minX > cur.minX)) || ((last.maxX - cur.maxX > -doubleRadius) && (last.maxX < cur.maxX))
         
         if t2 {
             let newRect = CGRect(origin: CGPoint(x: cur.minX, y: last.minY), size: CGSize(width: cur.width, height: last.height))
             self.rectArray[index - 1] = newRect
             self.processRectIndex(index - 1)
-        }
-        if t1 {
+        } else if t1 {
             let newRect = CGRect(origin: CGPoint(x: last.minX, y: cur.minY), size: CGSize(width: last.width, height: cur.height))
             self.rectArray[index] = newRect
             self.processRectIndex(index + 1)
@@ -1126,7 +1127,7 @@ private class DrawingTextLayoutManager: NSLayoutManager {
                 path.append(UIBezierPath(roundedRect: cur, cornerRadius: self.radius))
                 if i == 0 {
                     last = cur
-                } else if i > 0 && abs(last.maxY -  cur.minY) < 10.0 {
+                } else if i > 0 && abs(last.maxY -  cur.minY) < 15.0 {
                     let a = cur.origin
                     let b = CGPoint(x: cur.maxX, y: cur.minY)
                     let c = CGPoint(x: last.minX, y: last.maxY)
