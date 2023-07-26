@@ -874,6 +874,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         }
     }
     
+    public private(set) var isSelectionModeActive: Bool
+    
     private var currentParams: (size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData)?
     
     private let ready = Promise<Bool>()
@@ -930,6 +932,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         self.navigationController = navigationController
         self.isSaved = isSaved
         self.isArchive = isArchive
+        
+        self.isSelectionModeActive = isArchive
 
         self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
 
@@ -1228,7 +1232,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             }
         )
         //TODO:selection
-        if isArchive {
+        if isArchive || self.isSelectionModeActive {
             self._itemInteraction?.selectedIds = Set()
         }
         self.itemGridBinding.itemInteraction = self._itemInteraction
@@ -1520,28 +1524,29 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     }
 
     public func updateContentType(contentType: ContentType) {
-        /*if self.contentType == contentType {
-            return
-        }
-        self.contentType = contentType
-        self.contentTypePromise.set(contentType)
-
-        self.itemGrid.hideScrollingArea()
-        
-        var threadId: Int64?
-        if case let .replyThread(message) = chatLocation {
-            threadId = Int64(message.messageId.id)
-        }
-
-        self.listSource = self.context.engine.messages.sparseMessageList(peerId: self.peerId, threadId: threadId, tag: tagMaskForType(self.contentType))
-        self.isRequestingView = false
-        self.requestHistoryAroundVisiblePosition(synchronous: true, reloadAtTop: true)*/
     }
 
     public func updateZoomLevel(level: ZoomLevel) {
         self.itemGrid.setZoomLevel(level: level.value)
 
         //let _ = updateVisualMediaStoredState(engine: self.context.engine, peerId: self.peerId, messageTag: self.stateTag, state: VisualMediaStoredState(zoomLevel: level.rawValue)).start()
+    }
+    
+    public func setIsSelectionModeActive(_ value: Bool) {
+        if self.isSelectionModeActive != value {
+            self.isSelectionModeActive = value
+            
+            if value {
+                if self._itemInteraction?.selectedIds == nil {
+                    self._itemInteraction?.selectedIds = Set()
+                }
+            } else {
+                self._itemInteraction?.selectedIds = nil
+            }
+            
+            self.selectedIdsPromise.set(self._itemInteraction?.selectedIds ?? Set())
+            self.updateSelectedItems(animated: true)
+        }
     }
     
     public func ensureMessageIsVisible(id: MessageId) {
