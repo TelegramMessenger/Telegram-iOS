@@ -547,9 +547,12 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
                 } else {
                     newAngle = atan2(parentLocation.y - self.center.y, parentLocation.x - self.center.x)
                 }
-                
-             //   let delta = newAngle - updatedRotation
-                updatedRotation = newAngle// self.snapTool.update(entityView: entityView, velocity: 0.0, delta: delta, updatedRotation: newAngle)
+                var delta = newAngle - updatedRotation
+                if delta < -.pi {
+                    delta = 2.0 * .pi + delta
+                }
+                let velocityValue = sqrt(velocity.x * velocity.x + velocity.y * velocity.y) / 1000.0
+                updatedRotation = self.snapTool.update(entityView: entityView, velocity: velocityValue, delta: delta, updatedRotation: newAngle, skipMultiplier: 1.0)
             } else if self.currentHandle === self.layer {
                 updatedPosition.x += delta.x
                 updatedPosition.y += delta.y

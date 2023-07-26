@@ -308,7 +308,7 @@ class DrawingEntitySnapTool {
     func maybeSkipFromStart(entityView: DrawingEntityView, rotation: CGFloat) {
         self.rotationState = nil
         
-        let snapDelta: CGFloat = 0.25
+        let snapDelta: CGFloat = 0.01
         for snapRotation in self.snapRotations {
             let snapRotation = snapRotation * .pi
             if rotation > snapRotation - snapDelta && rotation < snapRotation + snapDelta {
@@ -318,7 +318,7 @@ class DrawingEntitySnapTool {
         }
     }
     
-    func update(entityView: DrawingEntityView, velocity: CGFloat, delta: CGFloat, updatedRotation: CGFloat) -> CGFloat {
+    func update(entityView: DrawingEntityView, velocity: CGFloat, delta: CGFloat, updatedRotation: CGFloat, skipMultiplier: CGFloat = 1.0) -> CGFloat {
         var updatedRotation = updatedRotation
         if updatedRotation < 0.0 {
             updatedRotation = 2.0 * .pi + updatedRotation
@@ -332,7 +332,7 @@ class DrawingEntitySnapTool {
         
         let snapDelta: CGFloat = 0.01
         let snapVelocity: CGFloat = snapDelta * 35.0
-        let snapSkipRotation: CGFloat = snapDelta * 40.0
+        let snapSkipRotation: CGFloat = snapDelta * 45.0 * skipMultiplier
         
         if abs(velocity) < snapVelocity || self.rotationState?.waitForLeave == true {
             if let (snapRotation, skipped, waitForLeave) = self.rotationState {
