@@ -9,15 +9,21 @@ final class SectionHeaderComponent: Component {
     let theme: PresentationTheme
     let style: ShareWithPeersScreenComponent.Style
     let title: String
+    let actionTitle: String?
+    let action: (() -> Void)?
     
     init(
         theme: PresentationTheme,
         style: ShareWithPeersScreenComponent.Style,
-        title: String
+        title: String,
+        actionTitle: String?,
+        action: (() -> Void)?
     ) {
         self.theme = theme
         self.style = style
         self.title = title
+        self.actionTitle = actionTitle
+        self.action = action
     }
     
     static func ==(lhs: SectionHeaderComponent, rhs: SectionHeaderComponent) -> Bool {
@@ -30,12 +36,16 @@ final class SectionHeaderComponent: Component {
         if lhs.title != rhs.title {
             return false
         }
+        if lhs.actionTitle != rhs.actionTitle {
+            return false
+        }
         return true
     }
     
     final class View: UIView {        
         private let title = ComponentView<Empty>()
         private let backgroundView: BlurredBackgroundView
+        private let action = ComponentView<Empty>()
         
         private var component: SectionHeaderComponent?
         private weak var state: EmptyComponentState?
@@ -93,6 +103,32 @@ final class SectionHeaderComponent: Component {
                 if let previousTitleFrame, previousTitleFrame.origin.x != titleFrame.origin.x {
                     transition.animatePosition(view: titleView, from: CGPoint(x: previousTitleFrame.origin.x - titleFrame.origin.x, y: 0.0), to: CGPoint(), additive: true)
                 }
+            }
+            
+            if let actionTitle = component.actionTitle {
+                let actionSize = self.action.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        Button(content: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: actionTitle, font: Font.regular(13.0), textColor: component.theme.list.itemSecondaryTextColor))
+                        )), action: { [weak self] in
+                            if let self, let component = self.component {
+                                component.action?()
+                            }
+                        })
+                    ),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - leftInset - rightInset, height: 100.0)
+                )
+                if let view = self.action.view {
+                    if view.superview == nil {
+                        self.addSubview(view)
+                    }
+                    let actionFrame = CGRect(origin: CGPoint(x: availableSize.width - leftInset - titleSize.width, y: floor((height - titleSize.height) / 2.0)), size: actionSize)
+                    view.frame = actionFrame
+                }
+            } else if self.action.view?.superview != nil {
+                self.action.view?.removeFromSuperview()
             }
             
             let size = CGSize(width: availableSize.width, height: height)

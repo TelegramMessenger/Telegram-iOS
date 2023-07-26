@@ -58,13 +58,9 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         self.textView.delegate = self
         self.addSubview(self.textView)
         
-        self.emojiViewProvider = { [weak self] emoji in
-            guard let strongSelf = self else {
-                return UIView()
-            }
-                        
+        self.emojiViewProvider = { emoji in
             let pointSize: CGFloat = 128.0
-            return EmojiTextAttachmentView(context: context, userLocation: .other, emoji: emoji, file: emoji.file, cache: strongSelf.context.animationCache, renderer: strongSelf.context.animationRenderer, placeholderColor: UIColor.white.withAlphaComponent(0.12), pointSize: CGSize(width: pointSize, height: pointSize))
+            return EmojiTextAttachmentView(context: context, userLocation: .other, emoji: emoji, file: emoji.file, cache: context.animationCache, renderer: context.animationRenderer, placeholderColor: UIColor.white.withAlphaComponent(0.12), pointSize: CGSize(width: pointSize, height: pointSize))
         }
         
         self.textView.onPaste = { [weak self] in
@@ -285,9 +281,10 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         }
         
         self._isEditing = false
-        self.textView.resignFirstResponder()
         self.textView.inputView = nil
         self.textView.inputAccessoryView = nil
+        self.textView.reloadInputViews()
+        self.textView.resignFirstResponder()
         
         self.textView.isEditable = false
         self.textView.isSelectable = false
@@ -656,8 +653,8 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             self.updateEditingPosition(animated: animated)
         }
         
-        self.textView.onLayoutUpdate = {
-            self.updateEntities()
+        self.textView.onLayoutUpdate = { [weak self] in
+            self?.updateEntities()
         }
         
         super.update(animated: animated)
@@ -1023,13 +1020,18 @@ private class DrawingTextLayoutManager: NSLayoutManager {
     private func prepare() {
         self.path = nil
         self.rectArray.removeAll()
-        
+                
         self.enumerateLineFragments(forGlyphRange: NSRange(location: 0, length: ((self.textStorage?.string ?? "") as NSString).length)) { rect, usedRect, textContainer, glyphRange, _ in
             var ignoreRange = false
-            let charecterRange = self.characterRange(forGlyphRange: glyphRange, actualGlyphRange: nil)
-            let substring = ((self.textStorage?.string ?? "") as NSString).substring(with: charecterRange)
+            let characterRange = self.characterRange(forGlyphRange: glyphRange, actualGlyphRange: nil)
+            let substring = ((self.textStorage?.string ?? "") as NSString).substring(with: characterRange)
             if substring.trimmingCharacters(in: .newlines).isEmpty {
                 ignoreRange = true
+            }
+            
+            var usedRect = usedRect
+            if substring.hasSuffix(" ") {
+                usedRect.size.width -= floorToScreenPixels(usedRect.height * 0.145)
             }
             
             if !ignoreRange {

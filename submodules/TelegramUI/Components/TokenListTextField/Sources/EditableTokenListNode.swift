@@ -450,7 +450,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         
         let previousContentHeight = self.scrollNode.view.contentSize.height
         let contentHeight = currentOffset.y + 29.0 + verticalInset
-        let nodeHeight = min(contentHeight, 110.0)
+        let nodeHeight = min(contentHeight, 140.0)
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: nodeHeight)))

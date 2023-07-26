@@ -2978,8 +2978,6 @@ public final class DrawingToolsInteraction {
     private var isActive = false
     private var validLayout: ContainerViewLayout?
     
-    private let startTimestamp = CACurrentMediaTime()
-    
     public init(
         context: AccountContext,
         drawingView: DrawingView,

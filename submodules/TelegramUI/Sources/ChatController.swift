@@ -13054,7 +13054,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if !value || concealed || botApp.flags.contains(.notActivated) {
                 let context = self.context
                                 
-                let controller = webAppLaunchConfirmationController(context: context, updatedPresentationData: self.updatedPresentationData, peer: botPeer, requestWriteAccess: !botApp.flags.contains(.notActivated) && botApp.flags.contains(.requiresWriteAccess), completion: { allowWrite in
+                let controller = webAppLaunchConfirmationController(context: context, updatedPresentationData: self.updatedPresentationData, peer: botPeer, requestWriteAccess: botApp.flags.contains(.notActivated) && botApp.flags.contains(.requiresWriteAccess), completion: { allowWrite in
                     let _ = ApplicationSpecificNotice.setBotGameNotice(accountManager: context.sharedContext.accountManager, peerId: botPeer.id).start()
                     openBotApp(allowWrite)
                 }, showMore: { [weak self] in
