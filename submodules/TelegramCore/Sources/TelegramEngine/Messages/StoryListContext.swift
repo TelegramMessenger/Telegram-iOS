@@ -470,15 +470,15 @@ public final class PeerStoryListContext {
             self.peerId = peerId
             self.isArchived = isArchived
             
-            self.stateValue = State(peerReference: nil, items: [], totalCount: 0, loadMoreToken: 0, isCached: true, allEntityFiles: [:])
+            self.stateValue = State(peerReference: nil, items: [], totalCount: 0, loadMoreToken: 0, isCached: true, hasCache: false, allEntityFiles: [:])
             
-            let _ = (account.postbox.transaction { transaction -> (PeerReference?, [EngineStoryItem], Int, [MediaId: TelegramMediaFile]) in
+            let _ = (account.postbox.transaction { transaction -> (PeerReference?, [EngineStoryItem], Int, [MediaId: TelegramMediaFile], Bool) in
                 let key = ValueBoxKey(length: 8 + 1)
                 key.setInt64(0, value: peerId.toInt64())
                 key.setInt8(8, value: isArchived ? 1 : 0)
                 let cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerStoryListHeads, key: key))?.get(CachedPeerStoryListHead.self)
                 guard let cached = cached else {
-                    return (nil, [], 0, [:])
+                    return (nil, [], 0, [:], false)
                 }
                 var items: [EngineStoryItem] = []
                 var allEntityFiles: [MediaId: TelegramMediaFile] = [:]
@@ -527,14 +527,14 @@ public final class PeerStoryListContext {
                 
                 let peerReference = transaction.getPeer(peerId).flatMap(PeerReference.init)
                 
-                return (peerReference, items, Int(cached.totalCount), allEntityFiles)
+                return (peerReference, items, Int(cached.totalCount), allEntityFiles, true)
             }
-            |> deliverOn(self.queue)).start(next: { [weak self] peerReference, items, totalCount, allEntityFiles in
+            |> deliverOn(self.queue)).start(next: { [weak self] peerReference, items, totalCount, allEntityFiles, hasCache in
                 guard let `self` = self else {
                     return
                 }
                 
-                self.stateValue = State(peerReference: peerReference, items: items, totalCount: totalCount, loadMoreToken: 0, isCached: true, allEntityFiles: allEntityFiles)
+                self.stateValue = State(peerReference: peerReference, items: items, totalCount: totalCount, loadMoreToken: 0, isCached: true, hasCache: hasCache, allEntityFiles: allEntityFiles)
                 self.loadMore(completion: nil)
             })
         }
@@ -665,6 +665,7 @@ public final class PeerStoryListContext {
                     updatedState.items.removeAll()
                     updatedState.isCached = false
                 }
+                updatedState.hasCache = true
                 
                 var existingIds = Set(updatedState.items.map { $0.id })
                 for item in storyItems {
@@ -939,6 +940,7 @@ public final class PeerStoryListContext {
         public var totalCount: Int
         public var loadMoreToken: Int?
         public var isCached: Bool
+        public var hasCache: Bool
         public var allEntityFiles: [MediaId: TelegramMediaFile]
         
         init(
@@ -947,6 +949,7 @@ public final class PeerStoryListContext {
             totalCount: Int,
             loadMoreToken: Int?,
             isCached: Bool,
+            hasCache: Bool,
             allEntityFiles: [MediaId: TelegramMediaFile]
         ) {
             self.peerReference = peerReference
@@ -954,6 +957,7 @@ public final class PeerStoryListContext {
             self.totalCount = totalCount
             self.loadMoreToken = loadMoreToken
             self.isCached = isCached
+            self.hasCache = hasCache
             self.allEntityFiles = allEntityFiles
         }
     }

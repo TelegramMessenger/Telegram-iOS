@@ -477,8 +477,11 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
     |> distinctUntilChanged
     
     let storyListContext = PeerStoryListContext(account: context.account, peerId: peerId, isArchived: false)
-    let hasStories: Signal<Bool, NoError> = storyListContext.state
-    |> map { state -> Bool in
+    let hasStories: Signal<Bool?, NoError> = storyListContext.state
+    |> map { state -> Bool? in
+        if !state.hasCache {
+            return nil
+        }
         return !state.items.isEmpty
     }
     |> distinctUntilChanged
@@ -564,7 +567,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             groupsInCommon: nil,
             linkedDiscussionPeer: nil,
             members: nil,
-            storyListContext: storyListContext,
+            storyListContext: hasStories == true ? storyListContext : nil,
             encryptionKeyFingerprint: nil,
             globalSettings: globalSettings,
             invitations: nil,
@@ -705,8 +708,11 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             }
             
             let storyListContext = PeerStoryListContext(account: context.account, peerId: peerId, isArchived: false)
-            let hasStories: Signal<Bool, NoError> = storyListContext.state
-            |> map { state -> Bool in
+            let hasStories: Signal<Bool?, NoError> = storyListContext.state
+            |> map { state -> Bool? in
+                if !state.hasCache {
+                    return nil
+                }
                 return !state.items.isEmpty
             }
             |> distinctUntilChanged
@@ -722,14 +728,18 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories -> PeerInfoScreenData in
                 var availablePanes = availablePanes
                 
-                if hasStories, peerView.peers[peerView.peerId] is TelegramUser, peerView.peerId != context.account.peerId {
-                    availablePanes?.insert(.stories, at: 0)
-                }
-                
-                if availablePanes != nil, groupsInCommon != nil, let cachedData = peerView.cachedData as? CachedUserData {
-                    if cachedData.commonGroupCount != 0 {
-                        availablePanes?.append(.groupsInCommon)
+                if let hasStories {
+                    if hasStories, peerView.peers[peerView.peerId] is TelegramUser, peerView.peerId != context.account.peerId {
+                        availablePanes?.insert(.stories, at: 0)
                     }
+                    
+                    if availablePanes != nil, groupsInCommon != nil, let cachedData = peerView.cachedData as? CachedUserData {
+                        if cachedData.commonGroupCount != 0 {
+                            availablePanes?.append(.groupsInCommon)
+                        }
+                    }
+                } else {
+                    availablePanes = nil
                 }
                 
                 return PeerInfoScreenData(
