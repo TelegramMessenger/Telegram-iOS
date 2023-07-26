@@ -2018,10 +2018,14 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
         
         var effectiveStorySubscriptions: EngineStorySubscriptions?
-        if let controller = self.controller, let storySubscriptions = controller.orderedStorySubscriptions, shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions, isHidden: controller.location == .chatList(groupId: .archive)) {
-            effectiveStorySubscriptions = controller.orderedStorySubscriptions
+        if let controller = self.controller, case .forum = controller.location {
+            effectiveStorySubscriptions = nil
         } else {
-            effectiveStorySubscriptions = EngineStorySubscriptions(accountItem: nil, items: [], hasMoreToken: nil)
+            if let controller = self.controller, let storySubscriptions = controller.orderedStorySubscriptions, shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions, isHidden: controller.location == .chatList(groupId: .archive)) {
+                effectiveStorySubscriptions = controller.orderedStorySubscriptions
+            } else {
+                effectiveStorySubscriptions = EngineStorySubscriptions(accountItem: nil, items: [], hasMoreToken: nil)
+            }
         }
         
         let navigationBarSize = self.navigationBarView.update(

@@ -50,7 +50,7 @@ final class PeerInfoStoryGridScreenComponent: Component {
     
     final class View: UIView {
         private var component: PeerInfoStoryGridScreenComponent?
-        private weak var state: EmptyComponentState?
+        private(set) weak var state: EmptyComponentState?
         private var environment: EnvironmentType?
         
         private(set) var paneNode: PeerInfoStoryPaneNode?
@@ -169,6 +169,24 @@ final class PeerInfoStoryGridScreenComponent: Component {
                         }
                         
                         self.environment?.controller()?.push(PeerInfoStoryGridScreen(context: component.context, peerId: component.peerId, scope: .archive))
+                    })))
+                }
+            }
+            
+            if let paneNode = self.paneNode, !paneNode.isSelectionModeActive, case .saved = component.scope {
+                if !paneNode.isEmpty {
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuSelect, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] _, a in
+                        a(.default)
+                        
+                        guard let self, let paneNode = self.paneNode else {
+                            return
+                        }
+                        
+                        paneNode.setIsSelectionModeActive(true)
+                        
+                        (self.environment?.controller() as? PeerInfoStoryGridScreen)?.updateTitle()
                     })))
                 }
             }
@@ -306,11 +324,19 @@ final class PeerInfoStoryGridScreenComponent: Component {
                     self.selectionPanel = selectionPanel
                 }
                 
+                let buttonText: String
+                switch component.scope {
+                case .saved:
+                    buttonText = environment.strings.Common_Delete
+                case .archive:
+                    buttonText = environment.strings.StoryList_SaveToProfile
+                }
+                
                 let selectionPanelSize = selectionPanel.update(
                     transition: selectionPanelTransition,
                     component: AnyComponent(BottomButtonPanelComponent(
                         theme: environment.theme,
-                        title: environment.strings.StoryList_SaveToProfile,
+                        title: buttonText,
                         label: nil,
                         isEnabled: true,
                         insets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: environment.safeInsets.bottom, right: sideInset),
@@ -322,20 +348,49 @@ final class PeerInfoStoryGridScreenComponent: Component {
                                 return
                             }
                             
-                            let _ = component.context.engine.messages.updateStoriesArePinned(ids: paneNode.selectedItems, isPinned: true).start()
-                            
-                            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
-                            
-                            let title: String = presentationData.strings.StoryList_TooltipStoriesSavedToProfile(Int32(paneNode.selectedIds.count))
-                            environment.controller()?.present(UndoOverlayController(
-                                presentationData: presentationData,
-                                content: .info(title: title, text: presentationData.strings.StoryList_TooltipStoriesSavedToProfileText, timeout: nil),
-                                elevatedLayout: false,
-                                animateInAsReplacement: false,
-                                action: { _ in return false }
-                            ), in: .current)
-                            
-                            paneNode.clearSelection()
+                            switch component.scope {
+                            case .saved:
+                                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
+                                let actionSheet = ActionSheetController(presentationData: presentationData)
+                                
+                                actionSheet.setItemGroups([
+                                    ActionSheetItemGroup(items: [
+                                        ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: { [weak self, weak actionSheet] in
+                                            actionSheet?.dismissAnimated()
+                                            
+                                            guard let self, let paneNode = self.paneNode, let component = self.component else {
+                                                return
+                                            }
+                                            let _ = component.context.engine.messages.deleteStories(ids: Array(paneNode.selectedIds)).start()
+                                            
+                                            paneNode.setIsSelectionModeActive(false)
+                                            (self.environment?.controller() as? PeerInfoStoryGridScreen)?.updateTitle()
+                                        })
+                                    ]),
+                                    ActionSheetItemGroup(items: [
+                                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                            actionSheet?.dismissAnimated()
+                                        })
+                                    ])
+                                ])
+                                
+                                self.environment?.controller()?.present(actionSheet, in: .window(.root))
+                            case .archive:
+                                let _ = component.context.engine.messages.updateStoriesArePinned(ids: paneNode.selectedItems, isPinned: true).start()
+                                
+                                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
+                                
+                                let title: String = presentationData.strings.StoryList_TooltipStoriesSavedToProfile(Int32(paneNode.selectedIds.count))
+                                environment.controller()?.present(UndoOverlayController(
+                                    presentationData: presentationData,
+                                    content: .info(title: title, text: presentationData.strings.StoryList_TooltipStoriesSavedToProfileText, timeout: nil),
+                                    elevatedLayout: false,
+                                    animateInAsReplacement: false,
+                                    action: { _ in return false }
+                                ), in: .current)
+                                
+                                paneNode.clearSelection()
+                            }
                         }
                     )),
                     environment: {},
@@ -462,6 +517,7 @@ public class PeerInfoStoryGridScreen: ViewControllerComponentContainer {
     
     private var moreBarButton: MoreHeaderButton?
     private var moreBarButtonItem: UIBarButtonItem?
+    private var doneBarButtonItem: UIBarButtonItem?
     
     public init(
         context: AccountContext,
@@ -492,6 +548,9 @@ public class PeerInfoStoryGridScreen: ViewControllerComponentContainer {
             let _ = self
         }
         moreBarButton.addTarget(self, action: #selector(self.morePressed), forControlEvents: .touchUpInside)
+        
+        let doneBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
+        self.doneBarButtonItem = doneBarButtonItem
         
         self.titleView = ChatTitleView(
             context: context, theme:
@@ -528,7 +587,7 @@ public class PeerInfoStoryGridScreen: ViewControllerComponentContainer {
         
         switch self.scope {
         case .saved:
-            guard let componentView = self.node.hostView.componentView as? PeerInfoStoryGridScreenComponent.View else {
+            guard let componentView = self.node.hostView.componentView as? PeerInfoStoryGridScreenComponent.View, let paneNode = componentView.paneNode else {
                 return
             }
             let title: String?
@@ -539,7 +598,11 @@ public class PeerInfoStoryGridScreen: ViewControllerComponentContainer {
             }
             self.titleView?.titleContent = .custom(presentationData.strings.StoryList_TitleSaved, title, false)
             
-            self.navigationItem.setRightBarButton(self.moreBarButtonItem, animated: false)
+            if paneNode.isSelectionModeActive {
+                self.navigationItem.setRightBarButton(self.doneBarButtonItem, animated: false)
+            } else {
+                self.navigationItem.setRightBarButton(self.moreBarButtonItem, animated: false)
+            }
         case .archive:
             guard let componentView = self.node.hostView.componentView as? PeerInfoStoryGridScreenComponent.View else {
                 return
@@ -575,6 +638,14 @@ public class PeerInfoStoryGridScreen: ViewControllerComponentContainer {
             return
         }
         componentView.morePressed(source: moreBarButton.referenceNode)
+    }
+    
+    @objc private func donePressed() {
+        guard let componentView = self.node.hostView.componentView as? PeerInfoStoryGridScreenComponent.View, let paneNode = componentView.paneNode else {
+            return
+        }
+        paneNode.setIsSelectionModeActive(false)
+        self.updateTitle()
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
