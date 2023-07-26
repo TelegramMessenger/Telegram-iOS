@@ -261,6 +261,7 @@ public final class MediaEditorVideoExport {
     private let account: Account
     private let subject: Subject
     private let configuration: Configuration
+    private let textScale: CGFloat
     private let outputPath: String
         
     private var reader: AVAssetReader?
@@ -295,11 +296,12 @@ public final class MediaEditorVideoExport {
     
     private let semaphore = DispatchSemaphore(value: 0)
     
-    public init(account: Account, subject: Subject, configuration: Configuration, outputPath: String) {
+    public init(account: Account, subject: Subject, configuration: Configuration, outputPath: String, textScale: CGFloat = 1.0) {
         self.account = account
         self.subject = subject
         self.configuration = configuration
         self.outputPath = outputPath
+        self.textScale = textScale
         
         if FileManager.default.fileExists(atPath: outputPath) {
             try? FileManager.default.removeItem(atPath: outputPath)
@@ -354,7 +356,7 @@ public final class MediaEditorVideoExport {
         guard self.composer == nil else {
             return
         }
-        self.composer = MediaEditorComposer(account: self.account, values: self.configuration.values, dimensions: self.configuration.composerDimensions, outputDimensions: self.configuration.dimensions)
+        self.composer = MediaEditorComposer(account: self.account, values: self.configuration.values, dimensions: self.configuration.composerDimensions, outputDimensions: self.configuration.dimensions, textScale: self.textScale)
     }
     
     private func setupWithAsset(_ asset: AVAsset, additionalAsset: AVAsset?) {

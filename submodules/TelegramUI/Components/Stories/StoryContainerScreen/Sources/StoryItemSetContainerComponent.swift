@@ -3209,7 +3209,7 @@ public final class StoryItemSetContainerComponent: Component {
                 text = component.strings.Story_PrivacyTooltipCloseFriends
             } else if privacy.base == .nobody {
                 if !privacy.additionallyIncludePeers.isEmpty {
-                    text = component.strings.Story_PrivacyTooltipSelectedContacts
+                    text = component.strings.Story_PrivacyTooltipSelectedContactsCount("\(privacy.additionallyIncludePeers.count)").string
                 } else {
                     text = component.strings.Story_PrivacyTooltipNobody
                 }

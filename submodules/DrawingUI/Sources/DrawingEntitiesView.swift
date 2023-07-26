@@ -651,7 +651,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             
             if let selectionView = entityView.makeSelectionView() {
                 selectionView.tapped = { [weak self, weak entityView] in
-                    if let self, let entityView = entityView {
+                    if let self, let entityView {
                         let entityViews = self.subviews.filter { $0 is DrawingEntityView }
                         self.requestedMenuForEntityView(entityView, entityViews.last === entityView)
                     }

@@ -307,6 +307,10 @@ final class ShareWithPeersScreenComponent: Component {
         
         private var savedSelectedPeers: [EnginePeer.Id] = []
         private var selectedPeers: [EnginePeer.Id] = []
+        private var selectedGroups: [EnginePeer.Id] = []
+
+        private var peersMap: [EnginePeer.Id: EnginePeer] = [:]
+        
         private var selectedCategories = Set<CategoryId>()
         private var selectedOptions = Set<OptionId>()
         
@@ -557,6 +561,132 @@ final class ShareWithPeersScreenComponent: Component {
             controller.present(tooltipScreen, in: .window(.root))
         }
         
+        private func toggleGroupPeer(_ peer: EnginePeer) {
+            guard let component = self.component, let environment = self.environment, let controller = self.environment?.controller() else {
+                return
+            }
+            
+            let countLimit = 200
+            var groupTooLarge = false
+            if case let .legacyGroup(group) = peer, group.participantCount > countLimit {
+                groupTooLarge = true
+            } else if let stateValue = self.effectiveStateValue, let count = stateValue.participants[peer.id], count > countLimit {
+                groupTooLarge = true
+            }
+            
+            let showCountLimitAlert = { [weak controller, weak environment, weak component] in
+                guard let controller, let environment, let component else {
+                    return
+                }
+                let alertController = textAlertController(
+                    context: component.context,
+                    forceTheme: defaultDarkColorPresentationTheme,
+                    title: environment.strings.Story_Privacy_GroupTooLarge,
+                    text: environment.strings.Story_Privacy_GroupParticipantsLimit,
+                    actions: [
+                        TextAlertAction(type: .defaultAction, title: environment.strings.Common_OK, action: {})
+                    ],
+                    actionLayout: .vertical
+                )
+                controller.present(alertController, in: .window(.root))
+            }
+            
+            if groupTooLarge {
+                showCountLimitAlert()
+                return
+            }
+            
+            var append = false
+            if let index = self.selectedGroups.firstIndex(of: peer.id) {
+                self.selectedGroups.remove(at: index)
+            } else {
+                self.selectedGroups.append(peer.id)
+                append = true
+            }
+            
+            let processPeers: ([EnginePeer]) -> Void = { [weak self] peers in
+                guard let self else {
+                    return
+                }
+                
+                var peerIds = Set<EnginePeer.Id>()
+                for peer in peers {
+                    self.peersMap[peer.id] = peer
+                    peerIds.insert(peer.id)
+                }
+                var existingPeerIds = Set<EnginePeer.Id>()
+                for peerId in self.selectedPeers {
+                    existingPeerIds.insert(peerId)
+                }
+                if append {
+                    if peers.count > countLimit {
+                        showCountLimitAlert()
+                        return
+                    }
+                    for peer in peers {
+                        if !existingPeerIds.contains(peer.id) {
+                            self.selectedPeers.append(peer.id)
+                            existingPeerIds.insert(peer.id)
+                        }
+                    }
+                } else {
+                    self.selectedPeers = self.selectedPeers.filter { !peerIds.contains($0) }
+                }
+                let transition = Transition(animation: .curve(duration: 0.35, curve: .spring))
+                self.state?.updated(transition: transition)
+            }
+            
+            let context = component.context
+            if peer.id.namespace == Namespaces.Peer.CloudGroup {
+                let _ = (context.engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.Peer.LegacyGroupParticipants(id: peer.id)
+                )
+                |> mapToSignal { participants -> Signal<[EnginePeer], NoError> in
+                    if case let .known(participants) = participants {
+                        return context.engine.data.get(
+                            EngineDataMap(participants.map { TelegramEngine.EngineData.Item.Peer.Peer(id: $0.peerId) })
+                        )
+                        |> map { peers in
+                            var result: [EnginePeer] = []
+                            for participant in participants {
+                                if let peer = peers[participant.peerId], let peer, peer.id != context.account.peerId {
+                                    result.append(peer)
+                                }
+                            }
+                            return result
+                        }
+                    } else {
+                        let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: peer.id).start()
+                        return .complete()
+                    }
+                }
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { peers in
+                    processPeers(peers)
+                })
+            } else if peer.id.namespace == Namespaces.Peer.CloudChannel {
+                let participants: Signal<[EnginePeer], NoError> = Signal { subscriber in
+                    let (disposable, _) = context.peerChannelMemberCategoriesContextsManager.recent(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peer.id, requestUpdate: true, updated: { list in
+                        var peers: [EnginePeer] = []
+                        for item in list.list {
+                            peers.append(EnginePeer(item.peer))
+                        }
+                        if !peers.isEmpty {
+                            subscriber.putNext(peers)
+                            subscriber.putCompletion()
+                        }
+                    })
+                    return disposable
+                }
+                
+                let _ = (participants
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { peers in
+                    processPeers(peers)
+                })
+            }
+        }
+        
         private func updateScrolling(transition: Transition) {
             guard let component = self.component, let environment = self.environment, let itemLayout = self.itemLayout else {
                 return
@@ -665,14 +795,22 @@ final class ShareWithPeersScreenComponent: Component {
                             component: AnyComponent(SectionHeaderComponent(
                                 theme: environment.theme,
                                 style: itemLayout.style,
-                                title: sectionTitle
+                                title: sectionTitle,
+                                actionTitle: (section.id == 1 && !self.selectedPeers.isEmpty) ? environment.strings.Contacts_DeselectAll : nil,
+                                action: { [weak self] in
+                                    if let self {
+                                        self.selectedPeers = []
+                                        self.selectedGroups = []
+                                        let transition = Transition(animation: .curve(duration: 0.35, curve: .spring))
+                                        self.state?.updated(transition: transition)
+                                    }
+                                }
                             )),
                             environment: {},
                             containerSize: sectionHeaderFrame.size
                         )
                         if let sectionHeaderView = sectionHeader.view {
                             if sectionHeaderView.superview == nil {
-                                sectionHeaderView.isUserInteractionEnabled = false
                                 self.scrollContentClippingView.addSubview(sectionHeaderView)
                             }
                             if minSectionHeader == nil {
@@ -736,9 +874,18 @@ final class ShareWithPeersScreenComponent: Component {
                                         self.selectedCategories.removeAll()
                                         self.selectedCategories.insert(categoryId)
                                         
-                                        if self.selectedPeers.isEmpty && categoryId == .selectedContacts {
+                                        let closeFriends = self.component?.stateContext.stateValue?.closeFriendsPeers ?? []
+                                        if categoryId == .selectedContacts && self.selectedPeers.isEmpty {
                                             component.editCategory(
                                                 EngineStoryPrivacy(base: .nobody, additionallyIncludePeers: []),
+                                                self.selectedOptions.contains(.screenshot),
+                                                self.selectedOptions.contains(.pin)
+                                            )
+                                            controller.dismissAllTooltips()
+                                            controller.dismiss()
+                                        } else if categoryId == .closeFriends && closeFriends.isEmpty {
+                                            component.editCategory(
+                                                EngineStoryPrivacy(base: .closeFriends, additionallyIncludePeers: []),
                                                 self.selectedOptions.contains(.screenshot),
                                                 self.selectedOptions.contains(.pin)
                                             )
@@ -811,6 +958,20 @@ final class ShareWithPeersScreenComponent: Component {
                             self.visibleItems[itemId] = visibleItem
                         }
                         
+                        let subtitle: String?
+                        if case let .legacyGroup(group) = peer {
+                            subtitle = environment.strings.Conversation_StatusMembers(Int32(group.participantCount))
+                        } else if case .channel = peer {
+                            if let count = stateValue.participants[peer.id] {
+                                subtitle = environment.strings.Conversation_StatusMembers(Int32(count))
+                            } else {
+                                subtitle = nil
+                            }
+                        } else {
+                            subtitle = nil
+                        }
+                          
+                        let isSelected = self.selectedPeers.contains(peer.id) || self.selectedGroups.contains(peer.id)
                         let _ = visibleItem.update(
                             transition: itemTransition,
                             component: AnyComponent(PeerListItemComponent(
@@ -821,19 +982,23 @@ final class ShareWithPeersScreenComponent: Component {
                                 sideInset: itemLayout.sideInset,
                                 title: peer.displayTitle(strings: environment.strings, displayOrder: .firstLast),
                                 peer: peer,
-                                subtitle: nil,
+                                subtitle: subtitle,
                                 subtitleAccessory: .none,
                                 presence: stateValue.presences[peer.id],
-                                selectionState: .editing(isSelected: self.selectedPeers.contains(peer.id), isTinted: false),
+                                selectionState: .editing(isSelected: isSelected, isTinted: false),
                                 hasNext: true,
                                 action: { [weak self] peer in
                                     guard let self else {
                                         return
                                     }
-                                    if let index = self.selectedPeers.firstIndex(of: peer.id) {
-                                        self.selectedPeers.remove(at: index)
+                                    if peer.id.isGroupOrChannel {
+                                        self.toggleGroupPeer(peer)
                                     } else {
-                                        self.selectedPeers.append(peer.id)
+                                        if let index = self.selectedPeers.firstIndex(of: peer.id) {
+                                            self.selectedPeers.remove(at: index)
+                                        } else {
+                                            self.selectedPeers.append(peer.id)
+                                        }
                                     }
                                     
                                     let transition = Transition(animation: .curve(duration: 0.35, curve: .spring))
@@ -1244,9 +1409,20 @@ final class ShareWithPeersScreenComponent: Component {
                 
                 var tokens: [TokenListTextField.Token] = []
                 for peerId in self.selectedPeers {
-                    guard let stateValue = self.defaultStateValue, let peer = stateValue.peers.first(where: { $0.id == peerId }) else {
+                    guard let stateValue = self.defaultStateValue else {
                         continue
                     }
+                    var peer: EnginePeer?
+                    if let peerValue = self.peersMap[peerId] {
+                        peer = peerValue
+                    } else if let peerValue = stateValue.peers.first(where: { $0.id == peerId }) {
+                        peer = peerValue
+                    }
+                    
+                    guard let peer else {
+                        continue
+                    }
+                    
                     tokens.append(TokenListTextField.Token(
                         id: AnyHashable(peerId),
                         title: peer.compactDisplayTitle,
@@ -1440,7 +1616,7 @@ final class ShareWithPeersScreenComponent: Component {
                     actionButtonTitle = environment.strings.Story_Privacy_PostStory
                 }
             case .chats:
-                title = ""
+                title = environment.strings.Story_Privacy_CategorySelectedContacts
             case let .contacts(category):
                 switch category {
                 case .closeFriends:
@@ -1507,6 +1683,13 @@ final class ShareWithPeersScreenComponent: Component {
             
             transition.setFrame(layer: self.navigationSeparatorLayer, frame: CGRect(origin: CGPoint(x: containerSideInset, y: navigationHeight), size: CGSize(width: containerWidth, height: UIScreenPixel)))
             
+            let badge: Int
+            if case .stories = component.stateContext.subject {
+                badge = 0
+            } else {
+                badge = self.selectedPeers.count
+            }
+            
             let actionButtonSize = self.actionButton.update(
                 transition: transition,
                 component: AnyComponent(ButtonComponent(
@@ -1519,7 +1702,7 @@ final class ShareWithPeersScreenComponent: Component {
                         id: actionButtonTitle,
                         component: AnyComponent(ButtonTextContentComponent(
                             text: actionButtonTitle,
-                            badge: 0,
+                            badge: badge,
                             textColor: environment.theme.list.itemCheckColors.foregroundColor,
                             badgeBackground: environment.theme.list.itemCheckColors.foregroundColor,
                             badgeForeground: environment.theme.list.itemCheckColors.fillColor
@@ -1755,15 +1938,18 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
     public final class State {
         let peers: [EnginePeer]
         let presences: [EnginePeer.Id: EnginePeer.Presence]
+        let participants: [EnginePeer.Id: Int]
         let closeFriendsPeers: [EnginePeer]
         
         fileprivate init(
             peers: [EnginePeer],
             presences: [EnginePeer.Id: EnginePeer.Presence],
+            participants: [EnginePeer.Id: Int],
             closeFriendsPeers: [EnginePeer]
         ) {
             self.peers = peers
             self.presences = presences
+            self.participants = participants
             self.closeFriendsPeers = closeFriendsPeers
         }
     }
@@ -1820,6 +2006,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     let state = State(
                         peers: peers.compactMap { $0 },
                         presences: [:],
+                        participants: [:],
                         closeFriendsPeers: closeFriends
                     )
                     self.stateValue = state
@@ -1828,16 +2015,36 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     self.readySubject.set(true)
                 })
             case .chats:
-                self.stateDisposable = (context.engine.messages.chatList(group: .root, count: 200)
-                |> deliverOnMainQueue).start(next: { [weak self] chatList in
+                self.stateDisposable = (combineLatest(
+                    context.engine.messages.chatList(group: .root, count: 200) |> take(1),
+                    context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.List(includePresences: true))
+                )
+                |> mapToSignal { chatList, contacts -> Signal<(EngineChatList, EngineContactList, [EnginePeer.Id: Optional<Int>]), NoError> in
+                    return context.engine.data.subscribe(
+                        EngineDataMap(chatList.items.map(\.renderedPeer.peerId).map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init))
+                    )
+                    |> map { participantCountMap -> (EngineChatList, EngineContactList, [EnginePeer.Id: Optional<Int>]) in
+                        return (chatList, contacts, participantCountMap)
+                    }
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] chatList, contacts, participantCounts in
                     guard let self else {
                         return
                     }
                     
+                    var participants: [EnginePeer.Id: Int] = [:]
+                    for (key, value) in participantCounts {
+                        if let value {
+                            participants[key] = value
+                        }
+                    }
+                    
+                    var existingIds = Set<EnginePeer.Id>()
                     var selectedPeers: [EnginePeer] = []
                     for item in chatList.items.reversed() {
                         if self.initialPeerIds.contains(item.renderedPeer.peerId), let peer = item.renderedPeer.peer {
                             selectedPeers.append(peer)
+                            existingIds.insert(peer.id)
                         }
                     }
                     
@@ -1847,16 +2054,49 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     }
                     
                     var peers: [EnginePeer] = []
-                    peers = chatList.items.filter { !self.initialPeerIds.contains($0.renderedPeer.peerId) && $0.renderedPeer.peerId != context.account.peerId }.reversed().compactMap { $0.renderedPeer.peer }
+                    peers = chatList.items.filter { peer in
+                        if let peer = peer.renderedPeer.peer {
+                            if self.initialPeerIds.contains(peer.id) {
+                                return false
+                            }
+                            if peer.id == context.account.peerId {
+                                return false
+                            }
+                            if peer.isService {
+                                return false
+                            }
+                            if case let .channel(channel) = peer {
+                                if channel.isForum  {
+                                    return false
+                                }
+                                if case .broadcast = channel.info {
+                                    return false
+                                }
+                            }
+                            return true
+                        } else {
+                            return false
+                        }
+                    }.reversed().compactMap { $0.renderedPeer.peer }
+                    for peer in peers {
+                        existingIds.insert(peer.id)
+                    }
                     peers.insert(contentsOf: selectedPeers, at: 0)
                     
                     let state = State(
                         peers: peers,
                         presences: presences,
+                        participants: participants,
                         closeFriendsPeers: []
                     )
                     self.stateValue = state
                     self.stateSubject.set(.single(state))
+                    
+                    for peer in state.peers {
+                        if case let .channel(channel) = peer, participants[channel.id] == nil {
+                            let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: channel.id).start()
+                        }
+                    }
                     
                     self.readySubject.set(true)
                 })
@@ -1908,6 +2148,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     let state = State(
                         peers: peers,
                         presences: contactList.presences,
+                        participants: [:],
                         closeFriendsPeers: []
                     )
                                         
@@ -1917,7 +2158,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     self.readySubject.set(true)
                 })
             case let .search(query, onlyContacts):
-                let signal: Signal<[EngineRenderedPeer], NoError>
+                let signal: Signal<([EngineRenderedPeer], [EnginePeer.Id: Optional<Int>]), NoError>
                 if onlyContacts {
                     signal = combineLatest(
                         context.engine.contacts.searchLocalPeers(query: query),
@@ -1925,17 +2166,32 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     )
                     |> map { peers, contacts in
                         let contactIds = Set(contacts.0.map { $0.id })
-                        return peers.filter { contactIds.contains($0.peerId) }
+                        return (peers.filter { contactIds.contains($0.peerId) }, [:])
                     }
                 } else {
                     signal = context.engine.contacts.searchLocalPeers(query: query)
+                    |> mapToSignal { peers in
+                        return context.engine.data.subscribe(
+                            EngineDataMap(peers.map(\.peerId).map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init))
+                        )
+                        |> map { participantCountMap -> ([EngineRenderedPeer], [EnginePeer.Id: Optional<Int>]) in
+                            return (peers, participantCountMap)
+                        }
+                    }
                 }
                 self.stateDisposable = (signal
-                |> deliverOnMainQueue).start(next: { [weak self] peers in
+                |> deliverOnMainQueue).start(next: { [weak self] peers, participantCounts in
                     guard let self else {
                         return
                     }
-                                        
+                    
+                    var participants: [EnginePeer.Id: Int] = [:]
+                    for (key, value) in participantCounts {
+                        if let value {
+                            participants[key] = value
+                        }
+                    }
+                                                            
                     let state = State(
                         peers: peers.compactMap { $0.peer }.filter { peer in
                             if case let .user(user) = peer {
@@ -1946,15 +2202,30 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                                 } else {
                                     return true
                                 }
+                            } else if case let .channel(channel) = peer {
+                                if channel.isForum {
+                                    return false
+                                }
+                                if case .broadcast = channel.info {
+                                    return false
+                                }
+                                return true
                             } else {
-                                return false
+                                return true
                             }
                         },
                         presences: [:],
+                        participants: participants,
                         closeFriendsPeers: []
                     )
                     self.stateValue = state
                     self.stateSubject.set(.single(state))
+                    
+                    for peer in state.peers {
+                        if case let .channel(channel) = peer, participants[channel.id] == nil {
+                            let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: channel.id).start()
+                        }
+                    }
                     
                     self.readySubject.set(true)
                 })

@@ -9558,6 +9558,7 @@ Sorry for the inconvenience.";
 "Story.PrivacyTooltipContacts" = "This story is shown to all your contacts.";
 "Story.PrivacyTooltipCloseFriends" = "This story is shown to your close friends.";
 "Story.PrivacyTooltipSelectedContacts" = "This story is shown to selected contacts.";
+"Story.PrivacyTooltipSelectedContactsCount" = "This story is now shown to %@ contacts.";
 "Story.PrivacyTooltipNobody" = "This story is shown only to you.";
 "Story.PrivacyTooltipEveryone" = "This story is shown to everyone.";
 
@@ -9728,3 +9729,12 @@ Sorry for the inconvenience.";
 "Story.Editor.TooltipPremiumCaptionEntities" = "Subscribe to [Telegram Premium]() to add links and formatting in captions to your stories.";
 
 "Story.Context.TooltipPremiumSaveStories" = "Subscribe to [Telegram Premium]() to save other people's unprotected stories to your Gallery.";
+
+"Story.Privacy.GroupTooLarge" = "Group Too Large";
+"Story.Privacy.GroupParticipantsLimit" = "You can select groups that are up to 200 members.";
+
+"ChatList.StoryFeedTooltipUsers" = "Tap above to view stories from %@";
+
+"Story.TooltipPrivacyCloseFriends2" = "You are seeing this story because **%@** added you to their list of Close Friends.";
+
+"Story.Editor.VideoTooShort" = "A video must be at least 1 second long.";

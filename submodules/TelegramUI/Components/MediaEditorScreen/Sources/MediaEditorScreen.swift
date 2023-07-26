@@ -19,7 +19,7 @@ import MessageInputPanelComponent
 import TextFieldComponent
 import EntityKeyboard
 import TooltipUI
-import BlurredBackgroundComponent
+import PlainButtonComponent
 import AvatarNode
 import ShareWithPeersScreen
 import PresentationDataUtils
@@ -38,7 +38,6 @@ enum DrawingScreenType {
     case sticker
 }
 
-private let privacyButtonTag = GenericComponentViewTag()
 private let muteButtonTag = GenericComponentViewTag()
 private let saveButtonTag = GenericComponentViewTag()
 
@@ -237,11 +236,9 @@ final class MediaEditorScreenComponent: Component {
         
         private let scrubber = ComponentView<Empty>()
         
-        private let privacyButton = ComponentView<Empty>()
         private let flipStickerButton = ComponentView<Empty>()
         private let muteButton = ComponentView<Empty>()
         private let saveButton = ComponentView<Empty>()
-        private let settingsButton = ComponentView<Empty>()
         
         private let textCancelButton = ComponentView<Empty>()
         private let textDoneButton = ComponentView<Empty>()
@@ -469,16 +466,6 @@ final class MediaEditorScreenComponent: Component {
                     view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
                 }
                 
-                if let view = self.settingsButton.view {
-                    view.layer.animateAlpha(from: 0.0, to: view.alpha, duration: 0.2)
-                    view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
-                }
-                
-                if let view = self.privacyButton.view {
-                    view.layer.animateAlpha(from: 0.0, to: view.alpha, duration: 0.2)
-                    view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
-                }
-                
                 if let view = self.inputPanel.view {
                     view.layer.animatePosition(from: CGPoint(x: 0.0, y: 44.0), to: .zero, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
                     view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -542,16 +529,6 @@ final class MediaEditorScreenComponent: Component {
             }
             
             if let view = self.muteButton.view {
-                transition.setAlpha(view: view, alpha: 0.0)
-                transition.setScale(view: view, scale: 0.1)
-            }
-            
-            if let view = self.settingsButton.view {
-                transition.setAlpha(view: view, alpha: 0.0)
-                transition.setScale(view: view, scale: 0.1)
-            }
-            
-            if let view = self.privacyButton.view {
                 transition.setAlpha(view: view, alpha: 0.0)
                 transition.setScale(view: view, scale: 0.1)
             }
@@ -673,12 +650,7 @@ final class MediaEditorScreenComponent: Component {
             
             self.setupIfNeeded()
                         
-            let isTablet: Bool
-            if case .regular = environment.metrics.widthClass {
-                isTablet = true
-            } else {
-                isTablet = false
-            }
+            let isTablet = environment.metrics.isTablet
             
             let openDrawing = component.openDrawing
             let openTools = component.openTools
@@ -745,11 +717,12 @@ final class MediaEditorScreenComponent: Component {
             
             let doneButtonSize = self.doneButton.update(
                 transition: transition,
-                component: AnyComponent(Button(
-                    content: AnyComponent(DoneButtonComponent(
+                component: AnyComponent(PlainButtonComponent(
+                    content: AnyComponent(DoneButtonContentComponent(
                         backgroundColor: UIColor(rgb: 0x007aff),
                         icon: UIImage(bundleImageName: "Media Editor/Next")!,
                         title: doneButtonTitle.uppercased())),
+                    effectAlignment: .center,
                     action: {
                         guard let controller = environment.controller() as? MediaEditorScreen else {
                             return
@@ -1282,70 +1255,9 @@ final class MediaEditorScreenComponent: Component {
                 transition.setAlpha(view: inputPanelView, alpha: isEditingTextEntity || component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
             }
             
-            let additionalPeersCount = component.privacy.privacy.additionallyIncludePeers.count
-            var privacyText: String
-            switch component.privacy.privacy.base {
-            case .everyone:
-                privacyText = environment.strings.Story_ContextPrivacy_LabelEveryone
-            case .closeFriends:
-                privacyText = environment.strings.Story_ContextPrivacy_LabelCloseFriends
-            case .contacts:
-                if additionalPeersCount > 0 {
-                    privacyText = environment.strings.Story_ContextPrivacy_LabelContactsExcept("\(additionalPeersCount)").string
-                } else {
-                    privacyText = environment.strings.Story_ContextPrivacy_LabelContacts
-                }
-            case .nobody:
-                if additionalPeersCount > 0 {
-                    privacyText = environment.strings.Story_ContextPrivacy_LabelOnlySelected(Int32(additionalPeersCount))
-                } else {
-                    privacyText = environment.strings.Story_ContextPrivacy_LabelOnlyMe
-                }
-            }
             
             let displayTopButtons = !(self.inputPanelExternalState.isEditing || isEditingTextEntity || component.isDisplayingTool)
-            
-            let privacyButtonSize = self.privacyButton.update(
-                transition: transition,
-                component: AnyComponent(Button(
-                    content: AnyComponent(
-                        PrivacyButtonComponent(
-                            backgroundColor: isTablet ? UIColor(rgb: 0x303030, alpha: 0.5) : UIColor(white: 0.0, alpha: 0.5),
-                            icon: UIImage(bundleImageName: "Media Editor/Recipient")!,
-                            text: privacyText
-                        )
-                    ),
-                    action: {
-                        if let controller = environment.controller() as? MediaEditorScreen {
-                            controller.openPrivacySettings()
-                        }
-                    }
-                ).tagged(privacyButtonTag)),
-                environment: {},
-                containerSize: CGSize(width: 44.0, height: 44.0)
-            )
-            let privacyButtonFrame: CGRect
-            if isTablet {
-                privacyButtonFrame = CGRect(
-                    origin: CGPoint(x: availableSize.width - buttonSideInset - doneButtonSize.width - privacyButtonSize.width - 24.0, y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + 1.0),
-                    size: privacyButtonSize
-                )
-            } else {
-                privacyButtonFrame = CGRect(
-                    origin: CGPoint(x: 16.0, y: environment.safeInsets.top + 20.0),
-                    size: privacyButtonSize
-                )
-            }
-            if let privacyButtonView = self.privacyButton.view {
-                if privacyButtonView.superview == nil {
-                    //self.addSubview(privacyButtonView)
-                }
-                transition.setPosition(view: privacyButtonView, position: privacyButtonFrame.center)
-                transition.setBounds(view: privacyButtonView, bounds: CGRect(origin: .zero, size: privacyButtonFrame.size))
-                transition.setScale(view: privacyButtonView, scale: displayTopButtons ? 1.0 : 0.01)
-                transition.setAlpha(view: privacyButtonView, alpha: displayTopButtons && !component.isDismissing && !component.isInteractingWithEntities ? 1.0 : 0.0)
-            }
-            
+                
             let saveContentComponent: AnyComponentWithIdentity<Empty>
             if component.hasAppeared {
                 saveContentComponent = AnyComponentWithIdentity(
@@ -2747,10 +2659,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 
                                 if let context = context {
                                     let path = UIBezierPath(roundedRect: rect, cornerRadius: cornerRadius)
-                                    
                                     context.addPath(path.cgPath)
                                     context.clip()
-                                    
                                     image.draw(in: rect)
                                 }
                                 
@@ -3410,7 +3320,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     }
     
     private func openEditCategory(privacy: EngineStoryPrivacy, isForwardingDisabled: Bool, pin: Bool, completion: @escaping (EngineStoryPrivacy) -> Void) {
-        let stateContext = ShareWithPeersScreen.StateContext(context: self.context, subject: .contacts(privacy.base), initialPeerIds: Set(privacy.additionallyIncludePeers))
+        let subject: ShareWithPeersScreen.StateContext.Subject
+        if privacy.base == .nobody {
+            subject = .chats
+        } else {
+            subject = .contacts(privacy.base)
+        }
+        let stateContext = ShareWithPeersScreen.StateContext(context: self.context, subject: subject, initialPeerIds: Set(privacy.additionallyIncludePeers))
         let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
             guard let self else {
                 return
@@ -3651,7 +3567,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         if let resultImage = mediaEditor.resultImage {
             mediaEditor.seek(0.0, andPlay: false)
-            makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: resultImage, dimensions: storyDimensions, values: values, time: .zero, completion: { resultImage in
+            makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: resultImage, dimensions: storyDimensions, values: values, time: .zero, textScale: 2.0, completion: { resultImage in
                 guard let resultImage else {
                     return
                 }
@@ -3813,9 +3729,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 } else {
                     duration = durationValue
                 }
-                
-                let _ = additionalPath
-                
+                                
                 firstFrame = Signal<(UIImage?, UIImage?), NoError> { subscriber in
                     let avAsset = AVURLAsset(url: URL(fileURLWithPath: path))
                     let avAssetGenerator = AVAssetImageGenerator(asset: avAsset)
@@ -3936,7 +3850,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         inputImage = UIImage()
                     }
 
-                    makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: inputImage, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] coverImage in
+                    makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: inputImage, dimensions: storyDimensions, values: mediaEditor.values, time: firstFrameTime, textScale: 2.0, completion: { [weak self] coverImage in
                         if let self {
                             Logger.shared.log("MediaEditor", "Completed with video \(videoResult)")
                             self.completion(randomId, .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions), caption, self.state.privacy, stickers, { [weak self] finished in
@@ -3959,7 +3873,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if let image = mediaEditor.resultImage {
                 self.saveDraft(id: randomId)
                 
-                makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] resultImage in
+                makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, textScale: 2.0, completion: { [weak self] resultImage in
                     if let self, let resultImage {
                         Logger.shared.log("MediaEditor", "Completed with image \(resultImage)")
                         self.completion(randomId, .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), caption, self.state.privacy, stickers, { [weak self] finished in
@@ -4087,7 +4001,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
                 let configuration = recommendedVideoExportConfiguration(values: mediaEditor.values, duration: duration, forceFullHd: true, frameRate: 60.0)
                 let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).mp4"
-                let videoExport = MediaEditorVideoExport(account: self.context.account, subject: exportSubject, configuration: configuration, outputPath: outputPath)
+                let videoExport = MediaEditorVideoExport(account: self.context.account, subject: exportSubject, configuration: configuration, outputPath: outputPath, textScale: 2.0)
                 self.videoExport = videoExport
                 
                 videoExport.start()
@@ -4120,7 +4034,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         } else {
             if let image = mediaEditor.resultImage {
                 Queue.concurrentDefaultQueue().async {
-                    makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { resultImage in
+                    makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, textScale: 2.0, completion: { resultImage in
                         if let data = resultImage?.jpegData(compressionQuality: 0.8) {
                             let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).jpg"
                             try? data.write(to: URL(fileURLWithPath: outputPath))
@@ -4133,10 +4047,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 self.node.presentSaveTooltip()
             }
         }
-    }
-    
-    func requestSettings() {
-        
     }
     
     fileprivate func cancelVideoExport() {
@@ -4213,80 +4123,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     }
 }
 
-final class PrivacyButtonComponent: CombinedComponent {
-    let backgroundColor: UIColor
-    let icon: UIImage
-    let text: String
-
-    init(
-        backgroundColor: UIColor,
-        icon: UIImage,
-        text: String
-    ) {
-        self.backgroundColor = backgroundColor
-        self.icon = icon
-        self.text = text
-    }
-
-    static func ==(lhs: PrivacyButtonComponent, rhs: PrivacyButtonComponent) -> Bool {
-        if lhs.backgroundColor != rhs.backgroundColor {
-            return false
-        }
-        if lhs.text != rhs.text {
-            return false
-        }
-        return true
-    }
-
-    static var body: Body {
-        let background = Child(BlurredBackgroundComponent.self)
-        let icon = Child(Image.self)
-        let text = Child(Text.self)
-
-        return { context in
-            let icon = icon.update(
-                component: Image(image: context.component.icon, size: CGSize(width: 9.0, height: 11.0)),
-                availableSize: CGSize(width: 180.0, height: 100.0),
-                transition: .immediate
-            )
-            
-            let text = text.update(
-                component: Text(
-                    text: context.component.text,
-                    font: Font.medium(14.0),
-                    color: .white
-                ),
-                availableSize: CGSize(width: 180.0, height: 100.0),
-                transition: .immediate
-            )
-
-            let backgroundSize = CGSize(width: text.size.width + 38.0, height: 30.0)
-            let background = background.update(
-                component: BlurredBackgroundComponent(color: context.component.backgroundColor),
-                availableSize: backgroundSize,
-                transition: .immediate
-            )
-
-            context.add(background
-                .position(CGPoint(x: backgroundSize.width / 2.0, y: backgroundSize.height / 2.0))
-                .cornerRadius(min(backgroundSize.width, backgroundSize.height) / 2.0)
-                .clipsToBounds(true)
-            )
-            
-            context.add(icon
-                .position(CGPoint(x: 16.0, y: backgroundSize.height / 2.0))
-            )
-
-            context.add(text
-                .position(CGPoint(x: backgroundSize.width / 2.0 + 7.0, y: backgroundSize.height / 2.0))
-            )
-
-            return backgroundSize
-        }
-    }
-}
-
-final class DoneButtonComponent: CombinedComponent {
+final class DoneButtonContentComponent: CombinedComponent {
     let backgroundColor: UIColor
     let icon: UIImage
     let title: String?
@@ -4301,7 +4138,7 @@ final class DoneButtonComponent: CombinedComponent {
         self.title = title
     }
 
-    static func ==(lhs: DoneButtonComponent, rhs: DoneButtonComponent) -> Bool {
+    static func ==(lhs: DoneButtonContentComponent, rhs: DoneButtonContentComponent) -> Bool {
         if lhs.backgroundColor != rhs.backgroundColor {
             return false
         }

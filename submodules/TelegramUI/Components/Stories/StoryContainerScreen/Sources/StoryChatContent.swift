@@ -191,8 +191,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                             isPublic: item.privacy.base == .everyone,
                             isPending: true,
                             isCloseFriends: item.privacy.base == .closeFriends,
-                            isContacts: item.privacy.base == .contacts && item.privacy.additionallyIncludePeers.isEmpty,
-                            isSelectedContacts: item.privacy.base == .contacts && !item.privacy.additionallyIncludePeers.isEmpty,
+                            isContacts: item.privacy.base == .contacts,
+                            isSelectedContacts: item.privacy.base == .nobody,
                             isForwardingDisabled: false,
                             isEdited: false
                         ))

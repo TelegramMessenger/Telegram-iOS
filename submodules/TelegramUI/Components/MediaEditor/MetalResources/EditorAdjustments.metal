@@ -21,7 +21,7 @@ typedef struct {
     float       grain;
     float       vignette;
     float       hasCurves;
-    float2       empty;
+    float2      empty;
 } MediaEditorAdjustments;
 
 half3 fade(half3 color, float fadeAmount) {

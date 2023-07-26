@@ -1651,9 +1651,15 @@ public class CameraScreen: ViewController {
             guard let camera = self.camera else {
                 return
             }
-            let location = gestureRecognizer.location(in: self.mainPreviewView)
-            let point = self.mainPreviewView.cameraPoint(for: location)
-            camera.focus(at: point, autoFocus: false)
+            
+            let location = gestureRecognizer.location(in: gestureRecognizer.view)
+            if self.cameraState.isDualCameraEnabled && self.additionalPreviewContainerView.frame.contains(location) {
+                self.toggleCameraPositionAction.invoke(Void())
+            } else {
+                let location = gestureRecognizer.location(in: self.mainPreviewView)
+                let point = self.mainPreviewView.cameraPoint(for: location)
+                camera.focus(at: point, autoFocus: false)
+            }
         }
 
         @objc private func handleDoubleTap(_ gestureRecognizer: UITapGestureRecognizer) {
@@ -2479,7 +2485,22 @@ public class CameraScreen: ViewController {
                         transitionOut: transitionOut
                     )
                     if let asset = result as? PHAsset {
-                        self.completion(.single(.asset(asset)), resultTransition, dismissed)
+                        if asset.mediaType == .video && asset.duration < 1.0 {
+                            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                            let alertController = textAlertController(
+                                context: self.context,
+                                forceTheme: defaultDarkColorPresentationTheme,
+                                title: nil,
+                                text: presentationData.strings.Story_Editor_VideoTooShort,
+                                actions: [
+                                    TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                                ],
+                                actionLayout: .vertical
+                            )
+                            self.present(alertController, in: .window(.root))
+                        } else {
+                            self.completion(.single(.asset(asset)), resultTransition, dismissed)
+                        }
                     } else if let draft = result as? MediaEditorDraft {
                         self.completion(.single(.draft(draft)), resultTransition, dismissed)
                     }
