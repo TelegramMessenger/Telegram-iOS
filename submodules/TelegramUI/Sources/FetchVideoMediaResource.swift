@@ -419,7 +419,7 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                                 var value = stat()
                                 if stat(result.fileURL.path, &value) == 0 {
                                     let remuxedTempFile = TempBox.shared.tempFile(fileName: "video.mp4")
-                                    if let size = fileSize(result.fileURL.path), size <= 32 * 1024 * 1024, FFMpegRemuxer.remux(result.fileURL.path, to: remuxedTempFile.path) {
+                                    if !"".isEmpty, let size = fileSize(result.fileURL.path), size <= 32 * 1024 * 1024, FFMpegRemuxer.remux(result.fileURL.path, to: remuxedTempFile.path) {
                                         TempBox.shared.dispose(tempFile)
                                         subscriber.putNext(.moveTempFile(file: remuxedTempFile))
                                     } else {
