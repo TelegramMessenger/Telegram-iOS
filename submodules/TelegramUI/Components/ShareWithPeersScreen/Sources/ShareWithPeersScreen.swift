@@ -2269,7 +2269,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
             categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
                 id: .everyone,
                 title: presentationData.strings.Story_Privacy_CategoryEveryone,
-                icon: "Chat List/Filters/Channel",
+                icon: "Media Editor/Privacy/Everyone",
                 iconColor: .blue,
                 actionTitle: nil
             ))
@@ -2298,7 +2298,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
             categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
                 id: .contacts,
                 title: presentationData.strings.Story_Privacy_CategoryContacts,
-                icon: "Chat List/Tabs/IconContacts",
+                icon: "Media Editor/Privacy/Contacts",
                 iconColor: .violet,
                 actionTitle: contactsSubtitle
             ))
@@ -2314,7 +2314,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
             categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
                 id: .closeFriends,
                 title: presentationData.strings.Story_Privacy_CategoryCloseFriends,
-                icon: "Call/StarHighlighted",
+                icon: "Media Editor/Privacy/CloseFriends",
                 iconColor: .green,
                 actionTitle: closeFriendsSubtitle
             ))
@@ -2338,7 +2338,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
             categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
                 id: .selectedContacts,
                 title: presentationData.strings.Story_Privacy_CategorySelectedContacts,
-                icon: "Chat List/Filters/Group",
+                icon: "Media Editor/Privacy/SelectedUsers",
                 iconColor: .yellow,
                 actionTitle: selectedContactsSubtitle
             ))

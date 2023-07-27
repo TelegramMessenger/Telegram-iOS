@@ -1010,6 +1010,8 @@ private class DrawingTextLayoutManager: NSLayoutManager {
     var frameColor: UIColor?
     var frameWidthInset: CGFloat = 0.0
     
+    var textAlignment: NSTextAlignment = .natural
+    
     override init() {
         self.radius = 8.0
         
@@ -1033,7 +1035,7 @@ private class DrawingTextLayoutManager: NSLayoutManager {
             }
             
             var usedRect = usedRect
-            if substring.hasSuffix(" ") {
+            if substring.hasSuffix(" ") && self.textAlignment != .right {
                 usedRect.size.width -= floorToScreenPixels(usedRect.height * 0.145)
             }
             
@@ -1062,21 +1064,28 @@ private class DrawingTextLayoutManager: NSLayoutManager {
             return
         }
         
-        let last = self.rectArray[index - 1]
-        let cur = self.rectArray[index]
+        var last = self.rectArray[index - 1]
+        var cur = self.rectArray[index]
         
         self.radius = cur.height * 0.18
         
         let doubleRadius = self.radius * 2.5
         
-        let t1 = ((cur.minX - last.minX < doubleRadius) && (cur.minX > last.minX)) || ((cur.maxX - last.maxX > -doubleRadius) && (cur.maxX < last.maxX))
+        var t1 = ((cur.minX - last.minX < doubleRadius) && (cur.minX > last.minX)) || ((cur.maxX - last.maxX > -doubleRadius) && (cur.maxX < last.maxX))
         let t2 = ((last.minX - cur.minX < doubleRadius) && (last.minX > cur.minX)) || ((last.maxX - cur.maxX > -doubleRadius) && (last.maxX < cur.maxX))
         
         if t2 {
             let newRect = CGRect(origin: CGPoint(x: cur.minX, y: last.minY), size: CGSize(width: cur.width, height: last.height))
             self.rectArray[index - 1] = newRect
             self.processRectIndex(index - 1)
-        } else if t1 {
+        }
+        
+        last = self.rectArray[index - 1]
+        cur = self.rectArray[index]
+        
+        t1 = ((cur.minX - last.minX < doubleRadius) && (cur.minX > last.minX)) || ((cur.maxX - last.maxX > -doubleRadius) && (cur.maxX < last.maxX))
+        
+        if t1 {
             let newRect = CGRect(origin: CGPoint(x: last.minX, y: cur.minY), size: CGSize(width: last.width, height: cur.height))
             self.rectArray[index] = newRect
             self.processRectIndex(index + 1)
@@ -1275,6 +1284,16 @@ final class DrawingTextView: UITextView, NSLayoutManagerDelegate {
         }
     }
         
+    override var textAlignment: NSTextAlignment {
+        get {
+            return super.textAlignment
+        }
+        set {
+            self.drawingLayoutManager.textAlignment = newValue
+            super.textAlignment = newValue
+        }
+    }
+    
     override var font: UIFont? {
         get {
             return super.font
