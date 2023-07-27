@@ -979,6 +979,7 @@ private final class NotificationServiceHandler {
                         case deleteMessage([MessageId])
                         case readReactions([MessageId])
                         case readMessage(MessageId)
+                        case readStories(peerId: PeerId, maxId: Int32)
                         case call(CallData)
                     }
 
@@ -1027,6 +1028,14 @@ private final class NotificationServiceHandler {
                                 if let messageIdString = payloadJson["max_id"] as? String {
                                     if let maxId = Int32(messageIdString) {
                                         action = .readMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: maxId))
+                                    }
+                                }
+                            }
+                        case "READ_STORIES":
+                            if let peerId = peerId {
+                                if let storyIdString = payloadJson["max_id"] as? String {
+                                    if let maxId = Int32(storyIdString) {
+                                        action = .readStories(peerId: peerId, maxId: maxId)
                                     }
                                 }
                             }
@@ -1786,6 +1795,10 @@ private final class NotificationServiceHandler {
                                                 }
                                             }
                                         }
+                                        
+                                        let wasDisplayed = stateManager.postbox.transaction { transaction -> Bool in
+                                            return _internal_getStoryNotificationWasDisplayed(transaction: transaction, id: StoryId(peerId: peerId, id: storyId))
+                                        }
 
                                         Logger.shared.log("NotificationService \(episode)", "Will fetch media")
                                         let _ = (combineLatest(queue: queue,
@@ -1794,10 +1807,11 @@ private final class NotificationServiceHandler {
                                             fetchNotificationSoundSignal
                                             |> timeout(10.0, queue: queue, alternate: .single(nil)),
                                             fetchStoriesSignal
-                                            |> timeout(10.0, queue: queue, alternate: .single(Void()))
+                                            |> timeout(10.0, queue: queue, alternate: .single(Void())),
+                                            wasDisplayed
                                         )
-                                        |> deliverOn(queue)).start(next: { mediaData, notificationSoundData, _ in
-                                            guard let strongSelf = self, let _ = strongSelf.stateManager else {
+                                        |> deliverOn(queue)).start(next: { mediaData, notificationSoundData, _, wasDisplayed in
+                                            guard let strongSelf = self, let stateManager = strongSelf.stateManager else {
                                                 completed()
                                                 return
                                             }
@@ -1810,6 +1824,15 @@ private final class NotificationServiceHandler {
                                                 if let (_, filePath, _) = downloadNotificationSound {
                                                     let _ = try? notificationSoundData.write(to: URL(fileURLWithPath: filePath))
                                                 }
+                                            }
+                                            
+                                            var content = content
+                                            if wasDisplayed {
+                                                content = NotificationContent(isLockedMessage: nil)
+                                            } else {
+                                                let _ = (stateManager.postbox.transaction { transaction -> Void in
+                                                    _internal_setStoryNotificationWasDisplayed(transaction: transaction, id: StoryId(peerId: peerId, id: storyId))
+                                                }).start()
                                             }
 
                                             Logger.shared.log("NotificationService \(episode)", "Updating content to \(content)")
@@ -2001,6 +2024,39 @@ private final class NotificationServiceHandler {
 
                                             completed()
                                         })
+                                    }
+
+                                    if !removeIdentifiers.isEmpty {
+                                        Logger.shared.log("NotificationService \(episode)", "Will try to remove \(removeIdentifiers.count) notifications")
+                                        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: removeIdentifiers)
+                                        queue.after(1.0, {
+                                            completeRemoval()
+                                        })
+                                    } else {
+                                        completeRemoval()
+                                    }
+                                })
+                            })
+                        case let .readStories(peerId, maxId):
+                            Logger.shared.log("NotificationService \(episode)", "Will read stories peerId: \(peerId) maxId: \(maxId)")
+                            let _ = (stateManager.postbox.transaction { transaction -> Void in
+                            }
+                            |> deliverOn(strongSelf.queue)).start(completed: {
+                                UNUserNotificationCenter.current().getDeliveredNotifications(completionHandler: { notifications in
+                                    var removeIdentifiers: [String] = []
+                                    for notification in notifications {
+                                        if let peerIdString = notification.request.content.userInfo["peerId"] as? String, let peerIdValue = Int64(peerIdString), let messageIdString = notification.request.content.userInfo["story_id"] as? String, let messageIdValue = Int32(messageIdString) {
+                                            if PeerId(peerIdValue) == peerId && messageIdValue <= maxId {
+                                                removeIdentifiers.append(notification.request.identifier)
+                                            }
+                                        }
+                                    }
+
+                                    let completeRemoval: () -> Void = {
+                                        let content = NotificationContent(isLockedMessage: nil)
+                                        updateCurrentContent(content)
+                                        
+                                        completed()
                                     }
 
                                     if !removeIdentifiers.isEmpty {

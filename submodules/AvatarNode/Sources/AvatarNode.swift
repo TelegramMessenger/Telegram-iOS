@@ -953,6 +953,9 @@ public final class AvatarNode: ASDisplayNode {
                 guard let self else {
                     return
                 }
+                if let previousDisposable = self.loadingStatuses.copyItemsWithIndices().first(where: { $0.0 == index })?.1 {
+                    previousDisposable.dispose()
+                }
                 self.loadingStatuses.remove(index)
                 if self.loadingStatuses.isEmpty {
                     self.updateStoryIndicator(transition: .immediate)
@@ -963,6 +966,9 @@ public final class AvatarNode: ASDisplayNode {
         return ActionDisposable { [weak self] in
             guard let self else {
                 return
+            }
+            if let previousDisposable = self.loadingStatuses.copyItemsWithIndices().first(where: { $0.0 == index })?.1 {
+                previousDisposable.dispose()
             }
             self.loadingStatuses.remove(index)
             if self.loadingStatuses.isEmpty {

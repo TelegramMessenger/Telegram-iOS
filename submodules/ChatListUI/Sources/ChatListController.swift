@@ -207,6 +207,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private var preloadStorySubscriptionsDisposable: Disposable?
     private var preloadStoryResourceDisposables: [MediaId: Disposable] = [:]
     
+    private var sharedOpenStoryProgressDisposable = MetaDisposable()
+    
     private var fullScreenEffectView: RippleEffectView?
     
     public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -778,6 +780,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.preloadStorySubscriptionsDisposable?.dispose()
         self.storyProgressDisposable?.dispose()
         self.storiesPostingAvailabilityDisposable?.dispose()
+        self.sharedOpenStoryProgressDisposable.dispose()
     }
     
     private func updateNavigationMetadata() {
@@ -1362,7 +1365,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             case .archive:
                 StoryContainerScreen.openArchivedStories(context: self.context, parentController: self, avatarNode: itemNode.avatarNode)
             case let .peer(peerId):
-                StoryContainerScreen.openPeerStories(context: self.context, peerId: peerId, parentController: self, avatarNode: itemNode.avatarNode)
+                StoryContainerScreen.openPeerStories(context: self.context, peerId: peerId, parentController: self, avatarNode: itemNode.avatarNode, sharedProgressDisposable: self.sharedOpenStoryProgressDisposable)
             }
         }
         
