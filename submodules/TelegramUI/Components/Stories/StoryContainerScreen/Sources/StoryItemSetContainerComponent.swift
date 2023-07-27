@@ -2419,6 +2419,7 @@ public final class StoryItemSetContainerComponent: Component {
                 soundImage = "Stories/SoundOn"
             }
             
+            //TODO:anim_storymute
             let soundButtonSize = self.soundButton.update(
                 transition: transition,
                 component: AnyComponent(PlainButtonComponent(

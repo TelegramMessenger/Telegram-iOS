@@ -1952,3 +1952,17 @@ func _internal_refreshSeenStories(postbox: Postbox, network: Network) -> Signal<
         |> ignoreValues
     }
 }
+
+public func _internal_getStoryNotificationWasDisplayed(transaction: Transaction, id: StoryId) -> Bool {
+    let key = ValueBoxKey(length: 8 + 4)
+    key.setInt64(0, value: id.peerId.toInt64())
+    key.setInt32(8, value: id.id)
+    return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.displayedStoryNotifications, key: key)) != nil
+}
+
+public func _internal_setStoryNotificationWasDisplayed(transaction: Transaction, id: StoryId) {
+    let key = ValueBoxKey(length: 8 + 4)
+    key.setInt64(0, value: id.peerId.toInt64())
+    key.setInt32(8, value: id.id)
+    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.displayedStoryNotifications, key: key), entry: CodableEntry(data: Data()))
+}
