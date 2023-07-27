@@ -1564,11 +1564,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
         
         if isSending {
-            if case .progress = streamingState {
-            } else {
-                let adjustedProgress: CGFloat = 0.027
-                streamingState = .progress(value: CGFloat(adjustedProgress), cancelEnabled: true, appearance: .init(inset: 1.0, lineWidth: 2.0))
-            }
+            streamingState = .none
             
             if case .progress = state {
             } else {
