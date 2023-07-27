@@ -4585,13 +4585,32 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                     
                                     if let result = itemNode.targetForStoryTransition(id: storyId) {
+                                        result.isHidden = true
                                         transitionOut = StoryContainerScreen.TransitionOut(
                                             destinationView: result,
-                                            transitionView: nil,
+                                            transitionView: StoryContainerScreen.TransitionView(
+                                                makeView: { [weak result] in
+                                                    let parentView = UIView()
+                                                    if let copyView = result?.snapshotContentTree(unhide: true) {
+                                                        parentView.addSubview(copyView)
+                                                    }
+                                                    return parentView
+                                                },
+                                                updateView: { copyView, state, transition in
+                                                    guard let view = copyView.subviews.first else {
+                                                        return
+                                                    }
+                                                    let size = state.sourceSize.interpolate(to: state.destinationSize, amount: state.progress)
+                                                    transition.setPosition(view: view, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
+                                                    transition.setScale(view: view, scale: size.width / state.destinationSize.width)
+                                                },
+                                                insertCloneTransitionView: nil
+                                            ),
                                             destinationRect: result.bounds,
                                             destinationCornerRadius: 2.0,
                                             destinationIsAvatar: false,
-                                            completed: {
+                                            completed: { [weak result] in
+                                                result?.isHidden = false
                                             }
                                         )
                                     }
