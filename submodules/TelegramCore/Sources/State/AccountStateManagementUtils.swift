@@ -2100,25 +2100,29 @@ func resolveStories<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, 
         while idOffset < allIds.count {
             let bucketLength = min(100, allIds.count - idOffset)
             let ids = Array(allIds[idOffset ..< (idOffset + bucketLength)])
-            signals.append(_internal_getStoriesById(accountPeerId: accountPeerId, postbox: postbox, source: source, peerId: peerId, peerReference: additionalPeers.get(peerId).flatMap(PeerReference.init), ids: ids)
+            signals.append(_internal_getStoriesById(accountPeerId: accountPeerId, postbox: postbox, source: source, peerId: peerId, peerReference: additionalPeers.get(peerId).flatMap(PeerReference.init), ids: ids, allowFloodWait: false)
             |> mapToSignal { result -> Signal<Never, NoError> in
-                return postbox.transaction { transaction -> Void in
-                    for id in ids {
-                        let current = transaction.getStory(id: StoryId(peerId: peerId, id: id))
-                        var updated: CodableEntry?
-                        if let updatedItem = result.first(where: { $0.id == id }) {
-                            if let entry = CodableEntry(updatedItem) {
-                                updated = entry
+                if let result = result {
+                    return postbox.transaction { transaction -> Void in
+                        for id in ids {
+                            let current = transaction.getStory(id: StoryId(peerId: peerId, id: id))
+                            var updated: CodableEntry?
+                            if let updatedItem = result.first(where: { $0.id == id }) {
+                                if let entry = CodableEntry(updatedItem) {
+                                    updated = entry
+                                }
+                            } else {
+                                updated = CodableEntry(data: Data())
                             }
-                        } else {
-                            updated = CodableEntry(data: Data())
-                        }
-                        if current != updated {
-                            transaction.setStory(id: StoryId(peerId: peerId, id: id), value: updated ?? CodableEntry(data: Data()))
+                            if current != updated {
+                                transaction.setStory(id: StoryId(peerId: peerId, id: id), value: updated ?? CodableEntry(data: Data()))
+                            }
                         }
                     }
+                    |> ignoreValues
+                } else {
+                    return .complete()
                 }
-                |> ignoreValues
             })
             idOffset += bucketLength
         }

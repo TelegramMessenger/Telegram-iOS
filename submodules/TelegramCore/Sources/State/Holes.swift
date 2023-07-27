@@ -108,12 +108,12 @@ enum FetchMessageHistoryHoleSource {
     case network(Network)
     case download(Download)
     
-    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>)) -> Signal<T, MTRpcError> {
+    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {
         switch self {
-            case let .network(network):
-                return network.request(data)
-            case let .download(download):
-                return download.request(data)
+        case let .network(network):
+            return network.request(data, automaticFloodWait: automaticFloodWait)
+        case let .download(download):
+            return download.request(data, automaticFloodWait: automaticFloodWait)
         }
     }
 }
