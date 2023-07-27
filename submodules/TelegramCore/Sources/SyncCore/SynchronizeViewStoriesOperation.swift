@@ -35,8 +35,8 @@ func _internal_addSynchronizeViewStoriesOperation(peerId: PeerId, storyId: Int32
     if let (topOperation, topLocalIndex) = topOperation {
         if topOperation.storyId < storyId {
             let _ = transaction.operationLogRemoveEntry(peerId: peerId, tag: tag, tagLocalIndex: topLocalIndex)
+            replace = true
         }
-        replace = true
     } else {
         replace = true
     }
