@@ -3319,8 +3319,13 @@ public final class StoryItemSetContainerComponent: Component {
             guard let context = self.component?.context else {
                 return
             }
-        
-            let stateContext = ShareWithPeersScreen.StateContext(context: context, subject: .contacts(privacy.base), initialPeerIds: Set(privacy.additionallyIncludePeers))
+            let subject: ShareWithPeersScreen.StateContext.Subject
+            if privacy.base == .nobody {
+                subject = .chats
+            } else {
+                subject = .contacts(privacy.base)
+            }
+            let stateContext = ShareWithPeersScreen.StateContext(context: context, subject: subject, initialPeerIds: Set(privacy.additionallyIncludePeers))
             let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
                 guard let self else {
                     return
