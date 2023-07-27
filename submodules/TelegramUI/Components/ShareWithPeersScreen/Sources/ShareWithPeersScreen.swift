@@ -2065,6 +2065,11 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                             if peer.isService {
                                 return false
                             }
+                            if case let .user(user) = peer {
+                                if user.botInfo != nil {
+                                    return false
+                                }
+                            }
                             if case let .channel(channel) = peer {
                                 if channel.isForum  {
                                     return false

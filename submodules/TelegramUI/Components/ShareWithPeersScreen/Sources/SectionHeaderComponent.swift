@@ -124,7 +124,7 @@ final class SectionHeaderComponent: Component {
                     if view.superview == nil {
                         self.addSubview(view)
                     }
-                    let actionFrame = CGRect(origin: CGPoint(x: availableSize.width - leftInset - titleSize.width, y: floor((height - titleSize.height) / 2.0)), size: actionSize)
+                    let actionFrame = CGRect(origin: CGPoint(x: availableSize.width - leftInset - actionSize.width, y: floor((height - titleSize.height) / 2.0)), size: actionSize)
                     view.frame = actionFrame
                 }
             } else if self.action.view?.superview != nil {
