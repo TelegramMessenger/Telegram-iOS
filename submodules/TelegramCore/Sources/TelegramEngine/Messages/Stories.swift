@@ -1414,25 +1414,25 @@ func _internal_getStoriesById(accountPeerId: PeerId, postbox: Postbox, network: 
     }
 }
 
-func _internal_getStoriesById(accountPeerId: PeerId, postbox: Postbox, source: FetchMessageHistoryHoleSource, peerId: PeerId, peerReference: PeerReference?, ids: [Int32]) -> Signal<[Stories.StoredItem], NoError> {
+func _internal_getStoriesById(accountPeerId: PeerId, postbox: Postbox, source: FetchMessageHistoryHoleSource, peerId: PeerId, peerReference: PeerReference?, ids: [Int32], allowFloodWait: Bool) -> Signal<[Stories.StoredItem]?, NoError> {
     return postbox.transaction { transaction -> Api.InputUser? in
         return transaction.getPeer(peerId).flatMap(apiInputUser)
     }
-    |> mapToSignal { inputUser -> Signal<[Stories.StoredItem], NoError> in
+    |> mapToSignal { inputUser -> Signal<[Stories.StoredItem]?, NoError> in
         guard let inputUser = inputUser ?? peerReference?.inputUser else {
             return .single([])
         }
         
-        return source.request(Api.functions.stories.getStoriesByID(userId: inputUser, id: ids))
+        return source.request(Api.functions.stories.getStoriesByID(userId: inputUser, id: ids), automaticFloodWait: allowFloodWait)
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.stories.Stories?, NoError> in
             return .single(nil)
         }
-        |> mapToSignal { result -> Signal<[Stories.StoredItem], NoError> in
+        |> mapToSignal { result -> Signal<[Stories.StoredItem]?, NoError> in
             guard let result = result else {
-                return .single([])
+                return .single(nil)
             }
-            return postbox.transaction { transaction -> [Stories.StoredItem] in
+            return postbox.transaction { transaction -> [Stories.StoredItem]? in
                 switch result {
                 case let .stories(_, stories, users):
                     updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
@@ -1883,8 +1883,11 @@ func _internal_exportStoryLink(account: Account, peerId: EnginePeer.Id, id: Int3
 }
 
 func _internal_refreshStories(account: Account, peerId: PeerId, ids: [Int32]) -> Signal<Never, NoError> {
-    return _internal_getStoriesById(accountPeerId: account.peerId, postbox: account.postbox, source: .network(account.network), peerId: peerId, peerReference: nil, ids: ids)
+    return _internal_getStoriesById(accountPeerId: account.peerId, postbox: account.postbox, source: .network(account.network), peerId: peerId, peerReference: nil, ids: ids, allowFloodWait: true)
     |> mapToSignal { result -> Signal<Never, NoError> in
+        guard let result = result else {
+            return .complete()
+        }
         return account.postbox.transaction { transaction -> Void in
             var currentItems = transaction.getStoryItems(peerId: peerId)
             for i in 0 ..< currentItems.count {

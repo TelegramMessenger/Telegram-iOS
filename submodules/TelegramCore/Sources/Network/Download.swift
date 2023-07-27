@@ -293,7 +293,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         |> retryRequest
     }
     
-    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>)) -> Signal<T, MTRpcError> {
+    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {
         return Signal { subscriber in
             let request = MTRequest()
             
@@ -308,6 +308,12 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             request.needsTimeoutTimer = self.useRequestTimeoutTimers
             
             request.shouldContinueExecutionWithErrorContext = { errorContext in
+                guard let errorContext = errorContext else {
+                    return true
+                }
+                if errorContext.floodWaitSeconds > 0 && !automaticFloodWait {
+                    return false
+                }
                 return true
             }
             
