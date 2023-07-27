@@ -37,6 +37,7 @@ swift_library(
         "//submodules/TelegramUI/Components/LottieComponent",
         "//submodules/TelegramUI/Components/SwitchComponent",
         "//submodules/TooltipUI",
+        "//submodules/OverlayStatusController",
     ],
     visibility = [
         "//visibility:public",
