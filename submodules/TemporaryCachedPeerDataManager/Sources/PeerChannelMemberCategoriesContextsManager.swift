@@ -56,12 +56,12 @@ private final class PeerChannelMemberCategoriesContextsManagerImpl {
     fileprivate var profileDataPreloadContexts: [PeerId: ProfileDataPreloadContext] = [:]
     fileprivate var profileDataPhotoPreloadContexts: [PeerId: ProfileDataPhotoPreloadContext] = [:]
     
-    func getContext(engine: TelegramEngine, postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, key: PeerChannelMemberContextKey, requestUpdate: Bool, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl) {
+    func getContext(engine: TelegramEngine, postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, key: PeerChannelMemberContextKey, requestUpdate: Bool, count: Int32? = nil, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl) {
         if let current = self.contexts[peerId] {
             return current.getContext(key: key, requestUpdate: requestUpdate, updated: updated)
         } else {
             var becameEmptyImpl: ((Bool) -> Void)?
-            let context = PeerChannelMemberCategoriesContext(engine: engine, postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, becameEmpty: { value in
+            let context = PeerChannelMemberCategoriesContext(engine: engine, postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, batchCount: count, becameEmpty: { value in
                 becameEmptyImpl?(value)
             })
             becameEmptyImpl = { [weak self, weak context] value in
@@ -297,10 +297,10 @@ public final class PeerChannelMemberCategoriesContextsManager {
         }
     }
     
-    private func getContext(engine: TelegramEngine, postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, key: PeerChannelMemberContextKey, requestUpdate: Bool, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl?) {
+    private func getContext(engine: TelegramEngine, postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, key: PeerChannelMemberContextKey, requestUpdate: Bool, count: Int32? = nil, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl?) {
         assert(Queue.mainQueue().isCurrent())
         let (disposable, control) = self.impl.syncWith({ impl in
-            return impl.getContext(engine: engine, postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, key: key, requestUpdate: requestUpdate, updated: updated)
+            return impl.getContext(engine: engine, postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, key: key, requestUpdate: requestUpdate, count: count, updated: updated)
         })
         return (disposable, control)
     }
@@ -325,14 +325,14 @@ public final class PeerChannelMemberCategoriesContextsManager {
         }
     }
     
-    public func recent(engine: TelegramEngine, postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, searchQuery: String? = nil, requestUpdate: Bool = true, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl?) {
+    public func recent(engine: TelegramEngine, postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, searchQuery: String? = nil, requestUpdate: Bool = true, count: Int32? = nil, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl?) {
         let key: PeerChannelMemberContextKey
         if let searchQuery = searchQuery {
             key = .recentSearch(searchQuery)
         } else {
             key = .recent
         }
-        return self.getContext(engine: engine, postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, key: key, requestUpdate: requestUpdate, updated: updated)
+        return self.getContext(engine: engine, postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, key: key, requestUpdate: requestUpdate, count: count, updated: updated)
     }
     
     public func mentions(engine: TelegramEngine, postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, threadMessageId: MessageId?, searchQuery: String? = nil, requestUpdate: Bool = true, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl?) {
