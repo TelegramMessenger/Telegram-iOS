@@ -389,3 +389,12 @@ public func _internal_parseMediaAttachment(data: Data) -> Media? {
         return nil
     }
 }
+
+public extension Message {
+    var isPeerBroadcastChannel: Bool {
+        if let channel = self.peers[self.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+            return true
+        }
+        return false
+    }
+}

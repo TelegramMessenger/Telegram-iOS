@@ -73,6 +73,9 @@
 "PtgSettings.ShowPeerId" = "Show Profile ID";
 "PtgSettings.ShowChannelCreationDate" = "Show Channel Creation Date";
 "PtgSettings.SuppressForeignAgentNotice" = "Hide Russian \"Foreign Agent\" Labels";
+"PtgSettings.EnableQuickReaction" = "Quick Reactions";
+"PtgSettings.EnableQuickReactionHelp" = "Turn on to quickly send reactions by double-tapping on a message or tapping on existing reactions. Turn off to prevent accidental reactions.";
+"PtgSettings.HideReactionsInChannels" = "Hide Reactions in Channels";
 "PtgSettings.EnableLiveText" = "Live Text";
 "PtgSettings.EnableLiveTextHelp" = "Automatically perform text recognition and bar code detection (e.g. QR-code) on each image you preview in fullscreen. Turn it off to save battery life.";
 "PtgSettings.PreferAppleVoiceToText" = "Voice-to-Text Conversion by Apple";

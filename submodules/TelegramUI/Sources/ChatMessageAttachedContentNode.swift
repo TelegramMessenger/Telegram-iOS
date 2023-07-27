@@ -374,13 +374,15 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             
             var contentMode: InteractiveMediaNodeContentMode = preferMediaAspectFilled ? .aspectFill : .aspectFit
             
+            let hideReactions = message.isPeerBroadcastChannel && context.sharedContext.currentPtgSettings.with { $0.hideReactionsInChannels }
+            
             var edited = false
             if attributes.updatingMedia != nil {
                 edited = true
             }
             var viewCount: Int?
             var dateReplies = 0
-            var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: associatedData.accountPeer, message: message)
+            var dateReactionsAndPeers = !hideReactions ? mergedMessageReactionsAndPeers(accountPeer: associatedData.accountPeer, message: message) : (reactions: [], peers: [])
             if message.isRestricted(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) {
                 dateReactionsAndPeers = ([], [])
             }

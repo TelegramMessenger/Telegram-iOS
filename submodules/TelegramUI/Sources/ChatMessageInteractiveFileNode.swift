@@ -910,13 +910,15 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 
                 var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))?
                 if let statusType = arguments.dateAndStatusType {
+                    let hideReactions = arguments.topMessage.isPeerBroadcastChannel && arguments.context.sharedContext.currentPtgSettings.with { $0.hideReactionsInChannels }
+                    
                     var edited = false
                     if arguments.attributes.updatingMedia != nil {
                         edited = true
                     }
                     var viewCount: Int?
                     var dateReplies = 0
-                    var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: arguments.associatedData.accountPeer, message: arguments.topMessage)
+                    var dateReactionsAndPeers = !hideReactions ? mergedMessageReactionsAndPeers(accountPeer: arguments.associatedData.accountPeer, message: arguments.topMessage) : (reactions: [], peers: [])
                     if arguments.topMessage.isRestricted(platform: "ios", contentSettings: arguments.context.currentContentSettings.with { $0 }) {
                         dateReactionsAndPeers = ([], [])
                     }

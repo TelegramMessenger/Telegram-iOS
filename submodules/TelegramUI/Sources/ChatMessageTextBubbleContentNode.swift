@@ -154,13 +154,15 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 let horizontalInset = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                 let textConstrainedSize = CGSize(width: min(maxTextWidth, constrainedSize.width - horizontalInset), height: constrainedSize.height)
                 
+                let hideReactions = item.topMessage.isPeerBroadcastChannel && item.context.sharedContext.currentPtgSettings.with { $0.hideReactionsInChannels }
+                
                 var edited = false
                 if item.attributes.updatingMedia != nil {
                     edited = true
                 }
                 var viewCount: Int?
                 var dateReplies = 0
-                var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: item.topMessage)
+                var dateReactionsAndPeers = !hideReactions ? mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: item.topMessage) : (reactions: [], peers: [])
                 if item.message.isRestricted(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) {
                     dateReactionsAndPeers = ([], [])
                 }

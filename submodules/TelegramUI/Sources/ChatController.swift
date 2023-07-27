@@ -1194,12 +1194,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 
+                let hideReactions = topMessage.isPeerBroadcastChannel && strongSelf.context.sharedContext.currentPtgSettings.with { $0.hideReactionsInChannels }
+                
                 let _ = combineLatest(queue: .mainQueue(),
                     strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.context.account.peerId)),
                     contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, context: strongSelf.context, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, selectAll: selectAll, interfaceInteraction: strongSelf.interfaceInteraction, messageNode: node as? ChatMessageItemView),
-                    peerMessageAllowedReactions(context: strongSelf.context, message: topMessage),
-                    peerMessageSelectedReactions(context: strongSelf.context, message: topMessage),
-                    topMessageReactions(context: strongSelf.context, message: topMessage),
+                    !hideReactions ? peerMessageAllowedReactions(context: strongSelf.context, message: topMessage) : .single(nil),
+                    !hideReactions ? peerMessageSelectedReactions(context: strongSelf.context, message: topMessage) : .single(([], [])),
+                    !hideReactions ? topMessageReactions(context: strongSelf.context, message: topMessage) : .single([]),
                     ApplicationSpecificNotice.getChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager)
                 ).start(next: { peer, actions, allowedReactions, selectedReactions, topReactions, chatTextSelectionTips in
                     guard let strongSelf = self else {
@@ -1776,7 +1778,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            let _ = (peerMessageAllowedReactions(context: strongSelf.context, message: message)
+            let hideReactions = message.isPeerBroadcastChannel && strongSelf.context.sharedContext.currentPtgSettings.with { $0.hideReactionsInChannels }
+            
+            let _ = ((!hideReactions ? peerMessageAllowedReactions(context: strongSelf.context, message: message) : .single(nil))
             |> deliverOnMainQueue).start(next: { allowedReactions in
                 guard let strongSelf = self else {
                     return
@@ -1795,7 +1799,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return
                     }
                     
-                    if strongSelf.context.sharedContext.immediateExperimentalUISettings.disableQuickReaction {
+                    if strongSelf.context.sharedContext.immediateExperimentalUISettings.disableQuickReaction || hideReactions {
                         itemNode.openMessageContextMenu()
                         return
                     }

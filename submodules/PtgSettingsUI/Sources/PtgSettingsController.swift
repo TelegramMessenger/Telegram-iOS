@@ -18,21 +18,35 @@ private final class PtgSettingsControllerArguments {
     let switchEnableLiveText: (Bool) -> Void
     let switchPreferAppleVoiceToText: (Bool) -> Void
     let changeDefaultCameraForVideos: () -> Void
+    let switchEnableQuickReaction: (Bool) -> Void
+    let switchHideReactionsInChannels: (Bool) -> Void
     
-    init(switchShowPeerId: @escaping (Bool) -> Void, switchShowChannelCreationDate: @escaping (Bool) -> Void, switchSuppressForeignAgentNotice: @escaping (Bool) -> Void, switchEnableLiveText: @escaping (Bool) -> Void, switchPreferAppleVoiceToText: @escaping (Bool) -> Void, changeDefaultCameraForVideos: @escaping () -> Void) {
+    init(
+        switchShowPeerId: @escaping (Bool) -> Void,
+        switchShowChannelCreationDate: @escaping (Bool) -> Void,
+        switchSuppressForeignAgentNotice: @escaping (Bool) -> Void,
+        switchEnableLiveText: @escaping (Bool) -> Void,
+        switchPreferAppleVoiceToText: @escaping (Bool) -> Void,
+        changeDefaultCameraForVideos: @escaping () -> Void,
+        switchEnableQuickReaction: @escaping (Bool) -> Void,
+        switchHideReactionsInChannels: @escaping (Bool) -> Void
+    ) {
         self.switchShowPeerId = switchShowPeerId
         self.switchShowChannelCreationDate = switchShowChannelCreationDate
         self.switchSuppressForeignAgentNotice = switchSuppressForeignAgentNotice
         self.switchEnableLiveText = switchEnableLiveText
         self.switchPreferAppleVoiceToText = switchPreferAppleVoiceToText
         self.changeDefaultCameraForVideos = changeDefaultCameraForVideos
+        self.switchEnableQuickReaction = switchEnableQuickReaction
+        self.switchHideReactionsInChannels = switchHideReactionsInChannels
     }
 }
 
 private enum PtgSettingsSection: Int32 {
     case showProfileData
     case foreignAgentNotice
-    case liveText
+    case experimental
+    case channels
     case preferAppleVoiceToText
     case defaultCameraForVideos
 }
@@ -51,18 +65,25 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
 
     case defaultCameraForVideos(String, String)
     
+    case enableQuickReaction(String, Bool)
+    case enableQuickReactionInfo(String)
+    
+    case hideReactionsInChannels(String, Bool)
+    
     var section: ItemListSectionId {
         switch self {
         case .showPeerId, .showChannelCreationDate:
             return PtgSettingsSection.showProfileData.rawValue
         case .suppressForeignAgentNotice:
             return PtgSettingsSection.foreignAgentNotice.rawValue
-        case .enableLiveText, .enableLiveTextInfo:
-            return PtgSettingsSection.liveText.rawValue
+        case .enableQuickReaction, .enableQuickReactionInfo, .enableLiveText, .enableLiveTextInfo:
+            return PtgSettingsSection.experimental.rawValue
         case .preferAppleVoiceToText, .preferAppleVoiceToTextInfo:
             return PtgSettingsSection.preferAppleVoiceToText.rawValue
         case .defaultCameraForVideos:
             return PtgSettingsSection.defaultCameraForVideos.rawValue
+        case .hideReactionsInChannels:
+            return PtgSettingsSection.channels.rawValue
         }
     }
     
@@ -72,18 +93,24 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
             return 0
         case .showChannelCreationDate:
             return 1
-        case .defaultCameraForVideos:
+        case .hideReactionsInChannels:
             return 2
-        case .enableLiveText:
+        case .enableQuickReaction:
             return 3
-        case .enableLiveTextInfo:
+        case .enableQuickReactionInfo:
             return 4
-        case .preferAppleVoiceToText:
+        case .enableLiveText:
             return 5
-        case .preferAppleVoiceToTextInfo:
+        case .enableLiveTextInfo:
             return 6
-        case .suppressForeignAgentNotice:
+        case .defaultCameraForVideos:
             return 7
+        case .preferAppleVoiceToText:
+            return 8
+        case .preferAppleVoiceToTextInfo:
+            return 9
+        case .suppressForeignAgentNotice:
+            return 10
         }
     }
     
@@ -110,7 +137,7 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                 arguments.switchEnableLiveText(updatedValue)
             })
-        case let .enableLiveTextInfo(text), let .preferAppleVoiceToTextInfo(text):
+        case let .enableQuickReactionInfo(text), let .enableLiveTextInfo(text), let .preferAppleVoiceToTextInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
         case let .preferAppleVoiceToText(title, value, enabled):
             return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, enabled: enabled, sectionId: self.section, style: .blocks, updated: { updatedValue in
@@ -119,6 +146,14 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
         case let .defaultCameraForVideos(title, value):
             return ItemListDisclosureItem(presentationData: presentationData, title: title, label: value, sectionId: self.section, style: .blocks, action: {
                 arguments.changeDefaultCameraForVideos()
+            })
+        case let .enableQuickReaction(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
+                arguments.switchEnableQuickReaction(updatedValue)
+            })
+        case let .hideReactionsInChannels(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
+                arguments.switchHideReactionsInChannels(updatedValue)
             })
         }
     }
@@ -138,11 +173,16 @@ private func ptgSettingsControllerEntries(presentationData: PresentationData, se
     entries.append(.showPeerId(presentationData.strings.PtgSettings_ShowPeerId, settings.showPeerId))
     entries.append(.showChannelCreationDate(presentationData.strings.PtgSettings_ShowChannelCreationDate, settings.showChannelCreationDate))
     
-    entries.append(.defaultCameraForVideos(presentationData.strings.PtgSettings_DefaultCameraForVideos, settings.useRearCameraByDefault ? presentationData.strings.PtgSettings_DefaultCameraForVideos_Rear : presentationData.strings.PtgSettings_DefaultCameraForVideos_Front))
+    entries.append(.hideReactionsInChannels(presentationData.strings.PtgSettings_HideReactionsInChannels, settings.hideReactionsInChannels))
+    
+    entries.append(.enableQuickReaction(presentationData.strings.PtgSettings_EnableQuickReaction, !experimentalSettings.disableQuickReaction))
+    entries.append(.enableQuickReactionInfo(presentationData.strings.PtgSettings_EnableQuickReactionHelp))
     
     entries.append(.enableLiveText(presentationData.strings.PtgSettings_EnableLiveText, !experimentalSettings.disableImageContentAnalysis))
     entries.append(.enableLiveTextInfo(presentationData.strings.PtgSettings_EnableLiveTextHelp))
 
+    entries.append(.defaultCameraForVideos(presentationData.strings.PtgSettings_DefaultCameraForVideos, settings.useRearCameraByDefault ? presentationData.strings.PtgSettings_DefaultCameraForVideos_Rear : presentationData.strings.PtgSettings_DefaultCameraForVideos_Front))
+    
     if experimentalSettings.localTranscription {
         entries.append(.preferAppleVoiceToText(presentationData.strings.PtgSettings_PreferAppleVoiceToText, settings.preferAppleVoiceToText || !hasPremiumAccounts, hasPremiumAccounts))
         entries.append(.preferAppleVoiceToTextInfo(presentationData.strings.PtgSettings_PreferAppleVoiceToTextHelp))
@@ -207,6 +247,18 @@ public func ptgSettingsController(context: AccountContext) -> ViewController {
         ])])
         
         presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    }, switchEnableQuickReaction: { value in
+        let _ = context.sharedContext.accountManager.transaction({ transaction in
+            transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                settings.disableQuickReaction = !value
+                return PreferencesEntry(settings)
+            })
+        }).start()
+    }, switchHideReactionsInChannels: { value in
+        updateSettings(context, statePromise) { settings in
+            return settings.withUpdated(hideReactionsInChannels: value)
+        }
     })
     
     let hasPremiumAccounts = combineLatest(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)), activeAccountsAndPeers(context: context))
@@ -257,27 +309,31 @@ private func updateSettings(_ context: AccountContext, _ statePromise: Promise<P
 
 extension PtgSettings {
     public func withUpdated(showPeerId: Bool) -> PtgSettings {
-        return PtgSettings(showPeerId: showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, useRearCameraByDefault: self.useRearCameraByDefault, testToolsEnabled: self.testToolsEnabled)
+        return PtgSettings(showPeerId: showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, useRearCameraByDefault: self.useRearCameraByDefault, hideReactionsInChannels: self.hideReactionsInChannels, testToolsEnabled: self.testToolsEnabled)
     }
     
     public func withUpdated(showChannelCreationDate: Bool) -> PtgSettings {
-        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, useRearCameraByDefault: self.useRearCameraByDefault, testToolsEnabled: self.testToolsEnabled)
+        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, useRearCameraByDefault: self.useRearCameraByDefault, hideReactionsInChannels: self.hideReactionsInChannels, testToolsEnabled: self.testToolsEnabled)
     }
     
     public func withUpdated(suppressForeignAgentNotice: Bool) -> PtgSettings {
-        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, useRearCameraByDefault: self.useRearCameraByDefault, testToolsEnabled: self.testToolsEnabled)
+        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, useRearCameraByDefault: self.useRearCameraByDefault, hideReactionsInChannels: self.hideReactionsInChannels, testToolsEnabled: self.testToolsEnabled)
     }
     
     public func withUpdated(preferAppleVoiceToText: Bool) -> PtgSettings {
-        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: preferAppleVoiceToText, useRearCameraByDefault: self.useRearCameraByDefault, testToolsEnabled: self.testToolsEnabled)
+        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: preferAppleVoiceToText, useRearCameraByDefault: self.useRearCameraByDefault, hideReactionsInChannels: self.hideReactionsInChannels, testToolsEnabled: self.testToolsEnabled)
     }
     
     public func withUpdated(useRearCameraByDefault: Bool) -> PtgSettings {
-        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, useRearCameraByDefault: useRearCameraByDefault, testToolsEnabled: self.testToolsEnabled)
+        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, useRearCameraByDefault: useRearCameraByDefault, hideReactionsInChannels: self.hideReactionsInChannels, testToolsEnabled: self.testToolsEnabled)
+    }
+    
+    public func withUpdated(hideReactionsInChannels: Bool) -> PtgSettings {
+        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, useRearCameraByDefault: self.useRearCameraByDefault, hideReactionsInChannels: hideReactionsInChannels, testToolsEnabled: self.testToolsEnabled)
     }
     
     public func withUpdated(testToolsEnabled: Bool?) -> PtgSettings {
-        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, useRearCameraByDefault: self.useRearCameraByDefault, testToolsEnabled: testToolsEnabled)
+        return PtgSettings(showPeerId: self.showPeerId, showChannelCreationDate: self.showChannelCreationDate, suppressForeignAgentNotice: self.suppressForeignAgentNotice, preferAppleVoiceToText: self.preferAppleVoiceToText, useRearCameraByDefault: self.useRearCameraByDefault, hideReactionsInChannels: self.hideReactionsInChannels, testToolsEnabled: testToolsEnabled)
     }
 }
 

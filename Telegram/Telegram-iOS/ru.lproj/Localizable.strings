@@ -73,6 +73,9 @@
 "PtgSettings.ShowPeerId" = "Показывать ID профилей";
 "PtgSettings.ShowChannelCreationDate" = "Показывать дату создания каналов";
 "PtgSettings.SuppressForeignAgentNotice" = "Скрывать метки иноагентов РФ";
+"PtgSettings.EnableQuickReaction" = "Быстрые реакции";
+"PtgSettings.EnableQuickReactionHelp" = "Включите, чтобы быстро отправлять реакции, дважды нажимая на сообщения или нажимая на существующие реакции. Выключите для предотвращения случайных реакций.";
+"PtgSettings.HideReactionsInChannels" = "Скрывать реакции в каналах";
 "PtgSettings.EnableLiveText" = "Сканер текста";
 "PtgSettings.EnableLiveTextHelp" = "Автоматически выполнять распознавание текста и штрих-кодов (например, QR-кода) на каждом изображении, которое вы просматриваете в полноэкранном режиме. Отключите, чтобы сэкономить заряд батареи.";
 "PtgSettings.PreferAppleVoiceToText" = "Перевод голоса в текст от Apple";

@@ -8,6 +8,9 @@
 "PtgSettings.ShowPeerId" = "Показувати ID профілів";
 "PtgSettings.ShowChannelCreationDate" = "Показувати дату створення каналів";
 "PtgSettings.SuppressForeignAgentNotice" = "Приховувати мітки іноагентів РФ";
+"PtgSettings.EnableQuickReaction" = "Швидкі реакції";
+"PtgSettings.EnableQuickReactionHelp" = "Увімкніть, щоб швидко залишати реакції, двічі торкаючись повідомлень або натискаючи на наявні реакції. Вимкніть, щоб запобігти випадковим реакціям.";
+"PtgSettings.HideReactionsInChannels" = "Приховувати реакції в каналах";
 "PtgSettings.EnableLiveText" = "Текст наживо";
 "PtgSettings.EnableLiveTextHelp" = "Автоматично виконувати розпізнавання тексту і штрих-кодів (наприклад, QR-коду) на кожному зображенні, яке ви переглядаєте в повноекранному режимі. Вимкніть, щоб заощадити заряд батареї.";
 "PtgSettings.PreferAppleVoiceToText" = "Переклад голосу в текст від Apple";
