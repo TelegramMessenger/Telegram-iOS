@@ -1170,7 +1170,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
             if let current = self.focusedId {
                 if let index = state.items.firstIndex(where: { $0.id == current }) {
                     focusedIndex = index
-                } else if let index = state.items.firstIndex(where: { $0.id >= current }) {
+                } else if let index = state.items.firstIndex(where: { $0.id <= current }) {
                     focusedIndex = index
                 } else if !state.items.isEmpty {
                     focusedIndex = 0
@@ -1180,7 +1180,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
             } else if let initialId = initialId {
                 if let index = state.items.firstIndex(where: { $0.id == initialId }) {
                     focusedIndex = index
-                } else if let index = state.items.firstIndex(where: { $0.id >= initialId }) {
+                } else if let index = state.items.firstIndex(where: { $0.id <= initialId }) {
                     focusedIndex = index
                 } else {
                     focusedIndex = nil
