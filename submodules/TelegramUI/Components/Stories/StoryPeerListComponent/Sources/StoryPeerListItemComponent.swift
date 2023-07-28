@@ -194,11 +194,23 @@ private final class StoryProgressLayer: HierarchyTrackingLayer {
         
         switch params.value {
         case let .progress(progress):
+            var animateIn = false
             if self.indefiniteReplicatorLayer.superlayer != nil {
-                self.indefiniteReplicatorLayer.removeFromSuperlayer()
+                self.indefiniteReplicatorLayer.opacity = 0.0
+                self.indefiniteReplicatorLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] finished in
+                    guard let self, finished else {
+                        return
+                    }
+                    self.indefiniteReplicatorLayer.removeFromSuperlayer()
+                })
+                animateIn = true
             }
             if self.uploadProgressLayer.superlayer == nil {
                 self.addSublayer(self.uploadProgressLayer)
+                if animateIn {
+                    self.uploadProgressLayer.opacity = 1.0
+                    self.uploadProgressLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
             }
             transition.setShapeLayerStrokeEnd(layer: self.uploadProgressLayer, strokeEnd: CGFloat(progress))
             if self.uploadProgressLayer.animation(forKey: "rotation") == nil {
@@ -211,11 +223,23 @@ private final class StoryProgressLayer: HierarchyTrackingLayer {
                 self.uploadProgressLayer.add(rotationAnimation, forKey: "rotation")
             }
         case .indefinite:
-            if self.uploadProgressLayer.superlayer == nil {
-                self.uploadProgressLayer.removeFromSuperlayer()
+            var animateIn = false
+            if self.uploadProgressLayer.superlayer != nil {
+                self.uploadProgressLayer.opacity = 0.0
+                self.uploadProgressLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] finished in
+                    guard let self, finished else {
+                        return
+                    }
+                    self.uploadProgressLayer.removeFromSuperlayer()
+                })
+                animateIn = true
             }
             if self.indefiniteReplicatorLayer.superlayer == nil {
                 self.addSublayer(self.indefiniteReplicatorLayer)
+                if animateIn {
+                    self.indefiniteReplicatorLayer.opacity = 1.0
+                    self.indefiniteReplicatorLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
             }
             if self.indefiniteReplicatorLayer.animation(forKey: "rotation") == nil {
                 let rotationAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
@@ -882,19 +906,32 @@ public final class StoryPeerListItemComponent: Component {
                 case .loading:
                     progressLayer.update(size: progressFrame.size, lineWidth: indicatorLineUnseenWidth, radius: indicatorRadius - indicatorLineUnseenWidth * 0.5, value: .indefinite, transition: transition)
                 }
+                
                 self.indicatorShapeSeenLayer.opacity = 0.0
                 self.indicatorShapeUnseenLayer.opacity = 0.0
+                
+                if let previousComponent = previousComponent, previousComponent.ringAnimation == nil {
+                    progressLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.indicatorShapeSeenLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                    self.indicatorShapeUnseenLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                }
             } else {
                 self.indicatorShapeSeenLayer.opacity = 1.0
                 self.indicatorShapeUnseenLayer.opacity = 1.0
                 
                 if let progressLayer = self.progressLayer {
+                    self.indicatorShapeSeenLayer.opacity = 1.0
+                    self.indicatorShapeUnseenLayer.opacity = 1.0
+                    
+                    self.indicatorShapeSeenLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.indicatorShapeUnseenLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    
                     self.progressLayer = nil
                     if transition.animation.isImmediate {
                         progressLayer.reset()
                         progressLayer.removeFromSuperlayer()
                     } else {
-                        progressLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak progressLayer] _ in
+                        progressLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak progressLayer] _ in
                             progressLayer?.reset()
                             progressLayer?.removeFromSuperlayer()
                         })
