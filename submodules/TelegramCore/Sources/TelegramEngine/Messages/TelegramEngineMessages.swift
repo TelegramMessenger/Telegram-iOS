@@ -629,6 +629,20 @@ public extension TelegramEngine {
             }).start()
         }
         
+        public func peerStoriesAreReady(id: EnginePeer.Id, minId: Int32) -> Signal<Bool, NoError> {
+            return self.account.postbox.combinedView(keys: [
+                PostboxViewKey.storyItems(peerId: id)
+            ])
+            |> map { views -> Bool in
+                guard let view = views.views[PostboxViewKey.storyItems(peerId: id)] as? StoryItemsView else {
+                    return false
+                }
+                return view.items.contains(where: { item in
+                    return item.id >= minId
+                })
+            }
+        }
+        
         public func storySubscriptions(isHidden: Bool, tempKeepNewlyArchived: Bool = false) -> Signal<EngineStorySubscriptions, NoError> {
             return `deferred` { () -> Signal<EngineStorySubscriptions, NoError> in
                 let debugTimerSignal: Signal<Bool, NoError>

@@ -85,7 +85,7 @@ public extension StoryContainerScreen {
         let _ = avatarNode.pushLoadingStatus(signal: signal)
     }
     
-    static func openPeerStories(context: AccountContext, peerId: EnginePeer.Id, parentController: ViewController, avatarNode: AvatarNode, sharedProgressDisposable: MetaDisposable? = nil) {
+    static func openPeerStories(context: AccountContext, peerId: EnginePeer.Id, parentController: ViewController, avatarNode: AvatarNode?, sharedProgressDisposable: MetaDisposable? = nil) {
         return openPeerStoriesCustom(
             context: context,
             peerId: peerId,

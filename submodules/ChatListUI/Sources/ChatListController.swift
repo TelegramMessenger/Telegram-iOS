@@ -3675,6 +3675,64 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         })
     }
     
+    public func openStoriesFromNotification(peerId: EnginePeer.Id, storyId: Int32) {
+        let presentationData = self.presentationData
+        let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+            self?.present(controller, in: .window(.root))
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> delay(0.8, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.start()
+        
+        let signal: Signal<Never, NoError> = self.context.engine.messages.peerStoriesAreReady(
+            id: peerId,
+            minId: storyId
+        )
+        |> filter { $0 }
+        |> deliverOnMainQueue
+        |> timeout(5.0, queue: .mainQueue(), alternate: .single(false))
+        |> take(1)
+        |> ignoreValues
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        
+        self.sharedOpenStoryProgressDisposable.set((signal |> deliverOnMainQueue).start(completed: { [weak self] in
+            guard let self else {
+                return
+            }
+            StoryContainerScreen.openPeerStoriesCustom(
+                context: self.context,
+                peerId: peerId,
+                isHidden: false,
+                singlePeer: true,
+                parentController: self,
+                transitionIn: {
+                    return nil
+                },
+                transitionOut: { _ in
+                    return nil
+                },
+                setFocusedItem: { _ in
+                },
+                setProgress: { [weak self] signal in
+                    guard let self else {
+                        return
+                    }
+                    self.sharedOpenStoryProgressDisposable.set(signal.start())
+                }
+            )
+        }))
+    }
+    
     public func openStories(peerId: EnginePeer.Id) {
         if let navigationBarView = self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
             if navigationBarView.storiesUnlocked {
