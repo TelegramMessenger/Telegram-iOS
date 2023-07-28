@@ -35,6 +35,7 @@ import AttachmentUI
 import StickerPackPreviewUI
 import TextNodeWithEntities
 import TelegramStringFormatting
+import LottieComponent
 
 public final class StoryAvailableReactions: Equatable {
     let reactionItems: [ReactionItem]
@@ -372,6 +373,7 @@ public final class StoryItemSetContainerComponent: Component {
         var leftInfoItem: InfoItem?
         
         let moreButton = ComponentView<Empty>()
+        var currentSoundButtonState: Bool?
         let soundButton = ComponentView<Empty>()
         var privacyIcon: ComponentView<Empty>?
         
@@ -2427,21 +2429,18 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
-            let soundImage: String
-            if isSilentVideo || component.isAudioMuted {
-                soundImage = "Stories/SoundOff"
-            } else {
-                soundImage = "Stories/SoundOn"
-            }
-            
-            //TODO:anim_storymute
+            let soundButtonState = isSilentVideo || component.isAudioMuted
             let soundButtonSize = self.soundButton.update(
                 transition: transition,
                 component: AnyComponent(PlainButtonComponent(
-                    content: AnyComponent(BundleIconComponent(
-                        name: soundImage,
-                        tintColor: .white,
-                        maxSize: nil
+                    content: AnyComponent(LottieComponent(
+                        content: LottieComponent.AppBundleContent(
+                            name: "anim_storymute",
+                            frameRange: soundButtonState ? (0.0 ..< 0.5) : (0.5 ..< 1.0)
+                        ),
+                        color: .white,
+                        startingPosition: .end,
+                        size: CGSize(width: 30.0, height: 30.0)
                     )),
                     effectAlignment: .center,
                     minSize: CGSize(width: 33.0, height: 64.0),
@@ -2481,6 +2480,13 @@ public final class StoryItemSetContainerComponent: Component {
                 if isVideo {
                     headerRightOffset -= soundButtonSize.width + 13.0
                 }
+                
+                if let currentSoundButtonState = self.currentSoundButtonState, currentSoundButtonState != soundButtonState {
+                    if let lottieView = (soundButtonView as? PlainButtonComponent.View)?.contentView as? LottieComponent.View {
+                        lottieView.playOnce()
+                    }
+                }
+                self.currentSoundButtonState = soundButtonState
             }
             
             let storyPrivacyIcon: StoryPrivacyIconComponent.Privacy?

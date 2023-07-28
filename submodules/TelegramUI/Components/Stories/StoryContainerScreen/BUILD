@@ -78,6 +78,7 @@ swift_library(
         "//submodules/WebPBinding",
         "//submodules/Utils/RangeSet",
         "//submodules/TelegramUI/Components/Stories/StoryStealthModeSheetScreen",
+        "//submodules/TelegramUI/Components/LottieComponent",
     ],
     visibility = [
         "//visibility:public",

@@ -47,6 +47,10 @@ public final class PlainButtonComponent: Component {
         private let contentContainer = UIView()
         private let content = ComponentView<Empty>()
         
+        public var contentView: UIView? {
+            return self.content.view
+        }
+        
         override init(frame: CGRect) {
             super.init(frame: frame)
             

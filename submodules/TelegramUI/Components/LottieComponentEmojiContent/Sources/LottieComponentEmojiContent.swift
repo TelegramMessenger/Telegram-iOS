@@ -9,6 +9,10 @@ public extension LottieComponent {
     final class EmojiContent: LottieComponent.Content {
         private let context: AccountContext
         private let fileId: Int64
+        
+        override public var frameRange: Range<Double> {
+            return 0.0 ..< 1.0
+        }
 
         public init(
             context: AccountContext,
