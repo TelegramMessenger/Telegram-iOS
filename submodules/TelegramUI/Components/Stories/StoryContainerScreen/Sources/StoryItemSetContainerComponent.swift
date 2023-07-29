@@ -36,6 +36,8 @@ import StickerPackPreviewUI
 import TextNodeWithEntities
 import TelegramStringFormatting
 import LottieComponent
+import Pasteboard
+import Speak
 
 public final class StoryAvailableReactions: Equatable {
     let reactionItems: [ReactionItem]
@@ -765,9 +767,13 @@ public final class StoryItemSetContainerComponent: Component {
                             break
                         }
                     }
-                } else if let captionItem = self.captionItem, captionItem.externalState.isExpanded {
+                } else if let captionItem = self.captionItem, (captionItem.externalState.isExpanded || captionItem.externalState.isSelectingText) {
                     if let captionItemView = captionItem.view.view as? StoryContentCaptionComponent.View {
-                        captionItemView.collapse(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                        if captionItem.externalState.isSelectingText {
+                            captionItemView.cancelTextSelection()
+                        } else {
+                            captionItemView.collapse(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                        }
                     }
                 } else {
                     let point = recognizer.location(in: self)
@@ -967,13 +973,16 @@ public final class StoryItemSetContainerComponent: Component {
             if self.sendMessageContext.statusController != nil {
                 return .pause
             }
+            if self.sendMessageContext.lookupController != nil {
+                return .pause
+            }
             if let navigationController = component.controller()?.navigationController as? NavigationController {
                 let topViewController = navigationController.topViewController
                 if !(topViewController is StoryContainerScreen) && !(topViewController is MediaEditorScreen) && !(topViewController is ShareWithPeersScreen) && !(topViewController is AttachmentController) {
                     return .pause
                 }
             }
-            if let captionItem = self.captionItem, captionItem.externalState.isExpanded {
+            if let captionItem = self.captionItem, captionItem.externalState.isExpanded || captionItem.externalState.isSelectingText {
                 return .blurred
             }
             return .play
@@ -2369,36 +2378,29 @@ public final class StoryItemSetContainerComponent: Component {
             
             let moreButtonSize = self.moreButton.update(
                 transition: transition,
-                component: AnyComponent(MessageInputActionButtonComponent(
-                    mode: .more,
-                    action: { _, _, _ in
-                    },
-                    longPressAction: nil,
-                    switchMediaInputMode: {
-                    },
-                    updateMediaCancelFraction: { _ in
-                    },
-                    lockMediaRecording: {
-                    },
-                    stopAndPreviewMediaRecording: {
-                    },
-                    moreAction: { [weak self] view, gesture in
+                component: AnyComponent(PlainButtonComponent(
+                    content: AnyComponent(LottieComponent(
+                        content: LottieComponent.AppBundleContent(
+                            name: "anim_story_more"
+                        ),
+                        color: .white,
+                        startingPosition: .end,
+                        size: CGSize(width: 30.0, height: 30.0)
+                    )),
+                    effectAlignment: .center,
+                    minSize: CGSize(width: 33.0, height: 64.0),
+                    action: { [weak self] in
                         guard let self else {
                             return
                         }
-                        self.performMoreAction(sourceView: view, gesture: gesture)
-                    },
-                    context: component.context,
-                    theme: component.theme,
-                    strings: component.strings,
-                    presentController: { [weak self] c in
-                        guard let self, let component = self.component else {
+                        guard let moreButtonView = self.moreButton.view else {
                             return
                         }
-                        component.presentController(c, nil)
-                    },
-                    audioRecorder: nil,
-                    videoRecordingStatus: nil
+                        if let animationView = (moreButtonView as? PlainButtonComponent.View)?.contentView as? LottieComponent.View {
+                            animationView.playOnce()
+                        }
+                        self.performMoreAction(sourceView: moreButtonView, gesture: nil)
+                    }
                 )),
                 environment: {},
                 containerSize: CGSize(width: 33.0, height: 64.0)
@@ -2410,7 +2412,7 @@ public final class StoryItemSetContainerComponent: Component {
                 moreButtonView.isUserInteractionEnabled = !component.slice.item.storyItem.isPending
                 transition.setFrame(view: moreButtonView, frame: CGRect(origin: CGPoint(x: headerRightOffset - moreButtonSize.width, y: 2.0), size: moreButtonSize))
                 transition.setAlpha(view: moreButtonView, alpha: component.slice.item.storyItem.isPending ? 0.5 : 1.0)
-                headerRightOffset -= moreButtonSize.width + 15.0
+                headerRightOffset -= moreButtonSize.width + 12.0
             }
             
             var isSilentVideo = false
@@ -2762,6 +2764,7 @@ public final class StoryItemSetContainerComponent: Component {
                         externalState: captionItem.externalState,
                         context: component.context,
                         strings: component.strings,
+                        theme: component.theme,
                         text: component.slice.item.storyItem.text,
                         entities: component.slice.item.storyItem.entities,
                         entityFiles: component.slice.item.entityFiles,
@@ -2811,6 +2814,39 @@ public final class StoryItemSetContainerComponent: Component {
                                     self.sendMessageContext.openResolved(view: self, result: resolved, forceExternal: false, concealed: concealed)
                                 })
                             })
+                        },
+                        textSelectionAction: { [weak self] text, action in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            switch action {
+                            case .copy:
+                                storeAttributedTextInPasteboard(text)
+                            case .share:
+                                self.sendMessageContext.performShareTextAction(view: self, text: text.string)
+                            case .lookup:
+                                self.sendMessageContext.performLookupTextAction(view: self, text: text.string)
+                            case .speak:
+                                if let speechHolder = speakText(context: component.context, text: text.string) {
+                                    speechHolder.completion = { [weak self, weak speechHolder] in
+                                        guard let self else {
+                                            return
+                                        }
+                                        if self.sendMessageContext.currentSpeechHolder === speechHolder {
+                                            self.sendMessageContext.currentSpeechHolder = nil
+                                        }
+                                    }
+                                    self.sendMessageContext.currentSpeechHolder = speechHolder
+                                }
+                            case .translate:
+                                self.sendMessageContext.performTranslateTextAction(view: self, text: text.string)
+                            }
+                        },
+                        controller: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return nil
+                            }
+                            return component.controller()
                         }
                     )),
                     environment: {},

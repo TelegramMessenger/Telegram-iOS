@@ -990,6 +990,8 @@ public class TranslateScreen: ViewController {
     public var pushController: (ViewController) -> Void = { _ in }
     public var presentController: (ViewController) -> Void = { _ in }
     
+    public var wasDismissed: (() -> Void)?
+    
     public convenience init(context: AccountContext, text: String, canCopy: Bool, fromLanguage: String?, toLanguage: String? = nil, isExpanded: Bool = false) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -1086,13 +1088,16 @@ public class TranslateScreen: ViewController {
     
     public override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         self.view.endEditing(true)
+        let wasDismissed = self.wasDismissed
         if flag {
             self.node.animateOut(completion: {
                 super.dismiss(animated: false, completion: {})
+                wasDismissed?()
                 completion?()
             })
         } else {
             super.dismiss(animated: false, completion: {})
+            wasDismissed?()
             completion?()
         }
     }
