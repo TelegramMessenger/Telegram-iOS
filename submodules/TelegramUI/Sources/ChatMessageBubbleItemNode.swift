@@ -271,7 +271,9 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
         needReactions = false
     }
     
-    if !isAction && !hasSeparateCommentsButton && !Namespaces.Message.allScheduled.contains(firstMessage.id.namespace) {
+    let hideComments = firstMessage.isPeerBroadcastChannel && item.context.sharedContext.currentPtgSettings.with { $0.hideCommentsInChannels }
+    
+    if !isAction && !hasSeparateCommentsButton && !Namespaces.Message.allScheduled.contains(firstMessage.id.namespace) && !hideComments {
         if hasCommentButton(item: item) {
             result.append((firstMessage, ChatMessageCommentFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform, neighborSpacing: .default)))
         }
@@ -1365,6 +1367,23 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             needsShareButton = false
         }
                 
+        let (contentNodeMessagesAndClasses, needSeparateContainers, needReactions) = contentNodeMessagesAndClassesForItem(item)
+        
+        var hasInstantVideo = false
+        for contentNodeItemValue in contentNodeMessagesAndClasses {
+            let contentNodeItem = contentNodeItemValue as (message: Message, type: AnyClass, attributes: ChatMessageEntryAttributes, bubbleAttributes: BubbleItemAttributes)
+            if contentNodeItem.type == ChatMessageInstantVideoBubbleContentNode.self, !contentNodeItem.bubbleAttributes.isAttachment {
+                hasInstantVideo = true
+                break
+            }
+        }
+        
+        let hideShareButton = item.message.isPeerBroadcastChannel && item.context.sharedContext.currentPtgSettings.with { (!hasInstantVideo || $0.hideCommentsInChannels) && $0.hideShareButtonInChannels }
+        
+        if hideShareButton {
+            needsShareButton = false
+        }
+        
         var tmpWidth: CGFloat
         if allowFullWidth {
             tmpWidth = baseWidth
@@ -1387,18 +1406,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         tmpWidth -= deliveryFailedInset
         
-        let (contentNodeMessagesAndClasses, needSeparateContainers, needReactions) = contentNodeMessagesAndClassesForItem(item)
-        
         var maximumContentWidth = floor(tmpWidth - layoutConstants.bubble.edgeInset * 3.0 - layoutConstants.bubble.contentInsets.left - layoutConstants.bubble.contentInsets.right - avatarInset)
         
-        var hasInstantVideo = false
-        for contentNodeItemValue in contentNodeMessagesAndClasses {
-            let contentNodeItem = contentNodeItemValue as (message: Message, type: AnyClass, attributes: ChatMessageEntryAttributes, bubbleAttributes: BubbleItemAttributes)
-            if contentNodeItem.type == ChatMessageInstantVideoBubbleContentNode.self, !contentNodeItem.bubbleAttributes.isAttachment {
-                maximumContentWidth = baseWidth - 20.0
-                hasInstantVideo = true
-                break
-            }
+        if hasInstantVideo {
+            maximumContentWidth = baseWidth - 20.0
         }
         
         var contentPropertiesAndPrepareLayouts: [(Message, Bool, ChatMessageEntryAttributes, BubbleItemAttributes, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))))] = []
@@ -2462,7 +2473,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
         }
         
-        let disablesComments = !hasInstantVideo
+        let hideComments = item.message.isPeerBroadcastChannel && item.context.sharedContext.currentPtgSettings.with { $0.hideCommentsInChannels }
+        
+        let disablesComments = !hasInstantVideo || hideComments
         
         return (layout, { animation, applyInfo, synchronousLoads in
             return ChatMessageBubbleItemNode.applyLayout(selfReference: selfReference, animation, synchronousLoads,

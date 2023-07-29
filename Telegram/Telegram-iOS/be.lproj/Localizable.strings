@@ -75,7 +75,10 @@
 "PtgSettings.SuppressForeignAgentNotice" = "Хаваць меткі іншаагентаў РФ";
 "PtgSettings.EnableQuickReaction" = "Хуткія рэакцыі";
 "PtgSettings.EnableQuickReactionHelp" = "Уключыце, каб хутка адпраўляць рэакцыі, двойчы націскаючы на паведамленні ці націскаючы на існуючыя рэакцыі. Выключыце, каб пазбегнуць выпадковых рэакцый.";
-"PtgSettings.HideReactionsInChannels" = "Хаваць рэакцыі ў каналах";
+"PtgSettings.ChannelAppearanceHeader" = "Выгляд каналаў";
+"PtgSettings.HideReactions" = "Хаваць рэакцыі";
+"PtgSettings.HideComments" = "Хаваць каментары";
+"PtgSettings.HideShareButton" = "Хаваць кнопку «Абагуліць»";
 "PtgSettings.EnableLiveText" = "Распазнанне тэксту";
 "PtgSettings.EnableLiveTextHelp" = "Аўтаматычна выконваць распазнанне тэксту і штрых-кодаў (напрыклад, QR-кода) на кожнай выяве, якую вы праглядаеце ў поўнаэкранным рэжыме. Выключыце, каб зэканоміць зарад батарэі.";
 "PtgSettings.PreferAppleVoiceToText" = "Пераклад голасу ў тэкст ад Apple";
