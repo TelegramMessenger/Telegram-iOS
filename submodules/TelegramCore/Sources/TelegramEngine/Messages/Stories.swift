@@ -894,6 +894,7 @@ func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId
                     return network.request(Api.functions.stories.sendStory(
                         flags: flags,
                         media: inputMedia,
+                        mediaAreas: nil,
                         caption: apiCaption,
                         entities: apiEntities,
                         privacyRules: privacyRules,
@@ -922,7 +923,7 @@ func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId
                                 for update in updates.allUpdates {
                                     if case let .updateStory(_, story) = update {
                                         switch story {
-                                        case let .storyItem(_, idValue, _, _, _, _, media, _, _):
+                                        case let .storyItem(_, idValue, _, _, _, _, media, _, _, _):
                                             if let parsedStory = Stories.StoredItem(apiStoryItem: story, peerId: accountPeerId, transaction: transaction) {
                                                 var items = transaction.getStoryItems(peerId: accountPeerId)
                                                 var updatedItems: [Stories.Item] = []
@@ -1046,6 +1047,7 @@ func _internal_editStory(account: Account, id: Int32, media: EngineStoryInputMed
                 flags: flags,
                 id: id,
                 media: inputMedia,
+                mediaAreas: nil,
                 caption: apiCaption,
                 entities: apiEntities,
                 privacyRules: privacyRules
@@ -1059,7 +1061,7 @@ func _internal_editStory(account: Account, id: Int32, media: EngineStoryInputMed
                     for update in updates.allUpdates {
                         if case let .updateStory(_, story) = update {
                             switch story {
-                            case let .storyItem(_, _, _, _, _, _, media, _, _):
+                            case let .storyItem(_, _, _, _, _, _, media, _, _, _):
                                 let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, account.peerId)
                                 if let parsedMedia = parsedMedia, let originalMedia = originalMedia {
                                     applyMediaResourceChanges(from: originalMedia, to: parsedMedia, postbox: account.postbox, force: false)
@@ -1141,7 +1143,7 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
         var flags: Int32 = 0
         flags |= 1 << 2
         
-        return account.network.request(Api.functions.stories.editStory(flags: flags, id: id, media: nil, caption: nil, entities: nil, privacyRules: inputRules))
+        return account.network.request(Api.functions.stories.editStory(flags: flags, id: id, media: nil, mediaAreas: nil, caption: nil, entities: nil, privacyRules: inputRules))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)
@@ -1302,7 +1304,7 @@ func _internal_updateStoriesArePinned(account: Account, ids: [Int32: EngineStory
 extension Api.StoryItem {
     var id: Int32 {
         switch self {
-        case let .storyItem(_, id, _, _, _, _, _, _, _):
+        case let .storyItem(_, id, _, _, _, _, _, _, _, _):
             return id
         case let .storyItemDeleted(id):
             return id
@@ -1328,7 +1330,7 @@ extension Stories.Item.Views {
 extension Stories.StoredItem {
     init?(apiStoryItem: Api.StoryItem, peerId: PeerId, transaction: Transaction) {
         switch apiStoryItem {
-        case let .storyItem(flags, id, date, expireDate, caption, entities, media, privacy, views):
+        case let .storyItem(flags, id, date, expireDate, caption, entities, media, _, privacy, views):
             let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
             if let parsedMedia = parsedMedia {
                 var parsedPrivacy: Stories.Item.Privacy?
@@ -1506,7 +1508,7 @@ func _internal_getStoryViewList(account: Account, id: Int32, offsetTimestamp: In
                 var items: [StoryViewList.Item] = []
                 for view in views {
                     switch view {
-                    case let .storyView(userId, date):
+                    case let .storyView(_, userId, date):
                         if let peer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))) {
                             items.append(StoryViewList.Item(peer: EnginePeer(peer), timestamp: date))
                         }
@@ -1678,7 +1680,7 @@ public final class EngineStoryViewListContext {
                             var nextOffset: NextOffset?
                             for view in views {
                                 switch view {
-                                case let .storyView(userId, date):
+                                case let .storyView(_, userId, date):
                                     let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                     if let peer = transaction.getPeer(peerId) {
                                         items.append(Item(peer: EnginePeer(peer), timestamp: date, storyStats: transaction.getPeerStoryStats(peerId: peerId)))

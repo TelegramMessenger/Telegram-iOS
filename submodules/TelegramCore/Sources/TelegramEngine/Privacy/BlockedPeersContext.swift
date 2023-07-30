@@ -58,7 +58,7 @@ public final class BlockedPeersContext {
         self._state = BlockedPeersContextState(isLoadingMore: true, canLoadMore: self._state.canLoadMore, totalCount: self._state.totalCount, peers: self._state.peers)
         let postbox = self.account.postbox
         let accountPeerId = self.account.peerId
-        self.disposable.set((self.account.network.request(Api.functions.contacts.getBlocked(offset: Int32(self._state.peers.count), limit: 64))
+        self.disposable.set((self.account.network.request(Api.functions.contacts.getBlocked(flags: 0, offset: Int32(self._state.peers.count), limit: 64))
         |> retryRequest
         |> mapToSignal { result -> Signal<(peers: [RenderedPeer], canLoadMore: Bool, totalCount: Int?), NoError> in
             return postbox.transaction { transaction -> (peers: [RenderedPeer], canLoadMore: Bool, totalCount: Int?) in
@@ -136,7 +136,7 @@ public final class BlockedPeersContext {
             guard let inputPeer = inputPeer else {
                 return .fail(.generic)
             }
-            return network.request(Api.functions.contacts.block(id: inputPeer))
+            return network.request(Api.functions.contacts.block(flags: 0, id: inputPeer))
             |> mapError { _ -> BlockedPeersContextAddError in
                 return .generic
             }
@@ -196,7 +196,7 @@ public final class BlockedPeersContext {
             guard let inputPeer = inputPeer else {
                 return .fail(.generic)
             }
-            return network.request(Api.functions.contacts.unblock(id: inputPeer))
+            return network.request(Api.functions.contacts.unblock(flags: 0, id: inputPeer))
             |> mapError { _ -> BlockedPeersContextRemoveError in
                 return .generic
             }

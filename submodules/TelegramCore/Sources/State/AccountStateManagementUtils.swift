@@ -1326,7 +1326,8 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         channelsToPoll[peerId] = nil
                     }
                 }
-            case let .updatePeerBlocked(peerId, blocked):
+            case let .updatePeerBlocked(flags, peerId):
+                let blocked = (flags & (1 << 0)) != 0
                 let userPeerId = peerId.peerId
                 updatedState.updateCachedPeerData(userPeerId, { current in
                     let previous: CachedUserData
@@ -1335,7 +1336,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                     } else {
                         previous = CachedUserData()
                     }
-                    return previous.withUpdatedIsBlocked(blocked == .boolTrue)
+                    return previous.withUpdatedIsBlocked(blocked)
                 })
             case let .updateUserStatus(userId, status):
                 updatedState.mergePeerPresences([PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)): status], explicit: true)
@@ -1673,8 +1674,6 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.readStories(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), maxId: id)
             case let .updateStoriesStealthMode(stealthMode):
                 updatedState.updateStoryStealthMode(stealthMode)
-            case let .updateStoriesStealth(expireDate):
-                updatedState.updateStoryStealth(expireDate: expireDate)
             default:
                 break
         }
