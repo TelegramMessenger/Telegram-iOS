@@ -1089,28 +1089,50 @@ public struct StoriesConfiguration {
         case disabled
     }
     
+    public enum CaptionEntitiesAvailability {
+        case enabled
+        case premium
+    }
+    
     static var defaultValue: StoriesConfiguration {
-        return StoriesConfiguration(posting: .disabled)
+        return StoriesConfiguration(posting: .disabled, captionEntities: .premium)
     }
     
     public let posting: PostingAvailability
+    public let captionEntities: CaptionEntitiesAvailability
     
-    fileprivate init(posting: PostingAvailability) {
+    fileprivate init(posting: PostingAvailability, captionEntities: CaptionEntitiesAvailability) {
         self.posting = posting
+        self.captionEntities = captionEntities
     }
     
     public static func with(appConfiguration: AppConfiguration) -> StoriesConfiguration {
-        if let data = appConfiguration.data, let postingString = data["stories_posting"] as? String {
-            var posting: PostingAvailability
-            switch postingString {
-            case "enabled":
-                posting = .enabled
-            case "premium":
-                posting = .premium
-            default:
+        if let data = appConfiguration.data {
+            let posting: PostingAvailability
+            let captionEntities: CaptionEntitiesAvailability
+            if let postingString = data["stories_posting"] as? String {
+                switch postingString {
+                case "enabled":
+                    posting = .enabled
+                case "premium":
+                    posting = .premium
+                default:
+                    posting = .disabled
+                }
+            } else {
                 posting = .disabled
             }
-            return StoriesConfiguration(posting: posting)
+            if let entitiesString = data["stories_entities"] as? String {
+                switch entitiesString {
+                case "enabled":
+                    captionEntities = .enabled
+                default:
+                    captionEntities = .premium
+                }
+            } else {
+                captionEntities = .premium
+            }
+            return StoriesConfiguration(posting: posting, captionEntities: captionEntities)
         } else {
             return .defaultValue
         }

@@ -407,6 +407,32 @@ public class PremiumLimitsListScreen: ViewController {
                         )
                     )
                 )
+                availableItems[.stories] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.stories,
+                        component: AnyComponent(
+                            StoriesPageComponent(
+                                context: context,
+                                bottomInset: self.footerNode.frame.height,
+                                updatedBottomAlpha: { [weak self] alpha in
+                                    if let strongSelf = self {
+                                        strongSelf.footerNode.updateCoverAlpha(alpha, transition: .immediate)
+                                    }
+                                },
+                                updatedDismissOffset: { [weak self] offset in
+                                    if let strongSelf = self {
+                                        strongSelf.updateDismissOffset(offset)
+                                    }
+                                },
+                                updatedIsDisplaying: { [weak self] isDisplaying in
+                                    if let strongSelf = self, strongSelf.isExpanded && !isDisplaying {
+                                        strongSelf.update(isExpanded: false, transition: .animated(duration: 0.2, curve: .easeInOut))
+                                    }
+                                }
+                            )
+                        )
+                    )
+                )
                 availableItems[.moreUpload] = DemoPagerComponent.Item(
                     AnyComponentWithIdentity(
                         id: PremiumDemoScreen.Subject.moreUpload,

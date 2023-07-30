@@ -9555,7 +9555,7 @@ Sorry for the inconvenience.";
 "Story.PrivacyTooltipContacts" = "This story is shown to all your contacts.";
 "Story.PrivacyTooltipCloseFriends" = "This story is shown to your close friends.";
 "Story.PrivacyTooltipSelectedContacts" = "This story is shown to selected contacts.";
-"Story.PrivacyTooltipSelectedContactsCount" = "This story is now shown to %@ contacts.";
+"Story.PrivacyTooltipSelectedContactsCount" = "This story is now shown to %@.";
 "Story.PrivacyTooltipNobody" = "This story is shown only to you.";
 "Story.PrivacyTooltipEveryone" = "This story is shown to everyone.";
 
@@ -9735,3 +9735,15 @@ Sorry for the inconvenience.";
 "Story.TooltipPrivacyCloseFriends2" = "You are seeing this story because **%@** added you to their list of Close Friends.";
 
 "Story.Editor.VideoTooShort" = "A video must be at least 1 second long.";
+
+"Story.PrivacyTooltipSelectedContacts.Contacts_1" = "1 contact";
+"Story.PrivacyTooltipSelectedContacts.Contacts_any" = "%@ contacts";
+
+"Story.Privacy.GrayListSelect" = "[Select people]() who will never see your stories.";
+"Story.Privacy.GrayListSelected" = "[%@]() will never see your stories.";
+"Story.Privacy.GrayListPeople_1" = "1 person";
+"Story.Privacy.GrayListPeople_any" = "%@ people";
+
+"Story.Privacy.HideMyStoriesFrom" = "Hide My Stories From";
+
+"Story.Privacy.SaveList" = "Save List";

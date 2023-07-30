@@ -15,6 +15,7 @@ import TelegramStringFormatting
 import AppBundle
 import PeerPresenceStatusManager
 import EmojiStatusComponent
+import ContextUI
 
 private let avatarFont = avatarPlaceholderFont(size: 15.0)
 private let readIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuReadIcon"), color: .white)?.withRenderingMode(.alwaysTemplate)
@@ -57,6 +58,7 @@ public final class PeerListItemComponent: Component {
     let selectionState: SelectionState
     let hasNext: Bool
     let action: (EnginePeer) -> Void
+    let contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)?
     let openStories: ((EnginePeer, AvatarNode) -> Void)?
     
     public init(
@@ -74,6 +76,7 @@ public final class PeerListItemComponent: Component {
         selectionState: SelectionState,
         hasNext: Bool,
         action: @escaping (EnginePeer) -> Void,
+        contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)? = nil,
         openStories: ((EnginePeer, AvatarNode) -> Void)? = nil
     ) {
         self.context = context
@@ -90,6 +93,7 @@ public final class PeerListItemComponent: Component {
         self.selectionState = selectionState
         self.hasNext = hasNext
         self.action = action
+        self.contextAction = contextAction
         self.openStories = openStories
     }
     
@@ -136,7 +140,8 @@ public final class PeerListItemComponent: Component {
         return true
     }
     
-    public final class View: UIView {
+    public final class View: ContextControllerSourceView {
+        private let extractedContainerView: ContextExtractedContentContainingView
         private let containerButton: HighlightTrackingButton
         
         private let title = ComponentView<Empty>()
@@ -173,9 +178,12 @@ public final class PeerListItemComponent: Component {
             return value
         }
         
+        private var isExtractedToContextMenu: Bool = false
+        
         override init(frame: CGRect) {
             self.separatorLayer = SimpleLayer()
             
+            self.extractedContainerView = ContextExtractedContentContainingView()
             self.containerButton = HighlightTrackingButton()
             self.containerButton.isExclusiveTouch = true
             
@@ -186,14 +194,49 @@ public final class PeerListItemComponent: Component {
             
             super.init(frame: frame)
             
+            self.addSubview(self.extractedContainerView)
+            self.targetViewForActivationProgress = self.extractedContainerView.contentView
+            
+            self.extractedContainerView.contentView.addSubview(self.containerButton)
+            
             self.layer.addSublayer(self.separatorLayer)
-            self.addSubview(self.containerButton)
             self.containerButton.layer.addSublayer(self.avatarNode.layer)
             
             self.containerButton.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
             
             self.addSubview(self.avatarButtonView)
             self.avatarButtonView.addTarget(self, action: #selector(self.avatarButtonPressed), for: .touchUpInside)
+            
+            self.extractedContainerView.isExtractedToContextPreviewUpdated = { [weak self] value in
+                guard let self, let component = self.component else {
+                    return
+                }
+                self.containerButton.clipsToBounds = value
+                self.containerButton.backgroundColor = value ? component.theme.rootController.navigationBar.blurredBackgroundColor : nil
+                self.containerButton.layer.cornerRadius = value ? 10.0 : 0.0
+            }
+            self.extractedContainerView.willUpdateIsExtractedToContextPreview = { [weak self] value, transition in
+                guard let self else {
+                    return
+                }
+                self.isExtractedToContextMenu = value
+                
+                let mappedTransition: Transition
+                if value {
+                    mappedTransition = Transition(transition)
+                } else {
+                    mappedTransition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                }
+                self.state?.updated(transition: mappedTransition)
+            }
+            
+            self.activated = { [weak self] gesture, _ in
+                guard let self, let component = self.component, let peer = component.peer else {
+                    gesture.cancel()
+                    return
+                }
+                component.contextAction?(peer, self.extractedContainerView, gesture)
+            }
         }
         
         required init?(coder: NSCoder) {
@@ -219,6 +262,8 @@ public final class PeerListItemComponent: Component {
             if let hint = transition.userData(TransitionHint.self) {
                 synchronousLoad = hint.synchronousLoad
             }
+                
+            self.isGestureEnabled = component.contextAction != nil
             
             let themeUpdated = self.component?.theme !== component.theme
             
@@ -270,7 +315,7 @@ public final class PeerListItemComponent: Component {
                 labelData = ("", false)
             }
             
-            let contextInset: CGFloat = 0.0
+            let contextInset: CGFloat = self.isExtractedToContextMenu ? 12.0 : 0.0
             
             let height: CGFloat
             let titleFont: UIFont
@@ -527,6 +572,11 @@ public final class PeerListItemComponent: Component {
             }
             transition.setFrame(layer: self.separatorLayer, frame: CGRect(origin: CGPoint(x: leftInset, y: height), size: CGSize(width: availableSize.width - leftInset, height: UIScreenPixel)))
             self.separatorLayer.isHidden = !component.hasNext
+            
+            let resultBounds = CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: height))
+            transition.setFrame(view: self.extractedContainerView, frame: resultBounds)
+            transition.setFrame(view: self.extractedContainerView.contentView, frame: resultBounds)
+            self.extractedContainerView.contentRect = resultBounds
             
             let containerFrame = CGRect(origin: CGPoint(x: contextInset, y: verticalInset), size: CGSize(width: availableSize.width - contextInset * 2.0, height: height - verticalInset * 2.0))
             transition.setFrame(view: self.containerButton, frame: containerFrame)

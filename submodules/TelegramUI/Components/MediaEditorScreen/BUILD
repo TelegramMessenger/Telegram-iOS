@@ -42,6 +42,7 @@ swift_library(
         "//submodules/TelegramUI/Components/CameraButtonComponent",
         "//submodules/ChatPresentationInterfaceState",
         "//submodules/DeviceAccess",
+        "//submodules/LocationUI",
     ],
     visibility = [
         "//visibility:public",

@@ -1309,6 +1309,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             customLayout: nil,
             externalBackground: nil,
             externalExpansionView: nil,
+            customContentView: nil,
             useOpaqueTheme: false,
             hideBackground: false,
             stateContext: self.stateContext?.emojiState,
@@ -1608,13 +1609,13 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             customLayout: nil,
             externalBackground: nil,
             externalExpansionView: nil,
+            customContentView: nil,
             useOpaqueTheme: false,
             hideBackground: false,
             stateContext: nil,
             addImage: nil
         )
                 
-        
         self.inputDataDisposable = (combineLatest(queue: .mainQueue(),
             updatedInputData,
             .single(self.currentInputData.gifs) |> then(self.gifComponent.get() |> map(Optional.init)),
@@ -2510,6 +2511,7 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
             customLayout: nil,
             externalBackground: nil,
             externalExpansionView: nil,
+            customContentView: nil,
             useOpaqueTheme: false,
             hideBackground: hideBackground,
             stateContext: nil,

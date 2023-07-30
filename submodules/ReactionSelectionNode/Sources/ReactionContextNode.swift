@@ -1593,6 +1593,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 effectContainerView: self.backgroundNode.vibrancyEffectView?.contentView
             ),
             externalExpansionView: self.view,
+            customContentView: nil,
             useOpaqueTheme: false,
             hideBackground: false,
             stateContext: nil,

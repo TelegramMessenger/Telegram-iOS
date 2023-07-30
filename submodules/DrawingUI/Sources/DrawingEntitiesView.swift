@@ -28,6 +28,8 @@ private func makeEntityView(context: AccountContext, entity: DrawingEntity) -> D
         return DrawingVectorEntityView(context: context, entity: entity)
     } else if let entity = entity as? DrawingMediaEntity {
         return DrawingMediaEntityView(context: context, entity: entity)
+    } else if let entity = entity as? DrawingLocationEntity {
+        return DrawingLocationEntityView(context: context, entity: entity)
     } else {
         return nil
     }
@@ -45,6 +47,9 @@ private func prepareForRendering(entityView: DrawingEntityView) {
         entityView.entity.renderSubEntities = entityView.getRenderSubEntities()
     }
     if let entityView = entityView as? DrawingVectorEntityView {
+        entityView.entity.renderImage = entityView.getRenderImage()
+    }
+    if let entityView = entityView as? DrawingLocationEntityView {
         entityView.entity.renderImage = entityView.getRenderImage()
     }
 }
@@ -346,6 +351,14 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                 text.width = floor(self.size.width * 0.9)
                 text.fontSize = 0.08
                 text.scale = zoomScale
+            }
+        } else if let location = entity as? DrawingLocationEntity {
+            location.position = center
+            if setup {
+                location.rotation = rotation
+                location.referenceDrawingSize = self.size
+                location.width = floor(self.size.width * 0.9)
+                location.scale = zoomScale
             }
         }
     }
@@ -653,7 +666,9 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                 selectionView.tapped = { [weak self, weak entityView] in
                     if let self, let entityView {
                         let entityViews = self.subviews.filter { $0 is DrawingEntityView }
-                        self.requestedMenuForEntityView(entityView, entityViews.last === entityView)
+                        if !entityView.selectedTapAction() {
+                            self.requestedMenuForEntityView(entityView, entityViews.last === entityView)
+                        }
                     }
                 }
                 entityView.selectionView = selectionView
@@ -910,6 +925,10 @@ public class DrawingEntityView: UIView {
         let values = [self.entity.scale, self.entity.scale * 0.88, self.entity.scale]
         let keyTimes = [0.0, 0.33, 1.0]
         self.layer.animateKeyframes(values: values as [NSNumber], keyTimes: keyTimes as [NSNumber], duration: 0.3, keyPath: "transform.scale")
+    }
+    
+    func selectedTapAction() -> Bool {
+        return false
     }
     
     public func play() {

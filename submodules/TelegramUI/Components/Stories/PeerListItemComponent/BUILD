@@ -25,6 +25,7 @@ swift_library(
         "//submodules/AppBundle",
         "//submodules/PeerPresenceStatusManager",
         "//submodules/TelegramUI/Components/EmojiStatusComponent",
+        "//submodules/ContextUI",
     ],
     visibility = [
         "//visibility:public",

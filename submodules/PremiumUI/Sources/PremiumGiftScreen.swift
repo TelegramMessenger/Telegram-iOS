@@ -201,6 +201,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
             let titleColor = theme.list.itemPrimaryTextColor
             let subtitleColor = theme.list.itemSecondaryTextColor
             let arrowColor = theme.list.disclosureArrowColor
+            let accentColor = theme.list.itemAccentColor
             
             let textFont = Font.regular(15.0)
             let boldTextFont = Font.semibold(15.0)
@@ -361,7 +362,8 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                                 titleColor: titleColor,
                                 subtitle: perk.subtitle(strings: strings),
                                 subtitleColor: subtitleColor,
-                                arrowColor: arrowColor
+                                arrowColor: arrowColor,
+                                accentColor: accentColor
                             )
                         )
                     ),

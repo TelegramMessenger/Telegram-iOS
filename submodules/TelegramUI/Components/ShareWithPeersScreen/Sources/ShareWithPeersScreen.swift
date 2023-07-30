@@ -23,6 +23,7 @@ import PeerListItemComponent
 import LottieComponent
 import TooltipUI
 import OverlayStatusController
+import Markdown
 
 final class ShareWithPeersScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -38,6 +39,7 @@ final class ShareWithPeersScreenComponent: Component {
     let optionItems: [OptionItem]
     let completion: (EngineStoryPrivacy, Bool, Bool, [EnginePeer]) -> Void
     let editCategory: (EngineStoryPrivacy, Bool, Bool) -> Void
+    let editGrayList: (EngineStoryPrivacy, Bool, Bool) -> Void
     
     init(
         context: AccountContext,
@@ -50,7 +52,8 @@ final class ShareWithPeersScreenComponent: Component {
         categoryItems: [CategoryItem],
         optionItems: [OptionItem],
         completion: @escaping (EngineStoryPrivacy, Bool, Bool, [EnginePeer]) -> Void,
-        editCategory: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void
+        editCategory: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void,
+        editGrayList: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void
     ) {
         self.context = context
         self.stateContext = stateContext
@@ -63,6 +66,7 @@ final class ShareWithPeersScreenComponent: Component {
         self.optionItems = optionItems
         self.completion = completion
         self.editCategory = editCategory
+        self.editGrayList = editGrayList
     }
     
     static func ==(lhs: ShareWithPeersScreenComponent, rhs: ShareWithPeersScreenComponent) -> Bool {
@@ -971,6 +975,76 @@ final class ShareWithPeersScreenComponent: Component {
                             itemTransition.setFrame(view: itemView, frame: itemFrame)
                         }
                     }
+                    
+                    let sectionFooter: ComponentView<Empty>
+                    var sectionFooterTransition = transition
+                    if let current = self.visibleSectionFooters[section.id] {
+                        sectionFooter = current
+                    } else {
+                        if !transition.animation.isImmediate {
+                            sectionFooterTransition = .immediate
+                        }
+                        sectionFooter = ComponentView()
+                        self.visibleSectionFooters[section.id] = sectionFooter
+                    }
+                    
+                    let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.freeTextColor)
+                    let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.freeTextColor)
+                    let link = MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemAccentColor)
+                    
+                    let footerText: String
+                    if let grayListPeers = component.stateContext.stateValue?.grayListPeers, !grayListPeers.isEmpty {
+                        let footerValue = environment.strings.Story_Privacy_GrayListPeople(Int32(grayListPeers.count))
+                        footerText = environment.strings.Story_Privacy_GrayListSelected(footerValue).string
+                    } else {
+                        footerText = environment.strings.Story_Privacy_GrayListSelect
+                    }
+                    let footerSize = sectionFooter.update(
+                        transition: sectionFooterTransition,
+                        component: AnyComponent(MultilineTextComponent(
+                            text: .markdown(text: footerText, attributes: MarkdownAttributes(
+                                body: body,
+                                bold: bold,
+                                link: link,
+                                linkAttribute: { url in
+                                    return ("URL", url)
+                                }
+                            )),
+                            maximumNumberOfLines: 0,
+                            lineSpacing: 0.2,
+                            highlightColor: UIColor(rgb: 0x007aff, alpha: 0.2),
+                            highlightAction: { attributes in
+                                if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
+                                    return NSAttributedString.Key(rawValue: "URL")
+                                } else {
+                                    return nil
+                                }
+                            },
+                            tapAction: { [weak self] _, _ in
+                                guard let self, let environment = self.environment, let controller = environment.controller() as? ShareWithPeersScreen else {
+                                    return
+                                }
+                                component.editGrayList(
+                                    EngineStoryPrivacy(base: .nobody, additionallyIncludePeers: []),
+                                    self.selectedOptions.contains(.screenshot),
+                                    self.selectedOptions.contains(.pin)
+                                )
+                                controller.dismissAllTooltips()
+                                controller.dismiss()
+                            }
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: itemLayout.containerSize.width - 16.0 * 2.0, height: itemLayout.contentHeight)
+                    )
+                    let footerFrame = CGRect(origin: CGPoint(x: itemLayout.sideInset + 16.0, y: sectionOffset + section.totalHeight + 7.0), size: footerSize)
+                    if let footerView = sectionFooter.view {
+                        if footerView.superview == nil {
+                            self.itemContainerView.addSubview(footerView)
+                        }
+                        sectionFooterTransition.setFrame(view: footerView, frame: footerFrame)
+                    }
+                    
+                    sectionOffset += footerSize.height
                 } else if section.id == 1 {
                     for i in 0 ..< stateValue.peers.count {
                         let itemFrame = CGRect(origin: CGPoint(x: itemLayout.sideInset, y: sectionOffset + section.insets.top + CGFloat(i) * section.itemHeight), size: CGSize(width: itemLayout.containerSize.width, height: section.itemHeight))
@@ -1641,7 +1715,7 @@ final class ShareWithPeersScreenComponent: Component {
             }
             navigationButtonsWidth += navigationLeftButtonSize.width + navigationSideInset
             
-            var actionButtonTitle = environment.strings.Story_Privacy_SaveSettings
+            var actionButtonTitle = environment.strings.Story_Privacy_SaveList
             let title: String
             switch component.stateContext.subject {
             case let .stories(editing):
@@ -1651,8 +1725,12 @@ final class ShareWithPeersScreenComponent: Component {
                     title = environment.strings.Story_Privacy_ShareStory
                     actionButtonTitle = environment.strings.Story_Privacy_PostStory
                 }
-            case .chats:
-                title = environment.strings.Story_Privacy_CategorySelectedContacts
+            case let .chats(grayList):
+                if grayList {
+                    title = environment.strings.Story_Privacy_HideMyStoriesFrom
+                } else {
+                    title = environment.strings.Story_Privacy_CategorySelectedContacts
+                }
             case let .contacts(category):
                 switch category {
                 case .closeFriends:
@@ -1976,24 +2054,27 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         let presences: [EnginePeer.Id: EnginePeer.Presence]
         let participants: [EnginePeer.Id: Int]
         let closeFriendsPeers: [EnginePeer]
+        let grayListPeers: [EnginePeer]
         
         fileprivate init(
             peers: [EnginePeer],
             presences: [EnginePeer.Id: EnginePeer.Presence],
             participants: [EnginePeer.Id: Int],
-            closeFriendsPeers: [EnginePeer]
+            closeFriendsPeers: [EnginePeer],
+            grayListPeers: [EnginePeer]
         ) {
             self.peers = peers
             self.presences = presences
             self.participants = participants
             self.closeFriendsPeers = closeFriendsPeers
+            self.grayListPeers = grayListPeers
         }
     }
     
     public final class StateContext {
         public enum Subject: Equatable {
             case stories(editing: Bool)
-            case chats
+            case chats(grayList: Bool)
             case contacts(EngineStoryPrivacy.Base)
             case search(query: String, onlyContacts: Bool)
         }
@@ -2002,6 +2083,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         
         public let subject: Subject
         public private(set) var initialPeerIds: Set<EnginePeer.Id> = Set()
+        fileprivate let storiesGrayList: BlockedPeersContext?
         
         private var stateDisposable: Disposable?
         private let stateSubject = Promise<State>()
@@ -2015,13 +2097,25 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         
         public init(
             context: AccountContext,
-            subject: Subject = .chats,
+            subject: Subject = .chats(grayList: false),
             initialPeerIds: Set<EnginePeer.Id> = Set(),
-            closeFriends: Signal<[EnginePeer], NoError> = .single([])
+            closeFriends: Signal<[EnginePeer], NoError> = .single([]),
+            storiesGrayList: BlockedPeersContext? = nil
         ) {
             self.subject = subject
             self.initialPeerIds = initialPeerIds
+            self.storiesGrayList = storiesGrayList
             
+            let grayListPeers: Signal<[EnginePeer], NoError>
+            if let storiesGrayList {
+                grayListPeers = storiesGrayList.state
+                |> map { state -> [EnginePeer] in
+                    return state.peers.compactMap { $0.peer.flatMap(EnginePeer.init) }
+                }
+            } else {
+                grayListPeers = .single([])
+            }
+             
             switch subject {
             case .stories:
                 var peerSignals: [Signal<EnginePeer?, NoError>] = []
@@ -2033,8 +2127,8 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                                 
                 let peers = combineLatest(peerSignals)
                                 
-                self.stateDisposable = combineLatest(queue: Queue.mainQueue(), peers, closeFriends)
-                .start(next: { [weak self] peers, closeFriends in
+                self.stateDisposable = combineLatest(queue: Queue.mainQueue(), peers, closeFriends, grayListPeers)
+                .start(next: { [weak self] peers, closeFriends, grayListPeers in
                     guard let self else {
                         return
                     }
@@ -2043,28 +2137,30 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                         peers: peers.compactMap { $0 },
                         presences: [:],
                         participants: [:],
-                        closeFriendsPeers: closeFriends
+                        closeFriendsPeers: closeFriends,
+                        grayListPeers: grayListPeers
                     )
                     self.stateValue = state
                     self.stateSubject.set(.single(state))
                     
                     self.readySubject.set(true)
                 })
-            case .chats:
+            case let .chats(isGrayList):
                 self.stateDisposable = (combineLatest(
                     context.engine.messages.chatList(group: .root, count: 200) |> take(1),
                     context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.List(includePresences: true)),
-                    context.engine.data.get(EngineDataMap(Array(self.initialPeerIds).map(TelegramEngine.EngineData.Item.Peer.Peer.init)))
+                    context.engine.data.get(EngineDataMap(Array(self.initialPeerIds).map(TelegramEngine.EngineData.Item.Peer.Peer.init))),
+                    grayListPeers
                 )
-                |> mapToSignal { chatList, contacts, initialPeers -> Signal<(EngineChatList, EngineContactList, [EnginePeer.Id: Optional<EnginePeer>], [EnginePeer.Id: Optional<Int>]), NoError> in
+                |> mapToSignal { chatList, contacts, initialPeers, grayListPeers -> Signal<(EngineChatList, EngineContactList, [EnginePeer.Id: Optional<EnginePeer>], [EnginePeer.Id: Optional<Int>], [EnginePeer]), NoError> in
                     return context.engine.data.subscribe(
                         EngineDataMap(chatList.items.map(\.renderedPeer.peerId).map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init))
                     )
-                    |> map { participantCountMap -> (EngineChatList, EngineContactList, [EnginePeer.Id: Optional<EnginePeer>], [EnginePeer.Id: Optional<Int>]) in
-                        return (chatList, contacts, initialPeers, participantCountMap)
+                    |> map { participantCountMap -> (EngineChatList, EngineContactList, [EnginePeer.Id: Optional<EnginePeer>], [EnginePeer.Id: Optional<Int>], [EnginePeer]) in
+                        return (chatList, contacts, initialPeers, participantCountMap, grayListPeers)
                     }
                 }
-                |> deliverOnMainQueue).start(next: { [weak self] chatList, contacts, initialPeers, participantCounts in
+                |> deliverOnMainQueue).start(next: { [weak self] chatList, contacts, initialPeers, participantCounts, grayListPeers in
                     guard let self else {
                         return
                     }
@@ -2076,12 +2172,24 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                         }
                     }
                     
+                    var grayListPeersIds = Set<EnginePeer.Id>()
+                    for peer in grayListPeers {
+                        grayListPeersIds.insert(peer.id)
+                    }
+                    
                     var existingIds = Set<EnginePeer.Id>()
                     var selectedPeers: [EnginePeer] = []
+                    
+                    if isGrayList {
+                        self.initialPeerIds = Set(grayListPeers.map { $0.id })
+                    }
+                    
                     for item in chatList.items.reversed() {
-                        if self.initialPeerIds.contains(item.renderedPeer.peerId), let peer = item.renderedPeer.peer {
-                            selectedPeers.append(peer)
-                            existingIds.insert(peer.id)
+                        if let peer = item.renderedPeer.peer {
+                            if self.initialPeerIds.contains(peer.id) || isGrayList && grayListPeersIds.contains(peer.id) {
+                                selectedPeers.append(peer)
+                                existingIds.insert(peer.id)
+                            }
                         }
                     }
                     
@@ -2089,6 +2197,15 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                         if !existingIds.contains(peerId), let maybePeer = initialPeers[peerId], let peer = maybePeer {
                             selectedPeers.append(peer)
                             existingIds.insert(peerId)
+                        }
+                    }
+                    
+                    if isGrayList {
+                        for peer in grayListPeers {
+                            if !existingIds.contains(peer.id) {
+                                selectedPeers.append(peer)
+                                existingIds.insert(peer.id)
+                            }
                         }
                     }
                     
@@ -2106,7 +2223,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                             if peer.id == context.account.peerId {
                                 return false
                             }
-                            if peer.isService {
+                            if peer.isService || peer.isDeleted {
                                 return false
                             }
                             if case let .user(user) = peer {
@@ -2136,7 +2253,8 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                         peers: peers,
                         presences: presences,
                         participants: participants,
-                        closeFriendsPeers: []
+                        closeFriendsPeers: [],
+                        grayListPeers: grayListPeers
                     )
                     self.stateValue = state
                     self.stateSubject.set(.single(state))
@@ -2198,7 +2316,8 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                         peers: peers,
                         presences: contactList.presences,
                         participants: [:],
-                        closeFriendsPeers: []
+                        closeFriendsPeers: [],
+                        grayListPeers: []
                     )
                                         
                     self.stateValue = state
@@ -2248,6 +2367,10 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                                     return false
                                 } else if user.botInfo != nil {
                                     return false
+                                } else if peer.isService {
+                                    return false
+                                } else if user.isDeleted {
+                                    return false
                                 } else {
                                     return true
                                 }
@@ -2265,7 +2388,8 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                         },
                         presences: [:],
                         participants: participants,
-                        closeFriendsPeers: []
+                        closeFriendsPeers: [],
+                        grayListPeers: []
                     )
                     self.stateValue = state
                     self.stateSubject.set(.single(state))
@@ -2301,7 +2425,8 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         mentions: [String] = [],
         stateContext: StateContext,
         completion: @escaping (EngineStoryPrivacy, Bool, Bool, [EnginePeer]) -> Void,
-        editCategory: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void
+        editCategory: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void,
+        editGrayList: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void
     ) {
         self.context = context
         
@@ -2411,7 +2536,8 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
             categoryItems: categoryItems,
             optionItems: optionItems,
             completion: completion,
-            editCategory: editCategory
+            editCategory: editCategory,
+            editGrayList: editGrayList
         ), navigationBarAppearance: .none, theme: .dark)
         
         self.statusBar.statusBarStyle = .Ignore

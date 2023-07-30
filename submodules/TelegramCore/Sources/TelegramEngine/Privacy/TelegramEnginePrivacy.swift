@@ -13,6 +13,10 @@ public extension TelegramEngine {
             return _internal_requestUpdatePeerIsBlocked(account: self.account, peerId: peerId, isBlocked: isBlocked)
         }
 
+        public func requestUpdatePeerIsBlockedFromStories(peerId: PeerId, isBlocked: Bool) -> Signal<Void, NoError> {
+            return _internal_requestUpdatePeerIsBlockedFromStories(account: self.account, peerId: peerId, isBlocked: isBlocked)
+        }
+
         public func activeSessions() -> ActiveSessionsContext {
             return ActiveSessionsContext(account: self.account)
         }

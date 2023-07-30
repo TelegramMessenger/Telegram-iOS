@@ -1082,6 +1082,8 @@ final class PerkComponent: CombinedComponent {
     let subtitle: String
     let subtitleColor: UIColor
     let arrowColor: UIColor
+    let accentColor: UIColor
+    let badge: String?
     
     init(
         iconName: String,
@@ -1090,7 +1092,9 @@ final class PerkComponent: CombinedComponent {
         titleColor: UIColor,
         subtitle: String,
         subtitleColor: UIColor,
-        arrowColor: UIColor
+        arrowColor: UIColor,
+        accentColor: UIColor,
+        badge: String? = nil
     ) {
         self.iconName = iconName
         self.iconBackgroundColors = iconBackgroundColors
@@ -1099,6 +1103,8 @@ final class PerkComponent: CombinedComponent {
         self.subtitle = subtitle
         self.subtitleColor = subtitleColor
         self.arrowColor = arrowColor
+        self.accentColor = accentColor
+        self.badge = badge
     }
     
     static func ==(lhs: PerkComponent, rhs: PerkComponent) -> Bool {
@@ -1123,6 +1129,12 @@ final class PerkComponent: CombinedComponent {
         if lhs.arrowColor != rhs.arrowColor {
             return false
         }
+        if lhs.accentColor != rhs.accentColor {
+            return false
+        }
+        if lhs.badge != rhs.badge {
+            return false
+        }
         return true
     }
     
@@ -1132,6 +1144,8 @@ final class PerkComponent: CombinedComponent {
         let title = Child(MultilineTextComponent.self)
         let subtitle = Child(MultilineTextComponent.self)
         let arrow = Child(BundleIconComponent.self)
+        let badgeBackground = Child(RoundedRectangle.self)
+        let badgeText = Child(MultilineTextComponent.self)
 
         return { context in
             let component = context.component
@@ -1214,6 +1228,32 @@ final class PerkComponent: CombinedComponent {
             context.add(title
                 .position(CGPoint(x: iconBackground.size.width + sideInset + title.size.width / 2.0, y: textTopInset + title.size.height / 2.0))
             )
+            
+            if let badge = component.badge {
+                let badgeText = badgeText.update(
+                    component: MultilineTextComponent(text: .plain(NSAttributedString(string: badge, font: Font.semibold(11.0), textColor: .white))),
+                    availableSize: context.availableSize,
+                    transition: context.transition
+                )
+                
+                let badgeWidth = badgeText.size.width + 7.0
+                let badgeBackground = badgeBackground.update(
+                    component: RoundedRectangle(
+                        colors: [component.accentColor],
+                        cornerRadius: 5.0,
+                        gradientDirection: .vertical),
+                    availableSize: CGSize(width: badgeWidth, height: 16.0),
+                    transition: context.transition
+                )
+                
+                context.add(badgeBackground
+                    .position(CGPoint(x: iconBackground.size.width + sideInset + title.size.width + badgeWidth / 2.0 + 8.0, y: textTopInset + title.size.height / 2.0 - 1.0))
+                )
+                
+                context.add(badgeText
+                    .position(CGPoint(x: iconBackground.size.width + sideInset + title.size.width + badgeWidth / 2.0 + 8.0, y: textTopInset + title.size.height / 2.0 - 1.0))
+                )
+            }
             
             context.add(subtitle
                 .position(CGPoint(x: iconBackground.size.width + sideInset + subtitle.size.width / 2.0, y: textTopInset + title.size.height + spacing + subtitle.size.height / 2.0))
@@ -1696,7 +1736,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                     titleColor: titleColor,
                                     subtitle: perk.subtitle(strings: strings),
                                     subtitleColor: subtitleColor,
-                                    arrowColor: arrowColor
+                                    arrowColor: arrowColor,
+                                    accentColor: accentColor
                                 )
                             )
                         ),

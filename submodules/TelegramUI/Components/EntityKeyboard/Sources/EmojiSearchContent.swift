@@ -407,6 +407,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
             customLayout: nil,
             externalBackground: nil,
             externalExpansionView: nil,
+            customContentView: nil,
             useOpaqueTheme: true,
             hideBackground: false,
             stateContext: nil,

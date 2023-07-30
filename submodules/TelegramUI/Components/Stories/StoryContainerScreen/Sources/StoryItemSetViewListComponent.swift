@@ -59,6 +59,7 @@ final class StoryItemSetViewListComponent: Component {
     let deleteAction: () -> Void
     let moreAction: (UIView, ContextGesture?) -> Void
     let openPeer: (EnginePeer) -> Void
+    let peerContextAction: (EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void
     let openPeerStories: (EnginePeer, AvatarNode) -> Void
     let openPremiumIntro: () -> Void
     
@@ -79,6 +80,7 @@ final class StoryItemSetViewListComponent: Component {
         deleteAction: @escaping () -> Void,
         moreAction: @escaping (UIView, ContextGesture?) -> Void,
         openPeer: @escaping (EnginePeer) -> Void,
+        peerContextAction: @escaping (EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void,
         openPeerStories: @escaping (EnginePeer, AvatarNode) -> Void,
         openPremiumIntro: @escaping () -> Void
     ) {
@@ -98,6 +100,7 @@ final class StoryItemSetViewListComponent: Component {
         self.deleteAction = deleteAction
         self.moreAction = moreAction
         self.openPeer = openPeer
+        self.peerContextAction = peerContextAction
         self.openPeerStories = openPeerStories
         self.openPremiumIntro = openPremiumIntro
     }
@@ -504,6 +507,9 @@ final class StoryItemSetViewListComponent: Component {
                                     return
                                 }
                                 component.openPeer(peer)
+                            },
+                            contextAction: { peer, view, gesture in
+                                component.peerContextAction(peer, view, gesture)
                             },
                             openStories: { [weak self] peer, avatarNode in
                                 guard let self, let component = self.component else {

@@ -271,6 +271,8 @@ final class StoryPreviewComponent: Component {
                     forwardAction: {},
                     moreAction: { _, _ in },
                     presentVoiceMessagesUnavailableTooltip: nil,
+                    presentTextLengthLimitTooltip: nil,
+                    presentTextFormattingTooltip: nil,
                     paste: { _ in },
                     audioRecorder: nil,
                     videoRecordingStatus: nil,
@@ -282,6 +284,7 @@ final class StoryPreviewComponent: Component {
                     timeoutSelected: false,
                     displayGradient: false,
                     bottomInset: 0.0,
+                    isFormattingLocked: false,
                     hideKeyboard: false,
                     forceIsEditing: false,
                     disabledPlaceholder: nil

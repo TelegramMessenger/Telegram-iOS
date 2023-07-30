@@ -20,7 +20,13 @@ public enum BlockedPeersContextRemoveError {
 }
 
 public final class BlockedPeersContext {
+    public enum Subject {
+        case blocked
+        case stories
+    }
+    
     private let account: Account
+    private let subject: Subject
     private var _state: BlockedPeersContextState {
         didSet {
             if self._state != oldValue {
@@ -35,10 +41,12 @@ public final class BlockedPeersContext {
     
     private let disposable = MetaDisposable()
     
-    public init(account: Account) {
+    public init(account: Account, subject: Subject) {
         assert(Queue.mainQueue().isCurrent())
         
         self.account = account
+        self.subject = subject
+        
         self._state = BlockedPeersContextState(isLoadingMore: false, canLoadMore: true, totalCount: nil, peers: [])
         self._statePromise.set(.single(self._state))
         
@@ -58,7 +66,13 @@ public final class BlockedPeersContext {
         self._state = BlockedPeersContextState(isLoadingMore: true, canLoadMore: self._state.canLoadMore, totalCount: self._state.totalCount, peers: self._state.peers)
         let postbox = self.account.postbox
         let accountPeerId = self.account.peerId
-        self.disposable.set((self.account.network.request(Api.functions.contacts.getBlocked(offset: Int32(self._state.peers.count), limit: 64))
+        
+        var flags: Int32 = 0
+        if case .stories = self.subject {
+            flags |= 1 << 0
+        }
+        
+        self.disposable.set((self.account.network.request(Api.functions.contacts.getBlocked(flags: flags, offset: Int32(self._state.peers.count), limit: 64))
         |> retryRequest
         |> mapToSignal { result -> Signal<(peers: [RenderedPeer], canLoadMore: Bool, totalCount: Int?), NoError> in
             return postbox.transaction { transaction -> (peers: [RenderedPeer], canLoadMore: Bool, totalCount: Int?) in
@@ -123,11 +137,41 @@ public final class BlockedPeersContext {
         }))
     }
     
+    public func updatePeerIds(_ peerIds: [EnginePeer.Id]) -> Signal<Never, BlockedPeersContextAddError> {
+        assert(Queue.mainQueue().isCurrent())
+        
+        let validIds = Set(peerIds)
+        var peersToRemove: [EnginePeer.Id] = []
+        for peer in self._state.peers {
+            if !validIds.contains(peer.peerId) {
+                peersToRemove.append(peer.peerId)
+            }
+        }
+        var updateSignals: [Signal<Never, BlockedPeersContextAddError>] = []
+        for peerId in peersToRemove {
+            updateSignals.append(self.remove(peerId: peerId) |> mapError { _ in .generic })
+        }
+        for peerId in peerIds {
+            updateSignals.append(self.add(peerId: peerId))
+        }
+        return combineLatest(updateSignals)
+        |> mapToSignal { _ in
+            return .never()
+        }
+    }
+    
     public func add(peerId: PeerId) -> Signal<Never, BlockedPeersContextAddError> {
         assert(Queue.mainQueue().isCurrent())
         
         let postbox = self.account.postbox
         let network = self.account.network
+        let subject = self.subject
+        
+        var flags: Int32 = 0
+        if case .stories = self.subject {
+            flags |= 1 << 0
+        }
+    
         return self.account.postbox.transaction { transaction -> Api.InputPeer? in
             return transaction.getPeer(peerId).flatMap(apiInputPeer)
         }
@@ -136,7 +180,7 @@ public final class BlockedPeersContext {
             guard let inputPeer = inputPeer else {
                 return .fail(.generic)
             }
-            return network.request(Api.functions.contacts.block(id: inputPeer))
+            return network.request(Api.functions.contacts.block(flags: flags, id: inputPeer))
             |> mapError { _ -> BlockedPeersContextAddError in
                 return .generic
             }
@@ -150,7 +194,13 @@ public final class BlockedPeersContext {
                             } else {
                                 previous = CachedUserData()
                             }
-                            return previous.withUpdatedIsBlocked(true)
+                            if case .stories = subject {
+                                var userFlags = previous.flags
+                                userFlags.insert(.isBlockedFromMyStories)
+                                return previous.withUpdatedFlags(userFlags)
+                            } else {
+                                return previous.withUpdatedIsBlocked(true)
+                            }
                         })
                     }
                     
@@ -188,6 +238,13 @@ public final class BlockedPeersContext {
         assert(Queue.mainQueue().isCurrent())
         let postbox = self.account.postbox
         let network = self.account.network
+        let subject = self.subject
+        
+        var flags: Int32 = 0
+        if case .stories = self.subject {
+            flags |= 1 << 0
+        }
+        
         return self.account.postbox.transaction { transaction -> Api.InputPeer? in
             return transaction.getPeer(peerId).flatMap(apiInputPeer)
         }
@@ -196,7 +253,7 @@ public final class BlockedPeersContext {
             guard let inputPeer = inputPeer else {
                 return .fail(.generic)
             }
-            return network.request(Api.functions.contacts.unblock(id: inputPeer))
+            return network.request(Api.functions.contacts.unblock(flags: flags, id: inputPeer))
             |> mapError { _ -> BlockedPeersContextRemoveError in
                 return .generic
             }
@@ -210,7 +267,13 @@ public final class BlockedPeersContext {
                             } else {
                                 previous = CachedUserData()
                             }
-                            return previous.withUpdatedIsBlocked(false)
+                            if case .stories = subject {
+                                var userFlags = previous.flags
+                                userFlags.remove(.isBlockedFromMyStories)
+                                return previous.withUpdatedFlags(userFlags)
+                            } else {
+                                return previous.withUpdatedIsBlocked(false)
+                            }
                         })
                     }
                     return transaction.getPeer(peerId)

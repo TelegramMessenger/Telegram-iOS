@@ -37,7 +37,7 @@ public struct UserLimitsConfiguration: Equatable {
             maxReactionsPerMessage: 1,
             maxSharedFolderInviteLinks: 3,
             maxSharedFolderJoin: 2,
-            maxStoryCaptionLength: 1024,
+            maxStoryCaptionLength: 200,
             maxExpiringStoriesCount: 100
         )
     }

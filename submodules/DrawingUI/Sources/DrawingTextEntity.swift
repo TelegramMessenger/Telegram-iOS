@@ -996,7 +996,7 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView {
     }
 }
 
-private class DrawingTextLayoutManager: NSLayoutManager {
+final class DrawingTextLayoutManager: NSLayoutManager {
     var radius: CGFloat
     var maxIndex: Int = 0
     
@@ -1008,7 +1008,7 @@ private class DrawingTextLayoutManager: NSLayoutManager {
     var strokeOffset: CGPoint = .zero
     
     var frameColor: UIColor?
-    var frameWidthInset: CGFloat = 0.0
+    var frameInsets = UIEdgeInsets()
     
     var textAlignment: NSTextAlignment = .natural
     
@@ -1040,7 +1040,7 @@ private class DrawingTextLayoutManager: NSLayoutManager {
             }
             
             if !ignoreRange {
-                let newRect = CGRect(origin: CGPoint(x: usedRect.minX - self.frameWidthInset, y: usedRect.minY), size: CGSize(width: usedRect.width + self.frameWidthInset * 2.0, height: usedRect.height))
+                let newRect = CGRect(origin: CGPoint(x: usedRect.minX - floorToScreenPixels(self.frameInsets.left * usedRect.height), y: usedRect.minY - floorToScreenPixels(self.frameInsets.top * usedRect.height)), size: CGSize(width: usedRect.width + floorToScreenPixels((self.frameInsets.left + self.frameInsets.right) * usedRect.height), height: usedRect.height + floorToScreenPixels((self.frameInsets.top + self.frameInsets.bottom) * usedRect.height)))
                 self.rectArray.append(newRect)
             }
         }
@@ -1249,7 +1249,7 @@ final class SimpleTextLayer: CATextLayer {
 final class DrawingTextView: UITextView, NSLayoutManagerDelegate {
     var characterLayers: [CALayer] = []
     
-    fileprivate var drawingLayoutManager: DrawingTextLayoutManager {
+    var drawingLayoutManager: DrawingTextLayoutManager {
         return self.layoutManager as! DrawingTextLayoutManager
     }
     
@@ -1277,9 +1277,9 @@ final class DrawingTextView: UITextView, NSLayoutManagerDelegate {
             self.setNeedsDisplay()
         }
     }
-    var frameWidthInset: CGFloat = 0.0 {
+    var frameInsets: UIEdgeInsets = .zero {
         didSet {
-            self.drawingLayoutManager.frameWidthInset = self.frameWidthInset
+            self.drawingLayoutManager.frameInsets = self.frameInsets
             self.setNeedsDisplay()
         }
     }
@@ -1378,10 +1378,6 @@ final class DrawingTextView: UITextView, NSLayoutManagerDelegate {
     func layoutManager(_ layoutManager: NSLayoutManager, didCompleteLayoutFor textContainer: NSTextContainer?, atEnd layoutFinishedFlag: Bool) {
         self.updateCharLayers()
         if layoutFinishedFlag {
-//            if self.needsLayersUpdate {
-//                self.needsLayersUpdate = false
-//                self.updateCharLayers()
-//            }
             if let onLayoutUpdate = self.onLayoutUpdate {
                 self.onLayoutUpdate = nil
                 onLayoutUpdate()

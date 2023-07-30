@@ -631,7 +631,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
             presentPrivacySettings(context, present, nil)
         }),
         SettingsSearchableItem(id: .privacy(1), title: strings.Settings_BlockedUsers, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_BlockedUsers), icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
-            present(.push, blockedPeersController(context: context, blockedPeersContext: BlockedPeersContext(account: context.account)))
+            present(.push, blockedPeersController(context: context, blockedPeersContext: BlockedPeersContext(account: context.account, subject: .blocked)))
         }),
         SettingsSearchableItem(id: .privacy(2), title: strings.PrivacySettings_LastSeen, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_LastSeen), icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
             presentSelectivePrivacySettings(context, .presence, present)

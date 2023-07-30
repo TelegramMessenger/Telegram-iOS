@@ -12,11 +12,25 @@ import TelegramAnimatedStickerNode
 import YuvConversion
 import StickerResources
 
-private func prerenderTextTransformations(entity: DrawingTextEntity, image: UIImage, textScale: CGFloat, colorSpace: CGColorSpace) -> MediaEditorComposerStaticEntity {
+private func prerenderTextTransformations(entity: DrawingEntity, image: UIImage, textScale: CGFloat, colorSpace: CGColorSpace) -> MediaEditorComposerStaticEntity {
     let imageSize = image.size
     
-    let angle = -entity.rotation
-    let scale = entity.scale * 0.5 * textScale
+    let angle: CGFloat
+    var scale: CGFloat
+    let position: CGPoint
+    
+    if let entity = entity as? DrawingTextEntity {
+        angle = -entity.rotation
+        scale = entity.scale
+        position = entity.position
+    } else if let entity = entity as? DrawingLocationEntity {
+        angle = -entity.rotation
+        scale = entity.scale
+        position = entity.position
+    } else {
+        fatalError()
+    }
+    scale *= 0.5 * textScale
     
     let rotatedSize = CGSize(
         width: abs(imageSize.width * cos(angle)) + abs(imageSize.height * sin(angle)),
@@ -43,7 +57,7 @@ private func prerenderTextTransformations(entity: DrawingTextEntity, image: UIIm
         }
     }, scale: 1.0)!
     
-    return MediaEditorComposerStaticEntity(image: CIImage(image: newImage, options: [.colorSpace: colorSpace])!, position: entity.position, scale: 1.0, rotation: 0.0, baseSize: nil, baseDrawingSize: CGSize(width: 1080, height: 1920), mirrored: false)
+    return MediaEditorComposerStaticEntity(image: CIImage(image: newImage, options: [.colorSpace: colorSpace])!, position: position, scale: 1.0, rotation: 0.0, baseSize: nil, baseDrawingSize: CGSize(width: 1080, height: 1920), mirrored: false)
 }
 
 func composerEntitiesForDrawingEntity(account: Account, textScale: CGFloat, entity: DrawingEntity, colorSpace: CGColorSpace, tintColor: UIColor? = nil) -> [MediaEditorComposerEntity] {
@@ -70,13 +84,14 @@ func composerEntitiesForDrawingEntity(account: Account, textScale: CGFloat, enti
         } else if let entity = entity as? DrawingTextEntity {
             var entities: [MediaEditorComposerEntity] = []
             entities.append(prerenderTextTransformations(entity: entity, image: renderImage, textScale: textScale, colorSpace: colorSpace))
-            
             if let renderSubEntities = entity.renderSubEntities {
                 for subEntity in renderSubEntities {
                     entities.append(contentsOf: composerEntitiesForDrawingEntity(account: account, textScale: textScale, entity: subEntity, colorSpace: colorSpace, tintColor: entity.color.toUIColor()))
                 }
             }
             return entities
+        } else if let entity = entity as? DrawingLocationEntity {
+            return [prerenderTextTransformations(entity: entity, image: renderImage, textScale: textScale, colorSpace: colorSpace)]
         }
     }
     return []

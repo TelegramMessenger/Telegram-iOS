@@ -1943,6 +1943,8 @@ public final class StoryItemSetContainerComponent: Component {
                         self.voiceMessagesRestrictedTooltipController = controller
                         self.state?.updated(transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)))
                     },
+                    presentTextLengthLimitTooltip: nil,
+                    presentTextFormattingTooltip: nil,
                     paste: { [weak self] data in
                         guard let self else {
                             return
@@ -1971,6 +1973,7 @@ public final class StoryItemSetContainerComponent: Component {
                     timeoutSelected: false,
                     displayGradient: false,
                     bottomInset: component.inputHeight != 0.0 || inputNodeVisible ? 0.0 : bottomContentInset,
+                    isFormattingLocked: false,
                     hideKeyboard: self.sendMessageContext.currentInputMode == .media,
                     forceIsEditing: self.sendMessageContext.currentInputMode == .media,
                     disabledPlaceholder: disabledPlaceholder
@@ -2205,6 +2208,106 @@ public final class StoryItemSetContainerComponent: Component {
                                     return
                                 }
                                 self.navigateToPeer(peer: peer, chat: false)
+                            },
+                            peerContextAction: { [weak self] peer, sourceView, gesture in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                
+                                let _ = (component.context.engine.data.get(
+                                    TelegramEngine.EngineData.Item.Peer.IsBlocked(id: peer.id),
+                                    TelegramEngine.EngineData.Item.Peer.IsBlockedFromStories(id: peer.id),
+                                    TelegramEngine.EngineData.Item.Peer.IsContact(id: peer.id)
+                                ) |> deliverOnMainQueue).start(next: { [weak self] isBlocked, isBlockedFromStories, isContact in
+                                    var isBlockedValue = false
+                                    var isBlockedFromStoriesValue = false
+                                    
+                                    if case let .known(value) = isBlocked {
+                                        isBlockedValue = value
+                                    }
+                                    if case let .known(value) = isBlockedFromStories {
+                                        isBlockedFromStoriesValue = value
+                                    }
+                                    
+                                    let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                                    var itemList: [ContextMenuItem] = []
+                                    
+                                    if isBlockedFromStoriesValue {
+                                        itemList.append(.action(ContextMenuActionItem(text: "Show My Stories To \(peer.compactDisplayTitle)", icon: { theme in
+                                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Stories"), color: theme.contextMenu.primaryColor)
+                                        }, action: { [weak self] _, f in
+                                            f(.default)
+                                            let _ = component.context.engine.privacy.requestUpdatePeerIsBlockedFromStories(peerId: peer.id, isBlocked: false).start()
+                                            
+                                            guard let self else {
+                                                return
+                                            }
+                                            
+                                            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                                            self.component?.presentController(UndoOverlayController(
+                                                presentationData: presentationData,
+                                                content: .info(title: nil, text: "**\(peer.compactDisplayTitle)** will now see your stories.", timeout: nil),
+                                                elevatedLayout: false,
+                                                position: .top,
+                                                animateInAsReplacement: false,
+                                                action: { _ in return false }
+                                            ), nil)
+                                        })))
+                                    } else {
+                                        itemList.append(.action(ContextMenuActionItem(text: "Hide My Stories From \(peer.compactDisplayTitle)", icon: { theme in
+                                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Stories"), color: theme.contextMenu.primaryColor)
+                                        }, action: { [weak self] _, f in
+                                            f(.default)
+                                            let _ = component.context.engine.privacy.requestUpdatePeerIsBlockedFromStories(peerId: peer.id, isBlocked: true).start()
+                                            
+                                            guard let self else {
+                                                return
+                                            }
+                                            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                                            self.component?.presentController(UndoOverlayController(
+                                                presentationData: presentationData,
+                                                content: .info(title: nil, text: "**\(peer.compactDisplayTitle)** will not see your stories anymore.", timeout: nil),
+                                                elevatedLayout: false,
+                                                position: .top,
+                                                animateInAsReplacement: false,
+                                                action: { _ in return false }
+                                            ), nil)
+                                        })))
+                                    }
+
+                                    if isContact {
+                                        itemList.append(.action(ContextMenuActionItem(text: "Delete Contact", textColor: .destructive, icon: { theme in
+                                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                                        }, action: { _, f in
+                                            f(.default)
+                                            
+                                        })))
+                                    } else {
+                                        if isBlockedValue {
+                                            
+                                        } else {
+                                            itemList.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuBlock, textColor: .destructive, icon: { theme in
+                                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.contextMenu.destructiveColor)
+                                            }, action: { _, f in
+                                                f(.default)
+                                                
+                                                let _ = component.context.engine.privacy.requestUpdatePeerIsBlocked(peerId: peer.id, isBlocked: true).start()
+                                            })))
+                                        }
+                                    }
+                                    
+                                    let items = ContextController.Items(content: .list(itemList))
+                                    
+                                    let controller = ContextController(
+                                        account: component.context.account,
+                                        presentationData: presentationData,
+                                        source: .extracted(ListContextExtractedContentSource(contentView: sourceView)),
+                                        items: .single(items),
+                                        recognizer: nil,
+                                        gesture: gesture
+                                    )
+                                    component.presentInGlobalOverlay(controller, nil)
+                                })
                             },
                             openPeerStories: { [weak self] peer, avatarNode in
                                 guard let self else {
@@ -3233,7 +3336,8 @@ public final class StoryItemSetContainerComponent: Component {
                 text = component.strings.Story_PrivacyTooltipCloseFriends
             } else if privacy.base == .nobody {
                 if !privacy.additionallyIncludePeers.isEmpty {
-                    text = component.strings.Story_PrivacyTooltipSelectedContactsCount("\(privacy.additionallyIncludePeers.count)").string
+                    let value = component.strings.Story_PrivacyTooltipSelectedContacts_Contacts(Int32(privacy.additionallyIncludePeers.count))
+                    text = component.strings.Story_PrivacyTooltipSelectedContactsCount(value).string
                 } else {
                     text = component.strings.Story_PrivacyTooltipNobody
                 }
@@ -3300,6 +3404,13 @@ public final class StoryItemSetContainerComponent: Component {
                             }
                             self.openItemPrivacySettings(initialPrivacy: privacy)
                         })
+                    },
+                    editGrayList: { [weak self] privacy, _, _ in
+                        guard let self else {
+                            return
+                        }
+                        let _ = self
+                        let _ = privacy
                     }
                 )
                 controller.dismissed = { [weak self] in
@@ -3321,7 +3432,7 @@ public final class StoryItemSetContainerComponent: Component {
             }
             let subject: ShareWithPeersScreen.StateContext.Subject
             if privacy.base == .nobody {
-                subject = .chats
+                subject = .chats(grayList: false)
             } else {
                 subject = .contacts(privacy.base)
             }
@@ -3345,7 +3456,8 @@ public final class StoryItemSetContainerComponent: Component {
                             completion(result)
                         }
                     },
-                    editCategory: { _, _, _ in }
+                    editCategory: { _, _, _ in },
+                    editGrayList: { _, _, _ in }
                 )
                 controller.dismissed = { [weak self] in
                     if let self {
@@ -4303,6 +4415,27 @@ final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
         return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, actionsPosition: self.position)
     }
 }
+
+final class ListContextExtractedContentSource: ContextExtractedContentSource {
+    let keepInPlace: Bool = false
+    let ignoreContentTouches: Bool = false
+    let blurBackground: Bool = true
+        
+    private let contentView: ContextExtractedContentContainingView
+    
+    init(contentView: ContextExtractedContentContainingView) {
+        self.contentView = contentView
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        return ContextControllerTakeViewInfo(containingItem: .view(self.contentView), contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
 
 private func generateParabollicMotionKeyframes(from sourcePoint: CGPoint, to targetPosition: CGPoint, elevation: CGFloat, duration: Double, curve: Transition.Animation.Curve, reverse: Bool) -> [CGPoint] {
     let midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0, y: sourcePoint.y - elevation)

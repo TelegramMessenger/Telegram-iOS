@@ -31,6 +31,7 @@ import ChatEntityKeyboardInputNode
 import ChatPresentationInterfaceState
 import TextFormat
 import DeviceAccess
+import LocationUI
 
 enum DrawingScreenType {
     case drawing
@@ -1148,6 +1149,18 @@ final class MediaEditorScreenComponent: Component {
                     forwardAction: nil,
                     moreAction: nil,
                     presentVoiceMessagesUnavailableTooltip: nil,
+                    presentTextLengthLimitTooltip: { [weak self] in
+                        guard let self, let controller = self.environment?.controller() as? MediaEditorScreen else {
+                            return
+                        }
+                        controller.presentCaptionLimitPremiumSuggestion()
+                    },
+                    presentTextFormattingTooltip: { [weak self] in
+                        guard let self, let controller = self.environment?.controller() as? MediaEditorScreen else {
+                            return
+                        }
+                        controller.presentCaptionEntitiesPremiumSuggestion()
+                    },
                     paste: { [weak self] data in
                         guard let self, let environment = self.environment, let controller = environment.controller() as? MediaEditorScreen else {
                             return
@@ -1179,6 +1192,7 @@ final class MediaEditorScreenComponent: Component {
                     timeoutSelected: timeoutSelected,
                     displayGradient: false,
                     bottomInset: 0.0,
+                    isFormattingLocked: false,
                     hideKeyboard: self.currentInputMode == .emoji,
                     forceIsEditing: self.currentInputMode == .emoji,
                     disabledPlaceholder: nil
@@ -2684,6 +2698,25 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             controller.push(galleryController)
         }
         
+        func presentLocationPicker() {
+            guard let controller = self.controller else {
+                return
+            }
+            let locationController = standaloneLocationPickerController(context: self.context, completion: { [weak self] location in
+                if let self {
+                    let title = location.venue?.title ?? "LOCATION"
+                    self.interaction?.insertEntity(DrawingLocationEntity(title: title, style: .white, location: location), scale: 1.0)
+                }
+            })
+            locationController.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak locationController] transition in
+                if let self, let locationController {
+                    let transitionFactor = locationController.modalStyleOverlayTransitionFactor
+                    self.updateModalTransitionFactor(transitionFactor, transition: transition)
+                }
+            }
+            controller.push(locationController)
+        }
+        
         func updateModalTransitionFactor(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
             guard let layout = self.validLayout, case .compact = layout.metrics.widthClass else {
                 return
@@ -2850,6 +2883,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     controller.presentGallery = { [weak self] in
                                         if let self {
                                             self.presentGallery()
+                                        }
+                                    }
+                                    controller.presentLocationPicker = { [weak self, weak controller] in
+                                        if let self {
+                                            controller?.dismiss(animated: true)
+                                            self.presentLocationPicker()
                                         }
                                     }
                                     self.stickerScreen = controller
@@ -3175,6 +3214,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     public var willDismiss: () -> Void = { }
     
     private var closeFriends = Promise<[EnginePeer]>()
+    private let storiesGrayList: BlockedPeersContext
     
     private let hapticFeedback = HapticFeedback()
     
@@ -3198,6 +3238,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         self.transitionIn = transitionIn
         self.transitionOut = transitionOut
         self.completion = completion
+        
+        self.storiesGrayList = BlockedPeersContext(account: context.account, subject: .stories)
         
         if let transitionIn, case .camera = transitionIn {
             self.isSavingAvailable = true
@@ -3271,7 +3313,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             context: self.context,
             subject: .stories(editing: false),
             initialPeerIds: Set(privacy.privacy.additionallyIncludePeers),
-            closeFriends: self.closeFriends.get()
+            closeFriends: self.closeFriends.get(),
+            storiesGrayList: self.storiesGrayList
         )
         let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
             guard let self else {
@@ -3299,7 +3342,23 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     guard let self else {
                         return
                     }
-                    self.openEditCategory(privacy: privacy, isForwardingDisabled: !allowScreenshots, pin: pin, completion: { [weak self] privacy in
+                    self.openEditCategory(privacy: privacy, isForwardingDisabled: !allowScreenshots, pin: pin, grayList: false, completion: { [weak self] privacy in
+                        guard let self else {
+                            return
+                        }
+                        self.openPrivacySettings(MediaEditorResultPrivacy(
+                            privacy: privacy,
+                            timeout: timeout,
+                            isForwardingDisabled: !allowScreenshots,
+                            pin: pin
+                        ), completion: completion)
+                    })
+                },
+                editGrayList: { [weak self] privacy, allowScreenshots, pin in
+                    guard let self else {
+                        return
+                    }
+                    self.openEditCategory(privacy: privacy, isForwardingDisabled: !allowScreenshots, pin: pin, grayList: true, completion: { [weak self] privacy in
                         guard let self else {
                             return
                         }
@@ -3319,14 +3378,21 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         })
     }
     
-    private func openEditCategory(privacy: EngineStoryPrivacy, isForwardingDisabled: Bool, pin: Bool, completion: @escaping (EngineStoryPrivacy) -> Void) {
+    private func openEditCategory(privacy: EngineStoryPrivacy, isForwardingDisabled: Bool, pin: Bool, grayList: Bool, completion: @escaping (EngineStoryPrivacy) -> Void) {
         let subject: ShareWithPeersScreen.StateContext.Subject
-        if privacy.base == .nobody {
-            subject = .chats
+        if grayList {
+            subject = .chats(grayList: true)
+        } else if privacy.base == .nobody {
+            subject = .chats(grayList: false)
         } else {
             subject = .contacts(privacy.base)
         }
-        let stateContext = ShareWithPeersScreen.StateContext(context: self.context, subject: subject, initialPeerIds: Set(privacy.additionallyIncludePeers))
+        let stateContext = ShareWithPeersScreen.StateContext(
+            context: self.context,
+            subject: subject,
+            initialPeerIds: Set(privacy.additionallyIncludePeers),
+            storiesGrayList: self.storiesGrayList
+        )
         let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
             guard let self else {
                 return
@@ -3341,7 +3407,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     guard let self else {
                         return
                     }
-                    if case .closeFriends = privacy.base {
+                    if grayList {
+                        let _ = self.storiesGrayList.updatePeerIds(result.additionallyIncludePeers).start()
+                        completion(privacy)
+                    } else if case .closeFriends = privacy.base {
                         let _ = self.context.engine.privacy.updateCloseFriends(peerIds: result.additionallyIncludePeers).start()
                         self.closeFriends.set(.single(peers))
                         completion(EngineStoryPrivacy(base: .closeFriends, additionallyIncludePeers: []))
@@ -3349,7 +3418,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         completion(result)
                     }
                 },
-                editCategory: { _, _, _ in }
+                editCategory: { _, _, _ in },
+                editGrayList: { _, _, _ in }
             )
             controller.dismissed = {
                 self.node.mediaEditor?.play()
@@ -3435,15 +3505,54 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         self.present(contextController, in: .window(.root))
     }
     
-    private func presentTimeoutPremiumSuggestion() {
-        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-        
-        let text = presentationData.strings.Story_Editor_TooltipPremiumExpiration
+    fileprivate func presentTimeoutPremiumSuggestion() {
+        self.dismissAllTooltips()
         
         let context = self.context
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+
+        let text = presentationData.strings.Story_Editor_TooltipPremiumExpiration
+                
         let controller = UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: true, title: nil, text: text, customUndoText: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
-            if case .undo = action, let self {
-                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings)
+            if case .info = action, let self {
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories)
+                self.push(controller)
+            }
+            return false }
+        )
+        self.present(controller, in: .current)
+    }
+
+    fileprivate func presentCaptionLimitPremiumSuggestion() {
+        self.dismissAllTooltips()
+        
+        let context = self.context
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+
+        let title = presentationData.strings.Story_Editor_TooltipPremiumCaptionLimitTitle
+        let text =  presentationData.strings.Story_Editor_TooltipPremiumCaptionLimitText
+                
+        let controller = UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_read", scale: 0.25, colors: [:], title: title, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
+            if case .info = action, let self {
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories)
+                self.push(controller)
+            }
+            return false }
+        )
+        self.present(controller, in: .current)
+    }
+    
+    fileprivate func presentCaptionEntitiesPremiumSuggestion() {
+        self.dismissAllTooltips()
+        
+        let context = self.context
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+
+        let text = presentationData.strings.Story_Editor_TooltipPremiumCaptionEntities
+                
+        let controller = UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: text), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
+            if case .info = action, let self {
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories)
                 self.push(controller)
             }
             return false }

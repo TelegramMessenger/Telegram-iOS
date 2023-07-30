@@ -416,6 +416,8 @@ public class StickerPickerScreen: ViewController {
             }
         }
         
+        private var storyStickersContentView: StoryStickersContentView?
+        
         init(context: AccountContext, controller: StickerPickerScreen, theme: PresentationTheme) {
             self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
             self.controller = controller
@@ -440,15 +442,19 @@ public class StickerPickerScreen: ViewController {
             self.wrappingView.addSubview(self.containerView)
             self.containerView.addSubview(self.hostView)
             
-            let signal = combineLatest(
+            self.storyStickersContentView = StoryStickersContentView(frame: .zero)
+            self.storyStickersContentView?.locationAction = { [weak self] in
+                self?.controller?.presentLocationPicker()
+            }
+            
+            let data = combineLatest(
                 queue: Queue.mainQueue(),
                 controller.inputData,
                 self.stickerSearchState.get(),
                 self.emojiSearchState.get()
             )
             
-            
-            self.contentDisposable.set(signal.start(next: { [weak self] inputData, stickerSearchState, emojiSearchState in
+            self.contentDisposable.set(data.start(next: { [weak self] inputData, stickerSearchState, emojiSearchState in
                 if let strongSelf = self {
                     let presentationData = strongSelf.presentationData
                     var inputData = inputData
@@ -910,6 +916,7 @@ public class StickerPickerScreen: ViewController {
                 customLayout: nil,
                 externalBackground: nil,
                 externalExpansionView: nil,
+                customContentView: nil,
                 useOpaqueTheme: false,
                 hideBackground: true,
                 stateContext: nil,
@@ -1174,6 +1181,7 @@ public class StickerPickerScreen: ViewController {
                 customLayout: nil,
                 externalBackground: nil,
                 externalExpansionView: nil,
+                customContentView: self.storyStickersContentView,
                 useOpaqueTheme: false,
                 hideBackground: true,
                 stateContext: nil,
@@ -1373,7 +1381,7 @@ public class StickerPickerScreen: ViewController {
                             deviceMetrics: layout.deviceMetrics,
                             bottomInset: bottomInset,
                             content: content,
-                            backgroundColor: self.theme.list.itemBlocksBackgroundColor,
+                            backgroundColor: self.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.85),
                             separatorColor: self.theme.list.blocksBackgroundColor,
                             getController: { [weak self] in
                                 if let self {
@@ -1640,6 +1648,7 @@ public class StickerPickerScreen: ViewController {
     public var completion: (DrawingStickerEntity.Content?) -> Void = { _ in }
     
     public var presentGallery: () -> Void = { }
+    public var presentLocationPicker: () -> Void = { }
     
     public init(context: AccountContext, inputData: Signal<StickerPickerInputData, NoError>, defaultToEmoji: Bool = false) {
         self.context = context
@@ -1695,5 +1704,94 @@ public class StickerPickerScreen: ViewController {
         let navigationHeight: CGFloat = 56.0
         
         self.node.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(transition))
+    }
+}
+
+final class StoryStickersContentView: UIView, EmojiCustomContentView {
+    override public static var layerClass: AnyClass {
+        return PassthroughLayer.self
+    }
+    
+    let tintContainerView = UIView()
+    
+    private let backgroundLayer = SimpleLayer()
+    private let tintBackgroundLayer = SimpleLayer()
+    
+    private let iconView: UIImageView
+    private let title: ComponentView<Empty>
+    private let button: HighlightTrackingButton
+    
+    var locationAction: () -> Void = {}
+    
+    override init(frame: CGRect) {
+        self.iconView = UIImageView(image: UIImage(bundleImageName: "Chat/Attach Menu/Location"))
+        self.iconView.tintColor = .white
+        
+        self.title = ComponentView<Empty>()
+        self.button = HighlightTrackingButton()
+        
+        super.init(frame: frame)
+        
+        self.layer.addSublayer(self.backgroundLayer)
+        self.tintContainerView.layer.addSublayer(self.tintBackgroundLayer)
+        
+        self.addSubview(self.iconView)
+        self.addSubview(self.button)
+        
+        self.button.addTarget(self, action: #selector(self.locationPressed), for: .touchUpInside)
+        
+        (self.layer as? PassthroughLayer)?.mirrorLayer = self.tintContainerView.layer
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    @objc private func locationPressed() {
+        self.locationAction()
+    }
+    
+    func update(theme: PresentationTheme, useOpaqueTheme: Bool, availableSize: CGSize, transition: Transition) -> CGSize {
+        if useOpaqueTheme {
+            self.backgroundLayer.backgroundColor = theme.chat.inputMediaPanel.panelContentControlOpaqueSelectionColor.cgColor
+            self.tintBackgroundLayer.backgroundColor = UIColor.white.cgColor
+        } else {
+            self.backgroundLayer.backgroundColor = theme.chat.inputMediaPanel.panelContentControlVibrantSelectionColor.cgColor
+            self.tintBackgroundLayer.backgroundColor = UIColor(white: 1.0, alpha: 0.2).cgColor
+        }
+        
+        self.backgroundLayer.cornerRadius = 6.0
+        self.tintBackgroundLayer.cornerRadius = 6.0
+        
+        let size = CGSize(width: availableSize.width, height: 76.0)
+        let titleSize = self.title.update(
+            transition: .immediate,
+            component: AnyComponent(Text(
+                text: "ADD LOCATION",
+                font: Font.with(size: 23.0, design: .camera),
+                color: .white
+            )),
+            environment: {},
+            containerSize: availableSize
+        )
+        let iconSize = CGSize(width: 20.0, height: 20.0)
+        let padding: CGFloat = 6.0
+        let spacing: CGFloat = 3.0
+        let buttonSize = CGSize(width: padding + iconSize.width + spacing + titleSize.width + padding, height: 34.0)
+        let buttonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - buttonSize.width) / 2.0), y: floorToScreenPixels((size.height - buttonSize.height) / 2.0)), size: buttonSize)
+        
+        transition.setFrame(layer: self.backgroundLayer, frame: buttonFrame)
+        transition.setFrame(layer: self.tintBackgroundLayer, frame: buttonFrame)
+        transition.setFrame(view: self.button, frame: buttonFrame)
+        
+        transition.setFrame(view: self.iconView, frame: CGRect(origin: CGPoint(x: padding, y: floorToScreenPixels((buttonSize.height - iconSize.height) / 2.0)).offsetBy(buttonFrame.origin), size: iconSize))
+        if let titleView = self.title.view {
+            if titleView.superview == nil {
+                self.insertSubview(titleView, aboveSubview: self.iconView)
+            }
+            transition.setFrame(view: titleView, frame: CGRect(origin: CGPoint(x: padding + iconSize.width + spacing, y: floorToScreenPixels((buttonSize.height - titleSize.height) / 2.0)).offsetBy(buttonFrame.origin), size: titleSize))
+        }
+        
+        return size
     }
 }

@@ -397,3 +397,23 @@ private final class LocationPickerContext: AttachmentMediaPickerContext {
     func mainButtonAction() {
     }
 }
+
+public func standaloneLocationPickerController(
+    context: AccountContext,
+    completion: @escaping (TelegramMediaMap) -> Void
+) -> ViewController {
+    let presentationData = context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
+    let updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) = (presentationData, .single(presentationData))
+    let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: nil, buttons: [.standalone], initialButton: .standalone, fromMenu: false, hasTextInput: false, makeEntityInputView: {
+        return nil
+    })
+    controller.requestController = { _, present in
+        let locationPickerController = LocationPickerController(context: context, updatedPresentationData: updatedPresentationData, mode: .share(peer: nil, selfPeer: nil, hasLiveLocation: false), completion: { location, _ in
+            completion(location)
+        })
+        present(locationPickerController, locationPickerController.mediaPickerContext)
+    }
+    controller.navigationPresentation = .flatModal
+    controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+    return controller
+}

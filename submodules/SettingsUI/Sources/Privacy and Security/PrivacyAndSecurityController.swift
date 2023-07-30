@@ -686,7 +686,7 @@ public func privacyAndSecurityController(
     let privacySettingsPromise = Promise<AccountPrivacySettings?>()
     privacySettingsPromise.set(.single(initialSettings) |> then(context.engine.privacy.requestAccountPrivacySettings() |> map(Optional.init)))
         
-    let blockedPeersContext = blockedPeersContext ?? BlockedPeersContext(account: context.account)
+    let blockedPeersContext = blockedPeersContext ?? BlockedPeersContext(account: context.account, subject: .blocked)
     let activeSessionsContext = activeSessionsContext ?? context.engine.privacy.activeSessions()
     let webSessionsContext = webSessionsContext ?? context.engine.privacy.webSessions()
     

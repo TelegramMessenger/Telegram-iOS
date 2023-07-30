@@ -84,6 +84,8 @@ public final class MessageInputPanelComponent: Component {
     public let forwardAction: (() -> Void)?
     public let moreAction: ((UIView, ContextGesture?) -> Void)?
     public let presentVoiceMessagesUnavailableTooltip: ((UIView) -> Void)?
+    public let presentTextLengthLimitTooltip: (() -> Void)?
+    public let presentTextFormattingTooltip: (() -> Void)?
     public let paste: (TextFieldComponent.PasteData) -> Void
     public let audioRecorder: ManagedAudioRecorder?
     public let videoRecordingStatus: InstantVideoControllerRecordingStatus?
@@ -95,6 +97,7 @@ public final class MessageInputPanelComponent: Component {
     public let timeoutSelected: Bool
     public let displayGradient: Bool
     public let bottomInset: CGFloat
+    public let isFormattingLocked: Bool
     public let hideKeyboard: Bool
     public let forceIsEditing: Bool
     public let disabledPlaceholder: String?
@@ -126,6 +129,8 @@ public final class MessageInputPanelComponent: Component {
         forwardAction: (() -> Void)?,
         moreAction: ((UIView, ContextGesture?) -> Void)?,
         presentVoiceMessagesUnavailableTooltip: ((UIView) -> Void)?,
+        presentTextLengthLimitTooltip: (() -> Void)?,
+        presentTextFormattingTooltip: (() -> Void)?,
         paste: @escaping (TextFieldComponent.PasteData) -> Void,
         audioRecorder: ManagedAudioRecorder?,
         videoRecordingStatus: InstantVideoControllerRecordingStatus?,
@@ -137,6 +142,7 @@ public final class MessageInputPanelComponent: Component {
         timeoutSelected: Bool,
         displayGradient: Bool,
         bottomInset: CGFloat,
+        isFormattingLocked: Bool,
         hideKeyboard: Bool,
         forceIsEditing: Bool,
         disabledPlaceholder: String?
@@ -167,6 +173,8 @@ public final class MessageInputPanelComponent: Component {
         self.forwardAction = forwardAction
         self.moreAction = moreAction
         self.presentVoiceMessagesUnavailableTooltip = presentVoiceMessagesUnavailableTooltip
+        self.presentTextLengthLimitTooltip = presentTextLengthLimitTooltip
+        self.presentTextFormattingTooltip = presentTextFormattingTooltip
         self.paste = paste
         self.audioRecorder = audioRecorder
         self.videoRecordingStatus = videoRecordingStatus
@@ -178,6 +186,7 @@ public final class MessageInputPanelComponent: Component {
         self.timeoutSelected = timeoutSelected
         self.displayGradient = displayGradient
         self.bottomInset = bottomInset
+        self.isFormattingLocked = isFormattingLocked
         self.hideKeyboard = hideKeyboard
         self.forceIsEditing = forceIsEditing
         self.disabledPlaceholder = disabledPlaceholder
@@ -242,6 +251,9 @@ public final class MessageInputPanelComponent: Component {
             return false
         }
         if lhs.bottomInset != rhs.bottomInset {
+            return false
+        }
+        if lhs.isFormattingLocked != rhs.isFormattingLocked {
             return false
         }
         if (lhs.forwardAction == nil) != (rhs.forwardAction == nil) {
@@ -567,6 +579,10 @@ public final class MessageInputPanelComponent: Component {
                     textColor: UIColor(rgb: 0xffffff),
                     insets: UIEdgeInsets(top: 9.0, left: 8.0, bottom: 10.0, right: 48.0),
                     hideKeyboard: component.hideKeyboard,
+                    formatMenuAvailability: component.isFormattingLocked ? .locked : .available,
+                    lockedFormatAction: {
+                        component.presentTextFormattingTooltip?()
+                    },
                     present: { c in
                         component.presentController(c)
                     },
@@ -907,6 +923,7 @@ public final class MessageInputPanelComponent: Component {
                                 } else {
                                     if let maxLength = component.maxLength, self.textFieldExternalState.textLength > maxLength {
                                         self.animateError()
+                                        component.presentTextLengthLimitTooltip?()
                                     } else {
                                         component.sendMessageAction()
                                     }
@@ -916,6 +933,7 @@ public final class MessageInputPanelComponent: Component {
                             if case .up = action {
                                 if let maxLength = component.maxLength, self.textFieldExternalState.textLength > maxLength {
                                     self.animateError()
+                                    component.presentTextLengthLimitTooltip?()
                                 } else {
                                     component.sendMessageAction()
                                 }
