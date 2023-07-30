@@ -18,6 +18,19 @@ import AvatarNode
 import Markdown
 import ButtonComponent
 
+private func cancelContextGestures(view: UIView) {
+    if let gestureRecognizers = view.gestureRecognizers {
+        for gesture in gestureRecognizers {
+            if let gesture = gesture as? ContextGesture {
+                gesture.cancel()
+            }
+        }
+    }
+    for subview in view.subviews {
+        cancelContextGestures(view: subview)
+    }
+}
+
 final class StoryItemSetViewListComponent: Component {
     final class AnimationHint {
         let synchronous: Bool
@@ -412,6 +425,10 @@ final class StoryItemSetViewListComponent: Component {
                     targetContentOffset.pointee.y = 0.0
                 }
             }
+        }
+        
+        func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+            cancelContextGestures(view: scrollView)
         }
         
         private func updateScrolling(transition: Transition) {

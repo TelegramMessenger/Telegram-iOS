@@ -196,7 +196,7 @@ public final class BlockedPeersContext {
                             }
                             if case .stories = subject {
                                 var userFlags = previous.flags
-                                userFlags.insert(.isBlockedFromMyStories)
+                                userFlags.insert(.isBlockedFromStories)
                                 return previous.withUpdatedFlags(userFlags)
                             } else {
                                 return previous.withUpdatedIsBlocked(true)
@@ -269,7 +269,7 @@ public final class BlockedPeersContext {
                             }
                             if case .stories = subject {
                                 var userFlags = previous.flags
-                                userFlags.remove(.isBlockedFromMyStories)
+                                userFlags.remove(.isBlockedFromStories)
                                 return previous.withUpdatedFlags(userFlags)
                             } else {
                                 return previous.withUpdatedIsBlocked(false)

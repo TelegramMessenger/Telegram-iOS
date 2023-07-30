@@ -1435,25 +1435,25 @@ func _internal_getStoriesById(accountPeerId: PeerId, postbox: Postbox, network: 
     }
 }
 
-func _internal_getStoriesById(accountPeerId: PeerId, postbox: Postbox, source: FetchMessageHistoryHoleSource, peerId: PeerId, peerReference: PeerReference?, ids: [Int32]) -> Signal<[Stories.StoredItem], NoError> {
+func _internal_getStoriesById(accountPeerId: PeerId, postbox: Postbox, source: FetchMessageHistoryHoleSource, peerId: PeerId, peerReference: PeerReference?, ids: [Int32], allowFloodWait: Bool) -> Signal<[Stories.StoredItem]?, NoError> {
     return postbox.transaction { transaction -> Api.InputUser? in
         return transaction.getPeer(peerId).flatMap(apiInputUser)
     }
-    |> mapToSignal { inputUser -> Signal<[Stories.StoredItem], NoError> in
+    |> mapToSignal { inputUser -> Signal<[Stories.StoredItem]?, NoError> in
         guard let inputUser = inputUser ?? peerReference?.inputUser else {
             return .single([])
         }
         
-        return source.request(Api.functions.stories.getStoriesByID(userId: inputUser, id: ids))
+        return source.request(Api.functions.stories.getStoriesByID(userId: inputUser, id: ids), automaticFloodWait: allowFloodWait)
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.stories.Stories?, NoError> in
             return .single(nil)
         }
-        |> mapToSignal { result -> Signal<[Stories.StoredItem], NoError> in
+        |> mapToSignal { result -> Signal<[Stories.StoredItem]?, NoError> in
             guard let result = result else {
-                return .single([])
+                return .single(nil)
             }
-            return postbox.transaction { transaction -> [Stories.StoredItem] in
+            return postbox.transaction { transaction -> [Stories.StoredItem]? in
                 switch result {
                 case let .stories(_, stories, users):
                     updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
@@ -1506,7 +1506,7 @@ func _internal_getStoryViewList(account: Account, id: Int32, offsetTimestamp: In
                 var items: [StoryViewList.Item] = []
                 for view in views {
                     switch view {
-                    case let .storyView(userId, date):
+                    case let .storyView(_, userId, date):
                         if let peer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))) {
                             items.append(StoryViewList.Item(peer: EnginePeer(peer), timestamp: date))
                         }
@@ -1678,8 +1678,26 @@ public final class EngineStoryViewListContext {
                             var nextOffset: NextOffset?
                             for view in views {
                                 switch view {
-                                case let .storyView(userId, date):
+                                case let .storyView(flags, userId, date):
+                                    let isBlocked = (flags & (1 << 0)) != 0
+                                    let isBlockedFromStories = (flags & (1 << 1)) != 0
+                                                                        
                                     let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData in
+                                        let previousData: CachedUserData
+                                        if let current = cachedData as? CachedUserData {
+                                            previousData = current
+                                        } else {
+                                            previousData = CachedUserData()
+                                        }
+                                        var updatedFlags = previousData.flags
+                                        if isBlockedFromStories {
+                                            updatedFlags.insert(.isBlockedFromStories)
+                                        } else {
+                                            updatedFlags.remove(.isBlockedFromStories)
+                                        }
+                                        return previousData.withUpdatedIsBlocked(isBlocked).withUpdatedFlags(updatedFlags)
+                                    })
                                     if let peer = transaction.getPeer(peerId) {
                                         items.append(Item(peer: EnginePeer(peer), timestamp: date, storyStats: transaction.getPeerStoryStats(peerId: peerId)))
                                         
@@ -1904,8 +1922,11 @@ func _internal_exportStoryLink(account: Account, peerId: EnginePeer.Id, id: Int3
 }
 
 func _internal_refreshStories(account: Account, peerId: PeerId, ids: [Int32]) -> Signal<Never, NoError> {
-    return _internal_getStoriesById(accountPeerId: account.peerId, postbox: account.postbox, source: .network(account.network), peerId: peerId, peerReference: nil, ids: ids)
+    return _internal_getStoriesById(accountPeerId: account.peerId, postbox: account.postbox, source: .network(account.network), peerId: peerId, peerReference: nil, ids: ids, allowFloodWait: true)
     |> mapToSignal { result -> Signal<Never, NoError> in
+        guard let result = result else {
+            return .complete()
+        }
         return account.postbox.transaction { transaction -> Void in
             var currentItems = transaction.getStoryItems(peerId: peerId)
             for i in 0 ..< currentItems.count {
@@ -2057,4 +2078,18 @@ func _internal_enableStoryStealthMode(account: Account) -> Signal<Never, NoError
         }
         |> ignoreValues
     }
+}
+
+public func _internal_getStoryNotificationWasDisplayed(transaction: Transaction, id: StoryId) -> Bool {
+    let key = ValueBoxKey(length: 8 + 4)
+    key.setInt64(0, value: id.peerId.toInt64())
+    key.setInt32(8, value: id.id)
+    return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.displayedStoryNotifications, key: key)) != nil
+}
+
+public func _internal_setStoryNotificationWasDisplayed(transaction: Transaction, id: StoryId) {
+    let key = ValueBoxKey(length: 8 + 4)
+    key.setInt64(0, value: id.peerId.toInt64())
+    key.setInt32(8, value: id.id)
+    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.displayedStoryNotifications, key: key), entry: CodableEntry(data: Data()))
 }

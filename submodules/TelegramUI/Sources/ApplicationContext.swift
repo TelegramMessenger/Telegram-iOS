@@ -27,6 +27,7 @@ import ContextUI
 import TelegramCallsUI
 import AuthorizationUI
 import ChatListUI
+import StoryContainerScreen
 
 final class UnauthorizedApplicationContext {
     let sharedContext: SharedAccountContextImpl
@@ -854,7 +855,18 @@ final class AuthorizedApplicationContext {
     
     func openChatWithPeerId(peerId: PeerId, threadId: Int64?, messageId: MessageId? = nil, activateInput: Bool = false, storyId: StoryId?) {
         if let storyId {
-            if let chatListController = self.rootController.chatListController as? ChatListControllerImpl {
+            var controllers = self.rootController.viewControllers
+            controllers = controllers.filter { c in
+                if c is StoryContainerScreen {
+                    return false
+                }
+                return true
+            }
+            self.rootController.setViewControllers(controllers, animated: false)
+            
+            self.rootController.chatListController?.openStoriesFromNotification(peerId: storyId.peerId, storyId: storyId.id)
+
+            /*if let chatListController = self.rootController.chatListController as? ChatListControllerImpl {
                 let _ = (chatListController.context.account.postbox.transaction { transaction -> Bool in
                     if let peer = transaction.getPeer(storyId.peerId) as? TelegramUser, let storiesHidden = peer.storiesHidden, storiesHidden {
                         return true
@@ -902,7 +914,7 @@ final class AuthorizedApplicationContext {
                         }
                     }
                 })
-            }
+            }*/
         } else {
             var visiblePeerId: PeerId?
             if let controller = self.rootController.topViewController as? ChatControllerImpl, controller.chatLocation.peerId == peerId, controller.chatLocation.threadId == threadId {

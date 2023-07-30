@@ -915,7 +915,7 @@ public extension TelegramEngine.EngineData.Item {
                     preconditionFailure()
                 }
                 if let cachedData = view.cachedPeerData as? CachedUserData {
-                    return .known(cachedData.flags.contains(.isBlockedFromMyStories))
+                    return .known(cachedData.flags.contains(.isBlockedFromStories))
                 } else {
                     return .unknown
                 }

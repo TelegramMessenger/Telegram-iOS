@@ -7,12 +7,11 @@ import MtProtoKit
 func _internal_requestUpdatePeerIsBlocked(account: Account, peerId: PeerId, isBlocked: Bool) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-            let flags: Int32 = 0
             let signal: Signal<Api.Bool, MTRpcError>
             if isBlocked {
-                signal = account.network.request(Api.functions.contacts.block(flags: flags, id: inputPeer))
+                signal = account.network.request(Api.functions.contacts.block(flags: 0, id: inputPeer))
             } else {
-                signal = account.network.request(Api.functions.contacts.unblock(flags: flags, id: inputPeer))
+                signal = account.network.request(Api.functions.contacts.unblock(flags: 0, id: inputPeer))
             }
             return signal
                 |> map(Optional.init)
@@ -67,9 +66,9 @@ func _internal_requestUpdatePeerIsBlockedFromStories(account: Account, peerId: P
                                 }
                                 var userFlags = previous.flags
                                 if isBlocked {
-                                    userFlags.insert(.isBlockedFromMyStories)
+                                    userFlags.insert(.isBlockedFromStories)
                                 } else {
-                                    userFlags.remove(.isBlockedFromMyStories)
+                                    userFlags.remove(.isBlockedFromStories)
                                 }
                                 return previous.withUpdatedFlags(userFlags)
                             })

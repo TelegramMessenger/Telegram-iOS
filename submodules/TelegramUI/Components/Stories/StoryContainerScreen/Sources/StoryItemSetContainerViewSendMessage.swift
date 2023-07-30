@@ -43,6 +43,12 @@ import WebPBinding
 import ContextUI
 import ChatScheduleTimeController
 import StoryStealthModeSheetScreen
+import Speak
+import TranslateUI
+import TelegramNotices
+import ObjectiveC
+
+private var ObjCKey_DeinitWatcher: Int?
 
 final class StoryItemSetContainerSendMessage {
     enum InputMode {
@@ -59,6 +65,7 @@ final class StoryItemSetContainerSendMessage {
     weak var tooltipScreen: ViewController?
     weak var actionSheet: ViewController?
     weak var statusController: ViewController?
+    weak var lookupController: UIViewController?
     var isViewingAttachedStickers = false
     
     var currentTooltipUpdateTimer: Foundation.Timer?
@@ -85,6 +92,8 @@ final class StoryItemSetContainerSendMessage {
     let enqueueMediaMessageDisposable = MetaDisposable()
     let navigationActionDisposable = MetaDisposable()
     let resolvePeerByNameDisposable = MetaDisposable()
+    
+    var currentSpeechHolder: SpeechSynthesizerHolder?
     
     private(set) var isMediaRecordingLocked: Bool = false
     var wasRecordingDismissed: Bool = false
@@ -1013,6 +1022,129 @@ final class StoryItemSetContainerSendMessage {
             }
             
             controller.present(shareController, in: .window(.root))
+        }
+    }
+    
+    func performShareTextAction(view: StoryItemSetContainerComponent.View, text: String) {
+        guard let component = view.component else {
+            return
+        }
+        guard let controller = component.controller() else {
+            return
+        }
+        
+        let theme = component.theme
+        let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
+        
+        let shareController = ShareController(context: component.context, subject: .text(text), externalShare: true, immediateExternalShare: false, updatedPresentationData: updatedPresentationData)
+        
+        self.shareController = shareController
+        view.updateIsProgressPaused()
+        
+        shareController.dismissed = { [weak self, weak view] _ in
+            guard let self, let view else {
+                return
+            }
+            self.shareController = nil
+            view.updateIsProgressPaused()
+        }
+        
+        controller.present(shareController, in: .window(.root))
+    }
+    
+    func performTranslateTextAction(view: StoryItemSetContainerComponent.View, text: String) {
+        guard let component = view.component else {
+            return
+        }
+        
+        let _ = (component.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self, weak view] sharedData in
+            guard let self, let view else {
+                return
+            }
+            let peer = component.slice.peer
+            
+            let _ = self
+            
+            let translationSettings: TranslationSettings
+            if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
+                translationSettings = current
+            } else {
+                translationSettings = TranslationSettings.defaultSettings
+            }
+            
+            var showTranslateIfTopical = false
+            if case let .channel(channel) = peer, !(channel.addressName ?? "").isEmpty {
+                showTranslateIfTopical = true
+            }
+            
+            let (_, language) = canTranslateText(context: component.context, text: text, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: showTranslateIfTopical, ignoredLanguages: translationSettings.ignoredLanguages)
+            
+            let _ = ApplicationSpecificNotice.incrementTranslationSuggestion(accountManager: component.context.sharedContext.accountManager, timestamp: Int32(Date().timeIntervalSince1970)).start()
+            
+            let translateController = TranslateScreen(context: component.context, text: text, canCopy: true, fromLanguage: language)
+            translateController.pushController = { [weak view] c in
+                guard let view, let component = view.component else {
+                    return
+                }
+                component.controller()?.push(c)
+            }
+            translateController.presentController = { [weak view] c in
+                guard let view, let component = view.component else {
+                    return
+                }
+                component.controller()?.present(c, in: .window(.root))
+            }
+            
+            self.actionSheet = translateController
+            view.updateIsProgressPaused()
+            
+            translateController.wasDismissed = { [weak self, weak view] in
+                guard let self, let view else {
+                    return
+                }
+                self.actionSheet = nil
+                view.updateIsProgressPaused()
+            }
+            
+            component.controller()?.present(translateController, in: .window(.root))
+        })
+    }
+    
+    func performLookupTextAction(view: StoryItemSetContainerComponent.View, text: String) {
+        guard let component = view.component else {
+            return
+        }
+        let controller = UIReferenceLibraryViewController(term: text)
+        if let window = component.controller()?.view.window {
+            controller.popoverPresentationController?.sourceView = window
+            controller.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
+            window.rootViewController?.present(controller, animated: true)
+            
+            final class DeinitWatcher: NSObject {
+                let f: () -> Void
+                
+                init(_ f: @escaping () -> Void) {
+                    self.f = f
+                }
+                
+                deinit {
+                    f()
+                }
+            }
+            
+            self.lookupController = controller
+            view.updateIsProgressPaused()
+            
+            objc_setAssociatedObject(controller, &ObjCKey_DeinitWatcher, DeinitWatcher { [weak self, weak view] in
+                guard let self, let view else {
+                    return
+                }
+                
+                self.lookupController = nil
+                view.updateIsProgressPaused()
+            }, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         }
     }
     

@@ -886,7 +886,8 @@ public final class StoryPeerListComponent: Component {
                 } else {
                     overscrollScaleFactor = 0.0
                 }
-                let maximizedItemScale: CGFloat = 1.0 + overscrollStage1 * 0.1 + overscrollScaleFactor * overscrollStage2 * 0.5
+                var maximizedItemScale: CGFloat = 1.0 + overscrollStage1 * 0.1 + overscrollScaleFactor * overscrollStage2 * 0.5
+                maximizedItemScale = min(1.6, maximizedItemScale)
                 
                 let minItemScale: CGFloat = minimizedItemScale.interpolate(to: minimizedMaxItemScale, amount: collapsedState.minFraction) * (1.0 - collapsedState.activityFraction) + 0.1 * collapsedState.activityFraction
                 

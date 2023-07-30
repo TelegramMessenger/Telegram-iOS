@@ -15,7 +15,8 @@ import MultilineTextComponent
 
 final class StoryItemImageView: UIView {
     private let contentView: UIImageView
-    private var captureProtectedContentLayer: CaptureProtectedContentLayer?
+    private var captureProtectedView: UITextField?
+    
     private var captureProtectedInfo: ComponentView<Empty>?
     
     private var currentMedia: EngineMedia?
@@ -30,8 +31,6 @@ final class StoryItemImageView: UIView {
         self.contentView.contentMode = .scaleAspectFill
         
         super.init(frame: frame)
-        
-        self.addSubview(self.contentView)
     }
     
     required init?(coder: NSCoder) {
@@ -43,28 +42,27 @@ final class StoryItemImageView: UIView {
     }
     
     private func updateImage(image: UIImage, isCaptureProtected: Bool) {
+        self.contentView.image = image
+        
         if isCaptureProtected {
-            let captureProtectedContentLayer: CaptureProtectedContentLayer
-            if let current = self.captureProtectedContentLayer {
-                captureProtectedContentLayer = current
+            let captureProtectedView: UITextField
+            if let current = self.captureProtectedView {
+                captureProtectedView = current
             } else {
-                captureProtectedContentLayer = CaptureProtectedContentLayer()
-                
-                captureProtectedContentLayer.videoGravity = .resizeAspectFill
-                if #available(iOS 13.0, *) {
-                    captureProtectedContentLayer.preventsCapture = true
-                    captureProtectedContentLayer.preventsDisplaySleepDuringVideoPlayback = false
-                }
-                
-                captureProtectedContentLayer.frame = self.contentView.frame
-                self.captureProtectedContentLayer = captureProtectedContentLayer
-                self.layer.addSublayer(captureProtectedContentLayer)
-            }
-            if let cmSampleBuffer = image.cmSampleBuffer {
-                captureProtectedContentLayer.enqueue(cmSampleBuffer)
+                captureProtectedView = UITextField(frame: self.contentView.frame)
+                captureProtectedView.isSecureTextEntry = true
+                self.captureProtectedView = captureProtectedView
+                self.layer.addSublayer(captureProtectedView.layer)
+                captureProtectedView.layer.sublayers?.first?.addSublayer(self.contentView.layer)
             }
         } else {
-            self.contentView.image = image
+            if self.contentView.layer.superlayer !== self.layer {
+                self.layer.addSublayer(self.contentView.layer)
+            }
+            if let captureProtectedView = self.captureProtectedView {
+                self.captureProtectedView = nil
+                captureProtectedView.layer.removeFromSuperlayer()
+            }
         }
     }
     
@@ -86,20 +84,6 @@ final class StoryItemImageView: UIView {
                 dimensions = representation.dimensions.cgSize
                 
                 if isMediaUpdated {
-                    if isCaptureProtected {
-                        if let thumbnailData = image.immediateThumbnailData.flatMap(decodeTinyThumbnail), let thumbnailImage = UIImage(data: thumbnailData) {
-                            if let image = blurredImage(thumbnailImage, radius: 10.0, iterations: 3) {
-                                self.updateImage(image: image, isCaptureProtected: false)
-                                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: { [weak self] in
-                                    guard let self else {
-                                        return
-                                    }
-                                    self.contentView.image = nil
-                                })
-                            }
-                        }
-                    }
-                    
                     if attemptSynchronous, let path = context.account.postbox.mediaBox.completedResourcePath(id: representation.resource.id, pathExtension: nil) {
                         if #available(iOS 15.0, *) {
                             if let image = UIImage(contentsOfFile: path)?.preparingForDisplay() {
@@ -159,20 +143,6 @@ final class StoryItemImageView: UIView {
             dimensions = file.dimensions?.cgSize
             
             if isMediaUpdated {
-                if isCaptureProtected {
-                    if let thumbnailData = file.immediateThumbnailData.flatMap(decodeTinyThumbnail), let thumbnailImage = UIImage(data: thumbnailData) {
-                        if let image = blurredImage(thumbnailImage, radius: 10.0, iterations: 3) {
-                            self.updateImage(image: image, isCaptureProtected: false)
-                            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: { [weak self] in
-                                guard let self else {
-                                    return
-                                }
-                                self.contentView.image = nil
-                            })
-                        }
-                    }
-                }
-                
                 let cachedPath = context.account.postbox.mediaBox.cachedRepresentationCompletePath(file.resource.id, representation: CachedVideoFirstFrameRepresentation())
                 
                 if attemptSynchronous, FileManager.default.fileExists(atPath: cachedPath) {
@@ -234,10 +204,12 @@ final class StoryItemImageView: UIView {
         if let dimensions {
             let filledSize = dimensions.aspectFilled(size)
             let contentFrame = CGRect(origin: CGPoint(x: floor((size.width - filledSize.width) * 0.5), y: floor((size.height - filledSize.height) * 0.5)), size: filledSize)
-            transition.setFrame(view: self.contentView, frame: contentFrame)
             
-            if let captureProtectedContentLayer = self.captureProtectedContentLayer {
-                transition.setFrame(layer: captureProtectedContentLayer, frame: contentFrame)
+            if let captureProtectedView = self.captureProtectedView {
+                transition.setFrame(view: self.contentView, frame: CGRect(origin: CGPoint(), size: contentFrame.size))
+                transition.setFrame(view: captureProtectedView, frame: contentFrame)
+            } else {
+                transition.setFrame(view: self.contentView, frame: contentFrame)
             }
         }
         

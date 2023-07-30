@@ -23,4 +23,5 @@ public protocol ChatListController: ViewController {
     func navigateToFolder(folderId: Int32, completion: @escaping () -> Void)
     
     func openStories(peerId: EnginePeer.Id)
+    func openStoriesFromNotification(peerId: EnginePeer.Id, storyId: Int32)
 }

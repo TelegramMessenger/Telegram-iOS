@@ -35,6 +35,9 @@ import AttachmentUI
 import StickerPackPreviewUI
 import TextNodeWithEntities
 import TelegramStringFormatting
+import LottieComponent
+import Pasteboard
+import Speak
 
 public final class StoryAvailableReactions: Equatable {
     let reactionItems: [ReactionItem]
@@ -372,6 +375,7 @@ public final class StoryItemSetContainerComponent: Component {
         var leftInfoItem: InfoItem?
         
         let moreButton = ComponentView<Empty>()
+        var currentSoundButtonState: Bool?
         let soundButton = ComponentView<Empty>()
         var privacyIcon: ComponentView<Empty>?
         
@@ -763,9 +767,13 @@ public final class StoryItemSetContainerComponent: Component {
                             break
                         }
                     }
-                } else if let captionItem = self.captionItem, captionItem.externalState.isExpanded {
+                } else if let captionItem = self.captionItem, (captionItem.externalState.isExpanded || captionItem.externalState.isSelectingText) {
                     if let captionItemView = captionItem.view.view as? StoryContentCaptionComponent.View {
-                        captionItemView.collapse(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                        if captionItem.externalState.isSelectingText {
+                            captionItemView.cancelTextSelection()
+                        } else {
+                            captionItemView.collapse(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                        }
                     }
                 } else {
                     let point = recognizer.location(in: self)
@@ -965,13 +973,16 @@ public final class StoryItemSetContainerComponent: Component {
             if self.sendMessageContext.statusController != nil {
                 return .pause
             }
+            if self.sendMessageContext.lookupController != nil {
+                return .pause
+            }
             if let navigationController = component.controller()?.navigationController as? NavigationController {
                 let topViewController = navigationController.topViewController
                 if !(topViewController is StoryContainerScreen) && !(topViewController is MediaEditorScreen) && !(topViewController is ShareWithPeersScreen) && !(topViewController is AttachmentController) {
                     return .pause
                 }
             }
-            if let captionItem = self.captionItem, captionItem.externalState.isExpanded {
+            if let captionItem = self.captionItem, captionItem.externalState.isExpanded || captionItem.externalState.isSelectingText {
                 return .blurred
             }
             return .play
@@ -2213,26 +2224,24 @@ public final class StoryItemSetContainerComponent: Component {
                                 guard let self, let component = self.component else {
                                     return
                                 }
-                                
                                 let _ = (component.context.engine.data.get(
+                                    TelegramEngine.EngineData.Item.Peer.IsContact(id: peer.id),
                                     TelegramEngine.EngineData.Item.Peer.IsBlocked(id: peer.id),
-                                    TelegramEngine.EngineData.Item.Peer.IsBlockedFromStories(id: peer.id),
-                                    TelegramEngine.EngineData.Item.Peer.IsContact(id: peer.id)
-                                ) |> deliverOnMainQueue).start(next: { [weak self] isBlocked, isBlockedFromStories, isContact in
-                                    var isBlockedValue = false
-                                    var isBlockedFromStoriesValue = false
-                                    
-                                    if case let .known(value) = isBlocked {
-                                        isBlockedValue = value
-                                    }
-                                    if case let .known(value) = isBlockedFromStories {
-                                        isBlockedFromStoriesValue = value
-                                    }
-                                    
+                                    TelegramEngine.EngineData.Item.Peer.IsBlockedFromStories(id: peer.id)
+                                ) |> deliverOnMainQueue).start(next: { [weak self] isContact, maybeIsBlocked, maybeIsBlockedFromStories in
                                     let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                                     var itemList: [ContextMenuItem] = []
                                     
-                                    if isBlockedFromStoriesValue {
+                                    var isBlocked = false
+                                    if case let .known(value) = maybeIsBlocked {
+                                        isBlocked = value
+                                    }
+                                    var isBlockedFromStories = false
+                                    if case let .known(value) = maybeIsBlockedFromStories {
+                                        isBlockedFromStories = value
+                                    }
+                                    
+                                    if isBlockedFromStories {
                                         itemList.append(.action(ContextMenuActionItem(text: "Show My Stories To \(peer.compactDisplayTitle)", icon: { theme in
                                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Stories"), color: theme.contextMenu.primaryColor)
                                         }, action: { [weak self] _, f in
@@ -2278,20 +2287,47 @@ public final class StoryItemSetContainerComponent: Component {
                                     if isContact {
                                         itemList.append(.action(ContextMenuActionItem(text: "Delete Contact", textColor: .destructive, icon: { theme in
                                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
-                                        }, action: { _, f in
+                                        }, action: { [weak self] _, f in
                                             f(.default)
                                             
+                                            let _ = component.context.engine.contacts.deleteContactPeerInteractively(peerId: peer.id)
+                                            
+                                            guard let self else {
+                                                return
+                                            }
+                                            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                                            self.component?.presentController(UndoOverlayController(
+                                                presentationData: presentationData,
+                                                content: .info(title: nil, text: "**\(peer.compactDisplayTitle)** has been removed from your contacts.", timeout: nil),
+                                                elevatedLayout: false,
+                                                position: .top,
+                                                animateInAsReplacement: false,
+                                                action: { _ in return false }
+                                            ), nil)
                                         })))
                                     } else {
-                                        if isBlockedValue {
+                                        if isBlocked {
                                             
                                         } else {
                                             itemList.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuBlock, textColor: .destructive, icon: { theme in
                                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.contextMenu.destructiveColor)
-                                            }, action: { _, f in
+                                            }, action: { [weak self] _, f in
                                                 f(.default)
                                                 
                                                 let _ = component.context.engine.privacy.requestUpdatePeerIsBlocked(peerId: peer.id, isBlocked: true).start()
+                                                
+                                                guard let self else {
+                                                    return
+                                                }
+                                                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                                                self.component?.presentController(UndoOverlayController(
+                                                    presentationData: presentationData,
+                                                    content: .info(title: nil, text: "**\(peer.compactDisplayTitle)** has been blocked.", timeout: nil),
+                                                    elevatedLayout: false,
+                                                    position: .top,
+                                                    animateInAsReplacement: false,
+                                                    action: { _ in return false }
+                                                ), nil)
                                             })))
                                         }
                                     }
@@ -2470,36 +2506,29 @@ public final class StoryItemSetContainerComponent: Component {
             
             let moreButtonSize = self.moreButton.update(
                 transition: transition,
-                component: AnyComponent(MessageInputActionButtonComponent(
-                    mode: .more,
-                    action: { _, _, _ in
-                    },
-                    longPressAction: nil,
-                    switchMediaInputMode: {
-                    },
-                    updateMediaCancelFraction: { _ in
-                    },
-                    lockMediaRecording: {
-                    },
-                    stopAndPreviewMediaRecording: {
-                    },
-                    moreAction: { [weak self] view, gesture in
+                component: AnyComponent(PlainButtonComponent(
+                    content: AnyComponent(LottieComponent(
+                        content: LottieComponent.AppBundleContent(
+                            name: "anim_story_more"
+                        ),
+                        color: .white,
+                        startingPosition: .end,
+                        size: CGSize(width: 30.0, height: 30.0)
+                    )),
+                    effectAlignment: .center,
+                    minSize: CGSize(width: 33.0, height: 64.0),
+                    action: { [weak self] in
                         guard let self else {
                             return
                         }
-                        self.performMoreAction(sourceView: view, gesture: gesture)
-                    },
-                    context: component.context,
-                    theme: component.theme,
-                    strings: component.strings,
-                    presentController: { [weak self] c in
-                        guard let self, let component = self.component else {
+                        guard let moreButtonView = self.moreButton.view else {
                             return
                         }
-                        component.presentController(c, nil)
-                    },
-                    audioRecorder: nil,
-                    videoRecordingStatus: nil
+                        if let animationView = (moreButtonView as? PlainButtonComponent.View)?.contentView as? LottieComponent.View {
+                            animationView.playOnce()
+                        }
+                        self.performMoreAction(sourceView: moreButtonView, gesture: nil)
+                    }
                 )),
                 environment: {},
                 containerSize: CGSize(width: 33.0, height: 64.0)
@@ -2511,7 +2540,7 @@ public final class StoryItemSetContainerComponent: Component {
                 moreButtonView.isUserInteractionEnabled = !component.slice.item.storyItem.isPending
                 transition.setFrame(view: moreButtonView, frame: CGRect(origin: CGPoint(x: headerRightOffset - moreButtonSize.width, y: 2.0), size: moreButtonSize))
                 transition.setAlpha(view: moreButtonView, alpha: component.slice.item.storyItem.isPending ? 0.5 : 1.0)
-                headerRightOffset -= moreButtonSize.width + 15.0
+                headerRightOffset -= moreButtonSize.width + 12.0
             }
             
             var isSilentVideo = false
@@ -2530,20 +2559,18 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
-            let soundImage: String
-            if isSilentVideo || component.isAudioMuted {
-                soundImage = "Stories/SoundOff"
-            } else {
-                soundImage = "Stories/SoundOn"
-            }
-            
+            let soundButtonState = isSilentVideo || component.isAudioMuted
             let soundButtonSize = self.soundButton.update(
                 transition: transition,
                 component: AnyComponent(PlainButtonComponent(
-                    content: AnyComponent(BundleIconComponent(
-                        name: soundImage,
-                        tintColor: .white,
-                        maxSize: nil
+                    content: AnyComponent(LottieComponent(
+                        content: LottieComponent.AppBundleContent(
+                            name: "anim_storymute",
+                            frameRange: soundButtonState ? (0.0 ..< 0.5) : (0.5 ..< 1.0)
+                        ),
+                        color: .white,
+                        startingPosition: .end,
+                        size: CGSize(width: 30.0, height: 30.0)
                     )),
                     effectAlignment: .center,
                     minSize: CGSize(width: 33.0, height: 64.0),
@@ -2583,6 +2610,13 @@ public final class StoryItemSetContainerComponent: Component {
                 if isVideo {
                     headerRightOffset -= soundButtonSize.width + 13.0
                 }
+                
+                if let currentSoundButtonState = self.currentSoundButtonState, currentSoundButtonState != soundButtonState {
+                    if let lottieView = (soundButtonView as? PlainButtonComponent.View)?.contentView as? LottieComponent.View {
+                        lottieView.playOnce()
+                    }
+                }
+                self.currentSoundButtonState = soundButtonState
             }
             
             let storyPrivacyIcon: StoryPrivacyIconComponent.Privacy?
@@ -2858,6 +2892,7 @@ public final class StoryItemSetContainerComponent: Component {
                         externalState: captionItem.externalState,
                         context: component.context,
                         strings: component.strings,
+                        theme: component.theme,
                         text: component.slice.item.storyItem.text,
                         entities: component.slice.item.storyItem.entities,
                         entityFiles: component.slice.item.entityFiles,
@@ -2907,6 +2942,39 @@ public final class StoryItemSetContainerComponent: Component {
                                     self.sendMessageContext.openResolved(view: self, result: resolved, forceExternal: false, concealed: concealed)
                                 })
                             })
+                        },
+                        textSelectionAction: { [weak self] text, action in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            switch action {
+                            case .copy:
+                                storeAttributedTextInPasteboard(text)
+                            case .share:
+                                self.sendMessageContext.performShareTextAction(view: self, text: text.string)
+                            case .lookup:
+                                self.sendMessageContext.performLookupTextAction(view: self, text: text.string)
+                            case .speak:
+                                if let speechHolder = speakText(context: component.context, text: text.string) {
+                                    speechHolder.completion = { [weak self, weak speechHolder] in
+                                        guard let self else {
+                                            return
+                                        }
+                                        if self.sendMessageContext.currentSpeechHolder === speechHolder {
+                                            self.sendMessageContext.currentSpeechHolder = nil
+                                        }
+                                    }
+                                    self.sendMessageContext.currentSpeechHolder = speechHolder
+                                }
+                            case .translate:
+                                self.sendMessageContext.performTranslateTextAction(view: self, text: text.string)
+                            }
+                        },
+                        controller: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return nil
+                            }
+                            return component.controller()
                         }
                     )),
                     environment: {},

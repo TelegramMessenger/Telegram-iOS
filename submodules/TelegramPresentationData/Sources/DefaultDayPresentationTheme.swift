@@ -191,7 +191,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
                 outgoingLinkTextColor = outgoingAccent
                 outgoingScamColor = UIColor(rgb: 0xff3b30)
                 outgoingControlColor = outgoingAccent
-                outgoingInactiveControlColor = outgoingAccent
+                outgoingInactiveControlColor = outgoingAccent.withMultipliedAlpha(0.5)
                 outgoingFileTitleColor = outgoingAccent
                 outgoingPollsProgressColor = outgoingControlColor
                 outgoingSelectionColor = outgoingAccent.withAlphaComponent(0.2)
