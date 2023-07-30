@@ -39,7 +39,7 @@ final class ShareWithPeersScreenComponent: Component {
     let optionItems: [OptionItem]
     let completion: (EngineStoryPrivacy, Bool, Bool, [EnginePeer]) -> Void
     let editCategory: (EngineStoryPrivacy, Bool, Bool) -> Void
-    let editGrayList: (EngineStoryPrivacy, Bool, Bool) -> Void
+    let editBlockedPeers: (EngineStoryPrivacy, Bool, Bool) -> Void
     
     init(
         context: AccountContext,
@@ -53,7 +53,7 @@ final class ShareWithPeersScreenComponent: Component {
         optionItems: [OptionItem],
         completion: @escaping (EngineStoryPrivacy, Bool, Bool, [EnginePeer]) -> Void,
         editCategory: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void,
-        editGrayList: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void
+        editBlockedPeers: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void
     ) {
         self.context = context
         self.stateContext = stateContext
@@ -66,7 +66,7 @@ final class ShareWithPeersScreenComponent: Component {
         self.optionItems = optionItems
         self.completion = completion
         self.editCategory = editCategory
-        self.editGrayList = editGrayList
+        self.editBlockedPeers = editBlockedPeers
     }
     
     static func ==(lhs: ShareWithPeersScreenComponent, rhs: ShareWithPeersScreenComponent) -> Bool {
@@ -1024,7 +1024,7 @@ final class ShareWithPeersScreenComponent: Component {
                                 guard let self, let environment = self.environment, let controller = environment.controller() as? ShareWithPeersScreen else {
                                     return
                                 }
-                                component.editGrayList(
+                                component.editBlockedPeers(
                                     EngineStoryPrivacy(base: .nobody, additionallyIncludePeers: []),
                                     self.selectedOptions.contains(.screenshot),
                                     self.selectedOptions.contains(.pin)
@@ -1672,7 +1672,7 @@ final class ShareWithPeersScreenComponent: Component {
                     ))
                     sections.append(ItemLayout.Section(
                         id: 2,
-                        insets: UIEdgeInsets(top: 28.0, left: 0.0, bottom: 0.0, right: 0.0),
+                        insets: UIEdgeInsets(top: 28.0, left: 0.0, bottom: 24.0, right: 0.0),
                         itemHeight: optionItemSize.height,
                         itemCount: component.optionItems.count
                     ))
@@ -1782,9 +1782,9 @@ final class ShareWithPeersScreenComponent: Component {
                 let inset: CGFloat
                 if case let .stories(editing) = component.stateContext.subject {
                     if editing {
-                        inset = 446.0
+                        inset = 478.0
                     } else {
-                        inset = 605.0
+                        inset = 630.0
                     }
                 } else {
                     inset = 600.0
@@ -2074,7 +2074,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
     public final class StateContext {
         public enum Subject: Equatable {
             case stories(editing: Bool)
-            case chats(grayList: Bool)
+            case chats(blocked: Bool)
             case contacts(EngineStoryPrivacy.Base)
             case search(query: String, onlyContacts: Bool)
         }
@@ -2083,7 +2083,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         
         public let subject: Subject
         public private(set) var initialPeerIds: Set<EnginePeer.Id> = Set()
-        fileprivate let storiesGrayList: BlockedPeersContext?
+        fileprivate let blockedPeersContext: BlockedPeersContext?
         
         private var stateDisposable: Disposable?
         private let stateSubject = Promise<State>()
@@ -2097,18 +2097,18 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         
         public init(
             context: AccountContext,
-            subject: Subject = .chats(grayList: false),
+            subject: Subject = .chats(blocked: false),
             initialPeerIds: Set<EnginePeer.Id> = Set(),
             closeFriends: Signal<[EnginePeer], NoError> = .single([]),
-            storiesGrayList: BlockedPeersContext? = nil
+            blockedPeersContext: BlockedPeersContext? = nil
         ) {
             self.subject = subject
             self.initialPeerIds = initialPeerIds
-            self.storiesGrayList = storiesGrayList
+            self.blockedPeersContext = blockedPeersContext
             
             let grayListPeers: Signal<[EnginePeer], NoError>
-            if let storiesGrayList {
-                grayListPeers = storiesGrayList.state
+            if let blockedPeersContext {
+                grayListPeers = blockedPeersContext.state
                 |> map { state -> [EnginePeer] in
                     return state.peers.compactMap { $0.peer.flatMap(EnginePeer.init) }
                 }
@@ -2426,7 +2426,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         stateContext: StateContext,
         completion: @escaping (EngineStoryPrivacy, Bool, Bool, [EnginePeer]) -> Void,
         editCategory: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void,
-        editGrayList: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void
+        editBlockedPeers: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void
     ) {
         self.context = context
         
@@ -2537,7 +2537,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
             optionItems: optionItems,
             completion: completion,
             editCategory: editCategory,
-            editGrayList: editGrayList
+            editBlockedPeers: editBlockedPeers
         ), navigationBarAppearance: .none, theme: .dark)
         
         self.statusBar.statusBarStyle = .Ignore

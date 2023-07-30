@@ -3466,19 +3466,23 @@ public final class StoryItemSetContainerComponent: Component {
                         guard let self else {
                             return
                         }
-                        self.openItemPrivacyCategory(privacy: privacy, completion: { [weak self] privacy in
+                        self.openItemPrivacyCategory(privacy: privacy, blockedPeers: false, completion: { [weak self] privacy in
                             guard let self else {
                                 return
                             }
                             self.openItemPrivacySettings(initialPrivacy: privacy)
                         })
                     },
-                    editGrayList: { [weak self] privacy, _, _ in
+                    editBlockedPeers: { [weak self] privacy, _, _ in
                         guard let self else {
                             return
                         }
-                        let _ = self
-                        let _ = privacy
+                        self.openItemPrivacyCategory(privacy: privacy, blockedPeers: true, completion: { [weak self] privacy in
+                            guard let self else {
+                                return
+                            }
+                            self.openItemPrivacySettings(initialPrivacy: privacy)
+                        })
                     }
                 )
                 controller.dismissed = { [weak self] in
@@ -3494,13 +3498,15 @@ public final class StoryItemSetContainerComponent: Component {
             })
         }
         
-        private func openItemPrivacyCategory(privacy: EngineStoryPrivacy, completion: @escaping (EngineStoryPrivacy) -> Void) {
+        private func openItemPrivacyCategory(privacy: EngineStoryPrivacy, blockedPeers: Bool, completion: @escaping (EngineStoryPrivacy) -> Void) {
             guard let context = self.component?.context else {
                 return
             }
             let subject: ShareWithPeersScreen.StateContext.Subject
-            if privacy.base == .nobody {
-                subject = .chats(grayList: false)
+            if blockedPeers {
+                subject = .chats(blocked: true)
+            } else if privacy.base == .nobody {
+                subject = .chats(blocked: false)
             } else {
                 subject = .contacts(privacy.base)
             }
@@ -3514,7 +3520,10 @@ public final class StoryItemSetContainerComponent: Component {
                     initialPrivacy: privacy,
                     stateContext: stateContext,
                     completion: { [weak self] result, _, _, peers in
-                        if case .closeFriends = privacy.base {
+                        if blockedPeers {
+//                            let _ = self.storiesBlockedPeers.updatePeerIds(result.additionallyIncludePeers).start()
+                            completion(privacy)
+                        } else if case .closeFriends = privacy.base {
                             let _ = context.engine.privacy.updateCloseFriends(peerIds: result.additionallyIncludePeers).start()
                             if let component = self?.component {
                                 component.closeFriends.set(.single(peers))
@@ -3525,7 +3534,7 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                     },
                     editCategory: { _, _, _ in },
-                    editGrayList: { _, _, _ in }
+                    editBlockedPeers: { _, _, _ in }
                 )
                 controller.dismissed = { [weak self] in
                     if let self {

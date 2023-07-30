@@ -3214,7 +3214,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     public var willDismiss: () -> Void = { }
     
     private var closeFriends = Promise<[EnginePeer]>()
-    private let storiesGrayList: BlockedPeersContext
+    private let storiesBlockedPeers: BlockedPeersContext
     
     private let hapticFeedback = HapticFeedback()
     
@@ -3239,7 +3239,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         self.transitionOut = transitionOut
         self.completion = completion
         
-        self.storiesGrayList = BlockedPeersContext(account: context.account, subject: .stories)
+        self.storiesBlockedPeers = BlockedPeersContext(account: context.account, subject: .stories)
         
         if let transitionIn, case .camera = transitionIn {
             self.isSavingAvailable = true
@@ -3314,7 +3314,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             subject: .stories(editing: false),
             initialPeerIds: Set(privacy.privacy.additionallyIncludePeers),
             closeFriends: self.closeFriends.get(),
-            storiesGrayList: self.storiesGrayList
+            blockedPeersContext: self.storiesBlockedPeers
         )
         let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
             guard let self else {
@@ -3342,7 +3342,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     guard let self else {
                         return
                     }
-                    self.openEditCategory(privacy: privacy, isForwardingDisabled: !allowScreenshots, pin: pin, grayList: false, completion: { [weak self] privacy in
+                    self.openEditCategory(privacy: privacy, isForwardingDisabled: !allowScreenshots, pin: pin, blockedPeers: false, completion: { [weak self] privacy in
                         guard let self else {
                             return
                         }
@@ -3354,11 +3354,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         ), completion: completion)
                     })
                 },
-                editGrayList: { [weak self] privacy, allowScreenshots, pin in
+                editBlockedPeers: { [weak self] privacy, allowScreenshots, pin in
                     guard let self else {
                         return
                     }
-                    self.openEditCategory(privacy: privacy, isForwardingDisabled: !allowScreenshots, pin: pin, grayList: true, completion: { [weak self] privacy in
+                    self.openEditCategory(privacy: privacy, isForwardingDisabled: !allowScreenshots, pin: pin, blockedPeers: true, completion: { [weak self] privacy in
                         guard let self else {
                             return
                         }
@@ -3378,12 +3378,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         })
     }
     
-    private func openEditCategory(privacy: EngineStoryPrivacy, isForwardingDisabled: Bool, pin: Bool, grayList: Bool, completion: @escaping (EngineStoryPrivacy) -> Void) {
+    private func openEditCategory(privacy: EngineStoryPrivacy, isForwardingDisabled: Bool, pin: Bool, blockedPeers: Bool, completion: @escaping (EngineStoryPrivacy) -> Void) {
         let subject: ShareWithPeersScreen.StateContext.Subject
-        if grayList {
-            subject = .chats(grayList: true)
+        if blockedPeers {
+            subject = .chats(blocked: true)
         } else if privacy.base == .nobody {
-            subject = .chats(grayList: false)
+            subject = .chats(blocked: false)
         } else {
             subject = .contacts(privacy.base)
         }
@@ -3391,7 +3391,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             context: self.context,
             subject: subject,
             initialPeerIds: Set(privacy.additionallyIncludePeers),
-            storiesGrayList: self.storiesGrayList
+            blockedPeersContext: self.storiesBlockedPeers
         )
         let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
             guard let self else {
@@ -3407,8 +3407,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     guard let self else {
                         return
                     }
-                    if grayList {
-                        let _ = self.storiesGrayList.updatePeerIds(result.additionallyIncludePeers).start()
+                    if blockedPeers {
+                        let _ = self.storiesBlockedPeers.updatePeerIds(result.additionallyIncludePeers).start()
                         completion(privacy)
                     } else if case .closeFriends = privacy.base {
                         let _ = self.context.engine.privacy.updateCloseFriends(peerIds: result.additionallyIncludePeers).start()
@@ -3419,7 +3419,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 },
                 editCategory: { _, _, _ in },
-                editGrayList: { _, _, _ in }
+                editBlockedPeers: { _, _, _ in }
             )
             controller.dismissed = {
                 self.node.mediaEditor?.play()
