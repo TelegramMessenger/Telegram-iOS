@@ -1012,12 +1012,15 @@ public class DrawingEntityView: UIView {
 let entitySelectionViewHandleSize = CGSize(width: 44.0, height: 44.0)
 public class DrawingEntitySelectionView: UIView {
     public weak var entityView: DrawingEntityView?
+    public var tapGestureRecognizer: UITapGestureRecognizer?
     
     var tapped: () -> Void = { }
     
     override init(frame: CGRect) {
         super.init(frame: frame)
-        self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:))))
+        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
+        self.tapGestureRecognizer = tapGestureRecognizer
+        self.addGestureRecognizer(tapGestureRecognizer)
     }
     
     required init?(coder: NSCoder) {

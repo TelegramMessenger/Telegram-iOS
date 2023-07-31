@@ -1364,6 +1364,7 @@ private final class StoryContainerScreenComponent: Component {
                                 strings: environment.strings,
                                 containerInsets: itemSetContainerInsets,
                                 safeInsets: itemSetContainerSafeInsets,
+                                statusBarHeight: environment.statusBarHeight,
                                 inputHeight: environment.inputHeight,
                                 metrics: environment.metrics,
                                 deviceMetrics: environment.deviceMetrics,

@@ -1095,21 +1095,24 @@ public struct StoriesConfiguration {
     }
     
     static var defaultValue: StoriesConfiguration {
-        return StoriesConfiguration(posting: .disabled, captionEntities: .premium)
+        return StoriesConfiguration(posting: .disabled, captionEntities: .premium, venueSearchBot: "foursquare")
     }
     
     public let posting: PostingAvailability
     public let captionEntities: CaptionEntitiesAvailability
+    public let venueSearchBot: String
     
-    fileprivate init(posting: PostingAvailability, captionEntities: CaptionEntitiesAvailability) {
+    fileprivate init(posting: PostingAvailability, captionEntities: CaptionEntitiesAvailability, venueSearchBot: String) {
         self.posting = posting
         self.captionEntities = captionEntities
+        self.venueSearchBot = venueSearchBot
     }
     
     public static func with(appConfiguration: AppConfiguration) -> StoriesConfiguration {
         if let data = appConfiguration.data {
             let posting: PostingAvailability
             let captionEntities: CaptionEntitiesAvailability
+            let venueSearchBot: String
             if let postingString = data["stories_posting"] as? String {
                 switch postingString {
                 case "enabled":
@@ -1132,7 +1135,12 @@ public struct StoriesConfiguration {
             } else {
                 captionEntities = .premium
             }
-            return StoriesConfiguration(posting: posting, captionEntities: captionEntities)
+            if let venueSearchBotString = data["stories_venue_search_username"] as? String {
+                venueSearchBot = venueSearchBotString
+            } else {
+                venueSearchBot = "foursquare"
+            }
+            return StoriesConfiguration(posting: posting, captionEntities: captionEntities, venueSearchBot: venueSearchBot)
         } else {
             return .defaultValue
         }

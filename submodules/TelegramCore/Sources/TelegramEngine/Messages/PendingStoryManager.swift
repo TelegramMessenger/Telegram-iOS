@@ -9,6 +9,7 @@ public extension Stories {
             case stableId
             case timestamp
             case media
+            case mediaAreas
             case text
             case entities
             case embeddedStickers
@@ -22,6 +23,7 @@ public extension Stories {
         public let stableId: Int32
         public let timestamp: Int32
         public let media: Media
+        public let mediaAreas: [MediaArea]
         public let text: String
         public let entities: [MessageTextEntity]
         public let embeddedStickers: [TelegramMediaFile]
@@ -35,6 +37,7 @@ public extension Stories {
             stableId: Int32,
             timestamp: Int32,
             media: Media,
+            mediaAreas: [MediaArea],
             text: String,
             entities: [MessageTextEntity],
             embeddedStickers: [TelegramMediaFile],
@@ -47,6 +50,7 @@ public extension Stories {
             self.stableId = stableId
             self.timestamp = timestamp
             self.media = media
+            self.mediaAreas = mediaAreas
             self.text = text
             self.entities = entities
             self.embeddedStickers = embeddedStickers
@@ -65,6 +69,7 @@ public extension Stories {
             
             let mediaData = try container.decode(Data.self, forKey: .media)
             self.media = PostboxDecoder(buffer: MemoryBuffer(data: mediaData)).decodeRootObject() as! Media
+            self.mediaAreas = try container.decodeIfPresent([MediaArea].self, forKey: .mediaAreas) ?? []
             
             self.text = try container.decode(String.self, forKey: .text)
             self.entities = try container.decode([MessageTextEntity].self, forKey: .entities)
@@ -89,6 +94,7 @@ public extension Stories {
             let mediaEncoder = PostboxEncoder()
             mediaEncoder.encodeRootObject(self.media)
             try container.encode(mediaEncoder.makeData(), forKey: .media)
+            try container.encode(self.mediaAreas, forKey: .mediaAreas)
             
             try container.encode(self.text, forKey: .text)
             try container.encode(self.entities, forKey: .entities)
@@ -112,6 +118,9 @@ public extension Stories {
                 return false
             }
             if !lhs.media.isEqual(to: rhs.media) {
+                return false
+            }
+            if lhs.mediaAreas != rhs.mediaAreas {
                 return false
             }
             if lhs.text != rhs.text {
@@ -284,7 +293,7 @@ final class PendingStoryManager {
                 self.currentPendingItemContext = pendingItemContext
                 
                 let stableId = firstItem.stableId
-                pendingItemContext.disposable = (_internal_uploadStoryImpl(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.revalidationContext, auxiliaryMethods: self.auxiliaryMethods, stableId: stableId, media: firstItem.media, text: firstItem.text, entities: firstItem.entities, embeddedStickers: firstItem.embeddedStickers, pin: firstItem.pin, privacy: firstItem.privacy, isForwardingDisabled: firstItem.isForwardingDisabled, period: Int(firstItem.period), randomId: firstItem.randomId)
+                pendingItemContext.disposable = (_internal_uploadStoryImpl(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.revalidationContext, auxiliaryMethods: self.auxiliaryMethods, stableId: stableId, media: firstItem.media, mediaAreas: firstItem.mediaAreas, text: firstItem.text, entities: firstItem.entities, embeddedStickers: firstItem.embeddedStickers, pin: firstItem.pin, privacy: firstItem.privacy, isForwardingDisabled: firstItem.isForwardingDisabled, period: Int(firstItem.period), randomId: firstItem.randomId)
                 |> deliverOn(self.queue)).start(next: { [weak self] event in
                     guard let `self` = self else {
                         return

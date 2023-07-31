@@ -38,6 +38,8 @@ import TelegramStringFormatting
 import LottieComponent
 import Pasteboard
 import Speak
+import TranslateUI
+import TelegramUIPreferences
 
 public final class StoryAvailableReactions: Equatable {
     let reactionItems: [ReactionItem]
@@ -95,6 +97,7 @@ public final class StoryItemSetContainerComponent: Component {
     public let strings: PresentationStrings
     public let containerInsets: UIEdgeInsets
     public let safeInsets: UIEdgeInsets
+    public let statusBarHeight: CGFloat
     public let inputHeight: CGFloat
     public let metrics: LayoutMetrics
     public let deviceMetrics: DeviceMetrics
@@ -129,6 +132,7 @@ public final class StoryItemSetContainerComponent: Component {
         strings: PresentationStrings,
         containerInsets: UIEdgeInsets,
         safeInsets: UIEdgeInsets,
+        statusBarHeight: CGFloat,
         inputHeight: CGFloat,
         metrics: LayoutMetrics,
         deviceMetrics: DeviceMetrics,
@@ -162,6 +166,7 @@ public final class StoryItemSetContainerComponent: Component {
         self.strings = strings
         self.containerInsets = containerInsets
         self.safeInsets = safeInsets
+        self.statusBarHeight = statusBarHeight
         self.inputHeight = inputHeight
         self.metrics = metrics
         self.deviceMetrics = deviceMetrics
@@ -204,6 +209,9 @@ public final class StoryItemSetContainerComponent: Component {
             return false
         }
         if lhs.safeInsets != rhs.safeInsets {
+            return false
+        }
+        if lhs.statusBarHeight != rhs.statusBarHeight {
             return false
         }
         if lhs.inputHeight != rhs.inputHeight {
@@ -747,6 +755,10 @@ public final class StoryItemSetContainerComponent: Component {
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state, let component = self.component, let itemLayout = self.itemLayout {
+                if let menuController = self.sendMessageContext.menuController {
+                    menuController.dismiss(animated: true)
+                    return
+                }
                 if self.hasActiveDeactivateableInput() {
                     Queue.mainQueue().justDispatch {
                         self.deactivateInput()
@@ -776,17 +788,44 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                     }
                 } else {
-                    let point = recognizer.location(in: self)
-                    
-                    var direction: NavigationDirection?
-                    if point.x < itemLayout.containerSize.width * 0.25 {
-                        direction = .previous
-                    } else {
-                        direction = .next
+                    let referenceSize = self.controlsContainerView.frame.size
+                    let point = recognizer.location(in: self.controlsContainerView)
+                                  
+                    var selectedMediaArea: MediaArea?
+                                        
+                    func isPoint(_ point: CGPoint, in area: MediaArea) -> Bool {
+                        let tx = point.x - area.coordinates.x / 100.0 * referenceSize.width
+                        let ty = point.y - area.coordinates.y / 100.0 * referenceSize.height
+                        
+                        let rad = -area.coordinates.rotation * Double.pi / 180.0
+                        let cosTheta = cos(rad)
+                        let sinTheta = sin(rad)
+                        let rotatedX = tx * cosTheta - ty * sinTheta
+                        let rotatedY = tx * sinTheta + ty * cosTheta
+                        
+                        return abs(rotatedX) <= area.coordinates.width / 100.0 * referenceSize.width / 2.0 && abs(rotatedY) <= area.coordinates.height / 100.0 * referenceSize.height / 2.0
                     }
                     
-                    if let direction {
-                        component.navigate(direction)
+                    for area in component.slice.item.storyItem.mediaAreas {
+                         if isPoint(point, in: area) {
+                            selectedMediaArea = area
+                            break
+                        }
+                    }
+                    
+                    if let selectedMediaArea {
+                        self.sendMessageContext.activateMediaArea(view: self, mediaArea: selectedMediaArea)
+                    } else {
+                        var direction: NavigationDirection?
+                        if point.x < itemLayout.containerSize.width * 0.25 {
+                            direction = .previous
+                        } else {
+                            direction = .next
+                        }
+                        
+                        if let direction {
+                            component.navigate(direction)
+                        }
                     }
                 }
             }
@@ -974,6 +1013,9 @@ public final class StoryItemSetContainerComponent: Component {
                 return .pause
             }
             if self.sendMessageContext.lookupController != nil {
+                return .pause
+            }
+            if self.sendMessageContext.menuController != nil {
                 return .pause
             }
             if let navigationController = component.controller()?.navigationController as? NavigationController {
@@ -2468,7 +2510,9 @@ public final class StoryItemSetContainerComponent: Component {
             )
             self.itemLayout = itemLayout
             
-            transition.setFrame(view: self.itemsContainerView, frame: CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: component.containerInsets.top + floor(contentVisualHeight))))
+            let itemsContainerFrame = CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: component.containerInsets.top + floor(contentVisualHeight)))
+            transition.setPosition(view: self.itemsContainerView, position: CGPoint(x: itemsContainerFrame.center.x, y: itemsContainerFrame.center.y))
+            transition.setBounds(view: self.itemsContainerView, bounds: CGRect(origin: .zero, size: itemsContainerFrame.size))
             
             transition.setPosition(view: self.controlsContainerView, position: contentFrame.center)
             transition.setBounds(view: self.controlsContainerView, bounds: CGRect(origin: CGPoint(), size: contentFrame.size))
@@ -2718,7 +2762,6 @@ public final class StoryItemSetContainerComponent: Component {
             transition.setAlpha(view: self.controlsContainerView, alpha: (component.hideUI || self.isEditingStory || self.displayViewList) ? 0.0 : 1.0)
             
             let focusedItem: StoryContentItem? = component.slice.item
-            let _ = focusedItem
             
             var currentLeftInfoItem: InfoItem?
             if focusedItem != nil {
@@ -3722,10 +3765,11 @@ public final class StoryItemSetContainerComponent: Component {
                 isEditing: true,
                 initialCaption: chatInputStateStringWithAppliedEntities(item.text, entities: item.entities),
                 initialPrivacy: item.privacy,
+                initialMediaAreas: item.mediaAreas,
                 initialVideoPosition: videoPlaybackPosition,
                 transitionIn: nil,
                 transitionOut: { _, _ in return nil },
-                completion: { [weak self] _, mediaResult, caption, privacy, stickers, commit in
+                completion: { [weak self] _, mediaResult, mediaAreas, caption, privacy, stickers, commit in
                     guard let self else {
                         return
                     }
@@ -3743,7 +3787,7 @@ public final class StoryItemSetContainerComponent: Component {
                             updateProgressImpl?(0.0)
                             
                             if let imageData = compressImageToJPEG(image, quality: 0.7) {
-                                updateDisposable.set((context.engine.messages.editStory(id: id, media: .image(dimensions: dimensions, data: imageData, stickers: stickers), text: updatedText, entities: updatedEntities, privacy: nil)
+                                updateDisposable.set((context.engine.messages.editStory(id: id, media: .image(dimensions: dimensions, data: imageData, stickers: stickers), mediaAreas: mediaAreas, text: updatedText, entities: updatedEntities, privacy: nil)
                                 |> deliverOnMainQueue).start(next: { [weak self] result in
                                     guard let self else {
                                         return
@@ -3791,7 +3835,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     }
                                 }
                                 
-                                updateDisposable.set((context.engine.messages.editStory(id: id, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), text: updatedText, entities: updatedEntities, privacy: nil)
+                                updateDisposable.set((context.engine.messages.editStory(id: id, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), mediaAreas: mediaAreas, text: updatedText, entities: updatedEntities, privacy: nil)
                                 |> deliverOnMainQueue).start(next: { [weak self] result in
                                     guard let self else {
                                         return
@@ -3813,7 +3857,7 @@ public final class StoryItemSetContainerComponent: Component {
                             }
                         }
                     } else if updatedText != nil {
-                        let _ = (context.engine.messages.editStory(id: id, media: nil, text: updatedText, entities: updatedEntities, privacy: nil)
+                        let _ = (context.engine.messages.editStory(id: id, media: nil, mediaAreas: nil, text: updatedText, entities: updatedEntities, privacy: nil)
                         |> deliverOnMainQueue).start(next: { [weak self] result in
                             switch result {
                             case .completed:
@@ -4202,17 +4246,35 @@ public final class StoryItemSetContainerComponent: Component {
             guard let component = self.component else {
                 return
             }
-            let _ = (component.context.engine.data.get(
-                TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: component.slice.peer.id),
-                TelegramEngine.EngineData.Item.NotificationSettings.Global(),
-                TelegramEngine.EngineData.Item.Contacts.Top(),
-                TelegramEngine.EngineData.Item.Peer.IsContact(id: component.slice.peer.id),
-                TelegramEngine.EngineData.Item.Peer.Peer(id: component.context.account.peerId)
-            )
-            |> deliverOnMainQueue).start(next: { [weak self] settings, globalSettings, topSearchPeers, isContact, accountPeer in
+            
+            let translationSettings = component.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
+            |> map { sharedData -> TranslationSettings in
+                let translationSettings: TranslationSettings
+                if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
+                    translationSettings = current
+                } else {
+                    translationSettings = TranslationSettings.defaultSettings
+                }
+                return translationSettings
+            }
+            
+            let _ = combineLatest(
+                queue: Queue.mainQueue(),
+                component.context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: component.slice.peer.id),
+                    TelegramEngine.EngineData.Item.NotificationSettings.Global(),
+                    TelegramEngine.EngineData.Item.Contacts.Top(),
+                    TelegramEngine.EngineData.Item.Peer.IsContact(id: component.slice.peer.id),
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: component.context.account.peerId)
+                ),
+                translationSettings
+            ).start(next: { [weak self] result, translationSettings in
                 guard let self, let component = self.component, let controller = component.controller() else {
                     return
                 }
+                
+                let (settings, globalSettings, topSearchPeers, isContact, accountPeer) = result
+                
                 guard case let .user(accountUser) = accountPeer else {
                     return
                 }
@@ -4383,6 +4445,22 @@ public final class StoryItemSetContainerComponent: Component {
                     })))
                 }
                 
+                if !component.slice.item.storyItem.text.isEmpty {
+                    let (canTranslate, _) = canTranslateText(context: component.context, text: component.slice.item.storyItem.text, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: false, ignoredLanguages: translationSettings.ignoredLanguages)
+                    if canTranslate {
+                        items.append(.action(ContextMenuActionItem(text: component.strings.Conversation_ContextMenuTranslate, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Translate"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { [weak self] _, f in
+                            f(.default)
+                            
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            self.sendMessageContext.performTranslateTextAction(view: self, text: component.slice.item.storyItem.text)
+                        })))
+                    }
+                }
+                
                 if !component.slice.peer.isService {
                     items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_Report, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.contextMenu.primaryColor)
@@ -4462,6 +4540,25 @@ public final class StoryItemSetContainerComponent: Component {
             self.sendMessageContext.tooltipScreen = tooltipScreen
             self.updateIsProgressPaused()
             component.controller()?.present(tooltipScreen, in: .current)
+        }
+        
+        func updateModalTransitionFactor(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
+            guard let component = self.component, case .compact = component.metrics.widthClass else {
+                return
+            }
+            
+            let statusBarHeight = component.statusBarHeight
+            let size = self.bounds.size
+            let progress = 1.0 - value
+            let maxScale = (size.width - 16.0 * 2.0) / size.width
+            
+            let topInset: CGFloat = statusBarHeight + 5.0
+            let targetTopInset = ceil(statusBarHeight - (size.height - size.height * maxScale) / 2.0)
+            let deltaOffset = (targetTopInset - topInset)
+            
+            let scale = 1.0 * progress + (1.0 - progress) * maxScale
+            let offset = (1.0 - progress) * deltaOffset
+            transition.updateSublayerTransformScaleAndOffset(layer: self.layer, scale: scale, offset: CGPoint(x: 0.0, y: offset), beginWithCurrentState: true)
         }
     }
     

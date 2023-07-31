@@ -19,6 +19,8 @@ private struct LocationSearchEntry: Identifiable, Comparable {
     let index: Int
     let theme: PresentationTheme
     let location: TelegramMediaMap
+    let queryId: Int64?
+    let resultId: String?
     let title: String?
     let distance: Double
     
@@ -36,6 +38,12 @@ private struct LocationSearchEntry: Identifiable, Comparable {
         if lhs.location.venue?.id != rhs.location.venue?.id {
             return false
         }
+        if lhs.queryId != rhs.queryId {
+            return false
+        }
+        if lhs.resultId != rhs.resultId {
+            return false
+        }
         if lhs.title != rhs.title {
             return false
         }
@@ -49,8 +57,11 @@ private struct LocationSearchEntry: Identifiable, Comparable {
         return lhs.index < rhs.index
     }
     
-    func item(engine: TelegramEngine, presentationData: PresentationData, sendVenue: @escaping (TelegramMediaMap) -> Void) -> ListViewItem {
+    func item(engine: TelegramEngine, presentationData: PresentationData, sendVenue: @escaping (TelegramMediaMap, Int64?, String?) -> Void) -> ListViewItem {
         let venue = self.location
+        let queryId = self.queryId
+        let resultId = self.resultId
+        
         let header: ChatListSearchItemHeader
         let subtitle: String?
         if let _ = venue.venue {
@@ -61,7 +72,7 @@ private struct LocationSearchEntry: Identifiable, Comparable {
             subtitle = presentationData.strings.Map_DistanceAway(stringForDistance(strings: presentationData.strings, distance: self.distance)).string
         }
         return ItemListVenueItem(presentationData: ItemListPresentationData(presentationData), engine: engine, venue: self.location, title: self.title, subtitle: subtitle, style: .plain, action: {
-            sendVenue(venue)
+            sendVenue(venue, queryId, resultId)
         }, header: header)
     }
 }
@@ -75,7 +86,7 @@ struct LocationSearchContainerTransition {
     let isEmpty: Bool
 }
 
-private func locationSearchContainerPreparedTransition(from fromEntries: [LocationSearchEntry], to toEntries: [LocationSearchEntry], query: String, isSearching: Bool, isEmpty: Bool, engine: TelegramEngine, presentationData: PresentationData, sendVenue: @escaping (TelegramMediaMap) -> Void) -> LocationSearchContainerTransition {
+private func locationSearchContainerPreparedTransition(from fromEntries: [LocationSearchEntry], to toEntries: [LocationSearchEntry], query: String, isSearching: Bool, isEmpty: Bool, engine: TelegramEngine, presentationData: PresentationData, sendVenue: @escaping (TelegramMediaMap, Int64?, String?) -> Void) -> LocationSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
@@ -108,11 +119,11 @@ final class LocationSearchContainerNode: ASDisplayNode {
         return self._isSearching.get()
     }
     
-    public init(context: AccountContext, coordinate: CLLocationCoordinate2D, interaction: LocationPickerInteraction) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, coordinate: CLLocationCoordinate2D, interaction: LocationPickerInteraction, story: Bool) {
         self.context = context
         self.interaction = interaction
                 
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.presentationData = presentationData
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
         
@@ -163,7 +174,7 @@ final class LocationSearchContainerNode: ASDisplayNode {
         }
         |> mapToSignal { query -> Signal<([LocationSearchEntry], String)?, NoError> in
             if let query = query, !query.isEmpty {
-                let foundVenues = nearbyVenues(context: context, latitude: coordinate.latitude, longitude: coordinate.longitude, query: query)
+                let foundVenues = nearbyVenues(context: context, story: story, latitude: coordinate.latitude, longitude: coordinate.longitude, query: query)
                 |> afterCompleted {
                     isSearching.set(false)
                 }
@@ -173,7 +184,7 @@ final class LocationSearchContainerNode: ASDisplayNode {
                 |> beforeStarted {
                     isSearching.set(true)
                 }
-                |> map { venues, placemarks, themeAndStrings -> ([LocationSearchEntry], String) in
+                |> map { contextResult, placemarks, themeAndStrings -> ([LocationSearchEntry], String) in
                     var entries: [LocationSearchEntry] = []
                     var index: Int = 0
                     
@@ -184,15 +195,24 @@ final class LocationSearchContainerNode: ASDisplayNode {
                             }
                             let location = TelegramMediaMap(latitude: placemarkLocation.coordinate.latitude, longitude: placemarkLocation.coordinate.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil)
                             
-                            entries.append(LocationSearchEntry(index: index, theme: themeAndStrings.0, location: location, title: placemark.name ?? "Name", distance: placemarkLocation.distance(from: currentLocation)))
+                            entries.append(LocationSearchEntry(index: index, theme: themeAndStrings.0, location: location, queryId: nil, resultId: nil, title: placemark.name ?? "Name", distance: placemarkLocation.distance(from: currentLocation)))
                             
                             index += 1
                         }
                     }
                     
-                    for venue in venues {
-                        entries.append(LocationSearchEntry(index: index, theme: themeAndStrings.0, location: venue, title: nil, distance: 0.0))
-                        index += 1
+                    if let contextResult {
+                        for result in contextResult.results {
+                            switch result.message {
+                                case let .mapLocation(mapMedia, _):
+                                    if let _ = mapMedia.venue {
+                                        entries.append(LocationSearchEntry(index: index, theme: themeAndStrings.0, location: mapMedia, queryId: contextResult.queryId, resultId: result.id, title: nil, distance: 0.0))
+                                        index += 1
+                                    }
+                                default:
+                                    break
+                            }
+                        }
                     }
                     return (entries, query)
                 }
@@ -210,9 +230,10 @@ final class LocationSearchContainerNode: ASDisplayNode {
             if let strongSelf = self {
                 let (items, query) = itemsAndQuery ?? (nil, "")
                 let previousItems = previousSearchItems.swap(items ?? [])
-                let transition = locationSearchContainerPreparedTransition(from: previousItems, to: items ?? [], query: query, isSearching: items != nil, isEmpty: items?.isEmpty ?? false, engine: context.engine, presentationData: strongSelf.presentationData, sendVenue: { venue in self?.listNode.clearHighlightAnimated(true)
+                let transition = locationSearchContainerPreparedTransition(from: previousItems, to: items ?? [], query: query, isSearching: items != nil, isEmpty: items?.isEmpty ?? false, engine: context.engine, presentationData: strongSelf.presentationData, sendVenue: { venue, queryId, resultId in
+                    self?.listNode.clearHighlightAnimated(true)
                     if let _ = venue.venue {
-                        self?.interaction.sendVenue(venue)
+                        self?.interaction.sendVenue(venue, queryId, resultId)
                     } else {
                         self?.interaction.goToCoordinate(venue.coordinate)
                         self?.interaction.dismissSearch()

@@ -12,6 +12,8 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
         case title
         case style
         case location
+        case queryId
+        case resultId
         case referenceDrawingSize
         case position
         case width
@@ -36,6 +38,8 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
     public var title: String
     public var style: Style
     public var location: TelegramMediaMap
+    public var queryId: Int64?
+    public var resultId: String?
     public var color: DrawingColor = .clear
     public var lineWidth: CGFloat = 0.0
     
@@ -56,12 +60,14 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
         return false
     }
     
-    public init(title: String, style: Style, location: TelegramMediaMap) {
+    public init(title: String, style: Style, location: TelegramMediaMap, queryId: Int64?, resultId: String?) {
         self.uuid = UUID()
         
         self.title = title
         self.style = style
         self.location = location
+        self.queryId = queryId
+        self.resultId = resultId
         
         self.referenceDrawingSize = .zero
         self.position = .zero
@@ -79,6 +85,15 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
         let locationData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .location)
         self.location = TelegramMediaMap(decoder: PostboxDecoder(buffer: MemoryBuffer(data: locationData.data)))
         
+        if let locationData = try container.decodeIfPresent(Data.self, forKey: .location) {
+            self.location = PostboxDecoder(buffer: MemoryBuffer(data: locationData)).decodeRootObject() as! TelegramMediaMap
+        } else {
+            fatalError()
+        }
+        
+        self.queryId = try container.decodeIfPresent(Int64.self, forKey: .queryId)
+        self.resultId = try container.decodeIfPresent(String.self, forKey: .resultId)
+        
         self.referenceDrawingSize = try container.decode(CGSize.self, forKey: .referenceDrawingSize)
         self.position = try container.decode(CGPoint.self, forKey: .position)
         self.width = try container.decode(CGFloat.self, forKey: .width)
@@ -94,7 +109,15 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
         try container.encode(self.uuid, forKey: .uuid)
         try container.encode(self.title, forKey: .title)
         try container.encode(self.style, forKey: .style)
-//        try container.encode(PostboxEncoder().encodeObjectToRawData(self.location), forKey: .location)
+        
+        let encoder = PostboxEncoder()
+        encoder.encodeRootObject(self.location)
+        let locationData = encoder.makeData()
+        try container.encode(locationData, forKey: .location)
+
+        try container.encodeIfPresent(self.queryId, forKey: .queryId)
+        try container.encodeIfPresent(self.resultId, forKey: .resultId)
+        
         try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)
         try container.encode(self.position, forKey: .position)
         try container.encode(self.width, forKey: .width)
@@ -106,7 +129,7 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
     }
 
     public func duplicate() -> DrawingEntity {
-        let newEntity = DrawingLocationEntity(title: self.title, style: self.style, location: self.location)
+        let newEntity = DrawingLocationEntity(title: self.title, style: self.style, location: self.location, queryId: self.queryId, resultId: self.resultId)
         newEntity.referenceDrawingSize = self.referenceDrawingSize
         newEntity.position = self.position
         newEntity.width = self.width
@@ -129,6 +152,12 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
             return false
         }
         if self.location != other.location {
+            return false
+        }
+        if self.queryId != other.queryId {
+            return false
+        }
+        if self.resultId != other.resultId {
             return false
         }
         if self.referenceDrawingSize != other.referenceDrawingSize {
