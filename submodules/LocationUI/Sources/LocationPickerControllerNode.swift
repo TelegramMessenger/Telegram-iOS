@@ -449,9 +449,16 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
             }
         )
         
+        let venuesLocation: Signal<CLLocation?, NoError>
+        if let initialLocation = controller.initialLocation {
+            venuesLocation = .single(CLLocation(coordinate: initialLocation, altitude: 0.0, horizontalAccuracy: 1.0, verticalAccuracy: 1.0, timestamp: Date()))
+        } else {
+            venuesLocation = throttledUserLocation(userLocation)
+        }
+        
         let venues: Signal<([(TelegramMediaMap, String)], Int64)?, NoError> = .single(nil)
         |> then(
-            throttledUserLocation(userLocation)
+            venuesLocation
             |> mapToSignal { location -> Signal<([(TelegramMediaMap, String)], Int64)?, NoError> in
                 if let location = location, location.horizontalAccuracy > 0 {
                     return combineLatest(nearbyVenues(context: context, story: source == .story, latitude: location.coordinate.latitude, longitude: location.coordinate.longitude), personalVenues)
@@ -573,7 +580,11 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                         switch strongSelf.mode {
                             case .share:
                             if source == .story {
-                                title = "Add My Current Location"
+                                if strongSelf.controller?.initialLocation != nil {
+                                    title = "Add This Location"
+                                } else {
+                                    title = "Add My Current Location"
+                                }
                             } else {
                                 title = presentationData.strings.Map_SendMyCurrentLocation
                             }
@@ -635,7 +646,9 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                 let previousUserLocation = previousUserLocation.swap(userLocation)
                 switch state.selectedLocation {
                     case .none:
-                        if let userLocation = userLocation {
+                        if let initialLocation = strongSelf.controller?.initialLocation {
+                            strongSelf.headerNode.mapNode.setMapCenter(coordinate: initialLocation, animated: false)
+                        } else if let userLocation = userLocation {
                             strongSelf.headerNode.mapNode.setMapCenter(coordinate: userLocation.coordinate, isUserLocation: true, animated: previousUserLocation != nil)
                         }
                         strongSelf.headerNode.mapNode.resetAnnotationSelection()
@@ -848,7 +861,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         
         self.locationManager.manager.stopUpdatingHeading()
     }
-    
+        
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
         self.headerNode.mapNode.userHeading = CGFloat(newHeading.magneticHeading)
     }

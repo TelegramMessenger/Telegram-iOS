@@ -64,6 +64,7 @@ public final class LocationPickerController: ViewController, AttachmentContainab
     private let context: AccountContext
     private let mode: LocationPickerMode
     private let source: Source
+    let initialLocation: CLLocationCoordinate2D?
     private let completion: (TelegramMediaMap, Int64?, String?, String?) -> Void
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -84,10 +85,11 @@ public final class LocationPickerController: ViewController, AttachmentContainab
     public var isContainerPanning: () -> Bool = { return false }
     public var isContainerExpanded: () -> Bool = { return false }
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: LocationPickerMode, source: Source = .generic, completion: @escaping (TelegramMediaMap, Int64?, String?, String?) -> Void) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: LocationPickerMode, source: Source = .generic, initialLocation: CLLocationCoordinate2D? = nil, completion: @escaping (TelegramMediaMap, Int64?, String?, String?) -> Void) {
         self.context = context
         self.mode = mode
         self.source = source
+        self.initialLocation = initialLocation
         self.completion = completion
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.updatedPresentationData = updatedPresentationData
@@ -409,6 +411,7 @@ private final class LocationPickerContext: AttachmentMediaPickerContext {
 
 public func storyLocationPickerController(
     context: AccountContext,
+    location: CLLocationCoordinate2D?,
     completion: @escaping (TelegramMediaMap, Int64?, String?, String?) -> Void
 ) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
@@ -417,7 +420,7 @@ public func storyLocationPickerController(
         return nil
     })
     controller.requestController = { _, present in
-        let locationPickerController = LocationPickerController(context: context, updatedPresentationData: updatedPresentationData, mode: .share(peer: nil, selfPeer: nil, hasLiveLocation: false), source: .story, completion: { location, queryId, resultId, address in
+        let locationPickerController = LocationPickerController(context: context, updatedPresentationData: updatedPresentationData, mode: .share(peer: nil, selfPeer: nil, hasLiveLocation: false), source: .story, initialLocation: location, completion: { location, queryId, resultId, address in
             completion(location, queryId, resultId, address)
         })
         present(locationPickerController, locationPickerController.mediaPickerContext)
