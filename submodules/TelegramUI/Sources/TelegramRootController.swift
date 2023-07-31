@@ -355,7 +355,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         } else {
                             return nil
                         }
-                    }, completion: { [weak self] randomId, mediaResult, caption, privacy, stickers, commit in
+                    }, completion: { [weak self] randomId, mediaResult, mediaAreas, caption, privacy, stickers, commit in
                         guard let self, let mediaResult else {
                             dismissCameraImpl?()
                             commit({})
@@ -397,7 +397,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                 if let imageData = compressImageToJPEG(image, quality: 0.7) {
                                     let entities = generateChatInputTextEntities(caption)
                                     Logger.shared.log("MediaEditor", "Calling uploadStory for image, randomId \(randomId)")
-                                    self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData, stickers: stickers), text: caption.string, entities: entities, pin: privacy.pin, privacy: privacy.privacy, isForwardingDisabled: privacy.isForwardingDisabled, period: privacy.timeout, randomId: randomId)
+                                    self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData, stickers: stickers), mediaAreas: mediaAreas, text: caption.string, entities: entities, pin: privacy.pin, privacy: privacy.privacy, isForwardingDisabled: privacy.isForwardingDisabled, period: privacy.timeout, randomId: randomId)
                                     
                                     completionImpl()
                                 }
@@ -428,7 +428,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                     }
                                     Logger.shared.log("MediaEditor", "Calling uploadStory for video, randomId \(randomId)")
                                     let entities = generateChatInputTextEntities(caption)
-                                    self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), text: caption.string, entities: entities, pin: privacy.pin, privacy: privacy.privacy, isForwardingDisabled: privacy.isForwardingDisabled, period: privacy.timeout, randomId: randomId)
+                                    self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), mediaAreas: mediaAreas, text: caption.string, entities: entities, pin: privacy.pin, privacy: privacy.privacy, isForwardingDisabled: privacy.isForwardingDisabled, period: privacy.timeout, randomId: randomId)
                                     
                                     completionImpl()
                                 }
@@ -436,7 +436,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         }
                         
                         dismissCameraImpl?()
-                    } as (Int64, MediaEditorScreen.Result?, NSAttributedString, MediaEditorResultPrivacy, [TelegramMediaFile], @escaping (@escaping () -> Void) -> Void) -> Void
+                    } as (Int64, MediaEditorScreen.Result?, [MediaArea], NSAttributedString, MediaEditorResultPrivacy, [TelegramMediaFile], @escaping (@escaping () -> Void) -> Void) -> Void
                 )
                 controller.cancelled = { showDraftTooltip in
                     if showDraftTooltip {

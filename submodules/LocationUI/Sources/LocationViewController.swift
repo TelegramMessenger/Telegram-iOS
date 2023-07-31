@@ -84,6 +84,8 @@ public final class LocationViewController: ViewController {
     private var interaction: LocationViewInteraction?
     
     private var rightBarButtonAction: LocationViewRightBarButton = .none
+    
+    public var dismissed: () -> Void = {}
 
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, subject: EngineMessage, params: LocationViewParams) {
         self.context = context
@@ -526,6 +528,11 @@ public final class LocationViewController: ViewController {
     
     @objc private func showAllPressed() {
         self.controllerNode.showAll()
+    }
+    
+    public override func dismiss(completion: (() -> Void)? = nil) {
+        super.dismiss(completion: completion)
+        self.dismissed()
     }
 }
 

@@ -408,15 +408,15 @@ public extension Api {
 }
 public extension Api {
     indirect enum StoryItem: TypeConstructorDescription {
-        case storyItem(flags: Int32, id: Int32, date: Int32, expireDate: Int32, caption: String?, entities: [Api.MessageEntity]?, media: Api.MessageMedia, privacy: [Api.PrivacyRule]?, views: Api.StoryViews?)
+        case storyItem(flags: Int32, id: Int32, date: Int32, expireDate: Int32, caption: String?, entities: [Api.MessageEntity]?, media: Api.MessageMedia, mediaAreas: [Api.MediaArea]?, privacy: [Api.PrivacyRule]?, views: Api.StoryViews?)
         case storyItemDeleted(id: Int32)
         case storyItemSkipped(flags: Int32, id: Int32, date: Int32, expireDate: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .storyItem(let flags, let id, let date, let expireDate, let caption, let entities, let media, let privacy, let views):
+                case .storyItem(let flags, let id, let date, let expireDate, let caption, let entities, let media, let mediaAreas, let privacy, let views):
                     if boxed {
-                        buffer.appendInt32(1445635639)
+                        buffer.appendInt32(-1806085190)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -429,6 +429,11 @@ public extension Api {
                         item.serialize(buffer, true)
                     }}
                     media.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 14) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(mediaAreas!.count))
+                    for item in mediaAreas! {
+                        item.serialize(buffer, true)
+                    }}
                     if Int(flags) & Int(1 << 2) != 0 {buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(privacy!.count))
                     for item in privacy! {
@@ -456,8 +461,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .storyItem(let flags, let id, let date, let expireDate, let caption, let entities, let media, let privacy, let views):
-                return ("storyItem", [("flags", flags as Any), ("id", id as Any), ("date", date as Any), ("expireDate", expireDate as Any), ("caption", caption as Any), ("entities", entities as Any), ("media", media as Any), ("privacy", privacy as Any), ("views", views as Any)])
+                case .storyItem(let flags, let id, let date, let expireDate, let caption, let entities, let media, let mediaAreas, let privacy, let views):
+                return ("storyItem", [("flags", flags as Any), ("id", id as Any), ("date", date as Any), ("expireDate", expireDate as Any), ("caption", caption as Any), ("entities", entities as Any), ("media", media as Any), ("mediaAreas", mediaAreas as Any), ("privacy", privacy as Any), ("views", views as Any)])
                 case .storyItemDeleted(let id):
                 return ("storyItemDeleted", [("id", id as Any)])
                 case .storyItemSkipped(let flags, let id, let date, let expireDate):
@@ -484,13 +489,17 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _7 = Api.parse(reader, signature: signature) as? Api.MessageMedia
             }
-            var _8: [Api.PrivacyRule]?
-            if Int(_1!) & Int(1 << 2) != 0 {if let _ = reader.readInt32() {
-                _8 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PrivacyRule.self)
+            var _8: [Api.MediaArea]?
+            if Int(_1!) & Int(1 << 14) != 0 {if let _ = reader.readInt32() {
+                _8 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MediaArea.self)
             } }
-            var _9: Api.StoryViews?
+            var _9: [Api.PrivacyRule]?
+            if Int(_1!) & Int(1 << 2) != 0 {if let _ = reader.readInt32() {
+                _9 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PrivacyRule.self)
+            } }
+            var _10: Api.StoryViews?
             if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
-                _9 = Api.parse(reader, signature: signature) as? Api.StoryViews
+                _10 = Api.parse(reader, signature: signature) as? Api.StoryViews
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -499,10 +508,11 @@ public extension Api {
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
             let _c7 = _7 != nil
-            let _c8 = (Int(_1!) & Int(1 << 2) == 0) || _8 != nil
-            let _c9 = (Int(_1!) & Int(1 << 3) == 0) || _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.StoryItem.storyItem(flags: _1!, id: _2!, date: _3!, expireDate: _4!, caption: _5, entities: _6, media: _7!, privacy: _8, views: _9)
+            let _c8 = (Int(_1!) & Int(1 << 14) == 0) || _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 2) == 0) || _9 != nil
+            let _c10 = (Int(_1!) & Int(1 << 3) == 0) || _10 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
+                return Api.StoryItem.storyItem(flags: _1!, id: _2!, date: _3!, expireDate: _4!, caption: _5, entities: _6, media: _7!, mediaAreas: _8, privacy: _9, views: _10)
             }
             else {
                 return nil

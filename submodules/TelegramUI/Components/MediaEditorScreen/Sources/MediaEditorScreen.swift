@@ -2702,10 +2702,24 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             guard let controller = self.controller else {
                 return
             }
-            let locationController = standaloneLocationPickerController(context: self.context, completion: { [weak self] location in
-                if let self {
-                    let title = location.venue?.title ?? "LOCATION"
-                    self.interaction?.insertEntity(DrawingLocationEntity(title: title, style: .white, location: location), scale: 1.0)
+            let locationController = storyLocationPickerController(context: self.context, completion: { [weak self] location, queryId, resultId, address in
+                if let self  {
+                    let title: String
+                    if let venueTitle = location.venue?.title {
+                        title = venueTitle
+                    } else {
+                        title = address ?? "Location"
+                    }
+                    self.interaction?.insertEntity(
+                        DrawingLocationEntity(
+                            title: title,
+                            style: .white,
+                            location: location,
+                            queryId: queryId,
+                            resultId: resultId
+                        ),
+                        scale: 1.0
+                    )
                 }
             })
             locationController.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak locationController] transition in
@@ -3203,13 +3217,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     
     fileprivate let initialCaption: NSAttributedString?
     fileprivate let initialPrivacy: EngineStoryPrivacy?
+    fileprivate let initialMediaAreas: [MediaArea]?
     fileprivate let initialVideoPosition: Double?
     
     fileprivate let transitionIn: TransitionIn?
     fileprivate let transitionOut: (Bool, Bool?) -> TransitionOut?
         
     public var cancelled: (Bool) -> Void = { _ in }
-    public var completion: (Int64, MediaEditorScreen.Result?, NSAttributedString, MediaEditorResultPrivacy, [TelegramMediaFile], @escaping (@escaping () -> Void) -> Void) -> Void = { _, _, _, _, _, _ in }
+    public var completion: (Int64, MediaEditorScreen.Result?, [MediaArea], NSAttributedString, MediaEditorResultPrivacy, [TelegramMediaFile], @escaping (@escaping () -> Void) -> Void) -> Void = { _, _, _, _, _, _, _ in }
     public var dismissed: () -> Void = { }
     public var willDismiss: () -> Void = { }
     
@@ -3224,16 +3239,18 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         isEditing: Bool,
         initialCaption: NSAttributedString? = nil,
         initialPrivacy: EngineStoryPrivacy? = nil,
+        initialMediaAreas: [MediaArea]? = nil,
         initialVideoPosition: Double? = nil,
         transitionIn: TransitionIn?,
         transitionOut: @escaping (Bool, Bool?) -> TransitionOut?,
-        completion: @escaping (Int64, MediaEditorScreen.Result?, NSAttributedString, MediaEditorResultPrivacy, [TelegramMediaFile], @escaping (@escaping () -> Void) -> Void) -> Void
+        completion: @escaping (Int64, MediaEditorScreen.Result?, [MediaArea], NSAttributedString, MediaEditorResultPrivacy, [TelegramMediaFile], @escaping (@escaping () -> Void) -> Void) -> Void
     ) {
         self.context = context
         self.subject = subject
         self.isEditingStory = isEditing
         self.initialCaption = initialCaption
         self.initialPrivacy = initialPrivacy
+        self.initialMediaAreas = initialMediaAreas
         self.initialVideoPosition = initialVideoPosition
         self.transitionIn = transitionIn
         self.transitionOut = transitionOut
@@ -3775,22 +3792,32 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             randomId = Int64.random(in: .min ... .max)
         }
         
+        var mediaAreas: [MediaArea] = self.initialMediaAreas ?? []
         var stickers: [TelegramMediaFile] = []
         for entity in codableEntities {
-            if case let .sticker(stickerEntity) = entity, case let .file(file) = stickerEntity.content {
-                stickers.append(file)
-                if let subEntities = stickerEntity.renderSubEntities {
+            switch entity {
+            case let .sticker(stickerEntity):
+                if case let .file(file) = stickerEntity.content {
+                    stickers.append(file)
+                }
+            case let .text(textEntity):
+                if let subEntities = textEntity.renderSubEntities {
                     for entity in subEntities {
                         if let stickerEntity = entity as? DrawingStickerEntity, case let .file(file) = stickerEntity.content {
                             stickers.append(file)
                         }
                     }
                 }
+            default:
+                break
+            }
+            if let mediaArea = entity.mediaArea {
+                mediaAreas.append(mediaArea)
             }
         }
         
         if self.isEditingStory && !self.node.hasAnyChanges {
-            self.completion(randomId, nil, caption, self.state.privacy, stickers, { [weak self] finished in
+            self.completion(randomId, nil, [], caption, self.state.privacy, stickers, { [weak self] finished in
                 self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                     self?.dismiss()
                     Queue.mainQueue().justDispatch {
@@ -3962,7 +3989,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: inputImage, dimensions: storyDimensions, values: mediaEditor.values, time: firstFrameTime, textScale: 2.0, completion: { [weak self] coverImage in
                         if let self {
                             Logger.shared.log("MediaEditor", "Completed with video \(videoResult)")
-                            self.completion(randomId, .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions), caption, self.state.privacy, stickers, { [weak self] finished in
+                            self.completion(randomId, .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions), mediaAreas, caption, self.state.privacy, stickers, { [weak self] finished in
                                 self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                     self?.dismiss()
                                     Queue.mainQueue().justDispatch {
@@ -3985,7 +4012,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 makeEditorImageComposition(context: self.node.ciContext, account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, textScale: 2.0, completion: { [weak self] resultImage in
                     if let self, let resultImage {
                         Logger.shared.log("MediaEditor", "Completed with image \(resultImage)")
-                        self.completion(randomId, .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), caption, self.state.privacy, stickers, { [weak self] finished in
+                        self.completion(randomId, .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), mediaAreas, caption, self.state.privacy, stickers, { [weak self] finished in
                             self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                 self?.dismiss()
                                 Queue.mainQueue().justDispatch {

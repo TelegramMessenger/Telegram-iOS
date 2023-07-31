@@ -30,6 +30,7 @@ public final class ContextMenuController: ViewController, KeyShortcutResponder, 
     
     private var layout: ContainerViewLayout?
     
+    public var centerHorizontally = false
     public var dismissed: (() -> Void)?
     
     public init(actions: [ContextMenuAction], catchTapsOutside: Bool = false, hasHapticFeedback: Bool = false) {
@@ -72,6 +73,7 @@ public final class ContextMenuController: ViewController, KeyShortcutResponder, 
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
+        self.contextMenuNode.centerHorizontally = self.centerHorizontally
         if self.layout != nil && self.layout! != layout {
             self.dismissed?()
             self.contextMenuNode.animateOut(bounce: (self.presentationArguments as? ContextMenuControllerPresentationArguments)?.bounce ?? true, completion: { [weak self] in

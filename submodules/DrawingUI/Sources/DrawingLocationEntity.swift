@@ -324,9 +324,11 @@ final class DrawingLocationEntititySelectionView: DrawingEntitySelectionView {
             return
         }
         let location = gestureRecognizer.location(in: self)
-        
         switch gestureRecognizer.state {
         case .began:
+            self.tapGestureRecognizer?.isEnabled = false
+            self.tapGestureRecognizer?.isEnabled = true
+            
             self.snapTool.maybeSkipFromStart(entityView: entityView, position: entity.position)
             
             if let sublayers = self.layer.sublayers {

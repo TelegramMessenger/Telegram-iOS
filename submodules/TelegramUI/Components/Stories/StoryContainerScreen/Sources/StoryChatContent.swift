@@ -152,6 +152,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                         timestamp: item.timestamp,
                         expirationTimestamp: item.expirationTimestamp,
                         media: EngineMedia(media),
+                        mediaAreas: item.mediaAreas,
                         text: item.text,
                         entities: item.entities,
                         views: item.views.flatMap { views in
@@ -182,6 +183,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                             timestamp: item.timestamp,
                             expirationTimestamp: Int32.max,
                             media: EngineMedia(item.media),
+                            mediaAreas: item.mediaAreas,
                             text: item.text,
                             entities: item.entities,
                             views: nil,
@@ -1019,6 +1021,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                     timestamp: itemValue.timestamp,
                     expirationTimestamp: itemValue.expirationTimestamp,
                     media: EngineMedia(media),
+                    mediaAreas: itemValue.mediaAreas,
                     text: itemValue.text,
                     entities: itemValue.entities,
                     views: itemValue.views.flatMap { views in

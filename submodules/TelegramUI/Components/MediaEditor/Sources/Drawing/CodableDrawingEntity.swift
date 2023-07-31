@@ -1,4 +1,5 @@
 import Foundation
+import TelegramCore
 
 public enum CodableDrawingEntity: Equatable {
     public static func == (lhs: CodableDrawingEntity, rhs: CodableDrawingEntity) -> Bool {
@@ -44,6 +45,30 @@ public enum CodableDrawingEntity: Equatable {
             return entity
         case let .location(entity):
             return entity
+        }
+    }
+    
+    public var mediaArea: MediaArea? {
+        switch self {
+        case let .location(entity):
+            return .venue(
+                coordinates: MediaArea.Coordinates(
+                    x: entity.position.x / 1080.0 * 100.0,
+                    y: entity.position.y / 1920.0 * 100.0,
+                    width: (entity.renderImage?.size.width ?? 0.0) * entity.scale / 1080.0 * 100.0,
+                    height: (entity.renderImage?.size.height ?? 0.0) * entity.scale / 1920.0 * 100.0,
+                    rotation: entity.rotation / .pi * 180.0
+                ),
+                venue: MediaArea.Venue(
+                    latitude: entity.location.latitude,
+                    longitude: entity.location.longitude,
+                    venue: entity.location.venue,
+                    queryId: entity.queryId,
+                    resultId: entity.resultId
+                )
+            )
+        default:
+            return nil
         }
     }
 }

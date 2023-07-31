@@ -372,7 +372,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     
                     entries.append(.info(presentationData.theme, location, address, distance, eta.0, eta.1, eta.2))
                     
-                    annotations.append(LocationPinAnnotation(context: context, theme: presentationData.theme, location: location, forcedSelection: true))
+                    annotations.append(LocationPinAnnotation(context: context, theme: presentationData.theme, location: location, queryId: nil, resultId: nil, forcedSelection: true))
                 } else {
                     var activeOwnLiveLocation: EngineMessage?
                     for message in effectiveLiveLocations {

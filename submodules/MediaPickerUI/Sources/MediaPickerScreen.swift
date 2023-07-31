@@ -274,6 +274,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             super.init()
             
             if case .assets(nil, .default) = controller.subject {
+            } else if case .assets(nil, .story) = controller.subject {
             } else {
                 self.preloadPromise.set(false)
             }

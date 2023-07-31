@@ -389,6 +389,63 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
     return (nil, nil, nil, nil)
 }
 
+func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
+    func coodinatesFromApiMediaAreaCoordinates(_ coordinates: Api.MediaAreaCoordinates) -> MediaArea.Coordinates {
+        switch coordinates {
+        case let .mediaAreaCoordinates(x, y, width, height, rotation):
+            return MediaArea.Coordinates(x: x, y: y, width: width, height: height, rotation: rotation)
+        }
+    }
+    switch mediaArea {
+    case .inputMediaAreaVenue:
+        return nil
+    case let .mediaAreaGeoPoint(coordinates, geo):
+        let latitude: Double
+        let longitude: Double
+        switch geo {
+        case let .geoPoint(_, long, lat, _, _):
+            latitude = lat
+            longitude = long
+        case .geoPointEmpty:
+            latitude = 0.0
+            longitude = 0.0
+        }
+        return .venue(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), venue: MediaArea.Venue(latitude: latitude, longitude: longitude, venue: nil, queryId: nil, resultId: nil))
+    case let .mediaAreaVenue(coordinates, geo, title, address, provider, venueId, venueType):
+        let latitude: Double
+        let longitude: Double
+        switch geo {
+        case let .geoPoint(_, long, lat, _, _):
+            latitude = lat
+            longitude = long
+        case .geoPointEmpty:
+            latitude = 0.0
+            longitude = 0.0
+        }
+        return .venue(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), venue: MediaArea.Venue(latitude: latitude, longitude: longitude, venue: MapVenue(title: title, address: address, provider: provider, id: venueId, type: venueType), queryId: nil, resultId: nil))
+    }
+}
+
+func apiMediaAreasFromMediaAreas(_ mediaAreas: [MediaArea]) -> [Api.MediaArea] {
+    var apiMediaAreas: [Api.MediaArea] = []
+    for area in mediaAreas {
+        let coordinates = area.coordinates
+        let inputCoordinates = Api.MediaAreaCoordinates.mediaAreaCoordinates(x: coordinates.x, y: coordinates.y, w: coordinates.width, h: coordinates.height, rotation: coordinates.rotation)
+        switch area {
+        case let .venue(_, venue):
+            if let queryId = venue.queryId, let resultId = venue.resultId {
+                apiMediaAreas.append(.inputMediaAreaVenue(coordinates: inputCoordinates, queryId: queryId, resultId: resultId))
+            } else if let venueInfo = venue.venue {
+                apiMediaAreas.append(.mediaAreaVenue(coordinates: inputCoordinates, geo: .geoPoint(flags: 0, long: venue.longitude, lat: venue.latitude, accessHash: 0, accuracyRadius: nil), title: venueInfo.title, address: venueInfo.address ?? "", provider: venueInfo.provider ?? "", venueId: venueInfo.id ?? "", venueType: venueInfo.type ?? ""))
+            } else {
+                apiMediaAreas.append(.mediaAreaGeoPoint(coordinates: inputCoordinates, geo: .geoPoint(flags: 0, long: venue.longitude, lat: venue.latitude, accessHash: 0, accuracyRadius: nil)))
+            }
+        }
+    }
+    return apiMediaAreas
+}
+
+
 func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [MessageTextEntity] {
     var result: [MessageTextEntity] = []
     for entity in entities {

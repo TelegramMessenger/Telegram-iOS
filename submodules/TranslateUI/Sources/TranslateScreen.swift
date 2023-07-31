@@ -536,6 +536,8 @@ public class TranslateScreen: ViewController {
             self.component = component
             self.theme = theme
             
+            let effectiveTheme = theme ?? self.presentationData.theme
+            
             self.dim = ASDisplayNode()
             self.dim.alpha = 0.0
             self.dim.backgroundColor = UIColor(white: 0.0, alpha: 0.25)
@@ -551,7 +553,7 @@ public class TranslateScreen: ViewController {
             self.scrollView.showsVerticalScrollIndicator = false
             
             self.containerView.clipsToBounds = true
-            self.containerView.backgroundColor = self.presentationData.theme.list.blocksBackgroundColor
+            self.containerView.backgroundColor = effectiveTheme.list.blocksBackgroundColor
             
             self.addSubnode(self.dim)
             
@@ -992,7 +994,7 @@ public class TranslateScreen: ViewController {
     
     public var wasDismissed: (() -> Void)?
     
-    public convenience init(context: AccountContext, text: String, canCopy: Bool, fromLanguage: String?, toLanguage: String? = nil, isExpanded: Bool = false) {
+    public convenience init(context: AccountContext, forceTheme: PresentationTheme? = nil, text: String, canCopy: Bool, fromLanguage: String?, toLanguage: String? = nil, isExpanded: Bool = false) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         var baseLanguageCode = presentationData.strings.baseLanguageCode
@@ -1021,7 +1023,7 @@ public class TranslateScreen: ViewController {
             changeLanguageImpl?(fromLang, toLang, completion)
         }, expand: {
             expandImpl?()
-        }))
+        }), theme: forceTheme)
         
         self.isInitiallyExpanded = isExpanded
                 
@@ -1065,7 +1067,7 @@ public class TranslateScreen: ViewController {
     private init<C: Component>(context: AccountContext, component: C, theme: PresentationTheme? = nil) where C.EnvironmentType == ViewControllerComponentContainer.Environment {
         self.context = context
         self.component = AnyComponent(component)
-        self.theme = nil
+        self.theme = theme
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: context.sharedContext.currentPresentationData.with { $0 }))
     }

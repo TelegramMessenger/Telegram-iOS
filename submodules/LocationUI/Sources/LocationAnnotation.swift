@@ -38,6 +38,9 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
         }
     }
     let location: TelegramMediaMap?
+    let queryId: Int64?
+    let resultId: String?
+    
     let peer: EnginePeer?
     let message: EngineMessage?
     let forcedSelection: Bool
@@ -55,10 +58,12 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
     var title: String? = ""
     var subtitle: String? = ""
     
-    init(context: AccountContext, theme: PresentationTheme, peer: EnginePeer) {
+    init(context: AccountContext, theme: PresentationTheme, peer: EnginePeer?) {
         self.context = context
         self.theme = theme
         self.location = nil
+        self.queryId = nil
+        self.resultId = nil
         self.peer = peer
         self.message = nil
         self.coordinate = kCLLocationCoordinate2DInvalid
@@ -66,10 +71,12 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
         super.init()
     }
     
-    init(context: AccountContext, theme: PresentationTheme, location: TelegramMediaMap, forcedSelection: Bool = false) {
+    init(context: AccountContext, theme: PresentationTheme, location: TelegramMediaMap, queryId: Int64?, resultId: String?, forcedSelection: Bool = false) {
         self.context = context
         self.theme = theme
         self.location = location
+        self.queryId = queryId
+        self.resultId = resultId
         self.peer = nil
         self.message = nil
         self.coordinate = location.coordinate
@@ -81,6 +88,8 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
         self.context = context
         self.theme = theme
         self.location = nil
+        self.queryId = nil
+        self.resultId = nil
         self.peer = nil
         self.isSelf = isSelf
         self.message = message
