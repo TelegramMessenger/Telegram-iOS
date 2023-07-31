@@ -92,7 +92,7 @@ struct NetworkResponseInfo {
 
 private final class MultiplexedRequestManagerContext {
     final class RequestManagerPriorityContext {
-        var resourceCounters: [String: Int] = [:]
+        var resourceCounters: [String: Bag<Int>] = [:]
     }
     
     private let queue: Queue
@@ -123,19 +123,34 @@ private final class MultiplexedRequestManagerContext {
         }
     }
     
-    func pushPriority(resourceId: String) -> Disposable {
+    func pushPriority(resourceId: String, priority: Int) -> Disposable {
         let queue = self.queue
         
-        let value = self.priorityContext.resourceCounters[resourceId] ?? 0
-        self.priorityContext.resourceCounters[resourceId] = value + 1
+        let counters: Bag<Int>
+        if let current = self.priorityContext.resourceCounters[resourceId] {
+            counters = current
+        } else {
+            counters = Bag()
+            self.priorityContext.resourceCounters[resourceId] = counters
+        }
         
-        return ActionDisposable { [weak self] in
+        let index = counters.add(priority)
+        
+        self.updateState()
+        
+        return ActionDisposable { [weak self, weak counters] in
             queue.async {
                 guard let `self` = self else {
                     return
                 }
-                let value = self.priorityContext.resourceCounters[resourceId] ?? 0
-                self.priorityContext.resourceCounters[resourceId] = max(0, value - 1)
+                
+                if let current = self.priorityContext.resourceCounters[resourceId], current === counters {
+                    current.remove(index)
+                    if current.isEmpty {
+                        self.priorityContext.resourceCounters.removeValue(forKey: resourceId)
+                    }
+                    self.updateState()
+                }
             }
         }
     }
@@ -191,26 +206,22 @@ private final class MultiplexedRequestManagerContext {
         
         for request in self.queuedRequests.sorted(by: { lhs, rhs in
             let lhsPriority = lhs.resourceId.flatMap { id in
-                if let counters = self.priorityContext.resourceCounters[id], counters > 0 {
-                    return true
+                if let counters = self.priorityContext.resourceCounters[id] {
+                    return counters.copyItems().max() ?? 0
                 } else {
-                    return false
+                    return 0
                 }
-            } ?? false
+            } ?? 0
             let rhsPriority = rhs.resourceId.flatMap { id in
-                if let counters = self.priorityContext.resourceCounters[id], counters > 0 {
-                    return true
+                if let counters = self.priorityContext.resourceCounters[id] {
+                    return counters.copyItems().max() ?? 0
                 } else {
-                    return false
+                    return 0
                 }
-            } ?? false
+            } ?? 0
             
             if lhsPriority != rhsPriority {
-                if lhsPriority {
-                    return true
-                } else {
-                    return false
-                }
+                return lhsPriority > rhsPriority
             }
             
             return lhs.id < rhs.id
@@ -335,10 +346,10 @@ final class MultiplexedRequestManager {
         })
     }
     
-    func pushPriority(resourceId: String) -> Disposable {
+    func pushPriority(resourceId: String, priority: Int) -> Disposable {
         let disposable = MetaDisposable()
         self.context.with { context in
-            disposable.set(context.pushPriority(resourceId: resourceId))
+            disposable.set(context.pushPriority(resourceId: resourceId, priority: priority))
         }
         return disposable
     }
