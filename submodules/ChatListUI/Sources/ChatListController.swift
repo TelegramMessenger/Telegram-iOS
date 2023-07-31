@@ -2900,7 +2900,16 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 undoValue = false
                             }
                             
-                            if self.location != .chatList(groupId: .archive) {
+                            if self.location == .chatList(groupId: .archive) {
+                                self.present(UndoOverlayController(presentationData: self.presentationData, content: .archivedChat(peerId: peer.id.toInt64(), title: "", text: self.presentationData.strings.StoryFeed_TooltipUnarchive(peer.compactDisplayTitle).string, undo: true), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { [weak self] action in
+                                    if case .undo = action {
+                                        if let self {
+                                            self.context.engine.peers.updatePeerStoriesHidden(id: peer.id, isHidden: undoValue)
+                                        }
+                                    }
+                                    return false
+                                }), in: .current)
+                            } else {
                                 self.present(UndoOverlayController(presentationData: self.presentationData, content: .archivedChat(peerId: peer.id.toInt64(), title: "", text: self.presentationData.strings.StoryFeed_TooltipArchive(peer.compactDisplayTitle).string, undo: true), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { [weak self] action in
                                     if case .undo = action {
                                         if let self {
