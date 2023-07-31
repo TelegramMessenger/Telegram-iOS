@@ -630,6 +630,26 @@ final class StoryItemSetViewListComponent: Component {
                     var applyState = false
                     var firstTime = true
                     self.viewListDisposable = (viewList.state
+                    |> mapToSignal { state in
+                        #if DEBUG && false
+                        if !state.items.isEmpty {
+                            let otherItems: [EngineStoryViewListContext.Item] = Array(state.items.reversed().prefix(3))
+                            let otherState = EngineStoryViewListContext.State(
+                                totalCount: 3,
+                                items: otherItems,
+                                loadMoreToken: state.loadMoreToken
+                            )
+                            return .single(state)
+                            |> then(.single(otherState) |> delay(1.0, queue: .mainQueue()))
+                            |> then(.complete() |> delay(1.0, queue: .mainQueue()))
+                            |> restart
+                        } else {
+                            return .single(state)
+                        }
+                        #else
+                        return .single(state)
+                        #endif
+                    }
                     |> deliverOnMainQueue).start(next: { [weak self] listState in
                         guard let self else {
                             return
@@ -641,6 +661,7 @@ final class StoryItemSetViewListComponent: Component {
                             self.ignoreScrolling = false
                         }
                         self.viewListState = listState
+                        
                         if applyState {
                             self.state?.updated(transition: Transition.immediate.withUserData(PeerListItemComponent.TransitionHint(synchronousLoad: false)))
                         }
