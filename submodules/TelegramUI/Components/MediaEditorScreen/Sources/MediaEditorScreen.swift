@@ -4302,6 +4302,7 @@ final class DoneButtonContentComponent: CombinedComponent {
             let textSpacing: CGFloat = 8.0
             
             var title: _UpdatedChildComponent?
+            var hideTitle = false
             if let titleText = context.component.title {
                 title = text.update(
                     component: Text(
@@ -4317,7 +4318,7 @@ final class DoneButtonContentComponent: CombinedComponent {
                 if updatedBackgroundWidth < 126.0 {
                     backgroundSize.width = updatedBackgroundWidth
                 } else {
-                    title = nil
+                    hideTitle = true
                 }
             }
 
@@ -4335,6 +4336,7 @@ final class DoneButtonContentComponent: CombinedComponent {
             if let title {
                 context.add(title
                     .position(CGPoint(x: title.size.width / 2.0 + 15.0, y: backgroundHeight / 2.0))
+                    .opacity(hideTitle ? 0.0 : 1.0)
                 )
             }
             
