@@ -2702,7 +2702,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             guard let controller = self.controller else {
                 return
             }
-            let locationController = storyLocationPickerController(context: self.context, completion: { [weak self] location, queryId, resultId, address in
+            var location: CLLocationCoordinate2D?
+            if let subject = self.subject, case let .asset(asset) = subject {
+                location = asset.location?.coordinate
+            }
+            let locationController = storyLocationPickerController(context: self.context, location: location, completion: { [weak self] location, queryId, resultId, address in
                 if let self  {
                     let title: String
                     if let venueTitle = location.venue?.title {
