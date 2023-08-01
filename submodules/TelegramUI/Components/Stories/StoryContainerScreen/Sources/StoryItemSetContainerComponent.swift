@@ -756,8 +756,7 @@ public final class StoryItemSetContainerComponent: Component {
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state, let component = self.component, let itemLayout = self.itemLayout {
-                if let menuController = self.sendMessageContext.menuController {
-                    menuController.dismiss(animated: true)
+                if let _ = self.sendMessageContext.menuController {
                     return
                 }
                 if self.hasActiveDeactivateableInput() {

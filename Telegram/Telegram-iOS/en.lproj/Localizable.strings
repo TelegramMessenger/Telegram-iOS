@@ -9739,8 +9739,8 @@ Sorry for the inconvenience.";
 "Story.PrivacyTooltipSelectedContacts.Contacts_1" = "1 contact";
 "Story.PrivacyTooltipSelectedContacts.Contacts_any" = "%@ contacts";
 
-"Story.Privacy.GrayListSelect" = "[Select people]() who will never see your stories.";
-"Story.Privacy.GrayListSelected" = "[%@]() will never see your stories.";
+"Story.Privacy.GrayListSelect" = "[Select people]() who will never see any of your stories.";
+"Story.Privacy.GrayListSelected" = "[%@]() will never see any of your stories.";
 "Story.Privacy.GrayListPeople_1" = "1 person";
 "Story.Privacy.GrayListPeople_any" = "%@ people";
 

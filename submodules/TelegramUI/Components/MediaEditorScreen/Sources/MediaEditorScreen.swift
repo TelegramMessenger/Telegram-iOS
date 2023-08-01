@@ -2919,8 +2919,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     controller.presentLocationPicker = { [weak self, weak controller] in
                                         if let self {
                                             controller?.dismiss(animated: true)
-                                            let existingEntity = self.entitiesView.getView(where: { $0 is DrawingLocationEntityView })?.entity as? DrawingLocationEntity
-                                            self.presentLocationPicker(existingEntity)
+                                            self.presentLocationPicker()
                                         }
                                     }
                                     self.stickerScreen = controller

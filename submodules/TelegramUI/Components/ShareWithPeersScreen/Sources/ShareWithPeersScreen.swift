@@ -942,7 +942,7 @@ final class ShareWithPeersScreenComponent: Component {
                                     let base: EngineStoryPrivacy.Base?
                                     switch categoryId {
                                     case .everyone:
-                                        base = nil
+                                        base = .everyone
                                     case .contacts:
                                         base = .contacts
                                     case .closeFriends:
@@ -1740,7 +1740,7 @@ final class ShareWithPeersScreenComponent: Component {
                 case .nobody:
                     title = environment.strings.Story_Privacy_CategorySelectedContacts
                 case .everyone:
-                    title = ""
+                    title = environment.strings.Story_Privacy_ExcludedPeople
                 }
             case .search:
                 title = ""
@@ -2435,19 +2435,35 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         var categoryItems: [ShareWithPeersScreenComponent.CategoryItem] = []
         var optionItems: [ShareWithPeersScreenComponent.OptionItem] = []
         if case let .stories(editing) = stateContext.subject {
-            categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
-                id: .everyone,
-                title: presentationData.strings.Story_Privacy_CategoryEveryone,
-                icon: "Media Editor/Privacy/Everyone",
-                iconColor: .blue,
-                actionTitle: nil
-            ))
-            
             var peerNames = ""
             if let peers = stateContext.stateValue?.peers, !peers.isEmpty {
                 peerNames = String(peers.map { $0.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) }.joined(separator: ", "))
             }
             
+            var everyoneSubtitle = presentationData.strings.Story_Privacy_ExcludePeople
+            if initialPrivacy.base == .everyone, initialPrivacy.additionallyIncludePeers.count > 0 {
+                if initialPrivacy.additionallyIncludePeers.count == 1 {
+                    if !peerNames.isEmpty {
+                        everyoneSubtitle = presentationData.strings.Story_Privacy_ExcludePeopleExceptNames(peerNames).string
+                    } else {
+                        everyoneSubtitle = presentationData.strings.Story_Privacy_ExcludePeopleExcept(1)
+                    }
+                } else {
+                    if !peerNames.isEmpty {
+                        everyoneSubtitle = presentationData.strings.Story_Privacy_ExcludePeopleExceptNames(peerNames).string
+                    } else {
+                        everyoneSubtitle = presentationData.strings.Story_Privacy_ExcludePeopleExcept(Int32(initialPrivacy.additionallyIncludePeers.count))
+                    }
+                }
+            }
+            categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
+                id: .everyone,
+                title: presentationData.strings.Story_Privacy_CategoryEveryone,
+                icon: "Media Editor/Privacy/Everyone",
+                iconColor: .blue,
+                actionTitle: everyoneSubtitle
+            ))
+                        
             var contactsSubtitle = presentationData.strings.Story_Privacy_ExcludePeople
             if initialPrivacy.base == .contacts, initialPrivacy.additionallyIncludePeers.count > 0 {
                 if initialPrivacy.additionallyIncludePeers.count == 1 {
