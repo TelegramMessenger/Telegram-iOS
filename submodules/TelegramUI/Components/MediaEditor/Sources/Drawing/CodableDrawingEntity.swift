@@ -53,10 +53,10 @@ public enum CodableDrawingEntity: Equatable {
         case let .location(entity):
             return .venue(
                 coordinates: MediaArea.Coordinates(
-                    x: entity.position.x / 1080.0,
-                    y: entity.position.y / 1920.0,
-                    width: (entity.renderImage?.size.width ?? 0.0) * entity.scale / 1080.0,
-                    height: (entity.renderImage?.size.height ?? 0.0) * entity.scale / 1920.0,
+                    x: entity.position.x / 1080.0 * 100.0,
+                    y: entity.position.y / 1920.0 * 100.0,
+                    width: (entity.renderImage?.size.width ?? 0.0) * entity.scale / 1080.0 * 100.0,
+                    height: (entity.renderImage?.size.height ?? 0.0) * entity.scale / 1920.0 * 100.0,
                     rotation: entity.rotation / .pi * 180.0
                 ),
                 venue: MediaArea.Venue(

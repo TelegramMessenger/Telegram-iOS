@@ -157,11 +157,7 @@ public extension MediaArea {
     var coordinates: Coordinates {
         switch self {
         case let .venue(coordinates, _):
-            if coordinates.width > 2 || coordinates.height > 2 {
-                return Coordinates(x: coordinates.x / 100.0, y: coordinates.y / 100.0, width: coordinates.width / 100.0, height: coordinates.height / 100.0, rotation: coordinates.rotation)
-            } else {
-                return coordinates
-            }
+            return coordinates
         }
     }
 }
