@@ -804,7 +804,7 @@ public final class StoryItemSetContainerComponent: Component {
                         let rotatedX = tx * cosTheta - ty * sinTheta
                         let rotatedY = tx * sinTheta + ty * cosTheta
                         
-                        return abs(rotatedX) <= area.coordinates.width / 100.0 * referenceSize.width / 2.0 && abs(rotatedY) <= area.coordinates.height / 100.0 * referenceSize.height / 2.0
+                        return abs(rotatedX) <= area.coordinates.width / 100.0 * referenceSize.width / 2.0 * 1.1 && abs(rotatedY) <= area.coordinates.height / 100.0 * referenceSize.height / 2.0 * 1.1
                     }
                     
                     for area in component.slice.item.storyItem.mediaAreas {

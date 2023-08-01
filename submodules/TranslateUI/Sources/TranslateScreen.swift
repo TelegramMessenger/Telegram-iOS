@@ -1043,8 +1043,8 @@ public class TranslateScreen: ViewController {
         changeLanguageImpl = { [weak self] fromLang, toLang, completion in
             let pushController = self?.pushController
             let presentController = self?.presentController
-            let controller = languageSelectionController(context: context, fromLanguage: fromLang, toLanguage: toLang, completion: { fromLang, toLang in
-                let controller = TranslateScreen(context: context, text: text, canCopy: canCopy, fromLanguage: fromLang, toLanguage: toLang, isExpanded: true)
+            let controller = languageSelectionController(context: context, forceTheme: forceTheme, fromLanguage: fromLang, toLanguage: toLang, completion: { fromLang, toLang in
+                let controller = TranslateScreen(context: context, forceTheme: forceTheme, text: text, canCopy: canCopy, fromLanguage: fromLang, toLanguage: toLang, isExpanded: true)
                 controller.pushController = pushController ?? { _ in }
                 controller.presentController = presentController ?? { _ in }
                 presentController?(controller)

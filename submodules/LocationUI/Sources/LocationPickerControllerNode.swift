@@ -37,7 +37,7 @@ private enum LocationPickerEntryId: Hashable {
 
 private enum LocationPickerEntry: Comparable, Identifiable {
     case city(PresentationTheme, String, String, TelegramMediaMap?, Int64?, String?, CLLocationCoordinate2D?, String?)
-    case location(PresentationTheme, String, String, TelegramMediaMap?, Int64?, String?, CLLocationCoordinate2D?, String?)
+    case location(PresentationTheme, String, String, TelegramMediaMap?, Int64?, String?, CLLocationCoordinate2D?, String?, Bool)
     case liveLocation(PresentationTheme, String, String, CLLocationCoordinate2D?)
     case header(PresentationTheme, String)
     case venue(PresentationTheme, TelegramMediaMap?, Int64?, String?, Int)
@@ -68,8 +68,8 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .location(lhsTheme, lhsTitle, lhsSubtitle, lhsVenue, lhsQueryId, lhsResultId, lhsCoordinate, lhsName):
-                if case let .location(rhsTheme, rhsTitle, rhsSubtitle, rhsVenue, rhsQueryId, rhsResultId, rhsCoordinate, rhsName) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsVenue?.venue?.id == rhsVenue?.venue?.id, lhsQueryId == rhsQueryId && lhsResultId == rhsResultId, lhsCoordinate == rhsCoordinate, lhsName == rhsName {
+        case let .location(lhsTheme, lhsTitle, lhsSubtitle, lhsVenue, lhsQueryId, lhsResultId, lhsCoordinate, lhsName, lhsIsTop):
+                if case let .location(rhsTheme, rhsTitle, rhsSubtitle, rhsVenue, rhsQueryId, rhsResultId, rhsCoordinate, rhsName, rhsIsTop) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsVenue?.venue?.id == rhsVenue?.venue?.id, lhsQueryId == rhsQueryId && lhsResultId == rhsResultId, lhsCoordinate == rhsCoordinate, lhsName == rhsName, lhsIsTop == rhsIsTop {
                     return true
                 } else {
                     return false
@@ -161,7 +161,7 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                 }, highlighted: { highlighted in
                     interaction?.updateSendActionHighlight(highlighted)
                 })
-            case let .location(_, title, subtitle, venue, queryId, resultId, coordinate, name):
+            case let .location(_, title, subtitle, venue, queryId, resultId, coordinate, name, isTop):
                 let icon: LocationActionListItemIcon
                 if let venue = venue {
                     icon = .venue(venue)
@@ -175,7 +175,9 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                         interaction?.sendLocation(coordinate, name)
                     }
                 }, highlighted: { highlighted in
-                    interaction?.updateSendActionHighlight(highlighted)
+                    if isTop {
+                        interaction?.updateSendActionHighlight(highlighted)
+                    }
                 })
             case let .liveLocation(_, title, subtitle, coordinate):
                 return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), engine: engine, title: title, subtitle: subtitle, icon: .liveLocation, beginTimeAndTimeout: nil, action: {
@@ -585,7 +587,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                             case .pick:
                                 title = presentationData.strings.Map_SetThisLocation
                         }
-                        entries.append(.location(presentationData.theme, title, address ?? presentationData.strings.Map_Locating, nil, nil, nil, coordinate, state.street))
+                        entries.append(.location(presentationData.theme, title, address ?? presentationData.strings.Map_Locating, nil, nil, nil, coordinate, state.street, true))
                     case .selecting:
                         let title: String
                         switch strongSelf.mode {
@@ -598,7 +600,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                             case .pick:
                                 title = presentationData.strings.Map_SetThisLocation
                         }
-                        entries.append(.location(presentationData.theme, title, presentationData.strings.Map_Locating, nil, nil, nil, nil, nil))
+                        entries.append(.location(presentationData.theme, title, presentationData.strings.Map_Locating, nil, nil, nil, nil, nil, true))
                     case let .venue(venue, queryId, resultId):
                         let title: String
                         switch strongSelf.mode {
@@ -607,7 +609,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                             case .pick:
                                 title = presentationData.strings.Map_SetThisPlace
                         }
-                        entries.append(.location(presentationData.theme, title, venue.venue?.title ?? "", venue, queryId, resultId, venue.coordinate, nil))
+                        entries.append(.location(presentationData.theme, title, venue.venue?.title ?? "", venue, queryId, resultId, venue.coordinate, nil, true))
                     case .none:
                         let title: String
                         var coordinate = userLocation?.coordinate
@@ -627,10 +629,14 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                                 title = presentationData.strings.Map_SetThisLocation
                         }
                         if source == .story {
-                            entries.append(.city(presentationData.theme, state.city ?? presentationData.strings.Map_Locating, "City", nil, nil, nil, coordinate, state.city))
-                            entries.append(.location(presentationData.theme, state.street ?? presentationData.strings.Map_Locating, "Street", nil, nil, nil, coordinate, state.street))
+                            if state.city != "" {
+                                entries.append(.city(presentationData.theme, state.city ?? presentationData.strings.Map_Locating, "City", nil, nil, nil, coordinate, state.city))
+                            }
+                            if state.street != "" {
+                                entries.append(.location(presentationData.theme, state.street ?? presentationData.strings.Map_Locating, "Street", nil, nil, nil, coordinate, state.street, false))
+                            }
                         } else {
-                            entries.append(.location(presentationData.theme, title, (userLocation?.horizontalAccuracy).flatMap { presentationData.strings.Map_AccurateTo(stringForDistance(strings: presentationData.strings, distance: $0)).string } ?? presentationData.strings.Map_Locating, nil, nil, nil, coordinate, state.street))
+                            entries.append(.location(presentationData.theme, title, (userLocation?.horizontalAccuracy).flatMap { presentationData.strings.Map_AccurateTo(stringForDistance(strings: presentationData.strings, distance: $0)).string } ?? presentationData.strings.Map_Locating, nil, nil, nil, coordinate, state.street, true))
                         }
                 }
                 
@@ -781,9 +787,20 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                             var streetName: String?
                             if let city = placemark?.city, let country = placemark?.country {
                                 cityName = "\(city), \(country)"
+                            } else {
+                                cityName = ""
                             }
-                            if let street = placemark?.street, let city = placemark?.city {
-                                streetName = "\(street), \(city)"
+                            if let street = placemark?.street {
+                                if let city = placemark?.city {
+                                    streetName = "\(street), \(city)"
+                                } else {
+                                    streetName = street
+                                }
+                            } else {
+                                streetName = ""
+                            }
+                            if streetName == "" && cityName == "" {
+                                streetName = "Location"
                             }
                             strongSelf.updateState { state in
                                 var state = state
@@ -808,9 +825,20 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                                 var streetName: String?
                                 if let city = placemark?.city, let country = placemark?.country {
                                     cityName = "\(city), \(country)"
+                                } else {
+                                    cityName = ""
                                 }
-                                if let street = placemark?.street, let city = placemark?.city {
-                                    streetName = "\(street), \(city)"
+                                if let street = placemark?.street {
+                                    if let city = placemark?.city {
+                                        streetName = "\(street), \(city)"
+                                    } else {
+                                        streetName = street
+                                    }
+                                } else {
+                                    streetName = ""
+                                }
+                                if streetName == "" && cityName == "" {
+                                    streetName = "Location"
                                 }
                                 strongSelf.updateState { state in
                                     var state = state

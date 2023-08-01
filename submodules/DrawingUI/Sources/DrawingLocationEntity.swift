@@ -70,7 +70,7 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
         self.textView.keyboardAppearance = .dark
         self.textView.autocorrectionType = .default
         self.textView.spellCheckingType = .no
-        self.textView.textContainer.maximumNumberOfLines = 1
+        self.textView.textContainer.maximumNumberOfLines = 2
         self.textView.textContainer.lineBreakMode = .byTruncatingTail
         
         self.iconView = UIImageView()
@@ -111,7 +111,7 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
     public override func layoutSubviews() {
         super.layoutSubviews()
         
-        let iconSize = floor(self.bounds.height * 0.6)
+        let iconSize = min(76.0, floor(self.bounds.height * 0.6))
         self.iconView.frame = CGRect(origin: CGPoint(x: floor(iconSize * 0.2), y: floorToScreenPixels((self.bounds.height - iconSize) / 2.0)), size: CGSize(width: iconSize, height: iconSize))
         self.textView.frame = CGRect(origin: CGPoint(x: self.bounds.width - self.textSize.width, y: floorToScreenPixels((self.bounds.height - self.textSize.height) / 2.0)), size: self.textSize)
         self.backgroundView.frame = self.bounds
@@ -165,7 +165,7 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
         self.textView.font = font
         
         let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.alignment = .right
+        paragraphStyle.alignment = .left
         text.addAttribute(.paragraphStyle, value: paragraphStyle, range: range)
         
         let textColor: UIColor
@@ -202,7 +202,7 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
             self.textView.textColor = .white
             self.backgroundView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.2)
         }
-        self.textView.textAlignment = .right
+        self.textView.textAlignment = .left
         
         self.updateText()
         
