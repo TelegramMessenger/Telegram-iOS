@@ -46,7 +46,11 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
     public var referenceDrawingSize: CGSize
     public var position: CGPoint
     public var width: CGFloat
-    public var scale: CGFloat
+    public var scale: CGFloat {
+        didSet {
+            self.scale = min(2.5, self.scale)
+        }
+    }
     public var rotation: CGFloat
     
     public var center: CGPoint {
@@ -81,9 +85,6 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
         self.uuid = try container.decode(UUID.self, forKey: .uuid)
         self.title = try container.decode(String.self, forKey: .title)
         self.style = try container.decode(Style.self, forKey: .style)
-        
-        let locationData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .location)
-        self.location = TelegramMediaMap(decoder: PostboxDecoder(buffer: MemoryBuffer(data: locationData.data)))
         
         if let locationData = try container.decodeIfPresent(Data.self, forKey: .location) {
             self.location = PostboxDecoder(buffer: MemoryBuffer(data: locationData)).decodeRootObject() as! TelegramMediaMap

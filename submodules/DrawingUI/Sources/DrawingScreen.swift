@@ -2445,6 +2445,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                     }
                 },
                 onTextEditingEnded: { _ in },
+                editEntity: { _ in },
                 getCurrentImage: { [weak controller] in
                     return controller?.getCurrentImage()
                 },
@@ -2961,6 +2962,7 @@ public final class DrawingToolsInteraction {
     
     private let onInteractionUpdated: (Bool) -> Void
     private let onTextEditingEnded: (Bool) -> Void
+    private let editEntity: (DrawingEntity) -> Void
     
     public let getCurrentImage: () -> UIImage?
     private let getControllerNode: () -> ASDisplayNode?
@@ -2990,6 +2992,7 @@ public final class DrawingToolsInteraction {
         updateColor: @escaping (DrawingColor) -> Void,
         onInteractionUpdated: @escaping (Bool) -> Void,
         onTextEditingEnded: @escaping (Bool) -> Void,
+        editEntity: @escaping (DrawingEntity) -> Void,
         getCurrentImage: @escaping () -> UIImage?,
         getControllerNode: @escaping () -> ASDisplayNode?,
         present: @escaping (ViewController, PresentationContextType, Any?) -> Void,
@@ -3006,6 +3009,7 @@ public final class DrawingToolsInteraction {
         self.updateColor = updateColor
         self.onInteractionUpdated = onInteractionUpdated
         self.onTextEditingEnded = onTextEditingEnded
+        self.editEntity = editEntity
         self.getCurrentImage = getCurrentImage
         self.getControllerNode = getControllerNode
         self.present = present
@@ -3066,7 +3070,14 @@ public final class DrawingToolsInteraction {
                     self.entitiesView.remove(uuid: entityView.entity.uuid, animated: true)
                 }
             }))
-            if let entityView = entityView as? DrawingTextEntityView {
+            if let entityView = entityView as? DrawingLocationEntityView {
+                actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Edit, accessibilityLabel: presentationData.strings.Paint_Edit), action: { [weak self, weak entityView] in
+                    if let self, let entityView {
+                        self.editEntity(entityView.entity)
+                        self.entitiesView.selectEntity(entityView.entity)
+                    }
+                }))
+            } else if let entityView = entityView as? DrawingTextEntityView {
                 actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Edit, accessibilityLabel: presentationData.strings.Paint_Edit), action: { [weak self, weak entityView] in
                     if let self, let entityView {
                         entityView.beginEditing(accessoryView: self.textEditAccessoryView)
@@ -3117,11 +3128,8 @@ public final class DrawingToolsInteraction {
         self.isActive = false
     }
     
-    public func insertEntity(_ entity: DrawingEntity, scale: CGFloat? = nil) {
-        self.entitiesView.prepareNewEntity(entity)
-        if let scale {
-            entity.scale = scale
-        }
+    public func insertEntity(_ entity: DrawingEntity, scale: CGFloat? = nil, position: CGPoint? = nil) {
+        self.entitiesView.prepareNewEntity(entity, scale: scale, position: position)
         self.entitiesView.add(entity)
         self.entitiesView.selectEntity(entity, animate: !(entity is DrawingTextEntity))
         

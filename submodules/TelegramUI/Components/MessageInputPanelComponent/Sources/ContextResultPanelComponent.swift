@@ -186,10 +186,10 @@ final class ContextResultPanelComponent: Component {
             
             let visibleBounds = self.scrollView.bounds.insetBy(dx: 0.0, dy: -200.0)
             
-            var synchronousLoad = false
-            if let hint = transition.userData(PeerListItemComponent.TransitionHint.self) {
-                synchronousLoad = hint.synchronousLoad
-            }
+//            var synchronousLoad = false
+//            if let hint = transition.userData(PeerListItemComponent.TransitionHint.self) {
+//                synchronousLoad = hint.synchronousLoad
+//            }
             
             var validIds: [AnyHashable] = []
             if let range = itemLayout.visibleItems(for: visibleBounds), case let .mentions(peers) = component.results {
@@ -241,16 +241,16 @@ final class ContextResultPanelComponent: Component {
                         containerSize: itemFrame.size
                     )
                     if let itemView = visibleItem.view {
-                        var animateIn = false
+//                        var animateIn = false
                         if itemView.superview == nil {
-                            animateIn = true
+//                            animateIn = true
                             self.scrollView.addSubview(itemView)
                         }
                         itemTransition.setFrame(view: itemView, frame: itemFrame)
                         
-                        if animateIn, synchronousLoad {
-                            itemView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                        }
+//                        if animateIn {
+//                            itemView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+//                        }
                     }
                 }
             }
@@ -274,8 +274,8 @@ final class ContextResultPanelComponent: Component {
         }
         
         func update(component: ContextResultPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-            //let itemUpdated = self.component?.results != component.results
-            
+            var transition = transition
+            let previousComponent = self.component
             self.component = component
             self.state = state
             
@@ -305,6 +305,10 @@ final class ContextResultPanelComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 1000.0)
             )
+            
+            if previousComponent?.results != component.results {
+                transition = transition.withUserData(PeerListItemComponent.TransitionHint(synchronousLoad: true))
+            }
             
             let itemLayout = ItemLayout(
                 containerSize: CGSize(width: availableSize.width, height: minimizedHeight),
