@@ -297,7 +297,15 @@ public final class StoryFooterPanelComponent: Component {
             if viewCount != 0 {
                 regularSegments.append(.number(viewCount, NSAttributedString(string: "\(viewCount)", font: Font.regular(15.0), textColor: .white)))
             }
-            regularSegments.append(.text(1, NSAttributedString(string: viewCount == 1 ? " View" : " Views", font: Font.regular(15.0), textColor: .white)))
+            let viewPart: String
+            if viewCount == 0 {
+                viewPart = "No Views"
+            } else if viewCount == 1 {
+                viewPart = " View"
+            } else {
+                viewPart = " Views"
+            }
+            regularSegments.append(.text(1, NSAttributedString(string: viewPart, font: Font.regular(15.0), textColor: .white)))
             
             var expandedSegments: [AnimatedCountLabelView.Segment] = []
             if viewCount != 0 {
