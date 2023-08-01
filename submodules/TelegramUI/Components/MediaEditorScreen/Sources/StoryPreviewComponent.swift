@@ -266,6 +266,8 @@ final class StoryPreviewComponent: Component {
                     stopAndPreviewMediaRecording: nil,
                     discardMediaRecordingPreview: nil,
                     attachmentAction: { },
+                    hasLike: false,
+                    likeAction: nil,
                     inputModeAction: nil,
                     timeoutAction: nil,
                     forwardAction: {},

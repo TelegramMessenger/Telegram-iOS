@@ -327,7 +327,7 @@ final class PeerInfoStoryGridScreenComponent: Component {
                 let buttonText: String
                 switch component.scope {
                 case .saved:
-                    buttonText = environment.strings.Common_Delete
+                    buttonText = environment.strings.ChatList_Context_Archive
                 case .archive:
                     buttonText = environment.strings.StoryList_SaveToProfile
                 }
@@ -350,31 +350,22 @@ final class PeerInfoStoryGridScreenComponent: Component {
                             
                             switch component.scope {
                             case .saved:
-                                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
-                                let actionSheet = ActionSheetController(presentationData: presentationData)
+                                let selectedCount = paneNode.selectedItems.count
+                                let _ = component.context.engine.messages.updateStoriesArePinned(ids: paneNode.selectedItems, isPinned: false).start()
                                 
-                                actionSheet.setItemGroups([
-                                    ActionSheetItemGroup(items: [
-                                        ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: { [weak self, weak actionSheet] in
-                                            actionSheet?.dismissAnimated()
-                                            
-                                            guard let self, let paneNode = self.paneNode, let component = self.component else {
-                                                return
-                                            }
-                                            let _ = component.context.engine.messages.deleteStories(ids: Array(paneNode.selectedIds)).start()
-                                            
-                                            paneNode.setIsSelectionModeActive(false)
-                                            (self.environment?.controller() as? PeerInfoStoryGridScreen)?.updateTitle()
-                                        })
-                                    ]),
-                                    ActionSheetItemGroup(items: [
-                                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                            actionSheet?.dismissAnimated()
-                                        })
-                                    ])
-                                ])
+                                paneNode.setIsSelectionModeActive(false)
+                                (self.environment?.controller() as? PeerInfoStoryGridScreen)?.updateTitle()
                                 
-                                self.environment?.controller()?.present(actionSheet, in: .window(.root))
+                                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
+                                
+                                let title: String = presentationData.strings.StoryList_TooltipStoriesSavedToProfile(Int32(selectedCount))
+                                environment.controller()?.present(UndoOverlayController(
+                                    presentationData: presentationData,
+                                    content: .info(title: nil, text: title, timeout: nil),
+                                    elevatedLayout: false,
+                                    animateInAsReplacement: false,
+                                    action: { _ in return false }
+                                ), in: .current)
                             case .archive:
                                 let _ = component.context.engine.messages.updateStoriesArePinned(ids: paneNode.selectedItems, isPinned: true).start()
                                 
@@ -591,7 +582,9 @@ public class PeerInfoStoryGridScreen: ViewControllerComponentContainer {
                 return
             }
             let title: String?
-            if let paneStatusText = componentView.paneStatusText, !paneStatusText.isEmpty {
+            if componentView.selectedCount != 0 {
+                title = presentationData.strings.StoryList_SubtitleSelected(Int32(componentView.selectedCount))
+            } else if let paneStatusText = componentView.paneStatusText, !paneStatusText.isEmpty {
                 title = paneStatusText
             } else {
                 title = nil

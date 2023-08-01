@@ -137,6 +137,7 @@ public enum Stories {
             case isSelectedContacts
             case isForwardingDisabled
             case isEdited
+            case hasLike
         }
         
         public let id: Int32
@@ -156,6 +157,7 @@ public enum Stories {
         public let isSelectedContacts: Bool
         public let isForwardingDisabled: Bool
         public let isEdited: Bool
+        public let hasLike: Bool
         
         public init(
             id: Int32,
@@ -174,7 +176,8 @@ public enum Stories {
             isContacts: Bool,
             isSelectedContacts: Bool,
             isForwardingDisabled: Bool,
-            isEdited: Bool
+            isEdited: Bool,
+            hasLike: Bool
         ) {
             self.id = id
             self.timestamp = timestamp
@@ -193,6 +196,7 @@ public enum Stories {
             self.isSelectedContacts = isSelectedContacts
             self.isForwardingDisabled = isForwardingDisabled
             self.isEdited = isEdited
+            self.hasLike = hasLike
         }
         
         public init(from decoder: Decoder) throws {
@@ -221,6 +225,7 @@ public enum Stories {
             self.isSelectedContacts = try container.decodeIfPresent(Bool.self, forKey: .isSelectedContacts) ?? false
             self.isForwardingDisabled = try container.decodeIfPresent(Bool.self, forKey: .isForwardingDisabled) ?? false
             self.isEdited = try container.decodeIfPresent(Bool.self, forKey: .isEdited) ?? false
+            self.hasLike = try container.decodeIfPresent(Bool.self, forKey: .hasLike) ?? false
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -250,6 +255,7 @@ public enum Stories {
             try container.encode(self.isSelectedContacts, forKey: .isSelectedContacts)
             try container.encode(self.isForwardingDisabled, forKey: .isForwardingDisabled)
             try container.encode(self.isEdited, forKey: .isEdited)
+            try container.encode(self.hasLike, forKey: .hasLike)
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -309,6 +315,9 @@ public enum Stories {
                 return false
             }
             if lhs.isEdited != rhs.isEdited {
+                return false
+            }
+            if lhs.hasLike != rhs.hasLike {
                 return false
             }
             
@@ -959,7 +968,8 @@ func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId
                                                         isContacts: item.isContacts,
                                                         isSelectedContacts: item.isSelectedContacts,
                                                         isForwardingDisabled: item.isForwardingDisabled,
-                                                        isEdited: item.isEdited
+                                                        isEdited: item.isEdited,
+                                                        hasLike: item.hasLike
                                                     )
                                                     if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                                                         items.append(StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends))
@@ -1122,7 +1132,8 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
                 isContacts: item.isContacts,
                 isSelectedContacts: item.isSelectedContacts,
                 isForwardingDisabled: item.isForwardingDisabled,
-                isEdited: item.isEdited
+                isEdited: item.isEdited,
+                hasLike: item.hasLike
             )
             if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                 transaction.setStory(id: storyId, value: entry)
@@ -1149,7 +1160,8 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
                 isContacts: item.isContacts,
                 isSelectedContacts: item.isSelectedContacts,
                 isForwardingDisabled: item.isForwardingDisabled,
-                isEdited: item.isEdited
+                isEdited: item.isEdited,
+                hasLike: item.hasLike
             )
             if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                 items[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
@@ -1276,7 +1288,8 @@ func _internal_updateStoriesArePinned(account: Account, ids: [Int32: EngineStory
                     isContacts: item.isContacts,
                     isSelectedContacts: item.isSelectedContacts,
                     isForwardingDisabled: item.isForwardingDisabled,
-                    isEdited: item.isEdited
+                    isEdited: item.isEdited,
+                    hasLike: item.hasLike
                 )
                 if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                     items[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
@@ -1302,7 +1315,8 @@ func _internal_updateStoriesArePinned(account: Account, ids: [Int32: EngineStory
                     isContacts: item.isContacts,
                     isSelectedContacts: item.isSelectedContacts,
                     isForwardingDisabled: item.isForwardingDisabled,
-                    isEdited: item.isEdited
+                    isEdited: item.isEdited,
+                    hasLike: item.hasLike
                 )
                 updatedItems.append(updatedItem)
             }
@@ -1420,7 +1434,8 @@ extension Stories.StoredItem {
                     isContacts: isContacts,
                     isSelectedContacts: isSelectedContacts,
                     isForwardingDisabled: isForwardingDisabled,
-                    isEdited: isEdited
+                    isEdited: isEdited,
+                    hasLike: false
                 )
                 self = .item(item)
             } else {
@@ -1585,15 +1600,18 @@ public final class EngineStoryViewListContext {
         public let peer: EnginePeer
         public let timestamp: Int32
         public let storyStats: PeerStoryStats?
+        public let isLike: Bool
         
         public init(
             peer: EnginePeer,
             timestamp: Int32,
-            storyStats: PeerStoryStats?
+            storyStats: PeerStoryStats?,
+            isLike: Bool
         ) {
             self.peer = peer
             self.timestamp = timestamp
             self.storyStats = storyStats
+            self.isLike = isLike
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -1604,6 +1622,9 @@ public final class EngineStoryViewListContext {
                 return false
             }
             if lhs.storyStats != rhs.storyStats {
+                return false
+            }
+            if lhs.isLike != rhs.isLike {
                 return false
             }
             return true
@@ -1726,7 +1747,7 @@ public final class EngineStoryViewListContext {
                                         return previousData.withUpdatedIsBlocked(isBlocked).withUpdatedFlags(updatedFlags)
                                     })
                                     if let peer = transaction.getPeer(peerId) {
-                                        items.append(Item(peer: EnginePeer(peer), timestamp: date, storyStats: transaction.getPeerStoryStats(peerId: peerId)))
+                                        items.append(Item(peer: EnginePeer(peer), timestamp: date, storyStats: transaction.getPeerStoryStats(peerId: peerId), isLike: false))
                                         
                                         nextOffset = NextOffset(id: userId, timestamp: date)
                                     }
@@ -1751,7 +1772,8 @@ public final class EngineStoryViewListContext {
                                     isContacts: item.isContacts,
                                     isSelectedContacts: item.isSelectedContacts,
                                     isForwardingDisabled: item.isForwardingDisabled,
-                                    isEdited: item.isEdited
+                                    isEdited: item.isEdited,
+                                    hasLike: item.hasLike
                                 ))
                                 if let entry = CodableEntry(updatedItem) {
                                     transaction.setStory(id: StoryId(peerId: account.peerId, id: storyId), value: entry)
@@ -1779,7 +1801,8 @@ public final class EngineStoryViewListContext {
                                             isContacts: item.isContacts,
                                             isSelectedContacts: item.isSelectedContacts,
                                             isForwardingDisabled: item.isForwardingDisabled,
-                                            isEdited: item.isEdited
+                                            isEdited: item.isEdited,
+                                            hasLike: item.hasLike
                                         ))
                                         if let entry = CodableEntry(updatedItem) {
                                             currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
@@ -1849,7 +1872,8 @@ public final class EngineStoryViewListContext {
                             items[i] = Item(
                                 peer: item.peer,
                                 timestamp: item.timestamp,
-                                storyStats: value
+                                storyStats: value,
+                                isLike: false
                             )
                         }
                     }
@@ -2121,4 +2145,67 @@ public func _internal_setStoryNotificationWasDisplayed(transaction: Transaction,
     key.setInt64(0, value: id.peerId.toInt64())
     key.setInt32(8, value: id.id)
     transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.displayedStoryNotifications, key: key), entry: CodableEntry(data: Data()))
+}
+
+func _internal_setStoryLike(account: Account, peerId: EnginePeer.Id, id: Int32, hasLike: Bool) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Void in
+        var currentItems = transaction.getStoryItems(peerId: peerId)
+        for i in 0 ..< currentItems.count {
+            if currentItems[i].id == id {
+                if case let .item(item) = currentItems[i].value.get(Stories.StoredItem.self) {
+                    let updatedItem: Stories.StoredItem = .item(Stories.Item(
+                        id: item.id,
+                        timestamp: item.timestamp,
+                        expirationTimestamp: item.expirationTimestamp,
+                        media: item.media,
+                        mediaAreas: item.mediaAreas,
+                        text: item.text,
+                        entities: item.entities,
+                        views: item.views,
+                        privacy: item.privacy,
+                        isPinned: item.isPinned,
+                        isExpired: item.isEdited,
+                        isPublic: item.isPublic,
+                        isCloseFriends: item.isCloseFriends,
+                        isContacts: item.isContacts,
+                        isSelectedContacts: item.isSelectedContacts,
+                        isForwardingDisabled: item.isForwardingDisabled,
+                        isEdited: item.isEdited,
+                        hasLike: hasLike
+                    ))
+                    if let entry = CodableEntry(updatedItem) {
+                        currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
+                    }
+                }
+            }
+        }
+        transaction.setStoryItems(peerId: peerId, items: currentItems)
+        
+        if let current = transaction.getStory(id: StoryId(peerId: peerId, id: id))?.get(Stories.StoredItem.self), case let .item(item) = current {
+            let updatedItem: Stories.StoredItem = .item(Stories.Item(
+                id: item.id,
+                timestamp: item.timestamp,
+                expirationTimestamp: item.expirationTimestamp,
+                media: item.media,
+                mediaAreas: item.mediaAreas,
+                text: item.text,
+                entities: item.entities,
+                views: item.views,
+                privacy: item.privacy,
+                isPinned: item.isPinned,
+                isExpired: item.isEdited,
+                isPublic: item.isPublic,
+                isCloseFriends: item.isCloseFriends,
+                isContacts: item.isContacts,
+                isSelectedContacts: item.isSelectedContacts,
+                isForwardingDisabled: item.isForwardingDisabled,
+                isEdited: item.isEdited,
+                hasLike: hasLike
+            ))
+            if let entry = CodableEntry(updatedItem) {
+                transaction.setStory(id: StoryId(peerId: peerId, id: id), value: entry)
+            }
+        }
+    }
+    |> ignoreValues
 }

@@ -196,6 +196,9 @@ public final class StoryItemSetContainerComponent: Component {
         if lhs.context !== rhs.context {
             return false
         }
+        if lhs.availableReactions !== rhs.availableReactions {
+            return false
+        }
         if lhs.slice != rhs.slice {
             return false
         }
@@ -288,6 +291,7 @@ public final class StoryItemSetContainerComponent: Component {
     
     final class VisibleItem {
         let externalState = StoryContentItem.ExternalState()
+        let unclippedContainerView: UIView
         let contentContainerView: UIView
         let contentTintLayer = SimpleLayer()
         let view = ComponentView<StoryContentItem.Environment>()
@@ -296,6 +300,9 @@ public final class StoryItemSetContainerComponent: Component {
         var requestedNext: Bool = false
         
         init() {
+            self.unclippedContainerView = UIView()
+            self.unclippedContainerView.isUserInteractionEnabled = false
+            
             self.contentContainerView = UIView()
             self.contentContainerView.clipsToBounds = true
             if #available(iOS 13.0, *) {
@@ -370,6 +377,7 @@ public final class StoryItemSetContainerComponent: Component {
         
         let itemsContainerView: UIView
         let controlsContainerView: UIView
+        let controlsClippingView: UIView
         let topContentGradientView: UIImageView
         let bottomContentGradientLayer: SimpleGradientLayer
         let contentDimView: UIView
@@ -453,9 +461,10 @@ public final class StoryItemSetContainerComponent: Component {
             self.scroller.delaysContentTouches = false
             
             self.controlsContainerView = SparseContainerView()
-            self.controlsContainerView.clipsToBounds = true
+            self.controlsClippingView = SparseContainerView()
+            self.controlsClippingView.clipsToBounds = true
             if #available(iOS 13.0, *) {
-                self.controlsContainerView.layer.cornerCurve = .continuous
+                self.controlsClippingView.layer.cornerCurve = .continuous
             }
             
             self.topContentGradientView = UIImageView()
@@ -486,14 +495,15 @@ public final class StoryItemSetContainerComponent: Component {
             self.itemsContainerView.addGestureRecognizer(self.scroller.panGestureRecognizer)
             
             self.addSubview(self.itemsContainerView)
+            self.addSubview(self.controlsClippingView)
             self.addSubview(self.controlsContainerView)
             
-            self.controlsContainerView.addSubview(self.contentDimView)
-            self.controlsContainerView.addSubview(self.topContentGradientView)
+            self.controlsClippingView.addSubview(self.contentDimView)
+            self.controlsClippingView.addSubview(self.topContentGradientView)
             self.layer.addSublayer(self.bottomContentGradientLayer)
             
             self.closeButton.addSubview(self.closeButtonIconView)
-            self.controlsContainerView.addSubview(self.closeButton)
+            self.controlsClippingView.addSubview(self.closeButton)
             self.closeButton.addTarget(self, action: #selector(self.closePressed), for: .touchUpInside)
             
             self.addSubview(self.viewListsContainer)
@@ -659,6 +669,15 @@ public final class StoryItemSetContainerComponent: Component {
                 if captionItemView.hitTest(self.convert(point, to: captionItemView), with: nil) != nil {
                     return false
                 }
+            }
+            
+            if self.controlsClippingView.frame.contains(point) {
+                if let result = self.controlsClippingView.hitTest(self.convert(point, to: self.controlsClippingView), with: nil) {
+                    if result != self.controlsClippingView {
+                        return false
+                    }
+                }
+                return true
             }
             
             if self.controlsContainerView.frame.contains(point) {
@@ -932,9 +951,11 @@ public final class StoryItemSetContainerComponent: Component {
             guard let result = super.hitTest(point, with: event) else {
                 return nil
             }
+            
             if result === self.scroller {
                 return self.itemsContainerView
             }
+            
             return result
         }
         
@@ -1202,6 +1223,7 @@ public final class StoryItemSetContainerComponent: Component {
                         if visibleItem.contentContainerView.superview == nil {
                             self.itemsContainerView.addSubview(visibleItem.contentContainerView)
                             self.itemsContainerView.layer.addSublayer(visibleItem.contentTintLayer)
+                            self.itemsContainerView.addSubview(visibleItem.unclippedContainerView)
                             visibleItem.contentContainerView.addSubview(view)
                         }
                         
@@ -1216,9 +1238,13 @@ public final class StoryItemSetContainerComponent: Component {
                             if !self.trulyValidIds.contains(itemId), let visibleItem = self.visibleItems[itemId] {
                                 self.visibleItems.removeValue(forKey: itemId)
                                 visibleItem.contentContainerView.removeFromSuperview()
+                                visibleItem.unclippedContainerView.removeFromSuperview()
                             }
                         })
                         itemTransition.setBounds(view: visibleItem.contentContainerView, bounds: CGRect(origin: CGPoint(), size: itemLayout.contentFrame.size))
+                        
+                        itemTransition.setPosition(view: visibleItem.unclippedContainerView, position: CGPoint(x: itemPositionX, y: itemLayout.contentFrame.center.y))
+                        itemTransition.setBounds(view: visibleItem.unclippedContainerView, bounds: CGRect(origin: CGPoint(), size: itemLayout.contentFrame.size))
                         
                         itemTransition.setPosition(layer: visibleItem.contentTintLayer, position: CGPoint(x: itemPositionX, y: itemLayout.contentFrame.center.y))
                         itemTransition.setBounds(layer: visibleItem.contentTintLayer, bounds: CGRect(origin: CGPoint(), size: itemLayout.contentFrame.size))
@@ -1239,6 +1265,8 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         itemTransition.setTransform(view: visibleItem.contentContainerView, transform: transform)
                         itemTransition.setCornerRadius(layer: visibleItem.contentContainerView.layer, cornerRadius: 12.0 * (1.0 / itemScale))
+                        
+                        itemTransition.setTransform(view: visibleItem.unclippedContainerView, transform: transform)
                         
                         itemTransition.setTransform(layer: visibleItem.contentTintLayer, transform: transform)
                         
@@ -1270,6 +1298,7 @@ public final class StoryItemSetContainerComponent: Component {
                 if !validIds.contains(id) {
                     removeIds.append(id)
                     visibleItem.contentContainerView.removeFromSuperview()
+                    visibleItem.unclippedContainerView.removeFromSuperview()
                     visibleItem.contentTintLayer.removeFromSuperlayer()
                 }
             }
@@ -1390,7 +1419,10 @@ public final class StoryItemSetContainerComponent: Component {
                 captionItemView.layer.animateAlpha(from: 0.0, to: captionItemView.alpha, duration: 0.28)
             }
             
-            if let component = self.component, let sourceView = transitionIn.sourceView, let contentContainerView = self.visibleItems[component.slice.item.storyItem.id]?.contentContainerView {
+            if let component = self.component, let sourceView = transitionIn.sourceView, let visibleItem = self.visibleItems[component.slice.item.storyItem.id] {
+                let contentContainerView = visibleItem.contentContainerView
+                let unclippedContainerView = visibleItem.unclippedContainerView
+                
                 if let centerInfoView = self.centerInfoItem?.view.view {
                     centerInfoView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                 }
@@ -1431,11 +1463,17 @@ public final class StoryItemSetContainerComponent: Component {
                     duration: 0.3
                 )
                 
+                unclippedContainerView.layer.animatePosition(from: sourceLocalFrame.center, to: contentContainerView.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                unclippedContainerView.layer.animateBounds(from: CGRect(origin: CGPoint(x: innerSourceLocalFrame.minX, y: innerSourceLocalFrame.minY), size: sourceLocalFrame.size), to: contentContainerView.bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                
                 self.controlsContainerView.layer.animatePosition(from: sourceLocalFrame.center, to: self.controlsContainerView.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                 self.controlsContainerView.layer.animateBounds(from: CGRect(origin: CGPoint(x: innerSourceLocalFrame.minX, y: innerSourceLocalFrame.minY), size: sourceLocalFrame.size), to: self.controlsContainerView.bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-                self.controlsContainerView.layer.animate(
+                
+                self.controlsClippingView.layer.animatePosition(from: sourceLocalFrame.center, to: self.controlsClippingView.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                self.controlsClippingView.layer.animateBounds(from: CGRect(origin: CGPoint(x: innerSourceLocalFrame.minX, y: innerSourceLocalFrame.minY), size: sourceLocalFrame.size), to: self.controlsClippingView.bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                self.controlsClippingView.layer.animate(
                     from: transitionIn.sourceCornerRadius as NSNumber,
-                    to: self.controlsContainerView.layer.cornerRadius as NSNumber,
+                    to: self.controlsClippingView.layer.cornerRadius as NSNumber,
                     keyPath: "cornerRadius",
                     timingFunction: kCAMediaTimingFunctionSpring,
                     duration: 0.3
@@ -1532,7 +1570,10 @@ public final class StoryItemSetContainerComponent: Component {
                 })
             }
             
-            if let component = self.component, let sourceView = transitionOut.destinationView, let contentContainerView = self.visibleItems[component.slice.item.storyItem.id]?.contentContainerView {
+            if let component = self.component, let sourceView = transitionOut.destinationView, let visibleItem = self.visibleItems[component.slice.item.storyItem.id] {
+                let contentContainerView = visibleItem.contentContainerView
+                let unclippedContainerView = visibleItem.unclippedContainerView
+                
                 let sourceLocalFrame = sourceView.convert(transitionOut.destinationRect, to: self)
                 let innerSourceLocalFrame = CGRect(origin: CGPoint(x: sourceLocalFrame.minX - contentContainerView.frame.minX, y: sourceLocalFrame.minY - contentContainerView.frame.minY), size: sourceLocalFrame.size)
                 
@@ -1614,7 +1655,9 @@ public final class StoryItemSetContainerComponent: Component {
                             }
                             
                             contentContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+                            unclippedContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
                             self.controlsContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+                            self.controlsClippingView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
                             
                             for transitionViewImpl in transitionViewsImpl {
                                 transition.setFrame(view: transitionViewImpl, frame: sourceLocalFrame)
@@ -1652,10 +1695,16 @@ public final class StoryItemSetContainerComponent: Component {
                     removeOnCompletion: false
                 )
                 
+                unclippedContainerView.layer.animatePosition(from: contentContainerView.center, to: sourceLocalFrame.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                unclippedContainerView.layer.animateBounds(from: contentContainerView.bounds, to: CGRect(origin: CGPoint(x: innerSourceLocalFrame.minX, y: innerSourceLocalFrame.minY), size: sourceLocalFrame.size), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                
                 self.controlsContainerView.layer.animatePosition(from: self.controlsContainerView.center, to: sourceLocalFrame.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                 self.controlsContainerView.layer.animateBounds(from: self.controlsContainerView.bounds, to: CGRect(origin: CGPoint(x: innerSourceLocalFrame.minX, y: innerSourceLocalFrame.minY), size: sourceLocalFrame.size), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-                self.controlsContainerView.layer.animate(
-                    from: self.controlsContainerView.layer.cornerRadius as NSNumber,
+                
+                self.controlsClippingView.layer.animatePosition(from: self.controlsClippingView.center, to: sourceLocalFrame.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                self.controlsClippingView.layer.animateBounds(from: self.controlsClippingView.bounds, to: CGRect(origin: CGPoint(x: innerSourceLocalFrame.minX, y: innerSourceLocalFrame.minY), size: sourceLocalFrame.size), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                self.controlsClippingView.layer.animate(
+                    from: self.controlsClippingView.layer.cornerRadius as NSNumber,
                     to: transitionOut.destinationCornerRadius as NSNumber,
                     keyPath: "cornerRadius",
                     timingFunction: kCAMediaTimingFunctionSpring,
@@ -1716,7 +1765,9 @@ public final class StoryItemSetContainerComponent: Component {
                             transitionViewImpl.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
                         }
                         contentContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                        unclippedContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
                         self.controlsContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                        self.controlsClippingView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
                         
                         for transitionViewImpl in transitionViewsImpl {
                             transition.setFrame(view: transitionViewImpl, frame: sourceLocalFrame)
@@ -1988,6 +2039,13 @@ public final class StoryItemSetContainerComponent: Component {
                             return
                         }
                         self.sendMessageContext.presentAttachmentMenu(view: self, subject: .default)
+                    },
+                    hasLike: component.slice.item.storyItem.hasLike,
+                    likeAction: component.slice.peer.isService ? nil : { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.performLikeAction()
                     },
                     inputModeAction: { [weak self] in
                         guard let self else {
@@ -2378,12 +2436,13 @@ public final class StoryItemSetContainerComponent: Component {
                                     }
 
                                     if isContact {
+                                        //TODO:localize
                                         itemList.append(.action(ContextMenuActionItem(text: "Delete Contact", textColor: .destructive, icon: { theme in
                                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                                         }, action: { [weak self] _, f in
                                             f(.default)
                                             
-                                            let _ = component.context.engine.contacts.deleteContactPeerInteractively(peerId: peer.id)
+                                            let _ = component.context.engine.contacts.deleteContactPeerInteractively(peerId: peer.id).start()
                                             
                                             guard let self else {
                                                 return
@@ -2568,6 +2627,9 @@ public final class StoryItemSetContainerComponent: Component {
             transition.setPosition(view: self.controlsContainerView, position: contentFrame.center)
             transition.setBounds(view: self.controlsContainerView, bounds: CGRect(origin: CGPoint(), size: contentFrame.size))
             
+            transition.setPosition(view: self.controlsClippingView, position: contentFrame.center)
+            transition.setBounds(view: self.controlsClippingView, bounds: CGRect(origin: CGPoint(), size: contentFrame.size))
+            
             var transform = CATransform3DMakeScale(contentVisualScale, contentVisualScale, 1.0)
             if let pinchState = component.pinchState {
                 let pinchOffset = CGPoint(
@@ -2583,8 +2645,9 @@ public final class StoryItemSetContainerComponent: Component {
                 transform = CATransform3DScale(transform, pinchState.scale, pinchState.scale, 0.0)
             }
             transition.setTransform(view: self.controlsContainerView, transform: transform)
+            transition.setTransform(view: self.controlsClippingView, transform: transform)
             
-            transition.setCornerRadius(layer: self.controlsContainerView.layer, cornerRadius: 12.0 * (1.0 / contentVisualScale))
+            transition.setCornerRadius(layer: self.controlsClippingView.layer, cornerRadius: 12.0 * (1.0 / contentVisualScale))
             
             var headerRightOffset: CGFloat = availableSize.width
             
@@ -2630,7 +2693,7 @@ public final class StoryItemSetContainerComponent: Component {
             )
             if let moreButtonView = self.moreButton.view {
                 if moreButtonView.superview == nil {
-                    self.controlsContainerView.addSubview(moreButtonView)
+                    self.controlsClippingView.addSubview(moreButtonView)
                 }
                 moreButtonView.isUserInteractionEnabled = !component.slice.item.storyItem.isPending
                 transition.setFrame(view: moreButtonView, frame: CGRect(origin: CGPoint(x: headerRightOffset - moreButtonSize.width, y: 2.0), size: moreButtonSize))
@@ -2697,7 +2760,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             if let soundButtonView = self.soundButton.view {
                 if soundButtonView.superview == nil {
-                    self.controlsContainerView.addSubview(soundButtonView)
+                    self.controlsClippingView.addSubview(soundButtonView)
                 }
                 transition.setFrame(view: soundButtonView, frame: CGRect(origin: CGPoint(x: headerRightOffset - soundButtonSize.width, y: 2.0), size: soundButtonSize))
                 transition.setAlpha(view: soundButtonView, alpha: soundAlpha)
@@ -2799,7 +2862,7 @@ public final class StoryItemSetContainerComponent: Component {
                 let closeFriendIconFrame = CGRect(origin: CGPoint(x: headerRightOffset - privacyIconSize.width - 8.0, y: 22.0), size: privacyIconSize)
                 if let closeFriendIconView = privacyIcon.view {
                     if closeFriendIconView.superview == nil {
-                        self.controlsContainerView.addSubview(closeFriendIconView)
+                        self.controlsClippingView.addSubview(closeFriendIconView)
                     }
                     
                     privacyIconTransition.setFrame(view: closeFriendIconView, frame: closeFriendIconFrame)
@@ -2810,7 +2873,9 @@ public final class StoryItemSetContainerComponent: Component {
                 closeFriendIcon.view?.removeFromSuperview()
             }
             
-            transition.setAlpha(view: self.controlsContainerView, alpha: (component.hideUI || self.isEditingStory || self.displayViewList) ? 0.0 : 1.0)
+            let controlsContainerAlpha = (component.hideUI || self.isEditingStory || self.displayViewList) ? 0.0 : 1.0
+            transition.setAlpha(view: self.controlsContainerView, alpha: controlsContainerAlpha)
+            transition.setAlpha(view: self.controlsClippingView, alpha: controlsContainerAlpha)
             
             let focusedItem: StoryContentItem? = component.slice.item
             
@@ -2887,7 +2952,7 @@ public final class StoryItemSetContainerComponent: Component {
                 if let view = currentCenterInfoItem.view.view {
                     var animateIn = false
                     if view.superview == nil {
-                        self.controlsContainerView.insertSubview(view, belowSubview: self.closeButton)
+                        self.controlsClippingView.insertSubview(view, belowSubview: self.closeButton)
                         animateIn = true
                     }
                     transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: 0.0, y: 10.0), size: centerInfoItemSize))
@@ -2921,7 +2986,7 @@ public final class StoryItemSetContainerComponent: Component {
                 if let view = currentLeftInfoItem.view.view {
                     var animateIn = false
                     if view.superview == nil {
-                        self.controlsContainerView.addSubview(view)
+                        self.controlsClippingView.addSubview(view)
                         animateIn = true
                     }
                     transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: 12.0, y: 18.0), size: leftInfoItemSize))
@@ -3469,7 +3534,7 @@ public final class StoryItemSetContainerComponent: Component {
                 if let navigationStripView = self.navigationStrip.view {
                     if navigationStripView.superview == nil {
                         navigationStripView.isUserInteractionEnabled = false
-                        self.controlsContainerView.addSubview(navigationStripView)
+                        self.controlsClippingView.addSubview(navigationStripView)
                     }
                     transition.setFrame(view: navigationStripView, frame: CGRect(origin: CGPoint(x: navigationStripSideInset, y: navigationStripTopInset), size: CGSize(width: availableSize.width - navigationStripSideInset * 2.0, height: 2.0)))
                     transition.setAlpha(view: navigationStripView, alpha: self.isEditingStory ? 0.0 : 1.0)
@@ -3995,6 +4060,65 @@ public final class StoryItemSetContainerComponent: Component {
             } else {
                 self.performOtherMoreAction(sourceView: sourceView, gesture: gesture)
             }
+        }
+        
+        private func performLikeAction() {
+            guard let component = self.component else {
+                return
+            }
+            guard let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View else {
+                return
+            }
+            guard let likeButtonView = inputPanelView.likeButtonView else {
+                return
+            }
+            
+            let _ = component.context.engine.messages.setStoryLike(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, hasLike: !component.slice.item.storyItem.hasLike).start()
+            
+            if component.slice.item.storyItem.hasLike {
+                return
+            }
+            
+            var reactionItem: ReactionItem?
+            guard let availableReactions = component.availableReactions else {
+                return
+            }
+            for item in availableReactions.reactionItems {
+                if case .builtin("❤") = item.reaction.rawValue {
+                    reactionItem = item
+                    break
+                }
+            }
+            
+            guard let reactionItem else {
+                return
+            }
+            
+            let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: nil, useDirectRendering: false)
+            self.addSubnode(standaloneReactionAnimation)
+            standaloneReactionAnimation.frame = self.bounds
+            standaloneReactionAnimation.animateReactionSelection(
+                context: component.context,
+                theme: component.theme,
+                animationCache: component.context.animationCache,
+                reaction: reactionItem,
+                avatarPeers: [],
+                playHaptic: true,
+                isLarge: false,
+                hideCenterAnimation: true,
+                targetView: likeButtonView,
+                addStandaloneReactionAnimation: { [weak self] standaloneReactionAnimation in
+                    guard let self else {
+                        return
+                    }
+                    
+                    standaloneReactionAnimation.frame = self.bounds
+                    self.addSubnode(standaloneReactionAnimation)
+                },
+                completion: { [weak standaloneReactionAnimation] in
+                    standaloneReactionAnimation?.removeFromSupernode()
+                }
+            )
         }
         
         func dismissAllTooltips() {

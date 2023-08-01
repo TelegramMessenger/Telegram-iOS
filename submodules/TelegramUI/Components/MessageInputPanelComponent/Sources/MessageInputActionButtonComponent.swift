@@ -19,6 +19,12 @@ private extension MessageInputActionButtonComponent.Mode {
             return "Chat/Input/Text/IconAttachment"
         case .forward:
             return "Chat/Input/Text/IconForwardSend"
+        case let .like(isActive):
+            if isActive {
+                return "Stories/InputLikeOn"
+            } else {
+                return "Stories/InputLikeOff"
+            }
         default:
             return nil
         }
@@ -26,7 +32,7 @@ private extension MessageInputActionButtonComponent.Mode {
 }
 
 public final class MessageInputActionButtonComponent: Component {
-    public enum Mode {
+    public enum Mode: Equatable {
         case none
         case send
         case apply
@@ -37,6 +43,7 @@ public final class MessageInputActionButtonComponent: Component {
         case attach
         case forward
         case more
+        case like(isActive: Bool)
     }
     
     public enum Action {
@@ -299,7 +306,7 @@ public final class MessageInputActionButtonComponent: Component {
             switch component.mode {
             case .none:
                 break
-            case .send, .apply, .attach, .delete, .forward:
+            case .send, .apply, .attach, .delete, .forward, .like:
                 sendAlpha = 1.0
             case .more:
                 moreAlpha = 1.0
@@ -311,7 +318,11 @@ public final class MessageInputActionButtonComponent: Component {
             
             if self.sendIconView.image == nil || previousComponent?.mode.iconName != component.mode.iconName {
                 if let iconName = component.mode.iconName {
-                    self.sendIconView.image = generateTintedImage(image: UIImage(bundleImageName: iconName), color: .white)
+                    var tintColor: UIColor = .white
+                    if case .like(true) = component.mode {
+                        tintColor = UIColor(rgb: 0xFF3B30)
+                    }
+                    self.sendIconView.image = generateTintedImage(image: UIImage(bundleImageName: iconName), color: tintColor)
                 } else if case .apply = component.mode {
                     self.sendIconView.image = generateImage(CGSize(width: 33.0, height: 33.0), contextGenerator: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
@@ -407,7 +418,7 @@ public final class MessageInputActionButtonComponent: Component {
                 
                 if previousComponent?.mode != component.mode {
                     switch component.mode {
-                    case .none, .send, .apply, .voiceInput, .attach, .delete, .forward, .unavailableVoiceInput, .more:
+                    case .none, .send, .apply, .voiceInput, .attach, .delete, .forward, .unavailableVoiceInput, .more, .like:
                         micButton.updateMode(mode: .audio, animated: !transition.animation.isImmediate)
                     case .videoInput:
                         micButton.updateMode(mode: .video, animated: !transition.animation.isImmediate)

@@ -1034,7 +1034,8 @@ public extension TelegramEngine {
                                     isContacts: item.isContacts,
                                     isSelectedContacts: item.isSelectedContacts,
                                     isForwardingDisabled: item.isForwardingDisabled,
-                                    isEdited: item.isEdited
+                                    isEdited: item.isEdited,
+                                    hasLike: item.hasLike
                                 ))
                                 if let entry = CodableEntry(updatedItem) {
                                     currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
@@ -1108,6 +1109,10 @@ public extension TelegramEngine {
         
         public func enableStoryStealthMode() -> Signal<Never, NoError> {
             return _internal_enableStoryStealthMode(account: self.account)
+        }
+        
+        public func setStoryLike(peerId: EnginePeer.Id, id: Int32, hasLike: Bool) -> Signal<Never, NoError> {
+            return _internal_setStoryLike(account: self.account, peerId: peerId, id: id, hasLike: hasLike)
         }
     }
 }

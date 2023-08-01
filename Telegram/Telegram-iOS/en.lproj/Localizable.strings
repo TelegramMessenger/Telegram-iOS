@@ -9747,3 +9747,6 @@ Sorry for the inconvenience.";
 "Story.Privacy.HideMyStoriesFrom" = "Hide My Stories From";
 
 "Story.Privacy.SaveList" = "Save List";
+
+"StoryList.TooltipStoriesSavedToProfile_1" = "Story archived";
+"StoryList.TooltipStoriesSavedToProfile_any" = "%d stories archived.";

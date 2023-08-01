@@ -103,6 +103,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     var skipText = false
     var messageWithCaptionToAdd: (Message, ChatMessageEntryAttributes)?
     var isUnsupportedMedia = false
+    var isStoryWithText = false
     var isAction = false
     
     var previousItemIsFile = false
@@ -139,6 +140,12 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                     if let storyItem = message.associatedStories[story.storyId], storyItem.data.isEmpty {
                     } else {
                         result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
+                    }
+                    
+                    if let storyItem = message.associatedStories[story.storyId], let storedItem = storyItem.get(Stories.StoredItem.self), case let .item(item) = storedItem {
+                        if !item.text.isEmpty {
+                            isStoryWithText = true
+                        }
                     }
                 }
             } else if let file = media as? TelegramMediaFile {
@@ -216,7 +223,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             messageText = updatingMedia.text
         }
         
-        if !messageText.isEmpty || isUnsupportedMedia {
+        if !messageText.isEmpty || isUnsupportedMedia || isStoryWithText {
             if !skipText {
                 if case .group = item.content, !isFile {
                     messageWithCaptionToAdd = (message, itemAttributes)

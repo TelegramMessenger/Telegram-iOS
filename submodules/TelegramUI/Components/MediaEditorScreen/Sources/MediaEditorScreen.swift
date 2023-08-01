@@ -1113,6 +1113,8 @@ final class MediaEditorScreenComponent: Component {
                     stopAndPreviewMediaRecording: nil,
                     discardMediaRecordingPreview: nil,
                     attachmentAction: nil,
+                    hasLike: false,
+                    likeAction: nil,
                     inputModeAction: { [weak self] in
                         if let self {
                             switch self.currentInputMode {

@@ -1298,4 +1298,10 @@ public struct PresentationResourcesChat {
             })
         })
     }
+    
+    public static func storyViewListLikeIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.storyViewListLikeIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Stories/InputLikeOn"), color: UIColor(rgb: 0xFF3B30))
+        })
+    }
 }

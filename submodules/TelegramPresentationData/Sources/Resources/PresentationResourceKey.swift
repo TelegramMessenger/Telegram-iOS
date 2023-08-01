@@ -295,6 +295,8 @@ public enum PresentationResourceKey: Int32 {
     case chatGeneralThreadFreeIcon
     
     case uploadToneIcon
+    
+    case storyViewListLikeIcon
 }
 
 public enum ChatExpiredStoryIndicatorType: Hashable {

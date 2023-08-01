@@ -240,7 +240,7 @@ public final class TextSelectionNode: ASDisplayNode {
         return self.recognizer?.didRecognizeTap ?? false
     }
     
-    public init(theme: TextSelectionTheme, strings: PresentationStrings, textNode: TextNode, updateIsActive: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, rootNode: ASDisplayNode, performAction: @escaping (NSAttributedString, TextSelectionAction) -> Void) {
+    public init(theme: TextSelectionTheme, strings: PresentationStrings, textNode: TextNode, updateIsActive: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, rootNode: ASDisplayNode, externalKnobSurface: UIView? = nil, performAction: @escaping (NSAttributedString, TextSelectionAction) -> Void) {
         self.theme = theme
         self.strings = strings
         self.textNode = textNode
@@ -269,8 +269,13 @@ public final class TextSelectionNode: ASDisplayNode {
             return TextSelectionNodeView()
         })
         
-        self.addSubnode(self.leftKnob)
-        self.addSubnode(self.rightKnob)
+        if let externalKnobSurface {
+            externalKnobSurface.addSubnode(self.leftKnob)
+            externalKnobSurface.addSubnode(self.rightKnob)
+        } else {
+            self.addSubnode(self.leftKnob)
+            self.addSubnode(self.rightKnob)
+        }
     }
     
     override public func didLoad() {
@@ -449,9 +454,11 @@ public final class TextSelectionNode: ASDisplayNode {
             } else {
                 highlightOverlay = LinkHighlightingNode(color: self.theme.selection)
                 highlightOverlay.isUserInteractionEnabled = false
-                highlightOverlay.innerRadius = 0.0
-                highlightOverlay.outerRadius = 0.0
+                highlightOverlay.innerRadius = 2.0
+                highlightOverlay.outerRadius = 2.0
                 highlightOverlay.inset = 1.0
+                highlightOverlay.useModernPathCalculation = true
+                
                 self.highlightOverlay = highlightOverlay
                 self.highlightAreaNode.addSubnode(highlightOverlay)
             }

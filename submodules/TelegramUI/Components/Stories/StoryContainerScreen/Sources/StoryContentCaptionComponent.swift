@@ -151,6 +151,8 @@ final class StoryContentCaptionComponent: Component {
         private let collapsedText: ContentItem
         private let expandedText: ContentItem
         private var textSelectionNode: TextSelectionNode?
+        private let textSelectionKnobContainer: UIView
+        private var textSelectionKnobSurface: UIView?
         
         private let scrollMaskContainer: UIView
         private let scrollFullMaskView: UIView
@@ -219,6 +221,9 @@ final class StoryContentCaptionComponent: Component {
             
             self.collapsedText = ContentItem(frame: CGRect())
             self.expandedText = ContentItem(frame: CGRect())
+            
+            self.textSelectionKnobContainer = UIView()
+            self.textSelectionKnobContainer.isUserInteractionEnabled = false
 
             super.init(frame: frame)
             
@@ -232,6 +237,8 @@ final class StoryContentCaptionComponent: Component {
             self.scrollView.addSubview(self.expandedText)
             
             self.scrollViewContainer.mask = self.scrollMaskContainer
+            
+            self.addSubview(self.textSelectionKnobContainer)
         }
         
         required init?(coder: NSCoder) {
@@ -334,6 +341,8 @@ final class StoryContentCaptionComponent: Component {
             
             let edgeDistanceFraction = edgeDistance / 7.0
             transition.setAlpha(view: self.scrollFullMaskView, alpha: 1.0 - edgeDistanceFraction)
+            
+            transition.setBounds(view: self.textSelectionKnobContainer, bounds: CGRect(origin: CGPoint(x: 0.0, y: self.scrollView.bounds.minY), size: CGSize()))
             
             let shadowOverflow: CGFloat = 58.0
             let shadowFrame = CGRect(origin: CGPoint(x: 0.0, y:  -self.scrollView.contentOffset.y + itemLayout.containerSize.height - itemLayout.visibleTextHeight - itemLayout.verticalInset - shadowOverflow), size: CGSize(width: itemLayout.containerSize.width, height: itemLayout.visibleTextHeight + itemLayout.verticalInset + shadowOverflow))
@@ -702,6 +711,13 @@ final class StoryContentCaptionComponent: Component {
             
             if self.textSelectionNode == nil, let controller = component.controller(), let textNode = self.expandedText.textNode?.textNode {
                 let selectionColor = UIColor(white: 1.0, alpha: 0.5)
+                
+                if self.textSelectionKnobSurface == nil {
+                    let textSelectionKnobSurface = UIView()
+                    self.textSelectionKnobSurface = textSelectionKnobSurface
+                    self.textSelectionKnobContainer.addSubview(textSelectionKnobSurface)
+                }
+                
                 let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: selectionColor, knob: component.theme.list.itemAccentColor), strings: component.strings, textNode: textNode, updateIsActive: { [weak self] value in
                     guard let self else {
                         return
@@ -718,7 +734,7 @@ final class StoryContentCaptionComponent: Component {
                         return
                     }
                     component.controller()?.presentInGlobalOverlay(c, with: a)
-                }, rootNode: controller.displayNode, performAction: { [weak self] text, action in
+                }, rootNode: controller.displayNode, externalKnobSurface: self.textSelectionKnobSurface, performAction: { [weak self] text, action in
                     guard let self, let component = self.component else {
                         return
                     }
@@ -806,6 +822,9 @@ final class StoryContentCaptionComponent: Component {
             if let textSelectionNode = self.textSelectionNode, let textNode = self.expandedText.textNode?.textNode {
                 textSelectionNode.frame = textNode.frame.offsetBy(dx: self.expandedText.frame.minX, dy: self.expandedText.frame.minY)
                 textSelectionNode.highlightAreaNode.frame = textSelectionNode.frame
+                if let textSelectionKnobSurface = self.textSelectionKnobSurface {
+                    textSelectionKnobSurface.frame = textSelectionNode.frame
+                }
             }
             
             self.itemLayout = ItemLayout(

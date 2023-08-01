@@ -55,6 +55,7 @@ public final class PeerListItemComponent: Component {
     let subtitle: String?
     let subtitleAccessory: SubtitleAccessory
     let presence: EnginePeer.Presence?
+    let displayLike: Bool
     let selectionState: SelectionState
     let hasNext: Bool
     let action: (EnginePeer) -> Void
@@ -73,6 +74,7 @@ public final class PeerListItemComponent: Component {
         subtitle: String?,
         subtitleAccessory: SubtitleAccessory,
         presence: EnginePeer.Presence?,
+        displayLike: Bool = false,
         selectionState: SelectionState,
         hasNext: Bool,
         action: @escaping (EnginePeer) -> Void,
@@ -90,6 +92,7 @@ public final class PeerListItemComponent: Component {
         self.subtitle = subtitle
         self.subtitleAccessory = subtitleAccessory
         self.presence = presence
+        self.displayLike = displayLike
         self.selectionState = selectionState
         self.hasNext = hasNext
         self.action = action
@@ -131,6 +134,9 @@ public final class PeerListItemComponent: Component {
         if lhs.presence != rhs.presence {
             return false
         }
+        if lhs.displayLike != rhs.displayLike {
+            return false
+        }
         if lhs.selectionState != rhs.selectionState {
             return false
         }
@@ -153,6 +159,8 @@ public final class PeerListItemComponent: Component {
         
         private var iconView: UIImageView?
         private var checkLayer: CheckLayer?
+        
+        private var likeIconView: UIImageView?
         
         private var component: PeerListItemComponent?
         private weak var state: EmptyComponentState?
@@ -340,7 +348,11 @@ public final class PeerListItemComponent: Component {
             if case .generic = component.style {
                 leftInset += 9.0
             }
-            let rightInset: CGFloat = contextInset * 2.0 + 8.0 + component.sideInset
+            var rightInset: CGFloat = contextInset * 2.0 + 8.0 + component.sideInset
+            if component.displayLike {
+                rightInset += 32.0
+            }
+            
             var avatarLeftInset: CGFloat = component.sideInset + 10.0
             
             if case let .editing(isSelected, isTinted) = component.selectionState {
@@ -565,6 +577,27 @@ public final class PeerListItemComponent: Component {
                 }
                 
                 transition.setFrame(view: labelView, frame: labelFrame)
+            }
+            
+            if component.displayLike {
+                let likeIconView: UIImageView
+                if let current = self.likeIconView {
+                    likeIconView = current
+                } else {
+                    likeIconView = UIImageView()
+                    self.likeIconView = likeIconView
+                    self.containerButton.addSubview(likeIconView)
+                    
+                    likeIconView.image = PresentationResourcesChat.storyViewListLikeIcon(component.theme)
+                }
+                
+                if let _ = likeIconView.image {
+                    let imageSize = CGSize(width: 32.0, height: 32.0)
+                    transition.setFrame(view: likeIconView, frame: CGRect(origin: CGPoint(x: availableSize.width - (contextInset * 2.0 + 11.0 + component.sideInset) - imageSize.width, y: floor((height - verticalInset * 2.0 - imageSize.height) * 0.5)), size: imageSize))
+                }
+            } else if let likeIconView = self.likeIconView {
+                self.likeIconView = nil
+                likeIconView.removeFromSuperview()
             }
             
             if themeUpdated {

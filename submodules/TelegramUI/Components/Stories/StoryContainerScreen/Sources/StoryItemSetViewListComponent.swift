@@ -517,6 +517,7 @@ final class StoryItemSetViewListComponent: Component {
                             subtitle: dateText,
                             subtitleAccessory: .checks,
                             presence: nil,
+                            displayLike: item.isLike,
                             selectionState: .none,
                             hasNext: index != viewListState.totalCount - 1,
                             action: { [weak self] peer in

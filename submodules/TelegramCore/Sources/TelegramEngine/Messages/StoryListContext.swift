@@ -49,8 +49,9 @@ public final class EngineStoryItem: Equatable {
     public let isSelectedContacts: Bool
     public let isForwardingDisabled: Bool
     public let isEdited: Bool
+    public let hasLike: Bool
     
-    public init(id: Int32, timestamp: Int32, expirationTimestamp: Int32, media: EngineMedia, mediaAreas: [MediaArea], text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?, isPinned: Bool, isExpired: Bool, isPublic: Bool, isPending: Bool, isCloseFriends: Bool, isContacts: Bool, isSelectedContacts: Bool, isForwardingDisabled: Bool, isEdited: Bool) {
+    public init(id: Int32, timestamp: Int32, expirationTimestamp: Int32, media: EngineMedia, mediaAreas: [MediaArea], text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?, isPinned: Bool, isExpired: Bool, isPublic: Bool, isPending: Bool, isCloseFriends: Bool, isContacts: Bool, isSelectedContacts: Bool, isForwardingDisabled: Bool, isEdited: Bool, hasLike: Bool) {
         self.id = id
         self.timestamp = timestamp
         self.expirationTimestamp = expirationTimestamp
@@ -69,6 +70,7 @@ public final class EngineStoryItem: Equatable {
         self.isSelectedContacts = isSelectedContacts
         self.isForwardingDisabled = isForwardingDisabled
         self.isEdited = isEdited
+        self.hasLike = hasLike
     }
     
     public static func ==(lhs: EngineStoryItem, rhs: EngineStoryItem) -> Bool {
@@ -126,6 +128,9 @@ public final class EngineStoryItem: Equatable {
         if lhs.isEdited != rhs.isEdited {
             return false
         }
+        if lhs.hasLike != rhs.hasLike {
+            return false
+        }
         return true
     }
 }
@@ -159,7 +164,8 @@ extension EngineStoryItem {
             isContacts: self.isContacts,
             isSelectedContacts: self.isSelectedContacts,
             isForwardingDisabled: self.isForwardingDisabled,
-            isEdited: self.isEdited
+            isEdited: self.isEdited,
+            hasLike: self.hasLike
         )
     }
 }
@@ -528,7 +534,8 @@ public final class PeerStoryListContext {
                             isContacts: item.isContacts,
                             isSelectedContacts: item.isSelectedContacts,
                             isForwardingDisabled: item.isForwardingDisabled,
-                            isEdited: item.isEdited
+                            isEdited: item.isEdited,
+                            hasLike: item.hasLike
                         )
                         items.append(mappedItem)
                         
@@ -653,7 +660,8 @@ public final class PeerStoryListContext {
                                             isContacts: item.isContacts,
                                             isSelectedContacts: item.isSelectedContacts,
                                             isForwardingDisabled: item.isForwardingDisabled,
-                                            isEdited: item.isEdited
+                                            isEdited: item.isEdited,
+                                            hasLike: item.hasLike
                                         )
                                         storyItems.append(mappedItem)
                                     }
@@ -802,7 +810,8 @@ public final class PeerStoryListContext {
                                                                 isContacts: item.isContacts,
                                                                 isSelectedContacts: item.isSelectedContacts,
                                                                 isForwardingDisabled: item.isForwardingDisabled,
-                                                                isEdited: item.isEdited
+                                                                isEdited: item.isEdited,
+                                                                hasLike: item.hasLike
                                                             )
                                                             finalUpdatedState = updatedState
                                                         }
@@ -842,7 +851,8 @@ public final class PeerStoryListContext {
                                                             isContacts: item.isContacts,
                                                             isSelectedContacts: item.isSelectedContacts,
                                                             isForwardingDisabled: item.isForwardingDisabled,
-                                                            isEdited: item.isEdited
+                                                            isEdited: item.isEdited,
+                                                            hasLike: item.hasLike
                                                         )
                                                         finalUpdatedState = updatedState
                                                     } else {
@@ -884,7 +894,8 @@ public final class PeerStoryListContext {
                                                                 isContacts: item.isContacts,
                                                                 isSelectedContacts: item.isSelectedContacts,
                                                                 isForwardingDisabled: item.isForwardingDisabled,
-                                                                isEdited: item.isEdited
+                                                                isEdited: item.isEdited,
+                                                                hasLike: item.hasLike
                                                             ))
                                                             updatedState.items.sort(by: { lhs, rhs in
                                                                 return lhs.timestamp > rhs.timestamp
@@ -922,7 +933,8 @@ public final class PeerStoryListContext {
                                                             isContacts: item.isContacts,
                                                             isSelectedContacts: item.isSelectedContacts,
                                                             isForwardingDisabled: item.isForwardingDisabled,
-                                                            isEdited: item.isEdited
+                                                            isEdited: item.isEdited,
+                                                            hasLike: item.hasLike
                                                         ))
                                                         updatedState.items.sort(by: { lhs, rhs in
                                                             return lhs.timestamp > rhs.timestamp
@@ -1084,7 +1096,8 @@ public final class PeerExpiringStoryListContext {
                                         isContacts: item.isContacts,
                                         isSelectedContacts: item.isSelectedContacts,
                                         isForwardingDisabled: item.isForwardingDisabled,
-                                        isEdited: item.isEdited
+                                        isEdited: item.isEdited,
+                                        hasLike: item.hasLike
                                     )
                                     items.append(.item(mappedItem))
                                 }

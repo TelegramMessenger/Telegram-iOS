@@ -2391,13 +2391,13 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         self.isUserInteractionEnabled = false
     }
     
-    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, animationCache: AnimationCache, reaction: ReactionItem, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, forceSmallEffectAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
-        self.animateReactionSelection(context: context, theme: theme, animationCache: animationCache, reaction: reaction, avatarPeers: avatarPeers, playHaptic: playHaptic, isLarge: isLarge, forceSmallEffectAnimation: forceSmallEffectAnimation, targetView: targetView, addStandaloneReactionAnimation: addStandaloneReactionAnimation, currentItemNode: nil, completion: completion)
+    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, animationCache: AnimationCache, reaction: ReactionItem, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, forceSmallEffectAnimation: Bool = false, hideCenterAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
+        self.animateReactionSelection(context: context, theme: theme, animationCache: animationCache, reaction: reaction, avatarPeers: avatarPeers, playHaptic: playHaptic, isLarge: isLarge, forceSmallEffectAnimation: forceSmallEffectAnimation, hideCenterAnimation: hideCenterAnimation, targetView: targetView, addStandaloneReactionAnimation: addStandaloneReactionAnimation, currentItemNode: nil, completion: completion)
     }
         
     public var currentDismissAnimation: (() -> Void)?
     
-    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, animationCache: AnimationCache, reaction: ReactionItem, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, forceSmallEffectAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, currentItemNode: ReactionNode?, completion: @escaping () -> Void) {
+    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, animationCache: AnimationCache, reaction: ReactionItem, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, forceSmallEffectAnimation: Bool = false, hideCenterAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, currentItemNode: ReactionNode?, completion: @escaping () -> Void) {
         guard let sourceSnapshotView = targetView.snapshotContentTree() else {
             completion()
             return
@@ -2430,7 +2430,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
             switchToInlineImmediately = false
         }
         
-        if !forceSmallEffectAnimation && !switchToInlineImmediately {
+        if !forceSmallEffectAnimation && !switchToInlineImmediately && !hideCenterAnimation {
             if let targetView = targetView as? ReactionIconView, !isLarge {
                 self.itemNodeIsEmbedded = true
                 targetView.addSubnode(itemNode)
