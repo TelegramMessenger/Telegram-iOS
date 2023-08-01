@@ -150,7 +150,7 @@ public func venueIcon(engine: TelegramEngine, type: String, background: Bool) ->
             
             let backgroundColor: UIColor
             let foregroundColor: UIColor
-            if type.isEmpty, let customArguments = arguments.custom as? VenueIconArguments {
+            if type.isEmpty || type == "building/default", let customArguments = arguments.custom as? VenueIconArguments {
                 backgroundColor = customArguments.defaultBackgroundColor
                 foregroundColor = customArguments.defaultForegroundColor
             } else {

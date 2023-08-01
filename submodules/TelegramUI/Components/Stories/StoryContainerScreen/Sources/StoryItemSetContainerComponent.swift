@@ -3554,6 +3554,7 @@ public final class StoryItemSetContainerComponent: Component {
                         self.presentPrivacyTooltip(privacy: privacy)
                         
                         self.privacyController = nil
+                        self.rewindCurrentItem()
                         self.updateIsProgressPaused()
                     },
                     editCategory: { [weak self] privacy, _, _ in
