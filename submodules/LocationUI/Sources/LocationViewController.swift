@@ -530,9 +530,17 @@ public final class LocationViewController: ViewController {
         self.controllerNode.showAll()
     }
     
+    private var didDismiss = false
+    public override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        if !self.didDismiss {
+            self.didDismiss = true
+            self.dismissed()
+        }
+    }
+    
     public override func dismiss(completion: (() -> Void)? = nil) {
         super.dismiss(completion: completion)
-        self.dismissed()
     }
 }
 

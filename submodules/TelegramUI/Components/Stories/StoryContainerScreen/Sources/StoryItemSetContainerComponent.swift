@@ -795,8 +795,8 @@ public final class StoryItemSetContainerComponent: Component {
                     var selectedMediaArea: MediaArea?
                                         
                     func isPoint(_ point: CGPoint, in area: MediaArea) -> Bool {
-                        let tx = point.x - area.coordinates.x / 100.0 * referenceSize.width
-                        let ty = point.y - area.coordinates.y / 100.0 * referenceSize.height
+                        let tx = point.x - area.coordinates.x * referenceSize.width
+                        let ty = point.y - area.coordinates.y * referenceSize.height
                         
                         let rad = -area.coordinates.rotation * Double.pi / 180.0
                         let cosTheta = cos(rad)
@@ -804,7 +804,7 @@ public final class StoryItemSetContainerComponent: Component {
                         let rotatedX = tx * cosTheta - ty * sinTheta
                         let rotatedY = tx * sinTheta + ty * cosTheta
                         
-                        return abs(rotatedX) <= area.coordinates.width / 100.0 * referenceSize.width / 2.0 && abs(rotatedY) <= area.coordinates.height / 100.0 * referenceSize.height / 2.0
+                        return abs(rotatedX) <= area.coordinates.width * referenceSize.width / 2.0 && abs(rotatedY) <= area.coordinates.height * referenceSize.height / 2.0
                     }
                     
                     for area in component.slice.item.storyItem.mediaAreas {

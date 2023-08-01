@@ -3113,7 +3113,9 @@ final class StoryItemSetContainerSendMessage {
                 view?.updateModalTransitionFactor(1.0, transition: .animated(duration: 0.5, curve: .spring))
                 locationController.dismissed = { [weak view] in
                     view?.updateModalTransitionFactor(0.0, transition: .animated(duration: 0.5, curve: .spring))
-                    view?.updateIsProgressPaused()
+                    Queue.mainQueue().after(0.3, {
+                        view?.updateIsProgressPaused()
+                    })
                 }
                 controller?.push(locationController)
             }))
@@ -3121,7 +3123,7 @@ final class StoryItemSetContainerSendMessage {
         
         let referenceSize = view.controlsContainerView.frame.size
         let size = CGSize(width: 16.0, height: 16.0)
-        var frame = CGRect(x: mediaArea.coordinates.x / 100.0 * referenceSize.width - size.width / 2.0, y: (mediaArea.coordinates.y - mediaArea.coordinates.height * 0.5)  / 100.0 * referenceSize.height - size.height / 2.0, width: size.width, height: size.height)
+        var frame = CGRect(x: mediaArea.coordinates.x * referenceSize.width - size.width / 2.0, y: (mediaArea.coordinates.y - mediaArea.coordinates.height * 0.5) * referenceSize.height - size.height / 2.0, width: size.width, height: size.height)
         frame = frame.offsetBy(dx: 0.0, dy: view.controlsContainerView.frame.minY)
         
         let node = controller.displayNode
