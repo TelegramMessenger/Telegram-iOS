@@ -671,6 +671,12 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                         }
                     }
                 }
+                selectionView.longPressed = { [weak self, weak entityView] in
+                    if let self, let entityView {
+                        let entityViews = self.subviews.filter { $0 is DrawingEntityView }
+                        self.requestedMenuForEntityView(entityView, entityViews.last === entityView)
+                    }
+                }
                 entityView.selectionView = selectionView
                 self.selectionContainerView?.addSubview(selectionView)
             }
@@ -1015,6 +1021,7 @@ public class DrawingEntitySelectionView: UIView {
     public var tapGestureRecognizer: UITapGestureRecognizer?
     
     var tapped: () -> Void = { }
+    var longPressed: () -> Void = { }
     
     override init(frame: CGRect) {
         super.init(frame: frame)

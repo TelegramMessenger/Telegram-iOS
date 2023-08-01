@@ -70,6 +70,8 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
         self.textView.keyboardAppearance = .dark
         self.textView.autocorrectionType = .default
         self.textView.spellCheckingType = .no
+        self.textView.textContainer.maximumNumberOfLines = 1
+        self.textView.textContainer.lineBreakMode = .byTruncatingTail
         
         self.iconView = UIImageView()
         
@@ -133,23 +135,21 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
         }
         self.locationEntity.style = updatedStyle
 
-//        if let snapshotView = self.snapshotView(afterScreenUpdates: false) {
-//            self.addSubview(snapshotView)
-//            
-//            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-//                snapshotView?.removeFromSuperview()
-//            })
-//            self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-//        }
         self.update()
         
         return true
     }
         
     private var displayFontSize: CGFloat {
+        var textFontSize: CGFloat = 0.07
+        let textLength = self.locationEntity.title.count
+        if textLength > 10 {
+            textFontSize = max(0.01, 0.07 - CGFloat(textLength - 10) / 100.0)
+        }
+        
         let minFontSize = max(10.0, max(self.locationEntity.referenceDrawingSize.width, self.locationEntity.referenceDrawingSize.height) * 0.025)
         let maxFontSize = max(10.0, max(self.locationEntity.referenceDrawingSize.width, self.locationEntity.referenceDrawingSize.height) * 0.25)
-        let fontSize = minFontSize + (maxFontSize - minFontSize) * 0.07
+        let fontSize = minFontSize + (maxFontSize - minFontSize) * textFontSize
         return fontSize
     }
     
@@ -264,6 +264,8 @@ final class DrawingLocationEntititySelectionView: DrawingEntitySelectionView {
     private let leftHandle = SimpleShapeLayer()
     private let rightHandle = SimpleShapeLayer()
     
+    private var longPressGestureRecognizer: UILongPressGestureRecognizer?
+    
     override init(frame: CGRect) {
         let handleBounds = CGRect(origin: .zero, size: entitySelectionViewHandleSize)
         let handles = [
@@ -296,6 +298,10 @@ final class DrawingLocationEntititySelectionView: DrawingEntitySelectionView {
                 entityView.onSnapUpdated(type, snapped)
             }
         }
+        
+        let longPressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handleLongPress(_:)))
+        self.addGestureRecognizer(longPressGestureRecognizer)
+        self.longPressGestureRecognizer = longPressGestureRecognizer
     }
     
     required init?(coder: NSCoder) {
@@ -318,6 +324,12 @@ final class DrawingLocationEntititySelectionView: DrawingEntitySelectionView {
     
     private let snapTool = DrawingEntitySnapTool()
     
+    @objc private func handleLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        if case .began = gestureRecognizer.state {
+            self.longPressed()
+        }
+    }
+    
     private var currentHandle: CALayer?
     override func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
         guard let entityView = self.entityView, let entity = entityView.entity as? DrawingLocationEntity else {
@@ -328,6 +340,9 @@ final class DrawingLocationEntititySelectionView: DrawingEntitySelectionView {
         case .began:
             self.tapGestureRecognizer?.isEnabled = false
             self.tapGestureRecognizer?.isEnabled = true
+            
+            self.longPressGestureRecognizer?.isEnabled = false
+            self.longPressGestureRecognizer?.isEnabled = true
             
             self.snapTool.maybeSkipFromStart(entityView: entityView, position: entity.position)
             

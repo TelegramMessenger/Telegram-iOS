@@ -577,11 +577,13 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                         entries.append(.location(presentationData.theme, title, venue.venue?.title ?? "", venue, queryId, resultId, venue.coordinate, nil))
                     case .none:
                         let title: String
+                        var coordinate = userLocation?.coordinate
                         switch strongSelf.mode {
                             case .share:
                             if source == .story {
-                                if strongSelf.controller?.initialLocation != nil {
+                                if let initialLocation = strongSelf.controller?.initialLocation {
                                     title = "Add This Location"
+                                    coordinate = initialLocation
                                 } else {
                                     title = "Add My Current Location"
                                 }
@@ -591,7 +593,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                             case .pick:
                                 title = presentationData.strings.Map_SetThisLocation
                         }
-                        entries.append(.location(presentationData.theme, title, (userLocation?.horizontalAccuracy).flatMap { presentationData.strings.Map_AccurateTo(stringForDistance(strings: presentationData.strings, distance: $0)).string } ?? presentationData.strings.Map_Locating, nil, nil, nil, userLocation?.coordinate, state.address))
+                        entries.append(.location(presentationData.theme, title, (userLocation?.horizontalAccuracy).flatMap { presentationData.strings.Map_AccurateTo(stringForDistance(strings: presentationData.strings, distance: $0)).string } ?? presentationData.strings.Map_Locating, nil, nil, nil, coordinate, state.address))
                 }
                 
                 if case .share(_, _, true) = mode {
@@ -747,8 +749,9 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                         }
                     }))
                 } else {
-                    if case .none = state.selectedLocation, let location = userLocation, state.address == nil {
-                        strongSelf.geocodingDisposable.set((reverseGeocodeLocation(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude)
+                    let coordinate = controller.initialLocation ?? userLocation?.coordinate
+                    if case .none = state.selectedLocation, let coordinate, state.address == nil {
+                        strongSelf.geocodingDisposable.set((reverseGeocodeLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
                         |> deliverOnMainQueue).start(next: { [weak self] placemark in
                             if let strongSelf = self {
                                 var address = placemark?.fullAddress ?? ""
