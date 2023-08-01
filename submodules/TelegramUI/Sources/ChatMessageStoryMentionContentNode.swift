@@ -196,7 +196,7 @@ class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
                 
                 let (buttonTitleLayout, buttonTitleApply) = makeButtonTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Chat_StoryMentionAction, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-                let backgroundSize = CGSize(width: width, height: subtitleLayout.size.height + 186.0)
+                let backgroundSize = CGSize(width: width, height: subtitleLayout.size.height + 167.0 + buttonTitleLayout.size.height)
                 
                 return (backgroundSize.width, { boundingWidth in
                     return (backgroundSize, { [weak self] animation, synchronousLoads, _ in
@@ -315,7 +315,7 @@ class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
                             let buttonTitleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - buttonTitleLayout.size.width) / 2.0), y: subtitleFrame.maxY + 19.0), size: buttonTitleLayout.size)
                             strongSelf.buttonTitleNode.frame = buttonTitleFrame
                             
-                            let buttonSize = CGSize(width: buttonTitleLayout.size.width + 38.0, height: 34.0)
+                            let buttonSize = CGSize(width: buttonTitleLayout.size.width + 38.0, height: 15.0 + buttonTitleLayout.size.height)
                             strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - buttonSize.width) / 2.0), y: subtitleFrame.maxY + 11.0), size: buttonSize)
 
                             if item.controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {

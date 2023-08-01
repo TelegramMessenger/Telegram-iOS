@@ -11,8 +11,17 @@ import MoreHeaderButton
 import SemanticStatusNode
 import SwiftSignalKit
 import TelegramPresentationData
+import AnimatedCountLabelNode
 
 public final class StoryFooterPanelComponent: Component {
+    public final class AnimationHint {
+        public let synchronousLoad: Bool
+        
+        public init(synchronousLoad: Bool) {
+            self.synchronousLoad = synchronousLoad
+        }
+    }
+    
     public let context: AccountContext
     public let strings: PresentationStrings
     public let storyItem: EngineStoryItem?
@@ -63,8 +72,8 @@ public final class StoryFooterPanelComponent: Component {
     
     public final class View: UIView {
         private let viewStatsButton: HighlightTrackingButton
-        private let viewStatsText = ComponentView<Empty>()
-        private let viewStatsExpandedText = ComponentView<Empty>()
+        private let viewStatsText: AnimatedCountLabelView
+        private let viewStatsExpandedText: AnimatedCountLabelView
         private let deleteButton = ComponentView<Empty>()
         
         private var statusButton: HighlightableButton?
@@ -72,7 +81,7 @@ public final class StoryFooterPanelComponent: Component {
         private var uploadingText: ComponentView<Empty>?
         
         private let avatarsContext: AnimatedAvatarSetContext
-        private let avatarsNode: AnimatedAvatarSetNode
+        private let avatarsView: AnimatedAvatarSetView
         
         private var component: StoryFooterPanelComponent?
         private weak var state: EmptyComponentState?
@@ -84,16 +93,18 @@ public final class StoryFooterPanelComponent: Component {
         
         override init(frame: CGRect) {
             self.viewStatsButton = HighlightTrackingButton()
+            self.viewStatsText = AnimatedCountLabelView(frame: CGRect())
+            self.viewStatsExpandedText = AnimatedCountLabelView(frame: CGRect())
             
             self.avatarsContext = AnimatedAvatarSetContext()
-            self.avatarsNode = AnimatedAvatarSetNode()
+            self.avatarsView = AnimatedAvatarSetView()
             
             self.externalContainerView = UIView()
             
             super.init(frame: frame)
             
-            self.avatarsNode.view.isUserInteractionEnabled = false
-            self.externalContainerView.addSubview(self.avatarsNode.view)
+            self.avatarsView.isUserInteractionEnabled = false
+            self.externalContainerView.addSubview(self.avatarsView)
             self.addSubview(self.viewStatsButton)
             
             self.viewStatsButton.highligthedChanged = { [weak self] highlighted in
@@ -101,11 +112,11 @@ public final class StoryFooterPanelComponent: Component {
                     return
                 }
                 if highlighted {
-                    self.avatarsNode.view.alpha = 0.7
-                    self.viewStatsText.view?.alpha = 0.7
+                    self.avatarsView.alpha = 0.7
+                    self.viewStatsText.alpha = 0.7
                 } else {
-                    self.avatarsNode.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
-                    self.viewStatsText.view?.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
+                    self.avatarsView.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
+                    self.viewStatsText.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
                 }
             }
             self.viewStatsButton.addTarget(self, action: #selector(self.viewStatsPressed), for: .touchUpInside)
@@ -137,6 +148,13 @@ public final class StoryFooterPanelComponent: Component {
         }
         
         func update(component: StoryFooterPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            let isFirstTime = self.component == nil
+            
+            var synchronousLoad = true
+            if let hint = transition.userData(AnimationHint.self) {
+                synchronousLoad = hint.synchronousLoad
+            }
+            
             if self.component?.storyItem?.id != component.storyItem?.id || self.component?.storyItem?.isPending != component.storyItem?.isPending {
                 self.uploadProgressDisposable?.dispose()
                 self.uploadProgress = 0.0
@@ -249,12 +267,12 @@ public final class StoryFooterPanelComponent: Component {
                 peers = Array(seenPeers.prefix(3))
             }
             let avatarsContent = self.avatarsContext.update(peers: peers, animated: false)
-            let avatarsSize = self.avatarsNode.update(context: component.context, content: avatarsContent, itemSize: CGSize(width: 30.0, height: 30.0), animated: false, synchronousLoad: true)
+            let avatarsSize = self.avatarsView.update(context: component.context, content: avatarsContent, itemSize: CGSize(width: 30.0, height: 30.0), animation: isFirstTime ? ListViewItemUpdateAnimation.None : ListViewItemUpdateAnimation.System(duration: 0.25, transition: ControlledTransition(duration: 0.25, curve: .easeInOut, interactive: false)), synchronousLoad: synchronousLoad)
             
             let avatarsNodeFrame = CGRect(origin: CGPoint(x: leftOffset, y: floor((size.height - avatarsSize.height) * 0.5)), size: avatarsSize)
-            self.avatarsNode.position = avatarsNodeFrame.center
-            self.avatarsNode.bounds = CGRect(origin: CGPoint(), size: avatarsNodeFrame.size)
-            transition.setAlpha(view: self.avatarsNode.view, alpha: avatarsAlpha)
+            self.avatarsView.center = avatarsNodeFrame.center
+            self.avatarsView.bounds = CGRect(origin: CGPoint(), size: avatarsNodeFrame.size)
+            transition.setAlpha(view: self.avatarsView, alpha: avatarsAlpha)
             if !avatarsSize.width.isZero {
                 leftOffset = avatarsNodeFrame.maxX + avatarSpacing
             }
@@ -270,21 +288,28 @@ public final class StoryFooterPanelComponent: Component {
             } else {
                 viewsText = component.strings.Story_Footer_Views(Int32(viewCount))
             }
+            let _ = viewsText
             
             self.viewStatsButton.isEnabled = viewCount != 0
             
-            let viewStatsTextSize = self.viewStatsText.update(
-                transition: .immediate,
-                component: AnyComponent(Text(text: viewsText, font: Font.regular(15.0), color: .white)),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width, height: size.height)
-            )
-            let viewStatsExpandedTextSize = self.viewStatsExpandedText.update(
-                transition: .immediate,
-                component: AnyComponent(Text(text: viewsText, font: Font.semibold(17.0), color: .white)),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width, height: size.height)
-            )
+            //TODO:localize
+            var regularSegments: [AnimatedCountLabelView.Segment] = []
+            if viewCount != 0 {
+                regularSegments.append(.number(viewCount, NSAttributedString(string: "\(viewCount)", font: Font.regular(15.0), textColor: .white)))
+            }
+            regularSegments.append(.text(1, NSAttributedString(string: " Views", font: Font.regular(15.0), textColor: .white)))
+            
+            var expandedSegments: [AnimatedCountLabelView.Segment] = []
+            if viewCount != 0 {
+                expandedSegments.append(.number(viewCount, NSAttributedString(string: "\(viewCount)", font: Font.semibold(17.0), textColor: .white)))
+            }
+            expandedSegments.append(.text(1, NSAttributedString(string: " Views", font: Font.semibold(17.0), textColor: .white)))
+            
+            let viewStatsTextLayout = self.viewStatsText.update(size: CGSize(width: availableSize.width, height: size.height), segments: regularSegments, transition: isFirstTime ? .immediate : ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut))
+            let expandedViewStatsTextLayout = self.viewStatsExpandedText.update(size: CGSize(width: availableSize.width, height: size.height), segments: expandedSegments, transition: isFirstTime ? .immediate : ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut))
+            
+            let viewStatsTextSize = viewStatsTextLayout.size
+            let viewStatsExpandedTextSize = expandedViewStatsTextLayout.size
             
             let viewStatsCollapsedFrame = CGRect(origin: CGPoint(x: leftOffset, y: floor((size.height - viewStatsTextSize.height) * 0.5)), size: viewStatsTextSize)
             let viewStatsExpandedFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - viewStatsExpandedTextSize.width) * 0.5), y: 3.0 + floor((size.height - viewStatsExpandedTextSize.height) * 0.5)), size: viewStatsExpandedTextSize)
@@ -293,7 +318,9 @@ public final class StoryFooterPanelComponent: Component {
             let viewStatsTextCenter = viewStatsCollapsedFrame.center.interpolate(to: viewStatsExpandedFrame.center, amount: component.expandFraction)
             
             let viewStatsTextFrame = viewStatsCollapsedFrame.size.centered(around: viewStatsTextCenter)
-            if let viewStatsTextView = self.viewStatsText.view {
+            do {
+                let viewStatsTextView = self.viewStatsText
+                
                 if viewStatsTextView.superview == nil {
                     viewStatsTextView.isUserInteractionEnabled = false
                     self.externalContainerView.addSubview(viewStatsTextView)
@@ -305,7 +332,9 @@ public final class StoryFooterPanelComponent: Component {
             }
             
             let viewStatsExpandedTextFrame = viewStatsExpandedFrame.size.centered(around: viewStatsTextCenter)
-            if let viewStatsExpandedTextView = self.viewStatsExpandedText.view {
+            do {
+                let viewStatsExpandedTextView = self.viewStatsExpandedText
+                
                 if viewStatsExpandedTextView.superview == nil {
                     viewStatsExpandedTextView.isUserInteractionEnabled = false
                     self.addSubview(viewStatsExpandedTextView)

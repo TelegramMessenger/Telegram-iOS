@@ -19,6 +19,7 @@ swift_library(
         "//submodules/TelegramCore",
         "//submodules/TelegramUI/Components/MoreHeaderButton",
         "//submodules/SemanticStatusNode",
+        "//submodules/AnimatedCountLabelNode",
     ],
     visibility = [
         "//visibility:public",

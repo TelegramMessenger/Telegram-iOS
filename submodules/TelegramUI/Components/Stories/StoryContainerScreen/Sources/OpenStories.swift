@@ -149,7 +149,10 @@ public extension StoryContainerScreen {
                 guard let avatarNode else {
                     return
                 }
-                sharedProgressDisposable?.set(avatarNode.pushLoadingStatus(signal: signal))
+                let disposable = avatarNode.pushLoadingStatus(signal: signal)
+                if let sharedProgressDisposable {
+                    sharedProgressDisposable.set(disposable)
+                }
             }
         )
     }

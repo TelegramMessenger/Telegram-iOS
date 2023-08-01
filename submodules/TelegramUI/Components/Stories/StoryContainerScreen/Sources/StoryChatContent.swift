@@ -1460,6 +1460,23 @@ public func waitUntilStoryMediaPreloaded(context: AccountContext, peerId: Engine
         
         var statusSignals: [Signal<Never, NoError>] = []
         var loadSignals: [Signal<Never, NoError>] = []
+        var fetchPriorityDisposable: Disposable?
+        
+        var fetchPriorityResourceId: String?
+        switch storyItem.media {
+        case let .image(image):
+            if let representation = largestImageRepresentation(image.representations) {
+                fetchPriorityResourceId = representation.resource.id.stringRepresentation
+            }
+        case let .file(file):
+            fetchPriorityResourceId = file.resource.id.stringRepresentation
+        default:
+            break
+        }
+        
+        if let fetchPriorityResourceId {
+            fetchPriorityDisposable = context.engine.resources.pushPriorityDownload(resourceId: fetchPriorityResourceId, priority: 2)
+        }
         
         switch storyItem.media {
         case let .image(image):
@@ -1523,6 +1540,7 @@ public func waitUntilStoryMediaPreloaded(context: AccountContext, peerId: Engine
             return ActionDisposable {
                 statusDisposable.dispose()
                 loadDisposable.dispose()
+                fetchPriorityDisposable?.dispose()
             }
         }
     }

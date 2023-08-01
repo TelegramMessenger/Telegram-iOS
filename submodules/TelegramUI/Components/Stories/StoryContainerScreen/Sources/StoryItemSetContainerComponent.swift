@@ -432,6 +432,7 @@ public final class StoryItemSetContainerComponent: Component {
         private var initializedOffset: Bool = false
         
         private var viewListPanState: PanState?
+        private var isCompletingViewListPan: Bool = false
         private var viewListSwipeRecognizer: InteractiveTransitionGestureRecognizer?
         
         private var verticalPanState: PanState?
@@ -838,6 +839,8 @@ public final class StoryItemSetContainerComponent: Component {
                     let translation = recognizer.translation(in: self)
                     let fraction: CGFloat = max(-1.0, min(1.0, translation.x / self.bounds.width))
                     self.viewListPanState = PanState(fraction: fraction)
+                    self.isCompletingViewListPan = false
+                    self.layer.removeAnimation(forKey: "isCompletingViewListPan")
                     self.state?.updated(transition: .immediate)
                 }
             case .changed:
@@ -846,6 +849,7 @@ public final class StoryItemSetContainerComponent: Component {
                     let fraction: CGFloat = max(-1.0, min(1.0, translation.x / self.bounds.width))
                     viewListPanState.fraction = fraction
                     self.viewListPanState = viewListPanState
+                    self.isCompletingViewListPan = false
                     self.state?.updated(transition: .immediate)
                 }
             case .cancelled, .ended:
@@ -868,8 +872,19 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                     
                     if !consumed {
+                        let transition = Transition(animation: .curve(duration: 0.4, curve: .spring))
                         self.viewListPanState = nil
-                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                        self.isCompletingViewListPan = true
+                        transition.attachAnimation(view: self, id: "isCompletingViewListPan", completion: { [weak self] completed in
+                            guard let self, completed else {
+                                return
+                            }
+                            if self.isCompletingViewListPan {
+                                self.isCompletingViewListPan = false
+                                self.state?.updated(transition: .immediate)
+                            }
+                        })
+                        self.state?.updated(transition: transition)
                     }
                 }
             default:
@@ -1175,7 +1190,8 @@ public final class StoryItemSetContainerComponent: Component {
                             peer: component.slice.peer,
                             item: item.storyItem,
                             audioMode: component.audioMode,
-                            isVideoBuffering: visibleItem.isBuffering
+                            isVideoBuffering: visibleItem.isBuffering,
+                            isCurrent: index == centralIndex
                         )),
                         environment: {
                             itemEnvironment
@@ -1287,16 +1303,14 @@ public final class StoryItemSetContainerComponent: Component {
                 return false
             }
             if component.slice.peer.id == component.context.account.peerId {
-                if let _ = component.slice.item.storyItem.views {
-                    self.displayViewList = true
-                    if component.verticalPanFraction == 0.0 {
-                        self.preparingToDisplayViewList = true
-                        self.updateScrolling(transition: .immediate)
-                        self.preparingToDisplayViewList = false
-                    }
-                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
-                    return true
+                self.displayViewList = true
+                if component.verticalPanFraction == 0.0 {
+                    self.preparingToDisplayViewList = true
+                    self.updateScrolling(transition: .immediate)
+                    self.preparingToDisplayViewList = false
                 }
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                return true
             } else {
                 var canReply = true
                 if component.slice.peer.id == component.context.account.peerId {
@@ -1777,8 +1791,34 @@ public final class StoryItemSetContainerComponent: Component {
             if let animateNextNavigationId = self.animateNextNavigationId, animateNextNavigationId == component.slice.item.storyItem.id {
                 self.animateNextNavigationId = nil
                 self.viewListPanState = nil
+                self.isCompletingViewListPan = true
                 itemsTransition = transition.withAnimation(.curve(duration: 0.3, curve: .spring))
+                itemsTransition.attachAnimation(view: self, id: "isCompletingViewListPan", completion: { [weak self] completed in
+                    guard let self, completed else {
+                        return
+                    }
+                    if self.isCompletingViewListPan {
+                        self.isCompletingViewListPan = false
+                        self.state?.updated(transition: .immediate)
+                    }
+                })
                 resetScrollingOffsetWithItemTransition = true
+            }
+            
+            if let awaitingSwitchToId = self.awaitingSwitchToId, awaitingSwitchToId.to == component.slice.item.storyItem.id {
+                self.awaitingSwitchToId = nil
+                self.viewListPanState = nil
+                self.isCompletingViewListPan = true
+                itemsTransition = transition.withAnimation(.curve(duration: 0.3, curve: .spring))
+                itemsTransition.attachAnimation(view: self, id: "isCompletingViewListPan", completion: { [weak self] completed in
+                    guard let self, completed else {
+                        return
+                    }
+                    if self.isCompletingViewListPan {
+                        self.isCompletingViewListPan = false
+                        self.state?.updated(transition: .immediate)
+                    }
+                })
             }
             
             /*if self.topContentGradientLayer.colors == nil {
@@ -2114,15 +2154,29 @@ public final class StoryItemSetContainerComponent: Component {
             var maximizedBottomContentHeight: CGFloat = 0.0
             var minimizedBottomContentFraction: CGFloat = 0.0
             
+            let minimizedHeight = max(100.0, availableSize.height - (325.0 + 12.0))
+            let defaultHeight = 60.0 + component.safeInsets.bottom + 1.0
+            
             var validViewListIds: [Int32] = []
             if component.slice.peer.id == component.context.account.peerId, let currentIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
                 var visibleViewListIds: [Int32] = [component.slice.item.storyItem.id]
-                if self.displayViewList {
+                if self.displayViewList, let viewListPanState = self.viewListPanState {
                     if currentIndex != 0 {
-                        visibleViewListIds.append(component.slice.allItems[currentIndex - 1].storyItem.id)
+                        if viewListPanState.fraction > 0.0 {
+                            visibleViewListIds.append(component.slice.allItems[currentIndex - 1].storyItem.id)
+                        }
                     }
                     if currentIndex != component.slice.allItems.count - 1 {
-                        visibleViewListIds.append(component.slice.allItems[currentIndex + 1].storyItem.id)
+                        if viewListPanState.fraction < 0.0 {
+                            visibleViewListIds.append(component.slice.allItems[currentIndex + 1].storyItem.id)
+                        }
+                    }
+                }
+                if self.viewListPanState != nil || self.isCompletingViewListPan {
+                    for (id, _) in self.viewLists {
+                        if !visibleViewListIds.contains(id) {
+                            visibleViewListIds.append(id)
+                        }
                     }
                 }
                 
@@ -2133,6 +2187,20 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 var fixedAnimationOffset: CGFloat = 0.0
                 var applyFixedAnimationOffsetIds: [Int32] = []
+                
+                let outerExpansionFraction: CGFloat
+                let outerExpansionDirection: Bool
+                if self.displayViewList {
+                    if let verticalPanState = self.verticalPanState {
+                        outerExpansionFraction = max(0.0, min(1.0, 1.0 - verticalPanState.fraction))
+                    } else {
+                        outerExpansionFraction = 1.0
+                    }
+                    outerExpansionDirection = false
+                } else {
+                    outerExpansionFraction = component.verticalPanFraction
+                    outerExpansionDirection = true
+                }
                 
                 for id in visibleViewListIds {
                     guard let itemIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == id }) else {
@@ -2152,23 +2220,6 @@ public final class StoryItemSetContainerComponent: Component {
                         viewList = ViewList()
                         self.viewLists[id] = viewList
                         applyFixedAnimationOffsetIds.append(id)
-                    }
-                    
-                    let outerExpansionFraction: CGFloat
-                    let outerExpansionDirection: Bool
-                    if self.displayViewList {
-                        if let verticalPanState = self.verticalPanState {
-                            outerExpansionFraction = max(0.0, min(1.0, 1.0 - verticalPanState.fraction))
-                        } else {
-                            outerExpansionFraction = 1.0
-                        }
-                        outerExpansionDirection = false
-                    } else if let _ = item.storyItem.views {
-                        outerExpansionFraction = component.verticalPanFraction
-                        outerExpansionDirection = true
-                    } else {
-                        outerExpansionFraction = 0.0
-                        outerExpansionDirection = true
                     }
                     
                     viewList.view.parentState = state
@@ -2419,10 +2470,10 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                     }
                     if id == component.slice.item.storyItem.id {
-                        viewListInset = viewList.externalState.minimizedHeight * viewList.externalState.minimizationFraction + viewList.externalState.defaultHeight * (1.0 - viewList.externalState.minimizationFraction)
+                        viewListInset = minimizedHeight * viewList.externalState.minimizationFraction + defaultHeight * (1.0 - viewList.externalState.minimizationFraction)
                         inputPanelBottomInset = viewListInset
-                        minimizedBottomContentHeight = viewList.externalState.minimizedHeight
-                        maximizedBottomContentHeight = viewList.externalState.defaultHeight
+                        minimizedBottomContentHeight = minimizedHeight
+                        maximizedBottomContentHeight = defaultHeight
                         minimizedBottomContentFraction = viewList.externalState.minimizationFraction
                     }
                 }

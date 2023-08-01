@@ -400,8 +400,8 @@ public extension TelegramEngine {
             preconditionFailure()
         }
         
-        public func pushPriorityDownload(resourceId: String) -> Disposable {
-            return self.account.network.multiplexedRequestManager.pushPriority(resourceId: resourceId)
+        public func pushPriorityDownload(resourceId: String, priority: Int = 1) -> Disposable {
+            return self.account.network.multiplexedRequestManager.pushPriority(resourceId: resourceId, priority: priority)
         }
     }
 }

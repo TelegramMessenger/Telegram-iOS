@@ -32,14 +32,16 @@ final class StoryItemContentComponent: Component {
     let item: EngineStoryItem
     let audioMode: StoryContentItem.AudioMode
     let isVideoBuffering: Bool
-
-    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer, item: EngineStoryItem, audioMode: StoryContentItem.AudioMode, isVideoBuffering: Bool) {
+    let isCurrent: Bool
+    
+    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer, item: EngineStoryItem, audioMode: StoryContentItem.AudioMode, isVideoBuffering: Bool, isCurrent: Bool) {
 		self.context = context
         self.strings = strings
         self.peer = peer
 		self.item = item
         self.audioMode = audioMode
         self.isVideoBuffering = isVideoBuffering
+        self.isCurrent = isCurrent
 	}
 
 	static func ==(lhs: StoryItemContentComponent, rhs: StoryItemContentComponent) -> Bool {
@@ -56,6 +58,9 @@ final class StoryItemContentComponent: Component {
 			return false
 		}
         if lhs.isVideoBuffering != rhs.isVideoBuffering {
+            return false
+        }
+        if lhs.isCurrent != rhs.isCurrent {
             return false
         }
 		return true
@@ -94,6 +99,9 @@ final class StoryItemContentComponent: Component {
         
         private let hierarchyTrackingLayer: HierarchyTrackingLayer
         
+        private var fetchPriorityResourceId: String?
+        private var currentFetchPriority: (isMain: Bool, disposable: Disposable)?
+        
 		override init(frame: CGRect) {
             self.hierarchyTrackingLayer = HierarchyTrackingLayer()
             self.imageView = StoryItemImageView()
@@ -121,6 +129,7 @@ final class StoryItemContentComponent: Component {
             self.priorityDisposable?.dispose()
             self.currentProgressTimer?.invalidate()
             self.videoProgressDisposable?.dispose()
+            self.currentFetchPriority?.disposable.dispose()
         }
         
         private func performActionAfterImageContentLoaded(update: Bool) {
@@ -476,6 +485,27 @@ final class StoryItemContentComponent: Component {
                 if let videoNode = self.videoNode {
                     self.videoNode = nil
                     videoNode.view.removeFromSuperview()
+                }
+            }
+            
+            var fetchPriorityResourceId: String?
+            switch messageMedia {
+            case let .image(image):
+                if let representation = largestImageRepresentation(image.representations) {
+                    fetchPriorityResourceId = representation.resource.id.stringRepresentation
+                }
+            case let .file(file):
+                fetchPriorityResourceId = file.resource.id.stringRepresentation
+            default:
+                break
+            }
+            
+            if self.fetchPriorityResourceId != fetchPriorityResourceId || self.currentFetchPriority?.0 != component.isCurrent {
+                self.fetchPriorityResourceId = fetchPriorityResourceId
+                self.currentFetchPriority?.disposable.dispose()
+                
+                if let fetchPriorityResourceId {
+                    self.currentFetchPriority = (component.isCurrent, component.context.engine.resources.pushPriorityDownload(resourceId: fetchPriorityResourceId, priority: component.isCurrent ? 2 : 1))
                 }
             }
             
