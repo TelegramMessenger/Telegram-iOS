@@ -775,8 +775,7 @@ public final class StoryItemSetContainerComponent: Component {
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state, let component = self.component, let itemLayout = self.itemLayout {
-                if let menuController = self.sendMessageContext.menuController {
-                    menuController.dismiss(animated: true)
+                if let _ = self.sendMessageContext.menuController {
                     return
                 }
                 if self.hasActiveDeactivateableInput() {
@@ -823,7 +822,7 @@ public final class StoryItemSetContainerComponent: Component {
                         let rotatedX = tx * cosTheta - ty * sinTheta
                         let rotatedY = tx * sinTheta + ty * cosTheta
                         
-                        return abs(rotatedX) <= area.coordinates.width / 100.0 * referenceSize.width / 2.0 && abs(rotatedY) <= area.coordinates.height / 100.0 * referenceSize.height / 2.0
+                        return abs(rotatedX) <= area.coordinates.width / 100.0 * referenceSize.width / 2.0 * 1.1 && abs(rotatedY) <= area.coordinates.height / 100.0 * referenceSize.height / 2.0 * 1.1
                     }
                     
                     for area in component.slice.item.storyItem.mediaAreas {
@@ -3619,6 +3618,7 @@ public final class StoryItemSetContainerComponent: Component {
                         self.presentPrivacyTooltip(privacy: privacy)
                         
                         self.privacyController = nil
+                        self.rewindCurrentItem()
                         self.updateIsProgressPaused()
                     },
                     editCategory: { [weak self] privacy, _, _ in

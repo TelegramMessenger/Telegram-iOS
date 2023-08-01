@@ -301,10 +301,16 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         return CGSize(width: width, height: width)
     }
     
-    public func prepareNewEntity(_ entity: DrawingEntity, setup: Bool = true, relativeTo: DrawingEntity? = nil) {
-        let center = self.startPosition(relativeTo: relativeTo, onlyVertical: entity is DrawingTextEntity)
+    public func prepareNewEntity(_ entity: DrawingEntity, setup: Bool = true, relativeTo: DrawingEntity? = nil, scale: CGFloat? = nil, position: CGPoint? = nil) {
+        var center = self.startPosition(relativeTo: relativeTo, onlyVertical: entity is DrawingTextEntity)
+        if let position {
+            center = position
+        }
         let rotation = self.getEntityInitialRotation()
-        let zoomScale = 1.0 / (self.drawingView?.zoomScale ?? 1.0)
+        var zoomScale = 1.0 / (self.drawingView?.zoomScale ?? 1.0)
+        if let scale {
+            zoomScale = scale
+        }
         
         if let shape = entity as? DrawingSimpleShapeEntity {
             shape.position = center
@@ -357,7 +363,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             if setup {
                 location.rotation = rotation
                 location.referenceDrawingSize = self.size
-                location.width = floor(self.size.width * 0.9)
+                location.width = floor(self.size.width * 0.85)
                 location.scale = zoomScale
             }
         }
@@ -471,7 +477,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         return newEntity
     }
     
-    func remove(uuid: UUID, animated: Bool = false, announce: Bool = true) {
+    public func remove(uuid: UUID, animated: Bool = false, announce: Bool = true) {
         if let view = self.getView(for: uuid) {
             if self.selectedEntityView === view {
                 self.selectedEntityView = nil
@@ -669,6 +675,12 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                         if !entityView.selectedTapAction() {
                             self.requestedMenuForEntityView(entityView, entityViews.last === entityView)
                         }
+                    }
+                }
+                selectionView.longPressed = { [weak self, weak entityView] in
+                    if let self, let entityView {
+                        let entityViews = self.subviews.filter { $0 is DrawingEntityView }
+                        self.requestedMenuForEntityView(entityView, entityViews.last === entityView)
                     }
                 }
                 entityView.selectionView = selectionView
@@ -1015,6 +1027,7 @@ public class DrawingEntitySelectionView: UIView {
     public var tapGestureRecognizer: UITapGestureRecognizer?
     
     var tapped: () -> Void = { }
+    var longPressed: () -> Void = { }
     
     override init(frame: CGRect) {
         super.init(frame: frame)

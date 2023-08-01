@@ -70,7 +70,8 @@ public struct ReverseGeocodedPlacemark {
 public func reverseGeocodeLocation(latitude: Double, longitude: Double) -> Signal<ReverseGeocodedPlacemark?, NoError> {
     return Signal { subscriber in
         let geocoder = CLGeocoder()
-        geocoder.reverseGeocodeLocation(CLLocation(latitude: latitude, longitude: longitude), completionHandler: { placemarks, _ in
+        let locale = Locale(identifier: "en-US")
+        geocoder.reverseGeocodeLocation(CLLocation(latitude: latitude, longitude: longitude), preferredLocale: locale, completionHandler: { placemarks, _ in
             if let placemarks = placemarks, let placemark = placemarks.first {
                 let result: ReverseGeocodedPlacemark
                 if placemark.thoroughfare == nil && placemark.locality == nil && placemark.country == nil {

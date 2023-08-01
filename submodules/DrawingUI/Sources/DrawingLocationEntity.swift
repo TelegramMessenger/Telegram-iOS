@@ -20,11 +20,11 @@ private func generateIcon(style: DrawingLocationEntity.Style) -> UIImage? {
             let blue: UIColor
             
             if case .black = style {
-                green = UIColor(rgb: 0x39e69a)
-                blue = UIColor(rgb: 0x1c9ae0)
+                green = UIColor(rgb: 0x3EF588)
+                blue = UIColor(rgb: 0x4FAAFF)
             } else {
-                green = UIColor(rgb: 0x1eb67a)
-                blue = UIColor(rgb: 0x1d9ae2)
+                green = UIColor(rgb: 0x1EBD5E)
+                blue = UIColor(rgb: 0x1C92FF)
             }
             
             var locations: [CGFloat] = [0.0, 1.0]
@@ -32,7 +32,7 @@ private func generateIcon(style: DrawingLocationEntity.Style) -> UIImage? {
             let colorSpace = CGColorSpaceCreateDeviceRGB()
             let gradient = CGGradient(colorsSpace: colorSpace, colors: colorsArray, locations: &locations)!
             
-            context.drawLinearGradient(gradient, start: CGPoint(x: size.width, y: 0.0), end: CGPoint(x: 0.0, y: 0.0), options: CGGradientDrawingOptions())
+            context.drawLinearGradient(gradient, start: CGPoint(x: size.width, y: size.height), end: CGPoint(x: 0.0, y: 0.0), options: CGGradientDrawingOptions())
         } else {
             context.setFillColor(UIColor.white.cgColor)
             context.fill(CGRect(origin: .zero, size: size))
@@ -46,12 +46,17 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
     }
     
     let backgroundView: UIView
+    let blurredBackgroundView: BlurredBackgroundView
+    
     let textView: DrawingTextView
     let iconView: UIImageView
     
     init(context: AccountContext, entity: DrawingLocationEntity) {
         self.backgroundView = UIView()
         self.backgroundView.clipsToBounds = true
+        
+        self.blurredBackgroundView = BlurredBackgroundView(color: UIColor(white: 0.0, alpha: 0.25), enableBlur: true)
+        self.blurredBackgroundView.clipsToBounds = true
         
         self.textView = DrawingTextView(frame: .zero)
         self.textView.clipsToBounds = false
@@ -70,6 +75,8 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
         self.textView.keyboardAppearance = .dark
         self.textView.autocorrectionType = .default
         self.textView.spellCheckingType = .no
+        self.textView.textContainer.maximumNumberOfLines = 2
+        self.textView.textContainer.lineBreakMode = .byTruncatingTail
         
         self.iconView = UIImageView()
         
@@ -77,6 +84,7 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
                 
         self.textView.delegate = self
         self.addSubview(self.backgroundView)
+        self.addSubview(self.blurredBackgroundView)
         self.addSubview(self.textView)
         self.addSubview(self.iconView)
         
@@ -92,7 +100,7 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
         self.textView.setNeedsLayersUpdate()
         var result = self.textView.sizeThatFits(CGSize(width: self.locationEntity.width, height: .greatestFiniteMagnitude))
         self.textSize = result
-        result.width = floorToScreenPixels(max(224.0, ceil(result.width) + 20.0) + result.height * 0.5)
+        result.width = floorToScreenPixels(max(224.0, ceil(result.width) + 20.0) + result.height * 0.55)
         result.height = ceil(result.height * 1.2);
         return result;
     }
@@ -109,10 +117,12 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
     public override func layoutSubviews() {
         super.layoutSubviews()
         
-        let iconSize = floor(self.bounds.height * 0.6)
-        self.iconView.frame = CGRect(origin: CGPoint(x: floor(iconSize * 0.2), y: floorToScreenPixels((self.bounds.height - iconSize) / 2.0)), size: CGSize(width: iconSize, height: iconSize))
+        let iconSize = min(76.0, floor(self.bounds.height * 0.6))
+        self.iconView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(iconSize * 0.25), y: floorToScreenPixels((self.bounds.height - iconSize) / 2.0)), size: CGSize(width: iconSize, height: iconSize))
         self.textView.frame = CGRect(origin: CGPoint(x: self.bounds.width - self.textSize.width, y: floorToScreenPixels((self.bounds.height - self.textSize.height) / 2.0)), size: self.textSize)
         self.backgroundView.frame = self.bounds
+        self.blurredBackgroundView.frame = self.bounds
+        self.blurredBackgroundView.update(size: self.bounds.size, transition: .immediate)
     }
     
     override func selectedTapAction() -> Bool {
@@ -127,29 +137,27 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
         case .black:
             updatedStyle = .transparent
         case .transparent:
-            updatedStyle = .white
+            updatedStyle = .blur
         case .blur:
             updatedStyle = .white
         }
         self.locationEntity.style = updatedStyle
 
-//        if let snapshotView = self.snapshotView(afterScreenUpdates: false) {
-//            self.addSubview(snapshotView)
-//            
-//            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-//                snapshotView?.removeFromSuperview()
-//            })
-//            self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-//        }
         self.update()
         
         return true
     }
         
     private var displayFontSize: CGFloat {
+        var textFontSize: CGFloat = 0.07
+        let textLength = self.locationEntity.title.count
+        if textLength > 10 {
+            textFontSize = max(0.01, 0.07 - CGFloat(textLength - 10) / 100.0)
+        }
+        
         let minFontSize = max(10.0, max(self.locationEntity.referenceDrawingSize.width, self.locationEntity.referenceDrawingSize.height) * 0.025)
         let maxFontSize = max(10.0, max(self.locationEntity.referenceDrawingSize.width, self.locationEntity.referenceDrawingSize.height) * 0.25)
-        let fontSize = minFontSize + (maxFontSize - minFontSize) * 0.07
+        let fontSize = minFontSize + (maxFontSize - minFontSize) * textFontSize
         return fontSize
     }
     
@@ -162,10 +170,11 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
             
         let font = Font.with(size: fontSize, design: .camera, weight: .semibold)
         text.addAttribute(.font, value: font, range: range)
+        text.addAttribute(.kern, value: -1.5 as NSNumber, range: range)
         self.textView.font = font
         
         let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.alignment = .right
+        paragraphStyle.alignment = .left
         text.addAttribute(.paragraphStyle, value: paragraphStyle, range: range)
         
         let textColor: UIColor
@@ -192,17 +201,25 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
         case .white:
             self.textView.textColor = .black
             self.backgroundView.backgroundColor = .white
+            self.backgroundView.isHidden = false
+            self.blurredBackgroundView.isHidden = true
         case .black:
             self.textView.textColor = .white
             self.backgroundView.backgroundColor = .black
+            self.backgroundView.isHidden = false
+            self.blurredBackgroundView.isHidden = true
         case .transparent:
             self.textView.textColor = .white
             self.backgroundView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.2)
+            self.backgroundView.isHidden = false
+            self.blurredBackgroundView.isHidden = true
         case .blur:
             self.textView.textColor = .white
-            self.backgroundView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.2)
+            self.backgroundView.isHidden = true
+            self.backgroundView.backgroundColor = UIColor(rgb: 0xffffff)
+            self.blurredBackgroundView.isHidden = false
         }
-        self.textView.textAlignment = .right
+        self.textView.textAlignment = .left
         
         self.updateText()
         
@@ -214,8 +231,10 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
         }
         
         self.backgroundView.layer.cornerRadius = self.textSize.height * 0.18
+        self.blurredBackgroundView.layer.cornerRadius = self.backgroundView.layer.cornerRadius
         if #available(iOS 13.0, *) {
             self.backgroundView.layer.cornerCurve = .continuous
+            self.blurredBackgroundView.layer.cornerCurve = .continuous
         }
         
         super.update(animated: animated)
@@ -264,6 +283,8 @@ final class DrawingLocationEntititySelectionView: DrawingEntitySelectionView {
     private let leftHandle = SimpleShapeLayer()
     private let rightHandle = SimpleShapeLayer()
     
+    private var longPressGestureRecognizer: UILongPressGestureRecognizer?
+    
     override init(frame: CGRect) {
         let handleBounds = CGRect(origin: .zero, size: entitySelectionViewHandleSize)
         let handles = [
@@ -296,6 +317,10 @@ final class DrawingLocationEntititySelectionView: DrawingEntitySelectionView {
                 entityView.onSnapUpdated(type, snapped)
             }
         }
+        
+        let longPressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handleLongPress(_:)))
+        self.addGestureRecognizer(longPressGestureRecognizer)
+        self.longPressGestureRecognizer = longPressGestureRecognizer
     }
     
     required init?(coder: NSCoder) {
@@ -318,6 +343,12 @@ final class DrawingLocationEntititySelectionView: DrawingEntitySelectionView {
     
     private let snapTool = DrawingEntitySnapTool()
     
+    @objc private func handleLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        if case .began = gestureRecognizer.state {
+            self.longPressed()
+        }
+    }
+    
     private var currentHandle: CALayer?
     override func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
         guard let entityView = self.entityView, let entity = entityView.entity as? DrawingLocationEntity else {
@@ -328,6 +359,9 @@ final class DrawingLocationEntititySelectionView: DrawingEntitySelectionView {
         case .began:
             self.tapGestureRecognizer?.isEnabled = false
             self.tapGestureRecognizer?.isEnabled = true
+            
+            self.longPressGestureRecognizer?.isEnabled = false
+            self.longPressGestureRecognizer?.isEnabled = true
             
             self.snapTool.maybeSkipFromStart(entityView: entityView, position: entity.position)
             

@@ -342,7 +342,7 @@ final class LocationInfoListItemNode: ListViewItemNode {
                             shapes.append(.roundedRectLine(startPoint: CGPoint(x: directionsWidth + directionsSpacing, y: 0.0), width: directionsWidth, diameter: 32.0))
                             shapes.append(.roundedRectLine(startPoint: CGPoint(x: directionsWidth + directionsSpacing + directionsWidth + directionsSpacing, y: 0.0), width: directionsWidth, diameter: 32.0))
                             
-                            shimmerNode.update(backgroundColor: item.presentationData.theme.list.itemBlocksBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: shimmerNode.frame.size)
+                            shimmerNode.update(backgroundColor: item.presentationData.theme.list.plainBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: shimmerNode.frame.size)
                         } else if let shimmerNode = strongSelf.placeholderNode {
                             strongSelf.placeholderNode = nil
                             shimmerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak shimmerNode] _ in

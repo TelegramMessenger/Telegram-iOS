@@ -275,6 +275,8 @@ public final class PeerListItemComponent: Component {
             
             let themeUpdated = self.component?.theme !== component.theme
             
+            self.avatarButtonView.isUserInteractionEnabled = component.openStories != nil
+            
             var hasSelectionUpdated = false
             if let previousComponent = self.component {
                 switch previousComponent.selectionState {

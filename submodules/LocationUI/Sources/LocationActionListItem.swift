@@ -265,6 +265,7 @@ final class LocationActionListItemNode: ListViewItemNode {
                             strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                         }
                         
+                        var arguments: TransformImageCustomArguments?
                         if let updatedIcon = updatedIcon {
                             switch updatedIcon {
                                 case .location:
@@ -279,6 +280,10 @@ final class LocationActionListItemNode: ListViewItemNode {
                                     strongSelf.iconNode.isHidden = true
                                     strongSelf.venueIconNode.isHidden = false
                                     strongSelf.venueIconNode.setSignal(venueIcon(engine: item.engine, type: venue.venue?.type ?? "", background: true))
+                                
+                                    if venue.venue?.id == "city" {
+                                        arguments = VenueIconArguments(defaultBackgroundColor: item.presentationData.theme.chat.inputPanel.actionControlFillColor, defaultForegroundColor: .white)
+                                    }
                             }
                             
                             if updatedIcon == .stopLiveLocation {
@@ -292,7 +297,7 @@ final class LocationActionListItemNode: ListViewItemNode {
                             strongSelf.wavesNode?.color = item.presentationData.theme.chat.inputPanel.actionControlForegroundColor
                         }
                         
-                        let iconApply = iconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: CGSize(width: iconSize, height: iconSize), boundingSize: CGSize(width: iconSize, height: iconSize), intrinsicInsets: UIEdgeInsets()))
+                        let iconApply = iconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: CGSize(width: iconSize, height: iconSize), boundingSize: CGSize(width: iconSize, height: iconSize), intrinsicInsets: UIEdgeInsets(), custom: arguments))
                         iconApply()
                         
                         let titleNode = titleApply()

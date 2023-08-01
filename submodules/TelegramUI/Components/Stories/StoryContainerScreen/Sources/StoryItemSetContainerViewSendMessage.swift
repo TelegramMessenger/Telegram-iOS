@@ -67,7 +67,7 @@ final class StoryItemSetContainerSendMessage {
     weak var actionSheet: ViewController?
     weak var statusController: ViewController?
     weak var lookupController: UIViewController?
-    weak var menuController: UIViewController?
+    weak var menuController: ViewController?
     var isViewingAttachedStickers = false
     
     var currentTooltipUpdateTimer: Foundation.Timer?
@@ -3113,16 +3113,18 @@ final class StoryItemSetContainerSendMessage {
                 view?.updateModalTransitionFactor(1.0, transition: .animated(duration: 0.5, curve: .spring))
                 locationController.dismissed = { [weak view] in
                     view?.updateModalTransitionFactor(0.0, transition: .animated(duration: 0.5, curve: .spring))
-                    view?.updateIsProgressPaused()
+                    Queue.mainQueue().after(0.3, {
+                        view?.updateIsProgressPaused()
+                    })
                 }
                 controller?.push(locationController)
             }))
         }
         
         let referenceSize = view.controlsContainerView.frame.size
-        let size = CGSize(width: 16.0, height: 16.0)
-        var frame = CGRect(x: mediaArea.coordinates.x / 100.0 * referenceSize.width - size.width / 2.0, y: (mediaArea.coordinates.y - mediaArea.coordinates.height * 0.5)  / 100.0 * referenceSize.height - size.height / 2.0, width: size.width, height: size.height)
-        frame = frame.offsetBy(dx: 0.0, dy: view.controlsContainerView.frame.minY)
+        let size = CGSize(width: 16.0, height: mediaArea.coordinates.height / 100.0 * referenceSize.height * 1.1)
+        var frame = CGRect(x: mediaArea.coordinates.x / 100.0 * referenceSize.width - size.width / 2.0, y: mediaArea.coordinates.y / 100.0 * referenceSize.height - size.height / 2.0, width: size.width, height: size.height)
+        frame = view.controlsContainerView.convert(frame, to: nil)
         
         let node = controller.displayNode
         let menuController = ContextMenuController(actions: actions)
@@ -3132,7 +3134,7 @@ final class StoryItemSetContainerSendMessage {
             in: .window(.root),
             with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak node] in
                 if let node {
-                    return (node, frame, node, CGRect(origin: .zero, size: referenceSize))
+                    return (node, frame, node, CGRect(origin: .zero, size: referenceSize).insetBy(dx: 0.0, dy: 64.0))
                 } else {
                     return nil
                 }

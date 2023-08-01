@@ -784,6 +784,8 @@ private func apiInputPrivacyRules(privacy: EngineStoryPrivacy, transaction: Tran
     if !privacyUsers.isEmpty {
         if case .contacts = privacy.base {
             privacyRules.append(.inputPrivacyValueDisallowUsers(users: privacyUsers))
+        } else if case .everyone = privacy.base {
+            privacyRules.append(.inputPrivacyValueDisallowUsers(users: privacyUsers))
         } else {
             privacyRules.append(.inputPrivacyValueAllowUsers(users: privacyUsers))
         }

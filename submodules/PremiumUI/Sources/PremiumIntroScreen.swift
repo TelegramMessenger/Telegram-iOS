@@ -395,7 +395,7 @@ enum PremiumPerk: CaseIterable {
         case .translation:
             return strings.Premium_Translation
         case .stories:
-            return ""
+            return "Upgraded Stories"
         }
     }
     
@@ -430,7 +430,7 @@ enum PremiumPerk: CaseIterable {
         case .translation:
             return strings.Premium_TranslationInfo
         case .stories:
-            return "Be one of the first to share your stories with your contacts or an unlimited audience."
+            return "Priority order, stealth mode, permanent views history and more."
         }
     }
     
@@ -465,7 +465,7 @@ enum PremiumPerk: CaseIterable {
         case .translation:
             return "Premium/Perk/Translation"
         case .stories:
-            return "Premium/Perk/Translation"
+            return "Premium/Perk/Stories"
         }
     }
 }
@@ -473,6 +473,7 @@ enum PremiumPerk: CaseIterable {
 struct PremiumIntroConfiguration {
     static var defaultValue: PremiumIntroConfiguration {
         return PremiumIntroConfiguration(perks: [
+            .stories,
             .doubleLimits,
             .moreUpload,
             .fasterDownload,

@@ -2045,6 +2045,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         }).start()
                     }
                 },
+                editEntity: { [weak self] entity in
+                    if let self {
+                        if let location = entity as? DrawingLocationEntity {
+                            self.presentLocationPicker(location)
+                        }
+                    }
+                },
                 getCurrentImage: { [weak self] in
                     guard let self else {
                         return nil
@@ -2700,7 +2707,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             controller.push(galleryController)
         }
         
-        func presentLocationPicker() {
+        func presentLocationPicker(_ existingEntity: DrawingLocationEntity? = nil) {
             guard let controller = self.controller else {
                 return
             }
@@ -2716,15 +2723,21 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     } else {
                         title = address ?? "Location"
                     }
+                    let position = existingEntity?.position
+                    let scale = existingEntity?.scale ?? 1.0
+                    if let existingEntity {
+                        self.entitiesView.remove(uuid: existingEntity.uuid, animated: true)
+                    }
                     self.interaction?.insertEntity(
                         DrawingLocationEntity(
                             title: title,
-                            style: .white,
+                            style: existingEntity?.style ?? .white,
                             location: location,
                             queryId: queryId,
                             resultId: resultId
                         ),
-                        scale: 1.0
+                        scale: scale,
+                        position: position
                     )
                 }
             })
