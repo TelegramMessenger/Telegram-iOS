@@ -1753,6 +1753,8 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     func deactivateSearch(placeholderNode: SearchBarPlaceholderNode, animated: Bool) -> (() -> Void)? {
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.deactivate(placeholder: placeholderNode, animated: animated)
+            // prevent redundant search pane creation which also makes useless network call
+            (searchDisplayController.contentNode as? ChatListSearchContainerNode)?.disableAdjacentLoading()
             self.searchDisplayController = nil
             self.mainContainerNode.accessibilityElementsHidden = false
             self.inlineStackContainerNode?.accessibilityElementsHidden = false

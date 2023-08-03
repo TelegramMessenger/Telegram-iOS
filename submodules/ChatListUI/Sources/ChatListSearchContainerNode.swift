@@ -1506,6 +1506,10 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private func dismissInput() {
         self.view.window?.endEditing(true)
     }
+    
+    public func disableAdjacentLoading() {
+        self.paneContainerNode.isAdjacentLoadingEnabled = false
+    }
 }
 
 private final class MessageContextExtractedContentSource: ContextExtractedContentSource {
