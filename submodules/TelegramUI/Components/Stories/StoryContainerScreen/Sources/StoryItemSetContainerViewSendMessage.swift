@@ -2989,7 +2989,7 @@ final class StoryItemSetContainerSendMessage {
             }
             
             let timestamp = Int32(Date().timeIntervalSince1970)
-            if let activeUntilTimestamp = config.stealthModeState.actualizedNow().activeUntilTimestamp, activeUntilTimestamp > timestamp, !"".isEmpty {
+            if let activeUntilTimestamp = config.stealthModeState.actualizedNow().activeUntilTimestamp, activeUntilTimestamp > timestamp {
                 let remainingActiveSeconds = activeUntilTimestamp - timestamp
                 
                 let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)

@@ -648,7 +648,7 @@ public final class MessageInputPanelComponent: Component {
                 fieldBackgroundFrame = fieldFrame
             } else {
                 fieldBackgroundFrame = CGRect(origin: CGPoint(x: mediaInsets.left, y: insets.top), size: CGSize(width: availableSize.width - mediaInsets.left - insets.right, height: textFieldSize.height))
-                if let _ = component.likeAction {
+                if component.likeAction != nil && component.forwardAction != nil {
                     fieldBackgroundFrame.size.width -= 49.0
                 }
             }
@@ -1019,7 +1019,22 @@ public final class MessageInputPanelComponent: Component {
                 containerSize: CGSize(width: 33.0, height: 33.0)
             )
             
-            let hasLikeAction = !(isEditing || component.likeAction == nil)
+            let hasLikeAction: Bool
+            let displayLikeAction: Bool
+            let likeActionReplacesInputAction: Bool
+            if component.likeAction == nil {
+                hasLikeAction = false
+                displayLikeAction = false
+                likeActionReplacesInputAction = false
+            } else if isEditing {
+                hasLikeAction = false
+                displayLikeAction = false
+                likeActionReplacesInputAction = false
+            } else {
+                hasLikeAction = component.forwardAction != nil
+                likeActionReplacesInputAction = component.forwardAction == nil
+                displayLikeAction = true
+            }
             
             var inputActionButtonOriginX: CGFloat
             if component.setMediaRecordingActive != nil || isEditing {
@@ -1039,7 +1054,11 @@ public final class MessageInputPanelComponent: Component {
                 let inputActionButtonFrame = CGRect(origin: CGPoint(x: inputActionButtonOriginX, y: size.height - insets.bottom - baseFieldHeight + floor((baseFieldHeight - inputActionButtonSize.height) * 0.5)), size: inputActionButtonSize)
                 transition.setPosition(view: inputActionButtonView, position: inputActionButtonFrame.center)
                 transition.setBounds(view: inputActionButtonView, bounds: CGRect(origin: CGPoint(), size: inputActionButtonFrame.size))
-                inputActionButtonOriginX += 41.0
+                transition.setAlpha(view: inputActionButtonView, alpha: likeActionReplacesInputAction ? 0.0 : 1.0)
+                
+                if hasLikeAction {
+                    inputActionButtonOriginX += 41.0
+                }
             }
             
             let likeButtonSize = self.likeButton.update(
@@ -1082,14 +1101,14 @@ public final class MessageInputPanelComponent: Component {
                 let likeButtonFrame = CGRect(origin: CGPoint(x: inputActionButtonOriginX, y: size.height - insets.bottom - baseFieldHeight + floor((baseFieldHeight - likeButtonSize.height) * 0.5)), size: likeButtonSize)
                 transition.setPosition(view: likeButtonView, position: likeButtonFrame.center)
                 transition.setBounds(view: likeButtonView, bounds: CGRect(origin: CGPoint(), size: likeButtonFrame.size))
-                transition.setAlpha(view: likeButtonView, alpha: hasLikeAction ? 1.0 : 0.0)
+                transition.setAlpha(view: likeButtonView, alpha: displayLikeAction ? 1.0 : 0.0)
                 inputActionButtonOriginX += 41.0
             }
         
             var fieldIconNextX = fieldBackgroundFrame.maxX - 4.0
             
             var inputModeVisible = false
-            if component.style == .story || isEditing {
+            if isEditing {
                 inputModeVisible = true
             }
             
