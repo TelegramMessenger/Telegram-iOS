@@ -926,6 +926,7 @@ public class Account {
     private let becomeMasterDisposable = MetaDisposable()
     private let managedServiceViewsDisposable = MetaDisposable()
     private let managedServiceViewsActionDisposable = MetaDisposable()
+    private let managedConfigurationUpdatesDisposable = MetaDisposable()
     private let managedOperationsDisposable = DisposableSet()
     private var storageSettingsDisposable: Disposable?
     private var automaticCacheEvictionContext: AutomaticCacheEvictionContext?
@@ -936,6 +937,7 @@ public class Account {
     
     public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
     public let shouldKeepOnlinePresence = Promise<Bool>()
+    private let onlineUpdatePeriodMs = Promise<Int32?>()
     public let autolockReportDeadline = Promise<Int32?>()
     public let shouldExplicitelyKeepWorkerConnections = Promise<Bool>(false)
     public let shouldKeepBackgroundDownloadConnections = Promise<Bool>(false)
@@ -1017,7 +1019,15 @@ public class Account {
         
         self.contactSyncManager = ContactSyncManager(postbox: postbox, network: network, accountPeerId: peerId, stateManager: self.stateManager)
         self.localInputActivityManager = PeerInputActivityManager()
-        self.accountPresenceManager = AccountPresenceManager(shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), network: network)
+        self.accountPresenceManager = AccountPresenceManager(shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), onlineUpdatePeriodMs: self.onlineUpdatePeriodMs.get(), network: network)
+        self.onlineUpdatePeriodMs.set(
+            postbox.preferencesView(keys: [PreferencesKeys.networkSettings])
+            |> map { view in
+                let networkSettings = view.values[PreferencesKeys.networkSettings]?.get(NetworkSettings.self)
+                return networkSettings?.onlineUpdatePeriodMs
+            }
+            |> distinctUntilChanged
+        )
         let _ = (postbox.transaction { transaction -> Void in
             transaction.updatePeerPresencesInternal(presences: [peerId: TelegramUserPresence(status: .present(until: Int32.max - 1), lastActivity: 0)], merge: { _, updated in return updated })
             transaction.setNeedsPeerGroupMessageStatsSynchronization(groupId: Namespaces.PeerGroup.archive, namespace: Namespaces.Message.Cloud)
@@ -1221,6 +1231,7 @@ public class Account {
         self.managedStickerPacksDisposable.dispose()
         self.managedServiceViewsDisposable.dispose()
         self.managedServiceViewsActionDisposable.dispose()
+        self.managedConfigurationUpdatesDisposable.dispose()
         self.managedOperationsDisposable.dispose()
         self.storageSettingsDisposable?.dispose()
         self.smallLogPostDisposable.dispose()
@@ -1229,7 +1240,7 @@ public class Account {
     }
     
     private func restartConfigurationUpdates() {
-        self.managedOperationsDisposable.add(managedConfigurationUpdates(accountManager: self.accountManager, postbox: self.postbox, network: self.network).start())
+        self.managedConfigurationUpdatesDisposable.set(managedConfigurationUpdates(accountManager: self.accountManager, postbox: self.postbox, network: self.network).start())
     }
     
     private func postSmallLogIfNeeded() {

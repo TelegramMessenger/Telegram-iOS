@@ -783,8 +783,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     var loggedOut: (() -> Void)?
     var didReceiveSoftAuthResetError: (() -> Void)?
     
-    private var isTrustedTimeSet = false
-    private let trustedTime = Atomic<(timestamp: TimeInterval, uptime: Int32)?>(value: nil)
+    private let trustedTime = Atomic<(timestamp: Int32, uptime: Int32)?>(value: nil)
     
     override public var description: String {
         return "Network context: \(self.context)"
@@ -1056,7 +1055,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         
     public func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {
         let requestService = self.requestService
-        return Signal { [weak self] subscriber in
+        return Signal { subscriber in
             let request = MTRequest()
             
             request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: tag), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
@@ -1078,12 +1077,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
                 return true
             }
             
-            var requestStartedUptime: Int32?
-            if let strongSelf = self, !strongSelf.isTrustedTimeSet {
-                requestStartedUptime = getDeviceUptimeSeconds(nil)
-            }
-            
-            request.completed = { (boxedResponse, responseInfo, error) -> () in
+            request.completed = { (boxedResponse, timestamp, error) -> () in
                 if let error = error {
                     subscriber.putError(error)
                 } else {
@@ -1093,16 +1087,6 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
                     }
                     else {
                         subscriber.putError(MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"))
-                    }
-                }
-                
-                if let requestStartedUptime, let strongSelf = self, !strongSelf.isTrustedTimeSet, let responseInfo {
-                    let requestCompletedUptime = getDeviceUptimeSeconds(nil)
-                    // checking request duration to make sure timestamp is recent
-                    if requestCompletedUptime - requestStartedUptime < 10 {
-                        let _ = strongSelf.trustedTime.swap((responseInfo.timestamp, requestCompletedUptime))
-                        assert(strongSelf.mtProto.messageServiceQueue().isCurrentQueue())
-                        strongSelf.isTrustedTimeSet = true
                     }
                 }
             }
@@ -1126,9 +1110,13 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         }
     }
     
+    func setTrustedTimestamp(_ timestamp: Int32) {
+        let _ = self.trustedTime.swap((timestamp, getDeviceUptimeSeconds(nil)))
+    }
+    
     public func getTrustedTimestamp() -> TimeInterval? {
         if let (timestamp, uptime) = self.trustedTime.with({ $0 }) {
-            return timestamp + Double(getDeviceUptimeSeconds(nil) - uptime)
+            return Double(timestamp + (getDeviceUptimeSeconds(nil) - uptime))
         }
         return nil
     }
