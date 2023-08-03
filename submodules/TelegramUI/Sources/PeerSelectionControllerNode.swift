@@ -1179,7 +1179,10 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     },
                     presentInGlobalOverlay: { _, _ in
                     },
-                    navigationController: nil
+                    navigationController: nil,
+                    parentController: { [weak self] in
+                        return self?.controller
+                    }
                 ), cancel: { [weak self] in
                     if let requestDeactivateSearch = self?.requestDeactivateSearch {
                         requestDeactivateSearch()

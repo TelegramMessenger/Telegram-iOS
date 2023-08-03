@@ -2347,7 +2347,9 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             self?.controller?.present(c, in: .window(.root), with: a)
         }, presentInGlobalOverlay: { [weak self] c, a in
             self?.controller?.presentInGlobalOverlay(c, with: a)
-        }, navigationController: navigationController)
+        }, navigationController: navigationController, parentController: { [weak self] in
+            return self?.controller
+        })
         
         self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, contentNode: contentNode, cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {

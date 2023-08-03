@@ -1090,5 +1090,34 @@ public extension TelegramEngine.EngineData.Item {
                 return view.info?.data.get(MessageHistoryThreadData.self)
             }
         }
+        
+        public struct StoryStats: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = PeerStoryStats?
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .peerStoryStats(peerIds: Set([self.id]))
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PeerStoryStatsView else {
+                    preconditionFailure()
+                }
+                
+                if let result = view.storyStats[self.id] {
+                    return result
+                } else {
+                    return nil
+                }
+            }
+        }
     }
 }
