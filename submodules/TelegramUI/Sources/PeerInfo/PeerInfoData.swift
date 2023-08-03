@@ -128,7 +128,7 @@ final class TelegramGlobalSettings {
     let notificationExceptions: NotificationExceptionsList?
     let inAppNotificationSettings: InAppNotificationSettings
     let privacySettings: AccountPrivacySettings?
-    let unreadTrendingStickerPacks: Int
+//    let unreadTrendingStickerPacks: Int
     let archivedStickerPacks: [ArchivedStickerPackItem]?
     let userLimits: EngineConfiguration.UserLimits
     let hasPassport: Bool
@@ -149,7 +149,7 @@ final class TelegramGlobalSettings {
         notificationExceptions: NotificationExceptionsList?,
         inAppNotificationSettings: InAppNotificationSettings,
         privacySettings: AccountPrivacySettings?,
-        unreadTrendingStickerPacks: Int,
+//        unreadTrendingStickerPacks: Int,
         archivedStickerPacks: [ArchivedStickerPackItem]?,
         userLimits: EngineConfiguration.UserLimits,
         hasPassport: Bool,
@@ -169,7 +169,7 @@ final class TelegramGlobalSettings {
         self.notificationExceptions = notificationExceptions
         self.inAppNotificationSettings = inAppNotificationSettings
         self.privacySettings = privacySettings
-        self.unreadTrendingStickerPacks = unreadTrendingStickerPacks
+//        self.unreadTrendingStickerPacks = unreadTrendingStickerPacks
         self.archivedStickerPacks = archivedStickerPacks
         self.userLimits = userLimits
         self.hasPassport = hasPassport
@@ -464,7 +464,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         privacySettings,
         preferences,
         combineLatest(notificationExceptions, notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get()),
-        combineLatest(context.account.viewTracker.featuredStickerPacks(), archivedStickerPacks),
+        combineLatest(/*context.account.viewTracker.featuredStickerPacks()*/.single(0), archivedStickerPacks),
         hasPassport,
         (context.watchManager?.watchAppInstalled ?? .single(false)),
         context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration]),
@@ -482,14 +482,14 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
     )
     |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled -> PeerInfoScreenData in
         let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
-        let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
+        let (/*featuredStickerPacks*/_, archivedStickerPacks) = stickerPacks
         
         let proxySettings: ProxySettings = sharedPreferences.entries[SharedDataKeys.proxySettings]?.get(ProxySettings.self) ?? ProxySettings.defaultSettings
         let inAppNotificationSettings: InAppNotificationSettings = sharedPreferences.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? InAppNotificationSettings.defaultSettings
         
-        let unreadTrendingStickerPacks = featuredStickerPacks.reduce(0, { count, item -> Int in
-            return item.unread ? count + 1 : count
-        })
+//        let unreadTrendingStickerPacks = featuredStickerPacks.reduce(0, { count, item -> Int in
+//            return item.unread ? count + 1 : count
+//        })
         
         var enableQRLogin = false
         let appConfiguration = accountPreferences.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self)
@@ -517,7 +517,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             notificationExceptions: notificationExceptions,
             inAppNotificationSettings: inAppNotificationSettings,
             privacySettings: privacySettings,
-            unreadTrendingStickerPacks: unreadTrendingStickerPacks,
+//            unreadTrendingStickerPacks: unreadTrendingStickerPacks,
             archivedStickerPacks: archivedStickerPacks,
             userLimits: peer?.isPremium == true ? limits.1 : limits.0,
             hasPassport: hasPassport,
