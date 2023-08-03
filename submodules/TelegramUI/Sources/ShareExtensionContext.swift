@@ -116,7 +116,6 @@ public class ShareRootControllerImpl {
     private var currentShareController: ShareController?
     private var currentPasscodeController: ViewController?
     
-    private var shouldBeMaster = Promise<Bool>()
     private let disposable = MetaDisposable()
     private var observer1: AnyObject?
     private var observer2: AnyObject?
@@ -130,7 +129,6 @@ public class ShareRootControllerImpl {
     
     deinit {
         self.disposable.dispose()
-        self.shouldBeMaster.set(.single(false))
         if let observer = self.observer1 {
             NotificationCenter.default.removeObserver(observer)
         }

@@ -15,15 +15,20 @@ import AvatarStoryIndicatorComponent
 
 private final class AvatarComponent: Component {
     let context: AccountContext
+    let theme: PresentationTheme
     let peer: EnginePeer
 
-    init(context: AccountContext, peer: EnginePeer) {
+    init(context: AccountContext, theme: PresentationTheme, peer: EnginePeer) {
         self.context = context
+        self.theme = theme
         self.peer = peer
     }
 
     static func ==(lhs: AvatarComponent, rhs: AvatarComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
             return false
         }
         if lhs.peer != rhs.peer {
@@ -60,7 +65,7 @@ private final class AvatarComponent: Component {
             self.avatarNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - size.width) / 2.0), y: -22.0), size: size)
             self.avatarNode.setPeer(
                 context: component.context,
-                theme: component.context.sharedContext.currentPresentationData.with({ $0 }).theme,
+                theme: component.theme,
                 peer: component.peer,
                 synchronousLoad: true
             )
@@ -234,17 +239,22 @@ private final class StoriesListComponent: CombinedComponent {
     typealias EnvironmentType = (Empty, ScrollChildEnvironment)
     
     let context: AccountContext
+    let theme: PresentationTheme
     let topInset: CGFloat
     let bottomInset: CGFloat
     
-    init(context: AccountContext, topInset: CGFloat, bottomInset: CGFloat) {
+    init(context: AccountContext, theme: PresentationTheme, topInset: CGFloat, bottomInset: CGFloat) {
         self.context = context
+        self.theme = theme
         self.topInset = topInset
         self.bottomInset = bottomInset
     }
     
     static func ==(lhs: StoriesListComponent, rhs: StoriesListComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
             return false
         }
         if lhs.topInset != rhs.topInset {
@@ -298,7 +308,7 @@ private final class StoriesListComponent: CombinedComponent {
         let list = Child(List<Empty>.self)
         
         return { context in
-            let theme = context.component.context.sharedContext.currentPresentationData.with { $0 }.theme
+            let theme = context.component.theme
 //            let strings = context.component.context.sharedContext.currentPresentationData.with { $0 }.strings
             
             let colors = [
@@ -322,6 +332,7 @@ private final class StoriesListComponent: CombinedComponent {
                         id: "avatar",
                         component: AnyComponent(AvatarComponent(
                             context: context.component.context,
+                            theme: theme,
                             peer: accountPeer
                         ))
                     )
@@ -447,13 +458,15 @@ final class StoriesPageComponent: CombinedComponent {
     typealias EnvironmentType = DemoPageEnvironment
     
     let context: AccountContext
+    let theme: PresentationTheme
     let bottomInset: CGFloat
     let updatedBottomAlpha: (CGFloat) -> Void
     let updatedDismissOffset: (CGFloat) -> Void
     let updatedIsDisplaying: (Bool) -> Void
 
-    init(context: AccountContext, bottomInset: CGFloat, updatedBottomAlpha: @escaping (CGFloat) -> Void, updatedDismissOffset: @escaping (CGFloat) -> Void, updatedIsDisplaying: @escaping (Bool) -> Void) {
+    init(context: AccountContext, theme: PresentationTheme, bottomInset: CGFloat, updatedBottomAlpha: @escaping (CGFloat) -> Void, updatedDismissOffset: @escaping (CGFloat) -> Void, updatedIsDisplaying: @escaping (Bool) -> Void) {
         self.context = context
+        self.theme = theme
         self.bottomInset = bottomInset
         self.updatedBottomAlpha = updatedBottomAlpha
         self.updatedDismissOffset = updatedDismissOffset
@@ -462,6 +475,9 @@ final class StoriesPageComponent: CombinedComponent {
     
     static func ==(lhs: StoriesPageComponent, rhs: StoriesPageComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
             return false
         }
         if lhs.bottomInset != rhs.bottomInset {
@@ -544,7 +560,7 @@ final class StoriesPageComponent: CombinedComponent {
             state.position = environment.position
             state.isDisplaying = environment.isDisplaying
             
-            let theme = context.component.context.sharedContext.currentPresentationData.with { $0 }.theme
+            let theme = context.component.theme
 //            let strings = context.component.context.sharedContext.currentPresentationData.with { $0 }.strings
             
             let topInset: CGFloat = 56.0
@@ -554,6 +570,7 @@ final class StoriesPageComponent: CombinedComponent {
                     content: AnyComponent(
                         StoriesListComponent(
                             context: context.component.context,
+                            theme: theme,
                             topInset: topInset,
                             bottomInset: context.component.bottomInset + 110.0
                         )

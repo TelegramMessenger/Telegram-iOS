@@ -2989,12 +2989,12 @@ final class StoryItemSetContainerSendMessage {
             }
             
             let timestamp = Int32(Date().timeIntervalSince1970)
-            if let activeUntilTimestamp = config.stealthModeState.actualizedNow().activeUntilTimestamp, activeUntilTimestamp > timestamp {
+            if let activeUntilTimestamp = config.stealthModeState.actualizedNow().activeUntilTimestamp, activeUntilTimestamp > timestamp, !"".isEmpty {
                 let remainingActiveSeconds = activeUntilTimestamp - timestamp
                 
                 let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
                 //TODO:localize
-                let text = "The creators of stories you will view in the next \(timeIntervalString(strings: presentationData.strings, value: remainingActiveSeconds)) won't see you in the viewers' lists."
+                let text = "The creators of stories you will view in the next **\(timeIntervalString(strings: presentationData.strings, value: remainingActiveSeconds))** won't see you in the viewers' lists."
                 let tooltipScreen = UndoOverlayController(
                     presentationData: presentationData,
                     content: .actionSucceeded(title: "You are in Stealth Mode", text: text, cancel: "", destructive: false),
@@ -3021,7 +3021,7 @@ final class StoryItemSetContainerSendMessage {
                     
                     let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
                     //TODO:localize
-                    let text = "The creators of stories you will view in the next \(timeIntervalString(strings: presentationData.strings, value: remainingActiveSeconds)) won't see you in the viewers' lists."
+                    let text = "The creators of stories you will view in the next **\(timeIntervalString(strings: presentationData.strings, value: remainingActiveSeconds))** won't see you in the viewers' lists."
                     tooltipScreenValue.content = .actionSucceeded(title: "You are in Stealth Mode", text: text, cancel: "", destructive: false)
                 })
                 
@@ -3062,7 +3062,7 @@ final class StoryItemSetContainerSendMessage {
                         
                         let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
                         //TODO:localize
-                        let text = "The creators of stories you viewed in the last \(timeIntervalString(strings: presentationData.strings, value: pastPeriod)) or will view in the next \(timeIntervalString(strings: presentationData.strings, value: futurePeriod)) won’t see you in the viewers’ lists."
+                        let text = "The creators of stories you viewed in the last \(timeIntervalString(strings: presentationData.strings, value: pastPeriod)) or will view in the next **\(timeIntervalString(strings: presentationData.strings, value: futurePeriod))** won’t see you in the viewers’ lists."
                         let tooltipScreen = UndoOverlayController(
                             presentationData: presentationData,
                             content: .actionSucceeded(title: "Stealth Mode On", text: text, cancel: "", destructive: false),

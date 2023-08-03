@@ -54,6 +54,8 @@ private final class StoryStealthModeSheetContentComponent: Component {
         private weak var state: EmptyComponentState?
         
         private var timer: Timer?
+        private var showCooldownToast: Bool = false
+        private var hideCooldownTimer: Timer?
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -65,6 +67,27 @@ private final class StoryStealthModeSheetContentComponent: Component {
         
         deinit {
             self.timer?.invalidate()
+            self.hideCooldownTimer?.invalidate()
+        }
+        
+        private func displayCooldown() {
+            if !self.showCooldownToast {
+                self.showCooldownToast = true
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+            }
+            
+            self.hideCooldownTimer?.invalidate()
+            self.hideCooldownTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: false, block: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                self.hideCooldownTimer?.invalidate()
+                self.hideCooldownTimer = nil
+                
+                self.showCooldownToast = false
+                
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+            })
         }
         
         func update(component: StoryStealthModeSheetContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
@@ -96,7 +119,7 @@ private final class StoryStealthModeSheetContentComponent: Component {
             
             let sideInset: CGFloat = 16.0
             
-            if remainingCooldownSeconds > 0 {
+            if remainingCooldownSeconds > 0, self.showCooldownToast {
                 let toast: ComponentView<Empty>
                 var toastTransition = transition
                 if let current = self.toast {
@@ -128,6 +151,7 @@ private final class StoryStealthModeSheetContentComponent: Component {
                 if let toastView = toast.view {
                     if toastView.superview == nil {
                         self.addSubview(toastView)
+                        toastView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                         
                         if let toastView = toastView as? ToastContentComponent.View, let iconView = toastView.iconView as? LottieComponent.View {
                             iconView.playOnce()
@@ -138,7 +162,11 @@ private final class StoryStealthModeSheetContentComponent: Component {
             } else {
                 if let toast = self.toast {
                     self.toast = nil
-                    toast.view?.removeFromSuperview()
+                    if let toastView = toast.view {
+                        toastView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak toastView] _ in
+                            toastView?.removeFromSuperview()
+                        })
+                    }
                 }
             }
             
@@ -184,12 +212,24 @@ private final class StoryStealthModeSheetContentComponent: Component {
                         Text(text: buttonText, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
                     )),
                     isEnabled: remainingCooldownSeconds <= 0,
+                    allowActionWhenDisabled: true,
                     displaysProgress: false,
                     action: { [weak self] in
                         guard let self, let component = self.component else {
                             return
                         }
-                        component.dismiss()
+                        
+                        var remainingCooldownSeconds: Int32 = 0
+                        if let cooldownUntilTimestamp = component.cooldownUntilTimestamp {
+                            remainingCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
+                            remainingCooldownSeconds = max(0, remainingCooldownSeconds)
+                        }
+                        
+                        if remainingCooldownSeconds > 0 {
+                            self.displayCooldown()
+                        } else {
+                            component.dismiss()
+                        }
                     }
                 )),
                 environment: {},

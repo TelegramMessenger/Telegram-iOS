@@ -283,7 +283,7 @@ public enum PremiumSource: Equatable {
     }
 }
 
-enum PremiumPerk: CaseIterable {
+public enum PremiumPerk: CaseIterable {
     case doubleLimits
     case moreUpload
     case fasterDownload
@@ -300,7 +300,7 @@ enum PremiumPerk: CaseIterable {
     case translation
     case stories
     
-    static var allCases: [PremiumPerk] {
+    public static var allCases: [PremiumPerk] {
         return [
             .doubleLimits,
             .moreUpload,
@@ -2771,7 +2771,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
     public weak var containerView: UIView?
     public var animationColor: UIColor?
     
-    public init(context: AccountContext, modal: Bool = true, source: PremiumSource) {
+    public init(context: AccountContext, modal: Bool = true, source: PremiumSource, forceDark: Bool = false) {
         self.context = context
             
         var updateInProgressImpl: ((Bool) -> Void)?
@@ -2793,7 +2793,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
             completion: {
                 completionImpl?()
             }
-        ), navigationBarAppearance: .transparent)
+        ), navigationBarAppearance: .transparent, theme: forceDark ? .dark : .default)
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

@@ -48,8 +48,11 @@ public class PremiumLimitsListScreen: ViewController {
         
         let nextAction = ActionSlot<Void>()
         
-        init(context: AccountContext, controller: PremiumLimitsListScreen, buttonTitle: String, gloss: Bool) {
+        init(context: AccountContext, controller: PremiumLimitsListScreen, buttonTitle: String, gloss: Bool, forceDark: Bool) {
             self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            if forceDark {
+                self.presentationData = self.presentationData.withUpdated(theme: defaultDarkPresentationTheme)
+            }
             
             self.controller = controller
             
@@ -413,6 +416,7 @@ public class PremiumLimitsListScreen: ViewController {
                         component: AnyComponent(
                             StoriesPageComponent(
                                 context: context,
+                                theme: self.presentationData.theme,
                                 bottomInset: self.footerNode.frame.height,
                                 updatedBottomAlpha: { [weak self] alpha in
                                     if let strongSelf = self {
@@ -1008,17 +1012,19 @@ public class PremiumLimitsListScreen: ViewController {
         
     private let buttonText: String
     private let buttonGloss: Bool
+    private let forceDark: Bool
     
-    var action: () -> Void = {}
-    var disposed: () -> Void = {}
+    public var action: () -> Void = {}
+    public var disposed: () -> Void = {}
     
-    init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source, order: [PremiumPerk]?, buttonText: String, isPremium: Bool) {
+    public init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source, order: [PremiumPerk]?, buttonText: String, isPremium: Bool, forceDark: Bool = false) {
         self.context = context
         self.subject = subject
         self.source = source
         self.order = order
         self.buttonText = buttonText
         self.buttonGloss = !isPremium
+        self.forceDark = forceDark
         
         super.init(navigationBarPresentationData: nil)
         
@@ -1041,7 +1047,7 @@ public class PremiumLimitsListScreen: ViewController {
     }
     
     override open func loadDisplayNode() {
-        self.displayNode = Node(context: self.context, controller: self, buttonTitle: self.buttonText, gloss: self.buttonGloss)
+        self.displayNode = Node(context: self.context, controller: self, buttonTitle: self.buttonText, gloss: self.buttonGloss, forceDark: self.forceDark)
         self.displayNodeDidLoad()
         
         self.view.disablesInteractiveModalDismiss = true
@@ -1163,9 +1169,15 @@ private class FooterNode: ASDisplayNode {
         let bottomPanelPadding: CGFloat = 12.0
         let bottomInset: CGFloat = layout.intrinsicInsets.bottom > 0.0 ? layout.intrinsicInsets.bottom + 5.0 : bottomPanelPadding
                 
-        let panelHeight: CGFloat = bottomPanelPadding + 50.0 + bottomInset + 28.0
+        var panelHeight: CGFloat = bottomPanelPadding + 50.0 + bottomInset + 8.0
+        var buttonOffset: CGFloat = 20.0
+        if let (_, count) = self.currentParams, count > 1 {
+            panelHeight += 20.0
+            buttonOffset += 20.0
+        }
+        
         let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: panelHeight))
-        transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + buttonInset, y: 40.0), size: CGSize(width: buttonWidth, height: buttonHeight)))
+        transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + buttonInset, y: buttonOffset), size: CGSize(width: buttonWidth, height: buttonHeight)))
         
         transition.updateFrame(node: self.backgroundNode, frame: panelFrame)
         self.backgroundNode.update(size: panelFrame.size, transition: transition)
@@ -1187,6 +1199,7 @@ private class FooterNode: ASDisplayNode {
                 containerSize: layout.size
             )
             self.pageIndicatorView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - indicatorSize.width) / 2.0), y: 10.0), size: indicatorSize)
+            transition.updateAlpha(layer: self.pageIndicatorView.layer, alpha: count <= 1 ? 0.0 : 1.0)
         }
         
         transition.updateFrame(node: self.coverNode, frame: panelFrame)

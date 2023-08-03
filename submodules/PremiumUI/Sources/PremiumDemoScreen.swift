@@ -373,7 +373,13 @@ final class DemoPagerComponent: Component {
             
             if firstTime {
                 self.scrollView.contentOffset = CGPoint(x: CGFloat(component.index) * availableSize.width, y: 0.0)
-                component.updated(self.scrollView.contentOffset.x / (self.scrollView.contentSize.width - self.scrollView.frame.width), component.items.count)
+                var position: CGFloat
+                if self.scrollView.contentSize.width > self.scrollView.frame.width {
+                    position = self.scrollView.contentOffset.x / (self.scrollView.contentSize.width - self.scrollView.frame.width)
+                } else {
+                    position = 0.0
+                }
+                component.updated(position, component.items.count)
             }
             let viewportCenter = self.scrollView.contentOffset.x + availableSize.width * 0.5
             
@@ -1230,12 +1236,12 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         return self._ready
     }
         
-    public convenience init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source = .other, action: @escaping () -> Void) {
-        self.init(context: context, subject: subject, source: source, order: nil, action: action)
+    public convenience init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source = .other, forceDark: Bool = false, action: @escaping () -> Void) {
+        self.init(context: context, subject: subject, source: source, order: nil, forceDark: forceDark, action: action)
     }
     
-    init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source = .other, order: [PremiumPerk]?, action: @escaping () -> Void) {
-        super.init(context: context, component: DemoSheetComponent(context: context, subject: subject, source: source, order: order, action: action), navigationBarAppearance: .none)
+    init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source = .other, order: [PremiumPerk]?, forceDark: Bool = false, action: @escaping () -> Void) {
+        super.init(context: context, component: DemoSheetComponent(context: context, subject: subject, source: source, order: order, action: action), navigationBarAppearance: .none, theme: forceDark ? .dark : .default)
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         

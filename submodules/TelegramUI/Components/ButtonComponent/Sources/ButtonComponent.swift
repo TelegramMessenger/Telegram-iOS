@@ -288,6 +288,7 @@ public final class ButtonComponent: Component {
     public let background: Background
     public let content: AnyComponentWithIdentity<Empty>
     public let isEnabled: Bool
+    public let allowActionWhenDisabled: Bool
     public let displaysProgress: Bool
     public let action: () -> Void
     
@@ -295,12 +296,14 @@ public final class ButtonComponent: Component {
         background: Background,
         content: AnyComponentWithIdentity<Empty>,
         isEnabled: Bool,
+        allowActionWhenDisabled: Bool = false,
         displaysProgress: Bool,
         action: @escaping () -> Void
     ) {
         self.background = background
         self.content = content
         self.isEnabled = isEnabled
+        self.allowActionWhenDisabled = allowActionWhenDisabled
         self.displaysProgress = displaysProgress
         self.action = action
     }
@@ -313,6 +316,9 @@ public final class ButtonComponent: Component {
             return false
         }
         if lhs.isEnabled != rhs.isEnabled {
+            return false
+        }
+        if lhs.allowActionWhenDisabled != rhs.allowActionWhenDisabled {
             return false
         }
         if lhs.displaysProgress != rhs.displaysProgress {
@@ -375,7 +381,7 @@ public final class ButtonComponent: Component {
             self.component = component
             self.componentState = state
             
-            self.isEnabled = component.isEnabled && !component.displaysProgress
+            self.isEnabled = (component.isEnabled || component.allowActionWhenDisabled) && !component.displaysProgress
             
             transition.setBackgroundColor(view: self, color: component.background.color)
             transition.setCornerRadius(layer: self.layer, cornerRadius: component.background.cornerRadius)

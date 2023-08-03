@@ -4488,8 +4488,17 @@ func replayFinalState(
                 }
             case let .UpdateStory(peerId, story):
                 var updatedPeerEntries: [StoryItemsTableEntry] = transaction.getStoryItems(peerId: peerId)
-                
-                if let storedItem = Stories.StoredItem(apiStoryItem: story, peerId: peerId, transaction: transaction) {
+                let previousEntryStory = updatedPeerEntries.first(where: { item in
+                    return item.id == story.id
+                }).flatMap { item -> Stories.Item? in
+                    if let value = item.value.get(Stories.StoredItem.self), case let .item(item) = value {
+                        return item
+                    } else {
+                        return nil
+                    }
+                }
+            
+                if let storedItem = Stories.StoredItem(apiStoryItem: story, existingItem: previousEntryStory, peerId: peerId, transaction: transaction) {
                     if let currentIndex = updatedPeerEntries.firstIndex(where: { $0.id == storedItem.id }) {
                         if case .item = storedItem {
                             if let codedEntry = CodableEntry(storedItem) {

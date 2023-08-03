@@ -1368,7 +1368,7 @@ extension Stories.Item.Views {
 }
 
 extension Stories.StoredItem {
-    init?(apiStoryItem: Api.StoryItem, peerId: PeerId, transaction: Transaction) {
+    init?(apiStoryItem: Api.StoryItem, existingItem: Stories.Item? = nil, peerId: PeerId, transaction: Transaction) {
         switch apiStoryItem {
         case let .storyItem(flags, id, date, expireDate, caption, entities, media, mediaAreas, privacy, views):
             let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
@@ -1414,10 +1414,18 @@ extension Stories.StoredItem {
                 let isExpired = (flags & (1 << 6)) != 0
                 let isPublic = (flags & (1 << 7)) != 0
                 let isCloseFriends = (flags & (1 << 8)) != 0
+                let isMin = (flags & (1 << 9)) != 0
                 let isForwardingDisabled = (flags & (1 << 10)) != 0
                 let isEdited = (flags & (1 << 11)) != 0
                 let isContacts = (flags & (1 << 12)) != 0
                 let isSelectedContacts = (flags & (1 << 13)) != 0
+                
+                var mergedViews: Stories.Item.Views?
+                if isMin, let existingItem = existingItem {
+                    mergedViews = existingItem.views
+                } else {
+                    mergedViews = views.flatMap(Stories.Item.Views.init(apiViews:))
+                }
                 
                 let item = Stories.Item(
                     id: id,
@@ -1427,7 +1435,7 @@ extension Stories.StoredItem {
                     mediaAreas: mediaAreas?.compactMap(mediaAreaFromApiMediaArea) ?? [],
                     text: caption ?? "",
                     entities: entities.flatMap { entities in return messageTextEntitiesFromApiEntities(entities) } ?? [],
-                    views: views.flatMap(Stories.Item.Views.init(apiViews:)),
+                    views: mergedViews,
                     privacy: parsedPrivacy,
                     isPinned: isPinned,
                     isExpired: isExpired,

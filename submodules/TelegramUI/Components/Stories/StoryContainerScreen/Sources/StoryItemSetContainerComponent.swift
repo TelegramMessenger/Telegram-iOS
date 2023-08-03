@@ -2229,6 +2229,25 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                     }
                 }
+                
+                var preloadViewListIds: [(Int32, EngineStoryItem.Views)] = []
+                if let views = component.slice.item.storyItem.views {
+                    preloadViewListIds.append((component.slice.item.storyItem.id, views))
+                }
+                if currentIndex != 0, let views = component.slice.allItems[currentIndex - 1].storyItem.views {
+                    preloadViewListIds.append((component.slice.allItems[currentIndex - 1].storyItem.id, views))
+                }
+                if currentIndex != component.slice.allItems.count - 1, let views = component.slice.allItems[currentIndex + 1].storyItem.views {
+                    preloadViewListIds.append((component.slice.allItems[currentIndex + 1].storyItem.id, views))
+                }
+                
+                for (id, views) in preloadViewListIds {
+                    if component.sharedViewListsContext.viewLists[StoryId(peerId: component.slice.peer.id, id: id)] == nil {
+                        let viewList = component.context.engine.messages.storyViewList(id: id, views: views)
+                        component.sharedViewListsContext.viewLists[StoryId(peerId: component.slice.peer.id, id: id)] = viewList
+                    }
+                }
+                
                 if self.viewListPanState != nil || self.isCompletingViewListPan {
                     for (id, _) in self.viewLists {
                         if !visibleViewListIds.contains(id) {
@@ -2447,18 +2466,40 @@ public final class StoryItemSetContainerComponent: Component {
                                                 return
                                             }
                                             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                                            let animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
                                             self.component?.presentController(UndoOverlayController(
                                                 presentationData: presentationData,
-                                                content: .info(title: nil, text: "**\(peer.compactDisplayTitle)** has been removed from your contacts.", timeout: nil),
+                                                content: .universal(
+                                                    animation: "anim_infotip",
+                                                    scale: 1.0,
+                                                    colors: [
+                                                        "info1.info1.stroke": animationBackgroundColor,
+                                                        "info2.info2.Fill": animationBackgroundColor
+                                                    ],
+                                                    title: nil,
+                                                    text: "**\(peer.compactDisplayTitle)** has been removed from your contacts.",
+                                                    customUndoText: "Undo",
+                                                    timeout: nil
+                                                ),
                                                 elevatedLayout: false,
                                                 position: .top,
                                                 animateInAsReplacement: false,
-                                                action: { _ in return false }
+                                                action: { [weak self] action in
+                                                    guard let self, let component = self.component else {
+                                                        return false
+                                                    }
+                                                    guard case let .user(user) = peer else {
+                                                        return false
+                                                    }
+                                                    if case .undo = action {
+                                                        let _ =  component.context.engine.contacts.addContactInteractively(peerId: peer.id, firstName: user.firstName ?? "", lastName: user.lastName ?? "", phoneNumber: user.phone ?? "", addToPrivacyExceptions: false).start()
+                                                    }
+                                                    return false
+                                                }
                                             ), nil)
                                         })))
                                     } else {
                                         if isBlocked {
-                                            
                                         } else {
                                             itemList.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuBlock, textColor: .destructive, icon: { theme in
                                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.contextMenu.destructiveColor)
@@ -2471,13 +2512,33 @@ public final class StoryItemSetContainerComponent: Component {
                                                     return
                                                 }
                                                 let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                                                let animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
                                                 self.component?.presentController(UndoOverlayController(
                                                     presentationData: presentationData,
-                                                    content: .info(title: nil, text: "**\(peer.compactDisplayTitle)** has been blocked.", timeout: nil),
+                                                    content: .universal(
+                                                        animation: "anim_infotip",
+                                                        scale: 1.0,
+                                                        colors: [
+                                                            "info1.info1.stroke": animationBackgroundColor,
+                                                            "info2.info2.Fill": animationBackgroundColor
+                                                        ],
+                                                        title: nil,
+                                                        text: "**\(peer.compactDisplayTitle)** has been blocked.",
+                                                        customUndoText: "Undo",
+                                                        timeout: nil
+                                                    ),
                                                     elevatedLayout: false,
                                                     position: .top,
                                                     animateInAsReplacement: false,
-                                                    action: { _ in return false }
+                                                    action: { [weak self] action in
+                                                        guard let self, let component = self.component else {
+                                                            return false
+                                                        }
+                                                        if case .undo = action {
+                                                            let _ = component.context.engine.privacy.requestUpdatePeerIsBlocked(peerId: peer.id, isBlocked: false).start()
+                                                        }
+                                                        return false
+                                                    }
                                                 ), nil)
                                             })))
                                         }
@@ -3108,6 +3169,12 @@ public final class StoryItemSetContainerComponent: Component {
                             switch action {
                             case .copy:
                                 storeAttributedTextInPasteboard(text)
+                                
+                                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                                let undoController = UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in true })
+                                self.sendMessageContext.tooltipScreen?.dismiss()
+                                self.sendMessageContext.tooltipScreen = undoController
+                                component.controller()?.present(undoController, in: .current)
                             case .share:
                                 self.sendMessageContext.performShareTextAction(view: self, text: text.string)
                             case .lookup:
@@ -4015,6 +4082,58 @@ public final class StoryItemSetContainerComponent: Component {
             }
         }
         
+        private func presentStoriesUpgradeScreen() {
+            guard let component = self.component else {
+                return
+            }
+            let context = component.context
+            //TODO:localize
+            var replaceImpl: ((ViewController) -> Void)?
+            let controller = PremiumLimitsListScreen(context: context, subject: .stories, source: .other, order: [.stories], buttonText: "Upgrade Stories", isPremium: false, forceDark: true)
+            controller.action = { [weak self] in
+                guard let self else {
+                    return
+                }
+                
+                let controller = PremiumIntroScreen(context: context, source: .stories, forceDark: true)
+                self.sendMessageContext.actionSheet = controller
+                controller.wasDismissed = { [weak self, weak controller]in
+                    guard let self else {
+                        return
+                    }
+                    
+                    if self.sendMessageContext.actionSheet === controller {
+                        self.sendMessageContext.actionSheet = nil
+                    }
+                    self.updateIsProgressPaused()
+                }
+                
+                replaceImpl?(controller)
+            }
+            controller.disposed = { [weak self, weak controller] in
+                guard let self else {
+                    return
+                }
+                
+                if self.sendMessageContext.actionSheet === controller {
+                    self.sendMessageContext.actionSheet = nil
+                }
+                self.updateIsProgressPaused()
+            }
+            replaceImpl = { [weak self, weak controller] c in
+                controller?.dismiss(animated: true, completion: {
+                    guard let self, let component = self.component else {
+                        return
+                    }
+                    component.controller()?.push(c)
+                })
+            }
+            self.sendMessageContext.actionSheet = controller
+            self.updateIsProgressPaused()
+            
+            component.controller()?.push(controller)
+        }
+        
         private func requestSave() {
             guard let component = self.component, let peerReference = PeerReference(component.slice.peer._asPeer()) else {
                 return
@@ -4360,6 +4479,24 @@ public final class StoryItemSetContainerComponent: Component {
                 self.requestSave()
             })))
             
+            if case let .user(accountUser) = component.slice.peer {
+                //TODO:localize
+                items.append(.action(ContextMenuActionItem(text: "Stealth Mode", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/Eye" : "Chat/Context Menu/EyeLocked"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, a in
+                    a(.default)
+                    
+                    guard let self else {
+                        return
+                    }
+                    if accountUser.isPremium {
+                        self.sendMessageContext.requestStealthMode(view: self)
+                    } else {
+                        self.presentStoriesUpgradeScreen()
+                    }
+                })))
+            }
+            
             if component.slice.item.storyItem.isPublic && (component.slice.peer.addressName != nil || !component.slice.peer._asPeer().usernames.isEmpty) && (component.slice.item.storyItem.expirationTimestamp > Int32(Date().timeIntervalSince1970) || component.slice.item.storyItem.isPinned) {
                 items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_CopyLink, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
@@ -4560,15 +4697,14 @@ public final class StoryItemSetContainerComponent: Component {
                     }, action: { [weak self] _, a in
                         a(.default)
                         
-                        guard let self, let component = self.component else {
+                        guard let self else {
                             return
                         }
                         
                         if accountUser.isPremium {
                             self.requestSave()
                         } else {
-                            let premiumScreen = PremiumIntroScreen(context: component.context, source: .stories)
-                            component.controller()?.push(premiumScreen)
+                            self.presentStoriesUpgradeScreen()
                         }
                     })))
                 }
@@ -4579,14 +4715,13 @@ public final class StoryItemSetContainerComponent: Component {
                 }, action: { [weak self] _, a in
                     a(.default)
                     
-                    guard let self, let component = self.component else {
+                    guard let self else {
                         return
                     }
                     if accountUser.isPremium {
                         self.sendMessageContext.requestStealthMode(view: self)
                     } else {
-                        let premiumScreen = PremiumIntroScreen(context: component.context, source: .stories)
-                        component.controller()?.push(premiumScreen)
+                        self.presentStoriesUpgradeScreen()
                     }
                 })))
                 

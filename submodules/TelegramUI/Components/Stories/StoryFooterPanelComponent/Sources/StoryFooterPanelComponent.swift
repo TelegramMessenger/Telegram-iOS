@@ -311,7 +311,7 @@ public final class StoryFooterPanelComponent: Component {
             if viewCount != 0 {
                 expandedSegments.append(.number(viewCount, NSAttributedString(string: "\(viewCount)", font: Font.semibold(17.0), textColor: .white)))
             }
-            expandedSegments.append(.text(1, NSAttributedString(string: " Views", font: Font.semibold(17.0), textColor: .white)))
+            expandedSegments.append(.text(1, NSAttributedString(string: viewPart, font: Font.semibold(17.0), textColor: .white)))
             
             let viewStatsTextLayout = self.viewStatsText.update(size: CGSize(width: availableSize.width, height: size.height), segments: regularSegments, transition: isFirstTime ? .immediate : ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut))
             let expandedViewStatsTextLayout = self.viewStatsExpandedText.update(size: CGSize(width: availableSize.width, height: size.height), segments: expandedSegments, transition: isFirstTime ? .immediate : ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut))

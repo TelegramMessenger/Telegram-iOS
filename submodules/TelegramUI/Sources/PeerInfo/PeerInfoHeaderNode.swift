@@ -3355,7 +3355,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if self.navigationTransition != nil {
             if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
                 var trueAvatarSize = transitionSourceAvatarFrame.size
-                if self.avatarListNode.avatarContainerNode.avatarNode.storyStats != nil {
+                if let storyStats = self.avatarListNode.avatarContainerNode.avatarNode.storyStats, storyStats.unseenCount != 0 {
                     trueAvatarSize.width -= 1.33 * 4.0
                     trueAvatarSize.height -= 1.33 * 4.0
                 }
@@ -3397,7 +3397,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self.avatarListNode.listContainerNode.isHidden = false
             if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
                 var trueAvatarSize = transitionSourceAvatarFrame.size
-                if self.avatarListNode.avatarContainerNode.avatarNode.storyStats != nil {
+                if let storyStats = self.avatarListNode.avatarContainerNode.avatarNode.storyStats, storyStats.unseenCount != 0 {
                     trueAvatarSize.width -= 1.33 * 4.0
                     trueAvatarSize.height -= 1.33 * 4.0
                 }
@@ -3446,7 +3446,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             apparentAvatarFrame = CGRect(origin: CGPoint(x: expandedAvatarCenter.x * (1.0 - transitionFraction) + transitionFraction * avatarCenter.x, y: expandedAvatarCenter.y * (1.0 - transitionFraction) + transitionFraction * avatarCenter.y), size: CGSize())
             if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
                 var trueAvatarSize = transitionSourceAvatarFrame.size
-                if self.avatarListNode.avatarContainerNode.avatarNode.storyStats != nil {
+                if let storyStats = self.avatarListNode.avatarContainerNode.avatarNode.storyStats, storyStats.unseenCount != 0 {
                     trueAvatarSize.width -= 1.33 * 4.0
                     trueAvatarSize.height -= 1.33 * 4.0
                 }
@@ -3459,7 +3459,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
         } else {
             var trueAvatarSize = avatarFrame.size
-            if self.avatarListNode.avatarContainerNode.avatarNode.storyStats != nil {
+            if let storyStats = self.avatarListNode.avatarContainerNode.avatarNode.storyStats, storyStats.unseenCount != 0 {
                 trueAvatarSize.width -= 3.0 * 4.0
                 trueAvatarSize.height -= 3.0 * 4.0
             }
@@ -3484,7 +3484,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 let neutralAvatarListContainerSize = expandedAvatarListSize
                 var avatarListContainerSize = CGSize(width: neutralAvatarListContainerSize.width * (1.0 - transitionFraction) + transitionSourceAvatarFrame.width * transitionFraction, height: neutralAvatarListContainerSize.height * (1.0 - transitionFraction) + transitionSourceAvatarFrame.height * transitionFraction)
                 
-                if self.avatarListNode.avatarContainerNode.avatarNode.storyStats != nil {
+                if let storyStats = self.avatarListNode.avatarContainerNode.avatarNode.storyStats, storyStats.unseenCount != 0 {
                     avatarListContainerSize.width -= 1.33 * 5.0
                     avatarListContainerSize.height -= 1.33 * 5.0
                 }
