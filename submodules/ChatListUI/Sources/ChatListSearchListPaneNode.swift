@@ -1537,7 +1537,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 foundRemoteMessages = .single(([FoundRemoteMessages(messages: [], readCounters: [:], threadsData: [:], totalCount: 0, matchesOnlyBcOfFAN: [])], false))
             } else {
                 if !finalQuery.isEmpty {
-                    addAppLogEvent(postbox: context.account.postbox, type: "search_global_query")
+//                    addAppLogEvent(postbox: context.account.postbox, type: "search_global_query")
                 }
                 
                 let searchSignals: [Signal<(SearchMessagesResult, SearchMessagesState), NoError>] = searchLocations.map { searchLocation in
