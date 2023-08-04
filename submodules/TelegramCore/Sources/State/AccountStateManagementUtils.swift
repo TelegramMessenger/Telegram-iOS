@@ -1679,6 +1679,8 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.readStories(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), maxId: id)
             case let .updateStoriesStealthMode(stealthMode):
                 updatedState.updateStoryStealthMode(stealthMode)
+            case let .updateSentStoryReaction(userId, storyId, reaction):
+                updatedState.updateStorySentReaction(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: storyId, reaction: reaction)
             default:
                 break
         }
@@ -3167,7 +3169,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddScheduledMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStoryStealth:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -4557,10 +4559,65 @@ func replayFinalState(
                 var configuration = _internal_getStoryConfigurationState(transaction: transaction)
                 configuration.stealthModeState = Stories.StealthModeState(apiMode: data)
                 _internal_setStoryConfigurationState(transaction: transaction, state: configuration)
-            case let .UpdateStoryStealth(expireDate):
-                var configuration = _internal_getStoryConfigurationState(transaction: transaction)
-                configuration.stealthModeState.activeUntilTimestamp = expireDate
-                _internal_setStoryConfigurationState(transaction: transaction, state: configuration)
+            case let .UpdateStorySentReaction(peerId, id, reaction):
+                var updatedPeerEntries: [StoryItemsTableEntry] = transaction.getStoryItems(peerId: peerId)
+                
+                if let index = updatedPeerEntries.firstIndex(where: { item in
+                    return item.id == id
+                }) {
+                    if let value = updatedPeerEntries[index].value.get(Stories.StoredItem.self), case let .item(item) = value {
+                        let updatedItem: Stories.StoredItem = .item(Stories.Item(
+                            id: item.id,
+                            timestamp: item.timestamp,
+                            expirationTimestamp: item.expirationTimestamp,
+                            media: item.media,
+                            mediaAreas: item.mediaAreas,
+                            text: item.text,
+                            entities: item.entities,
+                            views: item.views,
+                            privacy: item.privacy,
+                            isPinned: item.isPinned,
+                            isExpired: item.isExpired,
+                            isPublic: item.isPublic,
+                            isCloseFriends: item.isCloseFriends,
+                            isContacts: item.isContacts,
+                            isSelectedContacts: item.isSelectedContacts,
+                            isForwardingDisabled: item.isForwardingDisabled,
+                            isEdited: item.isEdited,
+                            myReaction: MessageReaction.Reaction(apiReaction: reaction)
+                        ))
+                        if let entry = CodableEntry(updatedItem) {
+                            updatedPeerEntries[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: item.expirationTimestamp, isCloseFriends: item.isCloseFriends)
+                        }
+                    }
+                }
+                transaction.setStoryItems(peerId: peerId, items: updatedPeerEntries)
+            
+                if let value = transaction.getStory(id: StoryId(peerId: peerId, id: id))?.get(Stories.StoredItem.self), case let .item(item) = value {
+                    let updatedItem: Stories.StoredItem = .item(Stories.Item(
+                        id: item.id,
+                        timestamp: item.timestamp,
+                        expirationTimestamp: item.expirationTimestamp,
+                        media: item.media,
+                        mediaAreas: item.mediaAreas,
+                        text: item.text,
+                        entities: item.entities,
+                        views: item.views,
+                        privacy: item.privacy,
+                        isPinned: item.isPinned,
+                        isExpired: item.isExpired,
+                        isPublic: item.isPublic,
+                        isCloseFriends: item.isCloseFriends,
+                        isContacts: item.isContacts,
+                        isSelectedContacts: item.isSelectedContacts,
+                        isForwardingDisabled: item.isForwardingDisabled,
+                        isEdited: item.isEdited,
+                        myReaction: MessageReaction.Reaction(apiReaction: reaction)
+                    ))
+                    if let entry = CodableEntry(updatedItem) {
+                        transaction.setStory(id: StoryId(peerId: peerId, id: id), value: entry)
+                    }
+                }
         }
     }
     

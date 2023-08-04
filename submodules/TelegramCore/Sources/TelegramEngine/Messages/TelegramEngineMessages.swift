@@ -1035,7 +1035,7 @@ public extension TelegramEngine {
                                     isSelectedContacts: item.isSelectedContacts,
                                     isForwardingDisabled: item.isForwardingDisabled,
                                     isEdited: item.isEdited,
-                                    hasLike: item.hasLike
+                                    myReaction: item.myReaction
                                 ))
                                 if let entry = CodableEntry(updatedItem) {
                                     currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
@@ -1095,10 +1095,6 @@ public extension TelegramEngine {
             return _internal_updateStoriesArePinned(account: self.account, ids: ids, isPinned: isPinned)
         }
         
-        public func getStoryViewList(account: Account, id: Int32, offsetTimestamp: Int32?, offsetPeerId: PeerId?, limit: Int) -> Signal<StoryViewList?, NoError> {
-            return _internal_getStoryViewList(account: account, id: id, offsetTimestamp: offsetTimestamp, offsetPeerId: offsetPeerId, limit: limit)
-        }
-        
         public func storyViewList(id: Int32, views: EngineStoryItem.Views) -> EngineStoryViewListContext {
             return EngineStoryViewListContext(account: self.account, storyId: id, views: views)
         }
@@ -1111,8 +1107,8 @@ public extension TelegramEngine {
             return _internal_enableStoryStealthMode(account: self.account)
         }
         
-        public func setStoryLike(peerId: EnginePeer.Id, id: Int32, hasLike: Bool) -> Signal<Never, NoError> {
-            return _internal_setStoryLike(account: self.account, peerId: peerId, id: id, hasLike: hasLike)
+        public func setStoryReaction(peerId: EnginePeer.Id, id: Int32, reaction: MessageReaction.Reaction?) -> Signal<Never, NoError> {
+            return _internal_setStoryReaction(account: self.account, peerId: peerId, id: id, reaction: reaction)
         }
     }
 }

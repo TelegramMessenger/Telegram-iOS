@@ -41,14 +41,17 @@ public enum Stories {
         public struct Views: Codable, Equatable {
             private enum CodingKeys: String, CodingKey {
                 case seenCount = "seenCount"
+                case reactedCount = "reactedCount"
                 case seenPeerIds = "seenPeerIds"
             }
             
             public var seenCount: Int
+            public var reactedCount: Int
             public var seenPeerIds: [PeerId]
             
-            public init(seenCount: Int, seenPeerIds: [PeerId]) {
+            public init(seenCount: Int, reactedCount: Int, seenPeerIds: [PeerId]) {
                 self.seenCount = seenCount
+                self.reactedCount = reactedCount
                 self.seenPeerIds = seenPeerIds
             }
             
@@ -56,6 +59,7 @@ public enum Stories {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 
                 self.seenCount = Int(try container.decode(Int32.self, forKey: .seenCount))
+                self.reactedCount = Int(try container.decodeIfPresent(Int32.self, forKey: .reactedCount) ?? 0)
                 self.seenPeerIds = try container.decode([Int64].self, forKey: .seenPeerIds).map(PeerId.init)
             }
             
@@ -63,6 +67,7 @@ public enum Stories {
                 var container = encoder.container(keyedBy: CodingKeys.self)
                 
                 try container.encode(Int32(clamping: self.seenCount), forKey: .seenCount)
+                try container.encode(Int32(clamping: self.reactedCount), forKey: .reactedCount)
                 try container.encode(self.seenPeerIds.map { $0.toInt64() }, forKey: .seenPeerIds)
             }
         }
@@ -137,7 +142,7 @@ public enum Stories {
             case isSelectedContacts
             case isForwardingDisabled
             case isEdited
-            case hasLike
+            case myReaction
         }
         
         public let id: Int32
@@ -157,7 +162,7 @@ public enum Stories {
         public let isSelectedContacts: Bool
         public let isForwardingDisabled: Bool
         public let isEdited: Bool
-        public let hasLike: Bool
+        public let myReaction: MessageReaction.Reaction?
         
         public init(
             id: Int32,
@@ -177,7 +182,7 @@ public enum Stories {
             isSelectedContacts: Bool,
             isForwardingDisabled: Bool,
             isEdited: Bool,
-            hasLike: Bool
+            myReaction: MessageReaction.Reaction?
         ) {
             self.id = id
             self.timestamp = timestamp
@@ -196,7 +201,7 @@ public enum Stories {
             self.isSelectedContacts = isSelectedContacts
             self.isForwardingDisabled = isForwardingDisabled
             self.isEdited = isEdited
-            self.hasLike = hasLike
+            self.myReaction = myReaction
         }
         
         public init(from decoder: Decoder) throws {
@@ -225,7 +230,7 @@ public enum Stories {
             self.isSelectedContacts = try container.decodeIfPresent(Bool.self, forKey: .isSelectedContacts) ?? false
             self.isForwardingDisabled = try container.decodeIfPresent(Bool.self, forKey: .isForwardingDisabled) ?? false
             self.isEdited = try container.decodeIfPresent(Bool.self, forKey: .isEdited) ?? false
-            self.hasLike = try container.decodeIfPresent(Bool.self, forKey: .hasLike) ?? false
+            self.myReaction = try container.decodeIfPresent(MessageReaction.Reaction.self, forKey: .myReaction)
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -255,7 +260,7 @@ public enum Stories {
             try container.encode(self.isSelectedContacts, forKey: .isSelectedContacts)
             try container.encode(self.isForwardingDisabled, forKey: .isForwardingDisabled)
             try container.encode(self.isEdited, forKey: .isEdited)
-            try container.encode(self.hasLike, forKey: .hasLike)
+            try container.encodeIfPresent(self.myReaction, forKey: .myReaction)
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -317,7 +322,7 @@ public enum Stories {
             if lhs.isEdited != rhs.isEdited {
                 return false
             }
-            if lhs.hasLike != rhs.hasLike {
+            if lhs.myReaction != rhs.myReaction {
                 return false
             }
             
@@ -948,7 +953,7 @@ func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId
                                 for update in updates.allUpdates {
                                     if case let .updateStory(_, story) = update {
                                         switch story {
-                                        case let .storyItem(_, idValue, _, _, _, _, media, _, _, _):
+                                        case let .storyItem(_, idValue, _, _, _, _, media, _, _, _, _):
                                             if let parsedStory = Stories.StoredItem(apiStoryItem: story, peerId: accountPeerId, transaction: transaction) {
                                                 var items = transaction.getStoryItems(peerId: accountPeerId)
                                                 var updatedItems: [Stories.Item] = []
@@ -971,7 +976,7 @@ func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId
                                                         isSelectedContacts: item.isSelectedContacts,
                                                         isForwardingDisabled: item.isForwardingDisabled,
                                                         isEdited: item.isEdited,
-                                                        hasLike: item.hasLike
+                                                        myReaction: item.myReaction
                                                     )
                                                     if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                                                         items.append(StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends))
@@ -1093,7 +1098,7 @@ func _internal_editStory(account: Account, id: Int32, media: EngineStoryInputMed
                     for update in updates.allUpdates {
                         if case let .updateStory(_, story) = update {
                             switch story {
-                            case let .storyItem(_, _, _, _, _, _, media, _, _, _):
+                            case let .storyItem(_, _, _, _, _, _, media, _, _, _, _):
                                 let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, account.peerId)
                                 if let parsedMedia = parsedMedia, let originalMedia = originalMedia {
                                     applyMediaResourceChanges(from: originalMedia, to: parsedMedia, postbox: account.postbox, force: false)
@@ -1135,7 +1140,7 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
                 isSelectedContacts: item.isSelectedContacts,
                 isForwardingDisabled: item.isForwardingDisabled,
                 isEdited: item.isEdited,
-                hasLike: item.hasLike
+                myReaction: item.myReaction
             )
             if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                 transaction.setStory(id: storyId, value: entry)
@@ -1163,7 +1168,7 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
                 isSelectedContacts: item.isSelectedContacts,
                 isForwardingDisabled: item.isForwardingDisabled,
                 isEdited: item.isEdited,
-                hasLike: item.hasLike
+                myReaction: item.myReaction
             )
             if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                 items[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
@@ -1291,7 +1296,7 @@ func _internal_updateStoriesArePinned(account: Account, ids: [Int32: EngineStory
                     isSelectedContacts: item.isSelectedContacts,
                     isForwardingDisabled: item.isForwardingDisabled,
                     isEdited: item.isEdited,
-                    hasLike: item.hasLike
+                    myReaction: item.myReaction
                 )
                 if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                     items[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
@@ -1318,7 +1323,7 @@ func _internal_updateStoriesArePinned(account: Account, ids: [Int32: EngineStory
                     isSelectedContacts: item.isSelectedContacts,
                     isForwardingDisabled: item.isForwardingDisabled,
                     isEdited: item.isEdited,
-                    hasLike: item.hasLike
+                    myReaction: item.myReaction
                 )
                 updatedItems.append(updatedItem)
             }
@@ -1344,7 +1349,7 @@ func _internal_updateStoriesArePinned(account: Account, ids: [Int32: EngineStory
 extension Api.StoryItem {
     var id: Int32 {
         switch self {
-        case let .storyItem(_, id, _, _, _, _, _, _, _, _):
+        case let .storyItem(_, id, _, _, _, _, _, _, _, _, _):
             return id
         case let .storyItemDeleted(id):
             return id
@@ -1357,12 +1362,12 @@ extension Api.StoryItem {
 extension Stories.Item.Views {
     init(apiViews: Api.StoryViews) {
         switch apiViews {
-        case let .storyViews(_, viewsCount, recentViewers):
+        case let .storyViews(_, viewsCount, reactionsCount, recentViewers):
             var seenPeerIds: [PeerId] = []
             if let recentViewers = recentViewers {
                 seenPeerIds = recentViewers.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) }
             }
-            self.init(seenCount: Int(viewsCount), seenPeerIds: seenPeerIds)
+            self.init(seenCount: Int(viewsCount), reactedCount: Int(reactionsCount), seenPeerIds: seenPeerIds)
         }
     }
 }
@@ -1370,7 +1375,7 @@ extension Stories.Item.Views {
 extension Stories.StoredItem {
     init?(apiStoryItem: Api.StoryItem, existingItem: Stories.Item? = nil, peerId: PeerId, transaction: Transaction) {
         switch apiStoryItem {
-        case let .storyItem(flags, id, date, expireDate, caption, entities, media, mediaAreas, privacy, views):
+        case let .storyItem(flags, id, date, expireDate, caption, entities, media, mediaAreas, privacy, views, sentReaction):
             let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
             if let parsedMedia = parsedMedia {
                 var parsedPrivacy: Stories.Item.Privacy?
@@ -1427,6 +1432,13 @@ extension Stories.StoredItem {
                     mergedViews = views.flatMap(Stories.Item.Views.init(apiViews:))
                 }
                 
+                var mergedMyReaction: MessageReaction.Reaction?
+                if isMin, let existingItem = existingItem {
+                    mergedMyReaction = existingItem.myReaction
+                } else {
+                    mergedMyReaction = sentReaction.flatMap(MessageReaction.Reaction.init(apiReaction:))
+                }
+                
                 let item = Stories.Item(
                     id: id,
                     timestamp: date,
@@ -1445,7 +1457,7 @@ extension Stories.StoredItem {
                     isSelectedContacts: isSelectedContacts,
                     isForwardingDisabled: isForwardingDisabled,
                     isEdited: isEdited,
-                    hasLike: false
+                    myReaction: mergedMyReaction
                 )
                 self = .item(item)
             } else {
@@ -1532,42 +1544,12 @@ public final class StoryViewList {
     
     public let items: [Item]
     public let totalCount: Int
+    public let totalReactedCount: Int
     
-    public init(items: [Item], totalCount: Int) {
+    public init(items: [Item], totalCount: Int, totalReactedCount: Int) {
         self.items = items
         self.totalCount = totalCount
-    }
-}
-
-func _internal_getStoryViewList(account: Account, id: Int32, offsetTimestamp: Int32?, offsetPeerId: PeerId?, limit: Int) -> Signal<StoryViewList?, NoError> {
-    let accountPeerId = account.peerId
-    return account.network.request(Api.functions.stories.getStoryViewsList(id: id, offsetDate: offsetTimestamp ?? 0, offsetId: offsetPeerId?.id._internalGetInt64Value() ?? 0, limit: Int32(limit)))
-    |> map(Optional.init)
-    |> `catch` { _ -> Signal<Api.stories.StoryViewsList?, NoError> in
-        return .single(nil)
-    }
-    |> mapToSignal { result -> Signal<StoryViewList?, NoError> in
-        guard let result = result else {
-            return .single(nil)
-        }
-        return account.postbox.transaction { transaction -> StoryViewList? in
-            switch result {
-            case let .storyViewsList(count, views, users):
-                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
-                
-                var items: [StoryViewList.Item] = []
-                for view in views {
-                    switch view {
-                    case let .storyView(_, userId, date):
-                        if let peer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))) {
-                            items.append(StoryViewList.Item(peer: EnginePeer(peer), timestamp: date))
-                        }
-                    }
-                }
-                
-                return StoryViewList(items: items, totalCount: Int(count))
-            }
-        }
+        self.totalReactedCount = totalReactedCount
     }
 }
 
@@ -1602,26 +1584,28 @@ func _internal_getStoryViews(account: Account, ids: [Int32]) -> Signal<[Int32: S
 
 public final class EngineStoryViewListContext {
     public struct LoadMoreToken: Equatable {
-        var id: Int64
-        var timestamp: Int32
+        var value: String
     }
     
     public final class Item: Equatable {
         public let peer: EnginePeer
         public let timestamp: Int32
         public let storyStats: PeerStoryStats?
-        public let isLike: Bool
+        public let reaction: MessageReaction.Reaction?
+        public let reactionFile: TelegramMediaFile?
         
         public init(
             peer: EnginePeer,
             timestamp: Int32,
             storyStats: PeerStoryStats?,
-            isLike: Bool
+            reaction: MessageReaction.Reaction?,
+            reactionFile: TelegramMediaFile?
         ) {
             self.peer = peer
             self.timestamp = timestamp
             self.storyStats = storyStats
-            self.isLike = isLike
+            self.reaction = reaction
+            self.reactionFile = reactionFile
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -1634,7 +1618,10 @@ public final class EngineStoryViewListContext {
             if lhs.storyStats != rhs.storyStats {
                 return false
             }
-            if lhs.isLike != rhs.isLike {
+            if lhs.reaction != rhs.reaction {
+                return false
+            }
+            if lhs.reactionFile?.fileId != rhs.reactionFile?.fileId {
                 return false
             }
             return true
@@ -1643,15 +1630,18 @@ public final class EngineStoryViewListContext {
     
     public struct State: Equatable {
         public var totalCount: Int
+        public var totalReactedCount: Int
         public var items: [Item]
         public var loadMoreToken: LoadMoreToken?
         
         public init(
             totalCount: Int,
+            totalReactedCount: Int,
             items: [Item],
             loadMoreToken: LoadMoreToken?
         ) {
             self.totalCount = totalCount
+            self.totalReactedCount = totalReactedCount
             self.items = items
             self.loadMoreToken = loadMoreToken
         }
@@ -1659,12 +1649,12 @@ public final class EngineStoryViewListContext {
     
     private final class Impl {
         struct NextOffset: Equatable {
-            var id: Int64
-            var timestamp: Int32
+            var value: String
         }
         
         struct InternalState: Equatable {
             var totalCount: Int
+            var totalReactedCount: Int
             var items: [Item]
             var canLoadMore: Bool
             var nextOffset: NextOffset?
@@ -1688,8 +1678,8 @@ public final class EngineStoryViewListContext {
             self.account = account
             self.storyId = storyId
             
-            let initialState = State(totalCount: views.seenCount, items: [], loadMoreToken: LoadMoreToken(id: 0, timestamp: 0))
-            self.state = InternalState(totalCount: initialState.totalCount, items: initialState.items, canLoadMore: initialState.loadMoreToken != nil, nextOffset: nil)
+            let initialState = State(totalCount: views.seenCount, totalReactedCount: views.reactedCount, items: [], loadMoreToken: LoadMoreToken(value: ""))
+            self.state = InternalState(totalCount: initialState.totalCount, totalReactedCount: initialState.totalReactedCount, items: initialState.items, canLoadMore: initialState.loadMoreToken != nil, nextOffset: nil)
             self.statePromise.set(.single(self.state))
             
             if initialState.loadMoreToken != nil {
@@ -1721,7 +1711,7 @@ public final class EngineStoryViewListContext {
             let signal: Signal<InternalState, NoError> = self.account.postbox.transaction { transaction -> Void in
             }
             |> mapToSignal { _ -> Signal<InternalState, NoError> in
-                return account.network.request(Api.functions.stories.getStoryViewsList(id: storyId, offsetDate: currentOffset?.timestamp ?? 0, offsetId: currentOffset?.id ?? 0, limit: Int32(limit)))
+                return account.network.request(Api.functions.stories.getStoryViewsList(flags: 0, q: nil, id: storyId, offset: currentOffset?.value ?? "", limit: Int32(limit)))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.stories.StoryViewsList?, NoError> in
                     return .single(nil)
@@ -1729,14 +1719,13 @@ public final class EngineStoryViewListContext {
                 |> mapToSignal { result -> Signal<InternalState, NoError> in
                     return account.postbox.transaction { transaction -> InternalState in
                         switch result {
-                        case let .storyViewsList(count, views, users):
+                        case let .storyViewsList(_, count, reactionsCount, views, users, nextOffset):
                             updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
                             
                             var items: [Item] = []
-                            var nextOffset: NextOffset?
                             for view in views {
                                 switch view {
-                                case let .storyView(flags, userId, date):
+                                case let .storyView(flags, userId, date, reaction):
                                     let isBlocked = (flags & (1 << 0)) != 0
                                     let isBlockedFromStories = (flags & (1 << 1)) != 0
                                                                         
@@ -1757,9 +1746,21 @@ public final class EngineStoryViewListContext {
                                         return previousData.withUpdatedIsBlocked(isBlocked).withUpdatedFlags(updatedFlags)
                                     })
                                     if let peer = transaction.getPeer(peerId) {
-                                        items.append(Item(peer: EnginePeer(peer), timestamp: date, storyStats: transaction.getPeerStoryStats(peerId: peerId), isLike: false))
-                                        
-                                        nextOffset = NextOffset(id: userId, timestamp: date)
+                                        let parsedReaction = reaction.flatMap(MessageReaction.Reaction.init(apiReaction:))
+                                        items.append(Item(
+                                            peer: EnginePeer(peer),
+                                            timestamp: date,
+                                            storyStats: transaction.getPeerStoryStats(peerId: peerId),
+                                            reaction: parsedReaction,
+                                            reactionFile: parsedReaction.flatMap { reaction -> TelegramMediaFile? in
+                                                switch reaction {
+                                                case .builtin:
+                                                    return nil
+                                                case let .custom(fileId):
+                                                    return transaction.getMedia(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)) as? TelegramMediaFile
+                                                }
+                                            }
+                                        ))
                                     }
                                 }
                             }
@@ -1773,7 +1774,7 @@ public final class EngineStoryViewListContext {
                                     mediaAreas: item.mediaAreas,
                                     text: item.text,
                                     entities: item.entities,
-                                    views: Stories.Item.Views(seenCount: Int(count), seenPeerIds: currentViews.seenPeerIds),
+                                    views: Stories.Item.Views(seenCount: Int(count), reactedCount: Int(reactionsCount), seenPeerIds: currentViews.seenPeerIds),
                                     privacy: item.privacy,
                                     isPinned: item.isPinned,
                                     isExpired: item.isExpired,
@@ -1783,7 +1784,7 @@ public final class EngineStoryViewListContext {
                                     isSelectedContacts: item.isSelectedContacts,
                                     isForwardingDisabled: item.isForwardingDisabled,
                                     isEdited: item.isEdited,
-                                    hasLike: item.hasLike
+                                    myReaction: item.myReaction
                                 ))
                                 if let entry = CodableEntry(updatedItem) {
                                     transaction.setStory(id: StoryId(peerId: account.peerId, id: storyId), value: entry)
@@ -1802,7 +1803,7 @@ public final class EngineStoryViewListContext {
                                             mediaAreas: item.mediaAreas,
                                             text: item.text,
                                             entities: item.entities,
-                                            views: Stories.Item.Views(seenCount: Int(count), seenPeerIds: currentViews.seenPeerIds),
+                                            views: Stories.Item.Views(seenCount: Int(count), reactedCount: Int(reactionsCount), seenPeerIds: currentViews.seenPeerIds),
                                             privacy: item.privacy,
                                             isPinned: item.isPinned,
                                             isExpired: item.isExpired,
@@ -1812,7 +1813,7 @@ public final class EngineStoryViewListContext {
                                             isSelectedContacts: item.isSelectedContacts,
                                             isForwardingDisabled: item.isForwardingDisabled,
                                             isEdited: item.isEdited,
-                                            hasLike: item.hasLike
+                                            myReaction: item.myReaction
                                         ))
                                         if let entry = CodableEntry(updatedItem) {
                                             currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
@@ -1822,9 +1823,9 @@ public final class EngineStoryViewListContext {
                             }
                             transaction.setStoryItems(peerId: account.peerId, items: currentItems)
                             
-                            return InternalState(totalCount: Int(count), items: items, canLoadMore: nextOffset != nil, nextOffset: nextOffset)
+                            return InternalState(totalCount: Int(count), totalReactedCount: Int(reactionsCount), items: items, canLoadMore: nextOffset != nil, nextOffset: nextOffset.flatMap { NextOffset(value: $0) })
                         case .none:
-                            return InternalState(totalCount: 0, items: [], canLoadMore: false, nextOffset: nil)
+                            return InternalState(totalCount: 0, totalReactedCount: 0, items: [], canLoadMore: false, nextOffset: nil)
                         }
                     }
                 }
@@ -1852,10 +1853,22 @@ public final class EngineStoryViewListContext {
                     existingItems.insert(itemHash)
                     strongSelf.state.items.append(item)
                 }
+                
+                var allReactedCount = 0
+                for item in strongSelf.state.items {
+                    if item.reaction != nil {
+                        allReactedCount += 1
+                    } else {
+                        break
+                    }
+                }
+                
                 if state.canLoadMore {
                     strongSelf.state.totalCount = max(state.totalCount, strongSelf.state.items.count)
+                    strongSelf.state.totalReactedCount = max(state.totalReactedCount, allReactedCount)
                 } else {
                     strongSelf.state.totalCount = strongSelf.state.items.count
+                    strongSelf.state.totalReactedCount = allReactedCount
                 }
                 strongSelf.state.canLoadMore = state.canLoadMore
                 strongSelf.state.nextOffset = state.nextOffset
@@ -1883,7 +1896,8 @@ public final class EngineStoryViewListContext {
                                 peer: item.peer,
                                 timestamp: item.timestamp,
                                 storyStats: value,
-                                isLike: false
+                                reaction: item.reaction,
+                                reactionFile: item.reactionFile
                             )
                         }
                     }
@@ -1906,10 +1920,11 @@ public final class EngineStoryViewListContext {
                 disposable.set(impl.statePromise.get().start(next: { state in
                     var loadMoreToken: LoadMoreToken?
                     if let nextOffset = state.nextOffset {
-                        loadMoreToken = LoadMoreToken(id: nextOffset.id, timestamp: nextOffset.timestamp)
+                        loadMoreToken = LoadMoreToken(value: nextOffset.value)
                     }
                     subscriber.putNext(State(
                         totalCount: state.totalCount,
+                        totalReactedCount: state.totalReactedCount,
                         items: state.items,
                         loadMoreToken: loadMoreToken
                     ))
@@ -2112,10 +2127,15 @@ func _internal_enableStoryStealthMode(account: Account) -> Signal<Never, NoError
     flags |= 1 << 0
     flags |= 1 << 1
     return account.network.request(Api.functions.stories.activateStealthMode(flags: flags))
-    |> `catch` { _ -> Signal<Api.Bool, NoError> in
-        return .single(.boolFalse)
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+        return .single(nil)
     }
     |> mapToSignal { result -> Signal<Never, NoError> in
+        if let result = result {
+            account.stateManager.addUpdates(result)
+        }
+        
         return account.postbox.transaction { transaction in
             let appConfig = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? .defaultValue
             
@@ -2157,8 +2177,15 @@ public func _internal_setStoryNotificationWasDisplayed(transaction: Transaction,
     transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.displayedStoryNotifications, key: key), entry: CodableEntry(data: Data()))
 }
 
-func _internal_setStoryLike(account: Account, peerId: EnginePeer.Id, id: Int32, hasLike: Bool) -> Signal<Never, NoError> {
-    return account.postbox.transaction { transaction -> Void in
+func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int32, reaction: MessageReaction.Reaction?) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Api.InputUser? in
+        guard let peer = transaction.getPeer(peerId) else {
+            return nil
+        }
+        guard let inputUser = apiInputUser(peer) else {
+            return nil
+        }
+        
         var currentItems = transaction.getStoryItems(peerId: peerId)
         for i in 0 ..< currentItems.count {
             if currentItems[i].id == id {
@@ -2181,7 +2208,7 @@ func _internal_setStoryLike(account: Account, peerId: EnginePeer.Id, id: Int32, 
                         isSelectedContacts: item.isSelectedContacts,
                         isForwardingDisabled: item.isForwardingDisabled,
                         isEdited: item.isEdited,
-                        hasLike: hasLike
+                        myReaction: reaction
                     ))
                     if let entry = CodableEntry(updatedItem) {
                         currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
@@ -2210,12 +2237,30 @@ func _internal_setStoryLike(account: Account, peerId: EnginePeer.Id, id: Int32, 
                 isSelectedContacts: item.isSelectedContacts,
                 isForwardingDisabled: item.isForwardingDisabled,
                 isEdited: item.isEdited,
-                hasLike: hasLike
+                myReaction: reaction
             ))
             if let entry = CodableEntry(updatedItem) {
                 transaction.setStory(id: StoryId(peerId: peerId, id: id), value: entry)
             }
         }
+        
+        return inputUser
     }
-    |> ignoreValues
+    |> mapToSignal { inputUser -> Signal<Never, NoError> in
+        guard let inputUser = inputUser else {
+            return .complete()
+        }
+        return account.network.request(Api.functions.stories.sendReaction(flags: 0, userId: inputUser, storyId: id, reaction: reaction?.apiReaction ?? .reactionEmpty))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { updates -> Signal<Never, NoError> in
+            if let updates = updates {
+                account.stateManager.addUpdates(updates)
+            }
+            
+            return .complete()
+        }
+    }
 }

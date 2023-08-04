@@ -1776,8 +1776,12 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    public func animateOutToReaction(value: MessageReaction.Reaction, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
+    public func animateOutToReaction(value: MessageReaction.Reaction, targetView: UIView, hideNode: Bool, forceSwitchToInlineImmediately: Bool = false, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
         self.isAnimatingOutToReaction = true
+        
+        #if DEBUG
+        let hideNode = true
+        #endif
         
         var foundItemNode: ReactionNode?
         for (_, itemNode) in self.visibleItemNodes {
@@ -1808,7 +1812,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         if itemNode.item.listAnimation.isVideoEmoji || itemNode.item.listAnimation.isVideoSticker || itemNode.item.listAnimation.isAnimatedSticker || itemNode.item.listAnimation.isStaticEmoji {
             switch itemNode.item.reaction.rawValue {
             case .builtin:
-                switchToInlineImmediately = false
+                switchToInlineImmediately = forceSwitchToInlineImmediately
             case .custom:
                 switchToInlineImmediately = !self.didTriggerExpandedReaction
             }

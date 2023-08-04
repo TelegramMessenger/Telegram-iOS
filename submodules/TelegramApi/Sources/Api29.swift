@@ -568,15 +568,17 @@ public extension Api.stories {
 }
 public extension Api.stories {
     enum StoryViewsList: TypeConstructorDescription {
-        case storyViewsList(count: Int32, views: [Api.StoryView], users: [Api.User])
+        case storyViewsList(flags: Int32, count: Int32, reactionsCount: Int32, views: [Api.StoryView], users: [Api.User], nextOffset: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .storyViewsList(let count, let views, let users):
+                case .storyViewsList(let flags, let count, let reactionsCount, let views, let users, let nextOffset):
                     if boxed {
-                        buffer.appendInt32(-79726676)
+                        buffer.appendInt32(1189722604)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(count, buffer: buffer, boxed: false)
+                    serializeInt32(reactionsCount, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(views.count))
                     for item in views {
@@ -587,33 +589,43 @@ public extension Api.stories {
                     for item in users {
                         item.serialize(buffer, true)
                     }
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(nextOffset!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .storyViewsList(let count, let views, let users):
-                return ("storyViewsList", [("count", count as Any), ("views", views as Any), ("users", users as Any)])
+                case .storyViewsList(let flags, let count, let reactionsCount, let views, let users, let nextOffset):
+                return ("storyViewsList", [("flags", flags as Any), ("count", count as Any), ("reactionsCount", reactionsCount as Any), ("views", views as Any), ("users", users as Any), ("nextOffset", nextOffset as Any)])
     }
     }
     
         public static func parse_storyViewsList(_ reader: BufferReader) -> StoryViewsList? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: [Api.StoryView]?
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: [Api.StoryView]?
             if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StoryView.self)
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StoryView.self)
             }
-            var _3: [Api.User]?
+            var _5: [Api.User]?
             if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
+            var _6: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_6 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.stories.StoryViewsList.storyViewsList(count: _1!, views: _2!, users: _3!)
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.stories.StoryViewsList.storyViewsList(flags: _1!, count: _2!, reactionsCount: _3!, views: _4!, users: _5!, nextOffset: _6)
             }
             else {
                 return nil

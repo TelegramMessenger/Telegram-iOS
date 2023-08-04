@@ -67,6 +67,7 @@ final class StoryItemSetViewListComponent: Component {
     let minimizedContentHeight: CGFloat
     let outerExpansionFraction: CGFloat
     let outerExpansionDirection: Bool
+    let availableReactions: StoryAvailableReactions?
     let close: () -> Void
     let expandViewStats: () -> Void
     let deleteAction: () -> Void
@@ -88,6 +89,7 @@ final class StoryItemSetViewListComponent: Component {
         minimizedContentHeight: CGFloat,
         outerExpansionFraction: CGFloat,
         outerExpansionDirection: Bool,
+        availableReactions: StoryAvailableReactions?,
         close: @escaping () -> Void,
         expandViewStats: @escaping () -> Void,
         deleteAction: @escaping () -> Void,
@@ -108,6 +110,7 @@ final class StoryItemSetViewListComponent: Component {
         self.minimizedContentHeight = minimizedContentHeight
         self.outerExpansionFraction = outerExpansionFraction
         self.outerExpansionDirection = outerExpansionDirection
+        self.availableReactions = availableReactions
         self.close = close
         self.expandViewStats = expandViewStats
         self.deleteAction = deleteAction
@@ -141,6 +144,9 @@ final class StoryItemSetViewListComponent: Component {
             return false
         }
         if lhs.outerExpansionDirection != rhs.outerExpansionDirection {
+            return false
+        }
+        if lhs.availableReactions !== rhs.availableReactions {
             return false
         }
         return true
@@ -517,7 +523,29 @@ final class StoryItemSetViewListComponent: Component {
                             subtitle: dateText,
                             subtitleAccessory: .checks,
                             presence: nil,
-                            displayLike: item.isLike,
+                            reaction: item.reaction.flatMap { reaction -> PeerListItemComponent.Reaction in
+                                var animationFileId: Int64?
+                                var animationFile: TelegramMediaFile?
+                                switch reaction {
+                                case .builtin:
+                                    if let availableReactions = component.availableReactions {
+                                        for availableReaction in availableReactions.reactionItems {
+                                            if availableReaction.reaction.rawValue == reaction {
+                                                animationFile = availableReaction.listAnimation
+                                                break
+                                            }
+                                        }
+                                    }
+                                case let .custom(fileId):
+                                    animationFileId = fileId
+                                    animationFile = item.reactionFile
+                                }
+                                return PeerListItemComponent.Reaction(
+                                    reaction: reaction,
+                                    file: animationFile,
+                                    animationFileId: animationFileId
+                                )
+                            },
                             selectionState: .none,
                             hasNext: index != viewListState.totalCount - 1,
                             action: { [weak self] peer in
@@ -670,7 +698,7 @@ final class StoryItemSetViewListComponent: Component {
                     applyState = true
                     let _ = synchronous
                 } else {
-                    self.viewListState = EngineStoryViewListContext.State(totalCount: 0, items: [], loadMoreToken: nil)
+                    self.viewListState = EngineStoryViewListContext.State(totalCount: 0, totalReactedCount: 0, items: [], loadMoreToken: nil)
                 }
             }
             
@@ -728,7 +756,7 @@ final class StoryItemSetViewListComponent: Component {
             
             var externalViews: EngineStoryItem.Views? = component.storyItem.views
             if let viewListState = self.viewListState, !viewListState.items.isEmpty {
-                externalViews = EngineStoryItem.Views(seenCount: viewListState.totalCount, seenPeers: viewListState.items.prefix(3).map(\.peer))
+                externalViews = EngineStoryItem.Views(seenCount: viewListState.totalCount, reactedCount: viewListState.totalReactedCount, seenPeers: viewListState.items.prefix(3).map(\.peer))
             }
             
             let navigationPanelSize = self.navigationPanel.update(

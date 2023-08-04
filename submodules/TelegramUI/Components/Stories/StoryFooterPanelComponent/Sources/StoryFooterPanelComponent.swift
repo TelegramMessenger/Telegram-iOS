@@ -76,6 +76,9 @@ public final class StoryFooterPanelComponent: Component {
         private let viewStatsExpandedText: AnimatedCountLabelView
         private let deleteButton = ComponentView<Empty>()
         
+        private var reactionStatsIcon: UIImageView?
+        private var reactionStatsText: AnimatedCountLabelView?
+        
         private var statusButton: HighlightableButton?
         private var statusNode: SemanticStatusNode?
         private var uploadingText: ComponentView<Empty>?
@@ -114,9 +117,13 @@ public final class StoryFooterPanelComponent: Component {
                 if highlighted {
                     self.avatarsView.alpha = 0.7
                     self.viewStatsText.alpha = 0.7
+                    self.reactionStatsIcon?.alpha = 0.7
+                    self.reactionStatsText?.alpha = 0.7
                 } else {
                     self.avatarsView.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
                     self.viewStatsText.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
+                    self.reactionStatsIcon?.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
+                    self.reactionStatsText?.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
                 }
             }
             self.viewStatsButton.addTarget(self, action: #selector(self.viewStatsPressed), for: .touchUpInside)
@@ -278,8 +285,10 @@ public final class StoryFooterPanelComponent: Component {
             }
             
             var viewCount = 0
+            var reactionCount = 0
             if let views = component.externalViews ?? component.storyItem?.views, views.seenCount != 0 {
                 viewCount = views.seenCount
+                reactionCount = views.reactedCount
             }
             
             let viewsText: String
@@ -353,7 +362,65 @@ public final class StoryFooterPanelComponent: Component {
                 transition.setScale(view: viewStatsExpandedTextView, scale: viewStatsCurrentFrame.width / viewStatsExpandedTextFrame.width)
             }
             
-            transition.setFrame(view: self.viewStatsButton, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: viewStatsTextFrame.maxX, height: viewStatsTextFrame.maxY + 8.0)))
+            var statsButtonWidth = viewStatsTextFrame.maxY + 8.0
+            
+            if reactionCount != 0 {
+                var reactionsTransition = transition
+                let reactionStatsIcon: UIImageView
+                if let current = self.reactionStatsIcon {
+                    reactionStatsIcon = current
+                } else {
+                    reactionsTransition = reactionsTransition.withAnimation(.none)
+                    reactionStatsIcon = UIImageView()
+                    reactionStatsIcon.image = UIImage(bundleImageName: "Stories/InputLikeOn")?.withRenderingMode(.alwaysTemplate)
+                    reactionStatsIcon.tintColor = UIColor(rgb: 0xFF3B30)
+                    
+                    self.reactionStatsIcon = reactionStatsIcon
+                    self.externalContainerView.addSubview(reactionStatsIcon)
+                }
+                
+                let reactionStatsText: AnimatedCountLabelView
+                if let current = self.reactionStatsText {
+                    reactionStatsText = current
+                } else {
+                    reactionStatsText = AnimatedCountLabelView(frame: CGRect())
+                    reactionStatsText.isUserInteractionEnabled = false
+                    self.reactionStatsText = reactionStatsText
+                    self.externalContainerView.addSubview(reactionStatsText)
+                }
+                
+                let reactionStatsLayout = reactionStatsText.update(
+                    size: CGSize(width: availableSize.width, height: size.height),
+                    segments: [
+                        .number(reactionCount, NSAttributedString(string: "\(reactionCount)", font: Font.regular(15.0), textColor: .white))
+                    ],
+                    transition: (isFirstTime || reactionsTransition.animation.isImmediate) ? .immediate : ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut)
+                )
+                
+                let imageSize = CGSize(width: 23.0, height: 23.0)
+                reactionsTransition.setFrame(view: reactionStatsIcon, frame: CGRect(origin: CGPoint(x: viewStatsTextFrame.maxX + 7.0, y: viewStatsTextFrame.minY - 3.0), size: imageSize))
+                
+                let reactionStatsFrame = CGRect(origin: CGPoint(x: viewStatsTextFrame.maxX + 7.0 + imageSize.width + 3.0, y: viewStatsTextFrame.minY), size: reactionStatsLayout.size)
+                reactionsTransition.setFrame(view: reactionStatsText, frame: reactionStatsFrame)
+                
+                statsButtonWidth = reactionStatsFrame.maxX + 8.0
+            } else {
+                if let reactionStatsIcon = self.reactionStatsIcon {
+                    self.reactionStatsIcon = nil
+                    reactionStatsIcon.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak reactionStatsIcon] _ in
+                        reactionStatsIcon?.removeFromSuperview()
+                    })
+                }
+                
+                if let reactionStatsText = self.reactionStatsText {
+                    self.reactionStatsText = nil
+                    reactionStatsText.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak reactionStatsText] _ in
+                        reactionStatsText?.removeFromSuperview()
+                    })
+                }
+            }
+
+            transition.setFrame(view: self.viewStatsButton, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: statsButtonWidth, height: baseHeight)))
             self.viewStatsButton.isUserInteractionEnabled = component.expandFraction == 0.0
             
             var rightContentOffset: CGFloat = availableSize.width - 12.0
