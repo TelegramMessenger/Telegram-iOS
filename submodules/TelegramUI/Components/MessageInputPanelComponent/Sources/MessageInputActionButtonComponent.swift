@@ -21,12 +21,8 @@ private extension MessageInputActionButtonComponent.Mode {
             return "Chat/Input/Text/IconAttachment"
         case .forward:
             return "Chat/Input/Text/IconForwardSend"
-        case let .like(reaction, _, _):
-            if reaction == nil {
-                return "Stories/InputLikeOff"
-            } else {
-                return nil
-            }
+        case .like:
+            return "Stories/InputLikeOff"
         default:
             return nil
         }
@@ -220,6 +216,11 @@ public final class MessageInputActionButtonComponent: Component {
             
             let themeUpdated = previousComponent?.theme !== component.theme
             
+            var transition = transition
+            if transition.animation.isImmediate, let previousComponent, case .like = previousComponent.mode, case .like = component.mode, previousComponent.mode != component.mode {
+                transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
+            }
+            
             self.containerNode.isUserInteractionEnabled = component.longPressAction != nil
             
             if self.micButton == nil {
@@ -319,8 +320,14 @@ public final class MessageInputActionButtonComponent: Component {
             switch component.mode {
             case .none:
                 break
-            case .send, .apply, .attach, .delete, .forward, .like:
+            case .send, .apply, .attach, .delete, .forward:
                 sendAlpha = 1.0
+            case let .like(reaction, _, _):
+                if reaction != nil {
+                    sendAlpha = 0.0
+                } else {
+                    sendAlpha = 1.0
+                }
             case .more:
                 moreAlpha = 1.0
             case .videoInput, .voiceInput:
@@ -333,8 +340,6 @@ public final class MessageInputActionButtonComponent: Component {
                 if let iconName = component.mode.iconName {
                     let tintColor: UIColor = .white
                     self.sendIconView.image = generateTintedImage(image: UIImage(bundleImageName: iconName), color: tintColor)
-                } else if case let .like(reaction, _, _) = component.mode, reaction != nil {
-                    self.sendIconView.image = nil
                 } else if case .apply = component.mode {
                     self.sendIconView.image = generateImage(CGSize(width: 33.0, height: 33.0), contextGenerator: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
@@ -392,7 +397,7 @@ public final class MessageInputActionButtonComponent: Component {
             }
             
             if case let .like(reactionValue, reactionFile, animationFileId) = component.mode, let reaction = reactionValue {
-                let reactionIconFrame = CGRect(origin: .zero, size: availableSize).insetBy(dx: 3.0, dy: 3.0)
+                let reactionIconFrame = CGRect(origin: .zero, size: CGSize(width: 32.0, height: 32.0)).insetBy(dx: 2.0, dy: 2.0)
                 
                 let reactionIconView: ReactionIconView
                 if let current = self.reactionIconView {
@@ -402,6 +407,11 @@ public final class MessageInputActionButtonComponent: Component {
                     reactionIconView.isUserInteractionEnabled = false
                     self.reactionIconView = reactionIconView
                     self.addSubview(reactionIconView)
+                    
+                    if previousComponent != nil {
+                        reactionIconView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                        reactionIconView.layer.animateScale(from: 0.01, to: 1.0, duration: 0.25)
+                    }
                 }
                 transition.setFrame(view: reactionIconView, frame: reactionIconFrame)
                 reactionIconView.update(
@@ -418,7 +428,10 @@ public final class MessageInputActionButtonComponent: Component {
                 )
             } else if let reactionIconView = self.reactionIconView {
                 self.reactionIconView = nil
-                reactionIconView.removeFromSuperview()
+                reactionIconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak reactionIconView] _ in
+                    reactionIconView?.removeFromSuperview()
+                })
+                reactionIconView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.25, removeOnCompletion: false)
             }
             
             transition.setFrame(view: self.button.view, frame: CGRect(origin: .zero, size: availableSize))

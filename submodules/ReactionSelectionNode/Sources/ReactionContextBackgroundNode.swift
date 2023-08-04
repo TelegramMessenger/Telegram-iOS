@@ -120,6 +120,7 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         isMinimized: Bool,
         isCoveredByInput: Bool,
         displayTail: Bool,
+        forceTailToRight: Bool,
         transition: ContainedViewLayoutTransition
     ) {
         let shadowInset: CGFloat = 15.0
@@ -171,7 +172,10 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         
         let largeCircleFrame: CGRect
         let smallCircleFrame: CGRect
-        if isLeftAligned {
+        if forceTailToRight {
+            largeCircleFrame = CGRect(origin: CGPoint(x: cloudSourcePoint - floor(largeCircleSize / 2.0), y: size.height - largeCircleSize / 2.0), size: CGSize(width: largeCircleSize, height: largeCircleSize))
+            smallCircleFrame = CGRect(origin: CGPoint(x: largeCircleFrame.maxX - 3.0, y: largeCircleFrame.maxY + 2.0), size: CGSize(width: smallCircleSize, height: smallCircleSize))
+        } else if isLeftAligned {
             largeCircleFrame = CGRect(origin: CGPoint(x: cloudSourcePoint - floor(largeCircleSize / 2.0), y: size.height - largeCircleSize / 2.0), size: CGSize(width: largeCircleSize, height: largeCircleSize))
             smallCircleFrame = CGRect(origin: CGPoint(x: largeCircleFrame.maxX - 3.0, y: largeCircleFrame.maxY + 2.0), size: CGSize(width: smallCircleSize, height: smallCircleSize))
         } else {

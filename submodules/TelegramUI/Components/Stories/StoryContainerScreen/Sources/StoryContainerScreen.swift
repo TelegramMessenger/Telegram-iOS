@@ -20,6 +20,7 @@ import VolumeButtons
 import TooltipUI
 import ChatEntityKeyboardInputNode
 import notify
+import TelegramNotices
 
 func hasFirstResponder(_ view: UIView) -> Bool {
     if view.isFirstResponder {
@@ -381,6 +382,8 @@ private final class StoryContainerScreenComponent: Component {
         var longPressRecognizer: StoryLongPressRecognizer?
         
         private var pendingNavigationToItemId: (peerId: EnginePeer.Id, id: Int32)?
+        
+        private var didDisplayReactionTooltip: Bool = false
         
         override init(frame: CGRect) {
             self.backgroundLayer = SimpleLayer()
@@ -911,6 +914,30 @@ private final class StoryContainerScreenComponent: Component {
                     self?.layer.allowsGroupOpacity = false
                 })
             }
+            
+            Queue.mainQueue().after(0.4, { [weak self] in
+                guard let self, let component = self.component else {
+                    return
+                }
+                
+                let _ = (ApplicationSpecificNotice.displayStoryReactionTooltip(accountManager: component.context.sharedContext.accountManager)
+                |> delay(1.0, queue: .mainQueue())
+                |> deliverOnMainQueue).start(next: { [weak self] value in
+                    guard let self else {
+                        return
+                    }
+                    if !value {
+                        if let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let currentItemView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                            currentItemView.maybeDisplayReactionTooltip()
+                        }
+                    }
+                    
+                    self.didDisplayReactionTooltip = true
+                    #if !DEBUG
+                    let _ = ApplicationSpecificNotice.setDisplayStoryReactionTooltip(accountManager: component.context.sharedContext.accountManager).start()
+                    #endif
+                })
+            })
         }
         
         func animateOut(completion: @escaping () -> Void) {
@@ -1094,6 +1121,7 @@ private final class StoryContainerScreenComponent: Component {
                         }
                     }
                 })
+                
                 update = true
             }
             

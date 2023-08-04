@@ -233,6 +233,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private var animationHideNode: Bool = false
     
     public var displayTail: Bool = true
+    public var forceTailToRight: Bool = true
     
     private var didAnimateIn: Bool = false
     public private(set) var isAnimatingOut: Bool = false
@@ -636,12 +637,20 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         contentSize.width = max(46.0, contentSize.width)
         contentSize.height = self.currentContentHeight
         
-        let sideInset: CGFloat = 11.0 + insets.left
+        let sideInset: CGFloat
+        if self.forceTailToRight {
+            sideInset = insets.left
+        } else {
+            sideInset = 11.0 + insets.left
+        }
         let backgroundOffset: CGPoint = CGPoint(x: 22.0, y: -7.0)
         
         var rect: CGRect
         let isLeftAligned: Bool
-        if anchorRect.minX < containerSize.width - anchorRect.maxX {
+        if self.forceTailToRight {
+            rect = CGRect(origin: CGPoint(x: anchorRect.minX - backgroundOffset.x - 4.0, y: anchorRect.minY - contentSize.height + backgroundOffset.y), size: contentSize)
+            isLeftAligned = false
+        } else if anchorRect.minX < containerSize.width - anchorRect.maxX {
             rect = CGRect(origin: CGPoint(x: anchorRect.maxX - contentSize.width + backgroundOffset.x, y: anchorRect.minY - contentSize.height + backgroundOffset.y), size: contentSize)
             isLeftAligned = true
         } else {
@@ -665,7 +674,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         let cloudSourcePoint: CGFloat
-        if isLeftAligned {
+        if self.forceTailToRight {
+            cloudSourcePoint = min(rect.maxX - 46.0 / 2.0, anchorRect.maxX - 4.0)
+        } else if isLeftAligned {
             cloudSourcePoint = min(rect.maxX - 46.0 / 2.0, anchorRect.maxX - 4.0)
         } else {
             cloudSourcePoint = max(rect.minX + 46.0 / 2.0, anchorRect.minX)
@@ -1190,6 +1201,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             isMinimized: self.highlightedReaction != nil && !self.highlightedByHover,
             isCoveredByInput: isCoveredByInput,
             displayTail: self.displayTail,
+            forceTailToRight: self.forceTailToRight,
             transition: transition
         )
         
@@ -1778,10 +1790,6 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     
     public func animateOutToReaction(value: MessageReaction.Reaction, targetView: UIView, hideNode: Bool, forceSwitchToInlineImmediately: Bool = false, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
         self.isAnimatingOutToReaction = true
-        
-        #if DEBUG
-        let hideNode = true
-        #endif
         
         var foundItemNode: ReactionNode?
         for (_, itemNode) in self.visibleItemNodes {

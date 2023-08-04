@@ -950,10 +950,21 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            let result = super.hitTest(point, with: event)
+            
+            if self.displayLikeReactions, let reactionContextNode = self.reactionContextNode {
+                if let result, result.isDescendant(of: reactionContextNode.view) {
+                    return result
+                } else {
+                    return self.itemsContainerView
+                }
+            }
+            
             if let inputView = self.inputPanel.view, let inputViewHitTest = inputView.hitTest(self.convert(point, to: inputView), with: event) {
                 return inputViewHitTest
             }
-            guard let result = super.hitTest(point, with: event) else {
+            
+            guard let result else {
                 return nil
             }
             
@@ -1821,6 +1832,67 @@ public final class StoryItemSetContainerComponent: Component {
                 cleanups.removeAll()
                 completion()
             })
+        }
+        
+        func maybeDisplayReactionTooltip() {
+            if "".isEmpty {
+                return
+            }
+            guard let component = self.component else {
+                return
+            }
+            guard let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View, let likeButtonView = inputPanelView.likeButtonView else {
+                return
+            }
+            if inputPanelView.isHidden || inputPanelView.alpha == 0.0 {
+                return
+            }
+            if !likeButtonView.isDescendant(of: self) {
+                return
+            }
+            
+            let rect = likeButtonView.convert(likeButtonView.bounds, to: nil)
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            //TODO:localize
+            let text = "Long tap for more reactions"
+            let controller = TooltipController(content: .text(text), baseFontSize: presentationData.listsFontSize.baseDisplaySize, padding: 2.0)
+            controller.dismissed = { [weak self] _ in
+                if let self {
+                    self.voiceMessagesRestrictedTooltipController = nil
+                    self.updateIsProgressPaused()
+                }
+            }
+            component.presentController(controller, TooltipControllerPresentationArguments(sourceViewAndRect: { [weak self] in
+                if let self {
+                    return (self, rect)
+                }
+                return nil
+            }))
+            self.voiceMessagesRestrictedTooltipController = controller
+            self.updateIsProgressPaused()
+            
+            //TODO:localize
+            /*let tooltipScreen = TooltipScreen(
+                account: component.context.account,
+                sharedContext: component.context.sharedContext,
+                text: .markdown(text: "Long tap for more reactions"),
+                balancedTextLayout: true,
+                style: .default,
+                location: TooltipScreen.Location.point(likeButtonView.convert(likeButtonView.bounds, to: nil).offsetBy(dx: 0.0, dy: 0.0), .bottom), displayDuration: .infinite, shouldDismissOnTouch: { _, _ in
+                    return .dismiss(consume: true)
+                }
+            )
+            tooltipScreen.willBecomeDismissed = { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                self.sendMessageContext.tooltipScreen = nil
+                self.updateIsProgressPaused()
+            }
+            self.sendMessageContext.tooltipScreen?.dismiss()
+            self.sendMessageContext.tooltipScreen = tooltipScreen
+            self.updateIsProgressPaused()
+            component.controller()?.present(tooltipScreen, in: .current)*/
         }
         
         func update(component: StoryItemSetContainerComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
@@ -3260,8 +3332,9 @@ public final class StoryItemSetContainerComponent: Component {
             let reactionsAnchorRect: CGRect
             if self.displayLikeReactions, let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View, let likeButtonView = inputPanelView.likeButtonView {
                 var likeRect = likeButtonView.convert(likeButtonView.bounds, to: self)
-                likeRect.origin.y -= 14.0
-                likeRect.size.height += 14.0
+                likeRect.origin.y -= 15.0
+                likeRect.size.height += 15.0
+                likeRect.origin.x -= 30.0
                 reactionsAnchorRect = likeRect
             } else {
                 reactionsAnchorRect = CGRect(origin: CGPoint(x: inputPanelFrame.maxX - 40.0, y: inputPanelFrame.minY + 9.0), size: CGSize(width: 32.0, height: 32.0)).insetBy(dx: -4.0, dy: -4.0)
@@ -3306,7 +3379,7 @@ public final class StoryItemSetContainerComponent: Component {
                         animationCache: component.context.animationCache,
                         presentationData: component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme),
                         items: reactionItems.map(ReactionContextItem.reaction),
-                        selectedItems: Set(),
+                        selectedItems: component.slice.item.storyItem.myReaction.flatMap { Set([$0]) } ?? Set(),
                         getEmojiContent: { [weak self] animationCache, animationRenderer in
                             guard let self, let component = self.component else {
                                 preconditionFailure()
@@ -3353,6 +3426,7 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                     )
                     reactionContextNode.displayTail = self.displayLikeReactions
+                    reactionContextNode.forceTailToRight = self.displayLikeReactions
                     self.reactionContextNode = reactionContextNode
                     
                     reactionContextNode.reactionSelected = { [weak self] updateReaction, _ in
@@ -3360,12 +3434,45 @@ public final class StoryItemSetContainerComponent: Component {
                             return
                         }
                         
-                        if component.slice.item.storyItem.myReaction == updateReaction.reaction {
-                            let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: nil).start()
-                            self.displayLikeReactions = false
-                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                        if self.displayLikeReactions {
+                            if component.slice.item.storyItem.myReaction == updateReaction.reaction {
+                                let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: nil).start()
+                                self.displayLikeReactions = false
+                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                            } else {
+                                self.waitingForReactionAnimateOutToLike = updateReaction.reaction
+                                let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: updateReaction.reaction).start()
+                            }
                         } else {
-                            self.waitingForReactionAnimateOutToLike = updateReaction.reaction
+                            let targetView = UIView(frame: CGRect(origin: CGPoint(x: floor((self.bounds.width - 100.0) * 0.5), y: floor((self.bounds.height - 100.0) * 0.5)), size: CGSize(width: 100.0, height: 100.0)))
+                            targetView.isUserInteractionEnabled = false
+                            self.addSubview(targetView)
+                            
+                            if let reactionContextNode = self.reactionContextNode {
+                                reactionContextNode.willAnimateOutToReaction(value: updateReaction.reaction)
+                                reactionContextNode.animateOutToReaction(value: updateReaction.reaction, targetView: targetView, hideNode: false, animateTargetContainer: nil, addStandaloneReactionAnimation: "".isEmpty ? nil : { [weak self] standaloneReactionAnimation in
+                                    guard let self else {
+                                        return
+                                    }
+                                    standaloneReactionAnimation.frame = self.bounds
+                                    self.addSubview(standaloneReactionAnimation.view)
+                                }, completion: { [weak targetView, weak reactionContextNode] in
+                                    targetView?.removeFromSuperview()
+                                    if let reactionContextNode {
+                                        reactionContextNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.3, removeOnCompletion: false)
+                                        reactionContextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak reactionContextNode] _ in
+                                            reactionContextNode?.view.removeFromSuperview()
+                                        })
+                                    }
+                                })
+                            }
+                            
+                            if hasFirstResponder(self) {
+                                self.sendMessageContext.currentInputMode = .text
+                                self.endEditing(true)
+                            }
+                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                            
                             let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: updateReaction.reaction).start()
                         }
                     }
