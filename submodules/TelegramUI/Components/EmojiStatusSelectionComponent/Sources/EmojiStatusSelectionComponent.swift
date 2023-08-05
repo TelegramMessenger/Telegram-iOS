@@ -174,6 +174,7 @@ public final class EmojiStatusSelectionComponent: Component {
                     externalBottomPanelContainer: nil,
                     displayTopPanelBackground: .blur,
                     topPanelExtensionUpdated: { _, _ in },
+                    topPanelScrollingOffset: { _, _ in },
                     hideInputUpdated: { _, _, _ in },
                     hideTopPanelUpdated: { [weak self] hideTopPanel, transition in
                         guard let strongSelf = self else {

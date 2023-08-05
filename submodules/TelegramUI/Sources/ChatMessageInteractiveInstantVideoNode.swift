@@ -1548,7 +1548,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     let context = item.context
                     var replaceImpl: ((ViewController) -> Void)?
                     let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .voiceToText, action: {
-                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings)
+                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings, forceDark: false)
                         replaceImpl?(controller)
                     })
                     replaceImpl = { [weak controller] c in

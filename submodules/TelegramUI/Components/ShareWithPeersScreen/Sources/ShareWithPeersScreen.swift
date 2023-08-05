@@ -313,6 +313,7 @@ final class ShareWithPeersScreenComponent: Component {
         private var savedSelectedPeers: [EnginePeer.Id] = []
         private var selectedPeers: [EnginePeer.Id] = []
         private var selectedGroups: [EnginePeer.Id] = []
+        private var groupPeersMap: [EnginePeer.Id: [EnginePeer.Id]] = [:]
 
         private var peersMap: [EnginePeer.Id: EnginePeer] = [:]
         
@@ -635,8 +636,7 @@ final class ShareWithPeersScreenComponent: Component {
                 }
                 
                 progressDisposable.dispose()
-                
-                
+                 
                 var peerIds = Set<EnginePeer.Id>()
                 for peer in peers {
                     self.peersMap[peer.id] = peer
@@ -651,12 +651,15 @@ final class ShareWithPeersScreenComponent: Component {
                         showCountLimitAlert()
                         return
                     }
+                    var groupPeerIds: [EnginePeer.Id] = []
                     for peer in peers {
                         if !existingPeerIds.contains(peer.id) {
                             self.selectedPeers.append(peer.id)
                             existingPeerIds.insert(peer.id)
                         }
+                        groupPeerIds.append(peer.id)
                     }
+                    self.groupPeersMap[peer.id] = groupPeerIds
                 } else {
                     self.selectedPeers = self.selectedPeers.filter { !peerIds.contains($0) }
                 }
@@ -711,7 +714,7 @@ final class ShareWithPeersScreenComponent: Component {
                             }
                             peers.append(EnginePeer(item.peer))
                         }
-                        if !peers.isEmpty {
+                        if !list.list.isEmpty {
                             subscriber.putNext(peers)
                             subscriber.putCompletion()
                         }
@@ -725,6 +728,25 @@ final class ShareWithPeersScreenComponent: Component {
                     processPeers(peers)
                 })
             }
+        }
+        
+        private func updateSelectedGroupPeers() {
+            var unselectedGroupIds: [EnginePeer.Id] = []
+            for groupPeerId in self.selectedGroups {
+                if let groupPeers = self.groupPeersMap[groupPeerId] {
+                    var hasAnyGroupPeerSelected = false
+                    for peerId in groupPeers {
+                        if self.selectedPeers.contains(peerId) {
+                            hasAnyGroupPeerSelected = true
+                            break
+                        }
+                    }
+                    if !hasAnyGroupPeerSelected {
+                        unselectedGroupIds.append(groupPeerId)
+                    }
+                }
+            }
+            self.selectedGroups.removeAll(where: { unselectedGroupIds.contains($0) })
         }
         
         private func updateScrolling(transition: Transition) {
@@ -1024,8 +1046,20 @@ final class ShareWithPeersScreenComponent: Component {
                                 guard let self, let environment = self.environment, let controller = environment.controller() as? ShareWithPeersScreen else {
                                     return
                                 }
+                                let base: EngineStoryPrivacy.Base
+                                if self.selectedCategories.contains(.everyone) {
+                                    base = .everyone
+                                } else if self.selectedCategories.contains(.closeFriends) {
+                                    base = .closeFriends
+                                } else if self.selectedCategories.contains(.contacts) {
+                                    base = .contacts
+                                } else if self.selectedCategories.contains(.selectedContacts) {
+                                    base = .nobody
+                                } else {
+                                    base = .nobody
+                                }
                                 component.editBlockedPeers(
-                                    EngineStoryPrivacy(base: .nobody, additionallyIncludePeers: []),
+                                    EngineStoryPrivacy(base: base, additionallyIncludePeers: self.selectedPeers),
                                     self.selectedOptions.contains(.screenshot),
                                     self.selectedOptions.contains(.pin)
                                 )
@@ -1106,6 +1140,7 @@ final class ShareWithPeersScreenComponent: Component {
                                     } else {
                                         if let index = self.selectedPeers.firstIndex(of: peer.id) {
                                             self.selectedPeers.remove(at: index)
+                                            self.updateSelectedGroupPeers()
                                         } else {
                                             self.selectedPeers.append(peer.id)
                                         }
@@ -1566,6 +1601,7 @@ final class ShareWithPeersScreenComponent: Component {
                                 self.selectedCategories.remove(categoryId)
                             } else if let peerId = tokenId.base as? EnginePeer.Id {
                                 self.selectedPeers.removeAll(where: { $0 == peerId })
+                                self.updateSelectedGroupPeers()
                             }
                             if self.selectedCategories.isEmpty {
                                 self.selectedCategories.insert(.everyone)
@@ -2099,6 +2135,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
             context: AccountContext,
             subject: Subject = .chats(blocked: false),
             initialPeerIds: Set<EnginePeer.Id> = Set(),
+            savedSelectedPeers: Set<EnginePeer.Id> = Set(),
             closeFriends: Signal<[EnginePeer], NoError> = .single([]),
             blockedPeersContext: BlockedPeersContext? = nil
         ) {

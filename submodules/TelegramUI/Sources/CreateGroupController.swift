@@ -1119,7 +1119,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
     }, changeLocation: {
         endEditingImpl?()
                  
-         let controller = LocationPickerController(context: context, mode: .pick, completion: { location, _, _, address in
+         let controller = LocationPickerController(context: context, mode: .pick, completion: { location, _, _, address, _ in
              let addressSignal: Signal<String, NoError>
              if let address = address {
                  addressSignal = .single(address)

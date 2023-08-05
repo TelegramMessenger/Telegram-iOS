@@ -9738,6 +9738,7 @@ Sorry for the inconvenience.";
 
 "Story.PrivacyTooltipSelectedContacts.Contacts_1" = "1 contact";
 "Story.PrivacyTooltipSelectedContacts.Contacts_any" = "%@ contacts";
+"Story.PrivacyTooltipSelectedContactsFull" = "This story is now shown to %@.";
 
 "Story.Privacy.GrayListSelect" = "[Select people]() who will never see any of your stories.";
 "Story.Privacy.GrayListSelected" = "[%@]() will never see any of your stories.";

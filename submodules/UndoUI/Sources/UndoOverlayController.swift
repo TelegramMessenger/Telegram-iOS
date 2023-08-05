@@ -69,17 +69,19 @@ public final class UndoOverlayController: ViewController {
     private let animateInAsReplacement: Bool
     private var action: (UndoOverlayAction) -> Bool
     
+    private let blurred: Bool
     private var didPlayPresentationAnimation = false
     private var dismissed = false
     
     public var keepOnParentDismissal = false
     
-    public init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, position: Position = .bottom, animateInAsReplacement: Bool = false, action: @escaping (UndoOverlayAction) -> Bool) {
+    public init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, position: Position = .bottom, animateInAsReplacement: Bool = false, blurred: Bool = false, action: @escaping (UndoOverlayAction) -> Bool) {
         self.presentationData = presentationData
         self.content = content
         self.elevatedLayout = elevatedLayout
         self.position = position
         self.animateInAsReplacement = animateInAsReplacement
+        self.blurred = blurred
         self.action = action
         
         super.init(navigationBarPresentationData: nil)
@@ -92,7 +94,7 @@ public final class UndoOverlayController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = UndoOverlayControllerNode(presentationData: self.presentationData, content: self.content, elevatedLayout: self.elevatedLayout, placementPosition: self.position, action: { [weak self] value in
+        self.displayNode = UndoOverlayControllerNode(presentationData: self.presentationData, content: self.content, elevatedLayout: self.elevatedLayout, placementPosition: self.position, blurred: self.blurred, action: { [weak self] value in
             return self?.action(value) ?? false
         }, dismiss: { [weak self] in
             self?.dismiss()

@@ -123,12 +123,26 @@ final class SectionHeaderComponent: Component {
                 if let view = self.action.view {
                     if view.superview == nil {
                         self.addSubview(view)
+                        if !transition.animation.isImmediate {
+                            view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            view.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+                        }
                     }
                     let actionFrame = CGRect(origin: CGPoint(x: availableSize.width - leftInset - actionSize.width, y: floor((height - titleSize.height) / 2.0)), size: actionSize)
                     view.frame = actionFrame
                 }
-            } else if self.action.view?.superview != nil {
-                self.action.view?.removeFromSuperview()
+            } else if let view = self.action.view, view.superview != nil {
+                if !transition.animation.isImmediate {
+                    view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { finished in
+                        if finished {
+                            view.removeFromSuperview()
+                            view.layer.removeAllAnimations()
+                        }
+                    })
+                    view.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                } else {
+                    view.removeFromSuperview()
+                }
             }
             
             let size = CGSize(width: availableSize.width, height: height)

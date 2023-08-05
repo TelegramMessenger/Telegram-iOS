@@ -112,6 +112,8 @@ private final class StickerSelectionComponent: Component {
         private var searchVisible = false
         private var forceUpdate = false
         
+        private var topPanelScrollingOffset: CGFloat = 0.0
+        
         override init(frame: CGRect) {
             self.keyboardView = ComponentView<Empty>()
             self.keyboardClippingView = UIView()
@@ -253,7 +255,13 @@ private final class StickerSelectionComponent: Component {
                     externalTopPanelContainer: self.panelHostView,
                     externalBottomPanelContainer: nil,
                     displayTopPanelBackground: .blur,
-                    topPanelExtensionUpdated: { _, _ in },
+                    topPanelExtensionUpdated: { _, _ in
+                    },
+                    topPanelScrollingOffset: { [weak self] offset, transition in
+                        if let self {
+                            self.topPanelScrollingOffset = offset
+                        }
+                    },
                     hideInputUpdated: { [weak self] _, searchVisible, transition in
                         guard let self else {
                             return
@@ -263,7 +271,6 @@ private final class StickerSelectionComponent: Component {
                         self.state?.updated(transition: transition)
                     },
                     hideTopPanelUpdated: { _, _ in
-                        print()
                     },
                     switchToTextInput: {},
                     switchToGifSubject: { _ in },
@@ -330,8 +337,15 @@ private final class StickerSelectionComponent: Component {
                 transition.setFrame(view: self.panelBackgroundView, frame: CGRect(origin: CGPoint(), size: CGSize(width: keyboardSize.width, height: topPanelHeight)))
                 self.panelBackgroundView.update(size: self.panelBackgroundView.bounds.size, transition: transition.containedViewLayoutTransition)
                 
-                transition.setAlpha(view: self.panelBackgroundView, alpha: self.searchVisible ? 0.0 : 1.0)
-                transition.setAlpha(view: self.panelSeparatorView, alpha: self.searchVisible ? 0.0 : 1.0)
+                let topPanelAlpha: CGFloat
+                if self.searchVisible {
+                    topPanelAlpha = 0.0
+                } else {
+                    topPanelAlpha = max(0.0, min(1.0, (self.topPanelScrollingOffset / 20.0)))
+                }
+                
+                transition.setAlpha(view: self.panelBackgroundView, alpha: topPanelAlpha)
+                transition.setAlpha(view: self.panelSeparatorView, alpha: topPanelAlpha)
                 
                 transition.setFrame(view: self.panelSeparatorView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight), size: CGSize(width: keyboardSize.width, height: UIScreenPixel)))
             }

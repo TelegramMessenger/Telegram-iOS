@@ -83,6 +83,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     private var detailsPlaceholderNode: DetailsChatPlaceholderNode?
     
     private var applicationInFocusDisposable: Disposable?
+    private var storyUploadEventsDisposable: Disposable?
         
     public init(context: AccountContext) {
         self.context = context
@@ -111,6 +112,15 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
             |> deliverOn(Queue.mainQueue())).start(next: { value in
                 context.sharedContext.mainWindow?.setForceBadgeHidden(!value)
             })
+            
+            self.storyUploadEventsDisposable = (context.engine.messages.allStoriesUploadEvents()
+            |> deliverOnMainQueue).start(next: { [weak self] event in
+                guard let self else {
+                    return
+                }
+                let (stableId, id) = event
+                moveStorySource(engine: self.context.engine, peerId: self.context.account.peerId, from: Int64(stableId), to: Int64(id))
+            })
         }
     }
     
@@ -122,6 +132,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         self.permissionsDisposable?.dispose()
         self.presentationDataDisposable?.dispose()
         self.applicationInFocusDisposable?.dispose()
+        self.storyUploadEventsDisposable?.dispose()
     }
     
     public func getContactsController() -> ViewController? {
@@ -362,6 +373,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                             return
                         }
                         
+                        let context = self.context
                         if let rootTabController = self.rootTabController {
                             if let index = rootTabController.controllers.firstIndex(where: { $0 is ChatListController}) {
                                 rootTabController.selectedIndex = index
@@ -397,7 +409,10 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                 if let imageData = compressImageToJPEG(image, quality: 0.7) {
                                     let entities = generateChatInputTextEntities(caption)
                                     Logger.shared.log("MediaEditor", "Calling uploadStory for image, randomId \(randomId)")
-                                    self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData, stickers: stickers), mediaAreas: mediaAreas, text: caption.string, entities: entities, pin: privacy.pin, privacy: privacy.privacy, isForwardingDisabled: privacy.isForwardingDisabled, period: privacy.timeout, randomId: randomId)
+                                    let _ = (context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData, stickers: stickers), mediaAreas: mediaAreas, text: caption.string, entities: entities, pin: privacy.pin, privacy: privacy.privacy, isForwardingDisabled: privacy.isForwardingDisabled, period: privacy.timeout, randomId: randomId)
+                                    |> deliverOnMainQueue).start(next: { stableId in
+                                        moveStorySource(engine: context.engine, peerId: context.account.peerId, from: randomId, to: Int64(stableId))
+                                    })
                                     
                                     completionImpl()
                                 }
@@ -428,7 +443,10 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                     }
                                     Logger.shared.log("MediaEditor", "Calling uploadStory for video, randomId \(randomId)")
                                     let entities = generateChatInputTextEntities(caption)
-                                    self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), mediaAreas: mediaAreas, text: caption.string, entities: entities, pin: privacy.pin, privacy: privacy.privacy, isForwardingDisabled: privacy.isForwardingDisabled, period: privacy.timeout, randomId: randomId)
+                                    let _ = (context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), mediaAreas: mediaAreas, text: caption.string, entities: entities, pin: privacy.pin, privacy: privacy.privacy, isForwardingDisabled: privacy.isForwardingDisabled, period: privacy.timeout, randomId: randomId)
+                                    |> deliverOnMainQueue).start(next: { stableId in
+                                        moveStorySource(engine: context.engine, peerId: context.account.peerId, from: randomId, to: Int64(stableId))
+                                    })
                                     
                                     completionImpl()
                                 }

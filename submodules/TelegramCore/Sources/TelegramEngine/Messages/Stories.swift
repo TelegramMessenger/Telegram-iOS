@@ -796,10 +796,10 @@ private func apiInputPrivacyRules(privacy: EngineStoryPrivacy, transaction: Tran
     return privacyRules
 }
 
-func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, mediaAreas: [MediaArea], text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, isForwardingDisabled: Bool, period: Int, randomId: Int64) {
+func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, mediaAreas: [MediaArea], text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, isForwardingDisabled: Bool, period: Int, randomId: Int64) -> Signal<Int32, NoError> {
     let inputMedia = prepareUploadStoryContent(account: account, media: media)
     
-    let _ = (account.postbox.transaction { transaction in
+    return (account.postbox.transaction { transaction in
         var currentState: Stories.LocalState
         if let value = transaction.getLocalStoryState()?.get(Stories.LocalState.self) {
             currentState = value
@@ -825,7 +825,8 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, media
             randomId: randomId
         ))
         transaction.setLocalStoryState(state: CodableEntry(currentState))
-    }).start()
+        return stableId
+    })
 }
 
 func _internal_cancelStoryUpload(account: Account, stableId: Int32) {

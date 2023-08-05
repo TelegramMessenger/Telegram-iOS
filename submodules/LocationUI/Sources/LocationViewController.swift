@@ -77,6 +77,7 @@ public final class LocationViewController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     private var showAll: Bool
+    private let disableDismissGesture: Bool
     
     private let locationManager = LocationManager()
     private var permissionDisposable: Disposable?
@@ -87,10 +88,11 @@ public final class LocationViewController: ViewController {
     
     public var dismissed: () -> Void = {}
 
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, subject: EngineMessage, params: LocationViewParams) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, subject: EngineMessage, disableDismissGesture: Bool = false, params: LocationViewParams) {
         self.context = context
         self.subject = subject
         self.showAll = params.showAll
+        self.disableDismissGesture = disableDismissGesture
         
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
                      
@@ -498,6 +500,8 @@ public final class LocationViewController: ViewController {
             }
             strongSelf.controllerNode.showAll()
         }
+        
+        self.controllerNode.headerNode.mapNode.disableHorizontalTransitionGesture = self.disableDismissGesture
     }
     
     private func updateRightBarButton() {

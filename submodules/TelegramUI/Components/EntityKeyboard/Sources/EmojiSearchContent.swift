@@ -501,6 +501,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                 externalBottomPanelContainer: nil,
                 displayTopPanelBackground: .blur,
                 topPanelExtensionUpdated: { _, _ in },
+                topPanelScrollingOffset: { _, _ in },
                 hideInputUpdated: { _, _, _ in },
                 hideTopPanelUpdated: { _, _ in
                 },

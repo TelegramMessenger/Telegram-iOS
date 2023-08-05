@@ -1732,7 +1732,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return archiveSettingsController(context: context)
     }
     
-    public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController {
+    public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool) -> ViewController {
         let mappedSource: PremiumSource
         switch source {
         case .settings:
@@ -1780,7 +1780,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         case .stories:
             mappedSource = .stories
         }
-        return PremiumIntroScreen(context: context, source: mappedSource)
+        return PremiumIntroScreen(context: context, source: mappedSource, forceDark: forceDark)
     }
     
     public func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, action: @escaping () -> Void) -> ViewController {

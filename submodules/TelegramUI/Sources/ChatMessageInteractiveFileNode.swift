@@ -368,7 +368,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 if case .undo = action {
                     var replaceImpl: ((ViewController) -> Void)?
                     let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .voiceToText, action: {
-                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings)
+                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings, forceDark: false)
                         replaceImpl?(controller)
                     })
                     replaceImpl = { [weak controller] c in

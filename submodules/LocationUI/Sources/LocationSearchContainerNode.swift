@@ -173,12 +173,13 @@ final class LocationSearchContainerNode: ASDisplayNode {
             }
         }
         |> mapToSignal { query -> Signal<([LocationSearchEntry], String)?, NoError> in
-            if let query = query, !query.isEmpty {
+            if let query, !query.isEmpty {
                 let foundVenues = nearbyVenues(context: context, story: story, latitude: coordinate.latitude, longitude: coordinate.longitude, query: query)
                 |> afterCompleted {
                     isSearching.set(false)
                 }
-                let foundPlacemarks = geocodeLocation(address: query)
+                let locale = localeWithStrings(presentationData.strings)
+                let foundPlacemarks = geocodeLocation(address: query, locale: locale)
                 return combineLatest(foundVenues, foundPlacemarks, themeAndStringsPromise.get())
                 |> delay(0.1, queue: Queue.concurrentDefaultQueue())
                 |> beforeStarted {
@@ -219,7 +220,7 @@ final class LocationSearchContainerNode: ASDisplayNode {
             } else {
                 return .single(nil)
                 |> afterCompleted {
-                    isSearching.set(true)
+                    isSearching.set(false)
                 }
             }
         }

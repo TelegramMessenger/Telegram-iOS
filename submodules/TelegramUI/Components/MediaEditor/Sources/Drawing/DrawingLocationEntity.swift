@@ -12,6 +12,7 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
         case title
         case style
         case location
+        case icon
         case queryId
         case resultId
         case referenceDrawingSize
@@ -38,6 +39,7 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
     public var title: String
     public var style: Style
     public var location: TelegramMediaMap
+    public var icon: TelegramMediaFile?
     public var queryId: Int64?
     public var resultId: String?
     public var color: DrawingColor = .clear
@@ -64,12 +66,13 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
         return false
     }
     
-    public init(title: String, style: Style, location: TelegramMediaMap, queryId: Int64?, resultId: String?) {
+    public init(title: String, style: Style, location: TelegramMediaMap, icon: TelegramMediaFile?, queryId: Int64?, resultId: String?) {
         self.uuid = UUID()
         
         self.title = title
         self.style = style
         self.location = location
+        self.icon = icon
         self.queryId = queryId
         self.resultId = resultId
         
@@ -92,6 +95,10 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
             fatalError()
         }
         
+        if let iconData = try container.decodeIfPresent(Data.self, forKey: .icon) {
+            self.icon = PostboxDecoder(buffer: MemoryBuffer(data: iconData)).decodeRootObject() as? TelegramMediaFile
+        }
+
         self.queryId = try container.decodeIfPresent(Int64.self, forKey: .queryId)
         self.resultId = try container.decodeIfPresent(String.self, forKey: .resultId)
         
@@ -111,11 +118,18 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
         try container.encode(self.title, forKey: .title)
         try container.encode(self.style, forKey: .style)
         
-        let encoder = PostboxEncoder()
+        var encoder = PostboxEncoder()
         encoder.encodeRootObject(self.location)
         let locationData = encoder.makeData()
         try container.encode(locationData, forKey: .location)
 
+        if let icon = self.icon {
+            encoder = PostboxEncoder()
+            encoder.encodeRootObject(icon)
+            let iconData = encoder.makeData()
+            try container.encode(iconData, forKey: .icon)
+        }
+        
         try container.encodeIfPresent(self.queryId, forKey: .queryId)
         try container.encodeIfPresent(self.resultId, forKey: .resultId)
         
@@ -130,7 +144,7 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
     }
 
     public func duplicate() -> DrawingEntity {
-        let newEntity = DrawingLocationEntity(title: self.title, style: self.style, location: self.location, queryId: self.queryId, resultId: self.resultId)
+        let newEntity = DrawingLocationEntity(title: self.title, style: self.style, location: self.location, icon: self.icon, queryId: self.queryId, resultId: self.resultId)
         newEntity.referenceDrawingSize = self.referenceDrawingSize
         newEntity.position = self.position
         newEntity.width = self.width

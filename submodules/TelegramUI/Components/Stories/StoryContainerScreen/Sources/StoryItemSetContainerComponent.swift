@@ -119,6 +119,7 @@ public final class StoryItemSetContainerComponent: Component {
     public let toggleAmbientMode: () -> Void
     public let keyboardInputData: Signal<ChatEntityKeyboardInputNode.InputData, NoError>
     public let closeFriends: Promise<[EnginePeer]>
+    public let blockedPeers: BlockedPeersContext?
     let sharedViewListsContext: StoryItemSetViewListComponent.SharedListsContext
     let stealthModeTimeout: Int32?
     
@@ -154,6 +155,7 @@ public final class StoryItemSetContainerComponent: Component {
         toggleAmbientMode: @escaping () -> Void,
         keyboardInputData: Signal<ChatEntityKeyboardInputNode.InputData, NoError>,
         closeFriends: Promise<[EnginePeer]>,
+        blockedPeers: BlockedPeersContext?,
         sharedViewListsContext: StoryItemSetViewListComponent.SharedListsContext,
         stealthModeTimeout: Int32?
     ) {
@@ -188,6 +190,7 @@ public final class StoryItemSetContainerComponent: Component {
         self.toggleAmbientMode = toggleAmbientMode
         self.keyboardInputData = keyboardInputData
         self.closeFriends = closeFriends
+        self.blockedPeers = blockedPeers
         self.sharedViewListsContext = sharedViewListsContext
         self.stealthModeTimeout = stealthModeTimeout
     }
@@ -2415,7 +2418,8 @@ public final class StoryItemSetContainerComponent: Component {
                                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Stories"), color: theme.contextMenu.primaryColor)
                                         }, action: { [weak self] _, f in
                                             f(.default)
-                                            let _ = component.context.engine.privacy.requestUpdatePeerIsBlockedFromStories(peerId: peer.id, isBlocked: false).start()
+                                            
+                                            let _ = component.blockedPeers?.remove(peerId: peer.id).start()
                                             
                                             guard let self else {
                                                 return
@@ -2428,6 +2432,7 @@ public final class StoryItemSetContainerComponent: Component {
                                                 elevatedLayout: false,
                                                 position: .top,
                                                 animateInAsReplacement: false,
+                                                blurred: true,
                                                 action: { _ in return false }
                                             ), nil)
                                         })))
@@ -2436,7 +2441,7 @@ public final class StoryItemSetContainerComponent: Component {
                                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Stories"), color: theme.contextMenu.primaryColor)
                                         }, action: { [weak self] _, f in
                                             f(.default)
-                                            let _ = component.context.engine.privacy.requestUpdatePeerIsBlockedFromStories(peerId: peer.id, isBlocked: true).start()
+                                            let _ = component.blockedPeers?.add(peerId: peer.id).start()
                                             
                                             guard let self else {
                                                 return
@@ -2448,6 +2453,7 @@ public final class StoryItemSetContainerComponent: Component {
                                                 elevatedLayout: false,
                                                 position: .top,
                                                 animateInAsReplacement: false,
+                                                blurred: true,
                                                 action: { _ in return false }
                                             ), nil)
                                         })))
@@ -2484,6 +2490,7 @@ public final class StoryItemSetContainerComponent: Component {
                                                 elevatedLayout: false,
                                                 position: .top,
                                                 animateInAsReplacement: false,
+                                                blurred: true,
                                                 action: { [weak self] action in
                                                     guard let self, let component = self.component else {
                                                         return false
@@ -2530,6 +2537,7 @@ public final class StoryItemSetContainerComponent: Component {
                                                     elevatedLayout: false,
                                                     position: .top,
                                                     animateInAsReplacement: false,
+                                                    blurred: true,
                                                     action: { [weak self] action in
                                                         guard let self, let component = self.component else {
                                                             return false
@@ -3171,7 +3179,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 storeAttributedTextInPasteboard(text)
                                 
                                 let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                let undoController = UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in true })
+                                let undoController = UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, blurred: true, action: { _ in true })
                                 self.sendMessageContext.tooltipScreen?.dismiss()
                                 self.sendMessageContext.tooltipScreen = undoController
                                 component.controller()?.present(undoController, in: .current)
@@ -3405,6 +3413,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         }),
                                         elevatedLayout: false,
                                         animateInAsReplacement: false,
+                                        blurred: true,
                                         action: { [weak self] _ in
                                             self?.sendMessageContext.tooltipScreen = nil
                                             self?.updateIsProgressPaused()
@@ -3461,7 +3470,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 controller?.replace(with: c)
                             }
                             component.controller()?.push(controller)
-                        }), elevatedLayout: false, animateInAsReplacement: false, action: { _ in true })
+                        }), elevatedLayout: false, animateInAsReplacement: false, blurred: true, action: { _ in true })
                         component.controller()?.present(undoController, in: .current)
                     }
                 }
@@ -3630,7 +3639,7 @@ public final class StoryItemSetContainerComponent: Component {
             } else if privacy.base == .nobody {
                 if !privacy.additionallyIncludePeers.isEmpty {
                     let value = component.strings.Story_PrivacyTooltipSelectedContacts_Contacts(Int32(privacy.additionallyIncludePeers.count))
-                    text = component.strings.Story_PrivacyTooltipSelectedContactsCount(value).string
+                    text = component.strings.Story_PrivacyTooltipSelectedContactsFull(value).string
                 } else {
                     text = component.strings.Story_PrivacyTooltipNobody
                 }
@@ -3644,6 +3653,7 @@ public final class StoryItemSetContainerComponent: Component {
                 content: .info(title: nil, text: text, timeout: nil),
                 elevatedLayout: false,
                 animateInAsReplacement: false,
+                blurred: true,
                 action: { _ in return false }
             )
             self.sendMessageContext.tooltipScreen = controller
@@ -3666,7 +3676,8 @@ public final class StoryItemSetContainerComponent: Component {
                 context: context,
                 subject: .stories(editing: true),
                 initialPeerIds: Set(privacy.additionallyIncludePeers),
-                closeFriends: component.closeFriends.get()
+                closeFriends: component.closeFriends.get(),
+                blockedPeersContext: component.blockedPeers
             )
             let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
                 guard let self else {
@@ -3725,9 +3736,10 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         private func openItemPrivacyCategory(privacy: EngineStoryPrivacy, blockedPeers: Bool, completion: @escaping (EngineStoryPrivacy) -> Void) {
-            guard let context = self.component?.context else {
+            guard let component = self.component else {
                 return
             }
+            let context = component.context
             let subject: ShareWithPeersScreen.StateContext.Subject
             if blockedPeers {
                 subject = .chats(blocked: true)
@@ -3736,7 +3748,12 @@ public final class StoryItemSetContainerComponent: Component {
             } else {
                 subject = .contacts(privacy.base)
             }
-            let stateContext = ShareWithPeersScreen.StateContext(context: context, subject: subject, initialPeerIds: Set(privacy.additionallyIncludePeers))
+            let stateContext = ShareWithPeersScreen.StateContext(
+                context: context,
+                subject: subject,
+                initialPeerIds: Set(privacy.additionallyIncludePeers),
+                blockedPeersContext: component.blockedPeers
+            )
             let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
                 guard let self else {
                     return
@@ -3911,32 +3928,38 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             let subject: Signal<MediaEditorScreen.Subject?, NoError>
-            
-            var duration: Double?
-            let media = item.media._asMedia()
-            if let file = media as? TelegramMediaFile {
-                duration = file.duration
-            }
-            subject = fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .peer(peerReference.id), customUserContentType: .story, mediaReference: .story(peer: peerReference, id: item.id, media: media))
-            |> mapToSignal { (value, isImage) -> Signal<MediaEditorScreen.Subject?, NoError> in
-                guard case let .data(data) = value, data.complete else {
-                    return .complete()
-                }
-                if let image = UIImage(contentsOfFile: data.path) {
-                    return .single(nil)
-                    |> then(
-                        .single(.image(image, PixelDimensions(image.size), nil, .bottomRight))
-                        |> delay(0.1, queue: Queue.mainQueue())
-                    )
+            subject = getStorySource(engine: component.context.engine, peerId: component.context.account.peerId, id: Int64(item.id))
+            |> mapToSignal { source in
+                if let source {
+                    return .single(.draft(source, Int64(item.id)))
                 } else {
-                    let symlinkPath = data.path + ".mp4"
-                    if fileSize(symlinkPath) == nil {
-                        let _ = try? FileManager.default.linkItem(atPath: data.path, toPath: symlinkPath)
+                    let media = item.media._asMedia()
+                    return fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .peer(peerReference.id), customUserContentType: .story, mediaReference: .story(peer: peerReference, id: item.id, media: media))
+                    |> mapToSignal { (value, isImage) -> Signal<MediaEditorScreen.Subject?, NoError> in
+                        guard case let .data(data) = value, data.complete else {
+                            return .complete()
+                        }
+                        if let image = UIImage(contentsOfFile: data.path) {
+                            return .single(nil)
+                            |> then(
+                                .single(.image(image, PixelDimensions(image.size), nil, .bottomRight))
+                                |> delay(0.1, queue: Queue.mainQueue())
+                            )
+                        } else {
+                            var duration: Double?
+                            if let file = media as? TelegramMediaFile {
+                                duration = file.duration
+                            }
+                            let symlinkPath = data.path + ".mp4"
+                            if fileSize(symlinkPath) == nil {
+                                let _ = try? FileManager.default.linkItem(atPath: data.path, toPath: symlinkPath)
+                            }
+                            return .single(nil)
+                            |> then(
+                                .single(.video(symlinkPath, nil, false, nil, nil, PixelDimensions(width: 720, height: 1280), duration ?? 0.0, [], .bottomRight))
+                            )
+                        }
                     }
-                    return .single(nil)
-                    |> then(
-                        .single(.video(symlinkPath, nil, false, nil, nil, PixelDimensions(width: 720, height: 1280), duration ?? 0.0, [], .bottomRight))
-                    )
                 }
             }
              
@@ -4454,6 +4477,7 @@ public final class StoryItemSetContainerComponent: Component {
                         content: .info(title: nil, text: component.strings.Story_ToastRemovedFromProfileText, timeout: nil),
                         elevatedLayout: false,
                         animateInAsReplacement: false,
+                        blurred: true,
                         action: { _ in return false }
                     ), nil)
                 } else {
@@ -4462,6 +4486,7 @@ public final class StoryItemSetContainerComponent: Component {
                         content: .info(title: component.strings.Story_ToastSavedToProfileTitle, text: component.strings.Story_ToastSavedToProfileText, timeout: nil),
                         elevatedLayout: false,
                         animateInAsReplacement: false,
+                        blurred: true,
                         action: { _ in return false }
                     ), nil)
                 }
@@ -4520,6 +4545,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 content: .linkCopied(text: component.strings.Story_ToastLinkCopied),
                                 elevatedLayout: false,
                                 animateInAsReplacement: false,
+                                blurred: true,
                                 action: { _ in return false }
                             ), nil)
                         }
@@ -4624,6 +4650,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 ], title: nil, text: component.strings.StoryFeed_TooltipNotifyOn(component.slice.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string, customUndoText: nil, timeout: nil),
                                 elevatedLayout: false,
                                 animateInAsReplacement: false,
+                                blurred: true,
                                 action: { _ in return false }
                             ), nil)
                         } else {
@@ -4638,6 +4665,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 ], title: nil, text: component.strings.StoryFeed_TooltipNotifyOff(component.slice.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string, customUndoText: nil, timeout: nil),
                                 elevatedLayout: false,
                                 animateInAsReplacement: false,
+                                blurred: true,
                                 action: { _ in return false }
                             ), nil)
                         }
@@ -4748,6 +4776,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     content: .linkCopied(text: component.strings.Story_ToastLinkCopied),
                                     elevatedLayout: false,
                                     animateInAsReplacement: false,
+                                    blurred: true,
                                     action: { _ in return false }
                                 ), nil)
                             }
@@ -4801,7 +4830,19 @@ public final class StoryItemSetContainerComponent: Component {
                                     return
                                 }
                                 let _ = component.context.engine.peers.reportPeerStory(peerId: component.slice.peer.id, storyId: component.slice.item.storyItem.id, reason: reason, message: "").start()
-                                controller.present(UndoOverlayController(presentationData: presentationData, content: .emoji(name: "PoliceCar", text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                controller.present(
+                                    UndoOverlayController(
+                                        presentationData: presentationData,
+                                        content: .emoji(
+                                            name: "PoliceCar",
+                                            text: presentationData.strings.Report_Succeed
+                                        ),
+                                        elevatedLayout: false,
+                                        blurred: true,
+                                        action: { _ in return false }
+                                    )
+                                    , in: .current
+                                )
                             }
                         )
                     })))

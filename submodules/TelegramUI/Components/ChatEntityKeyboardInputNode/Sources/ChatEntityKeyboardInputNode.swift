@@ -1942,6 +1942,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         strongSelf.topBackgroundExtensionUpdated?(transition.containedViewLayoutTransition)
                     }
                 },
+                topPanelScrollingOffset: { _, _ in },
                 hideInputUpdated: { [weak self] hideInput, adjustLayout, transition in
                     guard let strongSelf = self else {
                         return

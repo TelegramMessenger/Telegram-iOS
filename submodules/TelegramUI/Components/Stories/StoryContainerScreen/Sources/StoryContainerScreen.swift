@@ -368,6 +368,7 @@ private final class StoryContainerScreenComponent: Component {
         
         private let inputMediaNodeDataPromise = Promise<ChatEntityKeyboardInputNode.InputData>()
         private let closeFriendsPromise = Promise<[EnginePeer]>()
+        private var blockedPeers: BlockedPeersContext?
         
         private var availableReactions: StoryAvailableReactions?
         
@@ -1128,6 +1129,8 @@ private final class StoryContainerScreenComponent: Component {
                     self.closeFriendsPromise.set(
                         component.context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.CloseFriends())
                     )
+                    
+                    self.blockedPeers = BlockedPeersContext(account: component.context.account, subject: .stories)
                 }
                 
                 var update = false
@@ -1478,6 +1481,7 @@ private final class StoryContainerScreenComponent: Component {
                                 },
                                 keyboardInputData: self.inputMediaNodeDataPromise.get(),
                                 closeFriends: self.closeFriendsPromise,
+                                blockedPeers: self.blockedPeers,
                                 sharedViewListsContext: self.sharedViewListsContext,
                                 stealthModeTimeout: stealthModeTimeout
                             )),

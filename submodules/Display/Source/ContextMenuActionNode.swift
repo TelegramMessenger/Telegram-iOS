@@ -22,7 +22,7 @@ final class ContextMenuActionNode: ASDisplayNode {
     
     var dismiss: (() -> Void)?
     
-    init(action: ContextMenuAction) {
+    init(action: ContextMenuAction, blurred: Bool) {
         self.actionArea = AccessibilityAreaNode()
         self.actionArea.accessibilityTraits = .button
         
@@ -66,7 +66,10 @@ final class ContextMenuActionNode: ASDisplayNode {
         
         super.init()
         
-        self.backgroundColor = UIColor(rgb: 0x2f2f2f)
+        if !blurred {
+            self.backgroundColor = UIColor(rgb: 0x2f2f2f)
+        }
+        
         if let textNode = self.textNode {
             self.addSubnode(textNode)
         }
@@ -75,7 +78,11 @@ final class ContextMenuActionNode: ASDisplayNode {
         }
         
         self.button.highligthedChanged = { [weak self] highlighted in
-            self?.backgroundColor = highlighted ? UIColor(rgb: 0x8c8e8e) : UIColor(rgb: 0x2f2f2f)
+            if blurred {
+                self?.backgroundColor = highlighted ? UIColor(rgb: 0xffffff, alpha: 0.5) : .clear
+            } else {
+                self?.backgroundColor = highlighted ? UIColor(rgb: 0x8c8e8e) : UIColor(rgb: 0x2f2f2f)
+            }
         }
         self.view.addSubview(self.button)
         self.addSubnode(self.actionArea)
