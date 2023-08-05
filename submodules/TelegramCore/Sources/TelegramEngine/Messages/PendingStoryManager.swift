@@ -314,7 +314,7 @@ final class PendingStoryManager {
                             currentPendingItemContext.updated()
                         }
                     case let .completed(id):
-                        if let id {
+                        if let id = id {
                             self.allStoriesEventsPipe.putNext((stableId, id))
                         }
                         // wait for the local state to change via Postbox
