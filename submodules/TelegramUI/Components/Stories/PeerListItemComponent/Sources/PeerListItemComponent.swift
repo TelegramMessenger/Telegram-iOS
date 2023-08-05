@@ -16,6 +16,8 @@ import AppBundle
 import PeerPresenceStatusManager
 import EmojiStatusComponent
 import ContextUI
+import EmojiTextAttachmentView
+import TextFormat
 
 private let avatarFont = avatarPlaceholderFont(size: 15.0)
 private let readIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuReadIcon"), color: .white)?.withRenderingMode(.alwaysTemplate)
@@ -44,6 +46,39 @@ public final class PeerListItemComponent: Component {
         case checks
     }
     
+    public final class Reaction: Equatable {
+        public let reaction: MessageReaction.Reaction
+        public let file: TelegramMediaFile?
+        public let animationFileId: Int64?
+        
+        public init(
+            reaction: MessageReaction.Reaction,
+            file: TelegramMediaFile?,
+            animationFileId: Int64?
+        ) {
+            self.reaction = reaction
+            self.file = file
+            self.animationFileId = animationFileId
+        }
+        
+        public static func ==(lhs: Reaction, rhs: Reaction) -> Bool {
+            if lhs === rhs {
+                return true
+            }
+            if lhs.reaction != rhs.reaction {
+                return false
+            }
+            if lhs.file?.fileId != rhs.file?.fileId {
+                return false
+            }
+            if lhs.animationFileId != rhs.animationFileId {
+                return false
+            }
+            
+            return true
+        }
+    }
+    
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
@@ -55,7 +90,7 @@ public final class PeerListItemComponent: Component {
     let subtitle: String?
     let subtitleAccessory: SubtitleAccessory
     let presence: EnginePeer.Presence?
-    let displayLike: Bool
+    let reaction: Reaction?
     let selectionState: SelectionState
     let hasNext: Bool
     let action: (EnginePeer) -> Void
@@ -74,7 +109,7 @@ public final class PeerListItemComponent: Component {
         subtitle: String?,
         subtitleAccessory: SubtitleAccessory,
         presence: EnginePeer.Presence?,
-        displayLike: Bool = false,
+        reaction: Reaction? = nil,
         selectionState: SelectionState,
         hasNext: Bool,
         action: @escaping (EnginePeer) -> Void,
@@ -92,7 +127,7 @@ public final class PeerListItemComponent: Component {
         self.subtitle = subtitle
         self.subtitleAccessory = subtitleAccessory
         self.presence = presence
-        self.displayLike = displayLike
+        self.reaction = reaction
         self.selectionState = selectionState
         self.hasNext = hasNext
         self.action = action
@@ -134,7 +169,7 @@ public final class PeerListItemComponent: Component {
         if lhs.presence != rhs.presence {
             return false
         }
-        if lhs.displayLike != rhs.displayLike {
+        if lhs.reaction != rhs.reaction {
             return false
         }
         if lhs.selectionState != rhs.selectionState {
@@ -160,7 +195,10 @@ public final class PeerListItemComponent: Component {
         private var iconView: UIImageView?
         private var checkLayer: CheckLayer?
         
-        private var likeIconView: UIImageView?
+        private var reactionLayer: InlineStickerItemLayer?
+        private var iconFrame: CGRect?
+        private var file: TelegramMediaFile?
+        private var fileDisposable: Disposable?
         
         private var component: PeerListItemComponent?
         private weak var state: EmptyComponentState?
@@ -251,6 +289,10 @@ public final class PeerListItemComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        deinit {
+            self.fileDisposable?.dispose()
+        }
+        
         @objc private func pressed() {
             guard let component = self.component, let peer = component.peer else {
                 return
@@ -265,7 +307,49 @@ public final class PeerListItemComponent: Component {
             component.openStories?(peer, self.avatarNode)
         }
         
+        private func updateReactionLayer() {
+            guard let component = self.component else {
+                return
+            }
+            
+            if let reactionLayer = self.reactionLayer {
+                self.reactionLayer = nil
+                reactionLayer.removeFromSuperlayer()
+            }
+            
+            guard let file = self.file else {
+                return
+            }
+            
+            let reactionLayer = InlineStickerItemLayer(
+                context: component.context,
+                userLocation: .other,
+                attemptSynchronousLoad: false,
+                emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file),
+                file: file,
+                cache: component.context.animationCache,
+                renderer: component.context.animationRenderer,
+                placeholderColor: UIColor(white: 0.0, alpha: 0.1),
+                pointSize: CGSize(width: 64.0, height: 64.0)
+            )
+            self.reactionLayer = reactionLayer
+            
+            if let reaction = component.reaction, case .custom = reaction.reaction {
+                reactionLayer.isVisibleForAnimations = true
+            }
+            self.layer.addSublayer(reactionLayer)
+            
+            if var iconFrame = self.iconFrame {
+                if let reaction = component.reaction, case .builtin = reaction.reaction {
+                    iconFrame = iconFrame.insetBy(dx: -iconFrame.width * 0.5, dy: -iconFrame.height * 0.5)
+                }
+                reactionLayer.frame = iconFrame
+            }
+        }
+        
         func update(component: PeerListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            let previousComponent = self.component
+            
             var synchronousLoad = false
             if let hint = transition.userData(TransitionHint.self) {
                 synchronousLoad = hint.synchronousLoad
@@ -351,7 +435,7 @@ public final class PeerListItemComponent: Component {
                 leftInset += 9.0
             }
             var rightInset: CGFloat = contextInset * 2.0 + 8.0 + component.sideInset
-            if component.displayLike {
+            if component.reaction != nil {
                 rightInset += 32.0
             }
             
@@ -581,25 +665,29 @@ public final class PeerListItemComponent: Component {
                 transition.setFrame(view: labelView, frame: labelFrame)
             }
             
-            if component.displayLike {
-                let likeIconView: UIImageView
-                if let current = self.likeIconView {
-                    likeIconView = current
+            let imageSize = CGSize(width: 22.0, height: 22.0)
+            self.iconFrame = CGRect(origin: CGPoint(x: availableSize.width - (contextInset * 2.0 + 14.0 + component.sideInset) - imageSize.width, y: floor((height - verticalInset * 2.0 - imageSize.height) * 0.5)), size: imageSize)
+            
+            if previousComponent?.reaction != component.reaction {
+                if let reaction = component.reaction {
+                    switch reaction.reaction {
+                    case .builtin:
+                        self.file = reaction.file
+                        self.updateReactionLayer()
+                    case let .custom(fileId):
+                        self.fileDisposable = (component.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
+                        |> deliverOnMainQueue).start(next: { [weak self] files in
+                            guard let self, let file = files[fileId] else {
+                                return
+                            }
+                            self.file = file
+                            self.updateReactionLayer()
+                        })
+                    }
                 } else {
-                    likeIconView = UIImageView()
-                    self.likeIconView = likeIconView
-                    self.containerButton.addSubview(likeIconView)
-                    
-                    likeIconView.image = PresentationResourcesChat.storyViewListLikeIcon(component.theme)
+                    self.file = nil
+                    self.updateReactionLayer()
                 }
-                
-                if let _ = likeIconView.image {
-                    let imageSize = CGSize(width: 32.0, height: 32.0)
-                    transition.setFrame(view: likeIconView, frame: CGRect(origin: CGPoint(x: availableSize.width - (contextInset * 2.0 + 11.0 + component.sideInset) - imageSize.width, y: floor((height - verticalInset * 2.0 - imageSize.height) * 0.5)), size: imageSize))
-                }
-            } else if let likeIconView = self.likeIconView {
-                self.likeIconView = nil
-                likeIconView.removeFromSuperview()
             }
             
             if themeUpdated {

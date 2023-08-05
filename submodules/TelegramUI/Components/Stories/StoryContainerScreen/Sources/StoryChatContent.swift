@@ -158,6 +158,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                         views: item.views.flatMap { views in
                             return EngineStoryItem.Views(
                                 seenCount: views.seenCount,
+                                reactedCount: views.reactedCount,
                                 seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                     return peers[id].flatMap(EnginePeer.init)
                                 }
@@ -173,7 +174,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                         isSelectedContacts: item.isSelectedContacts,
                         isForwardingDisabled: item.isForwardingDisabled,
                         isEdited: item.isEdited,
-                        hasLike: item.hasLike
+                        myReaction: item.myReaction
                     )
                 }
                 var totalCount = peerStoryItemsView.items.count
@@ -198,7 +199,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                             isSelectedContacts: item.privacy.base == .nobody,
                             isForwardingDisabled: false,
                             isEdited: false,
-                            hasLike: false
+                            myReaction: nil
                         ))
                         totalCount += 1
                     }
@@ -1029,6 +1030,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                     views: itemValue.views.flatMap { views in
                         return EngineStoryItem.Views(
                             seenCount: views.seenCount,
+                            reactedCount: views.reactedCount,
                             seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                 return peers[id].flatMap(EnginePeer.init)
                             }
@@ -1044,7 +1046,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                     isSelectedContacts: itemValue.isSelectedContacts,
                     isForwardingDisabled: itemValue.isForwardingDisabled,
                     isEdited: itemValue.isEdited,
-                    hasLike: itemValue.hasLike
+                    myReaction: itemValue.myReaction
                 )
                 
                 let mainItem = StoryContentItem(

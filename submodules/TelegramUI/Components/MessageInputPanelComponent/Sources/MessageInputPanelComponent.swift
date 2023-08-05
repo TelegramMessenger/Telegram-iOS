@@ -44,6 +44,18 @@ public final class MessageInputPanelComponent: Component {
         case emoji
     }
     
+    public struct MyReaction: Equatable {
+        public let reaction: MessageReaction.Reaction
+        public let file: TelegramMediaFile?
+        public let animationFileId: Int64?
+        
+        public init(reaction: MessageReaction.Reaction, file: TelegramMediaFile?, animationFileId: Int64?) {
+            self.reaction = reaction
+            self.file = file
+            self.animationFileId = animationFileId
+        }
+    }
+    
     public final class ExternalState {
         public fileprivate(set) var isEditing: Bool = false
         public fileprivate(set) var hasText: Bool = false
@@ -79,8 +91,9 @@ public final class MessageInputPanelComponent: Component {
     public let stopAndPreviewMediaRecording: (() -> Void)?
     public let discardMediaRecordingPreview: (() -> Void)?
     public let attachmentAction: (() -> Void)?
-    public let hasLike: Bool
+    public let myReaction: MyReaction?
     public let likeAction: (() -> Void)?
+    public let likeOptionsAction: ((UIView, ContextGesture?) -> Void)?
     public let inputModeAction: (() -> Void)?
     public let timeoutAction: ((UIView) -> Void)?
     public let forwardAction: (() -> Void)?
@@ -126,8 +139,9 @@ public final class MessageInputPanelComponent: Component {
         stopAndPreviewMediaRecording: (() -> Void)?,
         discardMediaRecordingPreview: (() -> Void)?,
         attachmentAction: (() -> Void)?,
-        hasLike: Bool,
+        myReaction: MyReaction?,
         likeAction: (() -> Void)?,
+        likeOptionsAction: ((UIView, ContextGesture?) -> Void)?,
         inputModeAction: (() -> Void)?,
         timeoutAction: ((UIView) -> Void)?,
         forwardAction: (() -> Void)?,
@@ -172,8 +186,9 @@ public final class MessageInputPanelComponent: Component {
         self.stopAndPreviewMediaRecording = stopAndPreviewMediaRecording
         self.discardMediaRecordingPreview = discardMediaRecordingPreview
         self.attachmentAction = attachmentAction
-        self.hasLike = hasLike
+        self.myReaction = myReaction
         self.likeAction = likeAction
+        self.likeOptionsAction = likeOptionsAction
         self.inputModeAction = inputModeAction
         self.timeoutAction = timeoutAction
         self.forwardAction = forwardAction
@@ -280,10 +295,13 @@ public final class MessageInputPanelComponent: Component {
         if (lhs.attachmentAction == nil) != (rhs.attachmentAction == nil) {
             return false
         }
-        if lhs.hasLike != rhs.hasLike {
+        if lhs.myReaction != rhs.myReaction {
             return false
         }
         if (lhs.likeAction == nil) != (rhs.likeAction == nil) {
+            return false
+        }
+        if (lhs.likeOptionsAction == nil) != (rhs.likeOptionsAction == nil) {
             return false
         }
         return true
@@ -343,6 +361,10 @@ public final class MessageInputPanelComponent: Component {
         
         public var likeButtonView: UIView? {
             return self.likeButton.view
+        }
+        
+        public var likeIconView: UIView? {
+            return (self.likeButton.view as? MessageInputActionButtonComponent.View)?.likeIconView
         }
         
         override init(frame: CGRect) {
@@ -1064,7 +1086,7 @@ public final class MessageInputPanelComponent: Component {
             let likeButtonSize = self.likeButton.update(
                 transition: transition,
                 component: AnyComponent(MessageInputActionButtonComponent(
-                    mode: .like(isActive: component.hasLike),
+                    mode: .like(reaction: component.myReaction?.reaction, file: component.myReaction?.file, animationFileId: component.myReaction?.animationFileId),
                     action: { [weak self] _, action, _ in
                         guard let self, let component = self.component else {
                             return
@@ -1074,7 +1096,7 @@ public final class MessageInputPanelComponent: Component {
                         }
                         component.likeAction?()
                     },
-                    longPressAction: nil,
+                    longPressAction: component.likeOptionsAction,
                     switchMediaInputMode: {
                     },
                     updateMediaCancelFraction: { _ in
