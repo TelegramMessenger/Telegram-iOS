@@ -106,6 +106,8 @@ public struct Namespaces {
         public static let featuredStickersConfiguration: Int8 = 24
         public static let emojiSearchCategories: Int8 = 25
         public static let cachedEmojiQueryResults: Int8 = 26
+        
+        public static let cachedOrderedItemListHashes: Int8 = 100
     }
     
     public struct UnorderedItemList {

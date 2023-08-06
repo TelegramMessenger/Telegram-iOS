@@ -29,11 +29,14 @@ extension FeaturedStickerPacksCategory {
     }
 }
 
-private func hashForIdsReverse(_ ids: [Int64]) -> Int64 {
+private func hashForStickerPacks(_ ids: [Int64], _ unreadIds: Set<Int64>) -> Int64 {
     var acc: UInt64 = 0
     
     for id in ids {
         combineInt64Hash(&acc, with: UInt64(bitPattern: id))
+        if unreadIds.contains(id) {
+            combineInt64Hash(&acc, with: UInt64(1))
+        }
     }
     return Int64(bitPattern: acc)
 }
@@ -107,7 +110,8 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox, category: F
         let initialPackIds = initialPacks.map {
             return FeaturedStickerPackItemId($0.id).packId
         }
-        let initialHash: Int64 = hashForIdsReverse(initialPackIds)
+        let unreadIds = Set(initialPackIds.filter({ initialPackMap[$0]!.unread }))
+        let initialHash: Int64 = hashForStickerPacks(initialPackIds, unreadIds)
         
         struct FeaturedListContent {
             var unreadIds: Set<Int64>
@@ -126,7 +130,7 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox, category: F
                 switch result {
                 case .featuredStickersNotModified:
                     return .single(.notModified)
-                case let .featuredStickers(flags, _, _, sets, unread):
+                case let .featuredStickers(flags, hash, _, sets, unread):
                     return resolveMissingStickerSets(network: network, postbox: postbox, stickerSets: sets, ignorePacksWithHashes: initialPackMap.mapValues({ item in
                         item.info.hash
                     }))
@@ -144,6 +148,10 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox, category: F
                             updatedPacks.append(FeaturedStickerPackItem(info: info, topItems: items, unread: unreadIds.contains(info.id.id)))
                         }
                         let isPremium = flags & (1 << 0) != 0
+                        
+                        let updatedPackIds = updatedPacks.map { $0.info.id.id }
+                        assert(hashForStickerPacks(updatedPackIds, unreadIds) == hash)
+                        
                         return .content(FeaturedListContent(
                             unreadIds: unreadIds,
                             packs: updatedPacks,
@@ -161,7 +169,7 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox, category: F
                 switch result {
                 case .featuredStickersNotModified:
                     return .single(.notModified)
-                case let .featuredStickers(flags, _, _, sets, unread):
+                case let .featuredStickers(flags, hash, _, sets, unread):
                     return resolveMissingStickerSets(network: network, postbox: postbox, stickerSets: sets, ignorePacksWithHashes: initialPackMap.mapValues({ item in
                         item.info.hash
                     }))
@@ -179,6 +187,10 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox, category: F
                             updatedPacks.append(FeaturedStickerPackItem(info: info, topItems: items, unread: unreadIds.contains(info.id.id)))
                         }
                         let isPremium = flags & (1 << 0) != 0
+                        
+                        let updatedPackIds = updatedPacks.map { $0.info.id.id }
+                        assert(hashForStickerPacks(updatedPackIds, unreadIds) == hash)
+                        
                         return .content(FeaturedListContent(
                             unreadIds: unreadIds,
                             packs: updatedPacks,

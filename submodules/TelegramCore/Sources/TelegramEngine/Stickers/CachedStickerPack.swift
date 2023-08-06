@@ -203,7 +203,7 @@ func _internal_cachedStickerPack(postbox: Postbox, network: Network, reference: 
                 }
             }
             |> mapToSignal { result, loadRemote, previousHash in
-                if loadRemote || forceRemote {
+                if loadRemote /*|| forceRemote*/ {
                     let appliedRemote = updatedRemoteStickerPack(postbox: postbox, network: network, reference: reference)
                     |> mapToSignal { result -> Signal<CachedStickerPackResult, NoError> in
                         if let result = result, result.0.hash == previousHash {
