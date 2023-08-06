@@ -1992,6 +1992,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 contentWrapperView: self.previewContainerView,
                 selectionContainerView: self.selectionContainerView,
                 isVideo: false,
+                autoselectEntityOnPan: true,
                 updateSelectedEntity: { [weak self] _ in
                     if let self {
                         self.requestUpdate(transition: .easeInOut(duration: 0.2))

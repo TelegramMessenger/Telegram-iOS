@@ -2423,6 +2423,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                 contentWrapperView: self.contentWrapperView,
                 selectionContainerView: self.selectionContainerView,
                 isVideo: controller.isVideo,
+                autoselectEntityOnPan: false,
                 updateSelectedEntity: { [weak self] entity in
                     if let self {
                         self.updateSelectedEntity.invoke(entity)
@@ -2956,6 +2957,7 @@ public final class DrawingToolsInteraction {
     private weak var contentWrapperView: UIView?
     private let selectionContainerView: DrawingSelectionContainerView
     private let isVideo: Bool
+    private let autoSelectEntityOnPan: Bool
     private let updateSelectedEntity: (DrawingEntity?) -> Void
     private let updateVideoPlayback: (Bool) -> Void
     private let updateColor: (DrawingColor) -> Void
@@ -2987,6 +2989,7 @@ public final class DrawingToolsInteraction {
         contentWrapperView: UIView,
         selectionContainerView: DrawingSelectionContainerView,
         isVideo: Bool,
+        autoselectEntityOnPan: Bool,
         updateSelectedEntity: @escaping (DrawingEntity?) -> Void,
         updateVideoPlayback: @escaping (Bool) -> Void,
         updateColor: @escaping (DrawingColor) -> Void,
@@ -3004,6 +3007,7 @@ public final class DrawingToolsInteraction {
         self.contentWrapperView = contentWrapperView
         self.selectionContainerView = selectionContainerView
         self.isVideo = isVideo
+        self.autoSelectEntityOnPan = autoselectEntityOnPan
         self.updateSelectedEntity = updateSelectedEntity
         self.updateVideoPlayback = updateVideoPlayback
         self.updateColor = updateColor
@@ -3028,6 +3032,7 @@ public final class DrawingToolsInteraction {
     public func activate() {
         self.isActive = true
         
+        self.entitiesView.autoSelectEntities = self.autoSelectEntityOnPan
         self.entitiesView.selectionContainerView = self.selectionContainerView
         self.entitiesView.selectionChanged = { [weak self] entity in
             if let self {

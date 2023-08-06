@@ -76,6 +76,8 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     
     var entityAdded: (DrawingEntity) -> Void = { _ in }
     var entityRemoved: (DrawingEntity) -> Void = { _ in }
+    
+    var autoSelectEntities = false
         
     private let topEdgeView = UIView()
     private let leftEdgeView = UIView()
@@ -813,7 +815,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                 }
             }
         }
-        else if gestureRecognizer.numberOfTouches == 1, let viewToSelect = self.entity(at: location) {
+        else if self.autoSelectEntities, gestureRecognizer.numberOfTouches == 1, let viewToSelect = self.entity(at: location) {
             self.selectEntity(viewToSelect.entity, animate: false)
             self.onInteractionUpdated(true)
         }
