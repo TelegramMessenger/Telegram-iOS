@@ -77,7 +77,7 @@ public final class LocationViewController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     private var showAll: Bool
-    private let disableDismissGesture: Bool
+    private let isStoryLocation: Bool
     
     private let locationManager = LocationManager()
     private var permissionDisposable: Disposable?
@@ -88,11 +88,11 @@ public final class LocationViewController: ViewController {
     
     public var dismissed: () -> Void = {}
 
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, subject: EngineMessage, disableDismissGesture: Bool = false, params: LocationViewParams) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, subject: EngineMessage, isStoryLocation: Bool = false, params: LocationViewParams) {
         self.context = context
         self.subject = subject
         self.showAll = params.showAll
-        self.disableDismissGesture = disableDismissGesture
+        self.isStoryLocation = isStoryLocation
         
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
                      
@@ -491,7 +491,7 @@ public final class LocationViewController: ViewController {
             return
         }
         
-        self.displayNode = LocationViewControllerNode(context: self.context, presentationData: self.presentationData, subject: self.subject, interaction: interaction, locationManager: self.locationManager)
+        self.displayNode = LocationViewControllerNode(context: self.context, presentationData: self.presentationData, subject: self.subject, interaction: interaction, locationManager: self.locationManager, isStoryLocation: self.isStoryLocation)
         self.displayNodeDidLoad()
         
         self.controllerNode.onAnnotationsReady = { [weak self] in
@@ -501,7 +501,7 @@ public final class LocationViewController: ViewController {
             strongSelf.controllerNode.showAll()
         }
         
-        self.controllerNode.headerNode.mapNode.disableHorizontalTransitionGesture = self.disableDismissGesture
+        self.controllerNode.headerNode.mapNode.disableHorizontalTransitionGesture = self.isStoryLocation
     }
     
     private func updateRightBarButton() {

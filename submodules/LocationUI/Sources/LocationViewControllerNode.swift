@@ -47,7 +47,7 @@ private enum LocationViewEntryId: Hashable {
 }
 
 private enum LocationViewEntry: Comparable, Identifiable {
-    case info(PresentationTheme, TelegramMediaMap, String?, Double?, ExpectedTravelTime, ExpectedTravelTime, ExpectedTravelTime)
+    case info(PresentationTheme, TelegramMediaMap, String?, Double?, ExpectedTravelTime, ExpectedTravelTime, ExpectedTravelTime, Bool)
     case toggleLiveLocation(PresentationTheme, String, String, Double?, Double?)
     case liveLocation(PresentationTheme, PresentationDateTimeFormat, PresentationPersonNameOrder, EngineMessage, Double?, ExpectedTravelTime, ExpectedTravelTime, ExpectedTravelTime, Int)
     
@@ -64,8 +64,8 @@ private enum LocationViewEntry: Comparable, Identifiable {
     
     static func ==(lhs: LocationViewEntry, rhs: LocationViewEntry) -> Bool {
         switch lhs {
-            case let .info(lhsTheme, lhsLocation, lhsAddress, lhsDistance, lhsDrivingTime, lhsTransitTime, lhsWalkingTime):
-                if case let .info(rhsTheme, rhsLocation, rhsAddress, rhsDistance, rhsDrivingTime, rhsTransitTime, rhsWalkingTime) = rhs, lhsTheme === rhsTheme, lhsLocation.venue?.id == rhsLocation.venue?.id, lhsAddress == rhsAddress, lhsDistance == rhsDistance, lhsDrivingTime == rhsDrivingTime, lhsTransitTime == rhsTransitTime, lhsWalkingTime == rhsWalkingTime {
+            case let .info(lhsTheme, lhsLocation, lhsAddress, lhsDistance, lhsDrivingTime, lhsTransitTime, lhsWalkingTime, lhsHasEta):
+                if case let .info(rhsTheme, rhsLocation, rhsAddress, rhsDistance, rhsDrivingTime, rhsTransitTime, rhsWalkingTime, rhsHasEta) = rhs, lhsTheme === rhsTheme, lhsLocation.venue?.id == rhsLocation.venue?.id, lhsAddress == rhsAddress, lhsDistance == rhsDistance, lhsDrivingTime == rhsDrivingTime, lhsTransitTime == rhsTransitTime, lhsWalkingTime == rhsWalkingTime, lhsHasEta == rhsHasEta {
                     return true
                 } else {
                     return false
@@ -113,7 +113,7 @@ private enum LocationViewEntry: Comparable, Identifiable {
     
     func item(context: AccountContext, presentationData: PresentationData, interaction: LocationViewInteraction?) -> ListViewItem {
         switch self {
-            case let .info(_, location, address, distance, drivingTime, transitTime, walkingTime):
+            case let .info(_, location, address, distance, drivingTime, transitTime, walkingTime, hasEta):
                 let addressString: String?
                 if let address = address {
                     addressString = address
@@ -126,7 +126,7 @@ private enum LocationViewEntry: Comparable, Identifiable {
                 } else {
                     distanceString = nil
                 }
-                return LocationInfoListItem(presentationData: ItemListPresentationData(presentationData), engine: context.engine, location: location, address: addressString, distance: distanceString, drivingTime: drivingTime, transitTime: transitTime, walkingTime: walkingTime, action: {
+                return LocationInfoListItem(presentationData: ItemListPresentationData(presentationData), engine: context.engine, location: location, address: addressString, distance: distanceString, drivingTime: drivingTime, transitTime: transitTime, walkingTime: walkingTime, hasEta: hasEta, action: {
                     interaction?.goToCoordinate(location.coordinate)
                 }, drivingAction: {
                     interaction?.requestDirections(location, nil, .driving)
@@ -219,6 +219,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
     private var subject: EngineMessage
     private let interaction: LocationViewInteraction
     private let locationManager: LocationManager
+    private let isStoryLocation: Bool
     
     private let listNode: ListView
     let headerNode: LocationMapHeaderNode
@@ -246,13 +247,14 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
     }
     private let travelTimesPromise = Promise<[EngineMessage.Id: (Double, ExpectedTravelTime, ExpectedTravelTime, ExpectedTravelTime)]>([:])
 
-    init(context: AccountContext, presentationData: PresentationData, subject: EngineMessage, interaction: LocationViewInteraction, locationManager: LocationManager) {
+    init(context: AccountContext, presentationData: PresentationData, subject: EngineMessage, interaction: LocationViewInteraction, locationManager: LocationManager, isStoryLocation: Bool) {
         self.context = context
         self.presentationData = presentationData
         self.presentationDataPromise = Promise(presentationData)
         self.subject = subject
         self.interaction = interaction
         self.locationManager = locationManager
+        self.isStoryLocation = isStoryLocation
         
         self.state = LocationViewState()
         self.statePromise = Promise(self.state)
@@ -370,7 +372,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     let subjectLocation = CLLocation(latitude: location.latitude, longitude: location.longitude)
                     let distance = userLocation.flatMap { subjectLocation.distance(from: $0) }
                     
-                    entries.append(.info(presentationData.theme, location, address, distance, eta.0, eta.1, eta.2))
+                    entries.append(.info(presentationData.theme, location, address, distance, eta.0, eta.1, eta.2, !isStoryLocation))
                     
                     annotations.append(LocationPinAnnotation(context: context, theme: presentationData.theme, location: location, queryId: nil, resultId: nil, forcedSelection: true))
                 } else {
@@ -849,7 +851,10 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
         }
         
         let overlap: CGFloat = 6.0
-        var topInset: CGFloat = layout.size.height - layout.intrinsicInsets.bottom - 100.0 - overlap
+        var topInset: CGFloat = layout.size.height - layout.intrinsicInsets.bottom - overlap
+        if !self.isStoryLocation {
+            topInset -= 100.0
+        }
         if let location = getLocation(from: self.subject), location.liveBroadcastingTimeout != nil {
             topInset += 66.0
         }
