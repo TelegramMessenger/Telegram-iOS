@@ -3848,8 +3848,8 @@ public final class StoryItemSetContainerComponent: Component {
                     initialPrivacy: privacy,
                     stateContext: stateContext,
                     completion: { [weak self] result, _, _, peers in
-                        if blockedPeers {
-//                            let _ = self.storiesBlockedPeers.updatePeerIds(result.additionallyIncludePeers).start()
+                        if blockedPeers, let blockedPeers = self?.component?.blockedPeers {
+                            let _ = blockedPeers.updatePeerIds(result.additionallyIncludePeers).start()
                             completion(privacy)
                         } else if case .closeFriends = privacy.base {
                             let _ = context.engine.privacy.updateCloseFriends(peerIds: result.additionallyIncludePeers).start()
