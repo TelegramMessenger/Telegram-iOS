@@ -171,7 +171,7 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
         case .black:
             updatedStyle = .transparent
         case .transparent:
-            updatedStyle = .blur
+            updatedStyle = .white
         case .blur:
             updatedStyle = .white
         }
