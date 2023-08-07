@@ -264,7 +264,7 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
             self.iconView.image = generateIcon(style: self.locationEntity.style)
         }
         
-        self.backgroundView.layer.cornerRadius = self.textSize.height * 0.18
+        self.backgroundView.layer.cornerRadius = self.textSize.height * 0.2
         self.blurredBackgroundView.layer.cornerRadius = self.backgroundView.layer.cornerRadius
         if #available(iOS 13.0, *) {
             self.backgroundView.layer.cornerCurve = .continuous

@@ -186,6 +186,9 @@ final class MediaEditorScreenComponent: Component {
         var playerStateDisposable: Disposable?
         var playerState: MediaEditorPlayerState?
         
+        var isPremium = false
+        var isPremiumDisposable: Disposable?
+        
         init(context: AccountContext, mediaEditor: Signal<MediaEditor?, NoError>) {
             self.context = context
             
@@ -205,10 +208,19 @@ final class MediaEditorScreenComponent: Component {
                     self.updated()
                 }
             })
+            
+            self.isPremiumDisposable = (context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                if let self {
+                    self.isPremium = peer?.isPremium ?? false
+                    self.updated()
+                }
+            })
         }
         
         deinit {
             self.playerStateDisposable?.dispose()
+            self.isPremiumDisposable?.dispose()
         }
         
         var muteDidChange = false
@@ -1195,7 +1207,7 @@ final class MediaEditorScreenComponent: Component {
                     timeoutSelected: timeoutSelected,
                     displayGradient: false,
                     bottomInset: 0.0,
-                    isFormattingLocked: false,
+                    isFormattingLocked: !state.isPremium,
                     hideKeyboard: self.currentInputMode == .emoji,
                     forceIsEditing: self.currentInputMode == .emoji,
                     disabledPlaceholder: nil
@@ -2742,8 +2754,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
             
             var location: CLLocationCoordinate2D?
-            if let subject = self.subject, case let .asset(asset) = subject {
-                location = asset.location?.coordinate
+            if let subject = self.subject {
+                if case let .asset(asset) = subject {
+                    location = asset.location?.coordinate
+                } else if case let .draft(draft, _) = subject {
+                    location = draft.location
+                }
             }
             let locationController = storyLocationPickerController(context: self.context, location: location, completion: { [weak self] location, queryId, resultId, address, countryCode in
                 if let self  {

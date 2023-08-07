@@ -1069,7 +1069,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         let actionsInset: CGFloat = 148.0
         let padding: CGFloat = 16.0
         let emptyTextSize = self.emptyResultsTextNode.updateLayout(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
-        transition.updateFrame(node: self.emptyResultsTextNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - emptyTextSize.width) / 2.0), y: headerHeight + actionsInset + floor((layout.size.height - headerHeight - actionsInset - emptyTextSize.height - layout.intrinsicInsets.bottom) / 2.0)), size: emptyTextSize))
+        transition.updateFrame(node: self.emptyResultsTextNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - emptyTextSize.width) / 2.0), y: headerHeight + actionsInset + floor((layout.size.height - headerHeight - actionsInset - emptyTextSize.height - layout.intrinsicInsets.bottom - layout.additionalInsets.bottom) / 2.0)), size: emptyTextSize))
     }
 
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {

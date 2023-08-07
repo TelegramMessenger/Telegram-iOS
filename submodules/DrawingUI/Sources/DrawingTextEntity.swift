@@ -1067,7 +1067,7 @@ final class DrawingTextLayoutManager: NSLayoutManager {
         var last = self.rectArray[index - 1]
         var cur = self.rectArray[index]
         
-        self.radius = cur.height * 0.18
+        self.radius = cur.height * 0.2
         
         let doubleRadius = self.radius * 2.5
         
@@ -1134,7 +1134,7 @@ final class DrawingTextLayoutManager: NSLayoutManager {
             var last: CGRect = .null
             for i in 0 ..< self.rectArray.count {
                 let cur = self.rectArray[i]
-                self.radius = cur.height * 0.18
+                self.radius = cur.height * 0.2
                 
                 path.append(UIBezierPath(roundedRect: cur, cornerRadius: self.radius))
                 if i == 0 {
