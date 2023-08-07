@@ -204,7 +204,12 @@ public final class BlockedPeersContext {
             return peers
         }
         |> castError(BlockedPeersContextAddError.self)
-        |> mapToSignal { peers -> Signal<Never, BlockedPeersContextAddError> in
+        |> mapToSignal { [weak self] peers -> Signal<Never, BlockedPeersContextAddError> in
+            Queue.mainQueue().async {
+                if let strongSelf = self {
+                    strongSelf._state = BlockedPeersContextState(isLoadingMore: strongSelf._state.isLoadingMore, canLoadMore: strongSelf._state.canLoadMore, totalCount: peers.count, peers: peers.map(RenderedPeer.init))
+                }
+            }
             let inputPeers = peers.compactMap { apiInputPeer($0) }
             return network.request(Api.functions.contacts.setBlocked(flags: flags, id: inputPeers, limit: Int32(peers.count)))
             |> mapError { _ -> BlockedPeersContextAddError in

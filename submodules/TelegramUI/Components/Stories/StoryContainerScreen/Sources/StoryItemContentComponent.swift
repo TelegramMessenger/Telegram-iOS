@@ -453,6 +453,8 @@ final class StoryItemContentComponent: Component {
         }
         
         func update(component: StoryItemContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StoryContentItem.Environment>, transition: Transition) -> CGSize {
+            let previousItem = self.component?.item
+            
             self.component = component
             self.state = state
             let environment = environment[StoryContentItem.Environment.self].value
@@ -730,7 +732,7 @@ final class StoryItemContentComponent: Component {
             }
             
             if self.contentLoaded {
-                if reloadMedia {
+                if let previousItem, previousItem.mediaAreas != component.item.mediaAreas {
                     if let mediaAreasEffectView = self.mediaAreasEffectView {
                         self.mediaAreasEffectView = nil
                         mediaAreasEffectView.removeFromSuperview()
