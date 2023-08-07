@@ -409,7 +409,7 @@ struct WidgetView: View {
         switch content {
         case let .peer(peer):
             if let message = peer.peer.message {
-                text = self.presentationData.suppressForeignAgentNotice ? removeForeignAgentNotice(text: message.text, mayRemoveWholeText: message.content != .text) : message.text
+                text = (message.isPeerOrForwardSourceBroadcastChannel && self.presentationData.suppressForeignAgentNotice) ? removeForeignAgentNotice(text: message.text, mayRemoveWholeText: message.content != .text) : message.text
                 switch message.content {
                 case .text:
                     break

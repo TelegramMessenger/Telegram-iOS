@@ -194,7 +194,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                     
                     if messages.count == 1 {
                         title = strongSelf.strings.Conversation_ForwardOptions_ForwardTitleSingle
-                        let message_ = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: messages[0]) : messages[0]
+                        let message_ = context.shouldSuppressForeignAgentNotice(in: messages[0]) ? removeForeignAgentNotice(message: messages[0]) : messages[0]
                         let (string, entities, _) = textStringForForwardedMessage(message_, strings: strings)
                         
                         text = NSMutableAttributedString(attributedString: NSAttributedString(string: "\(authors): ", font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor))

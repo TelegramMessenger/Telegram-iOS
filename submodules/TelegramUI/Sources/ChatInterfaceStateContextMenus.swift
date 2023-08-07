@@ -1092,11 +1092,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         
         var messageText: String = ""
         var messageEntities: [MessageTextEntity]?
-        let suppressForeignAgentNotice = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice }
         for message in messages {
             if !message.text.isEmpty {
                 if messageText.isEmpty {
-                    (messageText, messageEntities) = suppressForeignAgentNotice ? removeForeignAgentNotice(text: message.text, entities: message.textEntitiesAttribute?.entities ?? [], media: message.media) : (message.text, message.textEntitiesAttribute?.entities ?? [])
+                    (messageText, messageEntities) = context.shouldSuppressForeignAgentNotice(in: message) ? removeForeignAgentNotice(text: message.text, entities: message.textEntitiesAttribute?.entities ?? [], media: message.media) : (message.text, message.textEntitiesAttribute?.entities ?? [])
                 } else {
                     messageText = ""
                     break
@@ -1123,7 +1122,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     for option in poll.options {
                         text.append("\n— \(option.text)")
                     }
-                    messageText = suppressForeignAgentNotice ? removeForeignAgentNotice(text: poll.text, mayRemoveWholeText: false) : poll.text
+                    messageText = context.shouldSuppressForeignAgentNotice(in: message) ? removeForeignAgentNotice(text: poll.text, mayRemoveWholeText: false) : poll.text
                     break
                 }
             }

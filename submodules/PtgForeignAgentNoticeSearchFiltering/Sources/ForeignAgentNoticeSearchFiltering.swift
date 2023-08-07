@@ -16,7 +16,7 @@ public func findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: [M
     var matchesOnlyBcOfFAN: Set<MessageId> = []
     
     for message in messages {
-        if !message.text.isEmpty {
+        if !message.text.isEmpty && message.isPeerOrForwardSourceBroadcastChannel {
             let (cleanedText, cleanedEntities) = removeForeignAgentNotice(text: message.text, entities: message.textEntitiesAttribute?.entities ?? [], media: message.media)
             
             var webpageContent: TelegramMediaWebpageLoadedContent?

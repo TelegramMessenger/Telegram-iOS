@@ -397,4 +397,14 @@ public extension Message {
         }
         return false
     }
+    
+    var isPeerOrForwardSourceBroadcastChannel: Bool {
+        if self.isPeerBroadcastChannel {
+            return true
+        }
+        if let channel = self.forwardInfo?.source as? TelegramChannel, case .broadcast = channel.info {
+            return true
+        }
+        return false
+    }
 }

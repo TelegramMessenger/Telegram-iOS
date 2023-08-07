@@ -260,7 +260,7 @@ func makeBridgeMedia(message: Message, strings: PresentationStrings, chatPeer: P
             let bridgeAttachment = TGBridgeUnsupportedMediaAttachment()
             bridgeAttachment.compactTitle = strings.Watch_Message_Poll
             bridgeAttachment.title = strings.Watch_Message_Poll
-            bridgeAttachment.subtitle = suppressForeignAgentNotice ? removeForeignAgentNotice(text: poll.text, mayRemoveWholeText: false) : poll.text
+            bridgeAttachment.subtitle = (message.isPeerOrForwardSourceBroadcastChannel && suppressForeignAgentNotice) ? removeForeignAgentNotice(text: poll.text, mayRemoveWholeText: false) : poll.text
             bridgeMedia.append(bridgeAttachment)
         } else if let contact = m as? TelegramMediaContact {
             let bridgeContact = TGBridgeContactMediaAttachment()
@@ -338,7 +338,7 @@ func makeBridgeChat(_ entry: ChatListEntry, strings: PresentationStrings, suppre
             if let author = message.author {
                 bridgeChat.fromUid = Int32(clamping: makeBridgeIdentifier(author.id))
             }
-            bridgeChat.text = suppressForeignAgentNotice ? removeForeignAgentNotice(text: message.text, media: message.media) : message.text
+            bridgeChat.text = (message.isPeerOrForwardSourceBroadcastChannel && suppressForeignAgentNotice) ? removeForeignAgentNotice(text: message.text, media: message.media) : message.text
             bridgeChat.outgoing = !message.flags.contains(.Incoming)
             bridgeChat.deliveryState = makeBridgeDeliveryState(message)
             bridgeChat.deliveryError = hasFailed
@@ -518,7 +518,7 @@ func makeBridgeMessage(_ message: Message, strings: PresentationStrings, chatPee
     }
     bridgeMessage.toUid = makeBridgeIdentifier(message.id.peerId)
     bridgeMessage.cid = makeBridgeIdentifier(message.id.peerId)
-    bridgeMessage.text = suppressForeignAgentNotice ? removeForeignAgentNotice(text: message.text, media: message.media) : message.text
+    bridgeMessage.text = (message.isPeerOrForwardSourceBroadcastChannel && suppressForeignAgentNotice) ? removeForeignAgentNotice(text: message.text, media: message.media) : message.text
     bridgeMessage.deliveryState = makeBridgeDeliveryState(message)
     bridgeMessage.media = makeBridgeMedia(message: message, strings: strings, chatPeer: chatPeer, suppressForeignAgentNotice: suppressForeignAgentNotice)
     return bridgeMessage

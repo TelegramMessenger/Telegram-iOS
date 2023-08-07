@@ -752,7 +752,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     break
                 }
             }
-            let (text_, entities_) = self.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(text: message.text, entities: entities, media: message.media) : (message.text, entities)
+            let (text_, entities_) = self.context.shouldSuppressForeignAgentNotice(in: message) ? removeForeignAgentNotice(text: message.text, entities: entities, media: message.media) : (message.text, entities)
             var text = text_
             entities = entities_
             if let translateToLanguage, !text.isEmpty {

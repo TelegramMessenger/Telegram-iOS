@@ -451,7 +451,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             }
             
             if let text = text, !text.isEmpty {
-                let (text_, entities_) = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(text: text, entities: entities ?? [], mayRemoveWholeText: true) : (text, entities ?? [])
+                let (text_, entities_) = context.shouldSuppressForeignAgentNotice(in: message) ? removeForeignAgentNotice(text: text, entities: entities ?? [], mayRemoveWholeText: true) : (text, entities ?? [])
                 if !text_.isEmpty {
                     if notEmpty {
                         string.append(NSAttributedString(string: "\n", font: textFont, textColor: messageTheme.primaryTextColor))

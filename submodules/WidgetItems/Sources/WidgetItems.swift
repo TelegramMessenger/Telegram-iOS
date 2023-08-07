@@ -233,12 +233,14 @@ public struct WidgetDataPeer: Codable, Equatable {
         public var text: String
         public var content: Content
         public var timestamp: Int32
+        public let isPeerOrForwardSourceBroadcastChannel: Bool
         
-        public init(author: Author?, text: String, content: Content, timestamp: Int32) {
+        public init(author: Author?, text: String, content: Content, timestamp: Int32, isPeerOrForwardSourceBroadcastChannel: Bool) {
             self.author = author
             self.text = text
             self.content = content
             self.timestamp = timestamp
+            self.isPeerOrForwardSourceBroadcastChannel = isPeerOrForwardSourceBroadcastChannel
         }
     }
     

@@ -1134,7 +1134,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 let messageTheme = incoming ? item.presentationData.theme.theme.chat.message.incoming : item.presentationData.theme.theme.chat.message.outgoing
                 
                 let pollText: String
-                if let poll = poll, item.context.sharedContext.currentPtgSettings.with({ $0.suppressForeignAgentNotice }) {
+                if let poll = poll, item.context.shouldSuppressForeignAgentNotice(in: item.message) {
                     pollText = removeForeignAgentNotice(text: poll.text, mayRemoveWholeText: false)
                 } else {
                     pollText = poll?.text ?? ""

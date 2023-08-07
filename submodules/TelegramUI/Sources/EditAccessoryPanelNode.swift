@@ -188,7 +188,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
             if let currentEditMediaReference = self.currentEditMediaReference {
                 effectiveMessage = effectiveMessage.withUpdatedMedia([currentEditMediaReference.media])
             }
-            effectiveMessage_ = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: effectiveMessage) : effectiveMessage
+            effectiveMessage_ = context.shouldSuppressForeignAgentNotice(in: message) ? removeForeignAgentNotice(message: effectiveMessage) : effectiveMessage
             let (attributedText, _, _) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(effectiveMessage_), strings: self.strings, nameDisplayOrder: self.nameDisplayOrder, dateTimeFormat: self.dateTimeFormat, accountPeerId: self.context.account.peerId)
             text = attributedText.string
         }

@@ -63,6 +63,6 @@ public extension WidgetDataPeer.Message {
             }
         }
         
-        self.init(author: author, text: message.text, content: content, timestamp: message.timestamp)
+        self.init(author: author, text: message.text, content: content, timestamp: message.timestamp, isPeerOrForwardSourceBroadcastChannel: message._asMessage().isPeerOrForwardSourceBroadcastChannel)
     }
 }

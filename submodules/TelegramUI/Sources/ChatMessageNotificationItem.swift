@@ -204,7 +204,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 imageDimensions = nil
             }
             
-            let message_ = item.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: message) : message
+            let message_ = item.context.shouldSuppressForeignAgentNotice(in: message) ? removeForeignAgentNotice(message: message) : message
             
             let (textString, _, isText) = descriptionStringForMessage(contentSettings: item.context.currentContentSettings.with { $0 }, message: EngineMessage(message_), strings: item.strings, nameDisplayOrder: item.nameDisplayOrder, dateTimeFormat: item.dateTimeFormat, accountPeerId: item.context.account.peerId)
             if isText {

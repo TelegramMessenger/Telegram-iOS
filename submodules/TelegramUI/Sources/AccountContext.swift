@@ -572,6 +572,10 @@ public final class AccountContextImpl: AccountContext {
         }
     }
     
+    public func shouldSuppressForeignAgentNotice(in message: Message) -> Bool {
+        return message.isPeerOrForwardSourceBroadcastChannel && self.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice }
+    }
+    
     public func scheduleGroupCall(peerId: PeerId) {
         let _ = self.sharedContext.callManager?.scheduleGroupCall(context: self, peerId: peerId, endCurrentIfAny: true)
     }

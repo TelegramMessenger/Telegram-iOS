@@ -225,7 +225,7 @@ public func galleryItemForEntry(
                     entities = result
                 }
                                 
-                let (text_, entities_) = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(text: text, entities: entities, media: message.media) : (text, entities)
+                let (text_, entities_) = context.shouldSuppressForeignAgentNotice(in: message) ? removeForeignAgentNotice(text: text, entities: entities, media: message.media) : (text, entities)
                 let caption = galleryCaptionStringWithAppliedEntities(text_, entities: entities_, message: message)
                 return UniversalVideoGalleryItem(
                     context: context,

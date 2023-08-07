@@ -50,7 +50,6 @@ private final class PtgSettingsControllerArguments {
 
 private enum PtgSettingsSection: Int32 {
     case showProfileData
-    case foreignAgentNotice
     case experimental
     case channels
     case preferAppleVoiceToText
@@ -83,15 +82,13 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
         switch self {
         case .showPeerId, .showChannelCreationDate:
             return PtgSettingsSection.showProfileData.rawValue
-        case .suppressForeignAgentNotice:
-            return PtgSettingsSection.foreignAgentNotice.rawValue
         case .enableQuickReaction, .enableQuickReactionInfo, .enableLiveText, .enableLiveTextInfo:
             return PtgSettingsSection.experimental.rawValue
         case .preferAppleVoiceToText, .preferAppleVoiceToTextInfo:
             return PtgSettingsSection.preferAppleVoiceToText.rawValue
         case .defaultCameraForVideos:
             return PtgSettingsSection.defaultCameraForVideos.rawValue
-        case .channelAppearanceHeader, .hideReactionsInChannels, .hideCommentsInChannels, .hideShareButtonInChannels:
+        case .channelAppearanceHeader, .hideReactionsInChannels, .hideCommentsInChannels, .hideShareButtonInChannels, .suppressForeignAgentNotice:
             return PtgSettingsSection.channels.rawValue
         }
     }
@@ -110,21 +107,21 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
             return 4
         case .hideShareButtonInChannels:
             return 5
-        case .enableQuickReaction:
-            return 6
-        case .enableQuickReactionInfo:
-            return 7
-        case .enableLiveText:
-            return 8
-        case .enableLiveTextInfo:
-            return 9
-        case .defaultCameraForVideos:
-            return 10
-        case .preferAppleVoiceToText:
-            return 11
-        case .preferAppleVoiceToTextInfo:
-            return 12
         case .suppressForeignAgentNotice:
+            return 6
+        case .enableQuickReaction:
+            return 7
+        case .enableQuickReactionInfo:
+            return 8
+        case .enableLiveText:
+            return 9
+        case .enableLiveTextInfo:
+            return 10
+        case .defaultCameraForVideos:
+            return 11
+        case .preferAppleVoiceToText:
+            return 12
+        case .preferAppleVoiceToTextInfo:
             return 13
         }
     }
@@ -202,6 +199,7 @@ private func ptgSettingsControllerEntries(presentationData: PresentationData, se
     entries.append(.hideReactionsInChannels(presentationData.strings.PtgSettings_HideReactions, settings.hideReactionsInChannels))
     entries.append(.hideCommentsInChannels(presentationData.strings.PtgSettings_HideComments, settings.hideCommentsInChannels))
     entries.append(.hideShareButtonInChannels(presentationData.strings.PtgSettings_HideShareButton, settings.hideShareButtonInChannels))
+    entries.append(.suppressForeignAgentNotice(presentationData.strings.PtgSettings_SuppressForeignAgentNotice, settings.suppressForeignAgentNotice))
     
     entries.append(.enableQuickReaction(presentationData.strings.PtgSettings_EnableQuickReaction, !experimentalSettings.disableQuickReaction))
     entries.append(.enableQuickReactionInfo(presentationData.strings.PtgSettings_EnableQuickReactionHelp))
@@ -215,8 +213,6 @@ private func ptgSettingsControllerEntries(presentationData: PresentationData, se
         entries.append(.preferAppleVoiceToText(presentationData.strings.PtgSettings_PreferAppleVoiceToText, settings.preferAppleVoiceToText || !hasPremiumAccounts, hasPremiumAccounts))
         entries.append(.preferAppleVoiceToTextInfo(presentationData.strings.PtgSettings_PreferAppleVoiceToTextHelp))
     }
-    
-    entries.append(.suppressForeignAgentNotice(presentationData.strings.PtgSettings_SuppressForeignAgentNotice, settings.suppressForeignAgentNotice))
     
     return entries
 }

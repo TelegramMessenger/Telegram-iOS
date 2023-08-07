@@ -122,7 +122,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             }
         }
         
-        var messageText = item.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(text: message.text, media: message.media) : message.text
+        var messageText = item.context.shouldSuppressForeignAgentNotice(in: message) ? removeForeignAgentNotice(text: message.text, media: message.media) : message.text
 
         var isFile = false
         inner: for media in message.media {
