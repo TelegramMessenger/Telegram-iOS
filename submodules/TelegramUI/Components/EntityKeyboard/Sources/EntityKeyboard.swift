@@ -108,6 +108,7 @@ public final class EntityKeyboardComponent: Component {
     public let externalBottomPanelContainer: PagerExternalTopPanelContainer?
     public let displayTopPanelBackground: DisplayTopPanelBackground
     public let topPanelExtensionUpdated: (CGFloat, Transition) -> Void
+    public let topPanelScrollingOffset: (CGFloat, Transition) -> Void
     public let hideInputUpdated: (Bool, Bool, Transition) -> Void
     public let hideTopPanelUpdated: (Bool, Transition) -> Void
     public let switchToTextInput: () -> Void
@@ -141,6 +142,7 @@ public final class EntityKeyboardComponent: Component {
         externalBottomPanelContainer: PagerExternalTopPanelContainer?,
         displayTopPanelBackground: DisplayTopPanelBackground,
         topPanelExtensionUpdated: @escaping (CGFloat, Transition) -> Void,
+        topPanelScrollingOffset: @escaping (CGFloat, Transition) -> Void,
         hideInputUpdated: @escaping (Bool, Bool, Transition) -> Void,
         hideTopPanelUpdated: @escaping (Bool, Transition) -> Void,
         switchToTextInput: @escaping () -> Void,
@@ -173,6 +175,7 @@ public final class EntityKeyboardComponent: Component {
         self.externalBottomPanelContainer = externalBottomPanelContainer
         self.displayTopPanelBackground = displayTopPanelBackground
         self.topPanelExtensionUpdated = topPanelExtensionUpdated
+        self.topPanelScrollingOffset = topPanelScrollingOffset
         self.hideInputUpdated = hideInputUpdated
         self.hideTopPanelUpdated = hideTopPanelUpdated
         self.switchToTextInput = switchToTextInput
@@ -272,6 +275,7 @@ public final class EntityKeyboardComponent: Component {
         private var topPanelExtension: CGFloat?
         private var isTopPanelExpanded: Bool = false
         private var isTopPanelHidden: Bool = false
+        private var topPanelScrollingOffset: CGFloat?
         
         public var centralId: AnyHashable? {
             if let pagerView = self.pagerView.findTaggedView(tag: PagerComponentViewTag()) as? PagerComponent<EntityKeyboardChildEnvironment, EntityKeyboardTopContainerPanelEnvironment>.View {
@@ -776,6 +780,7 @@ public final class EntityKeyboardComponent: Component {
                             return
                         }
                         strongSelf.topPanelExtensionUpdated(height: panelState.topPanelHeight, transition: transition)
+                        strongSelf.topPanelScrollingOffset(offset: panelState.scrollingPanelOffsetToTopEdge, transition: transition)
                     },
                     isTopPanelExpandedUpdated: { [weak self] isExpanded, transition in
                         guard let strongSelf = self else {
@@ -796,7 +801,8 @@ public final class EntityKeyboardComponent: Component {
                         component.contentIdUpdated(id)
                     },
                     panelHideBehavior: panelHideBehavior,
-                    clipContentToTopPanel: component.clipContentToTopPanel
+                    clipContentToTopPanel: component.clipContentToTopPanel,
+                    isExpanded: component.isExpanded
                 )),
                 environment: {
                     EntityKeyboardChildEnvironment(
@@ -886,6 +892,18 @@ public final class EntityKeyboardComponent: Component {
             }
             if self.searchComponent == nil {
                 component.topPanelExtensionUpdated(height, transition)
+            }
+        }
+        
+        private func topPanelScrollingOffset(offset: CGFloat, transition: Transition) {
+            guard let component = self.component else {
+                return
+            }
+            if self.topPanelScrollingOffset != offset {
+                self.topPanelScrollingOffset = offset
+            }
+            if self.searchComponent == nil {
+                component.topPanelScrollingOffset(offset, transition)
             }
         }
         

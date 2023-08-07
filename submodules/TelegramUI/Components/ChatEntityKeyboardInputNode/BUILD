@@ -39,6 +39,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ChatControllerInteraction:ChatControllerInteraction",
         "//submodules/FeaturedStickersScreen:FeaturedStickersScreen",
         "//submodules/StickerPackPreviewUI",
+        "//submodules/TelegramUI/Components/EntityKeyboardGifContent:EntityKeyboardGifContent",
     ],
     visibility = [
         "//visibility:public",

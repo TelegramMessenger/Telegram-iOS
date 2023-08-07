@@ -5,6 +5,10 @@ import ComponentFlow
 import Display
 
 final class StoryItemLoadingEffectView: UIView {
+    private let effectAlpha: CGFloat
+    private let duration: Double
+    private let playOnce: Bool
+    
     private let hierarchyTrackingLayer: HierarchyTrackingLayer
     
     private let gradientWidth: CGFloat
@@ -14,8 +18,12 @@ final class StoryItemLoadingEffectView: UIView {
     private let borderContainerView: UIView
     private let borderMaskLayer: SimpleShapeLayer
     
-    override init(frame: CGRect) {
+    init(effectAlpha: CGFloat, duration: Double, hasBorder: Bool, playOnce: Bool) {
         self.hierarchyTrackingLayer = HierarchyTrackingLayer()
+        
+        self.effectAlpha = effectAlpha
+        self.duration = duration
+        self.playOnce = playOnce
         
         self.gradientWidth = 200.0
         self.backgroundView = UIImageView()
@@ -24,7 +32,7 @@ final class StoryItemLoadingEffectView: UIView {
         self.borderContainerView = UIView()
         self.borderMaskLayer = SimpleShapeLayer()
         
-        super.init(frame: frame)
+        super.init(frame: .zero)
         
         self.layer.addSublayer(self.hierarchyTrackingLayer)
         self.hierarchyTrackingLayer.didEnterHierarchy = { [weak self] in
@@ -65,13 +73,15 @@ final class StoryItemLoadingEffectView: UIView {
                 context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())
             })
         }
-        self.backgroundView.image = generateGradient(0.1)
+        self.backgroundView.image = generateGradient(self.effectAlpha)
         self.addSubview(self.backgroundView)
         
-        self.borderGradientView.image = generateGradient(0.2)
-        self.borderContainerView.addSubview(self.borderGradientView)
-        self.addSubview(self.borderContainerView)
-        self.borderContainerView.layer.mask = self.borderMaskLayer
+        if hasBorder {
+            self.borderGradientView.image = generateGradient(self.effectAlpha + 0.1)
+            self.borderContainerView.addSubview(self.borderGradientView)
+            self.addSubview(self.borderContainerView)
+            self.borderContainerView.layer.mask = self.borderMaskLayer
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -83,8 +93,8 @@ final class StoryItemLoadingEffectView: UIView {
             return
         }
 
-        let animation = self.backgroundView.layer.makeAnimation(from: 0.0 as NSNumber, to: (size.width + self.gradientWidth + size.width * 0.2) as NSNumber, keyPath: "position.x", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 1.0, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: true, additive: true)
-        animation.repeatCount = Float.infinity
+        let animation = self.backgroundView.layer.makeAnimation(from: 0.0 as NSNumber, to: (size.width + self.gradientWidth + size.width * 0.2) as NSNumber, keyPath: "position.x", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: self.duration, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: true, additive: true)
+        animation.repeatCount = self.playOnce ? 1 : Float.infinity
         self.backgroundView.layer.add(animation, forKey: "shimmer")
         self.borderGradientView.layer.add(animation, forKey: "shimmer")
     }

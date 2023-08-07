@@ -3,6 +3,10 @@ import UIKit
 import Display
 import SwiftSignalKit
 import AccountContext
+import TelegramCore
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
+import StickerResources
 import MediaEditor
 
 private func generateIcon(style: DrawingLocationEntity.Style) -> UIImage? {
@@ -50,6 +54,12 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
     
     let textView: DrawingTextView
     let iconView: UIImageView
+    private let imageNode: TransformImageNode
+    private var animationNode: AnimatedStickerNode?
+    
+    private var didSetUpAnimationNode = false
+    private let stickerFetchedDisposable = MetaDisposable()
+    private let cachedDisposable = MetaDisposable()
     
     init(context: AccountContext, entity: DrawingLocationEntity) {
         self.backgroundView = UIView()
@@ -79,6 +89,7 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
         self.textView.textContainer.lineBreakMode = .byTruncatingTail
         
         self.iconView = UIImageView()
+        self.imageNode = TransformImageNode()
         
         super.init(context: context, entity: entity)
                 
@@ -89,6 +100,8 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
         self.addSubview(self.iconView)
         
         self.update(animated: false)
+        
+        self.setup()
     }
     
     required init?(coder: NSCoder) {
@@ -100,7 +113,14 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
         self.textView.setNeedsLayersUpdate()
         var result = self.textView.sizeThatFits(CGSize(width: self.locationEntity.width, height: .greatestFiniteMagnitude))
         self.textSize = result
-        result.width = floorToScreenPixels(max(224.0, ceil(result.width) + 20.0) + result.height * 0.55)
+        
+        let widthExtension: CGFloat
+        if self.locationEntity.icon != nil {
+            widthExtension = result.height * 0.77
+        } else {
+            widthExtension = result.height * 0.65
+        }
+        result.width = floorToScreenPixels(max(224.0, ceil(result.width) + 20.0) + widthExtension)
         result.height = ceil(result.height * 1.2);
         return result;
     }
@@ -117,9 +137,23 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
     public override func layoutSubviews() {
         super.layoutSubviews()
         
-        let iconSize = min(76.0, floor(self.bounds.height * 0.6))
-        self.iconView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(iconSize * 0.25), y: floorToScreenPixels((self.bounds.height - iconSize) / 2.0)), size: CGSize(width: iconSize, height: iconSize))
-        self.textView.frame = CGRect(origin: CGPoint(x: self.bounds.width - self.textSize.width, y: floorToScreenPixels((self.bounds.height - self.textSize.height) / 2.0)), size: self.textSize)
+        let iconSize: CGFloat
+        let iconOffset: CGFloat
+        if self.locationEntity.icon != nil {
+            iconSize = min(80.0, floor(self.bounds.height * 0.7))
+            iconOffset = 0.2
+        } else {
+            iconSize = min(76.0, floor(self.bounds.height * 0.6))
+            iconOffset = 0.3
+        }
+        
+        self.iconView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(iconSize * iconOffset), y: floorToScreenPixels((self.bounds.height - iconSize) / 2.0)), size: CGSize(width: iconSize, height: iconSize))
+        self.imageNode.frame = self.iconView.frame.offsetBy(dx: 0.0, dy: 2.0)
+        
+        let imageSize = CGSize(width: iconSize, height: iconSize)
+        self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
+        
+        self.textView.frame = CGRect(origin: CGPoint(x: self.bounds.width - self.textSize.width - 6.0, y: floorToScreenPixels((self.bounds.height - self.textSize.height) / 2.0)), size: self.textSize)
         self.backgroundView.frame = self.bounds
         self.blurredBackgroundView.frame = self.bounds
         self.blurredBackgroundView.update(size: self.bounds.size, transition: .immediate)
@@ -137,7 +171,7 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
         case .black:
             updatedStyle = .transparent
         case .transparent:
-            updatedStyle = .blur
+            updatedStyle = .white
         case .blur:
             updatedStyle = .white
         }
@@ -170,7 +204,7 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
             
         let font = Font.with(size: fontSize, design: .camera, weight: .semibold)
         text.addAttribute(.font, value: font, range: range)
-        text.addAttribute(.kern, value: -1.5 as NSNumber, range: range)
+        text.addAttribute(.kern, value: -3.5 as NSNumber, range: range)
         self.textView.font = font
         
         let paragraphStyle = NSMutableParagraphStyle()
@@ -230,7 +264,7 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
             self.iconView.image = generateIcon(style: self.locationEntity.style)
         }
         
-        self.backgroundView.layer.cornerRadius = self.textSize.height * 0.18
+        self.backgroundView.layer.cornerRadius = self.textSize.height * 0.2
         self.blurredBackgroundView.layer.cornerRadius = self.backgroundView.layer.cornerRadius
         if #available(iOS 13.0, *) {
             self.backgroundView.layer.cornerCurve = .continuous
@@ -238,6 +272,52 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
         }
         
         super.update(animated: animated)
+    }
+    
+    private func setup() {
+        if let file = self.locationEntity.icon {
+            self.iconView.isHidden = true
+            self.addSubnode(self.imageNode)
+            if let dimensions = file.dimensions {
+                if file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm" {
+                    if self.animationNode == nil {
+                        let animationNode = DefaultAnimatedStickerNodeImpl()
+                        animationNode.autoplay = false
+                        self.animationNode = animationNode
+                        animationNode.started = { [weak self, weak animationNode] in
+                            self?.imageNode.isHidden = true
+                            
+                            let _ = animationNode
+//                            if let animationNode = animationNode {
+//                                let _ = (animationNode.status
+//                                |> take(1)
+//                                |> deliverOnMainQueue).start(next: { [weak self] status in
+//                                    self?.started?(status.duration)
+//                                })
+//                            }
+                        }
+                        self.addSubnode(animationNode)
+                        
+                        if file.isCustomTemplateEmoji {
+                            animationNode.dynamicColor = UIColor(rgb: 0xffffff)
+                        }
+                    }
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: self.context.account.postbox, userLocation: .other, file: file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 256.0, height: 256.0))))
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: stickerPackFileReference(file), resource: file.resource).start())
+                } else {
+                    if let animationNode = self.animationNode {
+                        animationNode.visibility = false
+                        self.animationNode = nil
+                        animationNode.removeFromSupernode()
+                        self.imageNode.isHidden = false
+                        self.didSetUpAnimationNode = false
+                    }
+                    self.imageNode.setSignal(chatMessageSticker(account: self.context.account, userLocation: .other, file: file, small: false, synchronousLoad: false))
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: stickerPackFileReference(file), resource: chatMessageStickerResource(file: file, small: false)).start())
+                }
+                self.setNeedsLayout()
+            }
+        }
     }
     
     override func updateSelectionView() {
@@ -275,6 +355,34 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
         let image = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
         return image
+    }
+    
+    func getRenderSubEntities() -> [DrawingEntity] {
+//        let textSize = self.textView.bounds.size
+//        let textPosition = self.locationEntity.position
+//        let scale = self.locationEntity.scale
+//        let rotation = self.locationEntity.rotation
+//
+//        let itemSize: CGFloat = floor(24.0 * self.displayFontSize * 0.78 / 17.0)
+        
+        let entities: [DrawingEntity] = []
+//        for (emojiRect, emojiAttribute) in self.emojiRects {
+//            guard let file = emojiAttribute.file else {
+//                continue
+//            }
+//            let emojiTextPosition = emojiRect.center.offsetBy(dx: -textSize.width / 2.0, dy: -textSize.height / 2.0)
+//
+//            let entity = DrawingStickerEntity(content: .file(file))
+//            entity.referenceDrawingSize = CGSize(width: itemSize * 4.0, height: itemSize * 4.0)
+//            entity.scale = scale
+//            entity.position = textPosition.offsetBy(
+//                dx: (emojiTextPosition.x * cos(rotation) - emojiTextPosition.y * sin(rotation)) * scale,
+//                dy: (emojiTextPosition.y * cos(rotation) + emojiTextPosition.x * sin(rotation)) * scale
+//            )
+//            entity.rotation = rotation
+//            entities.append(entity)
+//        }
+        return entities
     }
 }
 

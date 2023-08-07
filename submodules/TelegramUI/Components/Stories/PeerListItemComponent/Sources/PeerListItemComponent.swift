@@ -235,6 +235,7 @@ public final class PeerListItemComponent: Component {
             
             self.avatarNode = AvatarNode(font: avatarFont)
             self.avatarNode.isLayerBacked = false
+            self.avatarNode.isUserInteractionEnabled = false
             
             self.avatarButtonView = HighlightTrackingButton()
             
@@ -359,8 +360,6 @@ public final class PeerListItemComponent: Component {
             
             let themeUpdated = self.component?.theme !== component.theme
             
-            self.avatarButtonView.isUserInteractionEnabled = component.openStories != nil
-            
             var hasSelectionUpdated = false
             if let previousComponent = self.component {
                 switch previousComponent.selectionState {
@@ -397,7 +396,7 @@ public final class PeerListItemComponent: Component {
             self.component = component
             self.state = state
             
-            self.avatarButtonView.isUserInteractionEnabled = component.storyStats != nil
+            self.avatarButtonView.isUserInteractionEnabled = component.storyStats != nil && component.openStories != nil
             
             let labelData: (String, Bool)
             if let presence = component.presence {

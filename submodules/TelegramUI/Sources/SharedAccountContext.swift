@@ -1732,7 +1732,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return archiveSettingsController(context: context)
     }
     
-    public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController {
+    public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool) -> ViewController {
         let mappedSource: PremiumSource
         switch source {
         case .settings:
@@ -1780,7 +1780,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         case .stories:
             mappedSource = .stories
         }
-        return PremiumIntroScreen(context: context, source: mappedSource)
+        return PremiumIntroScreen(context: context, source: mappedSource, forceDark: forceDark)
     }
     
     public func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, action: @escaping () -> Void) -> ViewController {
@@ -1847,8 +1847,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: mainStickerPack, stickerPacks: stickerPacks, loadedStickerPacks: loadedStickerPacks, parentNavigationController: parentNavigationController, sendSticker: sendSticker)
     }
     
-    public func makeMediaPickerScreen(context: AccountContext, completion: @escaping (Any) -> Void) -> ViewController {
-        return mediaPickerController(context: context, completion: completion)
+    public func makeMediaPickerScreen(context: AccountContext, hasSearch: Bool, completion: @escaping (Any) -> Void) -> ViewController {
+        return mediaPickerController(context: context, hasSearch: hasSearch, completion: completion)
     }
     
     public func makeStoryMediaPickerScreen(context: AccountContext, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, dismissed: @escaping () -> Void) -> ViewController {

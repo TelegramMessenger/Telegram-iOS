@@ -36,8 +36,8 @@ private enum LocationPickerEntryId: Hashable {
 }
 
 private enum LocationPickerEntry: Comparable, Identifiable {
-    case city(PresentationTheme, String, String, TelegramMediaMap?, Int64?, String?, CLLocationCoordinate2D?, String?)
-    case location(PresentationTheme, String, String, TelegramMediaMap?, Int64?, String?, CLLocationCoordinate2D?, String?, Bool)
+    case city(PresentationTheme, String, String, TelegramMediaMap?, Int64?, String?, CLLocationCoordinate2D?, String?, String?)
+    case location(PresentationTheme, String, String, TelegramMediaMap?, Int64?, String?, CLLocationCoordinate2D?, String?, String?, Bool)
     case liveLocation(PresentationTheme, String, String, CLLocationCoordinate2D?)
     case header(PresentationTheme, String)
     case venue(PresentationTheme, TelegramMediaMap?, Int64?, String?, Int)
@@ -62,14 +62,14 @@ private enum LocationPickerEntry: Comparable, Identifiable {
     
     static func ==(lhs: LocationPickerEntry, rhs: LocationPickerEntry) -> Bool {
         switch lhs {
-            case let .city(lhsTheme, lhsTitle, lhsSubtitle, lhsVenue, lhsQueryId, lhsResultId, lhsCoordinate, lhsName):
-                if case let .city(rhsTheme, rhsTitle, rhsSubtitle, rhsVenue, rhsQueryId, rhsResultId, rhsCoordinate, rhsName) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsVenue?.venue?.id == rhsVenue?.venue?.id, lhsQueryId == rhsQueryId && lhsResultId == rhsResultId, lhsCoordinate == rhsCoordinate, lhsName == rhsName {
+            case let .city(lhsTheme, lhsTitle, lhsSubtitle, lhsVenue, lhsQueryId, lhsResultId, lhsCoordinate, lhsName, lhsCountryCode):
+                if case let .city(rhsTheme, rhsTitle, rhsSubtitle, rhsVenue, rhsQueryId, rhsResultId, rhsCoordinate, rhsName, rhsCountryCode) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsVenue?.venue?.id == rhsVenue?.venue?.id, lhsQueryId == rhsQueryId && lhsResultId == rhsResultId, lhsCoordinate == rhsCoordinate, lhsName == rhsName, lhsCountryCode == rhsCountryCode {
                     return true
                 } else {
                     return false
                 }
-        case let .location(lhsTheme, lhsTitle, lhsSubtitle, lhsVenue, lhsQueryId, lhsResultId, lhsCoordinate, lhsName, lhsIsTop):
-                if case let .location(rhsTheme, rhsTitle, rhsSubtitle, rhsVenue, rhsQueryId, rhsResultId, rhsCoordinate, rhsName, rhsIsTop) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsVenue?.venue?.id == rhsVenue?.venue?.id, lhsQueryId == rhsQueryId && lhsResultId == rhsResultId, lhsCoordinate == rhsCoordinate, lhsName == rhsName, lhsIsTop == rhsIsTop {
+        case let .location(lhsTheme, lhsTitle, lhsSubtitle, lhsVenue, lhsQueryId, lhsResultId, lhsCoordinate, lhsName, lhsCountryCode, lhsIsTop):
+                if case let .location(rhsTheme, rhsTitle, rhsSubtitle, rhsVenue, rhsQueryId, rhsResultId, rhsCoordinate, rhsName, rhsCountryCode, rhsIsTop) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsVenue?.venue?.id == rhsVenue?.venue?.id, lhsQueryId == rhsQueryId && lhsResultId == rhsResultId, lhsCoordinate == rhsCoordinate, lhsName == rhsName, lhsCountryCode == rhsCountryCode, lhsIsTop == rhsIsTop {
                     return true
                 } else {
                     return false
@@ -147,7 +147,7 @@ private enum LocationPickerEntry: Comparable, Identifiable {
     
     func item(engine: TelegramEngine, presentationData: PresentationData, interaction: LocationPickerInteraction?) -> ListViewItem {
         switch self {
-            case let .city(_, title, subtitle, _, _, _, coordinate, name):
+            case let .city(_, title, subtitle, _, _, _, coordinate, name, countryCode):
                 let icon: LocationActionListItemIcon
                 if let name {
                     icon = .venue(TelegramMediaMap(latitude: 0, longitude: 0, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: MapVenue(title: name, address: "City", provider: nil, id: "city", type: "building/default"), liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
@@ -156,12 +156,12 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                 }
                 return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), engine: engine, title: title, subtitle: subtitle, icon: icon, beginTimeAndTimeout: nil, action: {
                     if let coordinate = coordinate {
-                        interaction?.sendLocation(coordinate, name)
+                        interaction?.sendLocation(coordinate, name, countryCode)
                     }
                 }, highlighted: { highlighted in
                     interaction?.updateSendActionHighlight(highlighted)
                 })
-            case let .location(_, title, subtitle, venue, queryId, resultId, coordinate, name, isTop):
+            case let .location(_, title, subtitle, venue, queryId, resultId, coordinate, name, countryCode, isTop):
                 let icon: LocationActionListItemIcon
                 if let venue = venue {
                     icon = .venue(venue)
@@ -172,7 +172,7 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                     if let venue = venue {
                         interaction?.sendVenue(venue, queryId, resultId)
                     } else if let coordinate = coordinate {
-                        interaction?.sendLocation(coordinate, name)
+                        interaction?.sendLocation(coordinate, name, countryCode)
                     }
                 }, highlighted: { highlighted in
                     if isTop {
@@ -262,6 +262,8 @@ struct LocationPickerState {
     var selectedLocation: LocationPickerLocation
     var city: String?
     var street: String?
+    var countryCode: String?
+    var isStreet: Bool
     var forceSelection: Bool
     var searchingVenuesAround: Bool
     
@@ -271,6 +273,7 @@ struct LocationPickerState {
         self.selectedLocation = .none
         self.city = nil
         self.street = nil
+        self.isStreet = false
         self.forceSelection = false
         self.searchingVenuesAround = false
     }
@@ -587,7 +590,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                             case .pick:
                                 title = presentationData.strings.Map_SetThisLocation
                         }
-                        entries.append(.location(presentationData.theme, title, address ?? presentationData.strings.Map_Locating, nil, nil, nil, coordinate, state.street, true))
+                        entries.append(.location(presentationData.theme, title, address ?? presentationData.strings.Map_Locating, nil, nil, nil, coordinate, state.street, state.countryCode, true))
                     case .selecting:
                         let title: String
                         switch strongSelf.mode {
@@ -600,7 +603,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                             case .pick:
                                 title = presentationData.strings.Map_SetThisLocation
                         }
-                        entries.append(.location(presentationData.theme, title, presentationData.strings.Map_Locating, nil, nil, nil, nil, nil, true))
+                        entries.append(.location(presentationData.theme, title, presentationData.strings.Map_Locating, nil, nil, nil, nil, nil, nil, true))
                     case let .venue(venue, queryId, resultId):
                         let title: String
                         switch strongSelf.mode {
@@ -609,7 +612,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                             case .pick:
                                 title = presentationData.strings.Map_SetThisPlace
                         }
-                        entries.append(.location(presentationData.theme, title, venue.venue?.title ?? "", venue, queryId, resultId, venue.coordinate, nil, true))
+                        entries.append(.location(presentationData.theme, title, venue.venue?.title ?? "", venue, queryId, resultId, venue.coordinate, nil, nil, true))
                     case .none:
                         let title: String
                         var coordinate = userLocation?.coordinate
@@ -630,13 +633,13 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                         }
                         if source == .story {
                             if state.city != "" {
-                                entries.append(.city(presentationData.theme, state.city ?? presentationData.strings.Map_Locating, "City", nil, nil, nil, coordinate, state.city))
+                                entries.append(.city(presentationData.theme, state.city ?? presentationData.strings.Map_Locating, "City", nil, nil, nil, coordinate, state.city, state.countryCode))
                             }
                             if state.street != "" {
-                                entries.append(.location(presentationData.theme, state.street ?? presentationData.strings.Map_Locating, "Street", nil, nil, nil, coordinate, state.street, false))
+                                entries.append(.location(presentationData.theme, state.street ?? presentationData.strings.Map_Locating, state.isStreet ? "Street" : "Location", nil, nil, nil, coordinate, state.street, nil, false))
                             }
                         } else {
-                            entries.append(.location(presentationData.theme, title, (userLocation?.horizontalAccuracy).flatMap { presentationData.strings.Map_AccurateTo(stringForDistance(strings: presentationData.strings, distance: $0)).string } ?? presentationData.strings.Map_Locating, nil, nil, nil, coordinate, state.street, true))
+                            entries.append(.location(presentationData.theme, title, (userLocation?.horizontalAccuracy).flatMap { presentationData.strings.Map_AccurateTo(stringForDistance(strings: presentationData.strings, distance: $0)).string } ?? presentationData.strings.Map_Locating, nil, nil, nil, coordinate, state.street, nil, true))
                         }
                 }
                 
@@ -775,8 +778,9 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                     }
                 }
                 
+                let locale = localeWithStrings(presentationData.strings)
                 if case let .location(coordinate, address) = state.selectedLocation, address == nil {
-                    strongSelf.geocodingDisposable.set((reverseGeocodeLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+                    strongSelf.geocodingDisposable.set((reverseGeocodeLocation(latitude: coordinate.latitude, longitude: coordinate.longitude, locale: locale)
                     |> deliverOnMainQueue).start(next: { [weak self] placemark in
                         if let strongSelf = self {
                             var address = placemark?.fullAddress ?? ""
@@ -785,8 +789,9 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                             }
                             var cityName: String?
                             var streetName: String?
-                            if let city = placemark?.city, let country = placemark?.country {
-                                cityName = "\(city), \(country)"
+                            let countryCode = placemark?.countryCode
+                            if let city = placemark?.city, let countryCode = placemark?.countryCode {
+                                cityName = "\(city), \(displayCountryName(countryCode, locale: locale))"
                             } else {
                                 cityName = ""
                             }
@@ -796,6 +801,10 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                                 } else {
                                     streetName = street
                                 }
+                            } else if let name = placemark?.name {
+                                streetName = name
+                            } else if let country = placemark?.country, cityName == "" {
+                                streetName = country
                             } else {
                                 streetName = ""
                             }
@@ -807,6 +816,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                                 state.selectedLocation = .location(coordinate, address)
                                 state.city = cityName
                                 state.street = streetName
+                                state.countryCode = countryCode
+                                state.isStreet = placemark?.street != nil
                                 return state
                             }
                         }
@@ -814,7 +825,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                 } else {
                     let coordinate = controller.initialLocation ?? userLocation?.coordinate
                     if case .none = state.selectedLocation, let coordinate, state.city == nil {
-                        strongSelf.geocodingDisposable.set((reverseGeocodeLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+                        strongSelf.geocodingDisposable.set((reverseGeocodeLocation(latitude: coordinate.latitude, longitude: coordinate.longitude, locale: locale)
                         |> deliverOnMainQueue).start(next: { [weak self] placemark in
                             if let strongSelf = self {
                                 var address = placemark?.fullAddress ?? ""
@@ -823,8 +834,9 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                                 }
                                 var cityName: String?
                                 var streetName: String?
-                                if let city = placemark?.city, let country = placemark?.country {
-                                    cityName = "\(city), \(country)"
+                                let countryCode = placemark?.countryCode
+                                if let city = placemark?.city, let countryCode = placemark?.countryCode {
+                                    cityName = "\(city), \(displayCountryName(countryCode, locale: locale))"
                                 } else {
                                     cityName = ""
                                 }
@@ -834,6 +846,10 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                                     } else {
                                         streetName = street
                                     }
+                                } else if let name = placemark?.name {
+                                    streetName = name
+                                } else if let country = placemark?.country, cityName == "" {
+                                    streetName = country
                                 } else {
                                     streetName = ""
                                 }
@@ -844,6 +860,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                                     var state = state
                                     state.city = cityName
                                     state.street = streetName
+                                    state.countryCode = countryCode
+                                    state.isStreet = placemark?.street != nil
                                     return state
                                 }
                             }
@@ -1051,7 +1069,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         let actionsInset: CGFloat = 148.0
         let padding: CGFloat = 16.0
         let emptyTextSize = self.emptyResultsTextNode.updateLayout(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
-        transition.updateFrame(node: self.emptyResultsTextNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - emptyTextSize.width) / 2.0), y: headerHeight + actionsInset + floor((layout.size.height - headerHeight - actionsInset - emptyTextSize.height - layout.intrinsicInsets.bottom) / 2.0)), size: emptyTextSize))
+        transition.updateFrame(node: self.emptyResultsTextNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - emptyTextSize.width) / 2.0), y: headerHeight + actionsInset + floor((layout.size.height - headerHeight - actionsInset - emptyTextSize.height - layout.intrinsicInsets.bottom - layout.additionalInsets.bottom) / 2.0)), size: emptyTextSize))
     }
 
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {

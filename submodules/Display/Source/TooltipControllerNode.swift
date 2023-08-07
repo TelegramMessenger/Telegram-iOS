@@ -33,7 +33,7 @@ final class TooltipControllerNode: ASDisplayNode {
         self.dismissByTapOutside = dismissByTapOutside
         self.dismissByTapOutsideSource = dismissByTapOutsideSource
         
-        self.containerNode = ContextMenuContainerNode()
+        self.containerNode = ContextMenuContainerNode(blurred: false)
         self.containerNode.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
         
         self.imageNode = ASImageNode()

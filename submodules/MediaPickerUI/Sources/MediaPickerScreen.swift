@@ -1534,7 +1534,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             if collection == nil {
                 self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
                 
-                if mode == .story {
+                if mode == .story || mode == .addImage {
                     self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: self.moreButtonNode)
                     self.navigationItem.rightBarButtonItem?.action = #selector(self.rightButtonPressed)
                     self.navigationItem.rightBarButtonItem?.target = self
@@ -2289,6 +2289,7 @@ public func wallpaperMediaPickerController(
 
 public func mediaPickerController(
     context: AccountContext,
+    hasSearch: Bool,
     completion: @escaping (Any) -> Void
 ) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
@@ -2301,6 +2302,26 @@ public func mediaPickerController(
         mediaPickerController.customSelection = { controller, result in
             completion(result)
             controller.dismiss(animated: true)
+        }
+        if hasSearch {
+            mediaPickerController.presentWebSearch = { [weak mediaPickerController] groups, activateOnDisplay in
+                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.SearchBots())
+                |> deliverOnMainQueue).start(next: { configuration in
+                    let webSearchController = WebSearchController(
+                        context: context,
+                        updatedPresentationData: updatedPresentationData,
+                        peer: nil,
+                        chatLocation: nil,
+                        configuration: configuration,
+                        mode: .editor(completion: { [weak mediaPickerController] image in
+                            completion(image)
+                            mediaPickerController?.dismiss(animated: true)
+                        }),
+                        activateOnDisplay: activateOnDisplay
+                    )
+                    mediaPickerController?.present(webSearchController, in: .current)
+                })
+            }
         }
         present(mediaPickerController, mediaPickerController.mediaPickerContext)
     }

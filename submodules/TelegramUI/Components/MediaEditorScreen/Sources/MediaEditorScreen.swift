@@ -186,6 +186,9 @@ final class MediaEditorScreenComponent: Component {
         var playerStateDisposable: Disposable?
         var playerState: MediaEditorPlayerState?
         
+        var isPremium = false
+        var isPremiumDisposable: Disposable?
+        
         init(context: AccountContext, mediaEditor: Signal<MediaEditor?, NoError>) {
             self.context = context
             
@@ -205,10 +208,19 @@ final class MediaEditorScreenComponent: Component {
                     self.updated()
                 }
             })
+            
+            self.isPremiumDisposable = (context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                if let self {
+                    self.isPremium = peer?.isPremium ?? false
+                    self.updated()
+                }
+            })
         }
         
         deinit {
             self.playerStateDisposable?.dispose()
+            self.isPremiumDisposable?.dispose()
         }
         
         var muteDidChange = false
@@ -807,7 +819,7 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
             let textButtonFrame = CGRect(
-                origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 5.0 * 2.0 - textButtonSize.width / 2.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset + 2.0),
+                origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 5.0 * 2.0 - textButtonSize.width / 2.0 - 1.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset + 2.0),
                 size: textButtonSize
             )
             if let textButtonView = self.textButton.view {
@@ -836,7 +848,7 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
             let stickerButtonFrame = CGRect(
-                origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 5.0 * 3.0 - stickerButtonSize.width / 2.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset + 2.0),
+                origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 5.0 * 3.0 - stickerButtonSize.width / 2.0 + 1.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset + 2.0),
                 size: stickerButtonSize
             )
             if let stickerButtonView = self.stickerButton.view {
@@ -1195,7 +1207,7 @@ final class MediaEditorScreenComponent: Component {
                     timeoutSelected: timeoutSelected,
                     displayGradient: false,
                     bottomInset: 0.0,
-                    isFormattingLocked: false,
+                    isFormattingLocked: !state.isPremium,
                     hideKeyboard: self.currentInputMode == .emoji,
                     forceIsEditing: self.currentInputMode == .emoji,
                     disabledPlaceholder: nil
@@ -1746,7 +1758,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                            emojiItems,
                                            stickerItems
                 ) |> map { emoji, stickers -> StickerPickerInputData in
-                    return StickerPickerInputData(emoji: emoji, stickers: stickers, masks: nil)
+                    return StickerPickerInputData(emoji: emoji, stickers: stickers, gifs: nil)
                 }
                 
                 stickerPickerInputData.set(signal)
@@ -1992,6 +2004,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 contentWrapperView: self.previewContainerView,
                 selectionContainerView: self.selectionContainerView,
                 isVideo: false,
+                autoselectEntityOnPan: true,
                 updateSelectedEntity: { [weak self] _ in
                     if let self {
                         self.requestUpdate(transition: .easeInOut(duration: 0.2))
@@ -2654,7 +2667,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 let tooltipController = SaveProgressScreen(context: self.context, content: .progress(text, 0.0))
                 tooltipController.cancelled = { [weak self] in
                     if let self, let controller = self.controller {
+                        controller.isSavingAvailable = true
                         controller.cancelVideoExport()
+                        controller.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
                     }
                 }
                 controller.present(tooltipController, in: .current)
@@ -2666,37 +2681,46 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             guard let controller = self.controller else {
                 return
             }
-            let galleryController = self.context.sharedContext.makeMediaPickerScreen(context: self.context, completion: { [weak self] result in
-                guard let self, let asset = result as? PHAsset else {
+            let galleryController = self.context.sharedContext.makeMediaPickerScreen(context: self.context, hasSearch: true, completion: { [weak self] result in
+                guard let self else {
                     return
                 }
                 
-                let options = PHImageRequestOptions()
-                options.deliveryMode = .highQualityFormat
-                PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { [weak self] image, _ in
-                    if let self, let image {
-                        Queue.mainQueue().async {
-                            func roundedImageWithTransparentCorners(image: UIImage, cornerRadius: CGFloat) -> UIImage? {
-                                let rect = CGRect(origin: .zero, size: image.size)
-                                UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
-                                let context = UIGraphicsGetCurrentContext()
-                                
-                                if let context = context {
-                                    let path = UIBezierPath(roundedRect: rect, cornerRadius: cornerRadius)
-                                    context.addPath(path.cgPath)
-                                    context.clip()
-                                    image.draw(in: rect)
-                                }
-                                
-                                let newImage = UIGraphicsGetImageFromCurrentImageContext()
-                                UIGraphicsEndImageContext()
-                                
-                                return newImage
+                func roundedImageWithTransparentCorners(image: UIImage, cornerRadius: CGFloat) -> UIImage? {
+                    let rect = CGRect(origin: .zero, size: image.size)
+                    UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
+                    let context = UIGraphicsGetCurrentContext()
+                    
+                    if let context = context {
+                        let path = UIBezierPath(roundedRect: rect, cornerRadius: cornerRadius)
+                        context.addPath(path.cgPath)
+                        context.clip()
+                        image.draw(in: rect)
+                    }
+                    
+                    let newImage = UIGraphicsGetImageFromCurrentImageContext()
+                    UIGraphicsEndImageContext()
+                    
+                    return newImage
+                }
+                
+                let completeWithImage: (UIImage) -> Void = { [weak self] image in
+                    let updatedImage = roundedImageWithTransparentCorners(image: image, cornerRadius: floor(image.size.width * 0.03))!
+                    self?.interaction?.insertEntity(DrawingStickerEntity(content: .image(updatedImage, .rectangle)), scale: 2.5)
+                }
+                
+                if let asset = result as? PHAsset {
+                    let options = PHImageRequestOptions()
+                    options.deliveryMode = .highQualityFormat
+                    PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { image, _ in
+                        if let image {
+                            Queue.mainQueue().async {
+                                completeWithImage(image)
                             }
-                            let updatedImage = roundedImageWithTransparentCorners(image: image, cornerRadius: floor(image.size.width * 0.03))!
-                            self.interaction?.insertEntity(DrawingStickerEntity(content: .image(updatedImage, .rectangle)), scale: 2.5)
                         }
                     }
+                } else if let image = result as? UIImage {
+                    completeWithImage(image)
                 }
             })
             galleryController.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak galleryController] transition in
@@ -2708,38 +2732,101 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             controller.push(galleryController)
         }
         
+        private let staticEmojiPack = Promise<LoadedStickerPack>()
+        private var didSetupStaticEmojiPack = false
+        
         func presentLocationPicker(_ existingEntity: DrawingLocationEntity? = nil) {
             guard let controller = self.controller else {
                 return
             }
-            var location: CLLocationCoordinate2D?
-            if let subject = self.subject, case let .asset(asset) = subject {
-                location = asset.location?.coordinate
+            
+            if !self.didSetupStaticEmojiPack {
+                self.staticEmojiPack.set(self.context.engine.stickers.loadedStickerPack(reference: .name("staticemoji"), forceActualized: false))
             }
-            let locationController = storyLocationPickerController(context: self.context, location: location, completion: { [weak self] location, queryId, resultId, address in
+            
+            func flag(countryCode: String) -> String {
+                let base : UInt32 = 127397
+                var flagString = ""
+                for v in countryCode.uppercased().unicodeScalars {
+                    flagString.unicodeScalars.append(UnicodeScalar(base + v.value)!)
+                }
+                return flagString
+            }
+            
+            var location: CLLocationCoordinate2D?
+            if let subject = self.subject {
+                if case let .asset(asset) = subject {
+                    location = asset.location?.coordinate
+                } else if case let .draft(draft, _) = subject {
+                    location = draft.location
+                }
+            }
+            let locationController = storyLocationPickerController(context: self.context, location: location, completion: { [weak self] location, queryId, resultId, address, countryCode in
                 if let self  {
-                    let title: String
-                    if let venueTitle = location.venue?.title {
-                        title = venueTitle
+                    let emojiFile: Signal<TelegramMediaFile?, NoError>
+                    if let countryCode {
+                        let flagEmoji = flag(countryCode: countryCode)
+                        emojiFile = self.staticEmojiPack.get()
+                        |> filter { result in
+                            if case .result = result {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
+                        |> take(1)
+                        |> map { result -> TelegramMediaFile? in
+                            if case let .result(_, items, _) = result, let match = items.first(where: { item in
+                                var displayText: String?
+                                for attribute in item.file.attributes {
+                                    if case let .CustomEmoji(_, _, alt, _) = attribute {
+                                        displayText = alt
+                                        break
+                                    }
+                                }
+                                if let displayText, displayText.hasPrefix(flagEmoji) {
+                                    return true
+                                } else {
+                                    return false
+                                }
+                            }) {
+                                return match.file
+                            } else {
+                                return nil
+                            }
+                        }
                     } else {
-                        title = address ?? "Location"
+                        emojiFile = .single(nil)
                     }
-                    let position = existingEntity?.position
-                    let scale = existingEntity?.scale ?? 1.0
-                    if let existingEntity {
-                        self.entitiesView.remove(uuid: existingEntity.uuid, animated: true)
-                    }
-                    self.interaction?.insertEntity(
-                        DrawingLocationEntity(
-                            title: title,
-                            style: existingEntity?.style ?? .white,
-                            location: location,
-                            queryId: queryId,
-                            resultId: resultId
-                        ),
-                        scale: scale,
-                        position: position
-                    )
+                    
+                    let _ = emojiFile.start(next: { [weak self] emojiFile in
+                        guard let self else {
+                            return
+                        }
+                        let title: String
+                        if let venueTitle = location.venue?.title {
+                            title = venueTitle
+                        } else {
+                            title = address ?? "Location"
+                        }
+                        let position = existingEntity?.position
+                        let scale = existingEntity?.scale ?? 1.0
+                        if let existingEntity {
+                            self.entitiesView.remove(uuid: existingEntity.uuid, animated: true)
+                        }
+                        self.interaction?.insertEntity(
+                            DrawingLocationEntity(
+                                title: title,
+                                style: existingEntity?.style ?? .white,
+                                location: location,
+                                icon: emojiFile,
+                                queryId: queryId,
+                                resultId: resultId
+                            ),
+                            scale: scale,
+                            position: position
+                        )
+                    })
                 }
             })
             locationController.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak locationController] transition in
@@ -2885,7 +2972,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 switch mode {
                                 case .sticker:
                                     self.mediaEditor?.stop()
-                                    let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get(), defaultToEmoji: self.defaultToEmoji)
+                                    let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get(), defaultToEmoji: self.defaultToEmoji, hasGifs: true)
                                     controller.completion = { [weak self] content in
                                         if let self {
                                             if let content {
@@ -2916,11 +3003,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     }
                                     controller.presentGallery = { [weak self] in
                                         if let self {
+                                            self.stickerScreen = nil
                                             self.presentGallery()
                                         }
                                     }
                                     controller.presentLocationPicker = { [weak self, weak controller] in
                                         if let self {
+                                            self.stickerScreen = nil
                                             controller?.dismiss(animated: true)
                                             self.presentLocationPicker()
                                         }
@@ -3552,7 +3641,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 
         let controller = UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: true, title: nil, text: text, customUndoText: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
             if case .info = action, let self {
-                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories)
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true)
                 self.push(controller)
             }
             return false }
@@ -3571,7 +3660,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 
         let controller = UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_read", scale: 0.25, colors: [:], title: title, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
             if case .info = action, let self {
-                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories)
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true)
                 self.push(controller)
             }
             return false }
@@ -3589,7 +3678,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 
         let controller = UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: text), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
             if case .info = action, let self {
-                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories)
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true)
                 self.push(controller)
             }
             return false }
@@ -3669,7 +3758,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         if saveDraft {
             self.saveDraft(id: nil)
         } else {
-            if case let .draft(draft, _) = self.node.subject {
+            if case let .draft(draft, id) = self.node.subject, id == nil {
                 removeStoryDraft(engine: self.context.engine, path: draft.path, delete: true)
             }
         }
@@ -3705,10 +3794,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let duration = mediaEditor.duration ?? 0.0
         
         var timestamp: Int32
+        var location: CLLocationCoordinate2D?
         if case let .draft(draft, _) = subject {
             timestamp = draft.timestamp
+            location = draft.location
         } else {
             timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+            if case let .asset(asset) = subject {
+                location = asset.location?.coordinate
+            }
         }
         
         if let resultImage = mediaEditor.resultImage {
@@ -3724,10 +3818,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
                         let path = "\(Int64.random(in: .min ... .max)).jpg"
                         if let data = image.jpegData(compressionQuality: 0.87) {
-                            let draft = MediaEditorDraft(path: path, isVideo: false, thumbnail: thumbnailImage, dimensions: dimensions, duration: nil, values: values, caption: caption, privacy: privacy, timestamp: timestamp)
+                            let draft = MediaEditorDraft(path: path, isVideo: false, thumbnail: thumbnailImage, dimensions: dimensions, duration: nil, values: values, caption: caption, privacy: privacy, timestamp: timestamp, location: location)
                             try? data.write(to: URL(fileURLWithPath: draft.fullPath()))
                             if let id {
-                                saveStorySource(engine: context.engine, item: draft, id: id)
+                                saveStorySource(engine: context.engine, item: draft, peerId: context.account.peerId, id: id)
                             } else {
                                 addStoryDraft(engine: context.engine, item: draft)
                             }
@@ -3738,10 +3832,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 let saveVideoDraft: (String, PixelDimensions, Double) -> Void = { videoPath, dimensions, duration in
                     if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
                         let path = "\(Int64.random(in: .min ... .max)).mp4"
-                        let draft = MediaEditorDraft(path: path, isVideo: true, thumbnail: thumbnailImage, dimensions: dimensions, duration: duration, values: values, caption: caption, privacy: privacy, timestamp: timestamp)
+                        let draft = MediaEditorDraft(path: path, isVideo: true, thumbnail: thumbnailImage, dimensions: dimensions, duration: duration, values: values, caption: caption, privacy: privacy, timestamp: timestamp, location: location)
                         try? FileManager.default.moveItem(atPath: videoPath, toPath: draft.fullPath())
                         if let id {
-                            saveStorySource(engine: context.engine, item: draft, id: id)
+                            saveStorySource(engine: context.engine, item: draft, peerId: context.account.peerId, id: id)
                         } else {
                             addStoryDraft(engine: context.engine, item: draft)
                         }
@@ -3812,7 +3906,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             randomId = Int64.random(in: .min ... .max)
         }
         
-        var mediaAreas: [MediaArea] = self.initialMediaAreas ?? []
+        var mediaAreas: [MediaArea] = []
+        if case .draft = subject {
+        } else {
+            mediaAreas = self.initialMediaAreas ?? []
+        }
+        
         var stickers: [TelegramMediaFile] = []
         for entity in codableEntities {
             switch entity {

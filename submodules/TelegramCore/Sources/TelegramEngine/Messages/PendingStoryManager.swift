@@ -194,6 +194,11 @@ final class PendingStoryManager {
         
         var storyObserverContexts: [Int32: Bag<(Float) -> Void>] = [:]
         
+        private let allStoriesEventsPipe = ValuePipe<(Int32, Int32)>()
+        var allStoriesUploadEvents: Signal<(Int32, Int32), NoError> {
+            return self.allStoriesEventsPipe.signal()
+        }
+        
         private let allStoriesUploadProgressPromise = Promise<Float?>(nil)
         private var allStoriesUploadProgressValue: Float? = nil
         var allStoriesUploadProgress: Signal<Float?, NoError> {
@@ -272,6 +277,10 @@ final class PendingStoryManager {
         private func update(localState: Stories.LocalState) {
             if let currentPendingItemContext = self.currentPendingItemContext, !localState.items.contains(where: { $0.randomId == currentPendingItemContext.item.randomId }) {
                 self.currentPendingItemContext = nil
+                self.queue.after(0.1, {
+                    let _ = currentPendingItemContext
+                    print(currentPendingItemContext)
+                })
             }
             
             if self.currentPendingItemContext == nil, let firstItem = localState.items.first {
@@ -304,7 +313,10 @@ final class PendingStoryManager {
                             currentPendingItemContext.progress = progress
                             currentPendingItemContext.updated()
                         }
-                    case .completed:
+                    case let .completed(id):
+                        if let id = id {
+                            self.allStoriesEventsPipe.putNext((stableId, id))
+                        }
                         // wait for the local state to change via Postbox
                         break
                     }
@@ -361,6 +373,12 @@ final class PendingStoryManager {
     public func storyUploadProgress(stableId: Int32) -> Signal<Float, NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.storyUploadProgress(stableId: stableId, next: subscriber.putNext)
+        }
+    }
+    
+    public func allStoriesUploadEvents() -> Signal<(Int32, Int32), NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.allStoriesUploadEvents.start(next: subscriber.putNext)
         }
     }
 

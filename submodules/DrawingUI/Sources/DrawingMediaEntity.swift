@@ -21,30 +21,13 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
             if let previewView = self.previewView {
                 previewView.isUserInteractionEnabled = false
                 previewView.layer.allowsEdgeAntialiasing = true
-                if self.additionalView == nil {
-                    self.addSubview(previewView)
-                }
+                self.addSubview(previewView)
             } else {
                 oldValue?.removeFromSuperview()
             }
         }
     }
-    
-    public var additionalView: DrawingStickerEntityView.VideoView? {
-        didSet {
-            if let additionalView = self.additionalView {
-                self.addSubview(additionalView)
-            } else {
-                if let previous = oldValue, previous.superview === self {
-                    previous.removeFromSuperview()
-                }
-                if let previewView = self.previewView {
-                    self.addSubview(previewView)
-                }
-            }
-        }
-    }
-    
+        
     private let snapTool = DrawingEntitySnapTool()
     
     init(context: AccountContext, entity: DrawingMediaEntity) {
@@ -113,13 +96,7 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
             if self.previewView?.superview === self {
                 self.previewView?.frame = CGRect(origin: .zero, size: size)
             }
-            if let additionalView = self.additionalView, additionalView.superview === self {
-                additionalView.frame = CGRect(origin: .zero, size: size)
-            }
             self.update(animated: false)
-        }
-        if let additionalView = self.additionalView, additionalView.superview === self {
-            self.additionalView?.frame = self.bounds
         }
     }
             

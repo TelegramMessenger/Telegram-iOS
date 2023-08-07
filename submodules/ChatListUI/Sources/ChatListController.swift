@@ -2634,7 +2634,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         location: .point(location, .top),
                         shouldDismissOnTouch: { [weak self] point, containerFrame in
                             if containerFrame.contains(point), premiumNeeded {
-                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories)
+                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: false)
                                 self?.push(controller)
                                 return .dismiss(consume: true)
                             } else {

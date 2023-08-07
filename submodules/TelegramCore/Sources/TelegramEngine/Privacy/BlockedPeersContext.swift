@@ -72,7 +72,12 @@ public final class BlockedPeersContext {
             flags |= 1 << 0
         }
         
-        self.disposable.set((self.account.network.request(Api.functions.contacts.getBlocked(flags: flags, offset: Int32(self._state.peers.count), limit: 64))
+        var limit: Int32 = 200
+        if self._state.peers.count > 0 {
+            limit = 100
+        }
+        
+        self.disposable.set((self.account.network.request(Api.functions.contacts.getBlocked(flags: flags, offset: Int32(self._state.peers.count), limit: limit))
         |> retryRequest
         |> mapToSignal { result -> Signal<(peers: [RenderedPeer], canLoadMore: Bool, totalCount: Int?), NoError> in
             return postbox.transaction { transaction -> (peers: [RenderedPeer], canLoadMore: Bool, totalCount: Int?) in
@@ -140,23 +145,74 @@ public final class BlockedPeersContext {
     public func updatePeerIds(_ peerIds: [EnginePeer.Id]) -> Signal<Never, BlockedPeersContextAddError> {
         assert(Queue.mainQueue().isCurrent())
         
-        let validIds = Set(peerIds)
-        var peersToRemove: [EnginePeer.Id] = []
-        for peer in self._state.peers {
-            if !validIds.contains(peer.peerId) {
-                peersToRemove.append(peer.peerId)
+        let network = self.account.network
+        let subject = self.subject
+        let currentPeers = self._state.peers
+        
+        var flags: Int32 = 0
+        if case .stories = self.subject {
+            flags |= 1 << 0
+        }
+        
+        return self.account.postbox.transaction { transaction -> [Peer] in
+            var peers: [Peer] = []
+            
+            var removedPeerIds = Set<EnginePeer.Id>()
+            var validPeerIds = Set<EnginePeer.Id>()
+            var allPeerIds = Set<EnginePeer.Id>()
+            
+            for peerId in peerIds {
+                if let peer = transaction.getPeer(peerId) {
+                    peers.append(peer)
+                }
+                validPeerIds.insert(peerId)
+                allPeerIds.insert(peerId)
             }
+            for peer in currentPeers {
+                if !validPeerIds.contains(peer.peerId) {
+                    removedPeerIds.insert(peer.peerId)
+                    allPeerIds.insert(peer.peerId)
+                }
+            }
+            
+            transaction.updatePeerCachedData(peerIds: allPeerIds, update: { peerId, current in
+                let previous: CachedUserData
+                if let current = current as? CachedUserData {
+                    previous = current
+                } else {
+                    previous = CachedUserData()
+                }
+                if case .stories = subject {
+                    var userFlags = previous.flags
+                    if validPeerIds.contains(peerId) {
+                        userFlags.insert(.isBlockedFromStories)
+                    } else if removedPeerIds.contains(peerId) {
+                        userFlags.remove(.isBlockedFromStories)
+                    }
+                    return previous.withUpdatedFlags(userFlags)
+                } else {
+                    if validPeerIds.contains(peerId) {
+                        return previous.withUpdatedIsBlocked(true)
+                    } else if removedPeerIds.contains(peerId) {
+                        return previous.withUpdatedIsBlocked(false)
+                    } else {
+                        return previous
+                    }
+                }
+            })
+            
+            return peers
         }
-        var updateSignals: [Signal<Never, BlockedPeersContextAddError>] = []
-        for peerId in peersToRemove {
-            updateSignals.append(self.remove(peerId: peerId) |> mapError { _ in .generic })
-        }
-        for peerId in peerIds {
-            updateSignals.append(self.add(peerId: peerId))
-        }
-        return combineLatest(updateSignals)
-        |> mapToSignal { _ in
-            return .never()
+        |> castError(BlockedPeersContextAddError.self)
+        |> mapToSignal { peers -> Signal<Never, BlockedPeersContextAddError> in
+            let inputPeers = peers.compactMap { apiInputPeer($0) }
+            return network.request(Api.functions.contacts.setBlocked(flags: flags, id: inputPeers, limit: Int32(peers.count)))
+            |> mapError { _ -> BlockedPeersContextAddError in
+                return .generic
+            }
+            |> mapToSignal { _ -> Signal<Never, BlockedPeersContextAddError> in
+                return .complete()
+            }
         }
     }
     
@@ -209,7 +265,6 @@ public final class BlockedPeersContext {
                 |> castError(BlockedPeersContextAddError.self)
             }
             |> deliverOnMainQueue
-            
             |> mapToSignal { peer -> Signal<Never, BlockedPeersContextAddError> in
                 guard let strongSelf = self, let peer = peer else {
                     return .complete()

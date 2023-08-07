@@ -145,16 +145,16 @@ final class ContextMenuNode: ASDisplayNode {
     
     private let feedback: HapticFeedback?
     
-    init(actions: [ContextMenuAction], dismiss: @escaping () -> Void, catchTapsOutside: Bool, hasHapticFeedback: Bool = false) {
+    init(actions: [ContextMenuAction], dismiss: @escaping () -> Void, catchTapsOutside: Bool, hasHapticFeedback: Bool = false, blurred: Bool = false) {
         self.actions = actions
         self.dismiss = dismiss
         self.catchTapsOutside = catchTapsOutside
         
-        self.containerNode = ContextMenuContainerNode()
+        self.containerNode = ContextMenuContainerNode(blurred: blurred)
         self.scrollNode = ContextMenuContentScrollNode()
         
         self.actionNodes = actions.map { action in
-            return ContextMenuActionNode(action: action)
+            return ContextMenuActionNode(action: action, blurred: blurred)
         }
         
         if hasHapticFeedback {

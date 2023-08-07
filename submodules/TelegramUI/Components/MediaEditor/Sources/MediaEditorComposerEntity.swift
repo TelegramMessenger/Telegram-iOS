@@ -68,8 +68,8 @@ func composerEntitiesForDrawingEntity(account: Account, textScale: CGFloat, enti
             content = .file(file)
         case let .image(image, _):
             content = .image(image)
-        case let .video(path, _, _):
-            content = .video(path)
+        case let .video(file):
+            content = .video(file)
         case .dualVideoReference:
             return []
         }
@@ -135,8 +135,8 @@ private class MediaEditorComposerStaticEntity: MediaEditorComposerEntity {
 private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
     public enum Content {
         case file(TelegramMediaFile)
+        case video(TelegramMediaFile)
         case image(UIImage)
-        case video(String)
         
         var file: TelegramMediaFile? {
             if case let .file(file) = self {
@@ -146,6 +146,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
         }
     }
     
+    let account: Account
     let content: Content
     let position: CGPoint
     let scale: CGFloat
@@ -181,6 +182,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
     let imagePromise = Promise<UIImage>()
     
     init(account: Account, content: Content, position: CGPoint, scale: CGFloat, rotation: CGFloat, baseSize: CGSize, mirrored: Bool, colorSpace: CGColorSpace, tintColor: UIColor?, isStatic: Bool) {
+        self.account = account
         self.content = content
         self.position = position
         self.scale = scale
@@ -263,27 +265,8 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
         case let .image(image):
             self.isAnimated = false
             self.imagePromise.set(.single(image))
-        case let .video(videoPath):
+        case .video:
             self.isAnimated = true
-            
-            let url = URL(fileURLWithPath: videoPath)
-            let asset = AVURLAsset(url: url)
-            
-            if let assetReader = try? AVAssetReader(asset: asset), let videoTrack = asset.tracks(withMediaType: .video).first {
-                let outputSettings: [String: Any]  = [
-                    kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
-                    kCVPixelBufferMetalCompatibilityKey as String: true
-                ]
-                let videoOutput = AVAssetReaderTrackOutput(track: videoTrack, outputSettings: outputSettings)
-                videoOutput.alwaysCopiesSampleData = true
-                if assetReader.canAdd(videoOutput) {
-                    assetReader.add(videoOutput)
-                }
-                
-                assetReader.startReading()
-                self.assetReader = assetReader
-                self.videoOutput = videoOutput
-            }
         }
     }
     
@@ -291,51 +274,109 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
         self.disposables.dispose()
     }
     
-    private var circleMaskFilter: CIFilter?
+    private func setupVideoOutput() {
+        if case let .video(file) = self.content {
+            if let path = self.account.postbox.mediaBox.completedResourcePath(file.resource, pathExtension: "mp4") {
+                let url = URL(fileURLWithPath: path)
+                let asset = AVURLAsset(url: url)
+                
+                if let assetReader = try? AVAssetReader(asset: asset), let videoTrack = asset.tracks(withMediaType: .video).first {
+                    self.videoFrameRate = videoTrack.nominalFrameRate
+                    let outputSettings: [String: Any]  = [
+                        kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
+                        kCVPixelBufferMetalCompatibilityKey as String: true
+                    ]
+                    let videoOutput = AVAssetReaderTrackOutput(track: videoTrack, outputSettings: outputSettings)
+                    videoOutput.alwaysCopiesSampleData = true
+                    if assetReader.canAdd(videoOutput) {
+                        assetReader.add(videoOutput)
+                    }
+                    
+                    assetReader.startReading()
+                    self.assetReader = assetReader
+                    self.videoOutput = videoOutput
+                }
+            }
+        }
+    }
+    
+    private var videoFrameRate: Float?
+    private var maskFilter: CIFilter?
     func image(for time: CMTime, frameRate: Float, context: CIContext, completion: @escaping (CIImage?) -> Void) {
+        let currentTime = CMTimeGetSeconds(time)
+        
         if case .video = self.content {
+            if self.videoOutput == nil {
+                self.setupVideoOutput()
+            }
             if let videoOutput = self.videoOutput {
-                if let sampleBuffer = videoOutput.copyNextSampleBuffer(), let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
-                    var ciImage = CIImage(cvPixelBuffer: imageBuffer)
-                    ciImage = ciImage.oriented(forExifOrientation: UIImage.Orientation.right.exifOrientation)
-                    let minSide = min(ciImage.extent.size.width, ciImage.extent.size.height)
-                    let cropRect = CGRect(origin: CGPoint(x: floor((ciImage.extent.size.width - minSide) / 2.0), y: floor((ciImage.extent.size.height - minSide) / 2.0)), size: CGSize(width: minSide, height: minSide))
-                    ciImage = ciImage.cropped(to: cropRect).samplingLinear()
-                    ciImage = ciImage.transformed(by: CGAffineTransform(translationX: 0.0, y: -420.0))
+                var frameAdvancement: Int = 0
+                if let frameRate = self.videoFrameRate, frameRate > 0 {
+                    let frameTime = 1.0 / Double(frameRate)
+                    let frameIndex = Int(floor(currentTime / frameTime))
                     
-                    var circleMaskFilter: CIFilter?
-                    if let current = self.circleMaskFilter {
-                        circleMaskFilter = current
-                    } else {
-                        let circleImage = generateImage(CGSize(width: minSide, height: minSide), scale: 1.0, rotatedContext: { size, context in
-                            context.clear(CGRect(origin: .zero, size: size))
-                            context.setFillColor(UIColor.white.cgColor)
-                            context.fillEllipse(in: CGRect(origin: .zero, size: size))
-                        })!
-                        let circleMask = CIImage(image: circleImage)
-                        if let filter = CIFilter(name: "CIBlendWithAlphaMask") {
-                            filter.setValue(circleMask, forKey: kCIInputMaskImageKey)
-                            self.circleMaskFilter = filter
-                            circleMaskFilter = filter
-                        } 
-                    }
-                    
-                    let _ = circleMaskFilter
-                    if let circleMaskFilter {
-                        circleMaskFilter.setValue(ciImage, forKey: kCIInputImageKey)
-                        if let output = circleMaskFilter.outputImage {
-                            ciImage = output
+                    let currentFrameIndex = self.currentFrameIndex
+                    if currentFrameIndex != frameIndex {
+                        let previousFrameIndex = currentFrameIndex
+                        self.currentFrameIndex = frameIndex
+                        
+                        var delta = 1
+                        if let previousFrameIndex = previousFrameIndex {
+                            delta = max(1, frameIndex - previousFrameIndex)
                         }
+                        frameAdvancement = delta
+                    }
+                }
+                
+                if frameAdvancement == 0, let image = self.image {
+                    completion(image)
+                    return
+                } else {
+                    var sampleBuffer = videoOutput.copyNextSampleBuffer()
+                    if sampleBuffer == nil && self.assetReader?.status == .completed {
+                        self.setupVideoOutput()
+                        sampleBuffer = self.videoOutput?.copyNextSampleBuffer()
                     }
                     
-                    completion(ciImage)
+                    if let sampleBuffer, let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
+                        var ciImage = CIImage(cvPixelBuffer: imageBuffer)
+                        
+                        var circleMaskFilter: CIFilter?
+                        if let current = self.maskFilter {
+                            circleMaskFilter = current
+                        } else {
+                            let circleImage = generateImage(ciImage.extent.size, scale: 1.0, rotatedContext: { size, context in
+                                context.clear(CGRect(origin: .zero, size: size))
+                                context.setFillColor(UIColor.white.cgColor)
+                                
+                                let path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: floor(size.width * 0.03))
+                                context.addPath(path.cgPath)
+                                context.fillPath()
+                            })!
+                            let circleMask = CIImage(image: circleImage)
+                            if let filter = CIFilter(name: "CIBlendWithAlphaMask") {
+                                filter.setValue(circleMask, forKey: kCIInputMaskImageKey)
+                                self.maskFilter = filter
+                                circleMaskFilter = filter
+                            }
+                        }
+                        
+                        let _ = circleMaskFilter
+                        if let circleMaskFilter {
+                            circleMaskFilter.setValue(ciImage, forKey: kCIInputImageKey)
+                            if let output = circleMaskFilter.outputImage {
+                                ciImage = output
+                            }
+                        }
+                        
+                        self.image = ciImage
+                        completion(ciImage)
+                    }
                 }
             } else {
                 completion(nil)
             }
         } else if self.isAnimated {
-            let currentTime = CMTimeGetSeconds(time)
-            
             var tintColor: UIColor?
             if let file = self.content.file, file.isCustomTemplateEmoji {
                 tintColor = self.tintColor ?? UIColor(rgb: 0xffffff)
@@ -389,8 +430,8 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                     }
                 }
                 
-                if frameAdvancement == 0 && strongSelf.image != nil {
-                    completion(strongSelf.image)
+                if frameAdvancement == 0, let image = strongSelf.image {
+                    completion(image)
                 } else {
                     if let frame = takeFrame(max(1, frameAdvancement)) {
                         var imagePixelBuffer: CVPixelBuffer?

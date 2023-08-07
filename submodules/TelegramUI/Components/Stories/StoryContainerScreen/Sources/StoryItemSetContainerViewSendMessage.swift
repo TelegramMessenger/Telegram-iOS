@@ -1517,7 +1517,7 @@ final class StoryItemSetContainerSendMessage {
                             let hasLiveLocation = peer.id.namespace != Namespaces.Peer.SecretChat && peer.id != component.context.account.peerId
                             let theme = component.theme
                             let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
-                            let controller = LocationPickerController(context: component.context, updatedPresentationData: updatedPresentationData, mode: .share(peer: peer, selfPeer: selfPeer, hasLiveLocation: hasLiveLocation), completion: { [weak self, weak view] location, _, _, _ in
+                            let controller = LocationPickerController(context: component.context, updatedPresentationData: updatedPresentationData, mode: .share(peer: peer, selfPeer: selfPeer, hasLiveLocation: hasLiveLocation), completion: { [weak self, weak view] location, _, _, _, _ in
                                 guard let self, let view else {
                                     return
                                 }
@@ -3109,11 +3109,11 @@ final class StoryItemSetContainerSendMessage {
             let subject = EngineMessage(stableId: 0, stableVersion: 0, id: EngineMessage.Id(peerId: PeerId(0), namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [.geo(TelegramMediaMap(latitude: venue.latitude, longitude: venue.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: venue.venue, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))], peers: [:], associatedMessages: [:], associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
             
             actions.append(ContextMenuAction(content: .textWithIcon(title: "View Location", icon: generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: .white)), action: { [weak controller, weak view] in
-                let locationController = LocationViewController(context: component.context, updatedPresentationData: updatedPresentationData, subject: subject, params: LocationViewParams(sendLiveLocation: { _ in }, stopLiveLocation: { _ in }, openUrl: { _ in }, openPeer: { _ in }))
+                let locationController = LocationViewController(context: component.context, updatedPresentationData: updatedPresentationData, subject: subject, isStoryLocation: true, params: LocationViewParams(sendLiveLocation: { _ in }, stopLiveLocation: { _ in }, openUrl: { _ in }, openPeer: { _ in }))
                 view?.updateModalTransitionFactor(1.0, transition: .animated(duration: 0.5, curve: .spring))
                 locationController.dismissed = { [weak view] in
                     view?.updateModalTransitionFactor(0.0, transition: .animated(duration: 0.5, curve: .spring))
-                    Queue.mainQueue().after(0.3, {
+                    Queue.mainQueue().after(0.5, {
                         view?.updateIsProgressPaused()
                     })
                 }
@@ -3127,7 +3127,7 @@ final class StoryItemSetContainerSendMessage {
         frame = view.controlsContainerView.convert(frame, to: nil)
         
         let node = controller.displayNode
-        let menuController = ContextMenuController(actions: actions)
+        let menuController = ContextMenuController(actions: actions, blurred: true)
         menuController.centerHorizontally = true
         controller.present(
             menuController,

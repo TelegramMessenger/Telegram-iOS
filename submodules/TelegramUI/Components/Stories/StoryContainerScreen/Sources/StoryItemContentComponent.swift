@@ -71,6 +71,8 @@ final class StoryItemContentComponent: Component {
         private var videoNode: UniversalVideoNode?
         private var loadingEffectView: StoryItemLoadingEffectView?
         
+        private var mediaAreasEffectView: StoryItemLoadingEffectView?
+        
         private var currentMessageMedia: EngineMedia?
         private var fetchDisposable: Disposable?
         private var priorityDisposable: Disposable?
@@ -715,7 +717,7 @@ final class StoryItemContentComponent: Component {
                 if let current = self.loadingEffectView {
                     loadingEffectView = current
                 } else {
-                    loadingEffectView = StoryItemLoadingEffectView(frame: CGRect())
+                    loadingEffectView = StoryItemLoadingEffectView(effectAlpha: 0.1, duration: 1.0, hasBorder: true, playOnce: false)
                     self.loadingEffectView = loadingEffectView
                     self.addSubview(loadingEffectView)
                 }
@@ -725,6 +727,57 @@ final class StoryItemContentComponent: Component {
                 loadingEffectView.layer.animateAlpha(from: loadingEffectView.alpha, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak loadingEffectView] _ in
                     loadingEffectView?.removeFromSuperview()
                 })
+            }
+            
+            if self.contentLoaded {
+                if reloadMedia {
+                    if let mediaAreasEffectView = self.mediaAreasEffectView {
+                        self.mediaAreasEffectView = nil
+                        mediaAreasEffectView.removeFromSuperview()
+                    }
+                }
+                if !component.item.mediaAreas.isEmpty {
+                    let mediaAreasEffectView: StoryItemLoadingEffectView
+                    if let current = self.mediaAreasEffectView {
+                        mediaAreasEffectView = current
+                    } else {
+                        mediaAreasEffectView = StoryItemLoadingEffectView(effectAlpha: 0.25, duration: 1.5, hasBorder: false, playOnce: true)
+                        self.mediaAreasEffectView = mediaAreasEffectView
+                        self.addSubview(mediaAreasEffectView)
+                    }
+                    mediaAreasEffectView.update(size: availableSize, transition: transition)
+                    
+                    let maskView: UIView
+                    if let current = mediaAreasEffectView.mask {
+                        maskView = current
+                    } else {
+                        maskView = UIView(frame: CGRect(origin: .zero, size: availableSize))
+                        mediaAreasEffectView.mask = maskView
+                    }
+                    
+                    if maskView.subviews.isEmpty {
+                        let referenceSize = availableSize
+                        for mediaArea in component.item.mediaAreas {
+                            guard case .venue = mediaArea else {
+                                continue
+                            }
+                            let size = CGSize(width: mediaArea.coordinates.width / 100.0 * referenceSize.width, height: mediaArea.coordinates.height / 100.0 * referenceSize.height)
+                            let position = CGPoint(x: mediaArea.coordinates.x / 100.0 * referenceSize.width, y: mediaArea.coordinates.y / 100.0 * referenceSize.height)
+                            
+                            let view = UIView()
+                            view.backgroundColor = .white
+                            view.bounds = CGRect(origin: .zero, size: size)
+                            view.center = position
+                            view.layer.cornerRadius = size.height * 0.18
+                            maskView.addSubview(view)
+                            
+                            view.transform = CGAffineTransformMakeRotation(mediaArea.coordinates.rotation * Double.pi / 180.0)
+                        }
+                    }
+                } else if let mediaAreasEffectView = self.mediaAreasEffectView {
+                    self.mediaAreasEffectView = nil
+                    mediaAreasEffectView.removeFromSuperview()
+                }
             }
             
             return availableSize

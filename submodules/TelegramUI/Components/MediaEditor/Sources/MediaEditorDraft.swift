@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import SwiftSignalKit
+import CoreLocation
 import TelegramCore
 import TelegramUIPreferences
 import PersistentStringHash
@@ -67,6 +68,8 @@ public final class MediaEditorDraft: Codable, Equatable {
         case caption
         case privacy
         case timestamp
+        case locationLatitude
+        case locationLongitude
     }
     
     public let path: String
@@ -78,8 +81,9 @@ public final class MediaEditorDraft: Codable, Equatable {
     public let caption: NSAttributedString
     public let privacy: MediaEditorResultPrivacy?
     public let timestamp: Int32
+    public let location: CLLocationCoordinate2D?
         
-    public init(path: String, isVideo: Bool, thumbnail: UIImage, dimensions: PixelDimensions, duration: Double?, values: MediaEditorValues, caption: NSAttributedString, privacy: MediaEditorResultPrivacy?, timestamp: Int32) {
+    public init(path: String, isVideo: Bool, thumbnail: UIImage, dimensions: PixelDimensions, duration: Double?, values: MediaEditorValues, caption: NSAttributedString, privacy: MediaEditorResultPrivacy?, timestamp: Int32, location: CLLocationCoordinate2D?) {
         self.path = path
         self.isVideo = isVideo
         self.thumbnail = thumbnail
@@ -89,6 +93,7 @@ public final class MediaEditorDraft: Codable, Equatable {
         self.caption = caption
         self.privacy = privacy
         self.timestamp = timestamp
+        self.location = location
     }
     
     public init(from decoder: Decoder) throws {
@@ -122,6 +127,12 @@ public final class MediaEditorDraft: Codable, Equatable {
         }
         
         self.timestamp = try container.decodeIfPresent(Int32.self, forKey: .timestamp) ?? 1688909663
+        
+        if let latitude = try container.decodeIfPresent(Double.self, forKey: .locationLatitude), let longitude = try container.decodeIfPresent(Double.self, forKey: .locationLongitude) {
+            self.location = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+        } else {
+            self.location = nil
+        }
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -141,7 +152,7 @@ public final class MediaEditorDraft: Codable, Equatable {
         let chatInputText = ChatTextInputStateText(attributedText: self.caption)
         try container.encode(chatInputText, forKey: .caption)
         
-        if let privacy = self .privacy {
+        if let privacy = self.privacy {
             if let data = try? JSONEncoder().encode(privacy) {
                 try container.encode(data, forKey: .privacy)
             } else {
@@ -151,6 +162,14 @@ public final class MediaEditorDraft: Codable, Equatable {
             try container.encodeNil(forKey: .privacy)
         }
         try container.encode(self.timestamp, forKey: .timestamp)
+        
+        if let location = self.location {
+            try container.encode(location.latitude, forKey: .locationLatitude)
+            try container.encode(location.longitude, forKey: .locationLongitude)
+        } else {
+            try container.encodeNil(forKey: .locationLatitude)
+            try container.encodeNil(forKey: .locationLongitude)
+        }
     }
 }
 

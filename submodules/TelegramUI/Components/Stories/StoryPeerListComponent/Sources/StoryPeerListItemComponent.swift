@@ -855,7 +855,9 @@ public final class StoryPeerListItemComponent: Component {
                     self?.indicatorShapeSeenLayer.animateShapeLineWidth(from: targetLineWidth, to: initialLineWidth, duration: 0.15)
                 })
                 
-                HapticFeedback().success()
+                if self.window != nil {
+                    HapticFeedback().success()
+                }
             }
             
             let titleSize = self.title.update(
