@@ -84,6 +84,8 @@ swift_library(
         "//submodules/Speak",
         "//submodules/TranslateUI",
         "//submodules/TelegramNotices",
+        "//submodules/MediaPlayer:UniversalMediaPlayer",
+        "//submodules/TelegramUniversalVideoContent",
     ],
     visibility = [
         "//visibility:public",

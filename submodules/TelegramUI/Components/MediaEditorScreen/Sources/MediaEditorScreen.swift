@@ -807,7 +807,7 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
             let textButtonFrame = CGRect(
-                origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 5.0 * 2.0 - textButtonSize.width / 2.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset + 2.0),
+                origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 5.0 * 2.0 - textButtonSize.width / 2.0 - 1.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset + 2.0),
                 size: textButtonSize
             )
             if let textButtonView = self.textButton.view {
@@ -836,7 +836,7 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
             let stickerButtonFrame = CGRect(
-                origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 5.0 * 3.0 - stickerButtonSize.width / 2.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset + 2.0),
+                origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 5.0 * 3.0 - stickerButtonSize.width / 2.0 + 1.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset + 2.0),
                 size: stickerButtonSize
             )
             if let stickerButtonView = self.stickerButton.view {
@@ -1746,7 +1746,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                            emojiItems,
                                            stickerItems
                 ) |> map { emoji, stickers -> StickerPickerInputData in
-                    return StickerPickerInputData(emoji: emoji, stickers: stickers, masks: nil)
+                    return StickerPickerInputData(emoji: emoji, stickers: stickers, gifs: nil)
                 }
                 
                 stickerPickerInputData.set(signal)
@@ -2655,7 +2655,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 let tooltipController = SaveProgressScreen(context: self.context, content: .progress(text, 0.0))
                 tooltipController.cancelled = { [weak self] in
                     if let self, let controller = self.controller {
+                        controller.isSavingAvailable = true
                         controller.cancelVideoExport()
+                        controller.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
                     }
                 }
                 controller.present(tooltipController, in: .current)
@@ -2667,37 +2669,46 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             guard let controller = self.controller else {
                 return
             }
-            let galleryController = self.context.sharedContext.makeMediaPickerScreen(context: self.context, completion: { [weak self] result in
-                guard let self, let asset = result as? PHAsset else {
+            let galleryController = self.context.sharedContext.makeMediaPickerScreen(context: self.context, hasSearch: true, completion: { [weak self] result in
+                guard let self else {
                     return
                 }
                 
-                let options = PHImageRequestOptions()
-                options.deliveryMode = .highQualityFormat
-                PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { [weak self] image, _ in
-                    if let self, let image {
-                        Queue.mainQueue().async {
-                            func roundedImageWithTransparentCorners(image: UIImage, cornerRadius: CGFloat) -> UIImage? {
-                                let rect = CGRect(origin: .zero, size: image.size)
-                                UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
-                                let context = UIGraphicsGetCurrentContext()
-                                
-                                if let context = context {
-                                    let path = UIBezierPath(roundedRect: rect, cornerRadius: cornerRadius)
-                                    context.addPath(path.cgPath)
-                                    context.clip()
-                                    image.draw(in: rect)
-                                }
-                                
-                                let newImage = UIGraphicsGetImageFromCurrentImageContext()
-                                UIGraphicsEndImageContext()
-                                
-                                return newImage
+                func roundedImageWithTransparentCorners(image: UIImage, cornerRadius: CGFloat) -> UIImage? {
+                    let rect = CGRect(origin: .zero, size: image.size)
+                    UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
+                    let context = UIGraphicsGetCurrentContext()
+                    
+                    if let context = context {
+                        let path = UIBezierPath(roundedRect: rect, cornerRadius: cornerRadius)
+                        context.addPath(path.cgPath)
+                        context.clip()
+                        image.draw(in: rect)
+                    }
+                    
+                    let newImage = UIGraphicsGetImageFromCurrentImageContext()
+                    UIGraphicsEndImageContext()
+                    
+                    return newImage
+                }
+                
+                let completeWithImage: (UIImage) -> Void = { [weak self] image in
+                    let updatedImage = roundedImageWithTransparentCorners(image: image, cornerRadius: floor(image.size.width * 0.03))!
+                    self?.interaction?.insertEntity(DrawingStickerEntity(content: .image(updatedImage, .rectangle)), scale: 2.5)
+                }
+                
+                if let asset = result as? PHAsset {
+                    let options = PHImageRequestOptions()
+                    options.deliveryMode = .highQualityFormat
+                    PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { image, _ in
+                        if let image {
+                            Queue.mainQueue().async {
+                                completeWithImage(image)
                             }
-                            let updatedImage = roundedImageWithTransparentCorners(image: image, cornerRadius: floor(image.size.width * 0.03))!
-                            self.interaction?.insertEntity(DrawingStickerEntity(content: .image(updatedImage, .rectangle)), scale: 2.5)
                         }
                     }
+                } else if let image = result as? UIImage {
+                    completeWithImage(image)
                 }
             })
             galleryController.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak galleryController] transition in
@@ -2945,7 +2956,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 switch mode {
                                 case .sticker:
                                     self.mediaEditor?.stop()
-                                    let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get(), defaultToEmoji: self.defaultToEmoji)
+                                    let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get(), defaultToEmoji: self.defaultToEmoji, hasGifs: true)
                                     controller.completion = { [weak self] content in
                                         if let self {
                                             if let content {
@@ -3767,10 +3778,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let duration = mediaEditor.duration ?? 0.0
         
         var timestamp: Int32
+        var location: CLLocationCoordinate2D?
         if case let .draft(draft, _) = subject {
             timestamp = draft.timestamp
+            location = draft.location
         } else {
             timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+            if case let .asset(asset) = subject {
+                location = asset.location?.coordinate
+            }
         }
         
         if let resultImage = mediaEditor.resultImage {
@@ -3786,7 +3802,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
                         let path = "\(Int64.random(in: .min ... .max)).jpg"
                         if let data = image.jpegData(compressionQuality: 0.87) {
-                            let draft = MediaEditorDraft(path: path, isVideo: false, thumbnail: thumbnailImage, dimensions: dimensions, duration: nil, values: values, caption: caption, privacy: privacy, timestamp: timestamp)
+                            let draft = MediaEditorDraft(path: path, isVideo: false, thumbnail: thumbnailImage, dimensions: dimensions, duration: nil, values: values, caption: caption, privacy: privacy, timestamp: timestamp, location: location)
                             try? data.write(to: URL(fileURLWithPath: draft.fullPath()))
                             if let id {
                                 saveStorySource(engine: context.engine, item: draft, peerId: context.account.peerId, id: id)
@@ -3800,7 +3816,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 let saveVideoDraft: (String, PixelDimensions, Double) -> Void = { videoPath, dimensions, duration in
                     if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
                         let path = "\(Int64.random(in: .min ... .max)).mp4"
-                        let draft = MediaEditorDraft(path: path, isVideo: true, thumbnail: thumbnailImage, dimensions: dimensions, duration: duration, values: values, caption: caption, privacy: privacy, timestamp: timestamp)
+                        let draft = MediaEditorDraft(path: path, isVideo: true, thumbnail: thumbnailImage, dimensions: dimensions, duration: duration, values: values, caption: caption, privacy: privacy, timestamp: timestamp, location: location)
                         try? FileManager.default.moveItem(atPath: videoPath, toPath: draft.fullPath())
                         if let id {
                             saveStorySource(engine: context.engine, item: draft, peerId: context.account.peerId, id: id)

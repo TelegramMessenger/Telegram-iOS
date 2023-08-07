@@ -11,6 +11,7 @@ import AppBundle
 import ChatControllerInteraction
 import MultiplexedVideoNode
 import ChatPresentationInterfaceState
+import EntityKeyboardGifContent
 
 final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
     private let context: AccountContext

@@ -18,7 +18,6 @@ import PagerComponent
 import SoftwareVideo
 import AVFoundation
 import PhotoResources
-//import ContextUI
 import ShimmerEffect
 
 private class GifVideoLayer: AVSampleBufferDisplayLayer {
@@ -268,6 +267,7 @@ public final class GifPagerContentComponent: Component {
         }
         return true
     }
+    
     
     public final class View: ContextControllerSourceView, PagerContentViewWithBackground, UIScrollViewDelegate {
         private struct ItemGroupDescription: Equatable {
@@ -994,7 +994,13 @@ public final class GifPagerContentComponent: Component {
                     vibrancyEffectView.contentView.addSubview(self.mirrorSearchHeaderContainer)
                 }
             }
-            self.backgroundView.updateColor(color: theme.chat.inputMediaPanel.backgroundColor, enableBlur: true, forceKeepBlur: false, transition: transition.containedViewLayoutTransition)
+            
+            let hideBackground = self.component?.hideBackground ?? false
+            var backgroundColor = theme.chat.inputMediaPanel.backgroundColor
+            if hideBackground {
+                backgroundColor = backgroundColor.withAlphaComponent(0.01)
+            }
+            self.backgroundView.updateColor(color: backgroundColor, enableBlur: true, forceKeepBlur: false, transition: transition.containedViewLayoutTransition)
             transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
             self.backgroundView.update(size: backgroundFrame.size, transition: transition.containedViewLayoutTransition)
             
@@ -1114,8 +1120,6 @@ public final class GifPagerContentComponent: Component {
             let clippingFrame = CGRect(origin: CGPoint(x: 0.0, y: clippingInset), size: CGSize(width: availableSize.width, height: availableSize.height - clippingInset))
             transition.setPosition(view: self.scrollClippingView, position: clippingFrame.center)
             transition.setBounds(view: self.scrollClippingView, bounds: clippingFrame)
-            
-            self.backgroundView.isHidden = component.hideBackground
             
             return availableSize
         }

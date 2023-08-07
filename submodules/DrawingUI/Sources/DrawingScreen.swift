@@ -759,7 +759,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                                                emojiItems,
                                                stickerItems
                     ) |> map { emoji, stickers -> StickerPickerInputData in
-                        return StickerPickerInputData(emoji: emoji, stickers: stickers, masks: nil)
+                        return StickerPickerInputData(emoji: emoji, stickers: stickers, gifs: nil)
                     }
                     
                     stickerPickerInputData.set(signal)
@@ -3057,9 +3057,7 @@ public final class DrawingToolsInteraction {
             
             var isVideo = false
             if let entity = entityView.entity as? DrawingStickerEntity {
-                if case .video = entity.content {
-                    isVideo = true
-                } else if case .dualVideoReference = entity.content {
+                if case .dualVideoReference = entity.content {
                     isVideo = true
                 }
             }

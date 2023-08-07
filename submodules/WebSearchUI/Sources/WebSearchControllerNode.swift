@@ -791,18 +791,29 @@ class WebSearchControllerNode: ASDisplayNode {
                 }
             }
         } else {
-            presentLegacyWebSearchEditor(context: self.context, theme: self.theme, result: currentResult, initialLayout: self.containerLayout?.0, updateHiddenMedia: { [weak self] id in
-                self?.hiddenMediaId.set(.single(id))
-            }, transitionHostView: { [weak self] in
-                return self?.gridNode.view
-            }, transitionView: { [weak self] result in
-                return self?.transitionNode(for: result)?.transitionView()
-            }, completed: { [weak self] result in
-                if let strongSelf = self {
-                    strongSelf.controllerInteraction.avatarCompleted(result)
-                    strongSelf.cancel?()
+            if let mode = self.controller?.mode, case let .editor(completion) = mode {
+                if let item = legacyWebSearchItem(account: self.context.account, result: currentResult) {
+                    let _ = (item.originalImage
+                    |> deliverOnMainQueue).start(next: { image in
+                        if !image.degraded() {
+                            completion(image)
+                        }
+                    })
                 }
-            }, present: present)
+            } else {
+                presentLegacyWebSearchEditor(context: self.context, theme: self.theme, result: currentResult, initialLayout: self.containerLayout?.0, updateHiddenMedia: { [weak self] id in
+                    self?.hiddenMediaId.set(.single(id))
+                }, transitionHostView: { [weak self] in
+                    return self?.gridNode.view
+                }, transitionView: { [weak self] result in
+                    return self?.transitionNode(for: result)?.transitionView()
+                }, completed: { [weak self] result in
+                    if let strongSelf = self {
+                        strongSelf.controllerInteraction.avatarCompleted(result)
+                        strongSelf.cancel?()
+                    }
+                }, present: present)
+            }
         }
     }
     

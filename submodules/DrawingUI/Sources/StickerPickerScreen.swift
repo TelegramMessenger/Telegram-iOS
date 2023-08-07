@@ -18,20 +18,23 @@ import ContextUI
 import ChatPresentationInterfaceState
 import MediaEditor
 import StickerPackPreviewUI
+import EntityKeyboardGifContent
+import GalleryUI
+import UndoUI
 
 public struct StickerPickerInputData: Equatable {
     var emoji: EmojiPagerContentComponent
     var stickers: EmojiPagerContentComponent?
-    var masks: EmojiPagerContentComponent?
+    var gifs: GifPagerContentComponent?
     
     public init(
         emoji: EmojiPagerContentComponent,
         stickers: EmojiPagerContentComponent?,
-        masks: EmojiPagerContentComponent?
+        gifs: GifPagerContentComponent?
     ) {
         self.emoji = emoji
         self.stickers = stickers
-        self.masks = masks
+        self.gifs = gifs
     }
 }
 
@@ -95,9 +98,18 @@ private final class StickerSelectionComponent: Component {
         return true
     }
     
+    final class KeyboardClippingView: UIView {
+        var hitEdgeInsets: UIEdgeInsets = .zero
+        
+        override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+            let bounds = self.bounds.inset(by: self.hitEdgeInsets)
+            return bounds.contains(point)
+        }
+    }
+    
     public final class View: UIView {
         fileprivate let keyboardView: ComponentView<Empty>
-        private let keyboardClippingView: UIView
+        private let keyboardClippingView: KeyboardClippingView
         private let panelHostView: PagerExternalTopPanelContainer
         private let panelBackgroundView: BlurredBackgroundView
         private let panelSeparatorView: UIView
@@ -107,18 +119,20 @@ private final class StickerSelectionComponent: Component {
         
         private var interaction: ChatEntityKeyboardInputNode.Interaction?
         private var inputNodeInteraction: ChatMediaInputNodeInteraction?
-        private let trendingGifsPromise = Promise<ChatMediaInputGifPaneTrendingState?>(nil)
         
         private var searchVisible = false
         private var forceUpdate = false
         
+        private var ignoreNextZeroScrollingOffset = false
         private var topPanelScrollingOffset: CGFloat = 0.0
+        private var keyboardContentId: AnyHashable?
         
         override init(frame: CGRect) {
             self.keyboardView = ComponentView<Empty>()
-            self.keyboardClippingView = UIView()
+            self.keyboardClippingView = KeyboardClippingView()
             self.panelHostView = PagerExternalTopPanelContainer()
             self.panelBackgroundView = BlurredBackgroundView(color: .clear, enableBlur: true)
+            self.panelBackgroundView.isUserInteractionEnabled = false
             self.panelSeparatorView = UIView()
             
             super.init(frame: frame)
@@ -210,6 +224,12 @@ private final class StickerSelectionComponent: Component {
         deinit {
         }
         
+        func scrolledToItemGroup() {
+            self.topPanelScrollingOffset = 30.0
+            self.ignoreNextZeroScrollingOffset = true
+            self.state?.updated(transition: .easeInOut(duration: 0.2))
+        }
+        
         func update(component: StickerSelectionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             self.backgroundColor = component.backgroundColor
             let panelBackgroundColor = component.backgroundColor.withMultipliedAlpha(0.85)
@@ -236,7 +256,6 @@ private final class StickerSelectionComponent: Component {
                 }
             )
             
-            let trendingGifsPromise = self.trendingGifsPromise
             let keyboardSize = self.keyboardView.update(
                 transition: transition.withUserData(EmojiPagerContentComponent.SynchronousLoadBehavior(isDisabled: true)),
                 component: AnyComponent(EntityKeyboardComponent(
@@ -247,9 +266,9 @@ private final class StickerSelectionComponent: Component {
                     topPanelInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
                     emojiContent: component.content.emoji,
                     stickerContent: component.content.stickers,
-                    maskContent: component.content.masks,
-                    gifContent: nil,
-                    hasRecentGifs: false,
+                    maskContent: nil,
+                    gifContent: component.content.gifs,
+                    hasRecentGifs: true,
                     availableGifSearchEmojies: [],
                     defaultToEmojiTab: defaultToEmoji,
                     externalTopPanelContainer: self.panelHostView,
@@ -259,7 +278,11 @@ private final class StickerSelectionComponent: Component {
                     },
                     topPanelScrollingOffset: { [weak self] offset, transition in
                         if let self {
-                            self.topPanelScrollingOffset = offset
+                            if self.ignoreNextZeroScrollingOffset && offset == 0.0 {
+                                self.ignoreNextZeroScrollingOffset = false
+                            } else {
+                                self.topPanelScrollingOffset = offset
+                            }
                         }
                     },
                     hideInputUpdated: { [weak self] _, searchVisible, transition in
@@ -297,14 +320,19 @@ private final class StickerSelectionComponent: Component {
                             inputNodeInteraction: inputNodeInteraction,
                             mode: mappedMode,
                             stickerActionTitle: presentationData.strings.StickerPack_AddSticker,
-                            trendingGifsPromise: trendingGifsPromise,
+                            trendingGifsPromise: Promise(nil),
                             cancel: {
                             },
                             peekBehavior: stickerPeekBehavior
                         )
                         return searchContainerNode
                     },
-                    contentIdUpdated: { _ in },
+                    contentIdUpdated: { [weak self] id in
+                        guard let self else {
+                            return
+                        }
+                        self.keyboardContentId = id
+                    },
                     deviceMetrics: component.deviceMetrics,
                     hiddenInputHeight: 0.0,
                     inputHeight: 0.0,
@@ -330,6 +358,7 @@ private final class StickerSelectionComponent: Component {
                 }
                 
                 transition.setFrame(view: self.keyboardClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight), size: CGSize(width: availableSize.width, height: availableSize.height - topPanelHeight)))
+                self.keyboardClippingView.hitEdgeInsets = UIEdgeInsets(top: -topPanelHeight, left: 0.0, bottom: 0.0, right: 0.0)
                 
                 transition.setFrame(view: keyboardComponentView, frame: CGRect(origin: CGPoint(x: 0.0, y: -topPanelHeight), size: keyboardSize))
                 transition.setFrame(view: self.panelHostView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight - 34.0), size: CGSize(width: keyboardSize.width, height: 0.0)))
@@ -338,7 +367,7 @@ private final class StickerSelectionComponent: Component {
                 self.panelBackgroundView.update(size: self.panelBackgroundView.bounds.size, transition: transition.containedViewLayoutTransition)
                 
                 let topPanelAlpha: CGFloat
-                if self.searchVisible {
+                if self.searchVisible || self.keyboardContentId == AnyHashable("gifs") {
                     topPanelAlpha = 0.0
                 } else {
                     topPanelAlpha = max(0.0, min(1.0, (self.topPanelScrollingOffset / 20.0)))
@@ -386,6 +415,8 @@ public class StickerPickerScreen: ViewController {
         
         private var content: StickerPickerInputData?
         private let contentDisposable = MetaDisposable()
+        private var hasRecentGifsDisposable: Disposable?
+        private let trendingGifsPromise = Promise<ChatMediaInputGifPaneTrendingState?>(nil)
         private var scheduledEmojiContentAnimationHint: EmojiPagerContentComponent.ContentAnimation?
         
         private(set) var isExpanded = false
@@ -396,6 +427,24 @@ public class StickerPickerScreen: ViewController {
         private var currentLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
         
         fileprivate var temporaryDismiss = false
+        
+        private var gifMode: GifPagerContentComponent.Subject? {
+            didSet {
+                if let gifMode = self.gifMode, gifMode != oldValue {
+                    self.reloadGifContext()
+                }
+            }
+        }
+        
+        private var gifContext: GifContext? {
+            didSet {
+                if let gifContext = self.gifContext {
+                    self.gifComponent.set(gifContext.component)
+                }
+            }
+        }
+        private let gifComponent = Promise<EntityKeyboardGifContent>()
+        private var gifInputInteraction: GifPagerContentComponent.InputInteraction?
         
         private struct EmojiSearchResult {
             var groups: [EmojiPagerContentComponent.ItemGroup]
@@ -431,7 +480,7 @@ public class StickerPickerScreen: ViewController {
         }
         
         private var storyStickersContentView: StoryStickersContentView?
-        
+                
         init(context: AccountContext, controller: StickerPickerScreen, theme: PresentationTheme) {
             self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
             self.controller = controller
@@ -464,14 +513,17 @@ public class StickerPickerScreen: ViewController {
             let data = combineLatest(
                 queue: Queue.mainQueue(),
                 controller.inputData,
+                .single(nil) |> then(self.gifComponent.get() |> map(Optional.init)),
                 self.stickerSearchState.get(),
                 self.emojiSearchState.get()
             )
             
-            self.contentDisposable.set(data.start(next: { [weak self] inputData, stickerSearchState, emojiSearchState in
+            self.contentDisposable.set(data.start(next: { [weak self] inputData, gifData, stickerSearchState, emojiSearchState in
                 if let strongSelf = self {
                     let presentationData = strongSelf.presentationData
                     var inputData = inputData
+                    
+                    inputData.gifs = gifData?.component
                     
                     let emoji = inputData.emoji
                     if let emojiSearchResult = emojiSearchState.result {
@@ -509,12 +561,183 @@ public class StickerPickerScreen: ViewController {
                     strongSelf.updateContent(inputData)
                 }
             }))
+            
+            if controller.hasGifs {
+                let hasRecentGifs = context.engine.data.subscribe(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: Namespaces.OrderedItemList.CloudRecentGifs))
+                |> map { savedGifs -> Bool in
+                    return !savedGifs.isEmpty
+                }
+                
+                self.hasRecentGifsDisposable = (hasRecentGifs
+                |> deliverOnMainQueue).start(next: { [weak self] hasRecentGifs in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    if let gifMode = strongSelf.gifMode {
+                        if !hasRecentGifs, case .recent = gifMode {
+                            strongSelf.gifMode = .trending
+                        }
+                    } else {
+                        strongSelf.gifMode = hasRecentGifs ? .recent : .trending
+                    }
+                })
+            }
+            
+            self.gifInputInteraction = GifPagerContentComponent.InputInteraction(
+                performItemAction: { [weak self] item, view, rect in
+                    guard let self else {
+                        return
+                    }
+                    self.controller?.completion(.video(item.file.media))
+                    self.controller?.dismiss(animated: true)
+                },
+                openGifContextMenu: { [weak self] item, sourceView, sourceRect, gesture, isSaved in
+                    guard let self else {
+                        return
+                    }
+                    self.openGifContextMenu(file: item.file, contextResult: item.contextResult, sourceView: sourceView, sourceRect: sourceRect, gesture: gesture, isSaved: isSaved)
+                },
+                loadMore: { [weak self] token in
+                    guard let strongSelf = self, let gifContext = strongSelf.gifContext else {
+                        return
+                    }
+                    gifContext.loadMore(token: token)
+                },
+                openSearch: { [weak self] in
+                    if let self, let componentView = self.hostView.componentView as? StickerSelectionComponent.View {
+                        if let pagerView = componentView.keyboardView.view as? EntityKeyboardComponent.View {
+                            pagerView.openSearch()
+                        }
+                        self.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
+                    }
+                },
+                updateSearchQuery: { [weak self] query in
+                    guard let self else {
+                        return
+                    }
+                    if let query {
+                        self.gifMode = .emojiSearch(query)
+                    } else {
+                        self.gifMode = .recent
+                    }
+                },
+                hideBackground: true,
+                hasSearch: true
+            )
         }
         
         deinit {
             self.contentDisposable.dispose()
             self.emojiSearchDisposable.dispose()
             self.stickerSearchDisposable.dispose()
+            self.hasRecentGifsDisposable?.dispose()
+        }
+        
+        private func reloadGifContext() {
+            if let gifInputInteraction = self.gifInputInteraction, let gifMode = self.gifMode, let context = self.controller?.context {
+                self.gifContext = GifContext(context: context, subject: gifMode, gifInputInteraction: gifInputInteraction, trendingGifs: self.trendingGifsPromise.get())
+            }
+        }
+        
+        private func openGifContextMenu(file: FileMediaReference, contextResult: (ChatContextResultCollection, ChatContextResult)?, sourceView: UIView, sourceRect: CGRect, gesture: ContextGesture, isSaved: Bool) {
+            guard let controller = self.controller else {
+                return
+            }
+            let context = controller.context
+            
+            let canSaveGif: Bool
+            if file.media.fileId.namespace == Namespaces.Media.CloudFile {
+                canSaveGif = true
+            } else {
+                canSaveGif = false
+            }
+            
+            let _ = (context.engine.stickers.isGifSaved(id: file.media.fileId)
+            |> deliverOnMainQueue).start(next: { [weak self] isGifSaved in
+                var isGifSaved = isGifSaved
+                if !canSaveGif {
+                    isGifSaved = false
+                }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                
+                let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: PeerId(0), namespace: Namespaces.Message.Local, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [file.media], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+                
+                let gallery = GalleryController(context: context, source: .standaloneMessage(message), streamSingleVideo: true, replaceRootController: { _, _ in
+                }, baseNavigationController: nil)
+                gallery.setHintWillBePresentedInPreviewingContext(true)
+                
+                var items: [ContextMenuItem] = []
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaPicker_Send, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.actionSheet.primaryTextColor)
+                }, action: { [weak self] _, f in
+                    f(.default)
+                    if let self {
+                        if isSaved {
+                            self.controller?.completion(.video(file.media))
+                            self.controller?.dismiss(animated: true)
+                        } else {
+                            
+                        }
+//                        if isSaved {
+//                            let _ = self.interaction?.sendGif(file, sourceView, sourceRect, false, false)
+//                        } else if let (collection, result) = contextResult {
+//                            let _ = self.interaction?.sendBotContextResultAsGif(collection, result, sourceView, sourceRect, false, false)
+//                        }
+                    }
+                })))
+                
+                if isSaved || isGifSaved {
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
+                    }, action: { _, f in
+                        f(.dismissWithoutContent)
+                        
+                        let _ = removeSavedGif(postbox: context.account.postbox, mediaId: file.media.fileId).start()
+                    })))
+                } else if canSaveGif && !isGifSaved {
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.Preview_SaveGif, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { [weak self] _, f in
+                        f(.dismissWithoutContent)
+                        
+                        guard let self else {
+                            return
+                        }
+                        
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        let _ = (toggleGifSaved(account: context.account, fileReference: file, saved: true)
+                        |> deliverOnMainQueue).start(next: { [weak self] result in
+                            guard let controller = self?.controller else {
+                                return
+                            }
+                            switch result {
+                            case .generic:
+                                controller.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                            case let .limitExceeded(limit, premiumLimit):
+                                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+                                let text: String
+                                if limit == premiumLimit || premiumConfiguration.isPremiumDisabled {
+                                    text = presentationData.strings.Premium_MaxSavedGifsFinalText
+                                } else {
+                                    text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
+                                }
+                                controller.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { [weak controller] action in
+                                    if case .info = action {
+                                        let premiumController = context.sharedContext.makePremiumIntroController(context: context, source: .savedGifs, forceDark: true)
+                                        controller?.push(premiumController)
+                                        return true
+                                    }
+                                    return false
+                                }), in: .window(.root))
+                            }
+                        })
+                    })))
+                }
+                
+                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceView: sourceView, sourceRect: sourceRect)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+                controller.presentInGlobalOverlay(contextController)
+            })
         }
         
         func updateContent(_ content: StickerPickerInputData) {
@@ -922,6 +1145,9 @@ public class StickerPickerScreen: ViewController {
                     }
                 },
                 updateScrollingToItemGroup: { [weak self] in
+                    if let self, let componentView = self.hostView.componentView as? StickerSelectionComponent.View {
+                        componentView.scrolledToItemGroup()
+                    }
                     self?.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
                 },
                 onScroll: {},
@@ -1187,6 +1413,9 @@ public class StickerPickerScreen: ViewController {
                     }
                 },
                 updateScrollingToItemGroup: { [weak self] in
+                    if let self, let componentView = self.hostView.componentView as? StickerSelectionComponent.View {
+                        componentView.scrolledToItemGroup()
+                    }
                     self?.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
                 },
                 onScroll: {},
@@ -1653,6 +1882,7 @@ public class StickerPickerScreen: ViewController {
     private let theme: PresentationTheme
     private let inputData: Signal<StickerPickerInputData, NoError>
     fileprivate let defaultToEmoji: Bool
+    let hasGifs: Bool
     
     private var currentLayout: ContainerViewLayout?
     
@@ -1664,11 +1894,12 @@ public class StickerPickerScreen: ViewController {
     public var presentGallery: () -> Void = { }
     public var presentLocationPicker: () -> Void = { }
     
-    public init(context: AccountContext, inputData: Signal<StickerPickerInputData, NoError>, defaultToEmoji: Bool = false) {
+    public init(context: AccountContext, inputData: Signal<StickerPickerInputData, NoError>, defaultToEmoji: Bool = false, hasGifs: Bool = false) {
         self.context = context
         self.theme = defaultDarkColorPresentationTheme
         self.inputData = inputData
         self.defaultToEmoji = defaultToEmoji
+        self.hasGifs = hasGifs
         
         super.init(navigationBarPresentationData: nil)
         
@@ -1807,5 +2038,39 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
         }
         
         return size
+    }
+}
+
+private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
+    let controller: ViewController
+    weak var sourceView: UIView?
+    let sourceRect: CGRect
+    
+    let navigationController: NavigationController? = nil
+    
+    let passthroughTouches: Bool = false
+    
+    init(controller: ViewController, sourceView: UIView?, sourceRect: CGRect) {
+        self.controller = controller
+        self.sourceView = sourceView
+        self.sourceRect = sourceRect
+    }
+    
+    func transitionInfo() -> ContextControllerTakeControllerInfo? {
+        let sourceView = self.sourceView
+        let sourceRect = self.sourceRect
+        return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceView] in
+            if let sourceView = sourceView {
+                return (sourceView, sourceRect)
+            } else {
+                return nil
+            }
+        })
+    }
+    
+    func animatedIn() {
+        if let controller = self.controller as? GalleryController {
+            controller.viewDidAppear(false)
+        }
     }
 }

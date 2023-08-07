@@ -98,6 +98,9 @@ swift_library(
         "//submodules/StickerPackPreviewUI:StickerPackPreviewUI",
         "//submodules/TelegramUI/Components/LottieComponent",
         "//submodules/ImageTransparency",
+        "//submodules/GalleryUI",
+        "//submodules/MediaPlayer:UniversalMediaPlayer",
+        "//submodules/TelegramUniversalVideoContent",
     ],
     visibility = [
         "//visibility:public",

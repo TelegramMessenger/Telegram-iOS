@@ -17,14 +17,15 @@ public enum WebSearchMode {
 
 public enum WebSearchControllerMode {
     case media(attachment: Bool, completion: (ChatContextResultCollection, TGMediaSelectionContext, TGMediaEditingContext, Bool) -> Void)
+    case editor(completion: (UIImage) -> Void)
     case avatar(initialQuery: String?, completion: (UIImage) -> Void)
     
     var mode: WebSearchMode {
         switch self {
-            case .media:
-                return .media
-            case .avatar:
-                return .avatar
+        case .media, .editor:
+            return .media
+        case .avatar:
+            return .avatar
         }
     }
 }
@@ -81,7 +82,7 @@ public final class WebSearchController: ViewController {
     private var validLayout: ContainerViewLayout?
     
     private let context: AccountContext
-    private let mode: WebSearchControllerMode
+    let mode: WebSearchControllerMode
     private let peer: EnginePeer?
     private let chatLocation: ChatLocation?
     private let configuration: EngineConfiguration.SearchBots
@@ -193,6 +194,8 @@ public final class WebSearchController: ViewController {
         var attachment = false
         if case let .media(attachmentValue, _) = mode {
             attachment = attachmentValue
+        } else if case .editor = mode {
+            attachment = true
         }
         let navigationContentNode = WebSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, attachment: attachment)
         self.navigationContentNode = navigationContentNode
@@ -217,6 +220,8 @@ public final class WebSearchController: ViewController {
             case .media:
                 selectionState = TGMediaSelectionContext()
             case .avatar:
+                selectionState = nil
+            case .editor:
                 selectionState = nil
         }
         let editingState = TGMediaEditingContext()
@@ -345,10 +350,13 @@ public final class WebSearchController: ViewController {
         super.viewWillAppear(animated)
         
         var select = false
-        if case let .avatar(initialQuery, _) = mode, let _ = initialQuery {
+        if case let .avatar(initialQuery, _) = self.mode, let _ = initialQuery {
             select = true
         }
-        if case let .media(attachment, _) = mode, attachment && !self.didPlayPresentationAnimation {
+        if case let .media(attachment, _) = self.mode, attachment && !self.didPlayPresentationAnimation {
+            self.didPlayPresentationAnimation = true
+            self.controllerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        } else if case .editor = self.mode, !self.didPlayPresentationAnimation {
             self.didPlayPresentationAnimation = true
             self.controllerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
@@ -414,7 +422,7 @@ public final class WebSearchController: ViewController {
                     return state.state?.scope
                 }
                 |> distinctUntilChanged
-            case .avatar:
+            case .avatar, .editor:
                 scope = .single(.images)
         }
         
@@ -467,9 +475,7 @@ public final class WebSearchController: ViewController {
         let delayRequest = true
         let signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .single({ _ in return .contextRequestResult(nil, nil) })
         
-        guard let peerId = self.peer?.id else {
-            return .single({ _ in return .contextRequestResult(nil, nil) })
-        }
+        let peerId = self.peer?.id ?? self.context.account.peerId
         
         let botName: String?
         switch scope {

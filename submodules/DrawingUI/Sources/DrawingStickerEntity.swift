@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AsyncDisplayKit
 import AVFoundation
 import Display
 import SwiftSignalKit
@@ -9,31 +10,10 @@ import TelegramAnimatedStickerNode
 import StickerResources
 import AccountContext
 import MediaEditor
+import UniversalMediaPlayer
+import TelegramUniversalVideoContent
 
-public final class DrawingStickerEntityView: DrawingEntityView {
-    public class VideoView: UIView {
-        init(player: AVPlayer) {
-            super.init(frame: .zero)
-            
-            self.videoLayer.player = player
-        }
-        
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-        
-        var videoLayer: AVPlayerLayer {
-            guard let layer = self.layer as? AVPlayerLayer else {
-                fatalError()
-            }
-            return layer
-        }
-        
-        public override class var layerClass: AnyClass {
-            return AVPlayerLayer.self
-        }
-    }
-    
+public final class DrawingStickerEntityView: DrawingEntityView {    
     private var stickerEntity: DrawingStickerEntity {
         return self.entity as! DrawingStickerEntity
     }
@@ -46,27 +26,8 @@ public final class DrawingStickerEntityView: DrawingEntityView {
     
     private let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
-    
-    private var videoContainerView: UIView?
-    private var videoPlayer: AVPlayer?
-    public var videoView: VideoView?
-    private var videoImageView: UIImageView?
-    
-    public var mainView: MediaEditorPreviewView? {
-        didSet {
-            if let mainView = self.mainView {
-                self.videoContainerView?.addSubview(mainView)
-            } else {
-                if let previous = oldValue, previous.superview === self {
-                    previous.removeFromSuperview()
-                }
-                if let videoView = self.videoView {
-                    self.videoContainerView?.addSubview(videoView)
-                }
-            }
-        }
-    }
-    
+    private var videoNode: UniversalVideoNode?
+        
     private var didSetUpAnimationNode = false
     private let stickerFetchedDisposable = MetaDisposable()
     private let cachedDisposable = MetaDisposable()
@@ -109,9 +70,9 @@ public final class DrawingStickerEntityView: DrawingEntityView {
         }
     }
     
-    private var video: String? {
-        if case let .video(path, _, _) = self.stickerEntity.content {
-            return path
+    private var video: TelegramMediaFile? {
+        if case let .video(file) = self.stickerEntity.content {
+            return file
         } else {
             return nil
         }
@@ -123,13 +84,8 @@ public final class DrawingStickerEntityView: DrawingEntityView {
             return file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
         case let .image(image, _):
             return image.size
-        case let .video(_, image, _):
-            if let image {
-                let minSide = min(image.size.width, image.size.height)
-                return CGSize(width: minSide, height: minSide)
-            } else {
-                return CGSize(width: 512.0, height: 512.0)
-            }
+        case let .video(file):
+            return file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
         case .dualVideoReference:
             return CGSize(width: 512.0, height: 512.0)
         }
@@ -220,30 +176,46 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                 return context
             }), attemptSynchronously: synchronous)
             self.setNeedsLayout()
-        } else if case let .video(videoPath, image, _) = self.stickerEntity.content {
-            let url = URL(fileURLWithPath: videoPath)
-            let asset = AVURLAsset(url: url)
-            let playerItem = AVPlayerItem(asset: asset)
-            let player = AVPlayer(playerItem: playerItem)
-            player.automaticallyWaitsToMinimizeStalling = false
-           
-            let videoContainerView = UIView()
-            videoContainerView.clipsToBounds = true
-            
-            let videoView = VideoView(player: player)
-            videoContainerView.addSubview(videoView)
-            
-            self.addSubview(videoContainerView)
-            
-            self.videoPlayer = player
-            self.videoContainerView = videoContainerView
-            self.videoView = videoView
-            
-            let imageView = UIImageView(image: image)
-            imageView.clipsToBounds = true
-            imageView.contentMode = .scaleAspectFill
-            videoContainerView.addSubview(imageView)
-            self.videoImageView = imageView
+        } else if case let .video(file) = self.stickerEntity.content {
+            let videoNode = UniversalVideoNode(
+                postbox: self.context.account.postbox,
+                audioSession: self.context.sharedContext.mediaManager.audioSession,
+                manager: self.context.sharedContext.mediaManager.universalVideoManager,
+                decoration: StickerVideoDecoration(),
+                content: NativeVideoContent(
+                    id: .contextResult(0, "\(UInt64.random(in: 0 ... UInt64.max))"),
+                    userLocation: .other,
+                    fileReference: .standalone(media: file),
+                    imageReference: nil,
+                    streamVideo: .story,
+                    loopVideo: true,
+                    enableSound: false,
+                    soundMuted: true,
+                    beginWithAmbientSound: false,
+                    mixWithOthers: true,
+                    useLargeThumbnail: false,
+                    autoFetchFullSizeThumbnail: false,
+                    tempFilePath: nil,
+                    captureProtected: false,
+                    hintDimensions: file.dimensions?.cgSize,
+                    storeAfterDownload: nil,
+                    displayImage: false,
+                    hasSentFramesToDisplay: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.videoNode?.isHidden = false
+                    }
+                ),
+                priority: .gallery
+            )
+            videoNode.canAttachContent = true
+            videoNode.isUserInteractionEnabled = false
+            videoNode.cornerRadius = floor(CGFloat(file.dimensions?.width ?? 512) * 0.03)
+            videoNode.clipsToBounds = true
+            self.addSubnode(videoNode)
+            self.videoNode = videoNode
+            self.setNeedsLayout()
         }
     }
     
@@ -251,27 +223,14 @@ public final class DrawingStickerEntityView: DrawingEntityView {
         self.isVisible = true
         self.applyVisibility()
         
-        if let player = self.videoPlayer {
-            player.play()
-            
-            if let videoImageView = self.videoImageView {
-                self.videoImageView = nil
-                Queue.mainQueue().after(0.1) {
-                    videoImageView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak videoImageView] _ in
-                        videoImageView?.removeFromSuperview()
-                    })
-                }
-            }
-        }
+        self.videoNode?.play()
     }
     
     public override func pause() {
         self.isVisible = false
         self.applyVisibility()
         
-        if let player = self.videoPlayer {
-            player.pause()
-        }
+        self.videoNode?.pause()
     }
     
     public override func seek(to timestamp: Double) {
@@ -279,9 +238,7 @@ public final class DrawingStickerEntityView: DrawingEntityView {
         self.isPlaying = false
         self.animationNode?.seekTo(.timestamp(timestamp))
         
-        if let player = self.videoPlayer {
-            player.seek(to: CMTime(seconds: timestamp, preferredTimescale: CMTimeScale(60.0)), toleranceBefore: .zero, toleranceAfter: .zero, completionHandler: { _ in })
-        }
+        self.videoNode?.seek(timestamp)
     }
     
     override func resetToStart() {
@@ -343,16 +300,10 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                 }
             }
             
-            if let videoView = self.videoView {
-                let videoSize = CGSize(width: imageFrame.width, height: imageFrame.width / 9.0 * 16.0)
-                videoView.frame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((imageFrame.height - videoSize.height) / 2.0)), size: videoSize)
-            }
-            if let videoContainerView = self.videoContainerView {
-                videoContainerView.layer.cornerRadius = imageFrame.width / 2.0
-                videoContainerView.frame = imageFrame
-            }
-            if let videoImageView = self.videoImageView {
-                videoImageView.frame = CGRect(origin: .zero, size: imageFrame.size)
+            if let videoNode = self.videoNode {
+                let videoSize = self.dimensions.aspectFitted(boundingSize)
+                videoNode.frame = CGRect(origin: CGPoint(x: floor((size.width - videoSize.width) * 0.5), y: floor((size.height - videoSize.height) * 0.5)), size: videoSize)
+                videoNode.updateLayout(size: videoSize, transition: .immediate)
             }
             
             self.update(animated: false)
@@ -386,18 +337,18 @@ public final class DrawingStickerEntityView: DrawingEntityView {
             UIView.animate(withDuration: 0.25, animations: {
                 self.imageNode.transform = animationTargetTransform
                 self.animationNode?.transform = animationTargetTransform
-                self.videoContainerView?.layer.transform = animationTargetTransform
+                self.videoNode?.transform = animationTargetTransform
             }, completion: { finished in
                 self.imageNode.transform = staticTransform
                 self.animationNode?.transform = staticTransform
-                self.videoContainerView?.layer.transform = staticTransform
+                self.videoNode?.transform = staticTransform
             })
         } else {
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             self.imageNode.transform = staticTransform
             self.animationNode?.transform = staticTransform
-            self.videoContainerView?.layer.transform = staticTransform
+            self.videoNode?.transform = staticTransform
             CATransaction.commit()
         }
         
@@ -711,5 +662,119 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
         
         self.leftHandle.position = CGPoint(x: actualInset, y: self.bounds.midY)
         self.rightHandle.position = CGPoint(x: self.bounds.maxX - actualInset, y: self.bounds.midY)
+    }
+}
+
+private final class StickerVideoDecoration: UniversalVideoDecoration {
+    public let backgroundNode: ASDisplayNode? = nil
+    public let contentContainerNode: ASDisplayNode
+    public let foregroundNode: ASDisplayNode? = nil
+    
+    private var contentNode: (ASDisplayNode & UniversalVideoContentNode)?
+    
+    private var validLayoutSize: CGSize?
+    
+    public init() {
+        self.contentContainerNode = ASDisplayNode()
+    }
+    
+    public func updateContentNode(_ contentNode: (UniversalVideoContentNode & ASDisplayNode)?) {
+        if self.contentNode !== contentNode {
+            let previous = self.contentNode
+            self.contentNode = contentNode
+            
+            if let previous = previous {
+                if previous.supernode === self.contentContainerNode {
+                    previous.removeFromSupernode()
+                }
+            }
+            
+            if let contentNode = contentNode {
+                if contentNode.supernode !== self.contentContainerNode {
+                    self.contentContainerNode.addSubnode(contentNode)
+                    if let validLayoutSize = self.validLayoutSize {
+                        contentNode.frame = CGRect(origin: CGPoint(), size: validLayoutSize)
+                        contentNode.updateLayout(size: validLayoutSize, transition: .immediate)
+                    }
+                }
+            }
+        }
+    }
+    
+    public func updateCorners(_ corners: ImageCorners) {
+        self.contentContainerNode.clipsToBounds = true
+        if isRoundEqualCorners(corners) {
+            self.contentContainerNode.cornerRadius = corners.topLeft.radius
+        } else {
+            let boundingSize: CGSize = CGSize(width: max(corners.topLeft.radius, corners.bottomLeft.radius) + max(corners.topRight.radius, corners.bottomRight.radius), height: max(corners.topLeft.radius, corners.topRight.radius) + max(corners.bottomLeft.radius, corners.bottomRight.radius))
+            let size: CGSize = CGSize(width: boundingSize.width + corners.extendedEdges.left + corners.extendedEdges.right, height: boundingSize.height + corners.extendedEdges.top + corners.extendedEdges.bottom)
+            let arguments = TransformImageArguments(corners: corners, imageSize: size, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets())
+            guard let context = DrawingContext(size: size, clear: true) else {
+                return
+            }
+            context.withContext { ctx in
+                ctx.setFillColor(UIColor.black.cgColor)
+                ctx.fill(arguments.drawingRect)
+            }
+            addCorners(context, arguments: arguments)
+            
+            if let maskImage = context.generateImage() {
+                let mask = CALayer()
+                mask.contents = maskImage.cgImage
+                mask.contentsScale = maskImage.scale
+                mask.contentsCenter = CGRect(x: max(corners.topLeft.radius, corners.bottomLeft.radius) / maskImage.size.width, y: max(corners.topLeft.radius, corners.topRight.radius) / maskImage.size.height, width: (maskImage.size.width - max(corners.topLeft.radius, corners.bottomLeft.radius) - max(corners.topRight.radius, corners.bottomRight.radius)) / maskImage.size.width, height: (maskImage.size.height - max(corners.topLeft.radius, corners.topRight.radius) - max(corners.bottomLeft.radius, corners.bottomRight.radius)) / maskImage.size.height)
+                
+                self.contentContainerNode.layer.mask = mask
+                self.contentContainerNode.layer.mask?.frame = self.contentContainerNode.bounds
+            }
+        }
+    }
+    
+    public func updateClippingFrame(_ frame: CGRect, completion: (() -> Void)?) {
+        self.contentContainerNode.layer.animate(from: NSValue(cgRect: self.contentContainerNode.bounds), to: NSValue(cgRect: frame), keyPath: "bounds", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+        })
+
+        if let maskLayer = self.contentContainerNode.layer.mask {
+            maskLayer.animate(from: NSValue(cgRect: self.contentContainerNode.bounds), to: NSValue(cgRect: frame), keyPath: "bounds", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+            })
+            
+            maskLayer.animate(from: NSValue(cgPoint: maskLayer.position), to: NSValue(cgPoint: frame.center), keyPath: "position", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+            })
+        }
+        
+        if let contentNode = self.contentNode {
+            contentNode.layer.animate(from: NSValue(cgPoint: contentNode.layer.position), to: NSValue(cgPoint: frame.center), keyPath: "position", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                completion?()
+            })
+        }
+    }
+    
+    public func updateContentNodeSnapshot(_ snapshot: UIView?) {
+    }
+    
+    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+        self.validLayoutSize = size
+        
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        if let backgroundNode = self.backgroundNode {
+            transition.updateFrame(node: backgroundNode, frame: bounds)
+        }
+        if let foregroundNode = self.foregroundNode {
+            transition.updateFrame(node: foregroundNode, frame: bounds)
+        }
+        transition.updateFrame(node: self.contentContainerNode, frame: bounds)
+        if let maskLayer = self.contentContainerNode.layer.mask {
+            transition.updateFrame(layer: maskLayer, frame: bounds)
+        }
+        if let contentNode = self.contentNode {
+            transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(), size: size))
+            contentNode.updateLayout(size: size, transition: transition)
+        }
+    }
+    
+    public func setStatus(_ status: Signal<MediaPlayerStatus?, NoError>) {
+    }
+    
+    public func tap() {
     }
 }

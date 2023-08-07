@@ -13,6 +13,7 @@ import ChatControllerInteraction
 import MultiplexedVideoNode
 import FeaturedStickersScreen
 import StickerPeekUI
+import EntityKeyboardGifContent
 
 private let searchBarHeight: CGFloat = 52.0
 

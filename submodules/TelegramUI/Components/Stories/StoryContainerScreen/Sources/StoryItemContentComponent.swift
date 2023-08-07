@@ -758,6 +758,9 @@ final class StoryItemContentComponent: Component {
                     if maskView.subviews.isEmpty {
                         let referenceSize = availableSize
                         for mediaArea in component.item.mediaAreas {
+                            guard case .venue = mediaArea else {
+                                continue
+                            }
                             let size = CGSize(width: mediaArea.coordinates.width / 100.0 * referenceSize.width, height: mediaArea.coordinates.height / 100.0 * referenceSize.height)
                             let position = CGPoint(x: mediaArea.coordinates.x / 100.0 * referenceSize.width, y: mediaArea.coordinates.y / 100.0 * referenceSize.height)
                             

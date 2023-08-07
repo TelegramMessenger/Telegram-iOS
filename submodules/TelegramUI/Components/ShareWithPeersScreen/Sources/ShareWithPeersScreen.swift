@@ -300,6 +300,7 @@ final class ShareWithPeersScreenComponent: Component {
         private let categoryTemplateItem = ComponentView<Empty>()
         private let peerTemplateItem = ComponentView<Empty>()
         private let optionTemplateItem = ComponentView<Empty>()
+        private let footerTemplateItem = ComponentView<Empty>()
         
         private let itemContainerView: UIView
         private var visibleSectionHeaders: [Int: ComponentView<Empty>] = [:]
@@ -1033,7 +1034,7 @@ final class ShareWithPeersScreenComponent: Component {
                                 }
                             )),
                             maximumNumberOfLines: 0,
-                            lineSpacing: 0.2,
+                            lineSpacing: 0.1,
                             highlightColor: UIColor(rgb: 0x007aff, alpha: 0.2),
                             highlightAction: { attributes in
                                 if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
@@ -1166,7 +1167,7 @@ final class ShareWithPeersScreenComponent: Component {
                             itemTransition.setFrame(view: itemView, frame: itemFrame)
                         }
                     }
-                } else if section.id == 2 {
+                } else if section.id == 2 && section.itemCount > 0 {
                     for i in 0 ..< component.optionItems.count {
                         let itemFrame = CGRect(origin: CGPoint(x: itemLayout.sideInset, y: sectionOffset + section.insets.top + CGFloat(i) * section.itemHeight), size: CGSize(width: itemLayout.containerSize.width, height: section.itemHeight))
                         if !visibleBounds.intersects(itemFrame) {
@@ -1645,7 +1646,6 @@ final class ShareWithPeersScreenComponent: Component {
                 
             transition.setFrame(view: self.dimView, frame: CGRect(origin: CGPoint(), size: availableSize))
             
-            
             let categoryItemSize = self.categoryTemplateItem.update(
                 transition: .immediate,
                 component: AnyComponent(CategoryListItemComponent(
@@ -1696,6 +1696,76 @@ final class ShareWithPeersScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: itemsContainerWidth, height: 1000.0)
             )
+            
+            var footersTotalHeight: CGFloat = 0.0
+            if case let .stories(editing) = component.stateContext.subject {
+                let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.freeTextColor)
+                let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.freeTextColor)
+                let link = MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemAccentColor)
+                
+                let firstFooterText: String
+                if let grayListPeers = component.stateContext.stateValue?.grayListPeers, !grayListPeers.isEmpty {
+                    let footerValue = environment.strings.Story_Privacy_GrayListPeople(Int32(grayListPeers.count))
+                    firstFooterText = environment.strings.Story_Privacy_GrayListSelected(footerValue).string
+                } else {
+                    firstFooterText = environment.strings.Story_Privacy_GrayListSelect
+                }
+                
+                let footerInset: CGFloat = 7.0
+                let firstFooterSize = self.footerTemplateItem.update(
+                    transition: transition,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .markdown(text: firstFooterText, attributes: MarkdownAttributes(
+                            body: body,
+                            bold: bold,
+                            link: link,
+                            linkAttribute: { url in
+                                return ("URL", url)
+                            }
+                        )),
+                        maximumNumberOfLines: 0,
+                        lineSpacing: 0.1,
+                        highlightColor: .clear,
+                        highlightAction: { _ in
+                            return nil
+                        },
+                        tapAction: { _, _ in
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: itemsContainerWidth - 16.0 * 2.0, height: 1000.0)
+                )
+                footersTotalHeight += firstFooterSize.height + footerInset
+                
+                if !editing {
+                    let footerValue = environment.strings.Story_Privacy_KeepOnMyPageHours(Int32(component.timeout / 3600))
+                    let secondFooterText = environment.strings.Story_Privacy_KeepOnMyPageInfo(footerValue).string
+                    let secondFooterSize = self.footerTemplateItem.update(
+                        transition: transition,
+                        component: AnyComponent(MultilineTextComponent(
+                            text: .markdown(text: secondFooterText, attributes: MarkdownAttributes(
+                                body: body,
+                                bold: bold,
+                                link: link,
+                                linkAttribute: { url in
+                                    return ("URL", url)
+                                }
+                            )),
+                            maximumNumberOfLines: 0,
+                            lineSpacing: 0.1,
+                            highlightColor: .clear,
+                            highlightAction: { _ in
+                                return nil
+                            },
+                            tapAction: { _, _ in
+                            }
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: itemsContainerWidth - 16.0 * 2.0, height: 1000.0)
+                    )
+                    footersTotalHeight += secondFooterSize.height + footerInset
+                }
+            }
             
             var sections: [ItemLayout.Section] = []
             if let stateValue = self.effectiveStateValue {
@@ -1815,13 +1885,14 @@ final class ShareWithPeersScreenComponent: Component {
             if environment.inputHeight != 0.0 || !self.navigationTextFieldState.text.isEmpty {
                 topInset = 0.0
             } else {
-                let inset: CGFloat
+                var inset: CGFloat
                 if case let .stories(editing) = component.stateContext.subject {
                     if editing {
-                        inset = 478.0
+                        inset = 351.0
                     } else {
-                        inset = 630.0
+                        inset = 464.0
                     }
+                    inset += 10.0 + environment.safeInsets.bottom + 50.0 + footersTotalHeight
                 } else {
                     inset = 600.0
                 }
@@ -2024,7 +2095,7 @@ final class ShareWithPeersScreenComponent: Component {
             transition.setFrame(layer: self.bottomSeparatorLayer, frame: CGRect(origin: CGPoint(x: containerSideInset + sideInset, y: availableSize.height - bottomPanelHeight - 8.0 - UIScreenPixel), size: CGSize(width: containerWidth, height: UIScreenPixel)))
                         
             let itemContainerSize = CGSize(width: itemsContainerWidth, height: availableSize.height)
-            let itemLayout = ItemLayout(style: itemLayoutStyle, containerSize: itemContainerSize, containerInset: containerInset, bottomInset: bottomPanelHeight, topInset: topInset, sideInset: sideInset, navigationHeight: navigationHeight, sections: sections)
+            let itemLayout = ItemLayout(style: itemLayoutStyle, containerSize: itemContainerSize, containerInset: containerInset, bottomInset: footersTotalHeight, topInset: topInset, sideInset: sideInset, navigationHeight: navigationHeight, sections: sections)
             let previousItemLayout = self.itemLayout
             self.itemLayout = itemLayout
             
