@@ -4093,6 +4093,8 @@ public final class StoryItemSetContainerComponent: Component {
                                             self.updateIsProgressPaused()
                                             self.state?.updated(transition: .easeInOut(duration: 0.2))
                                             
+                                            HapticFeedback().success()
+                                            
                                             commit({})
                                         }
                                     }
@@ -4141,6 +4143,8 @@ public final class StoryItemSetContainerComponent: Component {
                                             self.updateIsProgressPaused()
                                             self.state?.updated(transition: .easeInOut(duration: 0.2))
                                             
+                                            HapticFeedback().success()
+                                            
                                             commit({})
                                         }
                                     }
@@ -4158,6 +4162,8 @@ public final class StoryItemSetContainerComponent: Component {
                                         self.rewindCurrentItem()
                                         self.updateIsProgressPaused()
                                         self.state?.updated(transition: .easeInOut(duration: 0.2))
+                                        
+                                        HapticFeedback().success()
                                     }
                                     commit({})
                                 }
@@ -4170,6 +4176,8 @@ public final class StoryItemSetContainerComponent: Component {
                         self.rewindCurrentItem()
                         self.updateIsProgressPaused()
                         self.state?.updated(transition: .easeInOut(duration: 0.2))
+                        
+                        HapticFeedback().success()
                         
                         commit({})
                     }
