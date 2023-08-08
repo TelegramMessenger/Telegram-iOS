@@ -66,7 +66,7 @@ public class PremiumLimitsListScreen: ViewController {
             self.pagerView = ComponentHostView()
             self.closeView = ComponentHostView()
             
-            self.footerNode = FooterNode(theme: self.presentationData.theme, title: buttonTitle, gloss: gloss)
+            self.footerNode = FooterNode(theme: self.presentationData.theme, title: buttonTitle, gloss: gloss, order: controller.order)
             
             super.init()
                         
@@ -1087,6 +1087,8 @@ public class PremiumLimitsListScreen: ViewController {
 }
 
 private class FooterNode: ASDisplayNode {
+    private let order: [PremiumPerk]?
+    
     private let backgroundNode: NavigationBackgroundNode
     private let separatorNode: ASDisplayNode
     private let coverNode: ASDisplayNode
@@ -1099,7 +1101,8 @@ private class FooterNode: ASDisplayNode {
     
     var action: () -> Void = {}
         
-    init(theme: PresentationTheme, title: String, gloss: Bool) {
+    init(theme: PresentationTheme, title: String, gloss: Bool, order: [PremiumPerk]?) {
+        self.order = order
         self.theme = theme
         
         self.backgroundNode = NavigationBackgroundNode(color: theme.rootController.tabBar.backgroundColor)
@@ -1171,7 +1174,7 @@ private class FooterNode: ASDisplayNode {
                 
         var panelHeight: CGFloat = bottomPanelPadding + 50.0 + bottomInset + 8.0
         var buttonOffset: CGFloat = 20.0
-        if let (_, count) = self.currentParams, count > 1 {
+        if let order, order.count > 1 {
             panelHeight += 20.0
             buttonOffset += 20.0
         }
