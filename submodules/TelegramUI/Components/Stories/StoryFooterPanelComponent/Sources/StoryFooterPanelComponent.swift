@@ -24,7 +24,7 @@ public final class StoryFooterPanelComponent: Component {
     
     public let context: AccountContext
     public let strings: PresentationStrings
-    public let storyItem: EngineStoryItem?
+    public let storyItem: EngineStoryItem
     public let externalViews: EngineStoryItem.Views?
     public let expandFraction: CGFloat
     public let expandViewStats: () -> Void
@@ -34,7 +34,7 @@ public final class StoryFooterPanelComponent: Component {
     public init(
         context: AccountContext,
         strings: PresentationStrings,
-        storyItem: EngineStoryItem?,
+        storyItem: EngineStoryItem,
         externalViews: EngineStoryItem.Views?,
         expandFraction: CGFloat,
         expandViewStats: @escaping () -> Void,
@@ -72,8 +72,8 @@ public final class StoryFooterPanelComponent: Component {
     
     public final class View: UIView {
         private let viewStatsButton: HighlightTrackingButton
-        private let viewStatsText: AnimatedCountLabelView
-        private let viewStatsExpandedText: AnimatedCountLabelView
+        private let viewStatsCountText: AnimatedCountLabelView
+        private let viewStatsLabelText = ComponentView<Empty>()
         private let deleteButton = ComponentView<Empty>()
         
         private var reactionStatsIcon: UIImageView?
@@ -82,6 +82,8 @@ public final class StoryFooterPanelComponent: Component {
         private var statusButton: HighlightableButton?
         private var statusNode: SemanticStatusNode?
         private var uploadingText: ComponentView<Empty>?
+        
+        private let viewsIconView: UIImageView
         
         private let avatarsContext: AnimatedAvatarSetContext
         private let avatarsView: AnimatedAvatarSetView
@@ -96,8 +98,9 @@ public final class StoryFooterPanelComponent: Component {
         
         override init(frame: CGRect) {
             self.viewStatsButton = HighlightTrackingButton()
-            self.viewStatsText = AnimatedCountLabelView(frame: CGRect())
-            self.viewStatsExpandedText = AnimatedCountLabelView(frame: CGRect())
+            self.viewStatsCountText = AnimatedCountLabelView(frame: CGRect())
+            
+            self.viewsIconView = UIImageView()
             
             self.avatarsContext = AnimatedAvatarSetContext()
             self.avatarsView = AnimatedAvatarSetView()
@@ -106,8 +109,12 @@ public final class StoryFooterPanelComponent: Component {
             
             super.init(frame: frame)
             
+            self.viewsIconView.image = UIImage(bundleImageName: "Stories/EmbeddedViewIcon")
+            self.externalContainerView.addSubview(self.viewsIconView)
+            
             self.avatarsView.isUserInteractionEnabled = false
             self.externalContainerView.addSubview(self.avatarsView)
+            self.addSubview(self.externalContainerView)
             self.addSubview(self.viewStatsButton)
             
             self.viewStatsButton.highligthedChanged = { [weak self] highlighted in
@@ -116,12 +123,20 @@ public final class StoryFooterPanelComponent: Component {
                 }
                 if highlighted {
                     self.avatarsView.alpha = 0.7
-                    self.viewStatsText.alpha = 0.7
+                    self.viewStatsCountText.alpha = 0.7
+                    self.viewStatsLabelText.view?.alpha = 0.7
                     self.reactionStatsIcon?.alpha = 0.7
                     self.reactionStatsText?.alpha = 0.7
                 } else {
+                    self.avatarsView.alpha = 1.0
+                    self.viewStatsCountText.alpha = 1.0
+                    self.viewStatsLabelText.view?.alpha = 1.0
+                    self.reactionStatsIcon?.alpha = 1.0
+                    self.reactionStatsText?.alpha = 1.0
+                    
                     self.avatarsView.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
-                    self.viewStatsText.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
+                    self.viewStatsCountText.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
+                    self.viewStatsLabelText.view?.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
                     self.reactionStatsIcon?.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
                     self.reactionStatsText?.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
                 }
@@ -148,27 +163,26 @@ public final class StoryFooterPanelComponent: Component {
             guard let component = self.component else {
                 return
             }
-            guard let storyItem = component.storyItem else {
-                return
-            }
-            component.context.engine.messages.cancelStoryUpload(stableId: storyItem.id)
+            component.context.engine.messages.cancelStoryUpload(stableId: component.storyItem.id)
         }
         
         func update(component: StoryFooterPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let isFirstTime = self.component == nil
+            
+            self.isUserInteractionEnabled = component.expandFraction == 0.0
             
             var synchronousLoad = true
             if let hint = transition.userData(AnimationHint.self) {
                 synchronousLoad = hint.synchronousLoad
             }
             
-            if self.component?.storyItem?.id != component.storyItem?.id || self.component?.storyItem?.isPending != component.storyItem?.isPending {
+            if self.component?.storyItem.id != component.storyItem.id || self.component?.storyItem.isPending != component.storyItem.isPending {
                 self.uploadProgressDisposable?.dispose()
                 self.uploadProgress = 0.0
                 
-                if let storyItem = component.storyItem, storyItem.isPending {
+                if component.storyItem.isPending {
                     var applyState = false
-                    self.uploadProgressDisposable = (component.context.engine.messages.storyUploadProgress(stableId: storyItem.id)
+                    self.uploadProgressDisposable = (component.context.engine.messages.storyUploadProgress(stableId: component.storyItem.id)
                     |> deliverOnMainQueue).start(next: { [weak self] progress in
                         guard let self else {
                             return
@@ -188,13 +202,12 @@ public final class StoryFooterPanelComponent: Component {
             let baseHeight: CGFloat = 44.0
             let size = CGSize(width: availableSize.width, height: baseHeight)
             
-            var leftOffset: CGFloat = 16.0
-            
-            let avatarSpacing: CGFloat = 18.0
+            let sideContentMaxFraction: CGFloat = 0.2
+            let sideContentFraction = min(component.expandFraction, sideContentMaxFraction) / sideContentMaxFraction
             
             let avatarsAlpha: CGFloat
             let baseViewCountAlpha: CGFloat
-            if let storyItem = component.storyItem, storyItem.isPending {
+            if component.storyItem.isPending {
                 baseViewCountAlpha = 0.0
                 
                 let statusButton: HighlightableButton
@@ -247,8 +260,11 @@ public final class StoryFooterPanelComponent: Component {
                 }
                 innerLeftOffset += uploadingTextSize.width + 8.0
                 
-                transition.setFrame(view: statusButton, frame: CGRect(origin: CGPoint(x: leftOffset, y: 0.0), size: CGSize(width: innerLeftOffset, height: size.height)))
-                leftOffset += innerLeftOffset
+                var statusButtonFrame = CGRect(origin: CGPoint(x: 16.0, y: 0.0), size: CGSize(width: innerLeftOffset, height: size.height))
+                statusButtonFrame.origin.y += component.expandFraction * 45.0
+                transition.setFrame(view: statusButton, frame: statusButtonFrame)
+                
+                transition.setAlpha(view: statusButton, alpha: 1.0 - sideContentFraction)
                 
                 avatarsAlpha = 0.0
             } else {
@@ -269,43 +285,29 @@ public final class StoryFooterPanelComponent: Component {
                 baseViewCountAlpha = 1.0
             }
             
+            //TODO:upload
+            let _ = baseViewCountAlpha
+            
             var peers: [EnginePeer] = []
-            if let seenPeers = component.externalViews?.seenPeers ?? component.storyItem?.views?.seenPeers {
+            if let seenPeers = component.externalViews?.seenPeers ?? component.storyItem.views?.seenPeers {
                 peers = Array(seenPeers.prefix(3))
             }
             let avatarsContent = self.avatarsContext.update(peers: peers, animated: false)
             let avatarsSize = self.avatarsView.update(context: component.context, content: avatarsContent, itemSize: CGSize(width: 30.0, height: 30.0), animation: isFirstTime ? ListViewItemUpdateAnimation.None : ListViewItemUpdateAnimation.System(duration: 0.25, transition: ControlledTransition(duration: 0.25, curve: .easeInOut, interactive: false)), synchronousLoad: synchronousLoad)
             
-            let avatarsNodeFrame = CGRect(origin: CGPoint(x: leftOffset, y: floor((size.height - avatarsSize.height) * 0.5)), size: avatarsSize)
-            self.avatarsView.center = avatarsNodeFrame.center
-            self.avatarsView.bounds = CGRect(origin: CGPoint(), size: avatarsNodeFrame.size)
-            transition.setAlpha(view: self.avatarsView, alpha: avatarsAlpha)
-            if !avatarsSize.width.isZero {
-                leftOffset = avatarsNodeFrame.maxX + avatarSpacing
-            }
-            
             var viewCount = 0
             var reactionCount = 0
-            if let views = component.externalViews ?? component.storyItem?.views, views.seenCount != 0 {
+            if let views = component.externalViews ?? component.storyItem.views, views.seenCount != 0 {
                 viewCount = views.seenCount
                 reactionCount = views.reactedCount
             }
-            
-            let viewsText: String
-            if viewCount == 0 {
-                viewsText = component.strings.Story_Footer_NoViews
-            } else {
-                viewsText = component.strings.Story_Footer_Views(Int32(viewCount))
-            }
-            let _ = viewsText
             
             self.viewStatsButton.isEnabled = viewCount != 0
             
             //TODO:localize
             var regularSegments: [AnimatedCountLabelView.Segment] = []
-            if viewCount != 0 {
-                regularSegments.append(.number(viewCount, NSAttributedString(string: "\(viewCount)", font: Font.regular(15.0), textColor: .white)))
-            }
+            regularSegments.append(.number(viewCount, NSAttributedString(string: "\(viewCount)", font: Font.regular(15.0), textColor: .white)))
+            
             let viewPart: String
             if viewCount == 0 {
                 viewPart = "No Views"
@@ -314,55 +316,22 @@ public final class StoryFooterPanelComponent: Component {
             } else {
                 viewPart = " Views"
             }
-            regularSegments.append(.text(1, NSAttributedString(string: viewPart, font: Font.regular(15.0), textColor: .white)))
             
-            var expandedSegments: [AnimatedCountLabelView.Segment] = []
-            if viewCount != 0 {
-                expandedSegments.append(.number(viewCount, NSAttributedString(string: "\(viewCount)", font: Font.semibold(17.0), textColor: .white)))
-            }
-            expandedSegments.append(.text(1, NSAttributedString(string: viewPart, font: Font.semibold(17.0), textColor: .white)))
-            
-            let viewStatsTextLayout = self.viewStatsText.update(size: CGSize(width: availableSize.width, height: size.height), segments: regularSegments, transition: isFirstTime ? .immediate : ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut))
-            let expandedViewStatsTextLayout = self.viewStatsExpandedText.update(size: CGSize(width: availableSize.width, height: size.height), segments: expandedSegments, transition: isFirstTime ? .immediate : ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut))
-            
-            let viewStatsTextSize = viewStatsTextLayout.size
-            let viewStatsExpandedTextSize = expandedViewStatsTextLayout.size
-            
-            let viewStatsCollapsedFrame = CGRect(origin: CGPoint(x: leftOffset, y: floor((size.height - viewStatsTextSize.height) * 0.5)), size: viewStatsTextSize)
-            let viewStatsExpandedFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - viewStatsExpandedTextSize.width) * 0.5), y: 3.0 + floor((size.height - viewStatsExpandedTextSize.height) * 0.5)), size: viewStatsExpandedTextSize)
-            let viewStatsCurrentFrame = viewStatsCollapsedFrame.interpolate(to: viewStatsExpandedFrame, amount: component.expandFraction)
-            
-            let viewStatsTextCenter = viewStatsCollapsedFrame.center.interpolate(to: viewStatsExpandedFrame.center, amount: component.expandFraction)
-            
-            let viewStatsTextFrame = viewStatsCollapsedFrame.size.centered(around: viewStatsTextCenter)
-            do {
-                let viewStatsTextView = self.viewStatsText
-                
-                if viewStatsTextView.superview == nil {
-                    viewStatsTextView.isUserInteractionEnabled = false
-                    self.externalContainerView.addSubview(viewStatsTextView)
-                }
-                transition.setPosition(view: viewStatsTextView, position: viewStatsTextFrame.center)
-                transition.setBounds(view: viewStatsTextView, bounds: CGRect(origin: CGPoint(), size: viewStatsTextFrame.size))
-                transition.setAlpha(view: viewStatsTextView, alpha: pow(1.0 - component.expandFraction, 1.2) * baseViewCountAlpha)
-                transition.setScale(view: viewStatsTextView, scale: viewStatsCurrentFrame.width / viewStatsTextFrame.width)
+            let viewStatsTextLayout = self.viewStatsCountText.update(size: CGSize(width: availableSize.width, height: size.height), segments: regularSegments, transition: isFirstTime ? .immediate : ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut))
+            if self.viewStatsCountText.superview == nil {
+                self.viewStatsCountText.isUserInteractionEnabled = false
+                self.externalContainerView.addSubview(self.viewStatsCountText)
             }
             
-            let viewStatsExpandedTextFrame = viewStatsExpandedFrame.size.centered(around: viewStatsTextCenter)
-            do {
-                let viewStatsExpandedTextView = self.viewStatsExpandedText
-                
-                if viewStatsExpandedTextView.superview == nil {
-                    viewStatsExpandedTextView.isUserInteractionEnabled = false
-                    self.addSubview(viewStatsExpandedTextView)
-                }
-                transition.setPosition(view: viewStatsExpandedTextView, position: viewStatsExpandedTextFrame.center)
-                transition.setBounds(view: viewStatsExpandedTextView, bounds: CGRect(origin: CGPoint(), size: viewStatsExpandedTextFrame.size))
-                transition.setAlpha(view: viewStatsExpandedTextView, alpha: pow(component.expandFraction, 1.2) * baseViewCountAlpha)
-                transition.setScale(view: viewStatsExpandedTextView, scale: viewStatsCurrentFrame.width / viewStatsExpandedTextFrame.width)
-            }
+            let viewStatsLabelSize = self.viewStatsLabelText.update(
+                transition: .immediate,
+                component: AnyComponent(Text(text: viewPart, font: Font.regular(15.0), color: .white)),
+                environment: {},
+                containerSize: CGSize(width: 200.0, height: 100.0)
+            )
             
-            var statsButtonWidth = viewStatsTextFrame.maxY + 8.0
+            var reactionsIconSize: CGSize?
+            var reactionsTextSize: CGSize?
             
             if reactionCount != 0 {
                 var reactionsTransition = transition
@@ -373,11 +342,12 @@ public final class StoryFooterPanelComponent: Component {
                     reactionsTransition = reactionsTransition.withAnimation(.none)
                     reactionStatsIcon = UIImageView()
                     reactionStatsIcon.image = UIImage(bundleImageName: "Stories/InputLikeOn")?.withRenderingMode(.alwaysTemplate)
-                    reactionStatsIcon.tintColor = UIColor(rgb: 0xFF3B30)
                     
                     self.reactionStatsIcon = reactionStatsIcon
                     self.externalContainerView.addSubview(reactionStatsIcon)
                 }
+                
+                transition.setTintColor(view: reactionStatsIcon, color: UIColor(rgb: 0xFF3B30).mixedWith(.white, alpha: component.expandFraction))
                 
                 let reactionStatsText: AnimatedCountLabelView
                 if let current = self.reactionStatsText {
@@ -396,14 +366,10 @@ public final class StoryFooterPanelComponent: Component {
                     ],
                     transition: (isFirstTime || reactionsTransition.animation.isImmediate) ? .immediate : ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut)
                 )
+                reactionsTextSize = reactionStatsLayout.size
                 
                 let imageSize = CGSize(width: 23.0, height: 23.0)
-                reactionsTransition.setFrame(view: reactionStatsIcon, frame: CGRect(origin: CGPoint(x: viewStatsTextFrame.maxX + 7.0, y: viewStatsTextFrame.minY - 3.0), size: imageSize))
-                
-                let reactionStatsFrame = CGRect(origin: CGPoint(x: viewStatsTextFrame.maxX + 7.0 + imageSize.width + 3.0, y: viewStatsTextFrame.minY), size: reactionStatsLayout.size)
-                reactionsTransition.setFrame(view: reactionStatsText, frame: reactionStatsFrame)
-                
-                statsButtonWidth = reactionStatsFrame.maxX + 8.0
+                reactionsIconSize = imageSize
             } else {
                 if let reactionStatsIcon = self.reactionStatsIcon {
                     self.reactionStatsIcon = nil
@@ -419,11 +385,107 @@ public final class StoryFooterPanelComponent: Component {
                     })
                 }
             }
+            
+            let viewsReactionsCollapsedSpacing: CGFloat = 6.0
+            let viewsReactionsExpandedSpacing: CGFloat = 8.0
+            let viewsReactionsSpacing = viewsReactionsCollapsedSpacing.interpolate(to: viewsReactionsExpandedSpacing, amount: component.expandFraction)
+            
+            let avatarViewsSpacing: CGFloat = 18.0
+            let viewsIconSpacing: CGFloat = 2.0
+            
+            let reactionsIconSpacing: CGFloat = 2.0
+            
+            var contentWidth: CGFloat = 0.0
+            
+            contentWidth += (avatarsSize.width + avatarViewsSpacing) * (1.0 - component.expandFraction)
+            if let image = self.viewsIconView.image {
+                contentWidth += (image.size.width + viewsIconSpacing) * component.expandFraction
+            }
+            
+            if viewCount == 0 {
+                contentWidth += viewStatsTextLayout.size.width * component.expandFraction
+            } else {
+                contentWidth += viewStatsTextLayout.size.width
+            }
+            contentWidth += viewStatsLabelSize.width * (1.0 - component.expandFraction)
+            
+            if let reactionsIconSize, let reactionsTextSize {
+                contentWidth += viewsReactionsSpacing
+                contentWidth += reactionsIconSize.width
+                contentWidth += reactionsIconSpacing
+                contentWidth += reactionsTextSize.width
+            }
+            
+            let minContentX: CGFloat = 16.0
+            let maxContentX: CGFloat = floor((availableSize.width - contentWidth) * 0.5)
+            var contentX: CGFloat = minContentX.interpolate(to: maxContentX, amount: component.expandFraction)
+            
+            let avatarsNodeFrame = CGRect(origin: CGPoint(x: contentX, y: floor((size.height - avatarsSize.height) * 0.5)), size: avatarsSize)
+            transition.setPosition(view: self.avatarsView, position: avatarsNodeFrame.center)
+            transition.setBounds(view: self.avatarsView, bounds: CGRect(origin: CGPoint(), size: avatarsNodeFrame.size))
+            transition.setAlpha(view: self.avatarsView, alpha: avatarsAlpha)
+            transition.setScale(view: self.avatarsView, scale: CGFloat(1.0).interpolate(to: CGFloat(0.1), amount: component.expandFraction))
+            
+            if let image = self.viewsIconView.image {
+                let viewsIconFrame = CGRect(origin: CGPoint(x: contentX, y: floor((size.height - image.size.height) * 0.5)), size: image.size)
+                transition.setPosition(view: self.viewsIconView, position: viewsIconFrame.center)
+                transition.setBounds(view: self.viewsIconView, bounds: CGRect(origin: CGPoint(), size: viewsIconFrame.size))
+                transition.setAlpha(view: self.viewsIconView, alpha: component.expandFraction)
+                transition.setScale(view: self.viewsIconView, scale: CGFloat(1.0).interpolate(to: CGFloat(0.1), amount: 1.0 - component.expandFraction))
+            }
+            
+            if !avatarsSize.width.isZero {
+                contentX += (avatarsSize.width + avatarViewsSpacing) * (1.0 - component.expandFraction)
+            }
+            if let image = self.viewsIconView.image {
+                contentX += (image.size.width + viewsIconSpacing) * component.expandFraction
+            }
+            
+            transition.setFrame(view: self.viewStatsCountText, frame: CGRect(origin: CGPoint(x: contentX, y: floor((size.height - viewStatsTextLayout.size.height) * 0.5)), size: viewStatsTextLayout.size))
+            if viewCount == 0 {
+                contentX += viewStatsTextLayout.size.width * component.expandFraction
+                transition.setAlpha(view: self.viewStatsCountText, alpha: component.expandFraction)
+            } else {
+                contentX += viewStatsTextLayout.size.width
+                transition.setAlpha(view: self.viewStatsCountText, alpha: 1.0)
+            }
+            
+            let viewStatsLabelTextFrame = CGRect(origin: CGPoint(x: contentX, y: floor((size.height - viewStatsLabelSize.height) * 0.5)), size: viewStatsLabelSize)
+            if let viewStatsLabelTextView = self.viewStatsLabelText.view {
+                if viewStatsLabelTextView.superview == nil {
+                    viewStatsLabelTextView.isUserInteractionEnabled = false
+                    viewStatsLabelTextView.layer.anchorPoint = CGPoint(x: 0.0, y: 0.5)
+                    self.externalContainerView.addSubview(viewStatsLabelTextView)
+                }
+                transition.setPosition(view: viewStatsLabelTextView, position: CGPoint(x: viewStatsLabelTextFrame.minX, y: viewStatsLabelTextFrame.midY))
+                transition.setBounds(view: viewStatsLabelTextView, bounds: CGRect(origin: CGPoint(), size: viewStatsLabelTextFrame.size))
+                transition.setAlpha(view: viewStatsLabelTextView, alpha: 1.0 - component.expandFraction)
+                transition.setScale(view: viewStatsLabelTextView, scale: CGFloat(1.0).interpolate(to: CGFloat(0.1), amount: component.expandFraction))
+            }
+            contentX += viewStatsLabelSize.width * (1.0 - component.expandFraction)
+            
+            if let reactionStatsIcon = self.reactionStatsIcon, let reactionsIconSize, let reactionStatsText = self.reactionStatsText, let reactionsTextSize {
+                contentX += viewsReactionsSpacing
+                
+                transition.setFrame(view: reactionStatsIcon, frame: CGRect(origin: CGPoint(x: contentX, y: floor((size.height - reactionsIconSize.height) * 0.5)), size: reactionsIconSize))
+                contentX += reactionsIconSize.width
+                contentX += reactionsIconSpacing
+                
+                transition.setFrame(view: reactionStatsText, frame: CGRect(origin: CGPoint(x: contentX, y: floor((size.height - reactionsTextSize.height) * 0.5)), size: reactionsTextSize))
+                contentX += reactionsTextSize.width
+            }
+            
+            let statsButtonWidth = availableSize.width - 80.0
 
             transition.setFrame(view: self.viewStatsButton, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: statsButtonWidth, height: baseHeight)))
             self.viewStatsButton.isUserInteractionEnabled = component.expandFraction == 0.0
             
             var rightContentOffset: CGFloat = availableSize.width - 12.0
+            
+            let isPending = component.storyItem.isPending
+            self.viewsIconView.isHidden = isPending
+            self.viewStatsCountText.isHidden = isPending
+            self.viewStatsLabelText.view?.isHidden = isPending
             
             let deleteButtonSize = self.deleteButton.update(
                 transition: transition,
@@ -444,12 +506,17 @@ public final class StoryFooterPanelComponent: Component {
             )
             if let deleteButtonView = self.deleteButton.view {
                 if deleteButtonView.superview == nil {
-                    self.externalContainerView.addSubview(deleteButtonView)
+                    self.addSubview(deleteButtonView)
                 }
-                transition.setFrame(view: deleteButtonView, frame: CGRect(origin: CGPoint(x: rightContentOffset - deleteButtonSize.width, y: floor((size.height - deleteButtonSize.height) * 0.5)), size: deleteButtonSize))
+                var deleteButtonFrame = CGRect(origin: CGPoint(x: rightContentOffset - deleteButtonSize.width, y: floor((size.height - deleteButtonSize.height) * 0.5)), size: deleteButtonSize)
+                deleteButtonFrame.origin.y += component.expandFraction * 45.0
+                transition.setPosition(view: deleteButtonView, position: deleteButtonFrame.center)
+                transition.setBounds(view: deleteButtonView, bounds: CGRect(origin: CGPoint(), size: deleteButtonFrame.size))
+                
                 rightContentOffset -= deleteButtonSize.width + 8.0
                 
-                transition.setAlpha(view: deleteButtonView, alpha: pow(1.0 - component.expandFraction, 1.0) * baseViewCountAlpha)
+                transition.setAlpha(view: deleteButtonView, alpha: 1.0 - sideContentFraction)
+                transition.setScale(view: deleteButtonView, scale: CGFloat(1.0).interpolate(to: CGFloat(0.1), amount: sideContentFraction))
             }
             
             return size

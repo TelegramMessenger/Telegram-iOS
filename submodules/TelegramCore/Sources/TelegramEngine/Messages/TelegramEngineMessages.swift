@@ -1102,8 +1102,8 @@ public extension TelegramEngine {
             return _internal_updateStoriesArePinned(account: self.account, ids: ids, isPinned: isPinned)
         }
         
-        public func storyViewList(id: Int32, views: EngineStoryItem.Views) -> EngineStoryViewListContext {
-            return EngineStoryViewListContext(account: self.account, storyId: id, views: views)
+        public func storyViewList(id: Int32, views: EngineStoryItem.Views, listMode: EngineStoryViewListContext.ListMode, sortMode: EngineStoryViewListContext.SortMode, searchQuery: String? = nil, parentSource: EngineStoryViewListContext? = nil) -> EngineStoryViewListContext {
+            return EngineStoryViewListContext(account: self.account, storyId: id, views: views, listMode: listMode, sortMode: sortMode, searchQuery: searchQuery, parentSource: parentSource)
         }
         
         public func exportStoryLink(peerId: EnginePeer.Id, id: Int32) -> Signal<String?, NoError> {

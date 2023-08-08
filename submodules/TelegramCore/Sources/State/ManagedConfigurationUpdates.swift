@@ -35,7 +35,7 @@ func managedConfigurationUpdates(accountManager: AccountManager<TelegramAccountM
                         }
                     }
                     
-                    let blockedMode = (flags & 8) != 0
+                    let blockedMode = (flags & (1 << 8)) != 0
                     
                     updateNetworkSettingsInteractively(transaction: transaction, network: network, { settings in
                         var settings = settings

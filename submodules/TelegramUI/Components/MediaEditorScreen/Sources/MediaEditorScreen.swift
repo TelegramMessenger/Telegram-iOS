@@ -1223,7 +1223,8 @@ final class MediaEditorScreenComponent: Component {
                     isFormattingLocked: !state.isPremium,
                     hideKeyboard: self.currentInputMode == .emoji,
                     forceIsEditing: self.currentInputMode == .emoji,
-                    disabledPlaceholder: nil
+                    disabledPlaceholder: nil,
+                    storyId: nil
                 )),
                 environment: {},
                 containerSize: CGSize(width: inputPanelAvailableWidth, height: inputPanelAvailableHeight)

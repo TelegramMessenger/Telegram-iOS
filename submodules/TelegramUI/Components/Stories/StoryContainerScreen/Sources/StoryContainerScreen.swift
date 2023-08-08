@@ -343,7 +343,6 @@ private final class StoryContainerScreenComponent: Component {
         
         private var itemSetPinchState: StoryItemSetContainerComponent.PinchState?
         private var itemSetPanState: ItemSetPanState?
-        private var verticalPanState: ItemSetPanState?
         private var isHoldingTouch: Bool = false
         
         private var transitionCloneMasterView: UIView
@@ -377,6 +376,7 @@ private final class StoryContainerScreenComponent: Component {
         
         private var isAnimatingOut: Bool = false
         private var didAnimateOut: Bool = false
+        private var isDismissedExlusively: Bool = false
         
         var dismissWithoutTransitionOut: Bool = false
         
@@ -422,7 +422,8 @@ private final class StoryContainerScreenComponent: Component {
             })
             self.addGestureRecognizer(horizontalPanRecognizer)
             
-            let verticalPanRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.dismissPanGesture(_:)), allowedDirections: { [weak self] point in
+            //TODO:move dismiss pan
+            /*let verticalPanRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.dismissPanGesture(_:)), allowedDirections: { [weak self] point in
                 guard let self, let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View else {
                     return []
                 }
@@ -438,7 +439,7 @@ private final class StoryContainerScreenComponent: Component {
                 
                 return [.down]
             })
-            self.addGestureRecognizer(verticalPanRecognizer)
+            self.addGestureRecognizer(verticalPanRecognizer)*/
             
             let longPressRecognizer = StoryLongPressRecognizer(target: self, action: #selector(self.longPressGesture(_:)))
             longPressRecognizer.delegate = self
@@ -755,7 +756,7 @@ private final class StoryContainerScreenComponent: Component {
             }
         }
         
-        @objc private func dismissPanGesture(_ recognizer: UIPanGestureRecognizer) {
+        /*@objc private func dismissPanGesture(_ recognizer: UIPanGestureRecognizer) {
             switch recognizer.state {
             case .began:
                 self.dismissAllTooltips()
@@ -821,7 +822,7 @@ private final class StoryContainerScreenComponent: Component {
             default:
                 break
             }
-        }
+        }*/
         
         @objc private func longPressGesture(_ recognizer: StoryLongPressRecognizer) {
             switch recognizer.state {
@@ -975,7 +976,7 @@ private final class StoryContainerScreenComponent: Component {
                     transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
                 }
                 
-                self.verticalPanState = ItemSetPanState(fraction: 1.0, didBegin: true)
+                self.isDismissedExlusively = true
                 self.state?.updated(transition: transition)
                 
                 let focusedItemPromise = self.component?.focusedItemPromise
@@ -1267,9 +1268,6 @@ private final class StoryContainerScreenComponent: Component {
             if self.itemSetPanState != nil {
                 isProgressPaused = true
             }
-            if self.verticalPanState != nil {
-                isProgressPaused = true
-            }
             if self.isAnimatingOut {
                 isProgressPaused = true
             }
@@ -1282,21 +1280,6 @@ private final class StoryContainerScreenComponent: Component {
             if self.pendingNavigationToItemId != nil {
                 isProgressPaused = true
             }
-            
-            var dismissPanOffset: CGFloat = 0.0
-            var dismissPanScale: CGFloat = 1.0
-            var dismissAlphaScale: CGFloat = 1.0
-            var verticalPanFraction: CGFloat = 0.0
-            if let verticalPanState = self.verticalPanState {
-                let dismissFraction = max(0.0, verticalPanState.fraction)
-                verticalPanFraction = max(0.0, min(1.0, -verticalPanState.fraction))
-                
-                dismissPanOffset = dismissFraction * availableSize.height
-                dismissPanScale = 1.0 * (1.0 - dismissFraction) + 0.6 * dismissFraction
-                dismissAlphaScale = 1.0 * (1.0 - dismissFraction) + 0.2 * dismissFraction
-            }
-            
-            transition.setAlpha(layer: self.backgroundLayer, alpha: max(0.5, dismissAlphaScale))
             
             var contentDerivedBottomInset: CGFloat = environment.safeInsets.bottom
             
@@ -1316,6 +1299,13 @@ private final class StoryContainerScreenComponent: Component {
                     currentSlices.append(nextSlice)
                 }
             }
+            
+            var dismissPanOffset: CGFloat = 0.0
+            if self.isDismissedExlusively {
+                dismissPanOffset = availableSize.height
+            }
+            
+            var centerDismissFraction: CGFloat = 0.0
             
             var presentationContextInsets = UIEdgeInsets()
             if !currentSlices.isEmpty, let focusedIndex {
@@ -1383,6 +1373,7 @@ private final class StoryContainerScreenComponent: Component {
                             presentationContextInsets.bottom = itemSetContainerInsets.bottom
                         }
                         
+                        itemSetView.view.parentState = self.state
                         let _ = itemSetView.view.update(
                             transition: itemSetTransition,
                             component: AnyComponent(StoryItemSetContainerComponent(
@@ -1405,7 +1396,6 @@ private final class StoryContainerScreenComponent: Component {
                                 hideUI: (i == focusedIndex && (self.itemSetPanState?.didBegin == false || self.itemSetPinchState != nil)),
                                 visibilityFraction: 1.0 - abs(panFraction + cubeAdditionalRotationFraction),
                                 isPanning: self.itemSetPanState?.didBegin == true,
-                                verticalPanFraction: verticalPanFraction,
                                 pinchState: self.itemSetPinchState,
                                 presentController: { [weak self] c, a in
                                     guard let self, let environment = self.environment else {
@@ -1519,6 +1509,7 @@ private final class StoryContainerScreenComponent: Component {
                         
                         if i == focusedIndex {
                             contentDerivedBottomInset = itemSetView.externalState.derivedBottomInset
+                            centerDismissFraction = itemSetView.externalState.dismissFraction
                         }
                         
                         let itemFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - itemSetContainerSize.width) / 2.0), y: floorToScreenPixels((availableSize.height - itemSetContainerSize.height) / 2.0)), size: itemSetContainerSize)
@@ -1537,11 +1528,9 @@ private final class StoryContainerScreenComponent: Component {
                             
                             itemSetTransition.setPosition(view: itemSetView, position: itemFrame.center.offsetBy(dx: 0.0, dy: dismissPanOffset))
                             itemSetTransition.setBounds(view: itemSetView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
-                            itemSetTransition.setSublayerTransform(view: itemSetView, transform: CATransform3DMakeScale(dismissPanScale, dismissPanScale, 1.0))
                             
                             itemSetTransition.setPosition(view: itemSetComponentView.transitionCloneContainerView, position: itemFrame.center.offsetBy(dx: 0.0, dy: dismissPanOffset))
                             itemSetTransition.setBounds(view: itemSetComponentView.transitionCloneContainerView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
-                            itemSetTransition.setSublayerTransform(view: itemSetComponentView.transitionCloneContainerView, transform: CATransform3DMakeScale(dismissPanScale, dismissPanScale, 1.0))
                             
                             itemSetTransition.setPosition(view: itemSetComponentView, position: CGRect(origin: CGPoint(), size: itemFrame.size).center)
                             itemSetTransition.setBounds(view: itemSetComponentView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
@@ -1668,6 +1657,9 @@ private final class StoryContainerScreenComponent: Component {
             for id in removedIds {
                 self.visibleItemSetViews.removeValue(forKey: id)
             }
+            
+            let dismissAlphaScale = 1.0 * (1.0 - centerDismissFraction) + 0.2 * centerDismissFraction
+            transition.setAlpha(layer: self.backgroundLayer, alpha: max(0.5, min(1.0, dismissAlphaScale)))
             
             if let controller = environment.controller() {
                 let subLayout = ContainerViewLayout(

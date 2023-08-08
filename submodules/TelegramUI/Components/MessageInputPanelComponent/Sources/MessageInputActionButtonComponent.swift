@@ -50,6 +50,7 @@ public final class MessageInputActionButtonComponent: Component {
     }
 
     public let mode: Mode
+    public let storyId: Int32?
     public let action: (Mode, Action, Bool) -> Void
     public let longPressAction: ((UIView, ContextGesture?) -> Void)?
     public let switchMediaInputMode: () -> Void
@@ -66,6 +67,7 @@ public final class MessageInputActionButtonComponent: Component {
     
     public init(
         mode: Mode,
+        storyId: Int32?,
         action: @escaping (Mode, Action, Bool) -> Void,
         longPressAction: ((UIView, ContextGesture?) -> Void)?,
         switchMediaInputMode: @escaping () -> Void,
@@ -81,6 +83,7 @@ public final class MessageInputActionButtonComponent: Component {
         videoRecordingStatus: InstantVideoControllerRecordingStatus?
     ) {
         self.mode = mode
+        self.storyId = storyId
         self.action = action
         self.longPressAction = longPressAction
         self.switchMediaInputMode = switchMediaInputMode
@@ -98,6 +101,9 @@ public final class MessageInputActionButtonComponent: Component {
     
     public static func ==(lhs: MessageInputActionButtonComponent, rhs: MessageInputActionButtonComponent) -> Bool {
         if lhs.mode != rhs.mode {
+            return false
+        }
+        if lhs.storyId != rhs.storyId {
             return false
         }
         if lhs.context !== rhs.context {
@@ -125,6 +131,7 @@ public final class MessageInputActionButtonComponent: Component {
         public let referenceNode: ContextReferenceContentNode
         public let containerNode: ContextControllerSourceNode
         private let sendIconView: UIImageView
+        private var reactionHeartView: UIImageView?
         private var moreButton: MoreHeaderButton?
         private var reactionIconView: ReactionIconView?
         
@@ -134,7 +141,11 @@ public final class MessageInputActionButtonComponent: Component {
         private var acceptNextButtonPress: Bool = false
         
         public var likeIconView: UIView? {
-            return self.reactionIconView
+            if let reactionHeartView = self.reactionHeartView {
+                return reactionHeartView
+            } else {
+                return self.reactionIconView
+            }
         }
         
         override init(frame: CGRect) {
@@ -214,10 +225,12 @@ public final class MessageInputActionButtonComponent: Component {
             self.component = component
             self.componentState = state
             
+            let isFirstTimeForStory = previousComponent?.storyId != component.storyId
+            
             let themeUpdated = previousComponent?.theme !== component.theme
             
             var transition = transition
-            if transition.animation.isImmediate, let previousComponent, case .like = previousComponent.mode, case .like = component.mode, previousComponent.mode != component.mode {
+            if transition.animation.isImmediate, let previousComponent, case .like = previousComponent.mode, case .like = component.mode, previousComponent.mode != component.mode, !isFirstTimeForStory {
                 transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
             }
             
@@ -408,7 +421,7 @@ public final class MessageInputActionButtonComponent: Component {
                     self.reactionIconView = reactionIconView
                     self.addSubview(reactionIconView)
                     
-                    if previousComponent != nil {
+                    if !isFirstTimeForStory {
                         reactionIconView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                         reactionIconView.layer.animateScale(from: 0.01, to: 1.0, duration: 0.25)
                     }
@@ -428,10 +441,56 @@ public final class MessageInputActionButtonComponent: Component {
                 )
             } else if let reactionIconView = self.reactionIconView {
                 self.reactionIconView = nil
-                reactionIconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak reactionIconView] _ in
-                    reactionIconView?.removeFromSuperview()
-                })
-                reactionIconView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.25, removeOnCompletion: false)
+                
+                if !isFirstTimeForStory {
+                    reactionIconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak reactionIconView] _ in
+                        reactionIconView?.removeFromSuperview()
+                    })
+                    reactionIconView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.25, removeOnCompletion: false)
+                } else {
+                    reactionIconView.removeFromSuperview()
+                }
+            }
+            
+            if case let .like(reactionValue, _, _) = component.mode, let reaction = reactionValue, case .builtin("❤") = reaction {
+                self.reactionIconView?.isHidden = true
+                
+                var reactionHeartTransition = transition
+                let reactionHeartView: UIImageView
+                if let current = self.reactionHeartView {
+                    reactionHeartView = current
+                } else {
+                    reactionHeartTransition = reactionHeartTransition.withAnimation(.none)
+                    reactionHeartView = UIImageView()
+                    self.reactionHeartView = reactionHeartView
+                    reactionHeartView.image = PresentationResourcesChat.storyViewListLikeIcon(component.theme)
+                    self.addSubview(reactionHeartView)
+                }
+                
+                if let image = reactionHeartView.image {
+                    let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - image.size.width) * 0.5), y: floorToScreenPixels((availableSize.height - image.size.height) * 0.5)), size: image.size)
+                    reactionHeartTransition.setPosition(view: reactionHeartView, position: iconFrame.center)
+                    reactionHeartTransition.setBounds(view: reactionHeartView, bounds: CGRect(origin: CGPoint(), size: iconFrame.size))
+                }
+                
+                if !isFirstTimeForStory {
+                    reactionHeartView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                    reactionHeartView.layer.animateScale(from: 0.01, to: 1.0, duration: 0.25)
+                }
+            } else {
+                self.reactionIconView?.isHidden = false
+                
+                if let reactionHeartView = self.reactionHeartView {
+                    self.reactionHeartView = nil
+                    if !isFirstTimeForStory {
+                        reactionHeartView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak reactionHeartView] _ in
+                            reactionHeartView?.removeFromSuperview()
+                        })
+                        reactionHeartView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.25, removeOnCompletion: false)
+                    } else {
+                        reactionHeartView.removeFromSuperview()
+                    }
+                }
             }
             
             transition.setFrame(view: self.button.view, frame: CGRect(origin: .zero, size: availableSize))
