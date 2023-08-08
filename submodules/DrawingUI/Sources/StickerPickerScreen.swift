@@ -163,10 +163,22 @@ private final class StickerSelectionComponent: Component {
                 },
                 sendEmoji: { _, _, _ in
                 },
-                sendGif: { _, _, _, _, _ in
+                sendGif: { [weak self] file, _, _, _, _ in
+                    if let self, let controller = self.component?.getController() {
+                        controller.completion(.video(file.media))
+                        controller.dismiss(animated: true)
+                    }
                     return false
                 },
-                sendBotContextResultAsGif: { _, _, _, _, _, _ in
+                sendBotContextResultAsGif: { [weak self] collection, result, _, _, _, _ in
+                    if let self, let controller = self.component?.getController() {
+                        if case let .internalReference(reference) = result {
+                            if let file = reference.file {
+                                controller.completion(.video(file))
+                                controller.dismiss(animated: true)
+                            }
+                        }
+                    }
                     return false
                 },
                 updateChoosingSticker: { _ in },
@@ -320,7 +332,7 @@ private final class StickerSelectionComponent: Component {
                             inputNodeInteraction: inputNodeInteraction,
                             mode: mappedMode,
                             stickerActionTitle: presentationData.strings.StickerPack_AddSticker,
-                            trendingGifsPromise: Promise(nil),
+                            trendingGifsPromise: self.component?.getController()?.node.trendingGifsPromise ?? Promise(nil),
                             cancel: {
                             },
                             peekBehavior: stickerPeekBehavior
@@ -416,7 +428,7 @@ public class StickerPickerScreen: ViewController {
         private var content: StickerPickerInputData?
         private let contentDisposable = MetaDisposable()
         private var hasRecentGifsDisposable: Disposable?
-        private let trendingGifsPromise = Promise<ChatMediaInputGifPaneTrendingState?>(nil)
+        fileprivate let trendingGifsPromise = Promise<ChatMediaInputGifPaneTrendingState?>(nil)
         private var scheduledEmojiContentAnimationHint: EmojiPagerContentComponent.ContentAnimation?
         
         private(set) var isExpanded = false
@@ -583,6 +595,16 @@ public class StickerPickerScreen: ViewController {
                     }
                 })
             }
+            
+            self.trendingGifsPromise.set(.single(nil))
+            self.trendingGifsPromise.set(paneGifSearchForQuery(context: context, query: "", offset: nil, incompleteResults: true, delayRequest: false, updateActivity: nil)
+            |> map { items -> ChatMediaInputGifPaneTrendingState? in
+                if let items = items {
+                    return ChatMediaInputGifPaneTrendingState(files: items.files, nextOffset: items.nextOffset)
+                } else {
+                    return nil
+                }
+            })
             
             self.gifInputInteraction = GifPagerContentComponent.InputInteraction(
                 performItemAction: { [weak self] item, view, rect in
