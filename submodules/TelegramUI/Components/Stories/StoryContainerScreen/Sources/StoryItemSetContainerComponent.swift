@@ -2515,6 +2515,8 @@ public final class StoryItemSetContainerComponent: Component {
                             self.sendMessageContext.enqueueGifData(view: self, data: data)
                         case let .sticker(image, isMemoji):
                             self.sendMessageContext.enqueueStickerImage(view: self, image: image, isMemoji: isMemoji)
+                        case .text:
+                            break
                         }
                     },
                     audioRecorder: self.sendMessageContext.audioRecorderValue,
@@ -4192,8 +4194,8 @@ public final class StoryItemSetContainerComponent: Component {
                     initialPrivacy: privacy,
                     stateContext: stateContext,
                     completion: { [weak self] result, _, _, peers in
-                        if blockedPeers {
-//                            let _ = self.storiesBlockedPeers.updatePeerIds(result.additionallyIncludePeers).start()
+                        if blockedPeers, let blockedPeers = self?.component?.blockedPeers {
+                            let _ = blockedPeers.updatePeerIds(result.additionallyIncludePeers).start()
                             completion(privacy)
                         } else if case .closeFriends = privacy.base {
                             let _ = context.engine.privacy.updateCloseFriends(peerIds: result.additionallyIncludePeers).start()
@@ -4437,6 +4439,8 @@ public final class StoryItemSetContainerComponent: Component {
                                             self.updateIsProgressPaused()
                                             self.state?.updated(transition: .easeInOut(duration: 0.2))
                                             
+                                            HapticFeedback().success()
+                                            
                                             commit({})
                                         }
                                     }
@@ -4485,6 +4489,8 @@ public final class StoryItemSetContainerComponent: Component {
                                             self.updateIsProgressPaused()
                                             self.state?.updated(transition: .easeInOut(duration: 0.2))
                                             
+                                            HapticFeedback().success()
+                                            
                                             commit({})
                                         }
                                     }
@@ -4502,6 +4508,8 @@ public final class StoryItemSetContainerComponent: Component {
                                         self.rewindCurrentItem()
                                         self.updateIsProgressPaused()
                                         self.state?.updated(transition: .easeInOut(duration: 0.2))
+                                        
+                                        HapticFeedback().success()
                                     }
                                     commit({})
                                 }
@@ -4514,6 +4522,8 @@ public final class StoryItemSetContainerComponent: Component {
                         self.rewindCurrentItem()
                         self.updateIsProgressPaused()
                         self.state?.updated(transition: .easeInOut(duration: 0.2))
+                        
+                        HapticFeedback().success()
                         
                         commit({})
                     }

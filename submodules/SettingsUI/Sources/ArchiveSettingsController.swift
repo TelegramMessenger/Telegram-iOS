@@ -208,7 +208,7 @@ public func archiveSettingsController(context: AccountContext) -> ViewController
         guard let controller else {
             return
         }
-        let premiumController = context.sharedContext.makePremiumIntroController(context: context, source: .settings, forceDark: false)
+        let premiumController = context.sharedContext.makePremiumIntroController(context: context, source: .settings, forceDark: false, dismissed: nil)
         controller.push(premiumController)
     }
     

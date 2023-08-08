@@ -771,7 +771,7 @@ public final class MessageInputPanelComponent: Component {
                 }
             }
             
-            if let maxLength = component.maxLength, maxLength - self.textFieldExternalState.textLength < 5 {
+            if let maxLength = component.maxLength, maxLength - self.textFieldExternalState.textLength < 5 && isEditing {
                 let remainingLength = max(-999, maxLength - self.textFieldExternalState.textLength)
                 let counterSize = self.counter.update(
                     transition: .immediate,

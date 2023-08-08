@@ -894,7 +894,7 @@ public protocol SharedAccountContext: AnyObject {
     
     func makeChatQrCodeScreen(context: AccountContext, peer: Peer, threadId: Int64?) -> ViewController
     
-    func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool) -> ViewController
+    func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool, dismissed: (() -> Void)?) -> ViewController
     func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, action: @escaping () -> Void) -> ViewController
     func makePremiumLimitController(context: AccountContext, subject: PremiumLimitSubject, count: Int32, action: @escaping () -> Void) -> ViewController
     

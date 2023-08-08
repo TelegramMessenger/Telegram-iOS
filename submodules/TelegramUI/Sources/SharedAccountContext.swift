@@ -1732,7 +1732,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return archiveSettingsController(context: context)
     }
     
-    public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool) -> ViewController {
+    public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool, dismissed: (() -> Void)?) -> ViewController {
         let mappedSource: PremiumSource
         switch source {
         case .settings:

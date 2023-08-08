@@ -9414,6 +9414,7 @@ Sorry for the inconvenience.";
 "ChatList.ContextSelectChats" = "Select Chats";
 
 "StoryFeed.TooltipPremiumPosting" = "Posting stories is currently available only\nto subscribers of [Telegram Premium]().";
+"StoryFeed.TooltipPremiumPostingLimited" = "This month, posting stories is only available to subscribers of [Telegram Premium]().";
 "StoryFeed.TooltipStoryLimitValue_1" = "1 story";
 "StoryFeed.TooltipStoryLimitValue_any" = "%d stories";
 "StoryFeed.TooltipStoryLimit" = "You can't post more than **%@** stories in **24 hours**.";
@@ -9623,7 +9624,7 @@ Sorry for the inconvenience.";
 "Story.Editor.ExpirationValue_1" = "1 Hour";
 "Story.Editor.ExpirationValue_any" = "%d Hours";
 
-"Story.Editor.TooltipPremiumExpiration" = "Subscribe to **Telegram Premium** to make your stories disappear after 6, 12 or 48 hours.";
+"Story.Editor.TooltipPremiumExpiration" = "Subscribe to [Telegram Premium]() to make your stories disappear after 6, 12 or 48 hours.";
 
 "Story.Editor.InputPlaceholderAddCaption" = "Add a caption...";
 

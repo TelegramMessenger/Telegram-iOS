@@ -163,10 +163,22 @@ private final class StickerSelectionComponent: Component {
                 },
                 sendEmoji: { _, _, _ in
                 },
-                sendGif: { _, _, _, _, _ in
+                sendGif: { [weak self] file, _, _, _, _ in
+                    if let self, let controller = self.component?.getController() {
+                        controller.completion(.video(file.media))
+                        controller.dismiss(animated: true)
+                    }
                     return false
                 },
-                sendBotContextResultAsGif: { _, _, _, _, _, _ in
+                sendBotContextResultAsGif: { [weak self] collection, result, _, _, _, _ in
+                    if let self, let controller = self.component?.getController() {
+                        if case let .internalReference(reference) = result {
+                            if let file = reference.file {
+                                controller.completion(.video(file))
+                                controller.dismiss(animated: true)
+                            }
+                        }
+                    }
                     return false
                 },
                 updateChoosingSticker: { _ in },
@@ -279,8 +291,8 @@ private final class StickerSelectionComponent: Component {
                     topPanelScrollingOffset: { [weak self] offset, transition in
                         if let self {
                             if self.ignoreNextZeroScrollingOffset && offset == 0.0 {
-                                self.ignoreNextZeroScrollingOffset = false
                             } else {
+                                self.ignoreNextZeroScrollingOffset = false
                                 self.topPanelScrollingOffset = offset
                             }
                         }
@@ -320,11 +332,17 @@ private final class StickerSelectionComponent: Component {
                             inputNodeInteraction: inputNodeInteraction,
                             mode: mappedMode,
                             stickerActionTitle: presentationData.strings.StickerPack_AddSticker,
-                            trendingGifsPromise: Promise(nil),
+                            trendingGifsPromise: self.component?.getController()?.node.trendingGifsPromise ?? Promise(nil),
                             cancel: {
                             },
                             peekBehavior: stickerPeekBehavior
                         )
+                        searchContainerNode.openGifContextMenu = { [weak self] item, sourceNode, sourceRect, gesture, isSaved in
+                            guard let self, let node = self.component?.getController()?.node else {
+                                return
+                            }
+                            node.openGifContextMenu(file: item.file, contextResult: item.contextResult, sourceView: sourceNode.view, sourceRect: sourceRect, gesture: gesture, isSaved: isSaved)
+                        }
                         return searchContainerNode
                     },
                     contentIdUpdated: { [weak self] id in
@@ -416,7 +434,7 @@ public class StickerPickerScreen: ViewController {
         private var content: StickerPickerInputData?
         private let contentDisposable = MetaDisposable()
         private var hasRecentGifsDisposable: Disposable?
-        private let trendingGifsPromise = Promise<ChatMediaInputGifPaneTrendingState?>(nil)
+        fileprivate let trendingGifsPromise = Promise<ChatMediaInputGifPaneTrendingState?>(nil)
         private var scheduledEmojiContentAnimationHint: EmojiPagerContentComponent.ContentAnimation?
         
         private(set) var isExpanded = false
@@ -510,10 +528,105 @@ public class StickerPickerScreen: ViewController {
                 self?.controller?.presentLocationPicker()
             }
             
+            let gifItems: Signal<EntityKeyboardGifContent?, NoError>
+            if controller.hasGifs {
+                let hasRecentGifs = context.engine.data.subscribe(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: Namespaces.OrderedItemList.CloudRecentGifs))
+                |> map { savedGifs -> Bool in
+                    return !savedGifs.isEmpty
+                }
+                
+                self.hasRecentGifsDisposable = (hasRecentGifs
+                |> deliverOnMainQueue).start(next: { [weak self] hasRecentGifs in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    if let gifMode = strongSelf.gifMode {
+                        if !hasRecentGifs, case .recent = gifMode {
+                            strongSelf.gifMode = .trending
+                        }
+                    } else {
+                        strongSelf.gifMode = hasRecentGifs ? .recent : .trending
+                    }
+                })
+                
+                self.trendingGifsPromise.set(.single(nil))
+                self.trendingGifsPromise.set(paneGifSearchForQuery(context: context, query: "", offset: nil, incompleteResults: true, delayRequest: false, updateActivity: nil)
+                |> map { items -> ChatMediaInputGifPaneTrendingState? in
+                    if let items = items {
+                        return ChatMediaInputGifPaneTrendingState(files: items.files, nextOffset: items.nextOffset)
+                    } else {
+                        return nil
+                    }
+                })
+                
+                let gifInputInteraction = GifPagerContentComponent.InputInteraction(
+                    performItemAction: { [weak self] item, view, rect in
+                        guard let self else {
+                            return
+                        }
+                        self.controller?.completion(.video(item.file.media))
+                        self.controller?.dismiss(animated: true)
+                    },
+                    openGifContextMenu: { [weak self] item, sourceView, sourceRect, gesture, isSaved in
+                        guard let self else {
+                            return
+                        }
+                        self.openGifContextMenu(file: item.file, contextResult: item.contextResult, sourceView: sourceView, sourceRect: sourceRect, gesture: gesture, isSaved: isSaved)
+                    },
+                    loadMore: { [weak self] token in
+                        guard let strongSelf = self, let gifContext = strongSelf.gifContext else {
+                            return
+                        }
+                        gifContext.loadMore(token: token)
+                    },
+                    openSearch: { [weak self] in
+                        if let self, let componentView = self.hostView.componentView as? StickerSelectionComponent.View {
+                            if let pagerView = componentView.keyboardView.view as? EntityKeyboardComponent.View {
+                                pagerView.openSearch()
+                            }
+                            self.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
+                        }
+                    },
+                    updateSearchQuery: { [weak self] query in
+                        guard let self else {
+                            return
+                        }
+                        if let query {
+                            self.gifMode = .emojiSearch(query)
+                        } else {
+                            self.gifMode = .recent
+                        }
+                    },
+                    hideBackground: true,
+                    hasSearch: true
+                )
+                self.gifInputInteraction = gifInputInteraction
+                
+                gifItems = .single(EntityKeyboardGifContent(
+                    hasRecentGifs: true,
+                    component: GifPagerContentComponent(
+                        context: context,
+                        inputInteraction: gifInputInteraction,
+                        subject: .recent,
+                        items: [],
+                        isLoading: false,
+                        loadMoreToken: nil,
+                        displaySearchWithPlaceholder: nil,
+                        searchCategories: nil,
+                        searchInitiallyHidden: true,
+                        searchState: .empty(hasResults: false),
+                        hideBackground: true
+                    )
+                ))
+            } else {
+                gifItems = .single(nil)
+            }
+            
             let data = combineLatest(
                 queue: Queue.mainQueue(),
                 controller.inputData,
-                .single(nil) |> then(self.gifComponent.get() |> map(Optional.init)),
+                gifItems |> then(self.gifComponent.get() |> map(Optional.init)),
                 self.stickerSearchState.get(),
                 self.emojiSearchState.get()
             )
@@ -561,70 +674,6 @@ public class StickerPickerScreen: ViewController {
                     strongSelf.updateContent(inputData)
                 }
             }))
-            
-            if controller.hasGifs {
-                let hasRecentGifs = context.engine.data.subscribe(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: Namespaces.OrderedItemList.CloudRecentGifs))
-                |> map { savedGifs -> Bool in
-                    return !savedGifs.isEmpty
-                }
-                
-                self.hasRecentGifsDisposable = (hasRecentGifs
-                |> deliverOnMainQueue).start(next: { [weak self] hasRecentGifs in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    
-                    if let gifMode = strongSelf.gifMode {
-                        if !hasRecentGifs, case .recent = gifMode {
-                            strongSelf.gifMode = .trending
-                        }
-                    } else {
-                        strongSelf.gifMode = hasRecentGifs ? .recent : .trending
-                    }
-                })
-            }
-            
-            self.gifInputInteraction = GifPagerContentComponent.InputInteraction(
-                performItemAction: { [weak self] item, view, rect in
-                    guard let self else {
-                        return
-                    }
-                    self.controller?.completion(.video(item.file.media))
-                    self.controller?.dismiss(animated: true)
-                },
-                openGifContextMenu: { [weak self] item, sourceView, sourceRect, gesture, isSaved in
-                    guard let self else {
-                        return
-                    }
-                    self.openGifContextMenu(file: item.file, contextResult: item.contextResult, sourceView: sourceView, sourceRect: sourceRect, gesture: gesture, isSaved: isSaved)
-                },
-                loadMore: { [weak self] token in
-                    guard let strongSelf = self, let gifContext = strongSelf.gifContext else {
-                        return
-                    }
-                    gifContext.loadMore(token: token)
-                },
-                openSearch: { [weak self] in
-                    if let self, let componentView = self.hostView.componentView as? StickerSelectionComponent.View {
-                        if let pagerView = componentView.keyboardView.view as? EntityKeyboardComponent.View {
-                            pagerView.openSearch()
-                        }
-                        self.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
-                    }
-                },
-                updateSearchQuery: { [weak self] query in
-                    guard let self else {
-                        return
-                    }
-                    if let query {
-                        self.gifMode = .emojiSearch(query)
-                    } else {
-                        self.gifMode = .recent
-                    }
-                },
-                hideBackground: true,
-                hasSearch: true
-            )
         }
         
         deinit {
@@ -640,7 +689,7 @@ public class StickerPickerScreen: ViewController {
             }
         }
         
-        private func openGifContextMenu(file: FileMediaReference, contextResult: (ChatContextResultCollection, ChatContextResult)?, sourceView: UIView, sourceRect: CGRect, gesture: ContextGesture, isSaved: Bool) {
+        fileprivate func openGifContextMenu(file: FileMediaReference, contextResult: (ChatContextResultCollection, ChatContextResult)?, sourceView: UIView, sourceRect: CGRect, gesture: ContextGesture, isSaved: Bool) {
             guard let controller = self.controller else {
                 return
             }
@@ -676,14 +725,14 @@ public class StickerPickerScreen: ViewController {
                         if isSaved {
                             self.controller?.completion(.video(file.media))
                             self.controller?.dismiss(animated: true)
-                        } else {
-                            
+                        } else if let (_, result) = contextResult {
+                            if case let .internalReference(reference) = result {
+                                if let file = reference.file {
+                                    self.controller?.completion(.video(file))
+                                    self.controller?.dismiss(animated: true)
+                                }
+                            }
                         }
-//                        if isSaved {
-//                            let _ = self.interaction?.sendGif(file, sourceView, sourceRect, false, false)
-//                        } else if let (collection, result) = contextResult {
-//                            let _ = self.interaction?.sendBotContextResultAsGif(collection, result, sourceView, sourceRect, false, false)
-//                        }
                     }
                 })))
                 
@@ -724,7 +773,7 @@ public class StickerPickerScreen: ViewController {
                                 }
                                 controller.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { [weak controller] action in
                                     if case .info = action {
-                                        let premiumController = context.sharedContext.makePremiumIntroController(context: context, source: .savedGifs, forceDark: true)
+                                        let premiumController = context.sharedContext.makePremiumIntroController(context: context, source: .savedGifs, forceDark: true, dismissed: nil)
                                         controller?.push(premiumController)
                                         return true
                                     }

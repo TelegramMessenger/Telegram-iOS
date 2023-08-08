@@ -402,7 +402,8 @@ public final class PeerListItemComponent: Component {
             let labelData: (String, Bool)
             if let presence = component.presence {
                 let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                labelData = stringAndActivityForUserPresence(strings: component.strings, dateTimeFormat: PresentationDateTimeFormat(), presence: presence, relativeTo: Int32(timestamp))
+                let dateTimeFormat = component.context.sharedContext.currentPresentationData.with { $0 }.dateTimeFormat
+                labelData = stringAndActivityForUserPresence(strings: component.strings, dateTimeFormat: dateTimeFormat, presence: presence, relativeTo: Int32(timestamp))
             } else if let subtitle = component.subtitle {
                 labelData = (subtitle, false)
             } else {

@@ -60,6 +60,7 @@ public final class TextFieldComponent: Component {
         case images([UIImage])
         case video(Data)
         case gif(Data)
+        case text
     }
     
     
@@ -348,6 +349,7 @@ public final class TextFieldComponent: Component {
                 }
             }
             
+            component.paste(.text)
             return true
         }
         
