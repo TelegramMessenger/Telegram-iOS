@@ -116,6 +116,7 @@ public final class MessageInputPanelComponent: Component {
     public let hideKeyboard: Bool
     public let forceIsEditing: Bool
     public let disabledPlaceholder: String?
+    public let storyId: Int32?
     
     public init(
         externalState: ExternalState,
@@ -163,7 +164,8 @@ public final class MessageInputPanelComponent: Component {
         isFormattingLocked: Bool,
         hideKeyboard: Bool,
         forceIsEditing: Bool,
-        disabledPlaceholder: String?
+        disabledPlaceholder: String?,
+        storyId: Int32?
     ) {
         self.externalState = externalState
         self.context = context
@@ -211,6 +213,7 @@ public final class MessageInputPanelComponent: Component {
         self.hideKeyboard = hideKeyboard
         self.forceIsEditing = forceIsEditing
         self.disabledPlaceholder = disabledPlaceholder
+        self.storyId = storyId
     }
     
     public static func ==(lhs: MessageInputPanelComponent, rhs: MessageInputPanelComponent) -> Bool {
@@ -302,6 +305,9 @@ public final class MessageInputPanelComponent: Component {
             return false
         }
         if (lhs.likeOptionsAction == nil) != (rhs.likeOptionsAction == nil) {
+            return false
+        }
+        if lhs.storyId != rhs.storyId {
             return false
         }
         return true
@@ -803,6 +809,7 @@ public final class MessageInputPanelComponent: Component {
                     transition: transition,
                     component: AnyComponent(MessageInputActionButtonComponent(
                         mode: attachmentButtonMode,
+                        storyId: component.storyId,
                         action: { [weak self] mode, action, sendAction in
                             guard let self, let component = self.component, case .up = action else {
                                 return
@@ -951,6 +958,7 @@ public final class MessageInputPanelComponent: Component {
                 transition: transition,
                 component: AnyComponent(MessageInputActionButtonComponent(
                     mode: inputActionButtonMode,
+                    storyId: component.storyId,
                     action: { [weak self] mode, action, sendAction in
                         guard let self, let component = self.component else {
                             return
@@ -1087,6 +1095,7 @@ public final class MessageInputPanelComponent: Component {
                 transition: transition,
                 component: AnyComponent(MessageInputActionButtonComponent(
                     mode: .like(reaction: component.myReaction?.reaction, file: component.myReaction?.file, animationFileId: component.myReaction?.animationFileId),
+                    storyId: component.storyId,
                     action: { [weak self] _, action, _ in
                         guard let self, let component = self.component else {
                             return

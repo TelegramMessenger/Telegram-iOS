@@ -86,6 +86,9 @@ swift_library(
         "//submodules/TelegramNotices",
         "//submodules/MediaPlayer:UniversalMediaPlayer",
         "//submodules/TelegramUniversalVideoContent",
+        "//submodules/TelegramUI/Components/NavigationSearchComponent",
+        "//submodules/TelegramUI/Components/TabSelectorComponent",
+        "//submodules/TelegramUI/Components/OptionButtonComponent",
     ],
     visibility = [
         "//visibility:public",

@@ -98,7 +98,7 @@ public struct Transition {
     private var _userData: [Any] = []
 
     public func userData<T>(_ type: T.Type) -> T? {
-        for item in self._userData {
+        for item in self._userData.reversed() {
             if let item = item as? T {
                 return item
             }

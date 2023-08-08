@@ -40,6 +40,7 @@ import Pasteboard
 import Speak
 import TranslateUI
 import TelegramUIPreferences
+import StoryFooterPanelComponent
 
 public final class StoryAvailableReactions: Equatable {
     let reactionItems: [ReactionItem]
@@ -57,6 +58,7 @@ public final class StoryItemSetContainerComponent: Component {
     public final class ExternalState {
         public fileprivate(set) var derivedBottomInset: CGFloat = 0.0
         public fileprivate(set) var derivedMediaSize: CGSize = .zero
+        public fileprivate(set) var dismissFraction: CGFloat = 0.0
         
         public init() {
         }
@@ -107,7 +109,6 @@ public final class StoryItemSetContainerComponent: Component {
     public let hideUI: Bool
     public let visibilityFraction: CGFloat
     public let isPanning: Bool
-    public let verticalPanFraction: CGFloat
     public let pinchState: PinchState?
     public let presentController: (ViewController, Any?) -> Void
     public let presentInGlobalOverlay: (ViewController, Any?) -> Void
@@ -143,7 +144,6 @@ public final class StoryItemSetContainerComponent: Component {
         hideUI: Bool,
         visibilityFraction: CGFloat,
         isPanning: Bool,
-        verticalPanFraction: CGFloat,
         pinchState: PinchState?,
         presentController: @escaping (ViewController, Any?) -> Void,
         presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void,
@@ -178,7 +178,6 @@ public final class StoryItemSetContainerComponent: Component {
         self.hideUI = hideUI
         self.visibilityFraction = visibilityFraction
         self.isPanning = isPanning
-        self.verticalPanFraction = verticalPanFraction
         self.pinchState = pinchState
         self.presentController = presentController
         self.presentInGlobalOverlay = presentInGlobalOverlay
@@ -247,9 +246,6 @@ public final class StoryItemSetContainerComponent: Component {
         if lhs.isPanning != rhs.isPanning {
             return false
         }
-        if lhs.verticalPanFraction != rhs.verticalPanFraction {
-            return false
-        }
         if lhs.pinchState != rhs.pinchState {
             return false
         }
@@ -264,6 +260,7 @@ public final class StoryItemSetContainerComponent: Component {
         var contentFrame: CGRect
         var contentMinScale: CGFloat
         var contentScaleFraction: CGFloat
+        var contentOverflowFraction: CGFloat
         
         var itemSpacing: CGFloat
         var centralVisibleItemWidth: CGFloat
@@ -276,12 +273,14 @@ public final class StoryItemSetContainerComponent: Component {
             containerSize: CGSize,
             contentFrame: CGRect,
             contentMinScale: CGFloat,
-            contentScaleFraction: CGFloat
+            contentScaleFraction: CGFloat,
+            contentOverflowFraction: CGFloat
         ) {
             self.containerSize = containerSize
             self.contentFrame = contentFrame
             self.contentMinScale = contentMinScale
             self.contentScaleFraction = contentScaleFraction
+            self.contentOverflowFraction = contentOverflowFraction
             
             self.itemSpacing = 12.0
             self.centralVisibleItemWidth = self.contentFrame.width * self.contentMinScale
@@ -297,10 +296,12 @@ public final class StoryItemSetContainerComponent: Component {
         let unclippedContainerView: UIView
         let contentContainerView: UIView
         let contentTintLayer = SimpleLayer()
+        var contentViewsShadowView: UIImageView?
         let view = ComponentView<StoryContentItem.Environment>()
         var currentProgress: Double = 0.0
         var isBuffering: Bool = false
         var requestedNext: Bool = false
+        var footerPanel: ComponentView<Empty>?
         
         init() {
             self.unclippedContainerView = UIView()
@@ -336,18 +337,21 @@ public final class StoryItemSetContainerComponent: Component {
     }
     
     final class ViewList {
-        let externalState = StoryItemSetViewListComponent.ExternalState()
         let view = ComponentView<Empty>()
         
         init() {
         }
     }
     
-    private struct PanState: Equatable {
+    private final class PanState {
         var fraction: CGFloat
+        weak var scrollView: UIScrollView?
+        var startContentOffsetY: CGFloat = 0.0
+        var accumulatedOffset: CGFloat = 0.0
         
-        init(fraction: CGFloat) {
+        init(fraction: CGFloat, scrollView: UIScrollView?) {
             self.fraction = fraction
+            self.scrollView = scrollView
         }
     }
     
@@ -373,11 +377,18 @@ public final class StoryItemSetContainerComponent: Component {
         UIImage(named: "Stories/PanelGradient")
     }()
     
+    enum ViewListDisplayState {
+        case hidden
+        case half
+        case full
+    }
+    
     public final class View: UIView, UIScrollViewDelegate, UIGestureRecognizerDelegate {
         let sendMessageContext: StoryItemSetContainerSendMessage
         
         private let scroller: Scroller
         
+        let componentContainerView: UIView
         let itemsContainerView: UIView
         let controlsContainerView: UIView
         let controlsClippingView: UIView
@@ -407,7 +418,12 @@ public final class StoryItemSetContainerComponent: Component {
         private let inputPanelBackground = ComponentView<Empty>()
         
         var preparingToDisplayViewList: Bool = false
-        var displayViewList: Bool = false
+        
+        var viewListDisplayState: ViewListDisplayState = .hidden
+        private var targetViewListDisplayStateIsFull: Bool = false
+        
+        var isSearchActive: Bool = false
+        
         var viewLists: [Int32: ViewList] = [:]
         let viewListsContainer: UIView
         
@@ -455,8 +471,9 @@ public final class StoryItemSetContainerComponent: Component {
         override init(frame: CGRect) {
             self.sendMessageContext = StoryItemSetContainerSendMessage()
             
+            self.componentContainerView = UIView()
+            
             self.itemsContainerView = UIView()
-            //self.itemsContainerView.clipsToBounds = true
             
             self.scroller = Scroller()
             self.scroller.alwaysBounceHorizontal = true
@@ -494,14 +511,16 @@ public final class StoryItemSetContainerComponent: Component {
             self.viewListsContainer.clipsToBounds = true
             
             super.init(frame: frame)
+            
+            self.addSubview(self.componentContainerView)
 
             self.itemsContainerView.addSubview(self.scroller)
             self.scroller.delegate = self
             self.itemsContainerView.addGestureRecognizer(self.scroller.panGestureRecognizer)
             
-            self.addSubview(self.itemsContainerView)
-            self.addSubview(self.controlsClippingView)
-            self.addSubview(self.controlsContainerView)
+            self.componentContainerView.addSubview(self.itemsContainerView)
+            self.componentContainerView.addSubview(self.controlsClippingView)
+            self.componentContainerView.addSubview(self.controlsContainerView)
             
             self.controlsClippingView.addSubview(self.contentDimView)
             self.controlsClippingView.addSubview(self.topContentGradientView)
@@ -511,7 +530,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.controlsClippingView.addSubview(self.closeButton)
             self.closeButton.addTarget(self, action: #selector(self.closePressed), for: .touchUpInside)
             
-            self.addSubview(self.viewListsContainer)
+            self.componentContainerView.addSubview(self.viewListsContainer)
             
             let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
             tapRecognizer.delegate = self
@@ -521,18 +540,17 @@ public final class StoryItemSetContainerComponent: Component {
                 guard let self else {
                     return []
                 }
-                if !self.displayViewList {
-                    return []
-                }
+                let _ = self
                 return [.down]
             })
+            verticalPanRecognizer.delegate = self
             self.addGestureRecognizer(verticalPanRecognizer)
             
             let viewListSwipeRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.viewListPanGesture(_:)), allowedDirections: { [weak self] point in
                 guard let self else {
                     return []
                 }
-                if !self.displayViewList {
+                if self.viewListDisplayState != .half {
                     return []
                 }
                 if self.bounds.contains(point), !self.itemsContainerView.frame.contains(point) {
@@ -698,14 +716,14 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         func allowsInteractiveGestures() -> Bool {
-            if self.displayViewList {
+            if self.viewListDisplayState != .hidden {
                 return false
             }
             return true
         }
         
         func allowsVerticalPanGesture() -> Bool {
-            if self.displayViewList {
+            if self.viewListDisplayState != .hidden {
                 return false
             }
             return true
@@ -752,10 +770,32 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         @objc public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRequireFailureOf otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-            if otherGestureRecognizer is UIPanGestureRecognizer {
-                return true
+            if gestureRecognizer is UITapGestureRecognizer {
+                if otherGestureRecognizer is UIPanGestureRecognizer {
+                    return true
+                }
+                return false
+            } else {
+                return false
             }
-            return false
+        }
+        
+        public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            if gestureRecognizer is UIPanGestureRecognizer {
+                if let otherGestureRecognizer = otherGestureRecognizer as? UIPanGestureRecognizer {
+                    if otherGestureRecognizer.view is UIScrollView {
+                        return true
+                    }
+                    if let component = self.component, let viewList = self.viewLists[component.slice.item.storyItem.id], let viewListView = viewList.view.view as? StoryItemSetViewListComponent.View {
+                        if otherGestureRecognizer.view === viewListView {
+                            return true
+                        }
+                    }
+                }
+                return false
+            } else {
+                return false
+            }
         }
         
         func hasActiveDeactivateableInput() -> Bool {
@@ -791,14 +831,18 @@ public final class StoryItemSetContainerComponent: Component {
                     Queue.mainQueue().justDispatch {
                         self.deactivateInput()
                     }
-                } else if self.displayViewList {
+                } else if self.viewListDisplayState != .hidden {
                     let point = recognizer.location(in: self)
                     
                     for (id, visibleItem) in self.visibleItems {
                         if visibleItem.contentContainerView.convert(visibleItem.contentContainerView.bounds, to: self).contains(point) {
                             if id == component.slice.item.storyItem.id {
-                                self.displayViewList = false
-                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                                let transition = Transition(animation: .curve(duration: 0.4, curve: .spring))
+                                
+                                self.viewListDisplayState = .hidden
+                                self.isSearchActive = false
+                                
+                                self.state?.updated(transition: transition)
                             } else {
                                 self.animateNextNavigationId = id
                                 component.navigate(.id(id))
@@ -865,13 +909,13 @@ public final class StoryItemSetContainerComponent: Component {
                 if !self.bounds.isEmpty {
                     let translation = recognizer.translation(in: self)
                     let fraction: CGFloat = max(-1.0, min(1.0, translation.x / self.bounds.width))
-                    self.viewListPanState = PanState(fraction: fraction)
+                    self.viewListPanState = PanState(fraction: fraction, scrollView: nil)
                     self.isCompletingViewListPan = false
                     self.layer.removeAnimation(forKey: "isCompletingViewListPan")
                     self.state?.updated(transition: .immediate)
                 }
             case .changed:
-                if var viewListPanState = self.viewListPanState {
+                if let viewListPanState = self.viewListPanState {
                     let translation = recognizer.translation(in: self)
                     let fraction: CGFloat = max(-1.0, min(1.0, translation.x / self.bounds.width))
                     viewListPanState.fraction = fraction
@@ -920,25 +964,126 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         @objc private func viewListDismissPanGesture(_ recognizer: UIPanGestureRecognizer) {
+            guard let component = self.component else {
+                return
+            }
             switch recognizer.state {
-            case .began:
-                self.verticalPanState = PanState(fraction: 0.0)
-                self.state?.updated(transition: .immediate)
-            case .changed:
+            case .began, .changed:
                 let translation = recognizer.translation(in: self)
-                self.verticalPanState = PanState(fraction: max(-1.0, min(1.0, translation.y / self.bounds.height)))
-                self.state?.updated(transition: .immediate)
+                let fraction = max(-1.0, min(1.0, translation.y / self.bounds.height))
+                
+                if let verticalPanState = self.verticalPanState {
+                    verticalPanState.fraction = fraction
+                } else {
+                    var targetScrollView: UIScrollView?
+                    if self.viewListDisplayState != .hidden, let viewList = self.viewLists[component.slice.item.storyItem.id], let viewListView = viewList.view.view as? StoryItemSetViewListComponent.View {
+                        if let hitResult = viewListView.hitTest(self.convert(recognizer.location(in: self), to: viewListView), with: nil) {
+                            func findTargetScrollView(target: UIView, minParent: UIView) -> UIScrollView? {
+                                if target === viewListView {
+                                    return nil
+                                }
+                                if let target = target as? UIScrollView {
+                                    return target
+                                }
+                                if let parent = target.superview {
+                                    return findTargetScrollView(target: parent, minParent: minParent)
+                                } else {
+                                    return nil
+                                }
+                            }
+                            targetScrollView = findTargetScrollView(target: hitResult, minParent: viewListView)
+                        }
+                    }
+                    self.verticalPanState = PanState(fraction: fraction, scrollView: targetScrollView)
+                }
+                
+                if let verticalPanState = self.verticalPanState {
+                    if let scrollView = verticalPanState.scrollView {
+                        let relativeTranslationY = recognizer.translation(in: self).y - verticalPanState.startContentOffsetY
+                        let overflowY = scrollView.contentOffset.y - relativeTranslationY
+                        
+                        verticalPanState.accumulatedOffset += -overflowY
+                        verticalPanState.accumulatedOffset = max(0.0, verticalPanState.accumulatedOffset)
+                        
+                        if verticalPanState.accumulatedOffset > 0.0 {
+                            scrollView.contentOffset = CGPoint()
+                            
+                            if self.viewListDisplayState != .hidden, let viewList = self.viewLists[component.slice.item.storyItem.id], let viewListView = viewList.view.view as? StoryItemSetViewListComponent.View {
+                                let eventCycleState = StoryItemSetViewListComponent.EventCycleState()
+                                eventCycleState.ignoreScrolling = true
+                                viewListView.setEventCycleState(eventCycleState)
+                                
+                                DispatchQueue.main.async { [weak viewListView] in
+                                    guard let viewListView else {
+                                        return
+                                    }
+                                    viewListView.setEventCycleState(nil)
+                                }
+                            }
+                        }
+                        
+                        verticalPanState.startContentOffsetY = recognizer.translation(in: self).y
+                    }
+                    
+                    self.state?.updated(transition: .immediate)
+                }
             case .cancelled, .ended:
                 if let verticalPanState = self.verticalPanState {
                     self.verticalPanState = nil
                     
                     let velocity = recognizer.velocity(in: self)
+                    let translation = recognizer.translation(in: self)
                     
-                    if verticalPanState.fraction >= 0.3 || (verticalPanState.fraction >= 0.05 && velocity.y >= 150.0) {
-                        self.displayViewList = false
+                    if self.viewListDisplayState != .hidden {
+                        if verticalPanState.scrollView != nil {
+                            if verticalPanState.accumulatedOffset > 0.0 {
+                                if verticalPanState.fraction >= 0.3 || (verticalPanState.fraction >= 0.05 && velocity.y >= 150.0) {
+                                    if self.isSearchActive {
+                                        self.isSearchActive = false
+                                        self.viewListDisplayState = .half
+                                    } else {
+                                        self.viewListDisplayState = .hidden
+                                        self.isSearchActive = false
+                                    }
+                                }
+                                
+                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            } else {
+                                self.state?.updated(transition: .immediate)
+                            }
+                        } else {
+                            if verticalPanState.fraction >= 0.3 || (verticalPanState.fraction >= 0.05 && velocity.y >= 150.0) {
+                                self.viewListDisplayState = .hidden
+                                self.isSearchActive = false
+                            } else if self.targetViewListDisplayStateIsFull {
+                                if verticalPanState.fraction <= -0.05 && velocity.y <= -80.0 {
+                                    self.viewListDisplayState = .full
+                                } else if verticalPanState.fraction >= 0.05 && velocity.y >= -80.0 {
+                                    self.viewListDisplayState = .half
+                                }
+                            }
+                            
+                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                        }
+                    } else {
+                        if translation.y > 200.0 || (translation.y > 5.0 && velocity.y > 200.0) {
+                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                            self.component?.controller()?.dismiss()
+                        }  else if translation.y < -200.0 || (translation.y < -100.0 && velocity.y < -100.0) {
+                            if component.slice.peer.id == component.context.account.peerId {
+                                self.viewListDisplayState = self.targetViewListDisplayStateIsFull ? .full : .half
+                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                            } else {
+                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                                
+                                if let activate = self.activateInputWhileDragging() {
+                                    activate()
+                                }
+                            }
+                        } else {
+                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                        }
                     }
-                    
-                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                 }
             default:
                 break
@@ -1043,7 +1188,10 @@ public final class StoryItemSetContainerComponent: Component {
             if component.pinchState != nil {
                 return .pause
             }
-            if self.inputPanelExternalState.isEditing || component.isProgressPaused || self.sendMessageContext.actionSheet != nil || self.sendMessageContext.isViewingAttachedStickers || self.contextController != nil || self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil || self.displayViewList {
+            if self.verticalPanState != nil {
+                return .pause
+            }
+            if self.inputPanelExternalState.isEditing || component.isProgressPaused || self.sendMessageContext.actionSheet != nil || self.sendMessageContext.isViewingAttachedStickers || self.contextController != nil || self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil || self.viewListDisplayState != .hidden {
                 return .pause
             }
             if let reactionContextNode = self.reactionContextNode, reactionContextNode.isReactionSearchActive {
@@ -1299,6 +1447,8 @@ public final class StoryItemSetContainerComponent: Component {
                         let collapsedAlpha = itemAlpha * itemLayout.contentScaleFraction + 0.0 * (1.0 - itemLayout.contentScaleFraction)
                         itemAlpha = (1.0 - fractionDistanceToCenter) * itemAlpha + fractionDistanceToCenter * collapsedAlpha
                         
+                        itemAlpha *= (1.0 - itemLayout.contentOverflowFraction)
+                        
                         itemTransition.setAlpha(layer: visibleItem.contentTintLayer, alpha: 1.0 - itemAlpha)
                         
                         var itemProgressMode = self.itemProgressMode()
@@ -1308,6 +1458,125 @@ public final class StoryItemSetContainerComponent: Component {
 
                         if let view = view as? StoryContentItem.View {
                             view.setProgressMode(itemProgressMode)
+                        }
+                        
+                        if component.slice.peer.id == component.context.account.peerId {
+                            let contentViewsShadowView: UIImageView
+                            if let current = visibleItem.contentViewsShadowView {
+                                contentViewsShadowView = current
+                            } else {
+                                contentViewsShadowView = UIImageView(image: StoryItemSetContainerComponent.shadowImage)
+                                visibleItem.contentViewsShadowView = contentViewsShadowView
+                                visibleItem.contentContainerView.addSubview(contentViewsShadowView)
+                            }
+                            
+                            let shadowHeight: CGFloat = 100.0
+                            
+                            let shadowFrame = CGRect(origin: CGPoint(x: 0.0, y: itemLayout.contentFrame.height - shadowHeight), size: CGSize(width: itemLayout.contentFrame.width, height: shadowHeight))
+                            itemTransition.setPosition(view: contentViewsShadowView, position: shadowFrame.center)
+                            itemTransition.setBounds(view: contentViewsShadowView, bounds: CGRect(origin: CGPoint(), size: shadowFrame.size))
+                            itemTransition.setAlpha(view: contentViewsShadowView, alpha: itemLayout.contentScaleFraction)
+                            
+                            let footerPanel: ComponentView<Empty>
+                            if let current = visibleItem.footerPanel {
+                                footerPanel = current
+                            } else {
+                                footerPanel = ComponentView()
+                                visibleItem.footerPanel = footerPanel
+                            }
+                            
+                            let singleDistanceToCenter = max(0.0, min(1.0, abs(unboundFractionDistanceToCenter)))
+                            
+                            var footerExpandFraction = itemLayout.contentScaleFraction
+                            footerExpandFraction = footerExpandFraction.interpolate(to: 1.0, amount: singleDistanceToCenter)
+                            
+                            let footerSize = footerPanel.update(
+                                transition: itemTransition,
+                                component: AnyComponent(StoryFooterPanelComponent(
+                                    context: component.context,
+                                    strings: component.strings,
+                                    storyItem: item.storyItem,
+                                    externalViews: nil,
+                                    expandFraction: footerExpandFraction,
+                                    expandViewStats: { [weak self] in
+                                        guard let self else {
+                                            return
+                                        }
+                                        
+                                        if self.viewListDisplayState == .hidden {
+                                            self.viewListDisplayState = .half
+                                            
+                                            self.preparingToDisplayViewList = true
+                                            self.updateScrolling(transition: .immediate)
+                                            self.preparingToDisplayViewList = false
+                                            
+                                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                                        }
+                                    },
+                                    deleteAction: { [weak self] in
+                                        guard let self, let component = self.component else {
+                                            return
+                                        }
+                                        
+                                        let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                                        let actionSheet = ActionSheetController(presentationData: presentationData)
+                                        
+                                        actionSheet.setItemGroups([
+                                            ActionSheetItemGroup(items: [
+                                                ActionSheetButtonItem(title: component.strings.Story_ContextDeleteStory, color: .destructive, action: { [weak self, weak actionSheet] in
+                                                    actionSheet?.dismissAnimated()
+                                                    
+                                                    guard let self, let component = self.component else {
+                                                        return
+                                                    }
+                                                    component.delete()
+                                                })
+                                            ]),
+                                            ActionSheetItemGroup(items: [
+                                                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                                    actionSheet?.dismissAnimated()
+                                                })
+                                            ])
+                                        ])
+                                        
+                                        actionSheet.dismissed = { [weak self] _ in
+                                            guard let self else {
+                                                return
+                                            }
+                                            self.sendMessageContext.actionSheet = nil
+                                            self.updateIsProgressPaused()
+                                        }
+                                        self.sendMessageContext.actionSheet = actionSheet
+                                        self.updateIsProgressPaused()
+                                        
+                                        component.presentController(actionSheet, nil)
+                                    },
+                                    moreAction: { [weak self] sourceView, gesture in
+                                        guard let self else {
+                                            return
+                                        }
+                                        self.performMoreAction(sourceView: sourceView, gesture: gesture)
+                                    }
+                                )),
+                                environment: {},
+                                containerSize: CGSize(width: itemLayout.containerSize.width, height: 200.0)
+                            )
+                            if let footerPanelView = footerPanel.view {
+                                if footerPanelView.superview == nil {
+                                    self.componentContainerView.addSubview(footerPanelView)
+                                }
+                                
+                                var footerPanelY: CGFloat = self.itemsContainerView.frame.minY + itemLayout.contentFrame.center.y + itemLayout.contentFrame.height * 0.5 * itemScale
+                                
+                                footerPanelY += (1.0 - footerExpandFraction) * 4.0 + footerExpandFraction * (-41.0)
+                                
+                                let footerPanelFrame = CGRect(origin: CGPoint(x: itemPositionX - footerSize.width * 0.5, y: footerPanelY), size: footerSize)
+                                itemTransition.setFrame(view: footerPanelView, frame: footerPanelFrame)
+                                itemTransition.setAlpha(view: footerPanelView, alpha: 1.0 - itemLayout.contentOverflowFraction)
+                            }
+                        } else if let footerPanel = visibleItem.footerPanel {
+                            visibleItem.footerPanel = nil
+                            footerPanel.view?.removeFromSuperview()
                         }
                     }
                 }
@@ -1322,6 +1591,8 @@ public final class StoryItemSetContainerComponent: Component {
                     visibleItem.contentContainerView.removeFromSuperview()
                     visibleItem.unclippedContainerView.removeFromSuperview()
                     visibleItem.contentTintLayer.removeFromSuperlayer()
+                    visibleItem.footerPanel?.view?.removeFromSuperview()
+                    visibleItem.contentViewsShadowView?.removeFromSuperview()
                 }
             }
             for id in removeIds {
@@ -1354,12 +1625,7 @@ public final class StoryItemSetContainerComponent: Component {
                 return false
             }
             if component.slice.peer.id == component.context.account.peerId {
-                self.displayViewList = true
-                if component.verticalPanFraction == 0.0 {
-                    self.preparingToDisplayViewList = true
-                    self.updateScrolling(transition: .immediate)
-                    self.preparingToDisplayViewList = false
-                }
+                self.viewListDisplayState = .half
                 self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                 return true
             } else {
@@ -1444,6 +1710,17 @@ public final class StoryItemSetContainerComponent: Component {
             if let component = self.component, let sourceView = transitionIn.sourceView, let visibleItem = self.visibleItems[component.slice.item.storyItem.id] {
                 let contentContainerView = visibleItem.contentContainerView
                 let unclippedContainerView = visibleItem.unclippedContainerView
+                
+                if let footerPanelView = visibleItem.footerPanel?.view {
+                    footerPanelView.layer.animatePosition(
+                        from: CGPoint(x: 0.0, y: self.bounds.height - footerPanelView.frame.minY),
+                        to: CGPoint(),
+                        duration: 0.48,
+                        timingFunction: kCAMediaTimingFunctionSpring,
+                        additive: true
+                    )
+                    footerPanelView.layer.animateAlpha(from: 0.0, to: footerPanelView.alpha, duration: 0.28)
+                }
                 
                 if let centerInfoView = self.centerInfoItem?.view.view {
                     centerInfoView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
@@ -1593,6 +1870,18 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             if let component = self.component, let sourceView = transitionOut.destinationView, let visibleItem = self.visibleItems[component.slice.item.storyItem.id] {
+                if let footerPanelView = visibleItem.footerPanel?.view {
+                    footerPanelView.layer.animatePosition(
+                        from: CGPoint(),
+                        to: CGPoint(x: 0.0, y: self.bounds.height - footerPanelView.frame.minY),
+                        duration: 0.3,
+                        timingFunction: kCAMediaTimingFunctionSpring,
+                        removeOnCompletion: false,
+                        additive: true
+                    )
+                    footerPanelView.layer.animateAlpha(from: footerPanelView.alpha, to: 0.0, duration: 0.3, removeOnCompletion: false)
+                }
+                
                 let contentContainerView = visibleItem.contentContainerView
                 let unclippedContainerView = visibleItem.unclippedContainerView
                 
@@ -1630,7 +1919,7 @@ public final class StoryItemSetContainerComponent: Component {
                             
                             let transitionSourceContainerView = UIView(frame: self.bounds)
                             transitionSourceContainerView.isUserInteractionEnabled = false
-                            self.insertSubview(transitionSourceContainerView, aboveSubview: self.itemsContainerView)
+                            self.componentContainerView.insertSubview(transitionSourceContainerView, aboveSubview: self.itemsContainerView)
                             
                             transitionSourceContainerView.addSubview(transitionViewImpl)
                             
@@ -1744,7 +2033,7 @@ public final class StoryItemSetContainerComponent: Component {
                         
                         let transitionSourceContainerView = UIView(frame: self.bounds)
                         transitionSourceContainerView.isUserInteractionEnabled = false
-                        self.insertSubview(transitionSourceContainerView, belowSubview: self.itemsContainerView)
+                        self.componentContainerView.insertSubview(transitionSourceContainerView, belowSubview: self.itemsContainerView)
                         
                         transitionSourceContainerView.addSubview(transitionViewImpl)
                         
@@ -1955,25 +2244,6 @@ public final class StoryItemSetContainerComponent: Component {
                 })
             }
             
-            /*if self.topContentGradientLayer.colors == nil {
-                var locations: [NSNumber] = []
-                var colors: [CGColor] = []
-                let numStops = 4
-                let baseAlpha: CGFloat = 0.5
-                for i in 0 ..< numStops {
-                    let step = 1.0 - CGFloat(i) / CGFloat(numStops - 1)
-                    locations.append((1.0 - step) as NSNumber)
-                    let alphaStep: CGFloat = pow(step, 1.5)
-                    colors.append(UIColor.black.withAlphaComponent(alphaStep * baseAlpha).cgColor)
-                }
-                
-                self.topContentGradientLayer.startPoint = CGPoint(x: 0.0, y: 0.0)
-                self.topContentGradientLayer.endPoint = CGPoint(x: 0.0, y: 1.0)
-                
-                self.topContentGradientLayer.locations = locations
-                self.topContentGradientLayer.colors = colors
-                self.topContentGradientLayer.type = .axial
-            }*/
             if self.bottomContentGradientLayer.colors == nil {
                 var locations: [NSNumber] = []
                 var colors: [CGColor] = []
@@ -1999,6 +2269,25 @@ public final class StoryItemSetContainerComponent: Component {
             let wasPanning = self.component?.isPanning ?? false
             self.component = component
             self.state = state
+            
+            var dismissPanOffset: CGFloat = 0.0
+            var dismissPanScale: CGFloat = 1.0
+            var verticalPanFraction: CGFloat = 0.0
+            var dismissFraction: CGFloat = 0.0
+            
+            if let verticalPanState = self.verticalPanState, self.viewListDisplayState == .hidden {
+                dismissFraction = max(0.0, min(1.0, verticalPanState.fraction))
+                verticalPanFraction = max(0.0, min(1.0, -verticalPanState.fraction))
+                
+                dismissPanOffset = dismissFraction * availableSize.height
+                dismissPanScale = 1.0 * (1.0 - dismissFraction) + 0.6 * dismissFraction
+            }
+            
+            component.externalState.dismissFraction = dismissFraction
+            
+            transition.setPosition(view: self.componentContainerView, position: CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.5 + dismissPanOffset))
+            transition.setBounds(view: self.componentContainerView, bounds: CGRect(origin: CGPoint(), size: availableSize))
+            transition.setScale(view: self.componentContainerView, scale: dismissPanScale)
             
             var bottomContentInset: CGFloat
             if !component.safeInsets.bottom.isZero {
@@ -2241,7 +2530,8 @@ public final class StoryItemSetContainerComponent: Component {
                     isFormattingLocked: false,
                     hideKeyboard: self.sendMessageContext.currentInputMode == .media,
                     forceIsEditing: self.sendMessageContext.currentInputMode == .media,
-                    disabledPlaceholder: disabledPlaceholder
+                    disabledPlaceholder: disabledPlaceholder,
+                    storyId: component.slice.item.storyItem.id
                 )),
                 environment: {},
                 containerSize: CGSize(width: inputPanelAvailableWidth, height: 200.0)
@@ -2249,6 +2539,11 @@ public final class StoryItemSetContainerComponent: Component {
             
             var inputPanelInset: CGFloat = component.containerInsets.bottom
             var inputHeight = component.inputHeight
+            
+            var needInputBackground = true
+            if self.viewListDisplayState != .hidden {
+                needInputBackground = false
+            }
             if self.inputPanelExternalState.isEditing {
                 if self.sendMessageContext.currentInputMode == .media || (inputHeight.isZero && keyboardWasHidden) {
                     inputHeight = component.deviceMetrics.standardInputHeight(inLandscape: false)
@@ -2296,10 +2591,10 @@ public final class StoryItemSetContainerComponent: Component {
             )
             if let inputPanelBackgroundView = self.inputPanelBackground.view {
                 if inputPanelBackgroundView.superview == nil {
-                    self.addSubview(self.inputPanelContainer)
+                    self.componentContainerView.addSubview(self.inputPanelContainer)
                     self.inputPanelContainer.insertSubview(inputPanelBackgroundView, at: 0)
                 }
-                let isVisible = inputHeight > 44.0 && !hasRecordingBlurBackground
+                let isVisible = inputHeight > 44.0 && !hasRecordingBlurBackground && needInputBackground
                 transition.setFrame(view: inputPanelBackgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: isVisible ? availableSize.height - inputPanelBackgroundSize.height : availableSize.height), size: inputPanelBackgroundSize))
                 transition.setAlpha(view: inputPanelBackgroundView, alpha: isVisible ? 1.0 : 0.0, delay: isVisible ? 0.0 : 0.4)
             }
@@ -2324,7 +2619,6 @@ public final class StoryItemSetContainerComponent: Component {
             
             var minimizedBottomContentHeight: CGFloat = 0.0
             var maximizedBottomContentHeight: CGFloat = 0.0
-            var minimizedBottomContentFraction: CGFloat = 0.0
             
             let minimizedHeight = max(100.0, availableSize.height - (325.0 + 12.0))
             let defaultHeight = 60.0 + component.safeInsets.bottom + 1.0
@@ -2332,7 +2626,7 @@ public final class StoryItemSetContainerComponent: Component {
             var validViewListIds: [Int32] = []
             if component.slice.peer.id == component.context.account.peerId, let currentIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
                 var visibleViewListIds: [Int32] = [component.slice.item.storyItem.id]
-                if self.displayViewList, let viewListPanState = self.viewListPanState {
+                if self.viewListDisplayState != .hidden, let viewListPanState = self.viewListPanState {
                     if currentIndex != 0 {
                         if viewListPanState.fraction > 0.0 {
                             visibleViewListIds.append(component.slice.allItems[currentIndex - 1].storyItem.id)
@@ -2358,7 +2652,7 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 for (id, views) in preloadViewListIds {
                     if component.sharedViewListsContext.viewLists[StoryId(peerId: component.slice.peer.id, id: id)] == nil {
-                        let viewList = component.context.engine.messages.storyViewList(id: id, views: views)
+                        let viewList = component.context.engine.messages.storyViewList(id: id, views: views, listMode: .everyone, sortMode: .reactionsFirst)
                         component.sharedViewListsContext.viewLists[StoryId(peerId: component.slice.peer.id, id: id)] = viewList
                     }
                 }
@@ -2379,19 +2673,42 @@ public final class StoryItemSetContainerComponent: Component {
                 var fixedAnimationOffset: CGFloat = 0.0
                 var applyFixedAnimationOffsetIds: [Int32] = []
                 
-                let outerExpansionFraction: CGFloat
-                let outerExpansionDirection: Bool
-                if self.displayViewList {
-                    if let verticalPanState = self.verticalPanState {
-                        outerExpansionFraction = max(0.0, min(1.0, 1.0 - verticalPanState.fraction))
-                    } else {
-                        outerExpansionFraction = 1.0
-                    }
-                    outerExpansionDirection = false
-                } else {
-                    outerExpansionFraction = component.verticalPanFraction
-                    outerExpansionDirection = true
+                let normalCollapsedContentAreaHeight: CGFloat = availableSize.height - minimizedHeight
+                
+                let minViewListHeight: CGFloat = 0.0
+                let maxViewListHeight: CGFloat = availableSize.height - 60.0
+                let midViewListHeight: CGFloat = availableSize.height - normalCollapsedContentAreaHeight
+                
+                var viewListHeight: CGFloat = 0.0
+                
+                switch self.viewListDisplayState {
+                case .hidden:
+                    viewListHeight = minViewListHeight
+                case .half:
+                    viewListHeight = midViewListHeight
+                case .full:
+                    viewListHeight = maxViewListHeight
                 }
+                
+                if let verticalPanState = self.verticalPanState {
+                    if verticalPanState.scrollView != nil {
+                        viewListHeight += -verticalPanState.accumulatedOffset
+                    } else {
+                        viewListHeight += -verticalPanState.fraction * availableSize.height
+                    }
+                }
+                
+                viewListHeight = max(minViewListHeight, min(maxViewListHeight, viewListHeight))
+                
+                self.targetViewListDisplayStateIsFull = viewListHeight > midViewListHeight
+                
+                let viewListHeightMidFraction: CGFloat = max(0.0, min(1.0, viewListHeight / midViewListHeight))
+                viewListInset = defaultHeight * (1.0 - viewListHeightMidFraction) + viewListHeightMidFraction * midViewListHeight
+                viewListInset += max(0.0, viewListHeight - midViewListHeight)
+                
+                inputPanelBottomInset = viewListInset
+                minimizedBottomContentHeight = minimizedHeight
+                maximizedBottomContentHeight = defaultHeight
                 
                 for id in visibleViewListIds {
                     guard let itemIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == id }) else {
@@ -2413,6 +2730,9 @@ public final class StoryItemSetContainerComponent: Component {
                         applyFixedAnimationOffsetIds.append(id)
                     }
                     
+                    var safeInsets = component.safeInsets
+                    safeInsets.bottom = max(safeInsets.bottom, component.inputHeight)
+                    
                     viewList.view.parentState = state
                     let viewListSize = viewList.view.update(
                         transition: viewListTransition.withUserData(PeerListItemComponent.TransitionHint(
@@ -2421,23 +2741,23 @@ public final class StoryItemSetContainerComponent: Component {
                             synchronous: false
                         )),
                         component: AnyComponent(StoryItemSetViewListComponent(
-                            externalState: viewList.externalState,
                             context: component.context,
                             theme: component.theme,
                             strings: component.strings,
                             sharedListsContext: component.sharedViewListsContext,
                             peerId: component.slice.peer.id,
-                            safeInsets: component.safeInsets,
+                            safeInsets: safeInsets,
                             storyItem: item.storyItem,
-                            minimizedContentHeight: 325.0,
-                            outerExpansionFraction: outerExpansionFraction,
-                            outerExpansionDirection: outerExpansionDirection,
+                            effectiveHeight: viewListHeight,
+                            minHeight: midViewListHeight,
                             availableReactions: component.availableReactions,
+                            isSearchActive: self.isSearchActive,
                             close: { [weak self] in
                                 guard let self else {
                                     return
                                 }
-                                self.displayViewList = false
+                                self.viewListDisplayState = .hidden
+                                self.isSearchActive = false
                                 self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                             },
                             expandViewStats: { [weak self] in
@@ -2445,8 +2765,8 @@ public final class StoryItemSetContainerComponent: Component {
                                     return
                                 }
                                 
-                                if !self.displayViewList {
-                                    self.displayViewList = true
+                                if self.viewListDisplayState == .hidden {
+                                    self.viewListDisplayState = .half
                                     
                                     self.preparingToDisplayViewList = true
                                     self.updateScrolling(transition: .immediate)
@@ -2684,7 +3004,26 @@ public final class StoryItemSetContainerComponent: Component {
                                 }
                                 self.openPeerStories(peer: peer, avatarNode: avatarNode)
                             },
-                            openPremiumIntro: {}
+                            openPremiumIntro: {},
+                            setIsSearchActive: { [weak self] value in
+                                guard let self else {
+                                    return
+                                }
+                                if value != self.isSearchActive {
+                                    self.isSearchActive = value
+                                    
+                                    if self.isSearchActive {
+                                        self.viewListDisplayState = .full
+                                    } else {
+                                        self.viewListDisplayState = .half
+                                    }
+                                    
+                                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)))
+                                }
+                            },
+                            controller: { [weak self] in
+                                return self?.component?.controller()
+                            }
                         )),
                         environment: {},
                         containerSize: availableSize
@@ -2709,13 +3048,13 @@ public final class StoryItemSetContainerComponent: Component {
                             viewListView.animateIn(transition: transition)
                         }
                     }
-                    if id == component.slice.item.storyItem.id {
+                    /*if id == component.slice.item.storyItem.id {
                         viewListInset = minimizedHeight * viewList.externalState.minimizationFraction + defaultHeight * (1.0 - viewList.externalState.minimizationFraction)
                         inputPanelBottomInset = viewListInset
                         minimizedBottomContentHeight = minimizedHeight
                         maximizedBottomContentHeight = defaultHeight
                         minimizedBottomContentFraction = viewList.externalState.minimizationFraction
-                    }
+                    }*/
                 }
                 
                 if fixedAnimationOffset == 0.0 {
@@ -2753,18 +3092,21 @@ public final class StoryItemSetContainerComponent: Component {
             let itemSize = CGSize(width: availableSize.width, height: ceil(availableSize.width * 1.77778))
             let contentDefaultBottomInset: CGFloat = bottomContentInset
             
-            let contentVisualBottomInset: CGFloat = max(contentDefaultBottomInset, viewListInset)
             let contentVisualMaxBottomInset: CGFloat = max(contentDefaultBottomInset, maximizedBottomContentHeight)
             let contentVisualMinBottomInset: CGFloat = max(contentDefaultBottomInset, minimizedBottomContentHeight)
+            
+            var contentVisualBottomInset: CGFloat = max(contentDefaultBottomInset, viewListInset)
+            let contentBottomInsetOverflow = max(0.0, contentVisualBottomInset - contentVisualMinBottomInset)
+            contentVisualBottomInset = min(contentVisualMinBottomInset, contentVisualBottomInset)
+            contentVisualBottomInset = max(contentVisualMaxBottomInset, contentVisualBottomInset)
+            
+            let contentOverflowFraction: CGFloat = max(0.0, min(1.0, contentBottomInsetOverflow / (availableSize.height - contentVisualMinBottomInset - 60.0)))
             
             let contentVisualMaxHeight = min(itemSize.height, availableSize.height - component.containerInsets.top - contentVisualMaxBottomInset)
             let contentSize = CGSize(width: itemSize.width, height: contentVisualMaxHeight)
             let contentVisualMinHeight = min(contentSize.height, availableSize.height - component.containerInsets.top - contentVisualMinBottomInset)
             
             let contentVisualHeight = min(contentSize.height, availableSize.height - component.containerInsets.top - contentVisualBottomInset)
-            
-            //contentScaleFraction = 1.0 -> contentVisualScale = contentMinScale
-            //contentScaleFraction = 0.0 -> contentVisualScale = 1.0
             
             let contentVisualScale = min(1.0, contentVisualHeight / contentSize.height)
             
@@ -2777,10 +3119,8 @@ public final class StoryItemSetContainerComponent: Component {
             } else {
                 contentScaleFraction = 1.0 - (contentVisualScale - contentMinScale) / (contentMaxScale - contentMinScale)
             }
-            let _ = minimizedBottomContentFraction
-            //print("contentScaleFraction: \(contentScaleFraction), minimizedBottomContentFraction: \(minimizedBottomContentFraction)")
             
-            let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: component.containerInsets.top - (contentSize.height - contentVisualHeight) * 0.5), size: contentSize)
+            let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: component.containerInsets.top - (contentSize.height - contentVisualHeight) * 0.5 - contentBottomInsetOverflow), size: contentSize)
             
             transition.setFrame(view: self.viewListsContainer, frame: CGRect(origin: CGPoint(x: contentFrame.minX, y: 0.0), size: CGSize(width: contentSize.width, height: availableSize.height)))
             let viewListsRadius: CGFloat
@@ -2797,7 +3137,8 @@ public final class StoryItemSetContainerComponent: Component {
                 containerSize: availableSize,
                 contentFrame: contentFrame,
                 contentMinScale: contentMinScale,
-                contentScaleFraction: contentScaleFraction
+                contentScaleFraction: contentScaleFraction,
+                contentOverflowFraction: contentOverflowFraction
             )
             self.itemLayout = itemLayout
             
@@ -3054,7 +3395,7 @@ public final class StoryItemSetContainerComponent: Component {
                 closeFriendIcon.view?.removeFromSuperview()
             }
             
-            let controlsContainerAlpha = (component.hideUI || self.isEditingStory || self.displayViewList) ? 0.0 : 1.0
+            let controlsContainerAlpha = (component.hideUI || self.isEditingStory || self.viewListDisplayState != .hidden) ? 0.0 : 1.0
             transition.setAlpha(view: self.controlsContainerView, alpha: controlsContainerAlpha)
             transition.setAlpha(view: self.controlsClippingView, alpha: controlsContainerAlpha)
             
@@ -3193,12 +3534,12 @@ public final class StoryItemSetContainerComponent: Component {
             }
             if let inputPanelView = self.inputPanel.view {
                 if inputPanelView.superview == nil {
-                    self.addSubview(inputPanelView)
+                    self.componentContainerView.addSubview(inputPanelView)
                 }
                 
                 var inputPanelOffset: CGFloat = 0.0
                 if component.slice.peer.id != component.context.account.peerId && !self.inputPanelExternalState.isEditing {
-                    let bandingOffset = scrollingRubberBandingOffset(offset: component.verticalPanFraction * availableSize.height, bandingStart: 0.0, range: 10.0)
+                    let bandingOffset = scrollingRubberBandingOffset(offset: verticalPanFraction * availableSize.height, bandingStart: 0.0, range: 10.0)
                     inputPanelOffset = -max(0.0, min(10.0, bandingOffset))
                 }
                 
@@ -3333,7 +3674,10 @@ public final class StoryItemSetContainerComponent: Component {
                         self.controlsContainerView.insertSubview(captionItemView, aboveSubview: self.contentDimView)
                     }
                     captionItemTransition.setFrame(view: captionItemView, frame: captionFrame)
-                    captionItemTransition.setAlpha(view: captionItemView, alpha: (component.hideUI || self.displayViewList || self.isEditingStory || self.inputPanelExternalState.isEditing) ? 0.0 : 1.0)
+                    
+                    var captionAlpha: CGFloat = (component.hideUI || self.isEditingStory || self.inputPanelExternalState.isEditing) ? 0.0 : 1.0
+                    captionAlpha *= (1.0 - itemLayout.contentScaleFraction)
+                    captionItemTransition.setAlpha(view: captionItemView, alpha: captionAlpha)
                 }
             }
             
@@ -3454,7 +3798,7 @@ public final class StoryItemSetContainerComponent: Component {
                         } else {
                             let targetView = UIView(frame: CGRect(origin: CGPoint(x: floor((self.bounds.width - 100.0) * 0.5), y: floor((self.bounds.height - 100.0) * 0.5)), size: CGSize(width: 100.0, height: 100.0)))
                             targetView.isUserInteractionEnabled = false
-                            self.addSubview(targetView)
+                            self.componentContainerView.addSubview(targetView)
                             
                             if let reactionContextNode = self.reactionContextNode {
                                 reactionContextNode.willAnimateOutToReaction(value: updateReaction.reaction)
@@ -3463,7 +3807,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         return
                                     }
                                     standaloneReactionAnimation.frame = self.bounds
-                                    self.addSubview(standaloneReactionAnimation.view)
+                                    self.componentContainerView.addSubview(standaloneReactionAnimation.view)
                                 }, completion: { [weak targetView, weak reactionContextNode] in
                                     targetView?.removeFromSuperview()
                                     if let reactionContextNode {
@@ -3534,7 +3878,7 @@ public final class StoryItemSetContainerComponent: Component {
                 var animateReactionsIn = false
                 if reactionContextNode.view.superview == nil {
                     animateReactionsIn = true
-                    self.addSubnode(reactionContextNode)
+                    self.componentContainerView.addSubnode(reactionContextNode)
                 }
                 
                 if reactionContextNode.isAnimatingOutToReaction {
@@ -3560,7 +3904,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 return
                             }
                             standaloneReactionAnimation.frame = self.bounds
-                            self.addSubview(standaloneReactionAnimation.view)
+                            self.componentContainerView.addSubview(standaloneReactionAnimation.view)
                         }, completion: { [weak reactionContextNode] in
                             if let reactionContextNode {
                                 reactionContextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak reactionContextNode] _ in
@@ -3610,7 +3954,7 @@ public final class StoryItemSetContainerComponent: Component {
             //transition.setAlpha(layer: self.bottomContentGradientLayer, alpha: inputPanelIsOverlay ? 1.0 : 0.0)
             transition.setAlpha(layer: self.bottomContentGradientLayer, alpha: 0.0)
             
-            var topGradientAlpha: CGFloat = (component.hideUI || self.displayViewList || self.isEditingStory) ? 0.0 : 1.0
+            var topGradientAlpha: CGFloat = (component.hideUI || self.viewListDisplayState != .hidden || self.isEditingStory) ? 0.0 : 1.0
             var normalDimAlpha: CGFloat = 0.0
             var forceDimAnimation = false
             if let captionItem = self.captionItem {
@@ -3623,7 +3967,7 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             var dimAlpha: CGFloat = (inputPanelIsOverlay || self.inputPanelExternalState.isEditing) ? 1.0 : normalDimAlpha
-            if component.hideUI || self.displayViewList || self.isEditingStory {
+            if component.hideUI || self.viewListDisplayState != .hidden || self.isEditingStory {
                 dimAlpha = 0.0
             }
             
@@ -4322,7 +4666,7 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: nil, useDirectRendering: false)
-            self.addSubnode(standaloneReactionAnimation)
+            self.componentContainerView.addSubnode(standaloneReactionAnimation)
             standaloneReactionAnimation.frame = self.bounds
             standaloneReactionAnimation.animateReactionSelection(
                 context: component.context,
@@ -4340,7 +4684,7 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                     
                     standaloneReactionAnimation.frame = self.bounds
-                    self.addSubnode(standaloneReactionAnimation)
+                    self.componentContainerView.addSubnode(standaloneReactionAnimation)
                 },
                 completion: { [weak standaloneReactionAnimation] in
                     standaloneReactionAnimation?.removeFromSupernode()

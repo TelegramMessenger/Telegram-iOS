@@ -38,6 +38,18 @@ private func hashForIdsReverse(_ ids: [Int64]) -> Int64 {
     return Int64(bitPattern: acc)
 }
 
+private func hashForIdsReverse(_ ids: [Int64], unreadIds: [Int64]) -> Int64 {
+    var acc: UInt64 = 0
+    
+    for id in ids {
+        combineInt64Hash(&acc, with: UInt64(bitPattern: id))
+        if unreadIds.contains(id) {
+            combineInt64Hash(&acc, with: 1 as UInt64)
+        }
+    }
+    return Int64(bitPattern: acc)
+}
+
 func manageStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
     return (postbox.transaction { transaction -> Void in
         addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: .stickers, content: .sync, noDelay: false)
@@ -99,15 +111,19 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox, category: F
     return postbox.transaction { transaction -> Signal<Void, NoError> in
         let initialPacks = transaction.getOrderedListItems(collectionId: category.itemListNamespace)
         var initialPackMap: [Int64: FeaturedStickerPackItem] = [:]
+        var unreadIds: [Int64] = []
         for entry in initialPacks {
             let item = entry.contents.get(FeaturedStickerPackItem.self)!
             initialPackMap[FeaturedStickerPackItemId(entry.id).packId] = item
+            if item.unread {
+                unreadIds.append(item.info.id.id)
+            }
         }
         
         let initialPackIds = initialPacks.map {
             return FeaturedStickerPackItemId($0.id).packId
         }
-        let initialHash: Int64 = hashForIdsReverse(initialPackIds)
+        let initialHash: Int64 = hashForIdsReverse(initialPackIds, unreadIds: unreadIds)
         
         struct FeaturedListContent {
             var unreadIds: Set<Int64>

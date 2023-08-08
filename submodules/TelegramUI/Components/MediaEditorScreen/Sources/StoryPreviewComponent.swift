@@ -290,7 +290,8 @@ final class StoryPreviewComponent: Component {
                     isFormattingLocked: false,
                     hideKeyboard: false,
                     forceIsEditing: false,
-                    disabledPlaceholder: nil
+                    disabledPlaceholder: nil,
+                    storyId: nil
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 200.0)

@@ -2047,6 +2047,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         targetView.addSubnode(itemNode)
                         itemNode.frame = selfTargetBounds
                     }
+                } else if let targetView = targetView as? UIImageView {
+                    itemNode.isHidden = true
+                    targetView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
+                    targetView.layer.animateScale(from: 0.2, to: 1.0, duration: 0.12)
                 }
                 
                 if switchToInlineImmediately {

@@ -196,6 +196,7 @@ public final class PeerListItemComponent: Component {
         private var checkLayer: CheckLayer?
         
         private var reactionLayer: InlineStickerItemLayer?
+        private var heartReactionIcon: UIImageView?
         private var iconFrame: CGRect?
         private var file: TelegramMediaFile?
         private var fileDisposable: Disposable?
@@ -668,24 +669,50 @@ public final class PeerListItemComponent: Component {
             self.iconFrame = CGRect(origin: CGPoint(x: availableSize.width - (contextInset * 2.0 + 14.0 + component.sideInset) - imageSize.width, y: floor((height - verticalInset * 2.0 - imageSize.height) * 0.5)), size: imageSize)
             
             if previousComponent?.reaction != component.reaction {
-                if let reaction = component.reaction {
-                    switch reaction.reaction {
-                    case .builtin:
-                        self.file = reaction.file
-                        self.updateReactionLayer()
-                    case let .custom(fileId):
-                        self.fileDisposable = (component.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
-                        |> deliverOnMainQueue).start(next: { [weak self] files in
-                            guard let self, let file = files[fileId] else {
-                                return
-                            }
-                            self.file = file
-                            self.updateReactionLayer()
-                        })
-                    }
-                } else {
+                if let reaction = component.reaction, case .builtin("❤") = reaction.reaction {
                     self.file = nil
                     self.updateReactionLayer()
+                    
+                    var reactionTransition = transition
+                    let heartReactionIcon: UIImageView
+                    if let current = self.heartReactionIcon {
+                        heartReactionIcon = current
+                    } else {
+                        reactionTransition = reactionTransition.withAnimation(.none)
+                        heartReactionIcon = UIImageView()
+                        self.heartReactionIcon = heartReactionIcon
+                        self.containerButton.addSubview(heartReactionIcon)
+                        heartReactionIcon.image = PresentationResourcesChat.storyViewListLikeIcon(component.theme)
+                    }
+                    
+                    if let image = heartReactionIcon.image, let iconFrame = self.iconFrame {
+                        reactionTransition.setFrame(view: heartReactionIcon, frame: image.size.centered(around: iconFrame.center))
+                    }
+                } else {
+                    if let heartReactionIcon = self.heartReactionIcon {
+                        self.heartReactionIcon = nil
+                        heartReactionIcon.removeFromSuperview()
+                    }
+                    
+                    if let reaction = component.reaction {
+                        switch reaction.reaction {
+                        case .builtin:
+                            self.file = reaction.file
+                            self.updateReactionLayer()
+                        case let .custom(fileId):
+                            self.fileDisposable = (component.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
+                            |> deliverOnMainQueue).start(next: { [weak self] files in
+                                guard let self, let file = files[fileId] else {
+                                    return
+                                }
+                                self.file = file
+                                self.updateReactionLayer()
+                            })
+                        }
+                    } else {
+                        self.file = nil
+                        self.updateReactionLayer()
+                    }
                 }
             }
             
