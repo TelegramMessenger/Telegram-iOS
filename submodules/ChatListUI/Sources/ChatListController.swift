@@ -2612,7 +2612,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     let text: String
                     if premiumNeeded {
-                        text = self.presentationData.strings.StoryFeed_TooltipPremiumPosting
+                        text = self.presentationData.strings.StoryFeed_TooltipPremiumPostingLimited
                     } else if reachedCountLimit {
                         let valueText = self.presentationData.strings.StoryFeed_TooltipStoryLimitValue(Int32(storiesCountLimit))
                         text = self.presentationData.strings.StoryFeed_TooltipStoryLimit(valueText).string
@@ -2634,7 +2634,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         location: .point(location, .top),
                         shouldDismissOnTouch: { [weak self] point, containerFrame in
                             if containerFrame.contains(point), premiumNeeded {
-                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: false)
+                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: false, dismissed: nil)
                                 self?.push(controller)
                                 return .dismiss(consume: true)
                             } else {

@@ -2226,6 +2226,8 @@ public final class StoryItemSetContainerComponent: Component {
                             self.sendMessageContext.enqueueGifData(view: self, data: data)
                         case let .sticker(image, isMemoji):
                             self.sendMessageContext.enqueueStickerImage(view: self, image: image, isMemoji: isMemoji)
+                        case .text:
+                            break
                         }
                     },
                     audioRecorder: self.sendMessageContext.audioRecorderValue,

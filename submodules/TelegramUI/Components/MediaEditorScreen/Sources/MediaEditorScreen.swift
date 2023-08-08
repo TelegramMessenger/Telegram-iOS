@@ -404,26 +404,29 @@ final class MediaEditorScreenComponent: Component {
         
         private var nextTransitionUserData: Any?
         @objc private func deactivateInput() {
-            guard let view = self.inputPanel.view as? MessageInputPanelComponent.View else {
+            guard let _ = self.inputPanel.view as? MessageInputPanelComponent.View else {
                 return
             }
-            if view.canDeactivateInput() {
-                self.currentInputMode = .text
-                if hasFirstResponder(self) {
-                    if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
-                        self.nextTransitionUserData = TextFieldComponent.AnimationHint(kind: .textFocusChanged)
-                        if view.isActive {
-                            view.deactivateInput()
-                        } else {
-                            self.endEditing(true)
-                        }
+//            if view.canDeactivateInput() {
+            self.currentInputMode = .text
+            if hasFirstResponder(self) {
+                if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
+                    self.nextTransitionUserData = TextFieldComponent.AnimationHint(kind: .textFocusChanged)
+                    if view.isActive {
+                        view.deactivateInput()
+                    } else {
+                        self.endEditing(true)
                     }
-                } else {
-                    self.state?.updated(transition: .spring(duration: 0.4).withUserData(TextFieldComponent.AnimationHint(kind: .textFocusChanged)))
                 }
             } else {
-                view.animateError()
+                self.state?.updated(transition: .spring(duration: 0.4).withUserData(TextFieldComponent.AnimationHint(kind: .textFocusChanged)))
             }
+//            } else {
+//                if let controller = self.environment?.controller() as? MediaEditorScreen {
+//                    controller.presentCaptionLimitPremiumSuggestion(isPremium: self.sta)
+//                }
+//                view.animateError()
+//            }
         }
         
         private var animatingButtons = false
@@ -1168,7 +1171,7 @@ final class MediaEditorScreenComponent: Component {
                         guard let self, let controller = self.environment?.controller() as? MediaEditorScreen else {
                             return
                         }
-                        controller.presentCaptionLimitPremiumSuggestion()
+                        controller.presentCaptionLimitPremiumSuggestion(isPremium: self.state?.isPremium ?? false)
                     },
                     presentTextFormattingTooltip: { [weak self] in
                         guard let self, let controller = self.environment?.controller() as? MediaEditorScreen else {
@@ -1192,6 +1195,11 @@ final class MediaEditorScreenComponent: Component {
                                 let entity = DrawingStickerEntity(content: .image(image, .rectangle))
                                 controller.node.interaction?.insertEntity(entity, scale: 2.5)
                                 self.deactivateInput()
+                            }
+                        case .text:
+                            let text = self.getInputText()
+                            if text.length > component.context.userLimits.maxStoryCaptionLength {
+                                controller.presentCaptionLimitPremiumSuggestion(isPremium: self.state?.isPremium ?? false)
                             }
                         default:
                             break
@@ -2977,7 +2985,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         if let self {
                                             if let content {
                                                 let stickerEntity = DrawingStickerEntity(content: content)
-                                                self.interaction?.insertEntity(stickerEntity, scale: 1.33)
+                                                let scale: CGFloat
+                                                if case .image = content {
+                                                    scale = 2.5
+                                                } else if case .video = content {
+                                                    scale = 2.5
+                                                } else {
+                                                    scale = 1.33
+                                                }
+                                                self.interaction?.insertEntity(stickerEntity, scale: scale)
                                                 
                                                 self.hasAnyChanges = true
                                                 self.controller?.isSavingAvailable = true
@@ -3641,7 +3657,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 
         let controller = UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: true, title: nil, text: text, customUndoText: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
             if case .info = action, let self {
-                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true)
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true, dismissed: nil)
                 self.push(controller)
             }
             return false }
@@ -3649,7 +3665,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         self.present(controller, in: .current)
     }
 
-    fileprivate func presentCaptionLimitPremiumSuggestion() {
+    fileprivate func presentCaptionLimitPremiumSuggestion(isPremium: Bool) {
         self.dismissAllTooltips()
         
         let context = self.context
@@ -3660,7 +3676,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 
         let controller = UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_read", scale: 0.25, colors: [:], title: title, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
             if case .info = action, let self {
-                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true)
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true, dismissed: {
+                    
+                })
                 self.push(controller)
             }
             return false }
@@ -3678,7 +3696,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 
         let controller = UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: text), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
             if case .info = action, let self {
-                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true)
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true, dismissed: nil)
                 self.push(controller)
             }
             return false }
@@ -3960,6 +3978,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         if mediaEditor.resultIsVideo {
+            self.saveDraft(id: randomId)
+            
             var firstFrame: Signal<(UIImage?, UIImage?), NoError>
             let firstFrameTime = CMTime(seconds: mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0, preferredTimescale: CMTimeScale(60))
 
