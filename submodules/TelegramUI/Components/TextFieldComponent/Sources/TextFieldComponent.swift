@@ -300,6 +300,7 @@ public final class TextFieldComponent: Component {
                     }
                 }
                 self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+                component.paste(.text)
                 return false
             }
             

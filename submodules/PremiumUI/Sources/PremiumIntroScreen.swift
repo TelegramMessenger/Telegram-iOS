@@ -1738,7 +1738,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                     subtitle: perk.subtitle(strings: strings),
                                     subtitleColor: subtitleColor,
                                     arrowColor: arrowColor,
-                                    accentColor: accentColor
+                                    accentColor: accentColor,
+                                    badge: perk.identifier == "stories" ? strings.Premium_New : nil
                                 )
                             )
                         ),
