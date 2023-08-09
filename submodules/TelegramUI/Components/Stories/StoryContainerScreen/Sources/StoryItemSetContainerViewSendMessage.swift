@@ -3143,6 +3143,14 @@ final class StoryItemSetContainerSendMessage {
         let node = controller.displayNode
         let menuController = ContextMenuController(actions: actions, blurred: true)
         menuController.centerHorizontally = true
+        menuController.dismissed = { [weak self, weak view] in
+            if let self, let view {
+                Queue.mainQueue().after(0.1) {
+                    self.menuController = nil
+                    view.updateIsProgressPaused()
+                }
+            }
+        }
         controller.present(
             menuController,
             in: .window(.root),
