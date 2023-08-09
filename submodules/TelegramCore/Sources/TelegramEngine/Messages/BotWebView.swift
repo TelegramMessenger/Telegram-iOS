@@ -218,6 +218,9 @@ func _internal_requestAppWebView(postbox: Postbox, network: Network, stateManage
         if let _ = payload {
             flags |= (1 << 1)
         }
+        if allowWrite {
+            flags |= (1 << 0)
+        }
         
         return network.request(Api.functions.messages.requestAppWebView(flags: flags, peer: inputPeer, app: app, startParam: payload, themeParams: serializedThemeParams, platform: botWebViewPlatform))
         |> mapError { _ -> RequestAppWebViewError in
