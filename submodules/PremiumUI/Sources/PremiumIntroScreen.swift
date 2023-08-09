@@ -1276,6 +1276,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
     
     let context: AccountContext
     let source: PremiumSource
+    let forceDark: Bool
     let isPremium: Bool?
     let justBought: Bool
     let otherPeerName: String?
@@ -1291,6 +1292,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
     init(
         context: AccountContext,
         source: PremiumSource,
+        forceDark: Bool,
         isPremium: Bool?,
         justBought: Bool,
         otherPeerName: String?,
@@ -1305,6 +1307,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
     ) {
         self.context = context
         self.source = source
+        self.forceDark = forceDark
         self.isPremium = isPremium
         self.justBought = justBought
         self.otherPeerName = otherPeerName
@@ -1326,6 +1329,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             return false
         }
         if lhs.isPremium != rhs.isPremium {
+            return false
+        }
+        if lhs.forceDark != rhs.forceDark {
             return false
         }
         if lhs.justBought != rhs.justBought {
@@ -1718,7 +1724,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     }
                 }
             }
-                        
+             
+            let forceDark = context.component.forceDark
             let layoutPerks = {
                 var i = 0
                 var perksItems: [SectionGroupComponent.Item] = []
@@ -1738,7 +1745,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                     subtitle: perk.subtitle(strings: strings),
                                     subtitleColor: subtitleColor,
                                     arrowColor: arrowColor,
-                                    accentColor: accentColor
+                                    accentColor: accentColor,
+                                    badge: perk.identifier == "stories" ? strings.Premium_New : nil
                                 )
                             )
                         ),
@@ -1779,9 +1787,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             }
                             
                             let isPremium = state?.isPremium == true
-                            
                             var dismissImpl: (() -> Void)?
-                            let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .intro(state?.price), order: state?.configuration.perks, buttonText: isPremium ? strings.Common_OK : (state?.isAnnual == true ? strings.Premium_SubscribeForAnnual(state?.price ?? "—").string :  strings.Premium_SubscribeFor(state?.price ?? "–").string), isPremium: isPremium)
+                            let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .intro(state?.price), order: state?.configuration.perks, buttonText: isPremium ? strings.Common_OK : (state?.isAnnual == true ? strings.Premium_SubscribeForAnnual(state?.price ?? "—").string :  strings.Premium_SubscribeFor(state?.price ?? "–").string), isPremium: isPremium, forceDark: forceDark)
                             controller.action = { [weak state] in
                                 dismissImpl?()
                                 if state?.isPremium == false {
@@ -2001,14 +2008,16 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
     
     let context: AccountContext
     let source: PremiumSource
+    let forceDark: Bool
     let updateInProgress: (Bool) -> Void
     let present: (ViewController) -> Void
     let push: (ViewController) -> Void
     let completion: () -> Void
     
-    init(context: AccountContext, source: PremiumSource, updateInProgress: @escaping (Bool) -> Void, present: @escaping (ViewController) -> Void, push: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
+    init(context: AccountContext, source: PremiumSource, forceDark: Bool, updateInProgress: @escaping (Bool) -> Void, present: @escaping (ViewController) -> Void, push: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
         self.context = context
         self.source = source
+        self.forceDark = forceDark
         self.updateInProgress = updateInProgress
         self.present = present
         self.push = push
@@ -2020,6 +2029,9 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             return false
         }
         if lhs.source != rhs.source {
+            return false
+        }
+        if lhs.forceDark != rhs.forceDark {
             return false
         }
         return true
@@ -2548,6 +2560,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     content: AnyComponent(PremiumIntroScreenContentComponent(
                         context: context.component.context,
                         source: context.component.source,
+                        forceDark: context.component.forceDark,
                         isPremium: state.isPremium,
                         justBought: state.justBought,
                         otherPeerName: state.otherPeerName,
@@ -2781,6 +2794,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
         super.init(context: context, component: PremiumIntroScreenComponent(
             context: context,
             source: source,
+            forceDark: forceDark,
             updateInProgress: { inProgress in
                 updateInProgressImpl?(inProgress)
             },

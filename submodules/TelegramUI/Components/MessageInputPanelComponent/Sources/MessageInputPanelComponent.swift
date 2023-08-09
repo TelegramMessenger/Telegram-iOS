@@ -468,8 +468,8 @@ public final class MessageInputPanelComponent: Component {
             }
         }
         
-        public func deactivateInput() {
-            if self.canDeactivateInput() {
+        public func deactivateInput(force: Bool = false) {
+            if self.canDeactivateInput() || force {
                 if let textFieldView = self.textField.view as? TextFieldComponent.View {
                     textFieldView.deactivateInput()
                 }

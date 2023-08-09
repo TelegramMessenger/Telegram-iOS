@@ -516,6 +516,7 @@ private final class DrawingScreenComponent: CombinedComponent {
     let updateEntityView: ActionSlot<(UUID, Bool)>
     let endEditingTextEntityView: ActionSlot<(UUID, Bool)>
     let entityViewForEntity: (DrawingEntity) -> DrawingEntityView?
+    let presentGallery: (() -> Void)?
     let apply: ActionSlot<Void>
     let dismiss: ActionSlot<Void>
     
@@ -551,6 +552,7 @@ private final class DrawingScreenComponent: CombinedComponent {
         updateEntityView: ActionSlot<(UUID, Bool)>,
         endEditingTextEntityView: ActionSlot<(UUID, Bool)>,
         entityViewForEntity: @escaping (DrawingEntity) -> DrawingEntityView?,
+        presentGallery: (() -> Void)?,
         apply: ActionSlot<Void>,
         dismiss: ActionSlot<Void>,
         presentColorPicker: @escaping (DrawingColor) -> Void,
@@ -584,6 +586,7 @@ private final class DrawingScreenComponent: CombinedComponent {
         self.updateEntityView = updateEntityView
         self.endEditingTextEntityView = endEditingTextEntityView
         self.entityViewForEntity = entityViewForEntity
+        self.presentGallery = presentGallery
         self.apply = apply
         self.dismiss = dismiss
         self.presentColorPicker = presentColorPicker
@@ -665,6 +668,7 @@ private final class DrawingScreenComponent: CombinedComponent {
         private let toggleWithPreviousTool: ActionSlot<Void>
         private let insertSticker: ActionSlot<Void>
         private let insertText: ActionSlot<Void>
+        fileprivate var presentGallery: (() -> Void)?
         private let updateEntityView: ActionSlot<(UUID, Bool)>
         private let endEditingTextEntityView: ActionSlot<(UUID, Bool)>
         private let entityViewForEntity: (DrawingEntity) -> DrawingEntityView?
@@ -692,6 +696,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             toggleWithPreviousTool: ActionSlot<Void>,
             insertSticker: ActionSlot<Void>,
             insertText: ActionSlot<Void>,
+            presentGallery: (() -> Void)?,
             updateEntityView: ActionSlot<(UUID, Bool)>,
             endEditingTextEntityView: ActionSlot<(UUID, Bool)>,
             entityViewForEntity: @escaping (DrawingEntity) -> DrawingEntityView?,
@@ -707,6 +712,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             self.toggleWithPreviousTool = toggleWithPreviousTool
             self.insertSticker = insertSticker
             self.insertText = insertText
+            self.presentGallery = presentGallery
             self.updateEntityView = updateEntityView
             self.endEditingTextEntityView = endEditingTextEntityView
             self.entityViewForEntity = entityViewForEntity
@@ -1004,6 +1010,9 @@ private final class DrawingScreenComponent: CombinedComponent {
             
             self.updateEntitiesPlayback.invoke(false)
             let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get())
+            if let presentGallery = self.presentGallery {
+                controller.presentGallery = presentGallery
+            }
             controller.completion = { [weak self] content in
                 self?.updateEntitiesPlayback.invoke(true)
                 
@@ -1032,6 +1041,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             toggleWithPreviousTool: self.toggleWithPreviousTool,
             insertSticker: self.insertSticker,
             insertText: self.insertText,
+            presentGallery: self.presentGallery,
             updateEntityView: self.updateEntityView,
             endEditingTextEntityView: self.endEditingTextEntityView,
             entityViewForEntity: self.entityViewForEntity,
@@ -1112,6 +1122,8 @@ private final class DrawingScreenComponent: CombinedComponent {
             
             let updateEntityView = component.updateEntityView
             let endEditingTextEntityView = component.endEditingTextEntityView
+            
+            state.presentGallery = component.presentGallery
             
             component.updateState.connect { [weak state] updatedState in
                 state?.updateDrawingState(updatedState)
@@ -2670,6 +2682,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                                 return nil
                             }
                         },
+                        presentGallery: self.controller?.presentGallery,
                         apply: self.apply,
                         dismiss: self.dismiss,
                         presentColorPicker: { [weak self] initialColor in
@@ -2736,6 +2749,8 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
     public var requestApply: () -> Void = {}
     public var getCurrentImage: () -> UIImage? = { return nil }
     public var updateVideoPlayback: (Bool) -> Void = { _ in }
+    
+    public var presentGallery: (() -> Void)?
     
     public init(context: AccountContext, sourceHint: SourceHint? = nil, size: CGSize, originalSize: CGSize, isVideo: Bool, isAvatar: Bool, drawingView: DrawingView?, entitiesView: (UIView & TGPhotoDrawingEntitiesView)?, selectionContainerView: DrawingSelectionContainerView?, existingStickerPickerInputData: Promise<StickerPickerInputData>? = nil) {
         self.context = context
@@ -2965,7 +2980,7 @@ public final class DrawingToolsInteraction {
     private let onInteractionUpdated: (Bool) -> Void
     private let onTextEditingEnded: (Bool) -> Void
     private let editEntity: (DrawingEntity) -> Void
-    
+        
     public let getCurrentImage: () -> UIImage?
     private let getControllerNode: () -> ASDisplayNode?
     private let present: (ViewController, PresentationContextType, Any?) -> Void

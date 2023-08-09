@@ -9752,3 +9752,5 @@ Sorry for the inconvenience.";
 
 "StoryList.TooltipStoriesSavedToProfile_1" = "Story archived";
 "StoryList.TooltipStoriesSavedToProfile_any" = "%d stories archived.";
+
+"Premium.New" = "NEW";

@@ -413,7 +413,7 @@ final class MediaEditorScreenComponent: Component {
                 if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
                     self.nextTransitionUserData = TextFieldComponent.AnimationHint(kind: .textFocusChanged)
                     if view.isActive {
-                        view.deactivateInput()
+                        view.deactivateInput(force: true)
                     } else {
                         self.endEditing(true)
                     }
@@ -741,6 +741,9 @@ final class MediaEditorScreenComponent: Component {
                     effectAlignment: .center,
                     action: {
                         guard let controller = environment.controller() as? MediaEditorScreen else {
+                            return
+                        }
+                        guard controller.checkCaptionLimit() else {
                             return
                         }
                         if controller.isEditingStory {
@@ -1197,9 +1200,11 @@ final class MediaEditorScreenComponent: Component {
                                 self.deactivateInput()
                             }
                         case .text:
-                            let text = self.getInputText()
-                            if text.length > component.context.userLimits.maxStoryCaptionLength {
-                                controller.presentCaptionLimitPremiumSuggestion(isPremium: self.state?.isPremium ?? false)
+                            Queue.mainQueue().after(0.1) {
+                                let text = self.getInputText()
+                                if text.length > component.context.userLimits.maxStoryCaptionLength {
+                                    controller.presentCaptionLimitPremiumSuggestion(isPremium: self.state?.isPremium ?? false)
+                                }
                             }
                         default:
                             break
@@ -2686,10 +2691,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         }
                 
-        func presentGallery() {
+        func presentGallery(parentController: ViewController? = nil) {
             guard let controller = self.controller else {
                 return
             }
+            let parentController = parentController ?? controller
             let galleryController = self.context.sharedContext.makeMediaPickerScreen(context: self.context, hasSearch: true, completion: { [weak self] result in
                 guard let self else {
                     return
@@ -2738,7 +2744,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     self.updateModalTransitionFactor(transitionFactor, transition: transition)
                 }
             }
-            controller.push(galleryController)
+            parentController.push(galleryController)
         }
         
         private let staticEmojiPack = Promise<LoadedStickerPack>()
@@ -3058,6 +3064,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         selectionContainerView: self.selectionContainerView,
                                         existingStickerPickerInputData: self.stickerPickerInputData
                                     )
+                                    controller.presentGallery = { [weak self] in
+                                        if let self {
+                                            self.presentGallery()
+                                        }
+                                    }
                                     controller.getCurrentImage = { [weak self] in
                                         return self?.interaction?.getCurrentImage()
                                     }
@@ -3118,7 +3129,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         self.interaction?.activate()
                                         self.entitiesView.selectEntity(nil)
                                     }
-                                    self.controller?.present(controller, in: .window(.root))
+                                    self.controller?.present(controller, in: .current)
                                     self.animateOutToTool()
                                 }
                             }
@@ -3229,9 +3240,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             self.interaction?.containerLayoutUpdated(layout: layout, transition: transition)
             
-            var layout = layout
-            layout.intrinsicInsets.top = topInset
-            layout.intrinsicInsets.bottom = bottomInset + 60.0
+//            var layout = layout
+//            layout.intrinsicInsets.top = topInset
+//            layout.intrinsicInsets.bottom = bottomInset + 60.0
             controller.presentationContext.containerLayoutUpdated(layout, transition: transition.containedViewLayoutTransition)
             
             if isFirstTime {
@@ -3893,6 +3904,20 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             })
         }
     }
+    
+    fileprivate func checkCaptionLimit() -> Bool {
+        let caption = self.getCaption()
+        if caption.length > self.context.userLimits.maxStoryCaptionLength {
+            let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                if let self {
+                    self.presentCaptionLimitPremiumSuggestion(isPremium: peer?.isPremium ?? false)
+                }
+            })
+            return false
+        }
+        return true
+    }
         
     private var didComplete = false
     func requestCompletion(animated: Bool) {
@@ -4347,9 +4372,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if let controller = controller as? TooltipScreen {
                 controller.dismiss()
             }
+            if let controller = controller as? UndoOverlayController {
+                controller.dismiss()
+            }
         })
         self.forEachController({ controller in
             if let controller = controller as? TooltipScreen {
+                controller.dismiss()
+            }
+            if let controller = controller as? UndoOverlayController {
                 controller.dismiss()
             }
             if let controller = controller as? SaveProgressScreen {

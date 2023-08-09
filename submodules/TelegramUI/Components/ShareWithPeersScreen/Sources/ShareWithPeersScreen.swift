@@ -2090,9 +2090,10 @@ final class ShareWithPeersScreenComponent: Component {
                 transition.setFrame(view: actionButtonView, frame: actionButtonFrame)
             }
                         
-            transition.setFrame(view: self.bottomBackgroundView, frame: CGRect(origin: CGPoint(x: containerSideInset, y: availableSize.height - bottomPanelHeight - 8.0), size: CGSize(width: containerWidth, height: bottomPanelHeight + 8.0)))
+            let bottomPanelInset: CGFloat = 8.0
+            transition.setFrame(view: self.bottomBackgroundView, frame: CGRect(origin: CGPoint(x: containerSideInset, y: availableSize.height - bottomPanelHeight - 8.0), size: CGSize(width: containerWidth, height: bottomPanelHeight + bottomPanelInset)))
             self.bottomBackgroundView.update(size: self.bottomBackgroundView.bounds.size, transition: transition.containedViewLayoutTransition)
-            transition.setFrame(layer: self.bottomSeparatorLayer, frame: CGRect(origin: CGPoint(x: containerSideInset + sideInset, y: availableSize.height - bottomPanelHeight - 8.0 - UIScreenPixel), size: CGSize(width: containerWidth, height: UIScreenPixel)))
+            transition.setFrame(layer: self.bottomSeparatorLayer, frame: CGRect(origin: CGPoint(x: containerSideInset + sideInset, y: availableSize.height - bottomPanelHeight - bottomPanelInset - UIScreenPixel), size: CGSize(width: containerWidth, height: UIScreenPixel)))
                         
             let itemContainerSize = CGSize(width: itemsContainerWidth, height: availableSize.height)
             let itemLayout = ItemLayout(style: itemLayoutStyle, containerSize: itemContainerSize, containerInset: containerInset, bottomInset: footersTotalHeight, topInset: topInset, sideInset: sideInset, navigationHeight: navigationHeight, sections: sections)
@@ -2124,9 +2125,13 @@ final class ShareWithPeersScreenComponent: Component {
             if contentSize != self.scrollView.contentSize {
                 self.scrollView.contentSize = contentSize
             }
-            let indicatorInsets = UIEdgeInsets(top: max(itemLayout.containerInset, environment.safeInsets.top + navigationHeight), left: 0.0, bottom: environment.safeInsets.bottom, right: 0.0)
-            if indicatorInsets != self.scrollView.scrollIndicatorInsets {
-                self.scrollView.scrollIndicatorInsets = indicatorInsets
+            let contentInset: UIEdgeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: bottomPanelHeight + bottomPanelInset, right: 0.0)
+            let indicatorInset = UIEdgeInsets(top: max(itemLayout.containerInset, environment.safeInsets.top + navigationHeight), left: 0.0, bottom: contentInset.bottom, right: 0.0)
+            if indicatorInset != self.scrollView.scrollIndicatorInsets {
+                self.scrollView.scrollIndicatorInsets = indicatorInset
+            }
+            if contentInset != self.scrollView.contentInset {
+                self.scrollView.contentInset = contentInset
             }
             if resetScrolling {
                 self.scrollView.bounds = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: containerWidth, height: availableSize.height))

@@ -211,11 +211,11 @@ public final class DrawingStickerEntityView: DrawingEntityView {
             )
             videoNode.canAttachContent = true
             videoNode.isUserInteractionEnabled = false
-            videoNode.cornerRadius = floor(CGFloat(file.dimensions?.width ?? 512) * 0.03)
             videoNode.clipsToBounds = true
             self.addSubnode(videoNode)
             self.videoNode = videoNode
             self.setNeedsLayout()
+            videoNode.play()
         }
     }
     
@@ -302,6 +302,7 @@ public final class DrawingStickerEntityView: DrawingEntityView {
             
             if let videoNode = self.videoNode {
                 let videoSize = self.dimensions.aspectFitted(boundingSize)
+                videoNode.cornerRadius = floor(videoSize.width * 0.03)
                 videoNode.frame = CGRect(origin: CGPoint(x: floor((size.width - videoSize.width) * 0.5), y: floor((size.height - videoSize.height) * 0.5)), size: videoSize)
                 videoNode.updateLayout(size: videoSize, transition: .immediate)
             }

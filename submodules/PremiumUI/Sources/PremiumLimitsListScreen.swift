@@ -66,7 +66,7 @@ public class PremiumLimitsListScreen: ViewController {
             self.pagerView = ComponentHostView()
             self.closeView = ComponentHostView()
             
-            self.footerNode = FooterNode(theme: self.presentationData.theme, title: buttonTitle, gloss: gloss)
+            self.footerNode = FooterNode(theme: self.presentationData.theme, title: buttonTitle, gloss: gloss, order: controller.order)
             
             super.init()
                         
@@ -349,6 +349,7 @@ public class PremiumLimitsListScreen: ViewController {
             self.updated(transition: transition)
         }
         
+        private var indexPosition: CGFloat?
         func updated(transition: Transition) {
             guard let controller = self.controller else {
                 return
@@ -384,12 +385,33 @@ public class PremiumLimitsListScreen: ViewController {
                 let textColor = theme.actionSheet.primaryTextColor
                 
                 var availableItems: [PremiumPerk: DemoPagerComponent.Item] = [:]
+                
+                var storiesIndex: Int?
+                var limitsIndex: Int?
+                var storiesNeighbors = PageNeighbors(leftIsList: false, rightIsList: false)
+                var limitsNeighbors = PageNeighbors(leftIsList: false, rightIsList: false)
+                if let order = controller.order {
+                    storiesIndex = order.firstIndex(where: { $0 == .stories })
+                    limitsIndex = order.firstIndex(where: { $0 == .doubleLimits })
+                    if let limitsIndex, let storiesIndex {
+                        if limitsIndex == storiesIndex + 1 {
+                            storiesNeighbors.rightIsList = true
+                            limitsNeighbors.leftIsList = true
+                        } else if limitsIndex == storiesIndex - 1 {
+                            limitsNeighbors.rightIsList = true
+                            storiesNeighbors.leftIsList = true
+                        }
+                    }
+                }
+                
                 availableItems[.doubleLimits] = DemoPagerComponent.Item(
                     AnyComponentWithIdentity(
                         id: PremiumDemoScreen.Subject.doubleLimits,
                         component: AnyComponent(
                             LimitsPageComponent(
                                 context: context,
+                                theme: self.presentationData.theme,
+                                neighbors: limitsNeighbors,
                                 bottomInset: self.footerNode.frame.height,
                                 updatedBottomAlpha: { [weak self] alpha in
                                     if let strongSelf = self {
@@ -402,8 +424,11 @@ public class PremiumLimitsListScreen: ViewController {
                                     }
                                 },
                                 updatedIsDisplaying: { [weak self] isDisplaying in
-                                    if let strongSelf = self, strongSelf.isExpanded && !isDisplaying {
-                                        strongSelf.update(isExpanded: false, transition: .animated(duration: 0.2, curve: .easeInOut))
+                                    if let self, self.isExpanded && !isDisplaying {
+                                        if let storiesIndex, let indexPosition = self.indexPosition, abs(CGFloat(storiesIndex) - indexPosition) < 0.1 {
+                                        } else {
+                                            self.update(isExpanded: false, transition: .animated(duration: 0.2, curve: .easeInOut))
+                                        }
                                     }
                                 }
                             )
@@ -417,6 +442,7 @@ public class PremiumLimitsListScreen: ViewController {
                             StoriesPageComponent(
                                 context: context,
                                 theme: self.presentationData.theme,
+                                neighbors: storiesNeighbors,
                                 bottomInset: self.footerNode.frame.height,
                                 updatedBottomAlpha: { [weak self] alpha in
                                     if let strongSelf = self {
@@ -429,8 +455,11 @@ public class PremiumLimitsListScreen: ViewController {
                                     }
                                 },
                                 updatedIsDisplaying: { [weak self] isDisplaying in
-                                    if let strongSelf = self, strongSelf.isExpanded && !isDisplaying {
-                                        strongSelf.update(isExpanded: false, transition: .animated(duration: 0.2, curve: .easeInOut))
+                                    if let self, self.isExpanded && !isDisplaying {
+                                        if let limitsIndex, let indexPosition = self.indexPosition, abs(CGFloat(limitsIndex) - indexPosition) < 0.1 {
+                                        } else {
+                                            self.update(isExpanded: false, transition: .animated(duration: 0.2, curve: .easeInOut))
+                                        }
                                     }
                                 }
                             )
@@ -678,15 +707,15 @@ public class PremiumLimitsListScreen: ViewController {
                 
                 if let order = controller.order {
                     var items: [DemoPagerComponent.Item] = order.compactMap { availableItems[$0] }
-                    let index: Int
+                    let initialIndex: Int
                     switch controller.source {
                     case .intro, .gift:
-                        index = items.firstIndex(where: { (controller.subject as AnyHashable) == $0.content.id }) ?? 0
+                        initialIndex = items.firstIndex(where: { (controller.subject as AnyHashable) == $0.content.id }) ?? 0
                     case .other:
                         items = items.filter { item in
                             return item.content.id == (controller.subject as AnyHashable)
                         }
-                        index = 0
+                        initialIndex = 0
                     }
                     
                     let pagerSize = self.pagerView.update(
@@ -694,11 +723,12 @@ public class PremiumLimitsListScreen: ViewController {
                         component: AnyComponent(
                             DemoPagerComponent(
                                 items: items,
-                                index: index,
+                                index: initialIndex,
                                 nextAction: nextAction,
                                 updated: { [weak self] position, count in
-                                    if let strongSelf = self {
-                                        strongSelf.footerNode.updatePosition(position, count: count)
+                                    if let self {
+                                        self.indexPosition = position * CGFloat(count)
+                                        self.footerNode.updatePosition(position, count: count)
                                     }
                                 }
                             )
@@ -1087,6 +1117,8 @@ public class PremiumLimitsListScreen: ViewController {
 }
 
 private class FooterNode: ASDisplayNode {
+    private let order: [PremiumPerk]?
+    
     private let backgroundNode: NavigationBackgroundNode
     private let separatorNode: ASDisplayNode
     private let coverNode: ASDisplayNode
@@ -1099,7 +1131,8 @@ private class FooterNode: ASDisplayNode {
     
     var action: () -> Void = {}
         
-    init(theme: PresentationTheme, title: String, gloss: Bool) {
+    init(theme: PresentationTheme, title: String, gloss: Bool, order: [PremiumPerk]?) {
+        self.order = order
         self.theme = theme
         
         self.backgroundNode = NavigationBackgroundNode(color: theme.rootController.tabBar.backgroundColor)
@@ -1171,7 +1204,7 @@ private class FooterNode: ASDisplayNode {
                 
         var panelHeight: CGFloat = bottomPanelPadding + 50.0 + bottomInset + 8.0
         var buttonOffset: CGFloat = 20.0
-        if let (_, count) = self.currentParams, count > 1 {
+        if let order, order.count > 1 {
             panelHeight += 20.0
             buttonOffset += 20.0
         }

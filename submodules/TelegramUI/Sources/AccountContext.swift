@@ -379,13 +379,9 @@ public final class AccountContextImpl: AccountContext {
             strongSelf.animatedEmojiStickersValue.set(.single(stickers))
         })
         
-        self.userLimitsConfigurationDisposable = (self.account.postbox.peerView(id: self.account.peerId)
-        |> mapToSignal { peerView -> Signal<EngineConfiguration.UserLimits, NoError> in
-            if let peer = peerView.peers[peerView.peerId] {
-                return self.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: peer.isPremium))
-            } else {
-                return .complete()
-            }
+        self.userLimitsConfigurationDisposable = (self.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: account.peerId))
+        |> mapToSignal { peer -> Signal<EngineConfiguration.UserLimits, NoError> in
+            return self.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: peer?.isPremium ?? false))
         }
         |> deliverOnMainQueue).start(next: { [weak self] value in
             guard let strongSelf = self else {
