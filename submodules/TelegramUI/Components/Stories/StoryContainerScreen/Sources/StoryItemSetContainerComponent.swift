@@ -348,6 +348,7 @@ public final class StoryItemSetContainerComponent: Component {
         weak var scrollView: UIScrollView?
         var startContentOffsetY: CGFloat = 0.0
         var accumulatedOffset: CGFloat = 0.0
+        var dismissedTooltips: Bool = false
         
         init(fraction: CGFloat, scrollView: UIScrollView?) {
             self.fraction = fraction
@@ -998,6 +999,11 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 
                 if let verticalPanState = self.verticalPanState {
+                    if abs(verticalPanState.fraction) >= 0.1 && !verticalPanState.dismissedTooltips {
+                        verticalPanState.dismissedTooltips = true
+                        self.dismissAllTooltips()
+                    }
+                    
                     if let scrollView = verticalPanState.scrollView {
                         let relativeTranslationY = recognizer.translation(in: self).y - verticalPanState.startContentOffsetY
                         let overflowY = scrollView.contentOffset.y - relativeTranslationY
@@ -1061,6 +1067,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 } else if verticalPanState.fraction >= 0.05 && velocity.y >= -80.0 {
                                     self.viewListDisplayState = .half
                                 }
+                                self.dismissAllTooltips()
                             }
                             
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
@@ -1073,6 +1080,7 @@ public final class StoryItemSetContainerComponent: Component {
                             if component.slice.peer.id == component.context.account.peerId {
                                 self.viewListDisplayState = self.targetViewListDisplayStateIsFull ? .full : .half
                                 self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                                self.dismissAllTooltips()
                             } else {
                                 self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
                                 
@@ -1511,6 +1519,8 @@ public final class StoryItemSetContainerComponent: Component {
                                             self.preparingToDisplayViewList = false
                                             
                                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                                            
+                                            self.dismissAllTooltips()
                                         }
                                     },
                                     deleteAction: { [weak self] in
@@ -1627,6 +1637,9 @@ public final class StoryItemSetContainerComponent: Component {
             if component.slice.peer.id == component.context.account.peerId {
                 self.viewListDisplayState = .half
                 self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                
+                self.dismissAllTooltips()
+                
                 return true
             } else {
                 var canReply = true
@@ -2127,9 +2140,6 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         func maybeDisplayReactionTooltip() {
-            if "".isEmpty {
-                return
-            }
             guard let component = self.component else {
                 return
             }
@@ -2207,7 +2217,10 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 
                 if let tooltipScreen = self.sendMessageContext.tooltipScreen {
-                    tooltipScreen.dismiss()
+                    if let tooltipScreen = tooltipScreen as? UndoOverlayController, let tag = tooltipScreen.tag as? String, tag == "no_auto_dismiss" {
+                    } else {
+                        tooltipScreen.dismiss()
+                    }
                 }
             }
             var itemsTransition = transition
@@ -2736,6 +2749,11 @@ public final class StoryItemSetContainerComponent: Component {
                     var safeInsets = component.safeInsets
                     safeInsets.bottom = max(safeInsets.bottom, component.inputHeight)
                     
+                    var hasPremium = false
+                    if case let .user(user) = component.slice.peer {
+                        hasPremium = user.isPremium
+                    }
+                    
                     viewList.view.parentState = state
                     let viewListSize = viewList.view.update(
                         transition: viewListTransition.withUserData(PeerListItemComponent.TransitionHint(
@@ -2751,6 +2769,7 @@ public final class StoryItemSetContainerComponent: Component {
                             peerId: component.slice.peer.id,
                             safeInsets: safeInsets,
                             storyItem: item.storyItem,
+                            hasPremium: hasPremium,
                             effectiveHeight: viewListHeight,
                             minHeight: midViewListHeight,
                             availableReactions: component.availableReactions,
@@ -3007,7 +3026,12 @@ public final class StoryItemSetContainerComponent: Component {
                                 }
                                 self.openPeerStories(peer: peer, avatarNode: avatarNode)
                             },
-                            openPremiumIntro: {},
+                            openPremiumIntro: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.presentStoriesUpgradeScreen()
+                            },
                             setIsSearchActive: { [weak self] value in
                                 guard let self else {
                                     return
@@ -4136,7 +4160,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             component.externalState.derivedMediaSize = contentFrame.size
             if component.slice.peer.id == component.context.account.peerId {
-                component.externalState.derivedBottomInset = availableSize.height - contentFrame.maxY
+                component.externalState.derivedBottomInset = availableSize.height - itemsContainerFrame.maxY
             } else {
                 component.externalState.derivedBottomInset = availableSize.height - min(inputPanelFrame.minY, contentFrame.maxY)
             }
@@ -4674,6 +4698,15 @@ public final class StoryItemSetContainerComponent: Component {
             ), nil)
         }
         
+        private func presentStealthModeUpgradeScreen() {
+            self.sendMessageContext.presentStealthModeUpgrade(view: self, action: { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.presentStoriesUpgradeScreen()
+            })
+        }
+        
         private func presentStoriesUpgradeScreen() {
             guard let component = self.component else {
                 return
@@ -5095,7 +5128,7 @@ public final class StoryItemSetContainerComponent: Component {
                     if accountUser.isPremium {
                         self.sendMessageContext.requestStealthMode(view: self)
                     } else {
-                        self.presentStoriesUpgradeScreen()
+                        self.presentStealthModeUpgradeScreen()
                     }
                 })))
             }
@@ -5327,7 +5360,7 @@ public final class StoryItemSetContainerComponent: Component {
                     if accountUser.isPremium {
                         self.sendMessageContext.requestStealthMode(view: self)
                     } else {
-                        self.presentStoriesUpgradeScreen()
+                        self.presentStealthModeUpgradeScreen()
                     }
                 })))
                 

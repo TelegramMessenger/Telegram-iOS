@@ -15,17 +15,23 @@ public final class StoryStealthModeInfoContentComponent: Component {
     public let strings: PresentationStrings
     public let backwardDuration: Int32
     public let forwardDuration: Int32
+    public let mode: StoryStealthModeSheetScreen.Mode
+    public let dismiss: () -> Void
     
     public init(
         theme: PresentationTheme,
         strings: PresentationStrings,
         backwardDuration: Int32,
-        forwardDuration: Int32
+        forwardDuration: Int32,
+        mode: StoryStealthModeSheetScreen.Mode,
+        dismiss: @escaping () -> Void
     ) {
         self.theme = theme
         self.strings = strings
         self.backwardDuration = backwardDuration
         self.forwardDuration = forwardDuration
+        self.mode = mode
+        self.dismiss = dismiss
     }
     
     public static func ==(lhs: StoryStealthModeInfoContentComponent, rhs: StoryStealthModeInfoContentComponent) -> Bool {
@@ -39,6 +45,9 @@ public final class StoryStealthModeInfoContentComponent: Component {
             return false
         }
         if lhs.forwardDuration != rhs.forwardDuration {
+            return false
+        }
+        if lhs.mode != rhs.mode {
             return false
         }
         return true
@@ -155,7 +164,13 @@ public final class StoryStealthModeInfoContentComponent: Component {
             contentHeight += 15.0
             
             //TODO:localize
-            let text: String = "Turn Stealth Mode on to hide the fact that you viewed peoples' stories from them."
+            let text: String
+            switch component.mode {
+            case .control:
+                text = "Turn Stealth Mode on to hide the fact that you viewed peoples' stories from them."
+            case .upgrade:
+                text = "Subscribe to Telegram Premium to hide the fact that you viewed peoples' stories from them."
+            }
             let mainText = NSMutableAttributedString()
             mainText.append(parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(
                 body: MarkdownAttributeSet(

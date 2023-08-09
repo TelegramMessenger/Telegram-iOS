@@ -287,7 +287,7 @@ final class StorageUsageScreenComponent: Component {
             case .misc:
                 return UIColor(rgb: 0xFF9500)
             case .stories:
-                return UIColor(rgb: 0x3478F6)
+                return UIColor(rgb: 0xFF2D55)
             }
         }
         

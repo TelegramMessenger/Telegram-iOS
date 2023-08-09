@@ -82,17 +82,20 @@ public final class LottieComponent: Component {
     public let color: UIColor?
     public let startingPosition: StartingPosition
     public let size: CGSize?
+    public let loop: Bool
     
     public init(
         content: Content,
         color: UIColor? = nil,
         startingPosition: StartingPosition = .end,
-        size: CGSize? = nil
+        size: CGSize? = nil,
+        loop: Bool = false
     ) {
         self.content = content
         self.color = color
         self.startingPosition = startingPosition
         self.size = size
+        self.loop = loop
     }
     
     public static func ==(lhs: LottieComponent, rhs: LottieComponent) -> Bool {
@@ -108,6 +111,9 @@ public final class LottieComponent: Component {
         if lhs.size != rhs.size {
             return false
         }
+        if lhs.loop != rhs.loop {
+            return false
+        }
         return true
     }
 
@@ -116,6 +122,8 @@ public final class LottieComponent: Component {
         private var component: LottieComponent?
         
         private var scheduledPlayOnce: Bool = false
+        private var isPlaying: Bool = false
+        
         private var playOnceCompletion: (() -> Void)?
         private var animationInstance: LottieInstance?
         private var animationFrameRange: Range<Int>?
@@ -196,6 +204,7 @@ public final class LottieComponent: Component {
             }
             
             self.scheduledPlayOnce = false
+            self.isPlaying = true
             
             if self.currentFrame != animationFrameRange.lowerBound {
                 self.currentFrame = animationFrameRange.lowerBound
@@ -284,11 +293,19 @@ public final class LottieComponent: Component {
                     advanceFrameCount = 4
                 }
                 self.currentFrame += advanceFrameCount
+                
+                if self.currentFrame >= animationFrameRange.upperBound - 1 {
+                    if let component = self.component, component.loop {
+                        self.currentFrame = animationFrameRange.lowerBound
+                    }
+                }
+                
                 if self.currentFrame >= animationFrameRange.upperBound - 1 {
                     self.currentFrame = animationFrameRange.upperBound - 1
                     self.updateImage()
                     self.displayLink?.invalidate()
                     self.displayLink = nil
+                    self.isPlaying = false
                     
                     if let playOnceCompletion = self.playOnceCompletion {
                         self.playOnceCompletion = nil
@@ -360,6 +377,10 @@ public final class LottieComponent: Component {
             
             if let color = component.color, self.tintColor != color {
                 transition.setTintColor(view: self, color: color)
+            }
+            
+            if component.loop && !self.isPlaying {
+                self.playOnce()
             }
             
             return size

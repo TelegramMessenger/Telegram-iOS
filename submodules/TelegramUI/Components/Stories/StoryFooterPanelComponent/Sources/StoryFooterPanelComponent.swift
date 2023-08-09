@@ -284,8 +284,6 @@ public final class StoryFooterPanelComponent: Component {
                 avatarsAlpha = pow(1.0 - component.expandFraction, 1.0)
                 baseViewCountAlpha = 1.0
             }
-            
-            //TODO:upload
             let _ = baseViewCountAlpha
             
             var peers: [EnginePeer] = []
@@ -306,7 +304,9 @@ public final class StoryFooterPanelComponent: Component {
             
             //TODO:localize
             var regularSegments: [AnimatedCountLabelView.Segment] = []
-            regularSegments.append(.number(viewCount, NSAttributedString(string: "\(viewCount)", font: Font.regular(15.0), textColor: .white)))
+            if viewCount != 0 {
+                regularSegments.append(.number(viewCount, NSAttributedString(string: "\(viewCount)", font: Font.regular(15.0), textColor: .white)))
+            }
             
             let viewPart: String
             if viewCount == 0 {
@@ -399,11 +399,13 @@ public final class StoryFooterPanelComponent: Component {
             
             contentWidth += (avatarsSize.width + avatarViewsSpacing) * (1.0 - component.expandFraction)
             if let image = self.viewsIconView.image {
-                contentWidth += (image.size.width + viewsIconSpacing) * component.expandFraction
+                if viewCount != 0 {
+                    contentWidth += (image.size.width + viewsIconSpacing) * component.expandFraction
+                }
             }
             
             if viewCount == 0 {
-                contentWidth += viewStatsTextLayout.size.width * component.expandFraction
+                contentWidth += viewStatsTextLayout.size.width * (1.0 - component.expandFraction)
             } else {
                 contentWidth += viewStatsTextLayout.size.width
             }
@@ -430,7 +432,11 @@ public final class StoryFooterPanelComponent: Component {
                 let viewsIconFrame = CGRect(origin: CGPoint(x: contentX, y: floor((size.height - image.size.height) * 0.5)), size: image.size)
                 transition.setPosition(view: self.viewsIconView, position: viewsIconFrame.center)
                 transition.setBounds(view: self.viewsIconView, bounds: CGRect(origin: CGPoint(), size: viewsIconFrame.size))
-                transition.setAlpha(view: self.viewsIconView, alpha: component.expandFraction)
+                if viewCount == 0 {
+                    transition.setAlpha(view: self.viewsIconView, alpha: 0.0)
+                } else {
+                    transition.setAlpha(view: self.viewsIconView, alpha: component.expandFraction)
+                }
                 transition.setScale(view: self.viewsIconView, scale: CGFloat(1.0).interpolate(to: CGFloat(0.1), amount: 1.0 - component.expandFraction))
             }
             

@@ -15,25 +15,28 @@ import TelegramStringFormatting
 private final class StoryStealthModeSheetContentComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
-    let cooldownUntilTimestamp: Int32?
+    let mode: StoryStealthModeSheetScreen.Mode
     let backwardDuration: Int32
     let forwardDuration: Int32
+    let action: () -> Void
     let dismiss: () -> Void
     
     init(
-        cooldownUntilTimestamp: Int32?,
+        mode: StoryStealthModeSheetScreen.Mode,
         backwardDuration: Int32,
         forwardDuration: Int32,
+        action: @escaping () -> Void,
         dismiss: @escaping () -> Void
     ) {
-        self.cooldownUntilTimestamp = cooldownUntilTimestamp
+        self.mode = mode
         self.backwardDuration = backwardDuration
         self.forwardDuration = forwardDuration
+        self.action = action
         self.dismiss = dismiss
     }
     
     static func ==(lhs: StoryStealthModeSheetContentComponent, rhs: StoryStealthModeSheetContentComponent) -> Bool {
-        if lhs.cooldownUntilTimestamp != rhs.cooldownUntilTimestamp {
+        if lhs.mode != rhs.mode {
             return false
         }
         if lhs.backwardDuration != rhs.backwardDuration {
@@ -49,6 +52,8 @@ private final class StoryStealthModeSheetContentComponent: Component {
         private var toast: ComponentView<Empty>?
         private let content = ComponentView<Empty>()
         private let button = ComponentView<Empty>()
+        
+        private var cancelButton: ComponentView<Empty>?
         
         private var component: StoryStealthModeSheetContentComponent?
         private weak var state: EmptyComponentState?
@@ -95,10 +100,13 @@ private final class StoryStealthModeSheetContentComponent: Component {
             self.state = state
             
             var remainingCooldownSeconds: Int32 = 0
-            if let cooldownUntilTimestamp = component.cooldownUntilTimestamp {
-                remainingCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
-                remainingCooldownSeconds = max(0, remainingCooldownSeconds)
+            if case let .control(cooldownUntilTimestamp) = component.mode {
+                if let cooldownUntilTimestamp {
+                    remainingCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
+                    remainingCooldownSeconds = max(0, remainingCooldownSeconds)
+                }
             }
+            
             if remainingCooldownSeconds > 0 {
                 if self.timer == nil {
                     self.timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true, block: { [weak self] _ in
@@ -170,6 +178,39 @@ private final class StoryStealthModeSheetContentComponent: Component {
                 }
             }
             
+            if case .upgrade = component.mode {
+                let cancelButton: ComponentView<Empty>
+                if let current = self.cancelButton {
+                    cancelButton = current
+                } else {
+                    cancelButton = ComponentView()
+                    self.cancelButton = cancelButton
+                }
+                let cancelButtonSize = cancelButton.update(
+                    transition: transition,
+                    component: AnyComponent(Button(
+                        content: AnyComponent(Text(text: environment.strings.Common_Cancel, font: Font.regular(17.0), color: environment.theme.list.itemAccentColor)),
+                        action: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.dismiss()
+                        }
+                    ).minSize(CGSize(width: 8.0, height: 44.0))),
+                    environment: {},
+                    containerSize: CGSize(width: 200.0, height: 100.0)
+                )
+                if let cancelButtonView = cancelButton.view {
+                    if cancelButtonView.superview == nil {
+                        self.addSubview(cancelButtonView)
+                    }
+                    transition.setFrame(view: cancelButtonView, frame: CGRect(origin: CGPoint(x: 16.0, y: 6.0), size: cancelButtonSize))
+                }
+            } else if let cancelButton = self.cancelButton {
+                self.cancelButton = nil
+                cancelButton.view?.removeFromSuperview()
+            }
+            
             var contentHeight: CGFloat = 0.0
             contentHeight += 32.0
             
@@ -179,7 +220,14 @@ private final class StoryStealthModeSheetContentComponent: Component {
                     theme: environment.theme,
                     strings: environment.strings,
                     backwardDuration: component.backwardDuration,
-                    forwardDuration: component.forwardDuration
+                    forwardDuration: component.forwardDuration,
+                    mode: component.mode,
+                    dismiss: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.dismiss()
+                    }
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
@@ -195,10 +243,29 @@ private final class StoryStealthModeSheetContentComponent: Component {
             
             //TODO:localize
             let buttonText: String
-            if remainingCooldownSeconds <= 0 {
-                buttonText = "Enable Stealth Mode"
-            } else {
-                buttonText = "Available in \(stringForDuration(remainingCooldownSeconds))"
+            let content: AnyComponentWithIdentity<Empty>
+            switch component.mode {
+            case .control:
+                if remainingCooldownSeconds <= 0 {
+                    buttonText = "Enable Stealth Mode"
+                } else {
+                    buttonText = "Available in \(stringForDuration(remainingCooldownSeconds))"
+                }
+                content = AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(Text(text: buttonText, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)))
+            case .upgrade:
+                buttonText = "Unlock Stealth Mode"
+                content = AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(
+                    HStack([
+                        AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(Text(text: buttonText, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor))),
+                        AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(LottieComponent(
+                            content: LottieComponent.AppBundleContent(name: "premium_unlock"),
+                            color: environment.theme.list.itemCheckColors.foregroundColor,
+                            startingPosition: .begin,
+                            size: CGSize(width: 30.0, height: 30.0),
+                            loop: true
+                        )))
+                    ], spacing: 4.0)
+                ))
             }
             let buttonSize = self.button.update(
                 transition: transition,
@@ -208,9 +275,7 @@ private final class StoryStealthModeSheetContentComponent: Component {
                         foreground: environment.theme.list.itemCheckColors.foregroundColor,
                         pressedColor: environment.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
                     ),
-                    content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(
-                        Text(text: buttonText, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
-                    )),
+                    content: content,
                     isEnabled: remainingCooldownSeconds <= 0,
                     allowActionWhenDisabled: true,
                     displaysProgress: false,
@@ -219,16 +284,21 @@ private final class StoryStealthModeSheetContentComponent: Component {
                             return
                         }
                         
-                        var remainingCooldownSeconds: Int32 = 0
-                        if let cooldownUntilTimestamp = component.cooldownUntilTimestamp {
-                            remainingCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
-                            remainingCooldownSeconds = max(0, remainingCooldownSeconds)
-                        }
-                        
-                        if remainingCooldownSeconds > 0 {
-                            self.displayCooldown()
-                        } else {
-                            component.dismiss()
+                        switch component.mode {
+                        case let .control(cooldownUntilTimestamp):
+                            var remainingCooldownSeconds: Int32 = 0
+                            if let cooldownUntilTimestamp {
+                                remainingCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
+                                remainingCooldownSeconds = max(0, remainingCooldownSeconds)
+                            }
+                            
+                            if remainingCooldownSeconds > 0 {
+                                self.displayCooldown()
+                            } else {
+                                component.action()
+                            }
+                        case .upgrade:
+                            component.action()
                         }
                     }
                 )),
@@ -267,20 +337,20 @@ private final class StoryStealthModeSheetScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let cooldownUntilTimestamp: Int32?
+    let mode: StoryStealthModeSheetScreen.Mode
     let backwardDuration: Int32
     let forwardDuration: Int32
     let buttonAction: (() -> Void)?
     
     init(
         context: AccountContext,
-        cooldownUntilTimestamp: Int32?,
+        mode: StoryStealthModeSheetScreen.Mode,
         backwardDuration: Int32,
         forwardDuration: Int32,
         buttonAction: (() -> Void)?
     ) {
         self.context = context
-        self.cooldownUntilTimestamp = cooldownUntilTimestamp
+        self.mode = mode
         self.backwardDuration = backwardDuration
         self.forwardDuration = forwardDuration
         self.buttonAction = buttonAction
@@ -290,7 +360,7 @@ private final class StoryStealthModeSheetScreenComponent: Component {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.cooldownUntilTimestamp != rhs.cooldownUntilTimestamp {
+        if lhs.mode != rhs.mode {
             return false
         }
         if lhs.backwardDuration != rhs.backwardDuration {
@@ -343,10 +413,10 @@ private final class StoryStealthModeSheetScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(SheetComponent(
                     content: AnyComponent(StoryStealthModeSheetContentComponent(
-                        cooldownUntilTimestamp: component.cooldownUntilTimestamp,
+                        mode: component.mode,
                         backwardDuration: component.backwardDuration,
                         forwardDuration: component.forwardDuration,
-                        dismiss: { [weak self] in
+                        action: { [weak self] in
                             guard let self else {
                                 return
                             }
@@ -360,9 +430,16 @@ private final class StoryStealthModeSheetScreenComponent: Component {
                                 }
                                 self.component?.buttonAction?()
                             })
+                        },
+                        dismiss: {
+                            self.sheetAnimateOut.invoke(Action { _ in
+                                if let controller = environment.controller() {
+                                    controller.dismiss(completion: nil)
+                                }
+                            })
                         }
                     )),
-                    backgroundColor: .color(environment.theme.list.plainBackgroundColor),
+                    backgroundColor: .color(environment.theme.overallDarkAppearance ? environment.theme.list.itemBlocksBackgroundColor : environment.theme.list.blocksBackgroundColor),
                     animateOut: self.sheetAnimateOut
                 )),
                 environment: {
@@ -392,16 +469,21 @@ private final class StoryStealthModeSheetScreenComponent: Component {
 }
 
 public class StoryStealthModeSheetScreen: ViewControllerComponentContainer {
+    public enum Mode: Equatable {
+        case control(cooldownUntilTimestamp: Int32?)
+        case upgrade
+    }
+    
     public init(
         context: AccountContext,
-        cooldownUntilTimestamp: Int32?,
+        mode: Mode,
         backwardDuration: Int32,
         forwardDuration: Int32,
         buttonAction: (() -> Void)? = nil
     ) {
         super.init(context: context, component: StoryStealthModeSheetScreenComponent(
             context: context,
-            cooldownUntilTimestamp: cooldownUntilTimestamp,
+            mode: mode,
             backwardDuration: backwardDuration,
             forwardDuration: forwardDuration,
             buttonAction: buttonAction
