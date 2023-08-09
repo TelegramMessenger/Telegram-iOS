@@ -44,6 +44,14 @@ public func _internal_getRecentPeers(transaction: Transaction) -> [PeerId] {
     return entry.ids
 }
 
+private func hashForPeerIds(_ peerIds: [PeerId]) -> Int64 {
+    var acc: UInt64 = 0
+    for peerId in peerIds {
+        combineInt64Hash(&acc, with: peerId)
+    }
+    return finalizeInt64Hash(acc)
+}
+
 func _internal_managedUpdatedRecentPeers(accountPeerId: PeerId, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let key = PostboxViewKey.cachedItem(cachedRecentPeersEntryId())
     let peersEnabled = postbox.combinedView(keys: [key])
@@ -56,14 +64,18 @@ func _internal_managedUpdatedRecentPeers(accountPeerId: PeerId, postbox: Postbox
     }
     |> distinctUntilChanged
     
-    let updateOnce =
-        network.request(Api.functions.contacts.getTopPeers(flags: 1 << 0, offset: 0, limit: 50, hash: 0))
-    |> `catch` { _ -> Signal<Api.contacts.TopPeers, NoError> in
-        return .complete()
+    let updateOnce = postbox.transaction { transaction -> Int64 in
+        let peerIds = _internal_getRecentPeers(transaction: transaction)
+        return hashForPeerIds(peerIds)
     }
-    |> mapToSignal { result -> Signal<Void, NoError> in
-        return postbox.transaction { transaction -> Void in
-            switch result {
+    |> mapToSignal { hash in
+        return network.request(Api.functions.contacts.getTopPeers(flags: 1 << 0, offset: 0, limit: 50, hash: hash))
+        |> `catch` { _ -> Signal<Api.contacts.TopPeers, NoError> in
+            return .complete()
+        }
+        |> mapToSignal { result -> Signal<Void, NoError> in
+            return postbox.transaction { transaction -> Void in
+                switch result {
                 case let .topPeers(_, _, users):
                     var peers: [Peer] = []
                     var peerPresences: [PeerId: Api.User] = [:]
@@ -85,6 +97,7 @@ func _internal_managedUpdatedRecentPeers(accountPeerId: PeerId, postbox: Postbox
                     if let entry = CodableEntry(CachedRecentPeers(enabled: false, ids: [])) {
                         transaction.putItemCacheEntry(id: cachedRecentPeersEntryId(), entry: entry)
                     }
+                }
             }
         }
     }

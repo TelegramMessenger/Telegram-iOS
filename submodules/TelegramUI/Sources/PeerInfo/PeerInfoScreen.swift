@@ -9519,8 +9519,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
         
         if self.isSettings {
-            contentHeight = max(contentHeight, layout.size.height + 140.0 - layout.intrinsicInsets.bottom)
-
             if !self.state.isEditing {
                 let versionText = self.presentationData.strings.Settings_Version(Bundle.main.appVersion, Bundle.main.appBuildNumber, Bundle.main.originalVersion).string
                 self.versionLabelNode.attributedText = NSAttributedString(string: versionText, font: Font.regular(self.presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: presentationData.theme.list.freeTextColor, paragraphAlignment: .center)
@@ -9539,6 +9537,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 let bottomPadding = horizontalPadding
                 contentHeight += size.height + bottomPadding
             }
+            
+            contentHeight = max(contentHeight, layout.size.height + 140.0 - layout.intrinsicInsets.bottom)
         }
         self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: contentHeight)
         if self.isSettings {
