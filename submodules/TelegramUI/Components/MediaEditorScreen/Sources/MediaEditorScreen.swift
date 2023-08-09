@@ -2691,10 +2691,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         }
                 
-        func presentGallery() {
+        func presentGallery(parentController: ViewController? = nil) {
             guard let controller = self.controller else {
                 return
             }
+            let parentController = parentController ?? controller
             let galleryController = self.context.sharedContext.makeMediaPickerScreen(context: self.context, hasSearch: true, completion: { [weak self] result in
                 guard let self else {
                     return
@@ -2743,7 +2744,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     self.updateModalTransitionFactor(transitionFactor, transition: transition)
                 }
             }
-            controller.push(galleryController)
+            parentController.push(galleryController)
         }
         
         private let staticEmojiPack = Promise<LoadedStickerPack>()
@@ -3063,6 +3064,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         selectionContainerView: self.selectionContainerView,
                                         existingStickerPickerInputData: self.stickerPickerInputData
                                     )
+                                    controller.presentGallery = { [weak self] in
+                                        if let self {
+                                            self.presentGallery()
+                                        }
+                                    }
                                     controller.getCurrentImage = { [weak self] in
                                         return self?.interaction?.getCurrentImage()
                                     }
@@ -3123,7 +3129,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         self.interaction?.activate()
                                         self.entitiesView.selectEntity(nil)
                                     }
-                                    self.controller?.present(controller, in: .window(.root))
+                                    self.controller?.present(controller, in: .current)
                                     self.animateOutToTool()
                                 }
                             }
@@ -3234,9 +3240,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             self.interaction?.containerLayoutUpdated(layout: layout, transition: transition)
             
-            var layout = layout
-            layout.intrinsicInsets.top = topInset
-            layout.intrinsicInsets.bottom = bottomInset + 60.0
+//            var layout = layout
+//            layout.intrinsicInsets.top = topInset
+//            layout.intrinsicInsets.bottom = bottomInset + 60.0
             controller.presentationContext.containerLayoutUpdated(layout, transition: transition.containedViewLayoutTransition)
             
             if isFirstTime {

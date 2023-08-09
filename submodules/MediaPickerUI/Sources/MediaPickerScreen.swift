@@ -1673,8 +1673,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         self.updateSelectionState(count: Int32(selectionContext.count()))
         
         self.longTapWithTabBar = { [weak self] in
-            if let strongSelf = self {
-                strongSelf.presentSearch(activateOnDisplay: false)
+            if let self, self.groupsController == nil {
+                self.presentSearch(activateOnDisplay: false)
             }
         }
     }
@@ -1924,6 +1924,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         self.controllerNode.updateNavigation(delayDisappear: true, transition: .immediate)
     }
     
+    private weak var groupsController: MediaGroupsScreen?
     private func presentSearch(activateOnDisplay: Bool) {
         guard self.moreButtonNode.iconNode.iconState == .search, case let .assets(_, mode) = self.subject else {
             return
@@ -1976,6 +1977,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         } else {
             self.presentWebSearch(groupsController, activateOnDisplay)
         }
+        self.groupsController = groupsController
     }
     
     @objc private func searchOrMorePressed(node: ContextReferenceContentNode, gesture: ContextGesture?) {

@@ -404,76 +404,19 @@ public final class EntityKeyboardComponent: Component {
             
             if let gifContent = component.gifContent {
                 contents.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(gifContent)))
-                /*var topGifItems: [EntityKeyboardTopPanelComponent.Item] = []
-                if component.hasRecentGifs {
-                    topGifItems.append(EntityKeyboardTopPanelComponent.Item(
-                        id: "recent",
-                        isReorderable: false,
-                        content: AnyComponent(EntityKeyboardIconTopPanelComponent(
-                            icon: .recent,
-                            theme: component.theme,
-                            useAccentColor: false,
-                            title: component.strings.Stickers_Recent,
-                            pressed: { [weak self] in
-                                self?.component?.switchToGifSubject(.recent)
-                            }
-                        ))
-                    ))
-                }
-                topGifItems.append(EntityKeyboardTopPanelComponent.Item(
-                    id: "trending",
-                    isReorderable: false,
-                    content: AnyComponent(EntityKeyboardIconTopPanelComponent(
-                        icon: .trending,
-                        theme: component.theme,
-                        useAccentColor: false,
-                        title: component.strings.Stickers_Trending,
-                        pressed: { [weak self] in
-                            self?.component?.switchToGifSubject(.trending)
-                        }
-                    ))
-                ))
-                if let emojiContent = component.emojiContent {
-                    for emoji in component.availableGifSearchEmojies {
-                        topGifItems.append(EntityKeyboardTopPanelComponent.Item(
-                            id: emoji.emoji,
-                            isReorderable: false,
-                            content: AnyComponent(EntityKeyboardAnimationTopPanelComponent(
-                                context: emojiContent.context,
-                                item: EntityKeyboardAnimationData(file: emoji.file),
-                                isFeatured: false,
-                                isPremiumLocked: false,
-                                animationCache: emojiContent.animationCache,
-                                animationRenderer: emojiContent.animationRenderer,
-                                theme: component.theme,
-                                title: emoji.title,
-                                pressed: { [weak self] in
-                                    self?.component?.switchToGifSubject(.emojiSearch(emoji.emoji))
-                                }
-                            ))
-                        ))
-                    }
-                }
-                let defaultActiveGifItemId: AnyHashable
-                switch gifContent.subject {
-                case .recent:
-                    defaultActiveGifItemId = "recent"
-                case .trending:
-                    defaultActiveGifItemId = "trending"
-                case let .emojiSearch(value):
-                    defaultActiveGifItemId = AnyHashable(value)
-                }
-                contentTopPanels.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(EntityKeyboardTopPanelComponent(
-                    id: "gifs",
-                    theme: component.theme,
-                    items: topGifItems,
-                    containerSideInset: component.containerInsets.left + component.topPanelInsets.left,
-                    forceActiveItemId: defaultActiveGifItemId,
-                    activeContentItemIdUpdated: gifsContentItemIdUpdated,
-                    reorderItems: { _ in
-                    }
-                ))))*/
                 contentIcons.append(PagerComponentContentIcon(id: "gifs", imageName: "Chat/Input/Media/EntityInputGifsIcon", title: component.strings.EmojiInput_TabGifs))
+                if let addImage = component.stickerContent?.inputInteractionHolder.inputInteraction?.addImage {
+                    contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(Button(
+                        content: AnyComponent(BundleIconComponent(
+                            name: "Media Editor/AddImage",
+                            tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
+                            maxSize: nil
+                        )),
+                        action: {
+                            addImage()
+                        }
+                    ).minSize(CGSize(width: 38.0, height: 38.0)))))
+                }
             }
             
             if let stickerContent = component.stickerContent {
