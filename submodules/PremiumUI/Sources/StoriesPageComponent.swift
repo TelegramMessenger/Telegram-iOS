@@ -359,7 +359,7 @@ private final class StoriesListComponent: CombinedComponent {
                     component: AnyComponent(ParagraphComponent(
                         title: "Stealth Mode",
                         titleColor: titleColor,
-                        text: "Hide the fact that you viewd other people's stories.",
+                        text: "Hide the fact that you viewed other people's stories.",
                         textColor: textColor,
                         iconName: "Premium/Stories/Stealth",
                         iconColor: colors[1]
@@ -373,7 +373,7 @@ private final class StoriesListComponent: CombinedComponent {
                     component: AnyComponent(ParagraphComponent(
                         title: "Permanent Views History",
                         titleColor: titleColor,
-                        text: "Check who opens your stories - even after they expire.",
+                        text: "Check who opens your stories — even after they expire.",
                         textColor: textColor,
                         iconName: "Premium/Stories/Views",
                         iconColor: colors[2]

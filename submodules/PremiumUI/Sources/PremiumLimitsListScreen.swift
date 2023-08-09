@@ -256,6 +256,8 @@ public class PremiumLimitsListScreen: ViewController {
             })
             let alphaTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
             alphaTransition.updateAlpha(node: self.dim, alpha: 0.0)
+            
+            self.controller?.updateModalStyleOverlayTransitionFactor(0.0, transition: positionTransition)
         }
                 
         private var dismissOffset: CGFloat?

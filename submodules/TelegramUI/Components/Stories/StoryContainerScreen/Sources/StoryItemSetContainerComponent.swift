@@ -3839,7 +3839,7 @@ public final class StoryItemSetContainerComponent: Component {
                         guard let file else {
                             let context = component.context
                             var replaceImpl: ((ViewController) -> Void)?
-                            let controller = PremiumDemoScreen(context: context, subject: .uniqueReactions, action: {
+                            let controller = PremiumDemoScreen(context: context, subject: .uniqueReactions, forceDark: true, action: {
                                 let controller = PremiumIntroScreen(context: context, source: .reactions)
                                 replaceImpl?(controller)
                             })
@@ -3861,7 +3861,7 @@ public final class StoryItemSetContainerComponent: Component {
                             
                             let context = component.context
                             var replaceImpl: ((ViewController) -> Void)?
-                            let controller = PremiumDemoScreen(context: context, subject: .uniqueReactions, action: {
+                            let controller = PremiumDemoScreen(context: context, subject: .uniqueReactions, forceDark: true, action: {
                                 let controller = PremiumIntroScreen(context: context, source: .reactions)
                                 replaceImpl?(controller)
                             })
