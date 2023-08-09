@@ -79,6 +79,7 @@
 "PtgSettings.HideReactions" = "Хаваць рэакцыі";
 "PtgSettings.HideComments" = "Хаваць каментары";
 "PtgSettings.HideShareButton" = "Хаваць кнопку «Абагуліць»";
+"PtgSettings.UseFullWidth" = "На ўсю шырыню экрана";
 "PtgSettings.EnableLiveText" = "Распазнанне тэксту";
 "PtgSettings.EnableLiveTextHelp" = "Аўтаматычна выконваць распазнанне тэксту і штрых-кодаў (напрыклад, QR-кода) на кожнай выяве, якую вы праглядаеце ў поўнаэкранным рэжыме. Выключыце, каб зэканоміць зарад батарэі.";
 "PtgSettings.PreferAppleVoiceToText" = "Пераклад голасу ў тэкст ад Apple";

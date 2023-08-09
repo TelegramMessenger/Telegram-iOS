@@ -15,18 +15,20 @@ public struct PtgSettings: Codable, Equatable {
     public let hideReactionsInChannels: Bool
     public let hideCommentsInChannels: Bool
     public let hideShareButtonInChannels: Bool
+    public let useFullWidthInChannels: Bool
     public let testToolsEnabled: Bool?
     
     public static var defaultSettings: PtgSettings {
         return PtgSettings(
             showPeerId: true,
             showChannelCreationDate: true,
-            suppressForeignAgentNotice: true,
+            suppressForeignAgentNotice: false,
             preferAppleVoiceToText: false,
             useRearCameraByDefault: false,
             hideReactionsInChannels: false,
             hideCommentsInChannels: false,
             hideShareButtonInChannels: false,
+            useFullWidthInChannels: false,
             testToolsEnabled: nil
         )
     }
@@ -40,6 +42,7 @@ public struct PtgSettings: Codable, Equatable {
         hideReactionsInChannels: Bool,
         hideCommentsInChannels: Bool,
         hideShareButtonInChannels: Bool,
+        useFullWidthInChannels: Bool,
         testToolsEnabled: Bool?
     ) {
         self.showPeerId = showPeerId
@@ -50,6 +53,7 @@ public struct PtgSettings: Codable, Equatable {
         self.hideReactionsInChannels = hideReactionsInChannels
         self.hideCommentsInChannels = hideCommentsInChannels
         self.hideShareButtonInChannels = hideShareButtonInChannels
+        self.useFullWidthInChannels = useFullWidthInChannels
         self.testToolsEnabled = testToolsEnabled
     }
     
@@ -58,12 +62,13 @@ public struct PtgSettings: Codable, Equatable {
         
         self.showPeerId = (try container.decodeIfPresent(Int32.self, forKey: "spi") ?? 1) != 0
         self.showChannelCreationDate = (try container.decodeIfPresent(Int32.self, forKey: "sccd") ?? 1) != 0
-        self.suppressForeignAgentNotice = (try container.decodeIfPresent(Int32.self, forKey: "sfan") ?? 1) != 0
+        self.suppressForeignAgentNotice = (try container.decodeIfPresent(Int32.self, forKey: "sfan") ?? 0) != 0
         self.preferAppleVoiceToText = (try container.decodeIfPresent(Int32.self, forKey: "pavtt") ?? 0) != 0
         self.useRearCameraByDefault = (try container.decodeIfPresent(Int32.self, forKey: "urcbd") ?? 0) != 0
         self.hideReactionsInChannels = (try container.decodeIfPresent(Int32.self, forKey: "hric") ?? 0) != 0
         self.hideCommentsInChannels = (try container.decodeIfPresent(Int32.self, forKey: "hcic") ?? 0) != 0
         self.hideShareButtonInChannels = (try container.decodeIfPresent(Int32.self, forKey: "hsbic") ?? 0) != 0
+        self.useFullWidthInChannels = (try container.decodeIfPresent(Int32.self, forKey: "ufwic") ?? 0) != 0
         self.testToolsEnabled = try container.decodeIfPresent(Int32.self, forKey: "test").flatMap({ $0 != 0 })
     }
     
@@ -78,6 +83,7 @@ public struct PtgSettings: Codable, Equatable {
         try container.encode((self.hideReactionsInChannels ? 1 : 0) as Int32, forKey: "hric")
         try container.encode((self.hideCommentsInChannels ? 1 : 0) as Int32, forKey: "hcic")
         try container.encode((self.hideShareButtonInChannels ? 1 : 0) as Int32, forKey: "hsbic")
+        try container.encode((self.useFullWidthInChannels ? 1 : 0) as Int32, forKey: "ufwic")
         try container.encodeIfPresent(self.testToolsEnabled.flatMap({ ($0 ? 1 : 0) as Int32 }), forKey: "test")
     }
     

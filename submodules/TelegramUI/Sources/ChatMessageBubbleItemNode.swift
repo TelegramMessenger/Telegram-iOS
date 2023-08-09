@@ -1802,13 +1802,27 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var mosaicStatusSizeAndApply: (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageDateAndStatusNode)?
         
         if let mosaicRange = mosaicRange {
-            let maxSize = layoutConstants.image.maxDimensions.fittedToWidthOrSmaller(maximumContentWidth - layoutConstants.image.bubbleInsets.left - layoutConstants.image.bubbleInsets.right)
-            let (innerFramesAndPositions, innerSize) = chatMessageBubbleMosaicLayout(maxSize: maxSize, itemSizes: contentPropertiesAndLayouts[mosaicRange].map { item in
+            var maxDimensions = layoutConstants.image.maxDimensions
+            if item.message.isPeerBroadcastChannel, item.context.sharedContext.currentPtgSettings.with({ $0.useFullWidthInChannels }) {
+                maxDimensions.width = maximumContentWidth
+            }
+            var maxSize = maxDimensions.fittedToWidthOrSmaller(maximumContentWidth - layoutConstants.image.bubbleInsets.left - layoutConstants.image.bubbleInsets.right)
+            var (innerFramesAndPositions, innerSize) = chatMessageBubbleMosaicLayout(maxSize: maxSize, itemSizes: contentPropertiesAndLayouts[mosaicRange].map { item in
                 guard let size = item.0, size.width > 0.0, size.height > 0 else {
                     return CGSize(width: 256.0, height: 256.0)
                 }
                 return size
             })
+            
+            if innerSize.height > maxSize.height, maxDimensions.width != layoutConstants.image.maxDimensions.width {
+                maxSize = layoutConstants.image.maxDimensions.fittedToWidthOrSmaller(maximumContentWidth - layoutConstants.image.bubbleInsets.left - layoutConstants.image.bubbleInsets.right)
+                (innerFramesAndPositions, innerSize) = chatMessageBubbleMosaicLayout(maxSize: maxSize, itemSizes: contentPropertiesAndLayouts[mosaicRange].map { item in
+                    guard let size = item.0, size.width > 0.0, size.height > 0 else {
+                        return CGSize(width: 256.0, height: 256.0)
+                    }
+                    return size
+                })
+            }
             
             let framesAndPositions = innerFramesAndPositions.map { ($0.0.offsetBy(dx: layoutConstants.image.bubbleInsets.left, dy: layoutConstants.image.bubbleInsets.top), $0.1) }
             

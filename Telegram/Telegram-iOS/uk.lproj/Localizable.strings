@@ -14,6 +14,7 @@
 "PtgSettings.HideReactions" = "Приховувати реакції";
 "PtgSettings.HideComments" = "Приховувати коментарі";
 "PtgSettings.HideShareButton" = "Приховувати кнопку поширення";
+"PtgSettings.UseFullWidth" = "На всю ширину екрана";
 "PtgSettings.EnableLiveText" = "Текст наживо";
 "PtgSettings.EnableLiveTextHelp" = "Автоматично виконувати розпізнавання тексту і штрих-кодів (наприклад, QR-коду) на кожному зображенні, яке ви переглядаєте в повноекранному режимі. Вимкніть, щоб заощадити заряд батареї.";
 "PtgSettings.PreferAppleVoiceToText" = "Переклад голосу в текст від Apple";

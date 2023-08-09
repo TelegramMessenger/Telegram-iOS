@@ -79,6 +79,7 @@
 "PtgSettings.HideReactions" = "Hide Reactions";
 "PtgSettings.HideComments" = "Hide Comments";
 "PtgSettings.HideShareButton" = "Hide Share Button";
+"PtgSettings.UseFullWidth" = "Use Full Screen Width";
 "PtgSettings.EnableLiveText" = "Live Text";
 "PtgSettings.EnableLiveTextHelp" = "Automatically perform text recognition and bar code detection (e.g. QR-code) on each image you preview in fullscreen. Turn it off to save battery life.";
 "PtgSettings.PreferAppleVoiceToText" = "Voice-to-Text Conversion by Apple";
