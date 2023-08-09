@@ -117,7 +117,7 @@ extension UserLimitsConfiguration {
         self.maxReactionsPerMessage = getValue("reactions_user_max", orElse: 1)
         self.maxSharedFolderInviteLinks = getValue("chatlist_invites_limit", orElse: isPremium ? 100 : 3)
         self.maxSharedFolderJoin = getValue("chatlists_joined_limit", orElse: isPremium ? 100 : 2)
-        self.maxStoryCaptionLength = getGeneralValue("story_caption_length_limit", orElse: defaultValue.maxStoryCaptionLength)
-        self.maxExpiringStoriesCount = getGeneralValue("story_expiring_limit", orElse: defaultValue.maxExpiringStoriesCount)
+        self.maxStoryCaptionLength = getValue("story_caption_length_limit", orElse: defaultValue.maxStoryCaptionLength)
+        self.maxExpiringStoriesCount = getValue("story_expiring_limit", orElse: defaultValue.maxExpiringStoriesCount)
     }
 }
