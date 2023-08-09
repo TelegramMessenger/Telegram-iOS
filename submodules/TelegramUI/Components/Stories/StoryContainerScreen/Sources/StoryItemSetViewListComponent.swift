@@ -793,7 +793,7 @@ final class StoryItemSetViewListComponent: Component {
                 
                 var emptyButtonTransition = transition
                 let emptyButton: ComponentView<Empty>?
-                if !component.hasPremium, let views = component.storyItem.views, views.seenCount != 0 {
+                if self.query == nil, !component.hasPremium, let views = component.storyItem.views, views.seenCount != 0 {
                     if let current = self.emptyButton {
                         emptyButton = current
                     } else {
@@ -1277,18 +1277,22 @@ final class StoryItemSetViewListComponent: Component {
             var displayModeSelector = false
             var displaySearchBar = false
             var displaySortSelector = false
-            if let views = component.storyItem.views {
-                if views.seenCount >= 20 {
-                    displayModeSelector = true
-                    displaySearchBar = true
-                }
-                if views.reactedCount >= 10 {
-                    displaySortSelector = true
-                }
-            }
-            if let privacy = component.storyItem.privacy, case .everyone = privacy.base {
+            
+            if !component.hasPremium, component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
             } else {
-                displayModeSelector = false
+                if let views = component.storyItem.views {
+                    if views.seenCount >= 20 {
+                        displayModeSelector = true
+                        displaySearchBar = true
+                    }
+                    if views.reactedCount >= 10 {
+                        displaySortSelector = true
+                    }
+                }
+                if let privacy = component.storyItem.privacy, case .everyone = privacy.base {
+                } else {
+                    displayModeSelector = false
+                }
             }
             
             let navigationHeight: CGFloat
