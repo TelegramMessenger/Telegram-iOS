@@ -453,20 +453,26 @@ private final class StoriesListComponent: CombinedComponent {
     }
 }
 
+struct PageNeighbors: Equatable {
+    var leftIsList: Bool
+    var rightIsList: Bool
+}
 
 final class StoriesPageComponent: CombinedComponent {
     typealias EnvironmentType = DemoPageEnvironment
     
     let context: AccountContext
     let theme: PresentationTheme
+    let neighbors: PageNeighbors
     let bottomInset: CGFloat
     let updatedBottomAlpha: (CGFloat) -> Void
     let updatedDismissOffset: (CGFloat) -> Void
     let updatedIsDisplaying: (Bool) -> Void
 
-    init(context: AccountContext, theme: PresentationTheme, bottomInset: CGFloat, updatedBottomAlpha: @escaping (CGFloat) -> Void, updatedDismissOffset: @escaping (CGFloat) -> Void, updatedIsDisplaying: @escaping (Bool) -> Void) {
+    init(context: AccountContext, theme: PresentationTheme, neighbors: PageNeighbors, bottomInset: CGFloat, updatedBottomAlpha: @escaping (CGFloat) -> Void, updatedDismissOffset: @escaping (CGFloat) -> Void, updatedIsDisplaying: @escaping (Bool) -> Void) {
         self.context = context
         self.theme = theme
+        self.neighbors = neighbors
         self.bottomInset = bottomInset
         self.updatedBottomAlpha = updatedBottomAlpha
         self.updatedDismissOffset = updatedDismissOffset
@@ -478,6 +484,9 @@ final class StoriesPageComponent: CombinedComponent {
             return false
         }
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.neighbors != rhs.neighbors {
             return false
         }
         if lhs.bottomInset != rhs.bottomInset {
@@ -518,6 +527,8 @@ final class StoriesPageComponent: CombinedComponent {
             }
         }
         
+        var neighbors = PageNeighbors(leftIsList: false, rightIsList: false)
+        
         init(updateBottomAlpha: @escaping (CGFloat) -> Void, updateDismissOffset: @escaping (CGFloat) -> Void, updateIsDisplaying: @escaping (Bool) -> Void) {
             self.updateBottomAlpha = updateBottomAlpha
             self.updateDismissOffset = updateDismissOffset
@@ -527,8 +538,16 @@ final class StoriesPageComponent: CombinedComponent {
         }
         
         func updateAlpha() {
-            let dismissPosition = min(1.0, abs(self.position ?? 0.0) / 1.3333)
-            let position = min(1.0, abs(self.position ?? 0.0))
+            var dismissToLeft = false
+            if let position = self.position, position > 0.0 {
+                dismissToLeft = true
+            }
+            var dismissPosition = min(1.0, abs(self.position ?? 0.0) / 1.3333)
+            var position = min(1.0, abs(self.position ?? 0.0))
+            if position > 0.001, (dismissToLeft && self.neighbors.leftIsList) || (!dismissToLeft && self.neighbors.rightIsList) {
+                dismissPosition = 0.0
+                position = 1.0
+            }
             self.updateDismissOffset(dismissPosition)
             
             let verticalPosition = 1.0 - min(30.0, self.bottomContentOffset) / 30.0
@@ -556,6 +575,7 @@ final class StoriesPageComponent: CombinedComponent {
             let state = context.state
             
             let environment = context.environment[DemoPageEnvironment.self].value
+            state.neighbors = context.component.neighbors
             state.resetScroll = resetScroll
             state.position = environment.position
             state.isDisplaying = environment.isDisplaying
@@ -660,9 +680,9 @@ final class StoriesPageComponent: CombinedComponent {
             let titleBottomOriginY: CGFloat = 144.0
             let titleOriginDelta = titleTopOriginY - titleBottomOriginY
             
-            let fraction = max(0.0, min(1.0, abs(state.topContentOffset / titleOriginDelta)))
+            let fraction = min(1.0, state.topContentOffset / abs(titleOriginDelta))
             let titleOriginY: CGFloat = titleBottomOriginY + fraction * titleOriginDelta
-            let titleScale = 1.0 - fraction * 0.2
+            let titleScale = 1.0 - max(0.0, fraction * 0.2)
 
             let titleAlpha: CGFloat
             if fraction > 0.78 {
