@@ -2143,9 +2143,10 @@ public final class StoryItemSetContainerComponent: Component {
                 return
             }
             
-            let rect = likeButtonView.convert(likeButtonView.bounds, to: nil)
-            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             //TODO:localize
+            
+            /*let rect = likeButtonView.convert(likeButtonView.bounds, to: nil)
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let text = "Long tap for more reactions"
             let controller = TooltipController(content: .text(text), baseFontSize: presentationData.listsFontSize.baseDisplaySize, padding: 2.0)
             controller.dismissed = { [weak self] _ in
@@ -2161,10 +2162,10 @@ public final class StoryItemSetContainerComponent: Component {
                 return nil
             }))
             self.voiceMessagesRestrictedTooltipController = controller
-            self.updateIsProgressPaused()
+            self.updateIsProgressPaused()*/
             
             //TODO:localize
-            /*let tooltipScreen = TooltipScreen(
+            let tooltipScreen = TooltipScreen(
                 account: component.context.account,
                 sharedContext: component.context.sharedContext,
                 text: .markdown(text: "Long tap for more reactions"),
@@ -2184,7 +2185,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.sendMessageContext.tooltipScreen?.dismiss()
             self.sendMessageContext.tooltipScreen = tooltipScreen
             self.updateIsProgressPaused()
-            component.controller()?.present(tooltipScreen, in: .current)*/
+            component.controller()?.present(tooltipScreen, in: .current)
         }
         
         func update(component: StoryItemSetContainerComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
@@ -3717,7 +3718,7 @@ public final class StoryItemSetContainerComponent: Component {
                 effectiveDisplayReactions = false
             }
             
-            if let reactionContextNode = self.reactionContextNode, reactionContextNode.isReactionSearchActive {
+            if let reactionContextNode = self.reactionContextNode, (reactionContextNode.isReactionSearchActive && !reactionContextNode.isAnimatingOutToReaction && !reactionContextNode.isAnimatingOut) {
                 effectiveDisplayReactions = true
             }
             
@@ -3794,40 +3795,126 @@ public final class StoryItemSetContainerComponent: Component {
                                 self.displayLikeReactions = false
                                 self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
                             } else {
+                                if hasFirstResponder(self) {
+                                    self.sendMessageContext.currentInputMode = .text
+                                    self.endEditing(true)
+                                }
+                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                                
                                 self.waitingForReactionAnimateOutToLike = updateReaction.reaction
                                 let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: updateReaction.reaction).start()
                             }
                         } else {
-                            let targetView = UIView(frame: CGRect(origin: CGPoint(x: floor((self.bounds.width - 100.0) * 0.5), y: floor((self.bounds.height - 100.0) * 0.5)), size: CGSize(width: 100.0, height: 100.0)))
-                            targetView.isUserInteractionEnabled = false
-                            self.componentContainerView.addSubview(targetView)
-                            
-                            if let reactionContextNode = self.reactionContextNode {
-                                reactionContextNode.willAnimateOutToReaction(value: updateReaction.reaction)
-                                reactionContextNode.animateOutToReaction(value: updateReaction.reaction, targetView: targetView, hideNode: false, animateTargetContainer: nil, addStandaloneReactionAnimation: "".isEmpty ? nil : { [weak self] standaloneReactionAnimation in
-                                    guard let self else {
-                                        return
+                            let _ = (component.context.engine.stickers.availableReactions()
+                            |> take(1)
+                            |> deliverOnMainQueue).start(next: { [weak self, weak reactionContextNode] availableReactions in
+                                guard let self, let component = self.component, let availableReactions else {
+                                    return
+                                }
+                                
+                                var animation: TelegramMediaFile?
+                                for reaction in availableReactions.reactions {
+                                    if reaction.value == updateReaction.reaction {
+                                        animation = reaction.centerAnimation
+                                        break
                                     }
-                                    standaloneReactionAnimation.frame = self.bounds
-                                    self.componentContainerView.addSubview(standaloneReactionAnimation.view)
-                                }, completion: { [weak targetView, weak reactionContextNode] in
-                                    targetView?.removeFromSuperview()
-                                    if let reactionContextNode {
-                                        reactionContextNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.3, removeOnCompletion: false)
-                                        reactionContextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak reactionContextNode] _ in
-                                            reactionContextNode?.view.removeFromSuperview()
-                                        })
+                                }
+                                                            
+                                let targetView = UIView(frame: CGRect(origin: CGPoint(x: floor((self.bounds.width - 100.0) * 0.5), y: floor((self.bounds.height - 100.0) * 0.5)), size: CGSize(width: 100.0, height: 100.0)))
+                                targetView.isUserInteractionEnabled = false
+                                self.addSubview(targetView)
+                                
+                                if let reactionContextNode {
+                                    reactionContextNode.willAnimateOutToReaction(value: updateReaction.reaction)
+                                    reactionContextNode.animateOutToReaction(value: updateReaction.reaction, targetView: targetView, hideNode: false, animateTargetContainer: nil, addStandaloneReactionAnimation: "".isEmpty ? nil : { [weak self] standaloneReactionAnimation in
+                                        guard let self else {
+                                            return
+                                        }
+                                        standaloneReactionAnimation.frame = self.bounds
+                                        self.addSubview(standaloneReactionAnimation.view)
+                                    }, completion: { [weak targetView, weak reactionContextNode] in
+                                        targetView?.removeFromSuperview()
+                                        if let reactionContextNode {
+                                            reactionContextNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.3, removeOnCompletion: false)
+                                            reactionContextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak reactionContextNode] _ in
+                                                reactionContextNode?.view.removeFromSuperview()
+                                            })
+                                        }
+                                    })
+                                }
+                                
+                                if hasFirstResponder(self) {
+                                    self.sendMessageContext.currentInputMode = .text
+                                    self.endEditing(true)
+                                }
+                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                                                            
+                                var text = ""
+                                var messageAttributes: [MessageAttribute] = []
+                                var inlineStickers: [MediaId : Media] = [:]
+                                switch updateReaction {
+                                case let .builtin(textValue):
+                                    text = textValue
+                                case let .custom(fileId, file):
+                                    if let file {
+                                        animation = file
+                                        loop: for attribute in file.attributes {
+                                            switch attribute {
+                                            case let .CustomEmoji(_, _, displayText, _):
+                                                text = displayText
+                                                let length = (text as NSString).length
+                                                messageAttributes = [TextEntitiesMessageAttribute(entities: [MessageTextEntity(range: 0 ..< length, type: .CustomEmoji(stickerPack: nil, fileId: fileId))])]
+                                                inlineStickers = [file.fileId: file]
+                                                break loop
+                                            default:
+                                                break
+                                            }
+                                        }
+                                    }
+                                }
+
+                                let message: EnqueueMessage = .message(
+                                    text: text,
+                                    attributes: messageAttributes,
+                                    inlineStickers: inlineStickers,
+                                    mediaReference: nil,
+                                    replyToMessageId: nil,
+                                    replyToStoryId: StoryId(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id),
+                                    localGroupingKey: nil,
+                                    correlationId: nil,
+                                    bubbleUpEmojiOrStickersets: []
+                                )
+                                
+                                let context = component.context
+                                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                                let presentController = component.presentController
+                                let peer = component.slice.peer
+                                
+                                let _ = (enqueueMessages(account: context.account, peerId: peer.id, messages: [message])
+                                |> deliverOnMainQueue).start(next: { [weak self] messageIds in
+                                    if let animation, let self, let component = self.component {
+                                        let controller = UndoOverlayController(
+                                            presentationData: presentationData,
+                                            content: .sticker(context: context, file: animation, loop: false, title: nil, text: component.strings.Story_ToastReactionSent, undoText: component.strings.Story_ToastViewInChat, customAction: { [weak self] in
+                                                if let messageId = messageIds.first, let self {
+                                                    self.navigateToPeer(peer: peer, chat: true, subject: messageId.flatMap { .message(id: .id($0), highlight: false, timecode: nil) })
+                                                }
+                                            }),
+                                            elevatedLayout: false,
+                                            animateInAsReplacement: false,
+                                            action: { [weak self] _ in
+                                                self?.sendMessageContext.tooltipScreen = nil
+                                                self?.updateIsProgressPaused()
+                                                return false
+                                            }
+                                        )
+                                        self.sendMessageContext.tooltipScreen?.dismiss()
+                                        self.sendMessageContext.tooltipScreen = controller
+                                        self.updateIsProgressPaused()
+                                        presentController(controller, nil)
                                     }
                                 })
-                            }
-                            
-                            if hasFirstResponder(self) {
-                                self.sendMessageContext.currentInputMode = .text
-                                self.endEditing(true)
-                            }
-                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
-                            
-                            let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: updateReaction.reaction).start()
+                            })
                         }
                     }
                     
@@ -4544,10 +4631,54 @@ public final class StoryItemSetContainerComponent: Component {
             }
         }
         
+        private func presentSaveUpgradeScreen() {
+            guard let component = self.component else {
+                return
+            }
+            
+            self.dismissAllTooltips()
+            
+            //TODO:localize
+            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+            let animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
+            component.presentController(UndoOverlayController(
+                presentationData: presentationData,
+                content: .universal(
+                    animation: "anim_infotip",
+                    scale: 1.0,
+                    colors: [
+                        "info1.info1.stroke": animationBackgroundColor,
+                        "info2.info2.Fill": animationBackgroundColor
+                    ],
+                    title: nil,
+                    text: "Subscribe to [Telegram Premium]() to save other people's unprotected stories to your Gallery.",
+                    customUndoText: nil,
+                    timeout: nil
+                ),
+                elevatedLayout: false,
+                animateInAsReplacement: false,
+                blurred: true,
+                action: { [weak self] action in
+                    guard let self else {
+                        return false
+                    }
+                    switch action {
+                    case .info:
+                        self.presentStoriesUpgradeScreen()
+                        return true
+                    default:
+                        break
+                    }
+                    return false
+                }
+            ), nil)
+        }
+        
         private func presentStoriesUpgradeScreen() {
             guard let component = self.component else {
                 return
             }
+            
             let context = component.context
             //TODO:localize
             var replaceImpl: ((ViewController) -> Void)?
@@ -4703,6 +4834,8 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         private func performLikeOptionsAction(sourceView: UIView) {
+            HapticFeedback().tap()
+            
             self.displayLikeReactions = true
             self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
             self.updateIsProgressPaused()
@@ -5177,7 +5310,7 @@ public final class StoryItemSetContainerComponent: Component {
                         if accountUser.isPremium {
                             self.requestSave()
                         } else {
-                            self.presentStoriesUpgradeScreen()
+                            self.presentSaveUpgradeScreen()
                         }
                     })))
                 }
