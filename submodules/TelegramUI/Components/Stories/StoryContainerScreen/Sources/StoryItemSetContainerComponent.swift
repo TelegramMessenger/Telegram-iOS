@@ -2154,34 +2154,17 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             //TODO:localize
-            
-            /*let rect = likeButtonView.convert(likeButtonView.bounds, to: nil)
-            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-            let text = "Long tap for more reactions"
-            let controller = TooltipController(content: .text(text), baseFontSize: presentationData.listsFontSize.baseDisplaySize, padding: 2.0)
-            controller.dismissed = { [weak self] _ in
-                if let self {
-                    self.voiceMessagesRestrictedTooltipController = nil
-                    self.updateIsProgressPaused()
-                }
-            }
-            component.presentController(controller, TooltipControllerPresentationArguments(sourceViewAndRect: { [weak self] in
-                if let self {
-                    return (self, rect)
-                }
-                return nil
-            }))
-            self.voiceMessagesRestrictedTooltipController = controller
-            self.updateIsProgressPaused()*/
-            
-            //TODO:localize
             let tooltipScreen = TooltipScreen(
                 account: component.context.account,
                 sharedContext: component.context.sharedContext,
                 text: .markdown(text: "Long tap for more reactions"),
                 balancedTextLayout: true,
-                style: .default,
-                location: TooltipScreen.Location.point(likeButtonView.convert(likeButtonView.bounds, to: nil).offsetBy(dx: 0.0, dy: 0.0), .bottom), displayDuration: .infinite, shouldDismissOnTouch: { _, _ in
+                style: .customBlur(component.theme.rootController.navigationBar.blurredBackgroundColor, 0.0),
+                arrowStyle: .small,
+                location: TooltipScreen.Location.point(likeButtonView.convert(likeButtonView.bounds, to: nil).offsetBy(dx: 0.0, dy: 0.0), .bottom),
+                displayDuration: .infinite,
+                inset: 5.0,
+                shouldDismissOnTouch: { _, _ in
                     return .dismiss(consume: true)
                 }
             )
