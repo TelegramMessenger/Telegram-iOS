@@ -1,4 +1,4 @@
-"PasscodeSettings.AutoLock.IfAwayFor_10seconds" = "Сразу";
+"PasscodeSettings.AutoLock.IfAwayFor_10seconds" = "Немедленно";
 
 "PasscodeSettings.FakePasscodes" = "Ложные код-пароли";
 "PasscodeSettings.FakePasscode" = "Ложный код-пароль %1$d";

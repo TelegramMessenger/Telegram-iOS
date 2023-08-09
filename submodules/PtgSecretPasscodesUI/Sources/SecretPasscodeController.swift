@@ -412,7 +412,7 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
             }
         }
         
-        let values: [Int32] = [/*0, */10, 1 * 60, 5 * 60, 1 * 60 * 60, 5 * 60 * 60]
+        let values: [Int32] = [/*0, */10, 1 * 60, 5 * 60, 15 * 60, 1 * 60 * 60, 5 * 60 * 60]
         
         for value in values {
             var t: Int32?
