@@ -155,7 +155,7 @@ public final class TabSelectorComponent: Component {
                     }
                     itemTransition.setPosition(view: itemTitleView, position: itemTitleFrame.origin)
                     itemTransition.setBounds(view: itemTitleView, bounds: CGRect(origin: CGPoint(), size: itemTitleFrame.size))
-                    itemTransition.setAlpha(view: itemTitleView, alpha: item.id == component.selectedId ? 1.0 : 0.6)
+                    itemTransition.setAlpha(view: itemTitleView, alpha: item.id == component.selectedId ? 1.0 : 0.4)
                 }
             }
             
