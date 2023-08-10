@@ -483,125 +483,191 @@ final class StoryItemSetContainerSendMessage {
         view.updateIsProgressPaused()
     }
     
+    func performWithPossibleStealthModeConfirmation(view: StoryItemSetContainerComponent.View, action: @escaping () -> Void) {
+        guard let component = view.component, component.stealthModeTimeout != nil else {
+            action()
+            return
+        }
+        
+        let _ = (combineLatest(
+            component.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Configuration.StoryConfigurationState()
+            ),
+            ApplicationSpecificNotice.storyStealthModeReplyCount(accountManager: component.context.sharedContext.accountManager)
+        )
+        |> deliverOnMainQueue).start(next: { [weak self, weak view] data, noticeCount in
+            let config = data
+            
+            guard let self, let view, let component = view.component else {
+                return
+            }
+            
+            let timestamp = Int32(Date().timeIntervalSince1970)
+            if noticeCount < 3, let activeUntilTimestamp = config.stealthModeState.actualizedNow().activeUntilTimestamp, activeUntilTimestamp > timestamp {
+                
+                let theme = component.theme
+                let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
+                
+                //TODO:localize
+                let alertController = textAlertController(
+                    context: component.context,
+                    updatedPresentationData: updatedPresentationData,
+                    title: "You are in Stealth Mode now",
+                    text: "If you send a reply or reaction, the creator of the story will also see you in the list of viewers.",
+                    actions: [
+                        TextAlertAction(type: .defaultAction, title: "Cancel", action: {}),
+                        TextAlertAction(type: .genericAction, title: "Proceed", action: {
+                            action()
+                        })
+                    ]
+                )
+                alertController.dismissed = { [weak self, weak view] _ in
+                    guard let self, let view else {
+                        return
+                    }
+                    self.actionSheet = nil
+                    view.updateIsProgressPaused()
+                }
+                self.actionSheet = alertController
+                view.updateIsProgressPaused()
+                
+                component.controller()?.presentInGlobalOverlay(alertController)
+            } else {
+                action()
+            }
+        })
+    }
+    
     func performSendMessageAction(
         view: StoryItemSetContainerComponent.View,
         silentPosting: Bool = false,
         scheduleTime: Int32? = nil
     ) {
-        guard let component = view.component else {
-            return
-        }
-        let focusedItem = component.slice.item
-        guard let peerId = focusedItem.peerId else {
-            return
-        }
-        let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
-        guard let inputPanelView = view.inputPanel.view as? MessageInputPanelComponent.View else {
-            return
-        }
-        let peer = component.slice.peer
-        
-        let controller = component.controller() as? StoryContainerScreen
-        
-        if let recordedAudioPreview = self.recordedAudioPreview {
-            self.recordedAudioPreview = nil
+        self.performWithPossibleStealthModeConfirmation(view: view, action: { [weak self, weak view] in
+            guard let self, let view else {
+                return
+            }
+            guard let component = view.component else {
+                return
+            }
             
-            let waveformBuffer = recordedAudioPreview.waveform.makeBitstream()
+            let focusedItem = component.slice.item
+            guard let peerId = focusedItem.peerId else {
+                return
+            }
+            let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
+            guard let inputPanelView = view.inputPanel.view as? MessageInputPanelComponent.View else {
+                return
+            }
+            let peer = component.slice.peer
             
-            let messages: [EnqueueMessage] = [.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: recordedAudioPreview.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(recordedAudioPreview.fileSize), attributes: [.Audio(isVoice: true, duration: Int(recordedAudioPreview.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: nil, replyToStoryId: focusedStoryId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]
+            let controller = component.controller() as? StoryContainerScreen
             
-            let _ = enqueueMessages(account: component.context.account, peerId: peerId, messages: messages).start()
-            
-            view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
-        } else if self.hasRecordedVideoPreview, let videoRecorderValue = self.videoRecorderValue {
-            videoRecorderValue.send()
-            self.hasRecordedVideoPreview = false
-            self.videoRecorder.set(.single(nil))
-            view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
-        } else {
-            switch inputPanelView.getSendMessageInput() {
-            case let .text(text):
-                if !text.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    let entities = generateChatInputTextEntities(text)
-                    let _ = (component.context.engine.messages.enqueueOutgoingMessage(
-                        to: peerId,
-                        replyTo: nil,
-                        storyId: focusedStoryId,
-                        content: .text(text.string, entities),
-                        silentPosting: silentPosting,
-                        scheduleTime: scheduleTime
-                    ) |> deliverOnMainQueue).start(next: { [weak self, weak view] messageIds in
-                        Queue.mainQueue().after(0.3) {
-                            if let self, let view {
-                                self.presentMessageSentTooltip(view: view, peer: peer, messageId: messageIds.first.flatMap { $0 }, isScheduled: scheduleTime != nil)
+            if let recordedAudioPreview = self.recordedAudioPreview {
+                self.recordedAudioPreview = nil
+                
+                let waveformBuffer = recordedAudioPreview.waveform.makeBitstream()
+                
+                let messages: [EnqueueMessage] = [.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: recordedAudioPreview.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(recordedAudioPreview.fileSize), attributes: [.Audio(isVoice: true, duration: Int(recordedAudioPreview.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: nil, replyToStoryId: focusedStoryId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]
+                
+                let _ = enqueueMessages(account: component.context.account, peerId: peerId, messages: messages).start()
+                
+                view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+            } else if self.hasRecordedVideoPreview, let videoRecorderValue = self.videoRecorderValue {
+                videoRecorderValue.send()
+                self.hasRecordedVideoPreview = false
+                self.videoRecorder.set(.single(nil))
+                view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+            } else {
+                switch inputPanelView.getSendMessageInput() {
+                case let .text(text):
+                    if !text.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        let entities = generateChatInputTextEntities(text)
+                        let _ = (component.context.engine.messages.enqueueOutgoingMessage(
+                            to: peerId,
+                            replyTo: nil,
+                            storyId: focusedStoryId,
+                            content: .text(text.string, entities),
+                            silentPosting: silentPosting,
+                            scheduleTime: scheduleTime
+                        ) |> deliverOnMainQueue).start(next: { [weak self, weak view] messageIds in
+                            Queue.mainQueue().after(0.3) {
+                                if let self, let view {
+                                    self.presentMessageSentTooltip(view: view, peer: peer, messageId: messageIds.first.flatMap { $0 }, isScheduled: scheduleTime != nil)
+                                }
                             }
+                        })
+                        inputPanelView.clearSendMessageInput()
+                        
+                        self.currentInputMode = .text
+                        if hasFirstResponder(view) {
+                            view.endEditing(true)
+                        } else {
+                            view.state?.updated(transition: .spring(duration: 0.3))
                         }
-                    })
-                    inputPanelView.clearSendMessageInput()
-                    
-                    self.currentInputMode = .text
-                    if hasFirstResponder(view) {
-                        view.endEditing(true)
-                    } else {
-                        view.state?.updated(transition: .spring(duration: 0.3))
+                        controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
                     }
-                    controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
-                }
-            }
-        }
-    }
-    
-    func performSendStickerAction(view: StoryItemSetContainerComponent.View, fileReference: FileMediaReference) {
-        guard let component = view.component else {
-            return
-        }
-        let focusedItem = component.slice.item
-        guard let peerId = focusedItem.peerId else {
-            return
-        }
-        let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
-        let peer = component.slice.peer
-        
-        let controller = component.controller() as? StoryContainerScreen
-        
-        if let navigationController = controller?.navigationController as? NavigationController {
-            var controllers = navigationController.viewControllers
-            for controller in controllers.reversed() {
-                if !(controller is StoryContainerScreen) {
-                    controllers.removeLast()
-                } else {
-                    break
-                }
-            }
-            navigationController.setViewControllers(controllers, animated: true)
-            
-            controller?.window?.forEachController({ controller in
-                if let controller = controller as? StickerPackScreenImpl {
-                    controller.dismiss()
-                }
-            })
-        }
-        
-        let _ = (component.context.engine.messages.enqueueOutgoingMessage(
-            to: peerId,
-            replyTo: nil,
-            storyId: focusedStoryId,
-            content: .file(fileReference)
-        ) |> deliverOnMainQueue).start(next: { [weak self, weak view] messageIds in
-            Queue.mainQueue().after(0.3) {
-                if let self, let view {
-                    self.presentMessageSentTooltip(view: view, peer: peer, messageId: messageIds.first.flatMap { $0 })
                 }
             }
         })
-        
-        self.currentInputMode = .text
-        if hasFirstResponder(view) {
-            view.endEditing(true)
-        } else {
-            view.state?.updated(transition: .spring(duration: 0.3))
-        }
-        controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
+    }
+    
+    func performSendStickerAction(view: StoryItemSetContainerComponent.View, fileReference: FileMediaReference) {
+        self.performWithPossibleStealthModeConfirmation(view: view, action: { [weak self, weak view] in
+            guard let self, let view else {
+                return
+            }
+            guard let component = view.component else {
+                return
+            }
+            let focusedItem = component.slice.item
+            guard let peerId = focusedItem.peerId else {
+                return
+            }
+            let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
+            let peer = component.slice.peer
+            
+            let controller = component.controller() as? StoryContainerScreen
+            
+            if let navigationController = controller?.navigationController as? NavigationController {
+                var controllers = navigationController.viewControllers
+                for controller in controllers.reversed() {
+                    if !(controller is StoryContainerScreen) {
+                        controllers.removeLast()
+                    } else {
+                        break
+                    }
+                }
+                navigationController.setViewControllers(controllers, animated: true)
+                
+                controller?.window?.forEachController({ controller in
+                    if let controller = controller as? StickerPackScreenImpl {
+                        controller.dismiss()
+                    }
+                })
+            }
+            
+            let _ = (component.context.engine.messages.enqueueOutgoingMessage(
+                to: peerId,
+                replyTo: nil,
+                storyId: focusedStoryId,
+                content: .file(fileReference)
+            ) |> deliverOnMainQueue).start(next: { [weak self, weak view] messageIds in
+                Queue.mainQueue().after(0.3) {
+                    if let self, let view {
+                        self.presentMessageSentTooltip(view: view, peer: peer, messageId: messageIds.first.flatMap { $0 })
+                    }
+                }
+            })
+            
+            self.currentInputMode = .text
+            if hasFirstResponder(view) {
+                view.endEditing(true)
+            } else {
+                view.state?.updated(transition: .spring(duration: 0.3))
+            }
+            controller?.requestLayout(forceUpdate: true, transition: .animated(duration: 0.3, curve: .spring))
+        })
     }
     
     func performSendContextResultAction(view: StoryItemSetContainerComponent.View, results: ChatContextResultCollection, result: ChatContextResult) {

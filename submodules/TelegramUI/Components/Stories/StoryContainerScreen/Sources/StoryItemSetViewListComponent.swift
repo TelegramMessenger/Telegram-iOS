@@ -1139,7 +1139,10 @@ final class StoryItemSetViewListComponent: Component {
                 }
                 let _ = self
                 
-                sourceView?.alpha = 1.0
+                if let sourceView {
+                    let transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
+                    transition.setAlpha(view: sourceView, alpha: 1.0)
+                }
             }
             controller.present(contextController, in: .window(.root))
         }
@@ -1170,7 +1173,7 @@ final class StoryItemSetViewListComponent: Component {
                 component: AnyComponent(TabSelectorComponent(
                     colors: TabSelectorComponent.Colors(
                         foreground: .white,
-                        selection: UIColor(rgb: 0xffffff, alpha: 0.2)
+                        selection: UIColor(rgb: 0xffffff, alpha: 0.09)
                     ),
                     items: [
                         TabSelectorComponent.Item(
@@ -1203,7 +1206,7 @@ final class StoryItemSetViewListComponent: Component {
                 if component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
                     titleText = component.strings.Story_Footer_Views(Int32(views.seenCount))
                 } else {
-                    titleText = "All Viewers"
+                    titleText = "Viewers"
                 }
             } else {
                 titleText = "No Views"
@@ -1220,7 +1223,7 @@ final class StoryItemSetViewListComponent: Component {
                 transition: transition,
                 component: AnyComponent(OptionButtonComponent(
                     colors: OptionButtonComponent.Colors(
-                        background: UIColor(rgb: 0x767680, alpha: 0.2),
+                        background: UIColor(rgb: 0xffffff, alpha: 0.09),
                         foreground: .white
                     ),
                     icon: self.sortMode == .recentFirst ? "Chat/Context Menu/Time" : "Chat/Context Menu/Reactions",
@@ -1281,11 +1284,11 @@ final class StoryItemSetViewListComponent: Component {
             if !component.hasPremium, component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
             } else {
                 if let views = component.storyItem.views {
-                    if views.seenCount >= 20 {
+                    if views.seenCount >= 20 || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
                         displayModeSelector = true
                         displaySearchBar = true
                     }
-                    if views.reactedCount >= 10 {
+                    if views.reactedCount >= 10 || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
                         displaySortSelector = true
                     }
                 }
@@ -1299,9 +1302,9 @@ final class StoryItemSetViewListComponent: Component {
             if component.isSearchActive {
                 navigationHeight = navigationSearchSize.height
             } else if displaySearchBar {
-                navigationHeight = 50.0 + navigationSearchSize.height
+                navigationHeight = 56.0 + navigationSearchSize.height - 6.0
             } else {
-                navigationHeight = 50.0
+                navigationHeight = 56.0
             }
             
             let navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - visualHeight + 12.0), size: CGSize(width: availableSize.width, height: navigationHeight))
@@ -1313,7 +1316,7 @@ final class StoryItemSetViewListComponent: Component {
                     self.navigationContainerView.addSubview(tabSelectorView)
                 }
                 tabSelectorView.isHidden = !displayModeSelector
-                transition.setFrame(view: tabSelectorView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - tabSelectorSize.width) * 0.5), y: floor((50.0 - tabSelectorSize.height) * 0.5) + (component.isSearchActive ? (-50.0) : 0.0)), size: tabSelectorSize))
+                transition.setFrame(view: tabSelectorView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - tabSelectorSize.width) * 0.5), y: floor((56.0 - tabSelectorSize.height) * 0.5) + (component.isSearchActive ? (-56.0) : 0.0)), size: tabSelectorSize))
                 transition.setAlpha(view: tabSelectorView, alpha: component.isSearchActive ? 0.0 : 1.0)
             }
             if let titleView = self.title.view {
@@ -1322,7 +1325,7 @@ final class StoryItemSetViewListComponent: Component {
                 }
                 titleView.isHidden = displayModeSelector
                 
-                let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: floor((50.0 - titleSize.height) * 0.5) + (component.isSearchActive ? (-50.0) : 0.0)), size: titleSize)
+                let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: floor((56.0 - titleSize.height) * 0.5) + (component.isSearchActive ? (-56.0) : 0.0)), size: titleSize)
                 
                 transition.setFrame(view: titleView, frame: titleFrame)
                 transition.setAlpha(view: titleView, alpha: component.isSearchActive ? 0.0 : 1.0)
@@ -1332,7 +1335,7 @@ final class StoryItemSetViewListComponent: Component {
                 if orderSelectorView.superview == nil {
                     self.navigationContainerView.addSubview(orderSelectorView)
                 }
-                transition.setFrame(view: orderSelectorView, frame: CGRect(origin: CGPoint(x: availableSize.width - sideInset - orderSelectorSize.width, y: floor((50.0 - orderSelectorSize.height) * 0.5) + (component.isSearchActive ? (-50.0) : 0.0)), size: orderSelectorSize))
+                transition.setFrame(view: orderSelectorView, frame: CGRect(origin: CGPoint(x: availableSize.width - sideInset - orderSelectorSize.width, y: floor((56.0 - orderSelectorSize.height) * 0.5) + (component.isSearchActive ? (-56.0) : 0.0)), size: orderSelectorSize))
                 transition.setAlpha(view: orderSelectorView, alpha: component.isSearchActive ? 0.0 : 1.0)
                 
                 orderSelectorView.isHidden = !displaySortSelector

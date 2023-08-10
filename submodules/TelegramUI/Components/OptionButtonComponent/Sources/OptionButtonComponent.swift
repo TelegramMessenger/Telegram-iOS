@@ -90,7 +90,7 @@ public final class OptionButtonComponent: Component {
             
             self.component = component
             
-            let size = CGSize(width: 52.0, height: 28.0)
+            let size = CGSize(width: 53.0, height: 28.0)
             
             if previousComponent?.colors.background != component.colors.background {
                 self.backgroundView.image = generateStretchableFilledCircleImage(diameter: size.height, color: component.colors.background)
@@ -121,8 +121,8 @@ public final class OptionButtonComponent: Component {
             }
             
             if let iconSize = self.iconView.image?.size, let arrowSize = self.arrowView.image?.size {
-                transition.setFrame(view: self.iconView, frame: CGRect(origin: CGPoint(x: 3.0, y: floor((size.height - iconSize.height) * 0.5)), size: iconSize))
-                transition.setFrame(view: self.arrowView, frame: CGRect(origin: CGPoint(x: size.width - 8.0 - arrowSize.width, y: floor((size.height - arrowSize.height) * 0.5)), size: arrowSize))
+                transition.setFrame(view: self.iconView, frame: CGRect(origin: CGPoint(x: 4.0, y: floor((size.height - iconSize.height) * 0.5)), size: iconSize))
+                transition.setFrame(view: self.arrowView, frame: CGRect(origin: CGPoint(x: size.width - 8.0 - arrowSize.width, y: 1.0 + floor((size.height - arrowSize.height) * 0.5)), size: arrowSize))
             }
             
             transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: size))
