@@ -1598,11 +1598,18 @@ public final class StoryItemSetContainerComponent: Component {
                                 }
                                 
                                 var footerPanelY: CGFloat = self.itemsContainerView.frame.minY + itemLayout.contentFrame.center.y + itemLayout.contentFrame.height * 0.5 * itemScale
-                                
                                 footerPanelY += (1.0 - footerExpandFraction) * 4.0 + footerExpandFraction * (-41.0)
                                 
+                                let footerPanelMinScale: CGFloat = (1.0 - scaleFraction) + (itemLayout.sideVisibleItemScale / itemLayout.contentMinScale) * scaleFraction
+                                let footerPanelScale = itemLayout.contentScaleFraction * footerPanelMinScale + 1.0 * (1.0 - itemLayout.contentScaleFraction)
+                                
+                                footerPanelY += (footerSize.height - footerSize.height * footerPanelScale) * 0.5
+                                
                                 let footerPanelFrame = CGRect(origin: CGPoint(x: itemPositionX - footerSize.width * 0.5, y: footerPanelY), size: footerSize)
-                                itemTransition.setFrame(view: footerPanelView, frame: footerPanelFrame)
+                                
+                                itemTransition.setPosition(view: footerPanelView, position: footerPanelFrame.center)
+                                itemTransition.setBounds(view: footerPanelView, bounds: CGRect(origin: CGPoint(), size: footerPanelFrame.size))
+                                itemTransition.setScale(view: footerPanelView, scale: footerPanelScale)
                                 
                                 var footerAlpha: CGFloat = 1.0 - itemLayout.contentOverflowFraction
                                 if component.hideUI || self.isEditingStory {
