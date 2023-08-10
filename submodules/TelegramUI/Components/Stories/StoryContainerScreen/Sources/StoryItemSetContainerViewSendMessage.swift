@@ -3004,6 +3004,7 @@ final class StoryItemSetContainerSendMessage {
                         return false
                     }
                 )
+                tooltipScreen.tag = "no_auto_dismiss"
                 weak var tooltipScreenValue: UndoOverlayController? = tooltipScreen
                 self.currentTooltipUpdateTimer?.invalidate()
                 self.currentTooltipUpdateTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true, block: { [weak self, weak view] _ in
@@ -3046,7 +3047,7 @@ final class StoryItemSetContainerSendMessage {
             
             let sheet = StoryStealthModeSheetScreen(
                 context: component.context,
-                cooldownUntilTimestamp: config.stealthModeState.actualizedNow().cooldownUntilTimestamp,
+                mode: .control(cooldownUntilTimestamp: config.stealthModeState.actualizedNow().cooldownUntilTimestamp),
                 backwardDuration: pastPeriod,
                 forwardDuration: futurePeriod,
                 buttonAction: { [weak self, weak view] in
@@ -3080,6 +3081,52 @@ final class StoryItemSetContainerSendMessage {
                         
                         HapticFeedback().success()
                     })
+                }
+            )
+            sheet.wasDismissed = { [weak self, weak view] in
+                guard let self, let view else {
+                    return
+                }
+                self.actionSheet = nil
+                view.updateIsProgressPaused()
+            }
+            self.actionSheet = sheet
+            view.updateIsProgressPaused()
+            controller.push(sheet)
+        })
+    }
+    
+    func presentStealthModeUpgrade(view: StoryItemSetContainerComponent.View, action: @escaping () -> Void) {
+        guard let component = view.component else {
+            return
+        }
+        
+        let _ = (component.context.engine.data.get(
+            TelegramEngine.EngineData.Item.Configuration.StoryConfigurationState(),
+            TelegramEngine.EngineData.Item.Configuration.App()
+        )
+        |> deliverOnMainQueue).start(next: { [weak self, weak view] config, appConfig in
+            guard let self, let view, let component = view.component, let controller = component.controller() else {
+                return
+            }
+            
+            let pastPeriod: Int32
+            let futurePeriod: Int32
+            if let data = appConfig.data, let futurePeriodF = data["stories_stealth_future_period"] as? Double, let pastPeriodF = data["stories_stealth_past_period"] as? Double {
+                futurePeriod = Int32(futurePeriodF)
+                pastPeriod = Int32(pastPeriodF)
+            } else {
+                pastPeriod = 5 * 60
+                futurePeriod = 25 * 60
+            }
+            
+            let sheet = StoryStealthModeSheetScreen(
+                context: component.context,
+                mode: .upgrade,
+                backwardDuration: pastPeriod,
+                forwardDuration: futurePeriod,
+                buttonAction: {
+                    action()
                 }
             )
             sheet.wasDismissed = { [weak self, weak view] in

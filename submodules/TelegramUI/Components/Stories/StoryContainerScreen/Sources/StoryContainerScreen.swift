@@ -888,7 +888,10 @@ private final class StoryContainerScreenComponent: Component {
             }
             controller.forEachController { controller in
                 if let controller = controller as? UndoOverlayController {
-                    controller.dismissWithCommitAction()
+                    if let tag = controller.tag as? String, tag == "no_auto_dismiss" {
+                    } else {
+                        controller.dismissWithCommitAction()
+                    }
                 } else if let controller = controller as? TooltipScreen {
                     controller.dismiss()
                 }

@@ -59,6 +59,7 @@ final class StoryItemSetViewListComponent: Component {
     let peerId: EnginePeer.Id
     let safeInsets: UIEdgeInsets
     let storyItem: EngineStoryItem
+    let hasPremium: Bool
     let effectiveHeight: CGFloat
     let minHeight: CGFloat
     let availableReactions: StoryAvailableReactions?
@@ -82,6 +83,7 @@ final class StoryItemSetViewListComponent: Component {
         peerId: EnginePeer.Id,
         safeInsets: UIEdgeInsets,
         storyItem: EngineStoryItem,
+        hasPremium: Bool,
         effectiveHeight: CGFloat,
         minHeight: CGFloat,
         availableReactions: StoryAvailableReactions?,
@@ -104,6 +106,7 @@ final class StoryItemSetViewListComponent: Component {
         self.peerId = peerId
         self.safeInsets = safeInsets
         self.storyItem = storyItem
+        self.hasPremium = hasPremium
         self.effectiveHeight = effectiveHeight
         self.minHeight = minHeight
         self.availableReactions = availableReactions
@@ -134,6 +137,9 @@ final class StoryItemSetViewListComponent: Component {
             return false
         }
         if lhs.storyItem != rhs.storyItem {
+            return false
+        }
+        if lhs.hasPremium != rhs.hasPremium {
             return false
         }
         if lhs.effectiveHeight != rhs.effectiveHeight {
@@ -248,6 +254,7 @@ final class StoryItemSetViewListComponent: Component {
         
         var emptyIcon: ComponentView<Empty>?
         var emptyText: ComponentView<Empty>?
+        var emptyButton: ComponentView<Empty>?
         
         let scrollView: UIScrollView
         var itemLayout: ItemLayout?
@@ -266,6 +273,8 @@ final class StoryItemSetViewListComponent: Component {
         
         var contentLoaded: Bool = false
         var contentLoadedUpdated: ((Bool) -> Void)?
+        
+        var dismissInput: (() -> Void)?
         
         init(configuration: ContentConfigurationKey) {
             self.configuration = configuration
@@ -317,6 +326,8 @@ final class StoryItemSetViewListComponent: Component {
         
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
             cancelContextGestures(view: scrollView)
+            
+            self.dismissInput?()
         }
         
         private func updateScrolling(transition: Transition) {
@@ -759,6 +770,8 @@ final class StoryItemSetViewListComponent: Component {
             self.updateScrolling(transition: transition)
             
             if let viewListState = self.viewListState, viewListState.loadMoreToken == nil, viewListState.items.isEmpty, viewListState.totalCount == 0 {
+                self.scrollView.isUserInteractionEnabled = false
+                
                 var emptyTransition = transition
                 
                 let emptyIcon: ComponentView<Empty>
@@ -778,6 +791,25 @@ final class StoryItemSetViewListComponent: Component {
                     self.emptyText = emptyText
                 }
                 
+                var emptyButtonTransition = transition
+                let emptyButton: ComponentView<Empty>?
+                if self.query == nil, !component.hasPremium, let views = component.storyItem.views, views.seenCount != 0 {
+                    if let current = self.emptyButton {
+                        emptyButton = current
+                    } else {
+                        emptyButtonTransition = emptyButtonTransition.withAnimation(.none)
+                        emptyButton = ComponentView()
+                        self.emptyButton = emptyButton
+                    }
+                } else {
+                    if let emptyButton = self.emptyButton {
+                        self.emptyButton = nil
+                        emptyButton.view?.removeFromSuperview()
+                    }
+                    
+                    emptyButton = nil
+                }
+                
                 let emptyIconSize = emptyIcon.update(
                     transition: emptyTransition,
                     component: AnyComponent(LottieComponent(
@@ -794,12 +826,17 @@ final class StoryItemSetViewListComponent: Component {
                 let body = MarkdownAttributeSet(font: Font.regular(fontSize), textColor: component.theme.list.itemSecondaryTextColor)
                 let bold = MarkdownAttributeSet(font: Font.semibold(fontSize), textColor: component.theme.list.itemSecondaryTextColor)
                 let link = MarkdownAttributeSet(font: Font.semibold(fontSize), textColor: component.theme.list.itemAccentColor)
-                let attributes = MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in nil })
+                let attributes = MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return ("URL", "") })
                 
                 let text: String
                 if self.configuration.listMode == .everyone && (self.query == nil || self.query == "") {
                     if component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
-                        text = component.strings.Story_Views_ViewsExpired
+                        if emptyButton == nil {
+                            text = component.strings.Story_Views_ViewsExpired
+                        } else {
+                            //TODO:localize
+                            text = "List of viewers isn't available after 24 hours of story expiration.\n\nTo unlock viewers' lists for expired and saved stories, subscribe to [Telegram Premium]()."
+                        }
                     } else {
                         text = component.strings.Story_Views_NoViews
                     }
@@ -811,7 +848,12 @@ final class StoryItemSetViewListComponent: Component {
                         text = "None of your contacts viewed this story."
                     } else {
                         if component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
-                            text = component.strings.Story_Views_ViewsExpired
+                            if emptyButton == nil {
+                                text = component.strings.Story_Views_ViewsExpired
+                            } else {
+                                //TODO:localize
+                                text = "List of viewers isn't available after 24 hours of story expiration.\n\nTo unlock viewers' lists for expired and saved stories, subscribe to [Telegram Premium]()."
+                            }
                         } else {
                             text = component.strings.Story_Views_NoViews
                         }
@@ -822,15 +864,71 @@ final class StoryItemSetViewListComponent: Component {
                     component: AnyComponent(BalancedTextComponent(
                         text: .markdown(text: text, attributes: attributes),
                         horizontalAlignment: .center,
-                        maximumNumberOfLines: 0
+                        maximumNumberOfLines: 0,
+                        highlightColor: component.theme.list.itemAccentColor.withMultipliedAlpha(0.5),
+                        highlightAction: { attributes in
+                            if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
+                                return NSAttributedString.Key(rawValue: "URL")
+                            } else {
+                                return nil
+                            }
+                        },
+                        tapAction: { [weak self] _, _ in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.openPremiumIntro()
+                        }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: min(220.0, availableSize.width - 16.0 * 2.0), height: 1000.0)
+                    containerSize: CGSize(width: min(320.0, availableSize.width - 16.0 * 2.0), height: 1000.0)
                 )
                  
                 let emptyContentSpacing: CGFloat = 20.0
-                let emptyContentHeight = emptyIconSize.height + emptyContentSpacing + textSize.height
-                var emptyContentY = navigationMinY + floor((availableSize.height - navigationMinY - emptyContentHeight) * 0.5)
+                var emptyContentHeight = emptyIconSize.height + emptyContentSpacing + textSize.height
+                
+                var emptyButtonSize: CGSize?
+                if let emptyButton {
+                    //TODO:localize
+                    emptyButtonSize = emptyButton.update(
+                        transition: emptyButtonTransition,
+                        component: AnyComponent(ButtonComponent(
+                            background: ButtonComponent.Background(
+                                color: component.theme.list.itemCheckColors.fillColor,
+                                foreground: component.theme.list.itemCheckColors.foregroundColor,
+                                pressedColor: component.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
+                            ),
+                            content: AnyComponentWithIdentity(
+                                id: AnyHashable(0),
+                                component: AnyComponent(ButtonTextContentComponent(
+                                    text: "Learn More",
+                                    badge: 0,
+                                    textColor: component.theme.list.itemCheckColors.foregroundColor,
+                                    badgeBackground: component.theme.list.itemCheckColors.foregroundColor,
+                                    badgeForeground: component.theme.list.itemCheckColors.fillColor
+                                ))
+                            ),
+                            isEnabled: true,
+                            displaysProgress: false,
+                            action: { [weak self] in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                component.openPremiumIntro()
+                            }
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: min(availableSize.width, 180.0), height: 50.0)
+                    )
+                }
+
+                let emptyButtonSpacing: CGFloat = 32.0
+                if let emptyButtonSize {
+                    emptyContentHeight += emptyButtonSpacing
+                    emptyContentHeight += emptyButtonSize.height
+                }
+                
+                var emptyContentY = navigationMinY + floor((availableSize.height - component.safeInsets.bottom - navigationMinY - emptyContentHeight) * 0.5)
                 
                 if let emptyIconView = emptyIcon.view as? LottieComponent.View {
                     if emptyIconView.superview == nil {
@@ -868,7 +966,17 @@ final class StoryItemSetViewListComponent: Component {
                     emptyTransition.setFrame(view: emptyTextView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - textSize.width) * 0.5), y: emptyContentY), size: textSize))
                     emptyContentY += textSize.height + emptyContentSpacing * 2.0
                 }
+                
+                if let emptyButtonSize, let emptyButton, let emptyButtonView = emptyButton.view {
+                    if emptyButtonView.superview == nil {
+                        self.insertSubview(emptyButtonView, belowSubview: self.scrollView)
+                    }
+                    emptyTransition.setFrame(view: emptyButtonView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - emptyButtonSize.width) * 0.5), y: emptyContentY), size: emptyButtonSize))
+                    emptyContentY += emptyButtonSize.height + emptyButtonSpacing
+                }
             } else {
+                self.scrollView.isUserInteractionEnabled = true
+                
                 if let emptyIcon = self.emptyIcon {
                     self.emptyIcon = nil
                     emptyIcon.view?.removeFromSuperview()
@@ -876,6 +984,10 @@ final class StoryItemSetViewListComponent: Component {
                 if let emptyText = self.emptyText {
                     self.emptyText = nil
                     emptyText.view?.removeFromSuperview()
+                }
+                if let emptyButton = self.emptyButton {
+                    self.emptyButton = nil
+                    emptyButton.view?.removeFromSuperview()
                 }
             }
         }
@@ -1084,9 +1196,22 @@ final class StoryItemSetViewListComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - 10.0 * 2.0, height: 50.0)
             )
+            
+            //TODO:localize
+            let titleText: String
+            if let views = component.storyItem.views, views.seenCount != 0 {
+                if component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
+                    titleText = component.strings.Story_Footer_Views(Int32(views.seenCount))
+                } else {
+                    titleText = "All Viewers"
+                }
+            } else {
+                titleText = "No Views"
+            }
+            
             let titleSize = self.title.update(
                 transition: .immediate,
-                component: AnyComponent(Text(text: "All Viewers", font: Font.semibold(17.0), color: .white)),
+                component: AnyComponent(Text(text: titleText, font: Font.semibold(17.0), color: .white)),
                 environment: {},
                 containerSize: CGSize(width: 260.0, height: 100.0)
             )
@@ -1152,18 +1277,22 @@ final class StoryItemSetViewListComponent: Component {
             var displayModeSelector = false
             var displaySearchBar = false
             var displaySortSelector = false
-            if let views = component.storyItem.views {
-                if views.seenCount >= 20 {
-                    displayModeSelector = true
-                    displaySearchBar = true
-                }
-                if views.reactedCount >= 10 {
-                    displaySortSelector = true
-                }
-            }
-            if let privacy = component.storyItem.privacy, case .everyone = privacy.base {
+            
+            if !component.hasPremium, component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
             } else {
-                displayModeSelector = false
+                if let views = component.storyItem.views {
+                    if views.seenCount >= 20 {
+                        displayModeSelector = true
+                        displaySearchBar = true
+                    }
+                    if views.reactedCount >= 10 {
+                        displaySortSelector = true
+                    }
+                }
+                if let privacy = component.storyItem.privacy, case .everyone = privacy.base {
+                } else {
+                    displayModeSelector = false
+                }
             }
             
             let navigationHeight: CGFloat
@@ -1265,6 +1394,9 @@ final class StoryItemSetViewListComponent: Component {
                     navigationHeight: navigationHeight,
                     transition: contentViewTransition
                 )
+                if currentContentView.contentLoaded {
+                    currentContentView.isHidden = false
+                }
             }
             
             if !self.currentSearchQuery.isEmpty {
@@ -1275,6 +1407,12 @@ final class StoryItemSetViewListComponent: Component {
                     currentSearchContentView = ContentView(configuration: currentConfiguration)
                     self.currentSearchContentView = currentSearchContentView
                     currentSearchContentView.isHidden = true
+                    currentSearchContentView.dismissInput = { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.navigationSearch.view?.endEditing(true)
+                    }
                 }
                 
                 var contentViewTransition = transition

@@ -75,6 +75,8 @@ public final class UndoOverlayController: ViewController {
     
     public var keepOnParentDismissal = false
     
+    public var tag: Any?
+    
     public init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, position: Position = .bottom, animateInAsReplacement: Bool = false, blurred: Bool = false, action: @escaping (UndoOverlayAction) -> Bool) {
         self.presentationData = presentationData
         self.content = content
