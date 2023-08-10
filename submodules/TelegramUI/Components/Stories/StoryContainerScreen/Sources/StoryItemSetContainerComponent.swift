@@ -1163,7 +1163,7 @@ public final class StoryItemSetContainerComponent: Component {
                     if let currentIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
                         if index != currentIndex {
                             let nextId = component.slice.allItems[index].storyItem.id
-                            self.awaitingSwitchToId = (component.slice.allItems[currentIndex].storyItem.id, nextId)
+                            //self.awaitingSwitchToId = (component.slice.allItems[currentIndex].storyItem.id, nextId)
                             component.navigate(.id(nextId))
                         }
                     }
@@ -1598,12 +1598,25 @@ public final class StoryItemSetContainerComponent: Component {
                                 }
                                 
                                 var footerPanelY: CGFloat = self.itemsContainerView.frame.minY + itemLayout.contentFrame.center.y + itemLayout.contentFrame.height * 0.5 * itemScale
-                                
                                 footerPanelY += (1.0 - footerExpandFraction) * 4.0 + footerExpandFraction * (-41.0)
                                 
+                                let footerPanelMinScale: CGFloat = (1.0 - scaleFraction) + (itemLayout.sideVisibleItemScale / itemLayout.contentMinScale) * scaleFraction
+                                let footerPanelScale = itemLayout.contentScaleFraction * footerPanelMinScale + 1.0 * (1.0 - itemLayout.contentScaleFraction)
+                                
+                                footerPanelY += (footerSize.height - footerSize.height * footerPanelScale) * 0.5
+                                
                                 let footerPanelFrame = CGRect(origin: CGPoint(x: itemPositionX - footerSize.width * 0.5, y: footerPanelY), size: footerSize)
-                                itemTransition.setFrame(view: footerPanelView, frame: footerPanelFrame)
-                                itemTransition.setAlpha(view: footerPanelView, alpha: 1.0 - itemLayout.contentOverflowFraction)
+                                
+                                itemTransition.setPosition(view: footerPanelView, position: footerPanelFrame.center)
+                                itemTransition.setBounds(view: footerPanelView, bounds: CGRect(origin: CGPoint(), size: footerPanelFrame.size))
+                                itemTransition.setScale(view: footerPanelView, scale: footerPanelScale)
+                                
+                                var footerAlpha: CGFloat = 1.0 - itemLayout.contentOverflowFraction
+                                if component.hideUI || self.isEditingStory {
+                                    footerAlpha = 0.0
+                                }
+                                
+                                itemTransition.setAlpha(view: footerPanelView, alpha: footerAlpha)
                             }
                         } else if let footerPanel = visibleItem.footerPanel {
                             visibleItem.footerPanel = nil
@@ -3034,7 +3047,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 guard let self else {
                                     return
                                 }
-                                self.presentStoriesUpgradeScreen()
+                                self.presentStoriesUpgradeScreen(source: .storiesPermanentViews)
                             },
                             setIsSearchActive: { [weak self] value in
                                 guard let self else {
@@ -4718,7 +4731,7 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                     switch action {
                     case .info:
-                        self.presentStoriesUpgradeScreen()
+                        self.presentStoriesUpgradeScreen(source: .storiesDownload)
                         return true
                     default:
                         break
@@ -4733,11 +4746,11 @@ public final class StoryItemSetContainerComponent: Component {
                 guard let self else {
                     return
                 }
-                self.presentStoriesUpgradeScreen()
+                self.presentStoriesUpgradeScreen(source: .storiesStealthMode)
             })
         }
         
-        private func presentStoriesUpgradeScreen() {
+        private func presentStoriesUpgradeScreen(source: PremiumSource) {
             guard let component = self.component else {
                 return
             }
@@ -4751,7 +4764,7 @@ public final class StoryItemSetContainerComponent: Component {
                     return
                 }
                 
-                let controller = PremiumIntroScreen(context: context, source: .stories, forceDark: true)
+                let controller = PremiumIntroScreen(context: context, source: source, forceDark: true)
                 self.sendMessageContext.actionSheet = controller
                 controller.wasDismissed = { [weak self, weak controller]in
                     guard let self else {

@@ -947,6 +947,11 @@ public enum PremiumIntroSource {
     case fasterDownload
     case translation
     case stories
+    case storiesDownload
+    case storiesStealthMode
+    case storiesPermanentViews
+    case storiesFormatting
+    case storiesExpirationDurations
 }
 
 public enum PremiumDemoSubject {

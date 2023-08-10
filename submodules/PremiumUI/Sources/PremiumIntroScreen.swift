@@ -190,6 +190,36 @@ public enum PremiumSource: Equatable {
             } else {
                 return false
             }
+        case .storiesDownload:
+            if case .storiesDownload = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .storiesStealthMode:
+            if case .storiesStealthMode = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .storiesPermanentViews:
+            if case .storiesPermanentViews = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .storiesFormatting:
+            if case .storiesFormatting = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .storiesExpirationDurations:
+            if case .storiesExpirationDurations = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
@@ -220,6 +250,11 @@ public enum PremiumSource: Equatable {
     case linksPerSharedFolder
     case membershipInSharedFolders
     case stories
+    case storiesDownload
+    case storiesStealthMode
+    case storiesPermanentViews
+    case storiesFormatting
+    case storiesExpirationDurations
     
     var identifier: String? {
         switch self {
@@ -279,6 +314,16 @@ public enum PremiumSource: Equatable {
             return "double_limits__communities_joined"
         case .stories:
             return "stories"
+        case .storiesDownload:
+            return "stories__save_stories_to_gallery"
+        case .storiesStealthMode:
+            return "stories__stealth_mode"
+        case .storiesPermanentViews:
+            return "stories__permanent_views_history"
+        case .storiesFormatting:
+            return "stories__links_and_formatting"
+        case .storiesExpirationDurations:
+            return "stories__expiration_durations"
         }
     }
 }
