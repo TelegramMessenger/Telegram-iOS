@@ -994,7 +994,7 @@ public class TranslateScreen: ViewController {
     
     public var wasDismissed: (() -> Void)?
     
-    public convenience init(context: AccountContext, forceTheme: PresentationTheme? = nil, text: String, canCopy: Bool, fromLanguage: String?, toLanguage: String? = nil, isExpanded: Bool = false) {
+    public convenience init(context: AccountContext, forceTheme: PresentationTheme? = nil, text: String, canCopy: Bool, fromLanguage: String?, toLanguage: String? = nil, isExpanded: Bool = false, ignoredLanguages: [String]? = nil) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         var baseLanguageCode = presentationData.strings.baseLanguageCode
@@ -1003,9 +1003,15 @@ public class TranslateScreen: ViewController {
             baseLanguageCode = String(baseLanguageCode.dropLast(rawSuffix.count))
         }
         
+        let dontTranslateLanguages = effectiveIgnoredTranslationLanguages(context: context, ignoredLanguages: ignoredLanguages)
+        
         var toLanguage = toLanguage ?? baseLanguageCode
         if toLanguage == fromLanguage {
-            toLanguage = "en"
+            if fromLanguage == "en" {
+                toLanguage = dontTranslateLanguages.first(where: { $0 != "en" }) ?? "en"
+            } else {
+                toLanguage = "en"
+            }
         }
         
         if toLanguage == "nb" {
@@ -1044,7 +1050,7 @@ public class TranslateScreen: ViewController {
             let pushController = self?.pushController
             let presentController = self?.presentController
             let controller = languageSelectionController(context: context, forceTheme: forceTheme, fromLanguage: fromLang, toLanguage: toLang, completion: { fromLang, toLang in
-                let controller = TranslateScreen(context: context, forceTheme: forceTheme, text: text, canCopy: canCopy, fromLanguage: fromLang, toLanguage: toLang, isExpanded: true)
+                let controller = TranslateScreen(context: context, forceTheme: forceTheme, text: text, canCopy: canCopy, fromLanguage: fromLang, toLanguage: toLang, isExpanded: true, ignoredLanguages: ignoredLanguages)
                 controller.pushController = pushController ?? { _ in }
                 controller.presentController = presentController ?? { _ in }
                 presentController?(controller)

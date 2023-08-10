@@ -100,6 +100,7 @@ swift_library(
         "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
         "//submodules/TelegramUI/Components/Stories/AvatarStoryIndicatorComponent",
         "//submodules/AttachmentUI:AttachmentUI",
+        "//submodules/Components/BalancedTextComponent"
     ],
     visibility = [
         "//visibility:public",

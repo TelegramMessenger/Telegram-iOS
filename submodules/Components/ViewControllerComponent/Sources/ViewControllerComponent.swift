@@ -293,6 +293,15 @@ open class ViewControllerComponentContainer: ViewController {
         self.displayNodeDidLoad()
     }
     
+    private var didDismiss = false
+    open override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        if !self.didDismiss {
+            self.didDismiss = true
+            self.wasDismissed?()
+        }
+    }
+    
     override open func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
@@ -306,10 +315,8 @@ open class ViewControllerComponentContainer: ViewController {
     }
     
     open override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
-        let wasDismissed = self.wasDismissed
         super.dismiss(animated: flag, completion: {
             completion?()
-            wasDismissed?()
         })
     }
     

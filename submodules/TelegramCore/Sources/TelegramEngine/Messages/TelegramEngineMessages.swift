@@ -1090,6 +1090,10 @@ public extension TelegramEngine {
             return _internal_editStoryPrivacy(account: self.account, id: id, privacy: privacy)
         }
         
+        public func checkStoriesUploadAvailability() -> Signal<StoriesUploadAvailability, NoError> {
+            return _internal_checkStoriesUploadAvailability(account: self.account)
+        }
+        
         public func deleteStories(ids: [Int32]) -> Signal<Never, NoError> {
             return _internal_deleteStories(account: self.account, ids: ids)
         }

@@ -792,6 +792,10 @@ public class StickerPickerScreen: ViewController {
         func updateContent(_ content: StickerPickerInputData) {
             self.content = content
             
+            guard let controller = self.controller else {
+                return
+            }
+            
             content.emoji.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
                 performItemAction: { [weak self] groupId, item, _, _, _, _ in
                     guard let strongSelf = self, let controller = strongSelf.controller else {
@@ -1209,13 +1213,13 @@ public class StickerPickerScreen: ViewController {
                 useOpaqueTheme: false,
                 hideBackground: true,
                 stateContext: nil,
-                addImage: { [weak self] in
+                addImage: controller.hasGifs ? { [weak self] in
                     if let self {
                         self.controller?.completion(nil)
                         self.controller?.dismiss(animated: true)
                         self.controller?.presentGallery()
                     }
-                }
+                } : nil
             )
             
             var stickerPeekBehavior: EmojiContentPeekBehaviorImpl?
@@ -1473,17 +1477,17 @@ public class StickerPickerScreen: ViewController {
                 customLayout: nil,
                 externalBackground: nil,
                 externalExpansionView: nil,
-                customContentView: self.storyStickersContentView,
+                customContentView: controller.hasGifs ? self.storyStickersContentView : nil,
                 useOpaqueTheme: false,
                 hideBackground: true,
                 stateContext: nil,
-                addImage: { [weak self] in
+                addImage: controller.hasGifs ? { [weak self] in
                     if let self {
                         self.controller?.completion(nil)
                         self.controller?.dismiss(animated: true)
                         self.controller?.presentGallery()
                     }
-                }
+                } : nil
             )
             
             if let (layout, navigationHeight) = self.currentLayout {

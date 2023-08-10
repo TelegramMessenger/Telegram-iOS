@@ -2586,7 +2586,23 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
         }
         
-        if reachedCountLimit || premiumNeeded || hasActiveCall || hasActiveGroupCall {
+        if reachedCountLimit {
+            let context = self.context
+            var replaceImpl: ((ViewController) -> Void)?
+            let controller = PremiumLimitScreen(context: context, subject: .expiringStories, count: Int32(storiesCount), action: {
+                let controller = PremiumIntroScreen(context: context, source: .stories)
+                replaceImpl?(controller)
+            })
+            replaceImpl = { [weak controller] c in
+                controller?.replace(with: c)
+            }
+            if let navigationController = context.sharedContext.mainWindow?.viewController as? NavigationController {
+                navigationController.pushViewController(controller)
+            }
+            return
+        }
+        
+        if premiumNeeded || hasActiveCall || hasActiveGroupCall {
             if let storyCameraTooltip = self.storyCameraTooltip {
                 self.storyCameraTooltip = nil
                 storyCameraTooltip.dismiss()

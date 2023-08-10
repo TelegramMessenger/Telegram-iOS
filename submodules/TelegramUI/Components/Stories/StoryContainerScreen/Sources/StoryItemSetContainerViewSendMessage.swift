@@ -1151,7 +1151,7 @@ final class StoryItemSetContainerSendMessage {
             
             let _ = ApplicationSpecificNotice.incrementTranslationSuggestion(accountManager: component.context.sharedContext.accountManager, timestamp: Int32(Date().timeIntervalSince1970)).start()
             
-            let translateController = TranslateScreen(context: component.context, forceTheme: defaultDarkPresentationTheme, text: text, canCopy: true, fromLanguage: language)
+            let translateController = TranslateScreen(context: component.context, forceTheme: defaultDarkPresentationTheme, text: text, canCopy: true, fromLanguage: language, ignoredLanguages: translationSettings.ignoredLanguages)
             translateController.pushController = { [weak view] c in
                 guard let view, let component = view.component else {
                     return

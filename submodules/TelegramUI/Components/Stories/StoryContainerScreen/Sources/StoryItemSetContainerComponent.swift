@@ -4298,8 +4298,8 @@ public final class StoryItemSetContainerComponent: Component {
                     context: context,
                     initialPrivacy: privacy,
                     stateContext: stateContext,
-                    completion: { [weak self] privacy, _, _, _ in
-                        guard let self, let component = self.component else {
+                    completion: { [weak self] privacy, _, _, _, completed in
+                        guard let self, let component = self.component, completed else {
                             return
                         }
                         if component.slice.item.storyItem.privacy == privacy {
@@ -4376,7 +4376,10 @@ public final class StoryItemSetContainerComponent: Component {
                     context: context,
                     initialPrivacy: privacy,
                     stateContext: stateContext,
-                    completion: { [weak self] result, _, _, peers in
+                    completion: { [weak self] result, _, _, peers, completed in
+                        guard completed else {
+                            return
+                        }
                         if blockedPeers, let blockedPeers = self?.component?.blockedPeers {
                             let _ = blockedPeers.updatePeerIds(result.additionallyIncludePeers).start()
                             completion(privacy)

@@ -1790,7 +1790,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         case .storiesExpirationDurations:
             mappedSource = .storiesExpirationDurations
         }
-        return PremiumIntroScreen(context: context, source: mappedSource, forceDark: forceDark)
+        let controller = PremiumIntroScreen(context: context, source: mappedSource, forceDark: forceDark)
+        controller.wasDismissed = dismissed
+        return controller
     }
     
     public func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, action: @escaping () -> Void) -> ViewController {
@@ -1830,27 +1832,33 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return PremiumDemoScreen(context: context, subject: mappedSubject, action: action)
     }
     
-    public func makePremiumLimitController(context: AccountContext, subject: PremiumLimitSubject, count: Int32, action: @escaping () -> Void) -> ViewController {
+    public func makePremiumLimitController(context: AccountContext, subject: PremiumLimitSubject, count: Int32, forceDark: Bool, cancel: @escaping () -> Void, action: @escaping () -> Void) -> ViewController {
         let mappedSubject: PremiumLimitScreen.Subject
         switch subject {
         case .folders:
             mappedSubject = .folders
         case .chatsPerFolder:
-            mappedSubject =  .chatsPerFolder
+            mappedSubject = .chatsPerFolder
         case .pins:
-            mappedSubject =  .pins
+            mappedSubject = .pins
         case .files:
-            mappedSubject =  .files
+            mappedSubject = .files
         case .accounts:
-            mappedSubject =  .accounts
+            mappedSubject = .accounts
         case .linksPerSharedFolder:
             mappedSubject = .linksPerSharedFolder
         case .membershipInSharedFolders:
             mappedSubject = .membershipInSharedFolders
         case .channels:
             mappedSubject = .channels
+        case .expiringStories:
+            mappedSubject = .expiringStories
+        case .storiesWeekly:
+            mappedSubject = .storiesWeekly
+        case .storiesMonthly:
+            mappedSubject = .storiesMonthly
         }
-        return PremiumLimitScreen(context: context, subject: mappedSubject, count: count, action: action)
+        return PremiumLimitScreen(context: context, subject: mappedSubject, count: count, forceDark: forceDark, cancel: cancel, action: action)
     }
     
     public func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController {

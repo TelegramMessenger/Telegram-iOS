@@ -8487,6 +8487,21 @@ public extension Api.functions.stories {
                 }
 }
 public extension Api.functions.stories {
+                static func canSendStory() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1325345699)
+                    
+                    return (FunctionDescription(name: "stories.canSendStory", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.stories {
                 static func deleteStories(id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Int32]>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1244331561)

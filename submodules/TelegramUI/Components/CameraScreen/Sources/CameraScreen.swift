@@ -1175,6 +1175,8 @@ public class CameraScreen: ViewController {
         private var presentationData: PresentationData
         private var validLayout: ContainerViewLayout?
         
+        fileprivate var didAppear: () -> Void = {}
+        
         private let completion = ActionSlot<Signal<CameraScreen.Result, NoError>>()
         
         var cameraState: CameraState {
@@ -2140,6 +2142,7 @@ public class CameraScreen: ViewController {
                 } else if case .notDetermined = self.microphoneAuthorizationStatus {
                     self.requestDeviceAccess()
                 }
+                self.didAppear()
             }
 
             let componentSize = self.componentHost.update(
@@ -2359,6 +2362,9 @@ public class CameraScreen: ViewController {
     
     private var audioSessionDisposable: Disposable?
     
+    private let postingAvailabilityPromise = Promise<StoriesUploadAvailability>()
+    private var postingAvailabilityDisposable: Disposable?
+    
     private let hapticFeedback = HapticFeedback()
     
     private var validLayout: ContainerViewLayout?
@@ -2399,6 +2405,8 @@ public class CameraScreen: ViewController {
         self.navigationPresentation = .flatModal
         
         self.requestAudioSession()
+        
+        self.postingAvailabilityPromise.set(self.context.engine.messages.checkStoriesUploadAvailability())
     }
 
     required public init(coder: NSCoder) {
@@ -2407,6 +2415,7 @@ public class CameraScreen: ViewController {
     
     deinit {
         self.audioSessionDisposable?.dispose()
+        self.postingAvailabilityDisposable?.dispose()
         if #available(iOS 13.0, *) {
             try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(false)
         }
@@ -2416,6 +2425,58 @@ public class CameraScreen: ViewController {
         self.displayNode = Node(controller: self)
 
         super.displayNodeDidLoad()
+        
+        self.node.didAppear = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.postingAvailabilityDisposable = (self.postingAvailabilityPromise.get()
+            |> deliverOnMainQueue).start(next: { [weak self] availability in
+                guard let self, availability != .available else {
+                    return
+                }
+                let subject: PremiumLimitSubject
+                switch availability {
+                case .expiringLimit:
+                    subject = .expiringStories
+                case .weeklyLimit:
+                    subject = .storiesWeekly
+                case .monthlyLimit:
+                    subject = .storiesMonthly
+                default:
+                    subject = .expiringStories
+                }
+                
+                let context = self.context
+                var replaceImpl: ((ViewController) -> Void)?
+                let controller = self.context.sharedContext.makePremiumLimitController(context: self.context, subject: subject, count: 10, forceDark: true, cancel: { [weak self] in
+                    self?.requestDismiss(animated: true)
+                }, action: { [weak self] in
+                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true, dismissed: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
+                        |> deliverOnMainQueue).start(next: { [weak self] peer in
+                            guard let self else {
+                                return
+                            }
+                            let isPremium = peer?.isPremium ?? false
+                            if !isPremium {
+                                self.requestDismiss(animated: true)
+                            }
+                        })
+                    })
+                    replaceImpl?(controller)
+                })
+                replaceImpl = { [weak controller] c in
+                    controller?.replace(with: c)
+                }
+                if let navigationController = self.context.sharedContext.mainWindow?.viewController as? NavigationController {
+                    navigationController.pushViewController(controller)
+                }
+            })
+        }
     }
     
     private func requestAudioSession() {
