@@ -18,6 +18,8 @@ final class StoryItemLoadingEffectView: UIView {
     private let borderContainerView: UIView
     private let borderMaskLayer: SimpleShapeLayer
     
+    private var didPlayOnce = false
+    
     init(effectAlpha: CGFloat, duration: Double, hasBorder: Bool, playOnce: Bool) {
         self.hierarchyTrackingLayer = HierarchyTrackingLayer()
         
@@ -89,7 +91,7 @@ final class StoryItemLoadingEffectView: UIView {
     }
     
     private func updateAnimations(size: CGSize) {
-        if self.backgroundView.layer.animation(forKey: "shimmer") != nil {
+        if self.backgroundView.layer.animation(forKey: "shimmer") != nil || (self.playOnce && self.didPlayOnce) {
             return
         }
 
@@ -97,6 +99,8 @@ final class StoryItemLoadingEffectView: UIView {
         animation.repeatCount = self.playOnce ? 1 : Float.infinity
         self.backgroundView.layer.add(animation, forKey: "shimmer")
         self.borderGradientView.layer.add(animation, forKey: "shimmer")
+        
+        self.didPlayOnce = true
     }
     
     func update(size: CGSize, transition: Transition) {

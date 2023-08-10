@@ -811,7 +811,12 @@ public class PremiumLimitsListScreen: ViewController {
                 let bottomInset: CGFloat = layout.intrinsicInsets.bottom > 0.0 ? layout.intrinsicInsets.bottom + 5.0 : bottomPanelPadding
                 let panelHeight: CGFloat = bottomPanelPadding + 50.0 + bottomInset + 28.0
                 
-                return layout.size.height - layout.size.width - 178.0 - panelHeight
+                var additionalInset: CGFloat = 0.0
+                if let order = self.controller?.order, order.count == 1 {
+                    additionalInset = 20.0
+                }
+                
+                return layout.size.height - layout.size.width - 178.0 - panelHeight + additionalInset
             } else {
                 return 210.0
             }
