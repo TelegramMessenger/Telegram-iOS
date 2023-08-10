@@ -1200,6 +1200,38 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
     }
 }
 
+public enum StoriesUploadAvailability {
+    case available
+    case weeklyLimit
+    case monthlyLimit
+    case expiringLimit
+    case premiumRequired
+    case unknownLimit
+}
+
+func _internal_checkStoriesUploadAvailability(account: Account) -> Signal<StoriesUploadAvailability, NoError> {
+    return account.network.request(Api.functions.stories.canSendStory())
+    |> map { result -> StoriesUploadAvailability in
+        if result == .boolTrue {
+            return .available
+        } else {
+            return .unknownLimit
+        }
+    }
+    |> `catch` { error -> Signal<StoriesUploadAvailability, NoError> in
+        if error.errorDescription.hasPrefix("STORY_SEND_FLOOD_WEEKLY_") {
+            return .single(.weeklyLimit)
+        } else if error.errorDescription.hasPrefix("STORY_SEND_FLOOD_MONTHLY_") {
+            return .single(.monthlyLimit)
+        } else if error.errorDescription.hasPrefix("PREMIUM_ACCOUNT_REQUIRED") {
+            return .single(.premiumRequired)
+        } else if error.errorDescription.hasPrefix("STORIES_TOO_MUCH") {
+            return .single(.expiringLimit)
+        }
+        return .single(.unknownLimit)
+    }
+}
+
 func _internal_deleteStories(account: Account, ids: [Int32]) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Void in
         var items = transaction.getStoryItems(peerId: account.peerId)

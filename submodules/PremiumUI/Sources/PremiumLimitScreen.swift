@@ -14,6 +14,7 @@ import MultilineTextComponent
 import BundleIconComponent
 import SolidRoundedButtonComponent
 import Markdown
+import BalancedTextComponent
 
 func generateCloseButtonImage(backgroundColor: UIColor, foregroundColor: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
@@ -645,13 +646,15 @@ private final class LimitSheetContent: CombinedComponent {
     let context: AccountContext
     let subject: PremiumLimitScreen.Subject
     let count: Int32
+    let cancel: () -> Void
     let action: () -> Void
     let dismiss: () -> Void
     
-    init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, action: @escaping () -> Void, dismiss: @escaping () -> Void) {
+    init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, cancel: @escaping () -> Void, action: @escaping () -> Void, dismiss: @escaping () -> Void) {
         self.context = context
         self.subject = subject
         self.count = count
+        self.cancel = cancel
         self.action = action
         self.dismiss = dismiss
     }
@@ -715,7 +718,7 @@ private final class LimitSheetContent: CombinedComponent {
     static var body: Body {
         let closeButton = Child(Button.self)
         let title = Child(MultilineTextComponent.self)
-        let text = Child(MultilineTextComponent.self)
+        let text = Child(BalancedTextComponent.self)
         let limit = Child(PremiumLimitDisplayComponent.self)
         let button = Child(SolidRoundedButtonComponent.self)
         
@@ -732,7 +735,7 @@ private final class LimitSheetContent: CombinedComponent {
             let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
             
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
-            let textSideInset: CGFloat = 24.0 + environment.safeInsets.left
+            let textSideInset: CGFloat = 32.0 + environment.safeInsets.left
             
             let closeImage: UIImage
             if let (image, theme) = state.cachedCloseImage, theme === environment.theme {
@@ -747,6 +750,7 @@ private final class LimitSheetContent: CombinedComponent {
                     content: AnyComponent(Image(image: closeImage)),
                     action: { [weak component] in
                         component?.dismiss()
+                        component?.cancel()
                     }
                 ),
                 availableSize: CGSize(width: 30.0, height: 30.0),
@@ -922,6 +926,54 @@ private final class LimitSheetContent: CombinedComponent {
                         badgeText = "\(limit)"
                         string = strings.Premium_MaxAccountsNoPremiumText("\(limit)").string
                     }
+                case .expiringStories:
+                    let limit = state.limits.maxExpiringStoriesCount
+                    let premiumLimit = state.premiumLimits.maxExpiringStoriesCount
+                    iconName = "Premium/Stories"
+                    badgeText = "\(limit)"
+                    string = component.count >= premiumLimit ? strings.Premium_MaxExpiringStoriesFinalText("\(premiumLimit)").string : strings.Premium_MaxExpiringStoriesText("\(limit)", "\(premiumLimit)").string
+                    defaultValue = ""
+                    premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
+                    badgePosition = max(0.32, CGFloat(component.count) / CGFloat(premiumLimit))
+                    badgeGraphPosition = badgePosition
+                
+                    if isPremiumDisabled {
+                        badgeText = "\(limit)"
+                        string = strings.Premium_MaxExpiringStoriesNoPremiumText("\(limit)").string
+                    }
+                    buttonAnimationName = nil
+                case .storiesWeekly:
+                    let limit = state.limits.maxStoriesWeeklyCount
+                    let premiumLimit = state.premiumLimits.maxStoriesWeeklyCount
+                    iconName = "Premium/Stories"
+                    badgeText = "\(limit)"
+                    string = component.count >= premiumLimit ? strings.Premium_MaxStoriesWeeklyFinalText("\(premiumLimit)").string : strings.Premium_MaxStoriesWeeklyText("\(limit)", "\(premiumLimit)").string
+                    defaultValue = ""
+                    premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
+                    badgePosition = max(0.32, CGFloat(component.count) / CGFloat(premiumLimit))
+                    badgeGraphPosition = badgePosition
+                
+                    if isPremiumDisabled {
+                        badgeText = "\(limit)"
+                        string = strings.Premium_MaxStoriesWeeklyNoPremiumText("\(limit)").string
+                    }
+                    buttonAnimationName = nil
+                case .storiesMonthly:
+                    let limit = state.limits.maxStoriesMonthlyCount
+                    let premiumLimit = state.premiumLimits.maxStoriesMonthlyCount
+                    iconName = "Premium/Stories"
+                    badgeText = "\(limit)"
+                    string = component.count >= premiumLimit ? strings.Premium_MaxStoriesMonthlyFinalText("\(premiumLimit)").string : strings.Premium_MaxStoriesMonthlyText("\(limit)", "\(premiumLimit)").string
+                    defaultValue = ""
+                    premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
+                    badgePosition = max(0.32, CGFloat(component.count) / CGFloat(premiumLimit))
+                    badgeGraphPosition = badgePosition
+                
+                    if isPremiumDisabled {
+                        badgeText = "\(limit)"
+                        string = strings.Premium_MaxStoriesMonthlyNoPremiumText("\(limit)").string
+                    }
+                    buttonAnimationName = nil
             }
             var reachedMaximumLimit = badgePosition >= 1.0
             if case .folders = subject, !state.isPremium {
@@ -953,7 +1005,7 @@ private final class LimitSheetContent: CombinedComponent {
                 })
                 
                 let text = text.update(
-                    component: MultilineTextComponent(
+                    component: BalancedTextComponent(
                         text: .markdown(text: string, attributes: markdownAttributes),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 0,
@@ -1066,12 +1118,14 @@ private final class LimitSheetComponent: CombinedComponent {
     let context: AccountContext
     let subject: PremiumLimitScreen.Subject
     let count: Int32
+    let cancel: () -> Void
     let action: () -> Void
     
-    init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, action: @escaping () -> Void) {
+    init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, cancel: @escaping () -> Void, action: @escaping () -> Void) {
         self.context = context
         self.subject = subject
         self.count = count
+        self.cancel = cancel
         self.action = action
     }
     
@@ -1101,6 +1155,7 @@ private final class LimitSheetComponent: CombinedComponent {
                         context: context.component.context,
                         subject: context.component.subject,
                         count: context.component.count,
+                        cancel: context.component.cancel,
                         action: context.component.action,
                         dismiss: {
                             animateOut.invoke(Action { _ in
@@ -1158,12 +1213,25 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
         case linksPerSharedFolder
         case membershipInSharedFolders
         case channels
+        case expiringStories
+        case storiesWeekly
+        case storiesMonthly
     }
     
-    public init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, action: @escaping () -> Void) {
-        super.init(context: context, component: LimitSheetComponent(context: context, subject: subject, count: count, action: action), navigationBarAppearance: .none)
+    public init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, forceDark: Bool = false, cancel: @escaping () -> Void = {}, action: @escaping () -> Void) {
+        var actionImpl: (() -> Void)?
+        super.init(context: context, component: LimitSheetComponent(context: context, subject: subject, count: count, cancel: {}, action: {
+            actionImpl?()
+        }), navigationBarAppearance: .none, theme: forceDark ? .dark : .default)
         
         self.navigationPresentation = .flatModal
+        
+        self.wasDismissed = cancel
+        
+        actionImpl = { [weak self] in
+            self?.wasDismissed = nil
+            action()
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {

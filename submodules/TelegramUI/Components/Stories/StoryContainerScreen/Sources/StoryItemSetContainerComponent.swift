@@ -4256,8 +4256,8 @@ public final class StoryItemSetContainerComponent: Component {
                     context: context,
                     initialPrivacy: privacy,
                     stateContext: stateContext,
-                    completion: { [weak self] privacy, _, _, _ in
-                        guard let self, let component = self.component else {
+                    completion: { [weak self] privacy, _, _, _, completed in
+                        guard let self, let component = self.component, completed else {
                             return
                         }
                         let _ = component.context.engine.messages.editStoryPrivacy(id: component.slice.item.storyItem.id, privacy: privacy).start()
@@ -4331,7 +4331,10 @@ public final class StoryItemSetContainerComponent: Component {
                     context: context,
                     initialPrivacy: privacy,
                     stateContext: stateContext,
-                    completion: { [weak self] result, _, _, peers in
+                    completion: { [weak self] result, _, _, peers, completed in
+                        guard completed else {
+                            return
+                        }
                         if blockedPeers, let blockedPeers = self?.component?.blockedPeers {
                             let _ = blockedPeers.updatePeerIds(result.additionallyIncludePeers).start()
                             completion(privacy)

@@ -1835,7 +1835,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         performAction.invoke(.clear)
                     }
                 ).tagged(clearAllButtonTag),
-                availableSize: CGSize(width: 100.0, height: 30.0),
+                availableSize: CGSize(width: 180.0, height: 30.0),
                 transition: context.transition
             )
             context.add(clearAllButton

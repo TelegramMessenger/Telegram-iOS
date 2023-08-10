@@ -3251,9 +3251,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             self.interaction?.containerLayoutUpdated(layout: layout, transition: transition)
             
-//            var layout = layout
-//            layout.intrinsicInsets.top = topInset
-//            layout.intrinsicInsets.bottom = bottomInset + 60.0
+            var layout = layout
+            layout.intrinsicInsets.top = topInset
             controller.presentationContext.containerLayoutUpdated(layout, transition: transition.containedViewLayoutTransition)
             
             if isFirstTime {
@@ -3499,12 +3498,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 timeout: privacy.timeout,
                 mentions: mentions,
                 stateContext: stateContext,
-                completion: { [weak self] privacy, allowScreenshots, pin, _ in
+                completion: { [weak self] privacy, allowScreenshots, pin, _, completed in
                     guard let self else {
                         return
                     }
                     self.state.privacy = MediaEditorResultPrivacy(privacy: privacy, timeout: timeout, isForwardingDisabled: !allowScreenshots, pin: pin)
-                    completion()
+                    if completed {
+                        completion()
+                    }
                 },
                 editCategory: { [weak self] privacy, allowScreenshots, pin in
                     guard let self else {
@@ -3571,8 +3572,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 allowScreenshots: !isForwardingDisabled,
                 pin: pin,
                 stateContext: stateContext,
-                completion: { [weak self] result, isForwardingDisabled, pin, peers in
-                    guard let self else {
+                completion: { [weak self] result, isForwardingDisabled, pin, peers, completed in
+                    guard let self, completed else {
                         return
                     }
                     if blockedPeers {
@@ -3889,7 +3890,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
                         let path = "\(Int64.random(in: .min ... .max)).mp4"
                         let draft = MediaEditorDraft(path: path, isVideo: true, thumbnail: thumbnailImage, dimensions: dimensions, duration: duration, values: values, caption: caption, privacy: privacy, timestamp: timestamp, location: location, expiresOn: expiresOn)
-                        try? FileManager.default.moveItem(atPath: videoPath, toPath: draft.fullPath(engine: context.engine))
+                        try? FileManager.default.copyItem(atPath: videoPath, toPath: draft.fullPath(engine: context.engine))
                         if let id {
                             saveStorySource(engine: context.engine, item: draft, peerId: context.account.peerId, id: id)
                         } else {

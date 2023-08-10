@@ -395,7 +395,7 @@ public enum PremiumPerk: CaseIterable {
         case .translation:
             return strings.Premium_Translation
         case .stories:
-            return "Upgraded Stories"
+            return strings.Premium_Stories
         }
     }
     
@@ -430,7 +430,7 @@ public enum PremiumPerk: CaseIterable {
         case .translation:
             return strings.Premium_TranslationInfo
         case .stories:
-            return "Priority order, stealth mode, permanent views history and more."
+            return strings.Premium_StoriesInfo
         }
     }
     

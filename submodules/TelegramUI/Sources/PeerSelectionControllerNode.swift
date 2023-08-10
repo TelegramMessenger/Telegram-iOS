@@ -292,7 +292,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     return
                 }
                 var replaceImpl: ((ViewController) -> Void)?
-                let controller = context.sharedContext.makePremiumLimitController(context: context, subject: .folders, count: strongSelf.controller?.tabContainerNode?.filtersCount ?? 0, action: {
+                let controller = context.sharedContext.makePremiumLimitController(context: context, subject: .folders, count: strongSelf.controller?.tabContainerNode?.filtersCount ?? 0, forceDark: false, cancel: {}, action: {
                     let controller = context.sharedContext.makePremiumIntroController(context: context, source: .folders, forceDark: false, dismissed: nil)
                     replaceImpl?(controller)
                 })

@@ -1912,28 +1912,28 @@ func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, chec
                     case .generic:
                         text = presentationData.strings.ChatListFilter_CreateLinkUnknownError
                     case let .sharedFolderLimitExceeded(limit, _):
-                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .membershipInSharedFolders, count: limit, action: {
+                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .membershipInSharedFolders, count: limit, forceDark: false, cancel: {}, action: {
                             pushPremiumController(PremiumIntroScreen(context: context, source: .membershipInSharedFolders))
                         })
                         pushController(limitController)
                         
                         return
                     case let .limitExceeded(limit, _):
-                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .linksPerSharedFolder, count: limit, action: {
+                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .linksPerSharedFolder, count: limit, forceDark: false, cancel: {}, action: {
                             pushPremiumController(PremiumIntroScreen(context: context, source: .linksPerSharedFolder))
                         })
                         pushController(limitController)
                         
                         return
                     case let .tooManyChannels(limit, _):
-                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .linksPerSharedFolder, count: limit, action: {
+                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .linksPerSharedFolder, count: limit, forceDark: false, cancel: {}, action: {
                             pushPremiumController(PremiumIntroScreen(context: context, source: .groupsAndChannels))
                         })
                         pushController(limitController)
                         
                         return
                     case let .tooManyChannelsInAccount(limit, _):
-                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .channels, count: limit, action: {
+                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .channels, count: limit, forceDark: false, cancel: {}, action: {
                             pushPremiumController(PremiumIntroScreen(context: context, source: .groupsAndChannels))
                         })
                         pushController(limitController)

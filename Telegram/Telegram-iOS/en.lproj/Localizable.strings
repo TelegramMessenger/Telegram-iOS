@@ -9756,3 +9756,18 @@ Sorry for the inconvenience.";
 "Premium.New" = "NEW";
 
 "MediaEditor.AddGif" = "Add GIF";
+
+"Premium.Stories" = "Upgraded Stories";
+"Premium.StoriesInfo" = "Priority order, stealth mode, permanent views history and more.";
+
+"Premium.MaxExpiringStoriesText" = "You can post **%@** stories in **24** hours. Subscribe to **Telegram Premium** to increase this limit to **%@**.";
+"Premium.MaxExpiringStoriesNoPremiumText" = "You have reached the limit of **%@** stories per **24** hours.";
+"Premium.MaxExpiringStoriesFinalText" = "You have reached the limit of **%@** stories per **24** hours.";
+
+"Premium.MaxStoriesWeeklyText" = "You can post **%@** stories in a week. Upgrade to **Telegram Premium** to increase this limit to **%@**.";
+"Premium.MaxStoriesWeeklyNoPremiumText" = "You have reached the limit of **%@** stories per week.";
+"Premium.MaxStoriesWeeklyFinalText" = "You have reached the limit of **%@** stories per week.";
+
+"Premium.MaxStoriesMonthlyText" = "You can post **%@** stories in a month. Upgrade to **Telegram Premium** to increase this limit to **%@**.";
+"Premium.MaxStoriesMonthlyNoPremiumText" = "You have reached the limit of **%@** stories per month.";
+"Premium.MaxStoriesMonthlyFinalText" = "You have reached the limit of **%@** stories per month.";
