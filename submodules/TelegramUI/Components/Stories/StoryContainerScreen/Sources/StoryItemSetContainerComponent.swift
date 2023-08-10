@@ -3047,7 +3047,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 guard let self else {
                                     return
                                 }
-                                self.presentStoriesUpgradeScreen()
+                                self.presentStoriesUpgradeScreen(source: .storiesPermanentViews)
                             },
                             setIsSearchActive: { [weak self] value in
                                 guard let self else {
@@ -4728,7 +4728,7 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                     switch action {
                     case .info:
-                        self.presentStoriesUpgradeScreen()
+                        self.presentStoriesUpgradeScreen(source: .storiesDownload)
                         return true
                     default:
                         break
@@ -4743,11 +4743,11 @@ public final class StoryItemSetContainerComponent: Component {
                 guard let self else {
                     return
                 }
-                self.presentStoriesUpgradeScreen()
+                self.presentStoriesUpgradeScreen(source: .storiesStealthMode)
             })
         }
         
-        private func presentStoriesUpgradeScreen() {
+        private func presentStoriesUpgradeScreen(source: PremiumSource) {
             guard let component = self.component else {
                 return
             }
@@ -4761,7 +4761,7 @@ public final class StoryItemSetContainerComponent: Component {
                     return
                 }
                 
-                let controller = PremiumIntroScreen(context: context, source: .stories, forceDark: true)
+                let controller = PremiumIntroScreen(context: context, source: source, forceDark: true)
                 self.sendMessageContext.actionSheet = controller
                 controller.wasDismissed = { [weak self, weak controller]in
                     guard let self else {

@@ -1779,6 +1779,16 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .translation
         case .stories:
             mappedSource = .stories
+        case .storiesDownload:
+            mappedSource = .storiesDownload
+        case .storiesStealthMode:
+            mappedSource = .storiesStealthMode
+        case .storiesPermanentViews:
+            mappedSource = .storiesPermanentViews
+        case .storiesFormatting:
+            mappedSource = .storiesFormatting
+        case .storiesExpirationDurations:
+            mappedSource = .storiesExpirationDurations
         }
         return PremiumIntroScreen(context: context, source: mappedSource, forceDark: forceDark)
     }
