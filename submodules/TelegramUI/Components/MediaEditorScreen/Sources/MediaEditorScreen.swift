@@ -3231,7 +3231,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if self.entitiesView.selectedEntityView != nil || self.isDisplayingTool {
                         bottomInputOffset = inputHeight / 2.0
                     } else {
-                        bottomInputOffset = 0.0 //inputHeight - bottomInset - 17.0
+                        bottomInputOffset = 0.0
                     }
                 }
             }
@@ -3479,6 +3479,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let stateContext = ShareWithPeersScreen.StateContext(
             context: self.context,
             subject: .stories(editing: false),
+            editing: false,
             initialPeerIds: Set(privacy.privacy.additionallyIncludePeers),
             closeFriends: self.closeFriends.get(),
             blockedPeersContext: self.storiesBlockedPeers
@@ -3554,11 +3555,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         } else if privacy.base == .nobody {
             subject = .chats(blocked: false)
         } else {
-            subject = .contacts(privacy.base)
+            subject = .contacts(base: privacy.base)
         }
         let stateContext = ShareWithPeersScreen.StateContext(
             context: self.context,
             subject: subject,
+            editing: false,
             initialPeerIds: Set(privacy.additionallyIncludePeers),
             blockedPeersContext: self.storiesBlockedPeers
         )
@@ -3684,7 +3686,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 
         let controller = UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: true, title: nil, text: text, customUndoText: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
             if case .info = action, let self {
-                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true, dismissed: nil)
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .storiesExpirationDurations, forceDark: true, dismissed: nil)
                 self.push(controller)
             }
             return false }
@@ -3723,7 +3725,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 
         let controller = UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: text), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
             if case .info = action, let self {
-                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true, dismissed: nil)
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .storiesFormatting, forceDark: true, dismissed: nil)
                 self.push(controller)
             }
             return false }

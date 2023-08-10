@@ -1171,6 +1171,7 @@ public class CameraScreen: ViewController {
             }
         }
         fileprivate var hasGallery = false
+        fileprivate var postingAvailable = true
         
         private var presentationData: PresentationData
         private var validLayout: ContainerViewLayout?
@@ -2154,7 +2155,7 @@ public class CameraScreen: ViewController {
                         cameraAuthorizationStatus: self.cameraAuthorizationStatus,
                         microphoneAuthorizationStatus: self.microphoneAuthorizationStatus,
                         hasAppeared: self.hasAppeared,
-                        isVisible: self.cameraIsActive && !self.hasGallery,
+                        isVisible: self.cameraIsActive && !self.hasGallery && self.postingAvailable,
                         panelWidth: panelWidth,
                         animateFlipAction: self.animateFlipAction,
                         animateShutter: { [weak self] in
@@ -2435,6 +2436,8 @@ public class CameraScreen: ViewController {
                 guard let self, availability != .available else {
                     return
                 }
+                self.node.postingAvailable = false
+                
                 let subject: PremiumLimitSubject
                 switch availability {
                 case .expiringLimit:
@@ -2462,7 +2465,9 @@ public class CameraScreen: ViewController {
                                 return
                             }
                             let isPremium = peer?.isPremium ?? false
-                            if !isPremium {
+                            if isPremium {
+                                self.node.postingAvailable = true
+                            } else {
                                 self.requestDismiss(animated: true)
                             }
                         })

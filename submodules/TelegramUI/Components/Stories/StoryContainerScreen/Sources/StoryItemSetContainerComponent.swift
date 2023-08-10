@@ -4242,22 +4242,31 @@ public final class StoryItemSetContainerComponent: Component {
             self.component?.presentController(controller, nil)
         }
         
-        private func openItemPrivacySettings(initialPrivacy: EngineStoryPrivacy? = nil) {
+        private func openItemPrivacySettings(updatedPrivacy: EngineStoryPrivacy? = nil) {
             guard let component = self.component else {
                 return
             }
             
             let context = component.context
             
-            let privacy = initialPrivacy ?? self.component?.slice.item.storyItem.privacy
+            let currentPrivacy = component.slice.item.storyItem.privacy ?? EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: [])
+            
+            let privacy = updatedPrivacy ?? component.slice.item.storyItem.privacy
             guard let privacy else {
                 return
+            }
+            
+            var selectedPeers: [EngineStoryPrivacy.Base: [EnginePeer.Id]] = [:]
+            selectedPeers[currentPrivacy.base] = currentPrivacy.additionallyIncludePeers
+            if let updatedPrivacy {
+                selectedPeers[updatedPrivacy.base] = updatedPrivacy.additionallyIncludePeers
             }
             
             let stateContext = ShareWithPeersScreen.StateContext(
                 context: context,
                 subject: .stories(editing: true),
-                initialPeerIds: Set(privacy.additionallyIncludePeers),
+                editing: true,
+                initialSelectedPeers: selectedPeers,
                 closeFriends: component.closeFriends.get(),
                 blockedPeersContext: component.blockedPeers
             )
@@ -4289,7 +4298,7 @@ public final class StoryItemSetContainerComponent: Component {
                             guard let self else {
                                 return
                             }
-                            self.openItemPrivacySettings(initialPrivacy: privacy)
+                            self.openItemPrivacySettings(updatedPrivacy: privacy)
                         })
                     },
                     editBlockedPeers: { [weak self] privacy, _, _ in
@@ -4300,7 +4309,7 @@ public final class StoryItemSetContainerComponent: Component {
                             guard let self else {
                                 return
                             }
-                            self.openItemPrivacySettings(initialPrivacy: privacy)
+                            self.openItemPrivacySettings(updatedPrivacy: privacy)
                         })
                     }
                 )
@@ -4328,11 +4337,12 @@ public final class StoryItemSetContainerComponent: Component {
             } else if privacy.base == .nobody {
                 subject = .chats(blocked: false)
             } else {
-                subject = .contacts(privacy.base)
+                subject = .contacts(base: privacy.base)
             }
             let stateContext = ShareWithPeersScreen.StateContext(
                 context: context,
                 subject: subject,
+                editing: true,
                 initialPeerIds: Set(privacy.additionallyIncludePeers),
                 blockedPeersContext: component.blockedPeers
             )
