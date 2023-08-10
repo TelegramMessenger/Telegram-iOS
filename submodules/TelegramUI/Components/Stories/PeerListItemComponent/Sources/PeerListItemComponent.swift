@@ -499,6 +499,8 @@ public final class PeerListItemComponent: Component {
                 } else {
                     clipStyle = .round
                 }
+                let _ = clipStyle
+                let _ = synchronousLoad
                 self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, clipStyle: clipStyle, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
                 self.avatarNode.setStoryStats(storyStats: component.storyStats.flatMap { storyStats -> AvatarNode.StoryStats in
                     return AvatarNode.StoryStats(

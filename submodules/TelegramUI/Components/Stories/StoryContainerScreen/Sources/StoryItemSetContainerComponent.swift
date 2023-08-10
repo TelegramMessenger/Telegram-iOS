@@ -1163,7 +1163,7 @@ public final class StoryItemSetContainerComponent: Component {
                     if let currentIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
                         if index != currentIndex {
                             let nextId = component.slice.allItems[index].storyItem.id
-                            self.awaitingSwitchToId = (component.slice.allItems[currentIndex].storyItem.id, nextId)
+                            //self.awaitingSwitchToId = (component.slice.allItems[currentIndex].storyItem.id, nextId)
                             component.navigate(.id(nextId))
                         }
                     }
@@ -1603,7 +1603,13 @@ public final class StoryItemSetContainerComponent: Component {
                                 
                                 let footerPanelFrame = CGRect(origin: CGPoint(x: itemPositionX - footerSize.width * 0.5, y: footerPanelY), size: footerSize)
                                 itemTransition.setFrame(view: footerPanelView, frame: footerPanelFrame)
-                                itemTransition.setAlpha(view: footerPanelView, alpha: 1.0 - itemLayout.contentOverflowFraction)
+                                
+                                var footerAlpha: CGFloat = 1.0 - itemLayout.contentOverflowFraction
+                                if component.hideUI || self.isEditingStory {
+                                    footerAlpha = 0.0
+                                }
+                                
+                                itemTransition.setAlpha(view: footerPanelView, alpha: footerAlpha)
                             }
                         } else if let footerPanel = visibleItem.footerPanel {
                             visibleItem.footerPanel = nil
