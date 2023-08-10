@@ -9,6 +9,7 @@ import Display
 import TelegramCore
 import TelegramPresentationData
 import FastBlur
+import AccountContext
 
 public struct MediaEditorPlayerState {
     public let generationTimestamp: Double
@@ -41,6 +42,7 @@ public final class MediaEditor {
         }
     }
 
+    private let context: AccountContext
     private let subject: Subject
     private var player: AVPlayer?
     private var additionalPlayer: AVPlayer?
@@ -253,7 +255,8 @@ public final class MediaEditor {
         }
     }
     
-    public init(subject: Subject, values: MediaEditorValues? = nil, hasHistogram: Bool = false) {
+    public init(context: AccountContext, subject: Subject, values: MediaEditorValues? = nil, hasHistogram: Bool = false) {
+        self.context = context
         self.subject = subject
         if let values {
             self.values = values
@@ -332,6 +335,7 @@ public final class MediaEditor {
             print("error")
         }
                 
+        let context = self.context
         let textureSource: Signal<(TextureSource, UIImage?, AVPlayer?, AVPlayer?, UIColor, UIColor), NoError>
         switch subject {
         case let .image(image, _):
@@ -340,7 +344,7 @@ public final class MediaEditor {
         case let .draft(draft):
             if draft.isVideo {
                 textureSource = Signal { subscriber in
-                    let url = URL(fileURLWithPath: draft.fullPath())
+                    let url = URL(fileURLWithPath: draft.fullPath(engine: context.engine))
                     let asset = AVURLAsset(url: url)
                     
                     let playerItem = AVPlayerItem(asset: asset)
@@ -372,7 +376,7 @@ public final class MediaEditor {
                     }
                 }
             } else {
-                guard let image = UIImage(contentsOfFile: draft.fullPath()) else {
+                guard let image = UIImage(contentsOfFile: draft.fullPath(engine: context.engine)) else {
                     return
                 }
                 let colors: (UIColor, UIColor)
