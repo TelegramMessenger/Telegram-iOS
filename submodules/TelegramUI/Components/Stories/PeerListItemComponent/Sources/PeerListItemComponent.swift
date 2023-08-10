@@ -339,7 +339,7 @@ public final class PeerListItemComponent: Component {
             if let reaction = component.reaction, case .custom = reaction.reaction {
                 reactionLayer.isVisibleForAnimations = true
             }
-            self.layer.addSublayer(reactionLayer)
+            self.containerButton.layer.addSublayer(reactionLayer)
             
             if var iconFrame = self.iconFrame {
                 if let reaction = component.reaction, case .builtin = reaction.reaction {
@@ -671,25 +671,21 @@ public final class PeerListItemComponent: Component {
             let imageSize = CGSize(width: 22.0, height: 22.0)
             self.iconFrame = CGRect(origin: CGPoint(x: availableSize.width - (contextInset * 2.0 + 14.0 + component.sideInset) - imageSize.width, y: floor((height - verticalInset * 2.0 - imageSize.height) * 0.5)), size: imageSize)
             
+            var reactionIconTransition = transition
             if previousComponent?.reaction != component.reaction {
                 if let reaction = component.reaction, case .builtin("❤") = reaction.reaction {
                     self.file = nil
                     self.updateReactionLayer()
                     
-                    var reactionTransition = transition
                     let heartReactionIcon: UIImageView
                     if let current = self.heartReactionIcon {
                         heartReactionIcon = current
                     } else {
-                        reactionTransition = reactionTransition.withAnimation(.none)
+                        reactionIconTransition = reactionIconTransition.withAnimation(.none)
                         heartReactionIcon = UIImageView()
                         self.heartReactionIcon = heartReactionIcon
                         self.containerButton.addSubview(heartReactionIcon)
                         heartReactionIcon.image = PresentationResourcesChat.storyViewListLikeIcon(component.theme)
-                    }
-                    
-                    if let image = heartReactionIcon.image, let iconFrame = self.iconFrame {
-                        reactionTransition.setFrame(view: heartReactionIcon, frame: image.size.centered(around: iconFrame.center))
                     }
                 } else {
                     if let heartReactionIcon = self.heartReactionIcon {
@@ -717,6 +713,18 @@ public final class PeerListItemComponent: Component {
                         self.updateReactionLayer()
                     }
                 }
+            }
+            
+            if let heartReactionIcon = self.heartReactionIcon, let image = heartReactionIcon.image, let iconFrame = self.iconFrame {
+                reactionIconTransition.setFrame(view: heartReactionIcon, frame: image.size.centered(around: iconFrame.center))
+            }
+            
+            if let reactionLayer = self.reactionLayer, let iconFrame = self.iconFrame {
+                var adjustedIconFrame = iconFrame
+                if let reaction = component.reaction, case .builtin = reaction.reaction {
+                    adjustedIconFrame = adjustedIconFrame.insetBy(dx: -adjustedIconFrame.width * 0.5, dy: -adjustedIconFrame.height * 0.5)
+                }
+                transition.setFrame(layer: reactionLayer, frame: adjustedIconFrame)
             }
             
             if themeUpdated {

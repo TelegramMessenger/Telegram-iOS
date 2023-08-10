@@ -542,6 +542,12 @@ public final class StoryItemSetContainerComponent: Component {
                     return []
                 }
                 
+                for (_, viewList) in self.viewLists {
+                    if let view = viewList.view.view, view.hitTest(self.convert(point, to: view), with: nil) != nil {
+                        return [.down]
+                    }
+                }
+                
                 if self.itemsContainerView.frame.contains(point) {
                     if !self.isPointInsideContentArea(point: point) {
                         return []
@@ -668,6 +674,13 @@ public final class StoryItemSetContainerComponent: Component {
             self.audioRecorderDisposable?.dispose()
             self.audioRecorderStatusDisposable?.dispose()
             self.audioRecorderStatusDisposable?.dispose()
+        }
+        
+        func allowsExternalGestures(point: CGPoint) -> Bool {
+            if self.viewListDisplayState != .hidden {
+                return false
+            }
+            return true
         }
         
         func isPointInsideContentArea(point: CGPoint) -> Bool {
@@ -1146,6 +1159,9 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             if result === self.scroller {
+                if self.viewListDisplayState == .full {
+                    return self
+                }
                 return self.itemsContainerView
             }
             
@@ -1598,7 +1614,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 }
                                 
                                 var footerPanelY: CGFloat = self.itemsContainerView.frame.minY + itemLayout.contentFrame.center.y + itemLayout.contentFrame.height * 0.5 * itemScale
-                                footerPanelY += (1.0 - footerExpandFraction) * 4.0 + footerExpandFraction * (-41.0)
+                                footerPanelY += (1.0 - footerExpandFraction) * (10.0) + footerExpandFraction * (-41.0)
                                 
                                 let footerPanelMinScale: CGFloat = (1.0 - scaleFraction) + (itemLayout.sideVisibleItemScale / itemLayout.contentMinScale) * scaleFraction
                                 let footerPanelScale = itemLayout.contentScaleFraction * footerPanelMinScale + 1.0 * (1.0 - itemLayout.contentScaleFraction)
@@ -1612,6 +1628,10 @@ public final class StoryItemSetContainerComponent: Component {
                                 itemTransition.setScale(view: footerPanelView, scale: footerPanelScale)
                                 
                                 var footerAlpha: CGFloat = 1.0 - itemLayout.contentOverflowFraction
+                                
+                                let minFooterAlpha: CGFloat = 1.0 - fractionDistanceToCenter
+                                footerAlpha = footerAlpha * itemLayout.contentScaleFraction + minFooterAlpha * (1.0 - itemLayout.contentScaleFraction)
+                                
                                 if component.hideUI || self.isEditingStory {
                                     footerAlpha = 0.0
                                 }
@@ -1711,8 +1731,17 @@ public final class StoryItemSetContainerComponent: Component {
             
             if canReply {
                 if let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View {
-                    return { [weak inputPanelView] in
-                        inputPanelView?.activateInput()
+                    return { [weak self, weak inputPanelView] in
+                        guard let self, let inputPanelView else {
+                            return
+                        }
+                        
+                        if self.displayLikeReactions {
+                            self.displayLikeReactions = false
+                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                        }
+                        
+                        inputPanelView.activateInput()
                     }
                 }
             }
@@ -4271,6 +4300,9 @@ public final class StoryItemSetContainerComponent: Component {
                     stateContext: stateContext,
                     completion: { [weak self] privacy, _, _, _ in
                         guard let self, let component = self.component else {
+                            return
+                        }
+                        if component.slice.item.storyItem.privacy == privacy {
                             return
                         }
                         let _ = component.context.engine.messages.editStoryPrivacy(id: component.slice.item.storyItem.id, privacy: privacy).start()

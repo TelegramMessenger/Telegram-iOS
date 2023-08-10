@@ -3250,11 +3250,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             transition.setFrame(view: self.selectionContainerView, frame: CGRect(origin: .zero, size: previewFrame.size))
             
             self.interaction?.containerLayoutUpdated(layout: layout, transition: transition)
-            
+  
+            var presentationContextLayout = layout
+            presentationContextLayout.intrinsicInsets.top = max(presentationContextLayout.intrinsicInsets.top, topInset)
 //            var layout = layout
 //            layout.intrinsicInsets.top = topInset
 //            layout.intrinsicInsets.bottom = bottomInset + 60.0
-            controller.presentationContext.containerLayoutUpdated(layout, transition: transition.containedViewLayoutTransition)
+            controller.presentationContext.containerLayoutUpdated(presentationContextLayout, transition: transition.containedViewLayoutTransition)
             
             if isFirstTime {
                 self.animateIn()
@@ -3683,7 +3685,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 
         let controller = UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: true, title: nil, text: text, customUndoText: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
             if case .info = action, let self {
-                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true, dismissed: nil)
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .storiesExpirationDurations, forceDark: true, dismissed: nil)
                 self.push(controller)
             }
             return false }

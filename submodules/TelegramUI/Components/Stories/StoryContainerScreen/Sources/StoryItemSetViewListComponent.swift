@@ -164,21 +164,23 @@ final class StoryItemSetViewListComponent: Component {
         var sideInset: CGFloat
         var itemHeight: CGFloat
         var itemCount: Int
+        var premiumFooterSize: CGSize?
         
         var contentSize: CGSize
         
-        init(containerSize: CGSize, bottomInset: CGFloat, topInset: CGFloat, sideInset: CGFloat, itemHeight: CGFloat, itemCount: Int) {
+        init(containerSize: CGSize, bottomInset: CGFloat, topInset: CGFloat, sideInset: CGFloat, itemHeight: CGFloat, itemCount: Int, premiumFooterSize: CGSize?) {
             self.containerSize = containerSize
             self.bottomInset = bottomInset
             self.topInset = topInset
             self.sideInset = sideInset
             self.itemHeight = itemHeight
             self.itemCount = itemCount
+            self.premiumFooterSize = premiumFooterSize
             
             self.contentSize = CGSize(width: containerSize.width, height: topInset + CGFloat(itemCount) * itemHeight + bottomInset)
-            #if DEBUG && false
-            self.contentSize.height += 1000.0
-            #endif
+            if let premiumFooterSize {
+                self.contentSize.height += 13.0 + premiumFooterSize.height + 12.0
+            }
         }
         
         func visibleItems(for rect: CGRect) -> Range<Int>? {
@@ -255,6 +257,8 @@ final class StoryItemSetViewListComponent: Component {
         var emptyIcon: ComponentView<Empty>?
         var emptyText: ComponentView<Empty>?
         var emptyButton: ComponentView<Empty>?
+        
+        var premiumFooterText: ComponentView<Empty>?
         
         let scrollView: UIScrollView
         var itemLayout: ItemLayout?
@@ -447,7 +451,7 @@ final class StoryItemSetViewListComponent: Component {
                                 )
                             },
                             selectionState: .none,
-                            hasNext: index != viewListState.totalCount - 1,
+                            hasNext: index != viewListState.totalCount - 1 || itemLayout.premiumFooterSize != nil,
                             action: { [weak self] peer in
                                 guard let self, let component = self.component else {
                                     return
@@ -511,6 +515,17 @@ final class StoryItemSetViewListComponent: Component {
             }
             for id in removePlaceholderIds {
                 self.visiblePlaceholderViews.removeValue(forKey: id)
+            }
+            
+            if let premiumFooterTextView = self.premiumFooterText?.view, let premiumFooterSize = itemLayout.premiumFooterSize {
+                var premiumFooterTransition = transition
+                if premiumFooterTextView.superview == nil {
+                    premiumFooterTransition = premiumFooterTransition.withAnimation(.none)
+                    self.scrollView.addSubview(premiumFooterTextView)
+                }
+                let premiumFooterFrame = CGRect(origin: CGPoint(x: floor((itemLayout.contentSize.width - premiumFooterSize.width) * 0.5), y: itemLayout.itemFrame(for: itemLayout.itemCount - 1).maxY + 13.0), size: premiumFooterSize)
+                premiumFooterTransition.setPosition(view: premiumFooterTextView, position: premiumFooterFrame.center)
+                premiumFooterTransition.setBounds(view: premiumFooterTextView, bounds: CGRect(origin: CGPoint(), size: premiumFooterFrame.size))
             }
             
             if let viewList = self.viewList, let viewListState = self.viewListState, viewListState.loadMoreToken != nil, visibleBounds.maxY >= self.scrollView.contentSize.height - 200.0 {
@@ -737,13 +752,64 @@ final class StoryItemSetViewListComponent: Component {
                 }
             }
             
+            var premiumFooterSize: CGSize?
+            if !component.hasPremium, let viewListState = self.viewListState, viewListState.loadMoreToken == nil, !viewListState.items.isEmpty, let views = component.storyItem.views, views.seenCount > viewListState.totalCount, component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
+                let premiumFooterText: ComponentView<Empty>
+                if let current = self.premiumFooterText {
+                    premiumFooterText = current
+                } else {
+                    premiumFooterText = ComponentView()
+                    self.premiumFooterText = premiumFooterText
+                }
+                
+                let fontSize: CGFloat = 13.0
+                let body = MarkdownAttributeSet(font: Font.regular(fontSize), textColor: component.theme.list.itemSecondaryTextColor)
+                let bold = MarkdownAttributeSet(font: Font.semibold(fontSize), textColor: component.theme.list.itemSecondaryTextColor)
+                let link = MarkdownAttributeSet(font: Font.semibold(fontSize), textColor: component.theme.list.itemAccentColor)
+                let attributes = MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return ("URL", "") })
+                
+                //TODO:localize
+                let text = "To unlock viewers' lists for expired and saved stories, subscribe to [Telegram Premium]()."
+                premiumFooterSize = premiumFooterText.update(
+                    transition: .immediate,
+                    component: AnyComponent(BalancedTextComponent(
+                        text: .markdown(text: text, attributes: attributes),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 0,
+                        lineSpacing: 0.2,
+                        highlightColor: component.theme.list.itemAccentColor.withMultipliedAlpha(0.5),
+                        highlightAction: { attributes in
+                            if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
+                                return NSAttributedString.Key(rawValue: "URL")
+                            } else {
+                                return nil
+                            }
+                        },
+                        tapAction: { [weak self] _, _ in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.openPremiumIntro()
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: min(320.0, availableSize.width - 16.0 * 2.0), height: 1000.0)
+                )
+            } else {
+                if let premiumFooterText = self.premiumFooterText {
+                    self.premiumFooterText = nil
+                    premiumFooterText.view?.removeFromSuperview()
+                }
+            }
+            
             let itemLayout = ItemLayout(
                 containerSize: CGSize(width: availableSize.width, height: visualHeight),
                 bottomInset: component.safeInsets.bottom,
                 topInset: navigationHeight,
                 sideInset: sideInset,
                 itemHeight: measureItemSize.height,
-                itemCount: self.viewListState?.items.count ?? 0
+                itemCount: self.viewListState?.items.count ?? 0,
+                premiumFooterSize: premiumFooterSize
             )
             self.itemLayout = itemLayout
             
@@ -765,9 +831,6 @@ final class StoryItemSetViewListComponent: Component {
             if self.scrollView.contentSize != scrollContentSize {
                 self.scrollView.contentSize = scrollContentSize
             }
-            
-            self.ignoreScrolling = false
-            self.updateScrolling(transition: transition)
             
             if let viewListState = self.viewListState, viewListState.loadMoreToken == nil, viewListState.items.isEmpty, viewListState.totalCount == 0 {
                 self.scrollView.isUserInteractionEnabled = false
@@ -990,6 +1053,9 @@ final class StoryItemSetViewListComponent: Component {
                     emptyButton.view?.removeFromSuperview()
                 }
             }
+            
+            self.ignoreScrolling = false
+            self.updateScrolling(transition: transition)
         }
     }
 
