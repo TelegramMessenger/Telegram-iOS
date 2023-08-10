@@ -284,7 +284,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             self.itemSpacing = 12.0
             self.centralVisibleItemWidth = self.contentFrame.width * self.contentMinScale
-            self.sideVisibleItemWidth = self.centralVisibleItemWidth - 30.0
+            self.sideVisibleItemWidth = self.centralVisibleItemWidth - 54.0
             self.fullItemScrollDistance = self.centralVisibleItemWidth * 0.5 + self.itemSpacing + self.sideVisibleItemWidth * 0.5
             self.sideVisibleItemScale = self.contentMinScale * (self.sideVisibleItemWidth / self.centralVisibleItemWidth)
             self.halfItemScrollDistance = self.sideVisibleItemWidth * 0.5 + self.itemSpacing + self.sideVisibleItemWidth * 0.5
@@ -527,11 +527,11 @@ public final class StoryItemSetContainerComponent: Component {
             self.controlsClippingView.addSubview(self.topContentGradientView)
             self.layer.addSublayer(self.bottomContentGradientLayer)
             
-            self.closeButton.addSubview(self.closeButtonIconView)
-            self.controlsClippingView.addSubview(self.closeButton)
-            self.closeButton.addTarget(self, action: #selector(self.closePressed), for: .touchUpInside)
-            
             self.componentContainerView.addSubview(self.viewListsContainer)
+            
+            self.closeButton.addSubview(self.closeButtonIconView)
+            self.addSubview(self.closeButton)
+            self.closeButton.addTarget(self, action: #selector(self.closePressed), for: .touchUpInside)
             
             let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
             tapRecognizer.delegate = self
@@ -1102,7 +1102,14 @@ public final class StoryItemSetContainerComponent: Component {
             guard let component = self.component else {
                 return
             }
-            component.close()
+            
+            if self.viewListDisplayState != .hidden {
+                self.viewListDisplayState = .hidden
+                self.isSearchActive = false
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+            } else {
+                component.close()
+            }
         }
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -3188,7 +3195,11 @@ public final class StoryItemSetContainerComponent: Component {
                 self.closeButtonIconView.tintColor = .white
             }
             if let image = self.closeButtonIconView.image {
-                let closeButtonFrame = CGRect(origin: CGPoint(x: headerRightOffset - 50.0, y: 2.0), size: CGSize(width: 50.0, height: 64.0))
+                let closeButtonCollapsedFrame = CGRect(origin: CGPoint(x: contentFrame.minX + headerRightOffset - 50.0, y: component.containerInsets.top + 2.0), size: CGSize(width: 50.0, height: 64.0))
+                let closeButtonExpandedFrame = CGRect(origin: CGPoint(x: contentFrame.minX + headerRightOffset - 50.0, y: component.containerInsets.top - 15.0), size: CGSize(width: 50.0, height: 64.0))
+                var closeButtonFrame = closeButtonCollapsedFrame.interpolate(to: closeButtonExpandedFrame, amount: itemLayout.contentScaleFraction)
+                closeButtonFrame.origin.y -= contentBottomInsetOverflow
+                
                 transition.setFrame(view: self.closeButton, frame: closeButtonFrame)
                 transition.setFrame(view: self.closeButtonIconView, frame: CGRect(origin: CGPoint(x: floor((closeButtonFrame.width - image.size.width) * 0.5), y: floor((closeButtonFrame.height - image.size.height) * 0.5)), size: image.size))
                 headerRightOffset -= 51.0

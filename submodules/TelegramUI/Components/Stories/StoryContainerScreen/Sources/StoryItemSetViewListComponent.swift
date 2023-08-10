@@ -1203,7 +1203,7 @@ final class StoryItemSetViewListComponent: Component {
                 if component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
                     titleText = component.strings.Story_Footer_Views(Int32(views.seenCount))
                 } else {
-                    titleText = "All Viewers"
+                    titleText = "Viewers"
                 }
             } else {
                 titleText = "No Views"
