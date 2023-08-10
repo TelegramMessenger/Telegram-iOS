@@ -38,6 +38,7 @@ import PhoneNumberFormat
 import AuthorizationUI
 import ManagedFile
 import DeviceProximity
+import MediaEditor
 
 #if canImport(AppCenter)
 import AppCenter
@@ -1291,6 +1292,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             let _ = (updateIntentsSettingsInteractively(accountManager: accountManager) { current in
                 var updated = current
                 for peerId in loggedOutAccountPeerIds {
+                    deleteAllStoryDrafts(peerId: peerId)
                     if peerId == updated.account {
                         deleteAllSendMessageIntents()
                         updated = updated.withUpdatedAccount(nil)

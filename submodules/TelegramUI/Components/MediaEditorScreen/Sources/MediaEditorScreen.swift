@@ -1886,7 +1886,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
             }
             
-            let mediaEditor = MediaEditor(subject: subject.editorSubject, values: initialValues, hasHistogram: true)
+            let mediaEditor = MediaEditor(context: self.context, subject: subject.editorSubject, values: initialValues, hasHistogram: true)
             if let initialVideoPosition = self.controller?.initialVideoPosition {
                 mediaEditor.seek(initialVideoPosition, andPlay: true)
             }
@@ -3441,6 +3441,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
             })
         }
+        
+        updateStorySources(engine: self.context.engine)
+        updateStoryDrafts(engine: self.context.engine)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -3827,22 +3830,34 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         guard let subject = self.node.subject, let mediaEditor = self.node.mediaEditor else {
             return
         }
-        try? FileManager.default.createDirectory(atPath: draftPath(), withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(atPath: draftPath(engine: self.context.engine), withIntermediateDirectories: true)
         
         let values = mediaEditor.values
         let privacy = self.state.privacy
         let caption = self.getCaption()
         let duration = mediaEditor.duration ?? 0.0
         
+        let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
         var timestamp: Int32
         var location: CLLocationCoordinate2D?
+        let expiresOn: Int32
         if case let .draft(draft, _) = subject {
             timestamp = draft.timestamp
             location = draft.location
+            if let _ = id {
+                expiresOn = draft.expiresOn ?? currentTimestamp + 3600 * 24 * 7
+            } else {
+                expiresOn = currentTimestamp + 3600 * 24 * 7
+            }
         } else {
-            timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+            timestamp = currentTimestamp
             if case let .asset(asset) = subject {
                 location = asset.location?.coordinate
+            }
+            if let _ = id {
+                expiresOn = currentTimestamp + Int32(self.state.privacy.timeout)
+            } else {
+                expiresOn = currentTimestamp + 3600 * 24 * 7
             }
         }
         
@@ -3859,8 +3874,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
                         let path = "\(Int64.random(in: .min ... .max)).jpg"
                         if let data = image.jpegData(compressionQuality: 0.87) {
-                            let draft = MediaEditorDraft(path: path, isVideo: false, thumbnail: thumbnailImage, dimensions: dimensions, duration: nil, values: values, caption: caption, privacy: privacy, timestamp: timestamp, location: location)
-                            try? data.write(to: URL(fileURLWithPath: draft.fullPath()))
+                            let draft = MediaEditorDraft(path: path, isVideo: false, thumbnail: thumbnailImage, dimensions: dimensions, duration: nil, values: values, caption: caption, privacy: privacy, timestamp: timestamp, location: location, expiresOn: expiresOn)
+                            try? data.write(to: URL(fileURLWithPath: draft.fullPath(engine: context.engine)))
                             if let id {
                                 saveStorySource(engine: context.engine, item: draft, peerId: context.account.peerId, id: id)
                             } else {
@@ -3873,8 +3888,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 let saveVideoDraft: (String, PixelDimensions, Double) -> Void = { videoPath, dimensions, duration in
                     if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
                         let path = "\(Int64.random(in: .min ... .max)).mp4"
-                        let draft = MediaEditorDraft(path: path, isVideo: true, thumbnail: thumbnailImage, dimensions: dimensions, duration: duration, values: values, caption: caption, privacy: privacy, timestamp: timestamp, location: location)
-                        try? FileManager.default.moveItem(atPath: videoPath, toPath: draft.fullPath())
+                        let draft = MediaEditorDraft(path: path, isVideo: true, thumbnail: thumbnailImage, dimensions: dimensions, duration: duration, values: values, caption: caption, privacy: privacy, timestamp: timestamp, location: location, expiresOn: expiresOn)
+                        try? FileManager.default.moveItem(atPath: videoPath, toPath: draft.fullPath(engine: context.engine))
                         if let id {
                             saveStorySource(engine: context.engine, item: draft, peerId: context.account.peerId, id: id)
                         } else {
@@ -3906,8 +3921,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 case let .draft(draft, _):
                     if draft.isVideo {
-                        saveVideoDraft(draft.fullPath(), draft.dimensions, draft.duration ?? 0.0)
-                    } else if let image = UIImage(contentsOfFile: draft.fullPath()) {
+                        saveVideoDraft(draft.fullPath(engine: context.engine), draft.dimensions, draft.duration ?? 0.0)
+                    } else if let image = UIImage(contentsOfFile: draft.fullPath(engine: context.engine)) {
                         saveImageDraft(image, draft.dimensions)
                     }
                     removeStoryDraft(engine: self.context.engine, path: draft.path, delete: false)
@@ -3943,6 +3958,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         mediaEditor.invalidate()
         self.node.entitiesView.invalidate()
         
+        let context = self.context
         if let navigationController = self.navigationController as? NavigationController {
             navigationController.updateRootContainerTransitionOffset(0.0, transition: .immediate)
         }
@@ -4109,15 +4125,16 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     return EmptyDisposable
                 }
             case let .draft(draft, _):
+                let draftPath = draft.fullPath(engine: context.engine)
                 if draft.isVideo {
-                    videoResult = .videoFile(path: draft.fullPath())
+                    videoResult = .videoFile(path: draftPath)
                     if let videoTrimRange = mediaEditor.values.videoTrimRange {
                         duration = videoTrimRange.upperBound - videoTrimRange.lowerBound
                     } else {
                         duration = min(draft.duration ?? 5.0, storyMaxVideoDuration)
                     }
                     firstFrame = Signal<(UIImage?, UIImage?), NoError> { subscriber in
-                        let avAsset = AVURLAsset(url: URL(fileURLWithPath: draft.fullPath()))
+                        let avAsset = AVURLAsset(url: URL(fileURLWithPath: draftPath))
                         let avAssetGenerator = AVAssetImageGenerator(asset: avAsset)
                         avAssetGenerator.appliesPreferredTrackTransform = true
                         avAssetGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: firstFrameTime)], completionHandler: { _, cgImage, _, _, _ in
@@ -4131,10 +4148,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         }
                     }
                 } else {
-                    videoResult = .imageFile(path: draft.fullPath())
+                    videoResult = .imageFile(path: draftPath)
                     duration = 5.0
                     
-                    if let image = UIImage(contentsOfFile: draft.fullPath()) {
+                    if let image = UIImage(contentsOfFile: draftPath) {
                         firstFrame = .single((image, nil))
                     } else {
                         firstFrame = .single((UIImage(), nil))
@@ -4228,6 +4245,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             return
         }
             
+        let context = self.context
+        
         let entities = self.node.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }
         let codableEntities = DrawingEntitiesView.encodeEntities(entities, entitiesView: self.node.entitiesView)
         mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
@@ -4292,10 +4311,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
             case let .draft(draft, _):
                 if draft.isVideo {
-                    let asset = AVURLAsset(url: NSURL(fileURLWithPath: draft.fullPath()) as URL)
+                    let asset = AVURLAsset(url: NSURL(fileURLWithPath: draft.fullPath(engine: context.engine)) as URL)
                     exportSubject = .single(.video(asset))
                 } else {
-                    if let image = UIImage(contentsOfFile: draft.fullPath()) {
+                    if let image = UIImage(contentsOfFile: draft.fullPath(engine: context.engine)) {
                         exportSubject = .single(.image(image))
                     } else {
                         fatalError()
@@ -4768,8 +4787,8 @@ public final class BlurredGradientComponent: Component {
     }
 }
 
-func draftPath() -> String {
-    return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/storyDrafts"
+func draftPath(engine: TelegramEngine) -> String {
+    return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/storyDrafts_\(engine.account.peerId.toInt64())"
 }
 
 func hasFirstResponder(_ view: UIView) -> Bool {
