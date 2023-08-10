@@ -9756,9 +9756,34 @@ Sorry for the inconvenience.";
 "Premium.New" = "NEW";
 
 "MediaEditor.AddGif" = "Add GIF";
+"MediaEditor.AddLocation" = "Add Location";
 
 "Premium.Stories" = "Upgraded Stories";
 "Premium.StoriesInfo" = "Priority order, stealth mode, permanent views history and more.";
+
+"Premium.Stories.Title" = "Upgraded Stories";
+"Premium.Stories.AdditionalTitle" = "Exclusive Features in Stories";
+
+"Premium.Stories.Order.Title" = "Priority Order";
+"Premium.Stories.Order.Text" = "Get more views as your stories are always displayed first.";
+
+"Premium.Stories.Stealth.Title" = "Stealth Mode";
+"Premium.Stories.Stealth.Text" = "Hide the fact that you viewed other people's stories.";
+
+"Premium.Stories.Views.Title" = "Permanent Views History";
+"Premium.Stories.Views.Text" = "Check who opens your stories — even after they expire.";
+
+"Premium.Stories.Expiration.Title" = "Expiration Durations";
+"Premium.Stories.Expiration.Text" = "Set custom expiration durations like 6 or 48 hours for your stories.";
+
+"Premium.Stories.Save.Title" = "Save Stories to Gallery";
+"Premium.Stories.Save.Text" = "Save other people's unprotected stories to your Gallery.";
+
+"Premium.Stories.Captions.Title" = "Longer Captions";
+"Premium.Stories.Captions.Text" = "Add ten times longer captions to your stories.";
+
+"Premium.Stories.Format.Title" = "Links and Formatting";
+"Premium.Stories.Format.Text" = "Add links and formatting in captions to your stories.";
 
 "Premium.MaxExpiringStoriesText" = "You can post **%@** stories in **24** hours. Subscribe to **Telegram Premium** to increase this limit to **%@**.";
 "Premium.MaxExpiringStoriesNoPremiumText" = "You have reached the limit of **%@** stories per **24** hours.";

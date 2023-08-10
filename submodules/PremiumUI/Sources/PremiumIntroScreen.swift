@@ -360,7 +360,8 @@ public enum PremiumPerk: CaseIterable {
             .appIcons,
             .animatedEmoji,
             .emojiStatus,
-            .translation
+            .translation,
+            .stories
         ]
     }
     
@@ -1614,17 +1615,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             )
             context.add(text
                 .position(CGPoint(x: size.width / 2.0, y: size.height + text.size.height / 2.0))
-//                .update(Transition.Update { _, view, _ in
-//                    if let snapshot = view.snapshotView(afterScreenUpdates: false) {
-//                        let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
-//                        view.superview?.addSubview(snapshot)
-//                        transition.setAlpha(view: snapshot, alpha: 0.0, completion: { [weak snapshot] _ in
-//                            snapshot?.removeFromSuperview()
-//                        })
-//                        snapshot.frame = view.frame
-//                        transition.animateAlpha(view: view, from: 0.0, to: 1.0)
-//                    }
-//                })
             )
             size.height += text.size.height
             size.height += 21.0
