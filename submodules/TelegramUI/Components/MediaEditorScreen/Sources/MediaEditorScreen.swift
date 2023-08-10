@@ -1851,7 +1851,22 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
 
             self.entitiesView.add(mediaEntity, announce: false)
-                                    
+                       
+            let initialValues: MediaEditorValues?
+            if case let .draft(draft, _) = subject {
+                initialValues = draft.values
+
+                for entity in draft.values.entities {
+                    self.entitiesView.add(entity.entity, announce: false)
+                }
+                
+                if let drawingData = initialValues?.drawing?.pngData() {
+                    self.drawingView.setup(withDrawing: drawingData)
+                }
+            } else {
+                initialValues = nil
+            }
+            
             if let entityView = self.entitiesView.getView(for: mediaEntity.uuid) as? DrawingMediaEntityView {
                 self.entitiesView.sendSubviewToBack(entityView)
                 entityView.previewView = self.previewView
@@ -1863,18 +1878,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         self.mediaEditor?.setCrop(offset: positionDelta, scale: scaleDelta, rotation: rotationDelta, mirroring: false)
                     }
                 }
+                
+                if let initialValues {
+                    mediaEntity.position = mediaEntity.position.offsetBy(dx: initialValues.cropOffset.x, dy: initialValues.cropOffset.y)
+                    mediaEntity.rotation = mediaEntity.rotation + initialValues.cropRotation
+                    mediaEntity.scale = mediaEntity.scale * initialValues.cropScale
+                }
             }
             
-            let initialValues: MediaEditorValues?
-            if case let .draft(draft, _) = subject {
-                initialValues = draft.values
-                
-                for entity in draft.values.entities {
-                    entitiesView.add(entity.entity, announce: false)
-                }
-            } else {
-                initialValues = nil
-            }
             let mediaEditor = MediaEditor(subject: subject.editorSubject, values: initialValues, hasHistogram: true)
             if let initialVideoPosition = self.controller?.initialVideoPosition {
                 mediaEditor.seek(initialVideoPosition, andPlay: true)

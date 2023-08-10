@@ -398,6 +398,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
             
             if let context = DrawingContext(size: image.size, scale: 1.0, opaque: false) {
                 context.withFlippedContext { context in
+                    context.clear(CGRect(origin: .zero, size: image.size))
                     if let cgImage = image.cgImage {
                         context.draw(cgImage, in: CGRect(origin: .zero, size: image.size))
                     }
