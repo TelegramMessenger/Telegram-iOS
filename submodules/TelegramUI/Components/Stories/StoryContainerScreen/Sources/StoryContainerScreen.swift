@@ -153,6 +153,7 @@ private final class StoryPinchGesture: UIPinchGestureRecognizer {
 
     private(set) var currentTransform: (CGFloat, CGPoint, CGPoint)?
 
+    var shouldBegin: ((CGPoint) -> Bool)?
     var began: (() -> Void)?
     var updated: ((CGFloat, CGPoint, CGPoint) -> Void)?
     var ended: (() -> Void)?
@@ -181,6 +182,11 @@ private final class StoryPinchGesture: UIPinchGestureRecognizer {
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        if let touch = touches.first, let shouldBegin = self.shouldBegin, !shouldBegin(touch.location(in: self.view)) {
+            self.state = .failed
+            return
+        }
+        
         super.touchesBegan(touches, with: event)
 
         //self.currentTouches.formUnion(touches)
@@ -457,6 +463,9 @@ private final class StoryContainerScreenComponent: Component {
                 guard let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View else {
                     return false
                 }
+                if !itemSetComponentView.allowsExternalGestures(point: touch.location(in: itemSetComponentView)) {
+                    return false
+                }
                 if !itemSetComponentView.isPointInsideContentArea(point: touch.location(in: itemSetComponentView)) {
                     return false
                 }
@@ -467,6 +476,23 @@ private final class StoryContainerScreenComponent: Component {
             
             let pinchRecognizer = StoryPinchGesture()
             pinchRecognizer.delegate = self
+            pinchRecognizer.shouldBegin = { [weak self] pinchLocation in
+                guard let self else {
+                    return false
+                }
+                if let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id] {
+                    if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                        let itemLocation = self.convert(pinchLocation, to: itemSetComponentView)
+                        if itemSetComponentView.allowsExternalGestures(point: itemLocation) {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }
+                }
+                
+                return false
+            }
             pinchRecognizer.updated = { [weak self] scale, pinchLocation, offset in
                 guard let self else {
                     return

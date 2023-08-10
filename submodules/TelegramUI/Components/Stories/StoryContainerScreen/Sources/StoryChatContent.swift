@@ -961,32 +961,36 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: storyId.peerId),
                 TelegramEngine.EngineData.Item.NotificationSettings.Global()
             ),
-            context.account.postbox.transaction { transaction -> (Stories.StoredItem?, [PeerId: Peer], [MediaId: TelegramMediaFile]) in
-                guard let item = transaction.getStory(id: storyId)?.get(Stories.StoredItem.self) else {
-                    return (nil, [:], [:])
-                }
-                var peers: [PeerId: Peer] = [:]
-                var allEntityFiles: [MediaId: TelegramMediaFile] = [:]
-                if case let .item(item) = item {
-                    if let views = item.views {
-                        for id in views.seenPeerIds {
-                            if let peer = transaction.getPeer(id) {
-                                peers[peer.id] = peer
+            context.account.postbox.combinedView(keys: [PostboxViewKey.story(id: storyId)]) |> mapToSignal { views -> Signal<(Stories.StoredItem?, [PeerId: Peer], [MediaId: TelegramMediaFile]), NoError> in
+                let item = (views.views[PostboxViewKey.story(id: storyId)] as? StoryView)?.item?.get(Stories.StoredItem.self)
+            
+                return context.account.postbox.transaction { transaction -> (Stories.StoredItem?, [PeerId: Peer], [MediaId: TelegramMediaFile]) in
+                    guard let item else {
+                        return (nil, [:], [:])
+                    }
+                    var peers: [PeerId: Peer] = [:]
+                    var allEntityFiles: [MediaId: TelegramMediaFile] = [:]
+                    if case let .item(item) = item {
+                        if let views = item.views {
+                            for id in views.seenPeerIds {
+                                if let peer = transaction.getPeer(id) {
+                                    peers[peer.id] = peer
+                                }
                             }
                         }
-                    }
-                    for entity in item.entities {
-                        if case let .CustomEmoji(_, fileId) = entity.type {
-                            let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
-                            if allEntityFiles[mediaId] == nil {
-                                if let file = transaction.getMedia(mediaId) as? TelegramMediaFile {
-                                    allEntityFiles[file.fileId] = file
+                        for entity in item.entities {
+                            if case let .CustomEmoji(_, fileId) = entity.type {
+                                let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                                if allEntityFiles[mediaId] == nil {
+                                    if let file = transaction.getMedia(mediaId) as? TelegramMediaFile {
+                                        allEntityFiles[file.fileId] = file
+                                    }
                                 }
                             }
                         }
                     }
+                    return (item, peers, allEntityFiles)
                 }
-                return (item, peers, allEntityFiles)
             }
         )
         |> deliverOnMainQueue).start(next: { [weak self] data, itemAndPeers in
