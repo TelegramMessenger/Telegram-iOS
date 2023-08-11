@@ -1602,7 +1602,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []),
             timeout: 86400,
             isForwardingDisabled: false,
-            pin: false
+            pin: true
         )
     }
     
