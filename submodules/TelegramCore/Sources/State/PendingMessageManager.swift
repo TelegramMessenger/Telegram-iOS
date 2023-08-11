@@ -60,7 +60,7 @@ public enum PendingMessageFailureReason {
     case sendingTooFast
 }
 
-private func reasonForError(_ error: String) -> PendingMessageFailureReason? {
+func sendMessageReasonForError(_ error: String) -> PendingMessageFailureReason? {
     if error.hasPrefix("PEER_FLOOD") {
         return .flood
     } else if error.hasPrefix("SENDING_TOO_FAST") {
@@ -125,7 +125,7 @@ private func failMessages(postbox: Postbox, ids: [MessageId]) -> Signal<Void, No
     return modify
 }
 
-private final class PendingMessageRequestDependencyTag: NetworkRequestDependencyTag {
+final class PendingMessageRequestDependencyTag: NetworkRequestDependencyTag {
     let messageId: MessageId
     
     init(messageId: MessageId) {
@@ -970,7 +970,7 @@ public final class PendingMessageManager {
                                     strongSelf.beginSendingMessages(messages.map({ $0.0.id }))
                                     return .complete()
                                 }
-                            } else if let failureReason = reasonForError(error.errorDescription), let message = messages.first?.0 {
+                            } else if let failureReason = sendMessageReasonForError(error.errorDescription), let message = messages.first?.0 {
                                 for (message, _) in messages {
                                     if let context = strongSelf.messageContexts[message.id] {
                                         context.error = failureReason
@@ -1292,7 +1292,7 @@ public final class PendingMessageManager {
                                 strongSelf.beginSendingMessages([messageId])
                                 return
                             }
-                        } else if let failureReason = reasonForError(error.errorDescription) {
+                        } else if let failureReason = sendMessageReasonForError(error.errorDescription) {
                             if let context = strongSelf.messageContexts[message.id] {
                                 context.error = failureReason
                                 for f in context.statusSubscribers.copyItems() {
