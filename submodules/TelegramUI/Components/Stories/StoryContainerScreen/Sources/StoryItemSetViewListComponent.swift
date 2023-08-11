@@ -768,8 +768,7 @@ final class StoryItemSetViewListComponent: Component {
                 let link = MarkdownAttributeSet(font: Font.semibold(fontSize), textColor: component.theme.list.itemAccentColor)
                 let attributes = MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return ("URL", "") })
                 
-                //TODO:localize
-                let text = "To unlock viewers' lists for expired and saved stories, subscribe to [Telegram Premium]()."
+                let text = component.strings.Story_ViewList_PremiumUpgradeInlineText
                 premiumFooterSize = premiumFooterText.update(
                     transition: .immediate,
                     component: AnyComponent(BalancedTextComponent(
@@ -897,25 +896,22 @@ final class StoryItemSetViewListComponent: Component {
                         if emptyButton == nil {
                             text = component.strings.Story_Views_ViewsExpired
                         } else {
-                            //TODO:localize
-                            text = "List of viewers isn't available after 24 hours of story expiration.\n\nTo unlock viewers' lists for expired and saved stories, subscribe to [Telegram Premium]()."
+                            text = component.strings.Story_ViewList_PremiumUpgradeText
                         }
                     } else {
                         text = component.strings.Story_Views_NoViews
                     }
                 } else {
-                    //TODO:localize
                     if let query = self.query, !query.isEmpty {
-                        text = "No views found"
+                        text = component.strings.Story_ViewList_EmptyTextSearch
                     } else if self.configuration.listMode == .contacts {
-                        text = "None of your contacts viewed this story."
+                        text = component.strings.Story_ViewList_EmptyTextContacts
                     } else {
                         if component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
                             if emptyButton == nil {
                                 text = component.strings.Story_Views_ViewsExpired
                             } else {
-                                //TODO:localize
-                                text = "List of viewers isn't available after 24 hours of story expiration.\n\nTo unlock viewers' lists for expired and saved stories, subscribe to [Telegram Premium]()."
+                                text = component.strings.Story_ViewList_PremiumUpgradeText
                             }
                         } else {
                             text = component.strings.Story_Views_NoViews
@@ -952,7 +948,6 @@ final class StoryItemSetViewListComponent: Component {
                 
                 var emptyButtonSize: CGSize?
                 if let emptyButton {
-                    //TODO:localize
                     emptyButtonSize = emptyButton.update(
                         transition: emptyButtonTransition,
                         component: AnyComponent(ButtonComponent(
@@ -964,7 +959,7 @@ final class StoryItemSetViewListComponent: Component {
                             content: AnyComponentWithIdentity(
                                 id: AnyHashable(0),
                                 component: AnyComponent(ButtonTextContentComponent(
-                                    text: "Learn More",
+                                    text: component.strings.Story_ViewList_PremiumUpgradeAction,
                                     badge: 0,
                                     textColor: component.theme.list.itemCheckColors.foregroundColor,
                                     badgeBackground: component.theme.list.itemCheckColors.foregroundColor,
@@ -1148,10 +1143,9 @@ final class StoryItemSetViewListComponent: Component {
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
             var items: [ContextMenuItem] = []
             
-            //TODO:localize
             let sortMode = self.sortMode
             
-            items.append(.action(ContextMenuActionItem(text: "Reactions First", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: component.strings.Story_ViewList_ContextSortReactions, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reactions"), color: theme.contextMenu.primaryColor)
             }, additionalLeftIcon: { theme in
                 if sortMode != .reactionsFirst {
@@ -1169,7 +1163,7 @@ final class StoryItemSetViewListComponent: Component {
                     self.state?.updated(transition: .immediate)
                 }
             })))
-            items.append(.action(ContextMenuActionItem(text: "Recent First", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: component.strings.Story_ViewList_ContextSortRecent, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Time"), color: theme.contextMenu.primaryColor)
             }, additionalLeftIcon: { theme in
                 if sortMode != .recentFirst {
@@ -1190,9 +1184,8 @@ final class StoryItemSetViewListComponent: Component {
             
             items.append(.separator)
                                         
-            //TODO:localize
             let emptyAction: ((ContextMenuActionItem.Action) -> Void)? = nil
-            items.append(.action(ContextMenuActionItem(text: "Choose the order for the list of viewers.", textLayout: .multiline, textFont: .small, icon: { _ in return nil }, action: emptyAction)))
+            items.append(.action(ContextMenuActionItem(text: component.strings.Story_ViewList_ContextSortInfo, textLayout: .multiline, textFont: .small, icon: { _ in return nil }, action: emptyAction)))
             
             let contextItems = ContextController.Items(content: .list(items))
             
@@ -1233,7 +1226,6 @@ final class StoryItemSetViewListComponent: Component {
             
             let visualHeight: CGFloat = max(component.minHeight, component.effectiveHeight)
             
-            //TODO:localize
             let tabSelectorSize = self.tabSelector.update(
                 transition: transition,
                 component: AnyComponent(TabSelectorComponent(
@@ -1244,11 +1236,11 @@ final class StoryItemSetViewListComponent: Component {
                     items: [
                         TabSelectorComponent.Item(
                             id: AnyHashable(ListMode.everyone.rawValue),
-                            title: "All Viewers"
+                            title: component.strings.Story_ViewList_TabTitleAll
                         ),
                         TabSelectorComponent.Item(
                             id: AnyHashable(ListMode.contacts.rawValue),
-                            title: "Contacts"
+                            title: component.strings.Story_ViewList_TabTitleContacts
                         )
                     ],
                     selectedId: AnyHashable(self.listMode == .everyone ? 0 : 1),
@@ -1266,16 +1258,15 @@ final class StoryItemSetViewListComponent: Component {
                 containerSize: CGSize(width: availableSize.width - 10.0 * 2.0, height: 50.0)
             )
             
-            //TODO:localize
             let titleText: String
             if let views = component.storyItem.views, views.seenCount != 0 {
                 if component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
                     titleText = component.strings.Story_Footer_Views(Int32(views.seenCount))
                 } else {
-                    titleText = "Viewers"
+                    titleText = component.strings.Story_ViewList_TitleViewers
                 }
             } else {
-                titleText = "No Views"
+                titleText = component.strings.Story_ViewList_TitleEmpty
             }
             
             let titleSize = self.title.update(
@@ -1314,6 +1305,7 @@ final class StoryItemSetViewListComponent: Component {
                         foreground: .white,
                         button: component.theme.rootController.navigationBar.accentTextColor
                     ),
+                    cancel: component.strings.Common_Cancel,
                     placeholder: component.strings.Common_Search,
                     isSearchActive: component.isSearchActive,
                     collapseFraction: 1.0,

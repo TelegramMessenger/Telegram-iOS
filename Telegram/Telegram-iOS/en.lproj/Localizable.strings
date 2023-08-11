@@ -9799,6 +9799,54 @@ Sorry for the inconvenience.";
 
 "MediaPicker.Recents" = "Recents";
 
+"Story.LongTapForMoreReactions" = "Long tap for more reactions";
+"Story.StealthModeActivePlaceholder" = "Stealth Mode active – %@";
+
+"Story.ContextShowStoriesTo" = "Show My Stories To %@";
+"Story.ToastShowStoriesTo" = "**%@** will now see your stories.";
+"Story.ContextHideStoriesFrom" = "Hide My Stories From %@";
+"Story.ToastHideStoriesFrom" = "**%@** will not see your stories anymore.";
+"Story.ContextDeleteContact" = "Delete Contact";
+"Story.ToastDeletedContact" = "**%@** has been removed from your contacts.";
+"Story.ToastUserBlocked" = "**%@** has been blocked.";
+"Story.ToastPremiumSaveToGallery" = "Subscribe to [Telegram Premium]() to save other people's unprotected stories to your Gallery.";
+"Story.PremiumUpgradeStoriesButton" = "Upgrade Stories";
+"Story.ContextStealthMode" = "Stealth Mode";
+"Story.AlertStealthModeActiveTitle" = "You are in Stealth Mode now";
+"Story.AlertStealthModeActiveText" = "If you send a reply or reaction, the creator of the story will also see you in the list of viewers.";
+"Story.AlertStealthModeActiveAction" = "Proceed";
+"Story.ToastStealthModeActiveTitle" = "You are in Stealth Mode now";
+"Story.ToastStealthModeActiveText" = "The creators of stories you will view in the next **%@** won't see you in the viewers' lists.";
+"Story.ToastStealthModeActivatedTitle" = "Stealth Mode On";
+"Story.ToastStealthModeActivatedText" = "The creators of stories you viewed in the last **%1$@** or will view in the next **%2$@** won’t see you in the viewers’ lists.";
+
+"Story.ViewList.PremiumUpgradeText" = "List of viewers isn't available after 24 hours of story expiration.\n\nTo unlock viewers' lists for expired and saved stories, subscribe to [Telegram Premium]().";
+"Story.ViewList.PremiumUpgradeAction" = "Learn More";
+"Story.ViewList.PremiumUpgradeInlineText" = "To unlock viewers' lists for expired and saved stories, subscribe to [Telegram Premium]().";
+"Story.ViewList.EmptyTextSearch" = "No views found";
+"Story.ViewList.EmptyTextContacts" = "None of your contacts viewed this story.";
+"Story.ViewList.ContextSortReactions" = "Reactions First";
+"Story.ViewList.ContextSortRecent" = "Recent First";
+"Story.ViewList.ContextSortInfo" = "Choose the order for the list of viewers.";
+"Story.ViewList.TabTitleAll" = "All Viewers";
+"Story.ViewList.TabTitleContacts" = "Contacts";
+"Story.ViewList.TitleViewers" = "Viewers";
+"Story.ViewList.TitleEmpty" = "No Views";
+"Story.Footer.NoViews" = "No Views";
+"Story.Footer.ViewCount_1" = "|%d| View";
+"Story.Footer.ViewCount_any" = "|%d| Views";
+"Story.StealthMode.Title" = "Stealth Mode";
+"Story.StealthMode.ControlText" = "Turn Stealth Mode on to hide the fact that you viewed peoples' stories from them.";
+"Story.StealthMode.UpgradeText" = "Subscribe to Telegram Premium to hide the fact that you viewed peoples' stories from them.";
+"Story.StealthMode.RecentTitle" = "Hide Recent Views";
+"Story.StealthMode.RecentText" = "Hide my views in the last **%@**.";
+"Story.StealthMode.NextTitle" = "Hide Next Views";
+"Story.StealthMode.NextText" = "Hide my views in the next **%@**.";
+"Story.StealthMode.ToastCooldownText" = "Please wait until the **Stealth Mode** is ready to use again";
+"Story.StealthMode.EnableAction" = "Enable Stealth Mode";
+"Story.StealthMode.CooldownAction" = "Available in %@";
+"Story.StealthMode.UpgradeAction" = "Unlock Stealth Mode";
+
 "Location.AddThisLocation" = "Add This Location";
 "Location.AddMyLocation" = "Add My Current Location";
 "Location.TypeCity" = "City";
