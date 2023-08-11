@@ -43,16 +43,19 @@ public enum Stories {
                 case seenCount = "seenCount"
                 case reactedCount = "reactedCount"
                 case seenPeerIds = "seenPeerIds"
+                case hasList = "hasList"
             }
             
             public var seenCount: Int
             public var reactedCount: Int
             public var seenPeerIds: [PeerId]
+            public var hasList: Bool
             
-            public init(seenCount: Int, reactedCount: Int, seenPeerIds: [PeerId]) {
+            public init(seenCount: Int, reactedCount: Int, seenPeerIds: [PeerId], hasList: Bool) {
                 self.seenCount = seenCount
                 self.reactedCount = reactedCount
                 self.seenPeerIds = seenPeerIds
+                self.hasList = hasList
             }
             
             public init(from decoder: Decoder) throws {
@@ -61,6 +64,7 @@ public enum Stories {
                 self.seenCount = Int(try container.decode(Int32.self, forKey: .seenCount))
                 self.reactedCount = Int(try container.decodeIfPresent(Int32.self, forKey: .reactedCount) ?? 0)
                 self.seenPeerIds = try container.decode([Int64].self, forKey: .seenPeerIds).map(PeerId.init)
+                self.hasList = try container.decodeIfPresent(Bool.self, forKey: .hasList) ?? true
             }
             
             public func encode(to encoder: Encoder) throws {
@@ -69,6 +73,7 @@ public enum Stories {
                 try container.encode(Int32(clamping: self.seenCount), forKey: .seenCount)
                 try container.encode(Int32(clamping: self.reactedCount), forKey: .reactedCount)
                 try container.encode(self.seenPeerIds.map { $0.toInt64() }, forKey: .seenPeerIds)
+                try container.encode(self.hasList, forKey: .hasList)
             }
         }
         
@@ -1395,12 +1400,13 @@ extension Api.StoryItem {
 extension Stories.Item.Views {
     init(apiViews: Api.StoryViews) {
         switch apiViews {
-        case let .storyViews(_, viewsCount, reactionsCount, recentViewers):
+        case let .storyViews(flags, viewsCount, reactionsCount, recentViewers):
+            let hasList = (flags & (1 << 1)) != 0
             var seenPeerIds: [PeerId] = []
             if let recentViewers = recentViewers {
                 seenPeerIds = recentViewers.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) }
             }
-            self.init(seenCount: Int(viewsCount), reactedCount: Int(reactionsCount), seenPeerIds: seenPeerIds)
+            self.init(seenCount: Int(viewsCount), reactedCount: Int(reactionsCount), seenPeerIds: seenPeerIds, hasList: hasList)
         }
     }
 }
