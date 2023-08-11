@@ -503,7 +503,7 @@ final class StoryItemSetContainerSendMessage {
             }
             
             let timestamp = Int32(Date().timeIntervalSince1970)
-            if noticeCount < 3, let activeUntilTimestamp = config.stealthModeState.actualizedNow().activeUntilTimestamp, activeUntilTimestamp > timestamp {
+            if noticeCount < 1, let activeUntilTimestamp = config.stealthModeState.actualizedNow().activeUntilTimestamp, activeUntilTimestamp > timestamp {
                 
                 let theme = component.theme
                 let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
@@ -532,6 +532,11 @@ final class StoryItemSetContainerSendMessage {
                 view.updateIsProgressPaused()
                 
                 component.controller()?.presentInGlobalOverlay(alertController)
+                
+                #if DEBUG
+                #else
+                let _ = ApplicationSpecificNotice.incrementStoryStealthModeReplyCount(accountManager: component.context.sharedContext.accountManager).start()
+                #endif
             } else {
                 action()
             }
