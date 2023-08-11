@@ -854,6 +854,7 @@ public final class StoryItemSetContainerComponent: Component {
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state, let component = self.component, let itemLayout = self.itemLayout {
+                
                 if let _ = self.sendMessageContext.menuController {
                     return
                 }
@@ -896,26 +897,29 @@ public final class StoryItemSetContainerComponent: Component {
                 } else {
                     let referenceSize = self.controlsContainerView.frame.size
                     let point = recognizer.location(in: self.controlsContainerView)
-                                  
-                    var selectedMediaArea: MediaArea?
-                                        
-                    func isPoint(_ point: CGPoint, in area: MediaArea) -> Bool {
-                        let tx = point.x - area.coordinates.x / 100.0 * referenceSize.width
-                        let ty = point.y - area.coordinates.y / 100.0 * referenceSize.height
-                        
-                        let rad = -area.coordinates.rotation * Double.pi / 180.0
-                        let cosTheta = cos(rad)
-                        let sinTheta = sin(rad)
-                        let rotatedX = tx * cosTheta - ty * sinTheta
-                        let rotatedY = tx * sinTheta + ty * cosTheta
-                        
-                        return abs(rotatedX) <= area.coordinates.width / 100.0 * referenceSize.width / 2.0 * 1.1 && abs(rotatedY) <= area.coordinates.height / 100.0 * referenceSize.height / 2.0 * 1.1
-                    }
                     
-                    for area in component.slice.item.storyItem.mediaAreas {
-                         if isPoint(point, in: area) {
-                            selectedMediaArea = area
-                            break
+                    var selectedMediaArea: MediaArea?
+                    
+                    let safeAreaInset: CGFloat = 48.0
+                    if point.x > safeAreaInset && point.x < referenceSize.width - safeAreaInset {
+                        func isPoint(_ point: CGPoint, in area: MediaArea) -> Bool {
+                            let tx = point.x - area.coordinates.x / 100.0 * referenceSize.width
+                            let ty = point.y - area.coordinates.y / 100.0 * referenceSize.height
+                            
+                            let rad = -area.coordinates.rotation * Double.pi / 180.0
+                            let cosTheta = cos(rad)
+                            let sinTheta = sin(rad)
+                            let rotatedX = tx * cosTheta - ty * sinTheta
+                            let rotatedY = tx * sinTheta + ty * cosTheta
+                            
+                            return abs(rotatedX) <= area.coordinates.width / 100.0 * referenceSize.width / 2.0 * 1.1 && abs(rotatedY) <= area.coordinates.height / 100.0 * referenceSize.height / 2.0 * 1.1
+                        }
+                        
+                        for area in component.slice.item.storyItem.mediaAreas {
+                             if isPoint(point, in: area) {
+                                selectedMediaArea = area
+                                break
+                            }
                         }
                     }
                     
