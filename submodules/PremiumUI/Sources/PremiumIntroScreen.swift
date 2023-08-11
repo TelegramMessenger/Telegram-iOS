@@ -523,6 +523,7 @@ struct PremiumIntroConfiguration {
             .doubleLimits,
             .moreUpload,
             .fasterDownload,
+            .translation,
             .voiceToText,
             .noAds,
             .emojiStatus,
@@ -1633,7 +1634,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0x548DFF),
                 UIColor(rgb: 0x54A3FF),
                 UIColor(rgb: 0x54bdff),
-                UIColor(rgb: 0x71c8ff)
+                UIColor(rgb: 0x71c8ff),
+                UIColor(rgb: 0xa0daff)
             ]
                         
             let accountContext = context.component.context
