@@ -11,6 +11,8 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
         case uuid
         case title
         case style
+        case color
+        case hasCustomColor
         case location
         case icon
         case queryId
@@ -27,6 +29,7 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
         case white
         case black
         case transparent
+        case custom
         case blur
     }
     
@@ -42,7 +45,18 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
     public var icon: TelegramMediaFile?
     public var queryId: Int64?
     public var resultId: String?
-    public var color: DrawingColor = .clear
+    public var color: DrawingColor = DrawingColor(color: .white)  {
+        didSet {
+            if self.color.toUIColor().argb == UIColor.white.argb {
+                self.style = .white
+                self.hasCustomColor = false
+            } else {
+                self.style = .custom
+                self.hasCustomColor = true
+            }
+        }
+    }
+    public var hasCustomColor = false
     public var lineWidth: CGFloat = 0.0
     
     public var referenceDrawingSize: CGSize
@@ -88,6 +102,8 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
         self.uuid = try container.decode(UUID.self, forKey: .uuid)
         self.title = try container.decode(String.self, forKey: .title)
         self.style = try container.decode(Style.self, forKey: .style)
+        self.color = try container.decodeIfPresent(DrawingColor.self, forKey: .color) ?? DrawingColor(color: .white)
+        self.hasCustomColor = try container.decodeIfPresent(Bool.self, forKey: .hasCustomColor) ?? false
         
         if let locationData = try container.decodeIfPresent(Data.self, forKey: .location) {
             self.location = PostboxDecoder(buffer: MemoryBuffer(data: locationData)).decodeRootObject() as! TelegramMediaMap
@@ -117,6 +133,8 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
         try container.encode(self.uuid, forKey: .uuid)
         try container.encode(self.title, forKey: .title)
         try container.encode(self.style, forKey: .style)
+        try container.encode(self.color, forKey: .color)
+        try container.encode(self.hasCustomColor, forKey: .hasCustomColor)
         
         var encoder = PostboxEncoder()
         encoder.encodeRootObject(self.location)
