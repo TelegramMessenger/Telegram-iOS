@@ -560,8 +560,11 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 
                 if self.itemsContainerView.frame.contains(point) {
-                    if !self.isPointInsideContentArea(point: point) {
-                        return []
+                    if self.viewListDisplayState != .hidden {
+                    } else {
+                        if !self.isPointInsideContentArea(point: point) {
+                            return []
+                        }
                     }
                 }
                 
