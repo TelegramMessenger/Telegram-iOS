@@ -570,7 +570,10 @@ public final class MediaEditor {
         } else if case .forceRendering = mode {
             self.forceRendering = true
         }
-        self.values = f(self.values)
+        let updatedValues = f(self.values)
+        if self.values != updatedValues {
+            self.values = updatedValues
+        }
         if case .skipRendering = mode {
             self.skipRendering = false
         } else if case .forceRendering = mode {

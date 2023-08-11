@@ -287,6 +287,9 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         let iconSize: CGSize?
         if let iconSource = self.item.iconSource {
             iconSize = iconSource.size
+            self.iconNode.cornerRadius = iconSource.cornerRadius
+            self.iconNode.contentMode = iconSource.contentMode
+            self.iconNode.clipsToBounds = true
             if self.iconDisposable == nil {
                 self.iconDisposable = (iconSource.signal |> deliverOnMainQueue).start(next: { [weak self] image in
                     guard let strongSelf = self else {
