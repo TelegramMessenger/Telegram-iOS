@@ -171,6 +171,12 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
         case .black:
             updatedStyle = .transparent
         case .transparent:
+            if self.locationEntity.hasCustomColor {
+                updatedStyle = .custom
+            } else {
+                updatedStyle = .white
+            }
+        case .custom:
             updatedStyle = .white
         case .blur:
             updatedStyle = .white
@@ -217,6 +223,8 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
             textColor = .black
         case .black, .transparent, .blur:
             textColor = .white
+        case .custom:
+            textColor = .white
         }
         
         text.addAttribute(.foregroundColor, value: textColor, range: range)
@@ -245,6 +253,11 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
         case .transparent:
             self.textView.textColor = .white
             self.backgroundView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.2)
+            self.backgroundView.isHidden = false
+            self.blurredBackgroundView.isHidden = true
+        case .custom:
+            self.textView.textColor = .white
+            self.backgroundView.backgroundColor = self.locationEntity.color.toUIColor()
             self.backgroundView.isHidden = false
             self.blurredBackgroundView.isHidden = true
         case .blur:

@@ -116,16 +116,24 @@ public final class MediaEditorValues: Codable, Equatable {
                 return false
             }
             if let lhsToolValue = lhsToolValue as? Float, let rhsToolValue = rhsToolValue as? Float {
-                return lhsToolValue != rhsToolValue
+                if lhsToolValue != rhsToolValue {
+                    return false
+                }
             }
             if let lhsToolValue = lhsToolValue as? BlurValue, let rhsToolValue = rhsToolValue as? BlurValue {
-                return lhsToolValue != rhsToolValue
+                if lhsToolValue != rhsToolValue {
+                    return false
+                }
             }
             if let lhsToolValue = lhsToolValue as? TintValue, let rhsToolValue = rhsToolValue as? TintValue {
-                return lhsToolValue != rhsToolValue
+                if lhsToolValue != rhsToolValue {
+                    return false
+                }
             }
             if let lhsToolValue = lhsToolValue as? CurvesValue, let rhsToolValue = rhsToolValue as? CurvesValue {
-                return lhsToolValue != rhsToolValue
+                if lhsToolValue != rhsToolValue {
+                    return false
+                }
             }
         }
         
