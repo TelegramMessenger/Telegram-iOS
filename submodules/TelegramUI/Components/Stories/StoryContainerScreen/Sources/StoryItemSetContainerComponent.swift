@@ -4277,8 +4277,11 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             let context = component.context
-            
             let currentPrivacy = component.slice.item.storyItem.privacy ?? EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: [])
+            
+            if component.slice.item.storyItem.privacy == nil {
+                Logger.shared.log("EditStoryPrivacy", "Story privacy is unknown")
+            }
             
             let privacy = updatedPrivacy ?? component.slice.item.storyItem.privacy
             guard let privacy else {

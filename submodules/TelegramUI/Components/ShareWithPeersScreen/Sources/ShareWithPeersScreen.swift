@@ -1667,6 +1667,10 @@ final class ShareWithPeersScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: itemsContainerWidth, height: 1000.0)
             )
+            var isContactsSearch = false
+            if let searchStateContext = self.searchStateContext, case .search(_, true) = searchStateContext.subject {
+                isContactsSearch = true
+            }
             let peerItemSize = self.peerTemplateItem.update(
                 transition: transition,
                 component: AnyComponent(PeerListItemComponent(
@@ -1677,7 +1681,7 @@ final class ShareWithPeersScreenComponent: Component {
                     sideInset: sideInset,
                     title: "Name",
                     peer: nil,
-                    subtitle: self.searchStateContext != nil ? "" : "sub",
+                    subtitle: isContactsSearch ? "" : "sub",
                     subtitleAccessory: .none,
                     presence: nil,
                     selectionState: .editing(isSelected: false, isTinted: false),
@@ -2596,7 +2600,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     self.readySubject.set(true)
                 })
             case let .search(query, onlyContacts):
-                let signal: Signal<([EngineRenderedPeer], [EnginePeer.Id: Optional<Int>]), NoError>
+                let signal: Signal<([EngineRenderedPeer], [EnginePeer.Id: Optional<EnginePeer.Presence>], [EnginePeer.Id: Optional<Int>]), NoError>
                 if onlyContacts {
                     signal = combineLatest(
                         context.engine.contacts.searchLocalPeers(query: query),
@@ -2604,23 +2608,31 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     )
                     |> map { peers, contacts in
                         let contactIds = Set(contacts.0.map { $0.id })
-                        return (peers.filter { contactIds.contains($0.peerId) }, [:])
+                        return (peers.filter { contactIds.contains($0.peerId) }, [:], [:])
                     }
                 } else {
                     signal = context.engine.contacts.searchLocalPeers(query: query)
                     |> mapToSignal { peers in
                         return context.engine.data.subscribe(
+                            EngineDataMap(peers.map(\.peerId).map(TelegramEngine.EngineData.Item.Peer.Presence.init)),
                             EngineDataMap(peers.map(\.peerId).map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init))
                         )
-                        |> map { participantCountMap -> ([EngineRenderedPeer], [EnginePeer.Id: Optional<Int>]) in
-                            return (peers, participantCountMap)
+                        |> map { presenceMap, participantCountMap -> ([EngineRenderedPeer], [EnginePeer.Id: Optional<EnginePeer.Presence>], [EnginePeer.Id: Optional<Int>]) in
+                            return (peers, presenceMap, participantCountMap)
                         }
                     }
                 }
                 self.stateDisposable = (signal
-                |> deliverOnMainQueue).start(next: { [weak self] peers, participantCounts in
+                |> deliverOnMainQueue).start(next: { [weak self] peers, presenceMap, participantCounts in
                     guard let self else {
                         return
+                    }
+                    
+                    var presences: [EnginePeer.Id: EnginePeer.Presence] = [:]
+                    for (key, value) in presenceMap {
+                        if let value {
+                            presences[key] = value
+                        }
                     }
                     
                     var participants: [EnginePeer.Id: Int] = [:]
@@ -2658,7 +2670,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                         },
                         peersMap: [:],
                         savedSelectedPeers: [:],
-                        presences: [:],
+                        presences: presences,
                         participants: participants,
                         closeFriendsPeers: [],
                         grayListPeers: []
