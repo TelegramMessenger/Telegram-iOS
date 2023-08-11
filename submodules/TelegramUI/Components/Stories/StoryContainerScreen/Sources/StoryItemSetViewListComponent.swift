@@ -756,7 +756,7 @@ final class StoryItemSetViewListComponent: Component {
             }
             
             var premiumFooterSize: CGSize?
-            if let viewListState = self.viewListState, viewListState.loadMoreToken == nil, !viewListState.items.isEmpty, let views = component.storyItem.views, views.seenCount > viewListState.totalCount, component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
+            if self.configuration.listMode == .everyone, let viewListState = self.viewListState, viewListState.loadMoreToken == nil, !viewListState.items.isEmpty, let views = component.storyItem.views, views.seenCount > viewListState.totalCount, component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
                 let premiumFooterText: ComponentView<Empty>
                 if let current = self.premiumFooterText {
                     premiumFooterText = current
