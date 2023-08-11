@@ -86,7 +86,7 @@ final class MediaPickerTitleView: UIView {
         
         self.arrowNode = ASImageNode()
         self.arrowNode.displaysAsynchronously = false
-        self.arrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Stories/SelectorArrowDown"), color: theme.rootController.navigationBar.secondaryTextColor)
+        self.arrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/DownArrow"), color: theme.rootController.navigationBar.secondaryTextColor)
         self.arrowNode.isHidden = true
         
         self.segmentedControlNode = SegmentedControlNode(theme: SegmentedControlTheme(theme: theme), items: segments.map { SegmentedControlItem(title: $0) }, selectedIndex: selectedIndex)

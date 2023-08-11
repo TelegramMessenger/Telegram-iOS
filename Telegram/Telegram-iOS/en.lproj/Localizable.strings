@@ -9798,3 +9798,9 @@ Sorry for the inconvenience.";
 "Premium.MaxStoriesMonthlyFinalText" = "You have reached the limit of **%@** stories per month.";
 
 "MediaPicker.Recents" = "Recents";
+
+"Location.AddThisLocation" = "Add This Location";
+"Location.AddMyLocation" = "Add My Current Location";
+"Location.TypeCity" = "City";
+"Location.TypeStreet" = "Street";
+"Location.TypeLocation" = "Location";

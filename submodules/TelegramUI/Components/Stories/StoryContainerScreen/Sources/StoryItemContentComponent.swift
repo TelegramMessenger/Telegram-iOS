@@ -743,7 +743,7 @@ final class StoryItemContentComponent: Component {
                     if let current = self.mediaAreasEffectView {
                         mediaAreasEffectView = current
                     } else {
-                        mediaAreasEffectView = StoryItemLoadingEffectView(effectAlpha: 0.35, borderAlpha: 0.45, gradientWidth: 150.0, duration: 1.5, hasCustomBorder: false, playOnce: true)
+                        mediaAreasEffectView = StoryItemLoadingEffectView(effectAlpha: 0.35, borderAlpha: 0.45, gradientWidth: 150.0, duration: 1.2, hasCustomBorder: false, playOnce: true)
                         self.mediaAreasEffectView = mediaAreasEffectView
                         self.addSubview(mediaAreasEffectView)
                     }
