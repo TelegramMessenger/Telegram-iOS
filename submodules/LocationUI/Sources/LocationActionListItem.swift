@@ -268,22 +268,36 @@ final class LocationActionListItemNode: ListViewItemNode {
                         var arguments: TransformImageCustomArguments?
                         if let updatedIcon = updatedIcon {
                             switch updatedIcon {
-                                case .location:
-                                    strongSelf.iconNode.isHidden = false
-                                    strongSelf.venueIconNode.isHidden = true
-                                    strongSelf.iconNode.image = generateLocationIcon(theme: item.presentationData.theme)
-                                case .liveLocation, .stopLiveLocation:
-                                    strongSelf.iconNode.isHidden = false
-                                    strongSelf.venueIconNode.isHidden = true
-                                    strongSelf.iconNode.image = generateLiveLocationIcon(theme: item.presentationData.theme, stop: updatedIcon == .stopLiveLocation)
-                                case let .venue(venue):
-                                    strongSelf.iconNode.isHidden = true
-                                    strongSelf.venueIconNode.isHidden = false
-                                    strongSelf.venueIconNode.setSignal(venueIcon(engine: item.engine, type: venue.venue?.type ?? "", background: true))
-                                
-                                    if venue.venue?.id == "city" {
-                                        arguments = VenueIconArguments(defaultBackgroundColor: item.presentationData.theme.chat.inputPanel.actionControlFillColor, defaultForegroundColor: .white)
+                            case .location:
+                                strongSelf.iconNode.isHidden = false
+                                strongSelf.venueIconNode.isHidden = true
+                                strongSelf.iconNode.image = generateLocationIcon(theme: item.presentationData.theme)
+                            case .liveLocation, .stopLiveLocation:
+                                strongSelf.iconNode.isHidden = false
+                                strongSelf.venueIconNode.isHidden = true
+                                strongSelf.iconNode.image = generateLiveLocationIcon(theme: item.presentationData.theme, stop: updatedIcon == .stopLiveLocation)
+                            case let .venue(venue):
+                                strongSelf.iconNode.isHidden = true
+                                strongSelf.venueIconNode.isHidden = false
+                            
+                                func flagEmoji(countryCode: String) -> String {
+                                    let base : UInt32 = 127397
+                                    var flagString = ""
+                                    for v in countryCode.uppercased().unicodeScalars {
+                                        flagString.unicodeScalars.append(UnicodeScalar(base + v.value)!)
                                     }
+                                    return flagString
+                                }
+                                let type = venue.venue?.type
+                                var flag: String?
+                                if let venue = venue.venue, venue.provider == "city", let countryCode = venue.id {
+                                    flag = flagEmoji(countryCode: countryCode)
+                                }
+                                
+                                if venue.venue?.provider == "city" {
+                                    arguments = VenueIconArguments(defaultBackgroundColor: item.presentationData.theme.chat.inputPanel.actionControlFillColor, defaultForegroundColor: .white)
+                                }
+                                strongSelf.venueIconNode.setSignal(venueIcon(engine: item.engine, type: type ?? "", flag: flag, background: true))
                             }
                             
                             if updatedIcon == .stopLiveLocation {

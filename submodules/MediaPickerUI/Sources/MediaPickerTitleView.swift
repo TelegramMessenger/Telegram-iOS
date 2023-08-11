@@ -47,6 +47,7 @@ final class MediaPickerTitleView: UIView {
             if self.segmentsHidden != oldValue {
                 let transition = ContainedViewLayoutTransition.animated(duration: 0.21, curve: .easeInOut)
                 transition.updateAlpha(node: self.titleNode, alpha: self.segmentsHidden ? 1.0 : 0.0)
+                transition.updateAlpha(node: self.arrowNode, alpha: self.segmentsHidden ? 1.0 : 0.0)
                 transition.updateAlpha(node: self.segmentedControlNode, alpha: self.segmentsHidden ? 0.0 : 1.0)
                 self.segmentedControlNode.isUserInteractionEnabled = !self.segmentsHidden
             }

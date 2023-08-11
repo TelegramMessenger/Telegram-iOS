@@ -309,6 +309,9 @@ final class MediaPickerGridItemNode: GridItemNode {
                 
                 self.progressDisposable.set(nil)
                 self.updateProgress(nil, animated: false)
+                
+                self.backgroundNode.image = nil
+                self.imageNode.contentMode = .scaleAspectFill
             }
             
             if self.draftNode.supernode == nil {
@@ -403,6 +406,7 @@ final class MediaPickerGridItemNode: GridItemNode {
             if asset.localIdentifier == self.currentAsset?.localIdentifier {
                 return
             }
+            self.backgroundNode.image = nil
             
             self.progressDisposable.set(
                 (interaction.downloadManager.downloadProgress(identifier: asset.localIdentifier)
