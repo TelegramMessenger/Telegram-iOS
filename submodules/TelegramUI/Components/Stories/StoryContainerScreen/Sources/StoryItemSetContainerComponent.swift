@@ -2240,11 +2240,10 @@ public final class StoryItemSetContainerComponent: Component {
                 return
             }
             
-            //TODO:localize
             let tooltipScreen = TooltipScreen(
                 account: component.context.account,
                 sharedContext: component.context.sharedContext,
-                text: .markdown(text: "Long tap for more reactions"),
+                text: .markdown(text: component.strings.Story_LongTapForMoreReactions),
                 balancedTextLayout: true,
                 style: .customBlur(component.theme.rootController.navigationBar.blurredBackgroundColor, 0.0),
                 arrowStyle: .small,
@@ -2426,8 +2425,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             let inputPlaceholder: String
             if let stealthModeTimeout = component.stealthModeTimeout {
-                //TODO:localize
-                inputPlaceholder = "Stealth Mode active – \(stringForDuration(stealthModeTimeout))"
+                inputPlaceholder = component.strings.Story_StealthModeActivePlaceholder("\(stringForDuration(stealthModeTimeout))").string
             } else {
                 inputPlaceholder = component.strings.Story_InputPlaceholderReplyPrivately
             }
@@ -2961,7 +2959,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     }
                                     
                                     if isBlockedFromStories {
-                                        itemList.append(.action(ContextMenuActionItem(text: "Show My Stories To \(peer.compactDisplayTitle)", icon: { theme in
+                                        itemList.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextShowStoriesTo(peer.compactDisplayTitle).string, icon: { theme in
                                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Stories"), color: theme.contextMenu.primaryColor)
                                         }, action: { [weak self] _, f in
                                             f(.default)
@@ -2975,7 +2973,7 @@ public final class StoryItemSetContainerComponent: Component {
                                             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                                             self.component?.presentController(UndoOverlayController(
                                                 presentationData: presentationData,
-                                                content: .info(title: nil, text: "**\(peer.compactDisplayTitle)** will now see your stories.", timeout: nil),
+                                                content: .info(title: nil, text: component.strings.Story_ToastShowStoriesTo(peer.compactDisplayTitle).string, timeout: nil),
                                                 elevatedLayout: false,
                                                 position: .top,
                                                 animateInAsReplacement: false,
@@ -2984,7 +2982,7 @@ public final class StoryItemSetContainerComponent: Component {
                                             ), nil)
                                         })))
                                     } else {
-                                        itemList.append(.action(ContextMenuActionItem(text: "Hide My Stories From \(peer.compactDisplayTitle)", icon: { theme in
+                                        itemList.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextHideStoriesFrom(peer.compactDisplayTitle).string, icon: { theme in
                                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Stories"), color: theme.contextMenu.primaryColor)
                                         }, action: { [weak self] _, f in
                                             f(.default)
@@ -2996,7 +2994,7 @@ public final class StoryItemSetContainerComponent: Component {
                                             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                                             self.component?.presentController(UndoOverlayController(
                                                 presentationData: presentationData,
-                                                content: .info(title: nil, text: "**\(peer.compactDisplayTitle)** will not see your stories anymore.", timeout: nil),
+                                                content: .info(title: nil, text: component.strings.Story_ToastHideStoriesFrom(peer.compactDisplayTitle).string, timeout: nil),
                                                 elevatedLayout: false,
                                                 position: .top,
                                                 animateInAsReplacement: false,
@@ -3007,8 +3005,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     }
 
                                     if isContact {
-                                        //TODO:localize
-                                        itemList.append(.action(ContextMenuActionItem(text: "Delete Contact", textColor: .destructive, icon: { theme in
+                                        itemList.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextDeleteContact, textColor: .destructive, icon: { theme in
                                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                                         }, action: { [weak self] _, f in
                                             f(.default)
@@ -3030,8 +3027,8 @@ public final class StoryItemSetContainerComponent: Component {
                                                         "info2.info2.Fill": animationBackgroundColor
                                                     ],
                                                     title: nil,
-                                                    text: "**\(peer.compactDisplayTitle)** has been removed from your contacts.",
-                                                    customUndoText: "Undo",
+                                                    text: component.strings.Story_ToastDeletedContact(peer.compactDisplayTitle).string,
+                                                    customUndoText: component.strings.Undo_Undo,
                                                     timeout: nil
                                                 ),
                                                 elevatedLayout: false,
@@ -3077,8 +3074,8 @@ public final class StoryItemSetContainerComponent: Component {
                                                             "info2.info2.Fill": animationBackgroundColor
                                                         ],
                                                         title: nil,
-                                                        text: "**\(peer.compactDisplayTitle)** has been blocked.",
-                                                        customUndoText: "Undo",
+                                                        text: component.strings.Story_ToastUserBlocked(peer.compactDisplayTitle).string,
+                                                        customUndoText: component.strings.Undo_Undo,
                                                         timeout: nil
                                                     ),
                                                     elevatedLayout: false,
@@ -4813,7 +4810,6 @@ public final class StoryItemSetContainerComponent: Component {
             
             self.dismissAllTooltips()
             
-            //TODO:localize
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
             let animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
             component.presentController(UndoOverlayController(
@@ -4826,7 +4822,7 @@ public final class StoryItemSetContainerComponent: Component {
                         "info2.info2.Fill": animationBackgroundColor
                     ],
                     title: nil,
-                    text: "Subscribe to [Telegram Premium]() to save other people's unprotected stories to your Gallery.",
+                    text: component.strings.Story_ToastPremiumSaveToGallery,
                     customUndoText: nil,
                     timeout: nil
                 ),
@@ -4864,9 +4860,8 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             let context = component.context
-            //TODO:localize
             var replaceImpl: ((ViewController) -> Void)?
-            let controller = PremiumLimitsListScreen(context: context, subject: .stories, source: .other, order: [.stories], buttonText: "Upgrade Stories", isPremium: false, forceDark: true)
+            let controller = PremiumLimitsListScreen(context: context, subject: .stories, source: .other, order: [.stories], buttonText: component.strings.Story_PremiumUpgradeStoriesButton, isPremium: false, forceDark: true)
             controller.action = { [weak self] in
                 guard let self else {
                     return
@@ -5294,8 +5289,7 @@ public final class StoryItemSetContainerComponent: Component {
             })))
             
             if case let .user(accountUser) = component.slice.peer {
-                //TODO:localize
-                items.append(.action(ContextMenuActionItem(text: "Stealth Mode", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextStealthMode, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/Eye" : "Chat/Context Menu/EyeLocked"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, a in
                     a(.default)
@@ -5526,8 +5520,7 @@ public final class StoryItemSetContainerComponent: Component {
                     })))
                 }
                 
-                //TODO:localize
-                items.append(.action(ContextMenuActionItem(text: "Stealth Mode", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextStealthMode, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/Eye" : "Chat/Context Menu/EyeLocked"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, a in
                     a(.default)

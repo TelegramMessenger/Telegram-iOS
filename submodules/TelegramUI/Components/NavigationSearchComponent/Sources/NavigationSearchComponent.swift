@@ -26,6 +26,7 @@ public final class NavigationSearchComponent: Component {
     }
 
     public let colors: Colors
+    public let cancel: String
     public let placeholder: String
     public let isSearchActive: Bool
     public let collapseFraction: CGFloat
@@ -35,6 +36,7 @@ public final class NavigationSearchComponent: Component {
     
     public init(
         colors: Colors,
+        cancel: String,
         placeholder: String,
         isSearchActive: Bool,
         collapseFraction: CGFloat,
@@ -43,6 +45,7 @@ public final class NavigationSearchComponent: Component {
         updateQuery: @escaping (String) -> Void
     ) {
         self.colors = colors
+        self.cancel = cancel
         self.placeholder = placeholder
         self.isSearchActive = isSearchActive
         self.collapseFraction = collapseFraction
@@ -53,6 +56,9 @@ public final class NavigationSearchComponent: Component {
     
     public static func ==(lhs: NavigationSearchComponent, rhs: NavigationSearchComponent) -> Bool {
         if lhs.colors != rhs.colors {
+            return false
+        }
+        if lhs.cancel != rhs.cancel {
             return false
         }
         if lhs.placeholder != rhs.placeholder {
@@ -189,11 +195,10 @@ public final class NavigationSearchComponent: Component {
                     self.button = button
                 }
                 
-                //TODO:localize
                 let buttonSize = button.update(
                     transition: buttonTransition,
                     component: AnyComponent(Button(
-                        content: AnyComponent(Text(text: "Cancel", font: Font.regular(17.0), color: component.colors.button)),
+                        content: AnyComponent(Text(text: component.cancel, font: Font.regular(17.0), color: component.colors.button)),
                         action: { [weak self] in
                             guard let self, let component = self.component else {
                                 return

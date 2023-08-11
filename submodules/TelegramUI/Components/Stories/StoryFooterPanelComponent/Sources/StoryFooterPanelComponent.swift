@@ -302,7 +302,6 @@ public final class StoryFooterPanelComponent: Component {
             
             self.viewStatsButton.isEnabled = viewCount != 0
             
-            //TODO:localize
             var regularSegments: [AnimatedCountLabelView.Segment] = []
             if viewCount != 0 {
                 regularSegments.append(.number(viewCount, NSAttributedString(string: "\(viewCount)", font: Font.regular(15.0), textColor: .white)))
@@ -310,11 +309,9 @@ public final class StoryFooterPanelComponent: Component {
             
             let viewPart: String
             if viewCount == 0 {
-                viewPart = "No Views"
-            } else if viewCount == 1 {
-                viewPart = " View"
+                viewPart = component.strings.Story_Footer_NoViews
             } else {
-                viewPart = " Views"
+                viewPart = component.strings.Story_Footer_ViewCount(Int32(viewCount))
             }
             
             let viewStatsTextLayout = self.viewStatsCountText.update(size: CGSize(width: availableSize.width, height: size.height), segments: regularSegments, transition: isFirstTime ? .immediate : ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut))

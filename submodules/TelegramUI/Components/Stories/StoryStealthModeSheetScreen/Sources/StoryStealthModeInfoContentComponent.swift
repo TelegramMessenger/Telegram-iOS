@@ -139,8 +139,7 @@ public final class StoryStealthModeInfoContentComponent: Component {
             contentHeight += 15.0
             
             let titleString = NSMutableAttributedString()
-            //TODO:localize
-            titleString.append(NSAttributedString(string: "Stealth Mode", font: Font.semibold(19.0), textColor: component.theme.list.itemPrimaryTextColor))
+            titleString.append(NSAttributedString(string: component.strings.Story_StealthMode_Title, font: Font.semibold(19.0), textColor: component.theme.list.itemPrimaryTextColor))
             let imageAttachment = NSTextAttachment()
             imageAttachment.image = self.iconBackground.image
             titleString.append(NSAttributedString(attachment: imageAttachment))
@@ -163,13 +162,12 @@ public final class StoryStealthModeInfoContentComponent: Component {
             contentHeight += titleSize.height
             contentHeight += 15.0
             
-            //TODO:localize
             let text: String
             switch component.mode {
             case .control:
-                text = "Turn Stealth Mode on to hide the fact that you viewed peoples' stories from them."
+                text = component.strings.Story_StealthMode_ControlText
             case .upgrade:
-                text = "Subscribe to Telegram Premium to hide the fact that you viewed peoples' stories from them."
+                text = component.strings.Story_StealthMode_UpgradeText
             }
             let mainText = NSMutableAttributedString()
             mainText.append(parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(
@@ -216,17 +214,16 @@ public final class StoryStealthModeInfoContentComponent: Component {
                 var title: String
                 var text: String
             }
-            //TODO:localize
             let itemDescs: [ItemDesc] = [
                 ItemDesc(
                     icon: "Stories/StealthModeIntroIconHidePrevious",
-                    title: "Hide Recent Views",
-                    text: "Hide my views in the last **\(timeIntervalString(strings: component.strings, value: component.backwardDuration))**."
+                    title: component.strings.Story_StealthMode_RecentTitle,
+                    text: component.strings.Story_StealthMode_RecentText(timeIntervalString(strings: component.strings, value: component.backwardDuration)).string
                 ),
                 ItemDesc(
                     icon: "Stories/StealthModeIntroIconHideNext",
-                    title: "Hide Next Views",
-                    text: "Hide my views in the next **\(timeIntervalString(strings: component.strings, value: component.forwardDuration))**."
+                    title: component.strings.Story_StealthMode_NextTitle,
+                    text: component.strings.Story_StealthMode_NextText(timeIntervalString(strings: component.strings, value: component.forwardDuration)).string
                 )
             ]
             for i in 0 ..< itemDescs.count {
