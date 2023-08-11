@@ -233,7 +233,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private var animationHideNode: Bool = false
     
     public var displayTail: Bool = true
-    public var forceTailToRight: Bool = true
+    public var forceTailToRight: Bool = false
     
     private var didAnimateIn: Bool = false
     public private(set) var isAnimatingOut: Bool = false

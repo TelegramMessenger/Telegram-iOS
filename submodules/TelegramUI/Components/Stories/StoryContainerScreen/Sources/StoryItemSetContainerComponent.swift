@@ -440,6 +440,7 @@ public final class StoryItemSetContainerComponent: Component {
         weak var disappearingReactionContextNode: ReactionContextNode?
         var displayLikeReactions: Bool = false
         var waitingForReactionAnimateOutToLike: MessageReaction.Reaction?
+        private weak var standaloneReactionAnimation: StandaloneReactionAnimation?
         
         weak var contextController: ContextController?
         weak var privacyController: ShareWithPeersScreen?
@@ -530,7 +531,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.componentContainerView.addSubview(self.viewListsContainer)
             
             self.closeButton.addSubview(self.closeButtonIconView)
-            self.addSubview(self.closeButton)
+            self.componentContainerView.addSubview(self.closeButton)
             self.closeButton.addTarget(self, action: #selector(self.closePressed), for: .touchUpInside)
             
             let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
@@ -546,6 +547,13 @@ public final class StoryItemSetContainerComponent: Component {
                     if let view = viewList.view.view, view.hitTest(self.convert(point, to: view), with: nil) != nil {
                         return [.down]
                     }
+                }
+                
+                if self.reactionContextNode != nil {
+                    return []
+                }
+                if hasFirstResponder(self) {
+                    return []
                 }
                 
                 if self.itemsContainerView.frame.contains(point) {
@@ -1636,6 +1644,10 @@ public final class StoryItemSetContainerComponent: Component {
                                     footerAlpha = 0.0
                                 }
                                 
+                                if case .regular = component.metrics.widthClass {
+                                    footerAlpha *= itemAlpha
+                                }
+                                
                                 itemTransition.setAlpha(view: footerPanelView, alpha: footerAlpha)
                             }
                         } else if let footerPanel = visibleItem.footerPanel {
@@ -2267,6 +2279,24 @@ public final class StoryItemSetContainerComponent: Component {
                     } else {
                         tooltipScreen.dismiss()
                     }
+                }
+                
+                if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+                    self.standaloneReactionAnimation = nil
+                    standaloneReactionAnimation.view.removeFromSuperview()
+                }
+                self.displayLikeReactions = false
+                if let reactionContextNode = self.reactionContextNode {
+                    self.reactionContextNode = nil
+                    
+                    let reactionTransition = Transition.immediate
+                    reactionTransition.setAlpha(view: reactionContextNode.view, alpha: 0.0, completion: { [weak reactionContextNode] _ in
+                        reactionContextNode?.view.removeFromSuperview()
+                    })
+                }
+                if let disappearingReactionContextNode = self.disappearingReactionContextNode {
+                    self.disappearingReactionContextNode = nil
+                    disappearingReactionContextNode.view.removeFromSuperview()
                 }
             }
             var itemsTransition = transition
@@ -3257,6 +3287,7 @@ public final class StoryItemSetContainerComponent: Component {
                 closeButtonFrame.origin.y -= contentBottomInsetOverflow
                 
                 transition.setFrame(view: self.closeButton, frame: closeButtonFrame)
+                transition.setAlpha(view: self.closeButton, alpha: (component.hideUI || self.isEditingStory) ? 0.0 : 1.0)
                 transition.setFrame(view: self.closeButtonIconView, frame: CGRect(origin: CGPoint(x: floor((closeButtonFrame.width - image.size.width) * 0.5), y: floor((closeButtonFrame.height - image.size.height) * 0.5)), size: image.size))
                 headerRightOffset -= 51.0
             }
@@ -3908,6 +3939,13 @@ public final class StoryItemSetContainerComponent: Component {
                                             guard let self else {
                                                 return
                                             }
+                                            
+                                            if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+                                                self.standaloneReactionAnimation = nil
+                                                standaloneReactionAnimation.view.removeFromSuperview()
+                                            }
+                                            self.standaloneReactionAnimation = standaloneReactionAnimation
+                                            
                                             standaloneReactionAnimation.frame = self.bounds
                                             self.addSubview(standaloneReactionAnimation.view)
                                         }, completion: { [weak targetView, weak reactionContextNode] in
@@ -4085,6 +4123,13 @@ public final class StoryItemSetContainerComponent: Component {
                             guard let self else {
                                 return
                             }
+                            
+                            if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+                                self.standaloneReactionAnimation = nil
+                                standaloneReactionAnimation.view.removeFromSuperview()
+                            }
+                            self.standaloneReactionAnimation = standaloneReactionAnimation
+                            
                             standaloneReactionAnimation.frame = self.bounds
                             self.componentContainerView.addSubview(standaloneReactionAnimation.view)
                         }, completion: { [weak reactionContextNode] in
@@ -4315,6 +4360,8 @@ public final class StoryItemSetContainerComponent: Component {
                             return
                         }
                         if component.slice.item.storyItem.privacy == privacy {
+                            self.privacyController = nil
+                            self.updateIsProgressPaused()
                             return
                         }
                         let _ = component.context.engine.messages.editStoryPrivacy(id: component.slice.item.storyItem.id, privacy: privacy).start()
@@ -4933,7 +4980,14 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 
                 let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: nil, useDirectRendering: false)
-                self.componentContainerView.addSubnode(standaloneReactionAnimation)
+                self.componentContainerView.addSubview(standaloneReactionAnimation.view)
+                
+                if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+                    self.standaloneReactionAnimation = nil
+                    standaloneReactionAnimation.view.removeFromSuperview()
+                }
+                self.standaloneReactionAnimation = standaloneReactionAnimation
+                
                 standaloneReactionAnimation.frame = self.bounds
                 standaloneReactionAnimation.animateReactionSelection(
                     context: component.context,
@@ -4950,11 +5004,17 @@ public final class StoryItemSetContainerComponent: Component {
                             return
                         }
                         
+                        if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+                            self.standaloneReactionAnimation = nil
+                            standaloneReactionAnimation.view.removeFromSuperview()
+                        }
+                        self.standaloneReactionAnimation = standaloneReactionAnimation
+                        
                         standaloneReactionAnimation.frame = self.bounds
-                        self.componentContainerView.addSubnode(standaloneReactionAnimation)
+                        self.componentContainerView.addSubview(standaloneReactionAnimation.view)
                     },
                     completion: { [weak standaloneReactionAnimation] in
-                        standaloneReactionAnimation?.removeFromSupernode()
+                        standaloneReactionAnimation?.view.removeFromSuperview()
                     }
                 )
             }
