@@ -620,10 +620,10 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                             case .share:
                             if source == .story {
                                 if let initialLocation = strongSelf.controller?.initialLocation {
-                                    title = "Add This Location"
+                                    title = presentationData.strings.Location_AddThisLocation
                                     coordinate = initialLocation
                                 } else {
-                                    title = "Add My Current Location"
+                                    title = presentationData.strings.Location_AddMyLocation
                                 }
                             } else {
                                 title = presentationData.strings.Map_SendMyCurrentLocation
@@ -633,10 +633,10 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                         }
                         if source == .story {
                             if state.city != "" {
-                                entries.append(.city(presentationData.theme, state.city ?? presentationData.strings.Map_Locating, "City", nil, nil, nil, coordinate, state.city, state.countryCode))
+                                entries.append(.city(presentationData.theme, state.city ?? presentationData.strings.Map_Locating, presentationData.strings.Location_TypeCity, nil, nil, nil, coordinate, state.city, state.countryCode))
                             }
                             if state.street != "" {
-                                entries.append(.location(presentationData.theme, state.street ?? presentationData.strings.Map_Locating, state.isStreet ? "Street" : "Location", nil, nil, nil, coordinate, state.street, nil, false))
+                                entries.append(.location(presentationData.theme, state.street ?? presentationData.strings.Map_Locating, state.isStreet ? presentationData.strings.Location_TypeStreet : presentationData.strings.Location_TypeLocation, nil, nil, nil, coordinate, state.street, nil, false))
                             }
                         } else {
                             entries.append(.location(presentationData.theme, title, (userLocation?.horizontalAccuracy).flatMap { presentationData.strings.Map_AccurateTo(stringForDistance(strings: presentationData.strings, distance: $0)).string } ?? presentationData.strings.Map_Locating, nil, nil, nil, coordinate, state.street, nil, true))
@@ -809,7 +809,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                                 streetName = ""
                             }
                             if streetName == "" && cityName == "" {
-                                streetName = "Location"
+                                streetName = presentationData.strings.Location_TypeLocation
                             }
                             strongSelf.updateState { state in
                                 var state = state
@@ -854,7 +854,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                                     streetName = ""
                                 }
                                 if streetName == "" && cityName == "" {
-                                    streetName = "Location"
+                                    streetName = presentationData.strings.Location_TypeLocation
                                 }
                                 strongSelf.updateState { state in
                                     var state = state

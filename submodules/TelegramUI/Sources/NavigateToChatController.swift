@@ -117,6 +117,9 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 if let attachBotStart = params.attachBotStart {
                     controller.presentAttachmentBot(botId: attachBotStart.botId, payload: attachBotStart.payload, justInstalled: attachBotStart.justInstalled)
                 }
+                if let botAppStart = params.botAppStart, case let .peer(peer) = params.chatLocation {
+                    controller.presentBotApp(botApp: botAppStart.botApp, botPeer: peer, payload: botAppStart.payload)
+                }
                 params.setupController(controller)
                 found = true
                 break

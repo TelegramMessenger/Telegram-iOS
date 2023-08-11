@@ -9846,3 +9846,9 @@ Sorry for the inconvenience.";
 "Story.StealthMode.EnableAction" = "Enable Stealth Mode";
 "Story.StealthMode.CooldownAction" = "Available in %@";
 "Story.StealthMode.UpgradeAction" = "Unlock Stealth Mode";
+
+"Location.AddThisLocation" = "Add This Location";
+"Location.AddMyLocation" = "Add My Current Location";
+"Location.TypeCity" = "City";
+"Location.TypeStreet" = "Street";
+"Location.TypeLocation" = "Location";

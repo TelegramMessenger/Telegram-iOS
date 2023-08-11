@@ -134,7 +134,7 @@ public struct VenueIconArguments: TransformImageCustomArguments {
     }
 }
 
-public func venueIcon(engine: TelegramEngine, type: String, background: Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func venueIcon(engine: TelegramEngine, type: String, flag: String? = nil, background: Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let isBuiltinIcon = ["", "home", "work"].contains(type)
     let data: Signal<Data?, NoError> = isBuiltinIcon ? .single(nil) : venueIconData(engine: engine, resource: VenueIconResource(type: type))
     return data |> map { data in
