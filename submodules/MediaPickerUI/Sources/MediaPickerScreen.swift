@@ -73,13 +73,26 @@ private struct MediaPickerGridTransaction {
     let scrollToItem: GridNodeScrollToItem?
     
     init(previousList: [MediaPickerGridEntry], list: [MediaPickerGridEntry], context: AccountContext, interaction: MediaPickerInteraction, theme: PresentationTheme, strings: PresentationStrings, scrollToItem: GridNodeScrollToItem?) {
-         let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: previousList, rightList: list)
+        let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: previousList, rightList: list)
         
         self.deletions = deleteIndices
         self.insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(context: context, interaction: interaction, theme: theme, strings: strings), previousIndex: $0.2) }
         self.updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interaction: interaction, theme: theme, strings: strings)) }
         
         self.scrollToItem = scrollToItem
+    }
+    
+    init(clearList: [MediaPickerGridEntry]) {
+        var deletions: [Int] = []
+        var i = 0
+        for _ in clearList {
+            deletions.append(i)
+            i += 1
+        }
+        self.deletions = deletions
+        self.insertions = []
+        self.updates = []
+        self.scrollToItem = nil
     }
 }
 
@@ -585,6 +598,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             )
         }
         
+        fileprivate var resetOnUpdate = false
         private func updateState(_ state: State) {
             guard let controller = self.controller, let interaction = controller.interaction else {
                 return
@@ -659,6 +673,69 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         self.requestedCameraAccess = true
                         self.mediaAssetsContext.requestCameraAccess()
                     }
+                    
+                    if !controller.didSetupGroups {
+                        controller.didSetupGroups = true
+                        controller.groupsPromise.set(
+                            combineLatest(
+                                self.mediaAssetsContext.fetchAssetsCollections(.album),
+                                self.mediaAssetsContext.fetchAssetsCollections(.smartAlbum)
+                            )
+                            |> map { albums, smartAlbums -> [MediaGroupItem] in
+                                var collections: [PHAssetCollection] = []
+                                smartAlbums.enumerateObjects { collection, _, _ in
+                                    if [.smartAlbumUserLibrary, .smartAlbumFavorites].contains(collection.assetCollectionSubtype) {
+                                        collections.append(collection)
+                                    }
+                                }
+                                smartAlbums.enumerateObjects { collection, index, _ in
+                                    var supportedAlbums: [PHAssetCollectionSubtype] = [
+                                        .smartAlbumBursts,
+                                        .smartAlbumPanoramas,
+                                        .smartAlbumScreenshots,
+                                        .smartAlbumSelfPortraits,
+                                        .smartAlbumSlomoVideos,
+                                        .smartAlbumTimelapses,
+                                        .smartAlbumVideos,
+                                        .smartAlbumAllHidden
+                                    ]
+                                    if #available(iOS 11, *) {
+                                        supportedAlbums.append(.smartAlbumAnimated)
+                                        supportedAlbums.append(.smartAlbumDepthEffect)
+                                        supportedAlbums.append(.smartAlbumLivePhotos)
+                                    }
+                                    if supportedAlbums.contains(collection.assetCollectionSubtype) {
+                                        let result = PHAsset.fetchAssets(in: collection, options: nil)
+                                        if result.count > 0 {
+                                            collections.append(collection)
+                                        }
+                                    }
+                                }
+                                albums.enumerateObjects(options: [.reverse]) { collection, _, _ in
+                                    collections.append(collection)
+                                }
+                                
+                                var items: [MediaGroupItem] = []
+                                for collection in collections {
+                                    let result = PHAsset.fetchAssets(in: collection, options: nil)
+                                    let firstItem: PHAsset?
+                                    if [.smartAlbumUserLibrary, .smartAlbumFavorites].contains(collection.assetCollectionSubtype) {
+                                        firstItem = result.lastObject
+                                    } else {
+                                        firstItem = result.firstObject
+                                    }
+                                    items.append(
+                                        MediaGroupItem(
+                                            collection: collection,
+                                            firstItem: firstItem,
+                                            count: result.count
+                                        )
+                                    )
+                                }
+                                return items
+                            }
+                        )
+                    }
                 } else if case .notDetermined = mediaAccess, !self.requestedMediaAccess {
                     self.requestedMediaAccess = true
                     self.mediaAssetsContext.requestMediaAccess()
@@ -671,7 +748,16 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 }
             }
         
-            let previousEntries = self.currentEntries
+            
+            
+            var previousEntries = self.currentEntries
+            
+            if self.resetOnUpdate {
+                self.enqueueTransaction(MediaPickerGridTransaction(clearList: previousEntries))
+                self.resetOnUpdate = false
+                previousEntries = []
+            }
+            
             self.currentEntries = entries
             
             var scrollToItem: GridNodeScrollToItem?
@@ -690,6 +776,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: previousState == nil ? .immediate : .animated(duration: 0.2, curve: .easeInOut))
             }
             self.updateNavigation(transition: .immediate)
+        }
+        
+        private func resetItems() {
+            
         }
         
         private func updateSelectionState(animated: Bool = false) {
@@ -1541,7 +1631,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         
         self.titleView.action = { [weak self] in
             if let self {
-                self.openGroupsMenu()
+                self.presentGroupsMenu()
             }
         }
                 
@@ -1720,77 +1810,20 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         self.controllerNode.closeGalleryController()
     }
     
-    public func openGroupsMenu() {
-        let updatedState = combineLatest(
-            queue: Queue.mainQueue(),
-            self.controllerNode.mediaAssetsContext.fetchAssetsCollections(.album),
-            self.controllerNode.mediaAssetsContext.fetchAssetsCollections(.smartAlbum)
-        )
-        let _ = (updatedState
+    public var groupsPresented: () -> Void = {}
+    
+    private var didSetupGroups = false
+    private let groupsPromise = Promise<[MediaGroupItem]>()
+    
+    public func presentGroupsMenu() {
+        self.groupsPresented()
+        
+        let _ = (self.groupsPromise.get()
         |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak self] albums, smartAlbums in
+        |> deliverOnMainQueue).start(next: { [weak self] items in
             guard let self else {
                 return
             }
-            
-            var collections: [PHAssetCollection] = []
-            smartAlbums.enumerateObjects { collection, _, _ in
-                if [.smartAlbumUserLibrary, .smartAlbumFavorites].contains(collection.assetCollectionSubtype) {
-                    collections.append(collection)
-                }
-            }
-            smartAlbums.enumerateObjects { collection, index, _ in
-                var supportedAlbums: [PHAssetCollectionSubtype] = [
-                    .smartAlbumBursts,
-                    .smartAlbumPanoramas,
-                    .smartAlbumScreenshots,
-                    .smartAlbumSelfPortraits,
-                    .smartAlbumSlomoVideos,
-                    .smartAlbumTimelapses,
-                    .smartAlbumVideos,
-                    .smartAlbumAllHidden
-                ]
-                if #available(iOS 11, *) {
-                    supportedAlbums.append(.smartAlbumAnimated)
-                    supportedAlbums.append(.smartAlbumDepthEffect)
-                    supportedAlbums.append(.smartAlbumLivePhotos)
-                }
-                if supportedAlbums.contains(collection.assetCollectionSubtype) {
-                    let result = PHAsset.fetchAssets(in: collection, options: nil)
-                    if result.count > 0 {
-                        collections.append(collection)
-                    }
-                }
-            }
-            albums.enumerateObjects(options: [.reverse]) { collection, _, _ in
-                collections.append(collection)
-            }
-            
-            var items: [MediaGroupItem] = []
-            for collection in collections {
-                let result = PHAsset.fetchAssets(in: collection, options: nil)
-                let firstItem: PHAsset?
-                if [.smartAlbumUserLibrary, .smartAlbumFavorites].contains(collection.assetCollectionSubtype) {
-                    firstItem = result.lastObject
-                } else {
-                    firstItem = result.firstObject
-                }
-//                let iconSource: ContextMenuActionItemIconSource?
-//                if let firstItem {
-//                    let targetSize = CGSize(width: 24.0, height: 24.0)
-//                    iconSource = ContextMenuActionItemIconSource(size: CGSize(width: 24.0, height: 24.0), contentMode: .scaleAspectFill, cornerRadius: 6.0, signal: assetImage(asset: firstItem, targetSize: targetSize, exact: false))
-//                } else {
-//                    iconSource = nil
-//                }
-                items.append(
-                    MediaGroupItem(
-                        collection: collection,
-                        firstItem: firstItem,
-                        count: result.count
-                    )
-                )
-            }
-            
             var dismissImpl: (() -> Void)?
             let content: ContextControllerItemsContent = MediaGroupsContextMenuContent(
                 context: self.context,
@@ -1799,6 +1832,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     guard let self else {
                         return
                     }
+                    self.controllerNode.resetOnUpdate = true
                     if collection.assetCollectionSubtype == .smartAlbumUserLibrary {
                         self.selectedCollection.set(.single(nil))
                         self.titleView.title = self.presentationData.strings.MediaPicker_Recents
@@ -1806,6 +1840,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         self.selectedCollection.set(.single(collection))
                         self.titleView.title = collection.localizedTitle ?? ""
                     }
+                    self.scrollToTop?()
                     dismissImpl?()
                 }
             )
@@ -2461,7 +2496,8 @@ public func storyMediaPickerController(
     context: AccountContext,
     getSourceRect: @escaping () -> CGRect,
     completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void,
-    dismissed: @escaping () -> Void
+    dismissed: @escaping () -> Void,
+    groupsPresented: @escaping () -> Void
 ) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
     let updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) = (presentationData, .single(presentationData))
@@ -2472,6 +2508,7 @@ public func storyMediaPickerController(
     controller.getSourceRect = getSourceRect
     controller.requestController = { _, present in
         let mediaPickerController = MediaPickerScreen(context: context, updatedPresentationData: updatedPresentationData, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .story), mainButtonState: nil, mainButtonAction: nil)
+        mediaPickerController.groupsPresented = groupsPresented
         mediaPickerController.customSelection = { controller, result in
             if let result = result as? MediaEditorDraft {
                 controller.updateHiddenMediaId(result.path)

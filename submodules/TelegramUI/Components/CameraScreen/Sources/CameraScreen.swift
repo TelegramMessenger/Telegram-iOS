@@ -2577,6 +2577,8 @@ public class CameraScreen: ViewController {
                     self.node.hasGallery = false
                     self.node.requestUpdateLayout(hasAppeared: self.node.hasAppeared, transition: .immediate)
                 }
+            }, groupsPresented: {
+                stopCameraCapture()
             })
             self.galleryController = controller
         }

@@ -2068,6 +2068,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         self.isInteractingWithEntities = isInteracting
                         if !isInteracting {
                             self.controller?.isSavingAvailable = true
+                            self.hasAnyChanges = true
                         }
                         self.requestUpdate(transition: .easeInOut(duration: 0.2))
                     }
