@@ -311,7 +311,13 @@ public final class StoryFooterPanelComponent: Component {
             if viewCount == 0 {
                 viewPart = component.strings.Story_Footer_NoViews
             } else {
-                viewPart = component.strings.Story_Footer_ViewCount(Int32(viewCount))
+                var string = component.strings.Story_Footer_ViewCount(Int32(viewCount))
+                if let range = string.range(of: "|") {
+                    if let nextRange = string.range(of: "|", range: range.upperBound ..< string.endIndex) {
+                        string.removeSubrange(string.startIndex ..< nextRange.upperBound)
+                    }
+                }
+                viewPart = string
             }
             
             let viewStatsTextLayout = self.viewStatsCountText.update(size: CGSize(width: availableSize.width, height: size.height), segments: regularSegments, transition: isFirstTime ? .immediate : ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut))
