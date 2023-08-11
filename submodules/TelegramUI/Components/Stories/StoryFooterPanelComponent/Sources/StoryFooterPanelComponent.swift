@@ -419,7 +419,7 @@ public final class StoryFooterPanelComponent: Component {
             }
             
             let minContentX: CGFloat = 16.0
-            let maxContentX: CGFloat = floor((availableSize.width - contentWidth) * 0.5)
+            let maxContentX: CGFloat = (availableSize.width - contentWidth) * 0.5
             var contentX: CGFloat = minContentX.interpolate(to: maxContentX, amount: component.expandFraction)
             
             let avatarsNodeFrame = CGRect(origin: CGPoint(x: contentX, y: floor((size.height - avatarsSize.height) * 0.5)), size: avatarsSize)

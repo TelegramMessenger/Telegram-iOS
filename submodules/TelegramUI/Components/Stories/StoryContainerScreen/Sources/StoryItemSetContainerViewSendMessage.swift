@@ -838,7 +838,12 @@ final class StoryItemSetContainerSendMessage {
 
                                 self.videoRecorder.set(.single(nil))
 
-                                self.sendMessages(view: view, peer: peer, messages: [updatedMessage])
+                                self.performWithPossibleStealthModeConfirmation(view: view, action: { [weak self, weak view] in
+                                    guard let self, let view else {
+                                        return
+                                    }
+                                    self.sendMessages(view: view, peer: peer, messages: [updatedMessage])
+                                })
                             }, displaySlowmodeTooltip: { [weak self] view, rect in
                                 //self?.interfaceInteraction?.displaySlowmodeTooltip(view, rect)
                                 let _ = self
@@ -883,9 +888,14 @@ final class StoryItemSetContainerSendMessage {
                             
                             let waveformBuffer: Data? = data.waveform
                             
-                            self.sendMessages(view: view, peer: peer, messages: [.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(data.compressedData.count), attributes: [.Audio(isVoice: true, duration: Int(data.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: nil, replyToStoryId: focusedStoryId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
-                            
-                            HapticFeedback().tap()
+                            self.performWithPossibleStealthModeConfirmation(view: view, action: { [weak self, weak view] in
+                                guard let self, let view else {
+                                    return
+                                }
+                                self.sendMessages(view: view, peer: peer, messages: [.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(data.compressedData.count), attributes: [.Audio(isVoice: true, duration: Int(data.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: nil, replyToStoryId: focusedStoryId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
+                                
+                                HapticFeedback().tap()
+                            })
                         }
                     })
                 } else if let videoRecorderValue = self.videoRecorderValue {

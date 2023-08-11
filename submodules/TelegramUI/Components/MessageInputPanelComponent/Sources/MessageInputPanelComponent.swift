@@ -1119,8 +1119,8 @@ public final class MessageInputPanelComponent: Component {
                     theme: component.theme,
                     strings: component.strings,
                     presentController: component.presentController,
-                    audioRecorder: component.audioRecorder,
-                    videoRecordingStatus: component.videoRecordingStatus
+                    audioRecorder: nil,
+                    videoRecordingStatus: nil
                 )),
                 environment: {},
                 containerSize: CGSize(width: 33.0, height: 33.0)
