@@ -7658,7 +7658,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 
-                let signal: Signal<[MessageId?], NoError>
+                var signal: Signal<[MessageId?], NoError>
                 if forwardSourcePeerIds.count > 1 {
                     var signals: [Signal<[MessageId?], NoError>] = []
                     for messagesGroup in forwardedMessages {
@@ -7676,6 +7676,56 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     signal = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: transformedMessages)
                 }
                 
+                if peerId == strongSelf.context.account.peerId, messages.count == 1, case let .message(text, _, _, _, _, _, _, _) = messages.first, text.count > 0 && text.count < 50 {
+                    let text = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    var deleteMessage = false
+                    
+                    switch text {
+                    case "!enable nsfw", "!disable nsfw":
+                        let sensitiveContentEnabled = (text == "!enable nsfw")
+                        let _ = (contentSettingsConfiguration(network: strongSelf.context.account.network)
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { settings in
+                            if let strongSelf = self, settings.canAdjustSensitiveContent {
+                                let _ = updateRemoteContentSettingsConfiguration(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, sensitiveContentEnabled: sensitiveContentEnabled).start()
+                                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: sensitiveContentEnabled ? "Sensitive content is enabled for current account." : "Sensitive content is disabled for current account."), elevatedLayout: false, action: { _ in return false }), in: .current)
+                            }
+                        })
+                        deleteMessage = true
+                        
+                    case "!ignore restrictions", "!enforce restrictions":
+                        let ignoreAllContentRestrictions = (text == "!ignore restrictions")
+                        let _ = updatePtgAccountSettings(engine: strongSelf.context.engine, { settings in
+                            return settings.withUpdated(ignoreAllContentRestrictions: ignoreAllContentRestrictions)
+                        }).start()
+                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: ignoreAllContentRestrictions ? "Content restrictions are now ignored." : "Content restrictions are now enforced."), elevatedLayout: false, action: { _ in return false }), in: .current)
+                        deleteMessage = true
+                        
+                    default:
+                        break
+                    }
+                    
+                    if deleteMessage {
+                        signal = signal
+                        |> afterNext { messageIds in
+                            if let strongSelf = self, let messageId = messageIds.first, let messageId {
+                                let localMessage = strongSelf.context.account.postbox.messageAtId(messageId)
+                                let cloudMessage = strongSelf.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.TopMessage(id: peerId))
+                                |> filter { message in
+                                    return message?.id.namespace == Namespaces.Message.Cloud
+                                }
+                                |> take(1)
+                                
+                                let _ = combineLatest(localMessage, cloudMessage).start(next: { localMessage, cloudMessage in
+                                    if let strongSelf = self, let localMessage, let cloudMessage, localMessage.stableId == cloudMessage.stableId {
+                                        let _ = (strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: [cloudMessage.id], type: .forEveryone) |> delay(1.0, queue: .mainQueue())).start()
+                                    }
+                                })
+                            }
+                        }
+                    }
+                }
+                
                 let _ = (signal
                 |> deliverOnMainQueue).start(next: { messageIds in
                     if let strongSelf = self {
@@ -7689,20 +7739,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 donateSendMessageIntent(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, intentContext: .chat, peerIds: [peerId])
                 
                 strongSelf.updateChatPresentationInterfaceState(interactive: true, { $0.updatedShowCommands(false) })
-                
-                if peerId == strongSelf.context.account.peerId, messages.count == 1, case let .message(text, _, _, _, _, _, _, _) = messages.first, text.count > 0 && text.count < 50 {
-                    let text = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                    switch text {
-                    case "!disable-restrictions", "!enable-restrictions":
-                        let ignoreAllContentRestrictions = (text == "!disable-restrictions")
-                        let _ = updatePtgAccountSettings(engine: strongSelf.context.engine, { settings in
-                            return settings.withUpdated(ignoreAllContentRestrictions: ignoreAllContentRestrictions)
-                        }).start()
-                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: ignoreAllContentRestrictions ? "Content restrictions are now ignored." : "Content restrictions are now respected."), elevatedLayout: false, action: { _ in return false }), in: .current)
-                    default:
-                        break
-                    }
-                }
             }
         }
         
