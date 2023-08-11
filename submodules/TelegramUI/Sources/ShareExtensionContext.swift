@@ -408,6 +408,7 @@ public class ShareRootControllerImpl {
                         }), fromForeignApp: true, externalShare: false, switchableAccounts: otherAccounts, immediatePeerId: immediatePeerId)
                         shareController.presentationArguments = ViewControllerPresentationArguments(presentationAnimation: .modalSheet)
                         shareController.dismissed = { _ in
+                            inForeground.set(false)
                             self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
                         }
                         shareController.debugAction = {
@@ -423,6 +424,7 @@ public class ShareRootControllerImpl {
                         
                         cancelImpl = { [weak shareController] in
                             shareController?.dismiss(completion: { [weak self] in
+                                inForeground.set(false)
                                 self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
                             })
                         }
@@ -668,6 +670,7 @@ public class ShareRootControllerImpl {
                                                     }, pretendPresentedInModal: true, selectForumThreads: false))
                                                     
                                                     controller.customDismiss = {
+                                                        inForeground.set(false)
                                                         self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
                                                     }
                                                     
@@ -680,6 +683,7 @@ public class ShareRootControllerImpl {
                                                     let beginWithPeer: (PeerId) -> Void = { peerId in
                                                         navigationController.view.endEditing(true)
                                                         navigationController.pushViewController(ChatImportActivityScreen(context: context, cancel: {
+                                                            inForeground.set(false)
                                                             self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
                                                         }, peerId: peerId, archivePath: archivePathValue, mainEntry: mainFile, otherEntries: otherEntries))
                                                     }
@@ -842,6 +846,7 @@ public class ShareRootControllerImpl {
                                                     }, pretendPresentedInModal: true, selectForumThreads: true))
                                                     
                                                     controller.customDismiss = {
+                                                        inForeground.set(false)
                                                         self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
                                                     }
                                                     
@@ -854,6 +859,7 @@ public class ShareRootControllerImpl {
                                                     let beginWithPeer: (PeerId) -> Void = { peerId in
                                                         navigationController.view.endEditing(true)
                                                         navigationController.pushViewController(ChatImportActivityScreen(context: context, cancel: {
+                                                            inForeground.set(false)
                                                             self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
                                                         }, peerId: peerId, archivePath: archivePathValue, mainEntry: mainFile, otherEntries: otherEntries))
                                                     }
@@ -917,6 +923,7 @@ public class ShareRootControllerImpl {
                                                     }, pretendPresentedInModal: true, selectForumThreads: true))
                                                     
                                                     controller.customDismiss = {
+                                                        inForeground.set(false)
                                                         self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
                                                     }
                                                     
@@ -929,6 +936,7 @@ public class ShareRootControllerImpl {
                                                     let beginWithPeer: (EnginePeer.Id) -> Void = { peerId in
                                                         navigationController.view.endEditing(true)
                                                         navigationController.pushViewController(ChatImportActivityScreen(context: context, cancel: {
+                                                            inForeground.set(false)
                                                             self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
                                                         }, peerId: peerId, archivePath: archivePathValue, mainEntry: mainFile, otherEntries: otherEntries))
                                                     }
@@ -1108,6 +1116,7 @@ public class ShareRootControllerImpl {
                         displayShare()
                     } else {
                         Queue.mainQueue().after(0.5, {
+                            inForeground.set(false)
                             self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
                         })
                     }
@@ -1130,6 +1139,7 @@ public class ShareRootControllerImpl {
                 }
                 let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
                 let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.Share_AuthTitle, text: presentationData.strings.Share_AuthDescription, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                    inForeground.set(false)
                     self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
                 })])
                 strongSelf.mainWindow?.present(controller, on: .root)

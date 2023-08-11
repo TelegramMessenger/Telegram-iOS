@@ -63,6 +63,11 @@ class ShareRootController: UIViewController {
         self.impl?.viewWillDisappear()
     }
     
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        self.impl?.viewWillDisappear()
+    }
+    
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         self.impl?.viewDidLayoutSubviews(view: self.view, traitCollection: self.traitCollection)
