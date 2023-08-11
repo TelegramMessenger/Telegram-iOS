@@ -390,6 +390,7 @@ public final class StoryItemSetContainerComponent: Component {
         private let scroller: Scroller
         
         let componentContainerView: UIView
+        let overlayContainerView: SparseContainerView
         let itemsContainerView: UIView
         let controlsContainerView: UIView
         let controlsClippingView: UIView
@@ -474,6 +475,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.sendMessageContext = StoryItemSetContainerSendMessage()
             
             self.componentContainerView = UIView()
+            self.overlayContainerView = SparseContainerView()
             
             self.itemsContainerView = UIView()
             
@@ -515,6 +517,7 @@ public final class StoryItemSetContainerComponent: Component {
             super.init(frame: frame)
             
             self.addSubview(self.componentContainerView)
+            self.addSubview(self.overlayContainerView)
 
             self.itemsContainerView.addSubview(self.scroller)
             self.scroller.delegate = self
@@ -531,7 +534,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.componentContainerView.addSubview(self.viewListsContainer)
             
             self.closeButton.addSubview(self.closeButtonIconView)
-            self.componentContainerView.addSubview(self.closeButton)
+            self.overlayContainerView.addSubview(self.closeButton)
             self.closeButton.addTarget(self, action: #selector(self.closePressed), for: .touchUpInside)
             
             let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
@@ -2111,6 +2114,12 @@ public final class StoryItemSetContainerComponent: Component {
                     removeOnCompletion: false
                 )
                 
+                self.overlayContainerView.clipsToBounds = true
+                let overlayToFrame = sourceLocalFrame
+                let overlayToBounds = CGRect(origin: CGPoint(x: overlayToFrame.minX, y: overlayToFrame.minY), size: overlayToFrame.size)
+                self.overlayContainerView.layer.animatePosition(from: CGPoint(), to: overlayToFrame.center.offsetBy(dx: -self.overlayContainerView.center.x, dy: -self.overlayContainerView.center.y), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+                self.overlayContainerView.layer.animateBounds(from: self.overlayContainerView.bounds, to: overlayToBounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                
                 if !transitionOut.destinationIsAvatar {
                     let transitionView = transitionOut.transitionView
                     
@@ -2378,6 +2387,10 @@ public final class StoryItemSetContainerComponent: Component {
             transition.setPosition(view: self.componentContainerView, position: CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.5 + dismissPanOffset))
             transition.setBounds(view: self.componentContainerView, bounds: CGRect(origin: CGPoint(), size: availableSize))
             transition.setScale(view: self.componentContainerView, scale: dismissPanScale)
+            
+            transition.setPosition(view: self.overlayContainerView, position: CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.5 + dismissPanOffset))
+            transition.setBounds(view: self.overlayContainerView, bounds: CGRect(origin: CGPoint(), size: availableSize))
+            transition.setScale(view: self.overlayContainerView, scale: dismissPanScale)
             
             var bottomContentInset: CGFloat
             if !component.safeInsets.bottom.isZero {
