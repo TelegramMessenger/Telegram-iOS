@@ -161,7 +161,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                                 reactedCount: views.reactedCount,
                                 seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                     return peers[id].flatMap(EnginePeer.init)
-                                }
+                                },
+                                hasList: views.hasList
                             )
                         },
                         privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
@@ -1037,7 +1038,8 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                             reactedCount: views.reactedCount,
                             seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                 return peers[id].flatMap(EnginePeer.init)
-                            }
+                            },
+                            hasList: views.hasList
                         )
                     },
                     privacy: itemValue.privacy.flatMap(EngineStoryPrivacy.init),

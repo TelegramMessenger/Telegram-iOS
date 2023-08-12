@@ -586,6 +586,9 @@ final class StoryItemSetViewListComponent: Component {
                             if let baseContentView, baseContentView.configuration == self.configuration, baseContentView.query == nil {
                                 parentSource = baseContentView.viewList
                             }
+                            if component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
+                                parentSource = nil
+                            }
                             
                             self.viewList = component.context.engine.messages.storyViewList(id: component.storyItem.id, views: views, listMode: mappedListMode, sortMode: mappedSortMode, searchQuery: query, parentSource: parentSource)
                         }
@@ -753,7 +756,7 @@ final class StoryItemSetViewListComponent: Component {
             }
             
             var premiumFooterSize: CGSize?
-            if !component.hasPremium, let viewListState = self.viewListState, viewListState.loadMoreToken == nil, !viewListState.items.isEmpty, let views = component.storyItem.views, views.seenCount > viewListState.totalCount, component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
+            if self.configuration.listMode == .everyone, let viewListState = self.viewListState, viewListState.loadMoreToken == nil, !viewListState.items.isEmpty, let views = component.storyItem.views, views.seenCount > viewListState.totalCount, component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
                 let premiumFooterText: ComponentView<Empty>
                 if let current = self.premiumFooterText {
                     premiumFooterText = current
@@ -768,7 +771,15 @@ final class StoryItemSetViewListComponent: Component {
                 let link = MarkdownAttributeSet(font: Font.semibold(fontSize), textColor: component.theme.list.itemAccentColor)
                 let attributes = MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return ("URL", "") })
                 
-                let text = component.strings.Story_ViewList_PremiumUpgradeInlineText
+                let text: String
+                let fullWidth: Bool
+                if component.hasPremium {
+                    text = component.strings.Story_ViewList_NotFullyRecorded
+                    fullWidth = true
+                } else {
+                    text = component.strings.Story_ViewList_PremiumUpgradeInlineText
+                    fullWidth = false
+                }
                 premiumFooterSize = premiumFooterText.update(
                     transition: .immediate,
                     component: AnyComponent(BalancedTextComponent(
@@ -777,14 +788,14 @@ final class StoryItemSetViewListComponent: Component {
                         maximumNumberOfLines: 0,
                         lineSpacing: 0.2,
                         highlightColor: component.theme.list.itemAccentColor.withMultipliedAlpha(0.5),
-                        highlightAction: { attributes in
+                        highlightAction: component.hasPremium ? nil : { attributes in
                             if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
                                 return NSAttributedString.Key(rawValue: "URL")
                             } else {
                                 return nil
                             }
                         },
-                        tapAction: { [weak self] _, _ in
+                        tapAction: component.hasPremium ? nil : { [weak self] _, _ in
                             guard let self, let component = self.component else {
                                 return
                             }
@@ -792,7 +803,7 @@ final class StoryItemSetViewListComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: min(320.0, availableSize.width - 16.0 * 2.0), height: 1000.0)
+                    containerSize: CGSize(width: min(fullWidth ? 500.0 : 320.0, availableSize.width - 16.0 * 2.0), height: 1000.0)
                 )
             } else {
                 if let premiumFooterText = self.premiumFooterText {
@@ -894,7 +905,11 @@ final class StoryItemSetViewListComponent: Component {
                 if self.configuration.listMode == .everyone && (self.query == nil || self.query == "") {
                     if component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
                         if emptyButton == nil {
-                            text = component.strings.Story_Views_ViewsExpired
+                            if let views = component.storyItem.views, views.seenCount > 0 {
+                                text = component.strings.Story_Views_ViewsNotRecorded
+                            } else {
+                                text = component.strings.Story_Views_ViewsExpired
+                            }
                         } else {
                             text = component.strings.Story_ViewList_PremiumUpgradeText
                         }
@@ -909,7 +924,11 @@ final class StoryItemSetViewListComponent: Component {
                     } else {
                         if component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
                             if emptyButton == nil {
-                                text = component.strings.Story_Views_ViewsExpired
+                                if let views = component.storyItem.views, views.seenCount > 0 {
+                                    text = component.strings.Story_Views_ViewsNotRecorded
+                                } else {
+                                    text = component.strings.Story_Views_ViewsExpired
+                                }
                             } else {
                                 text = component.strings.Story_ViewList_PremiumUpgradeText
                             }
@@ -1341,7 +1360,7 @@ final class StoryItemSetViewListComponent: Component {
             
             if !component.hasPremium, component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
             } else {
-                if let views = component.storyItem.views {
+                if let views = component.storyItem.views, views.hasList {
                     if views.seenCount >= 20 || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
                         displayModeSelector = true
                         displaySearchBar = true

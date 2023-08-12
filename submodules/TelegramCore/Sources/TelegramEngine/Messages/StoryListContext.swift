@@ -15,11 +15,13 @@ public final class EngineStoryItem: Equatable {
         public let seenCount: Int
         public let reactedCount: Int
         public let seenPeers: [EnginePeer]
+        public let hasList: Bool
         
-        public init(seenCount: Int, reactedCount: Int, seenPeers: [EnginePeer]) {
+        public init(seenCount: Int, reactedCount: Int, seenPeers: [EnginePeer], hasList: Bool) {
             self.seenCount = seenCount
             self.reactedCount = reactedCount
             self.seenPeers = seenPeers
+            self.hasList = hasList
         }
         
         public static func ==(lhs: Views, rhs: Views) -> Bool {
@@ -30,6 +32,9 @@ public final class EngineStoryItem: Equatable {
                 return false
             }
             if lhs.seenPeers != rhs.seenPeers {
+                return false
+            }
+            if lhs.hasList != rhs.hasList {
                 return false
             }
             return true
@@ -154,7 +159,8 @@ extension EngineStoryItem {
                 return Stories.Item.Views(
                     seenCount: views.seenCount,
                     reactedCount: views.reactedCount,
-                    seenPeerIds: views.seenPeers.map(\.id)
+                    seenPeerIds: views.seenPeers.map(\.id),
+                    hasList: views.hasList
                 )
             },
             privacy: self.privacy.flatMap { privacy in
@@ -529,7 +535,8 @@ public final class PeerStoryListContext {
                                     reactedCount: views.reactedCount,
                                     seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                         return transaction.getPeer(id).flatMap(EnginePeer.init)
-                                    }
+                                    },
+                                    hasList: views.hasList
                                 )
                             },
                             privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
@@ -656,7 +663,8 @@ public final class PeerStoryListContext {
                                                     reactedCount: views.reactedCount,
                                                     seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                                         return transaction.getPeer(id).flatMap(EnginePeer.init)
-                                                    }
+                                                    },
+                                                    hasList: views.hasList
                                                 )
                                             },
                                             privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
@@ -807,7 +815,8 @@ public final class PeerStoryListContext {
                                                                         reactedCount: views.reactedCount,
                                                                         seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                                                             return peers[id].flatMap(EnginePeer.init)
-                                                                        }
+                                                                        },
+                                                                        hasList: views.hasList
                                                                     )
                                                                 },
                                                                 privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
@@ -849,7 +858,8 @@ public final class PeerStoryListContext {
                                                                     reactedCount: views.reactedCount,
                                                                     seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                                                         return peers[id].flatMap(EnginePeer.init)
-                                                                    }
+                                                                    },
+                                                                    hasList: views.hasList
                                                                 )
                                                             },
                                                             privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
@@ -893,7 +903,8 @@ public final class PeerStoryListContext {
                                                                         reactedCount: views.reactedCount,
                                                                         seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                                                             return peers[id].flatMap(EnginePeer.init)
-                                                                        }
+                                                                        },
+                                                                        hasList: views.hasList
                                                                     )
                                                                 },
                                                                 privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
@@ -933,7 +944,8 @@ public final class PeerStoryListContext {
                                                                     reactedCount: views.reactedCount,
                                                                     seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                                                         return peers[id].flatMap(EnginePeer.init)
-                                                                    }
+                                                                    },
+                                                                    hasList: views.hasList
                                                                 )
                                                             },
                                                             privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
@@ -1097,7 +1109,8 @@ public final class PeerExpiringStoryListContext {
                                                 reactedCount: views.reactedCount,
                                                 seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                                     return transaction.getPeer(id).flatMap(EnginePeer.init)
-                                                }
+                                                },
+                                                hasList: views.hasList
                                             )
                                         },
                                         privacy: item.privacy.flatMap(EngineStoryPrivacy.init),

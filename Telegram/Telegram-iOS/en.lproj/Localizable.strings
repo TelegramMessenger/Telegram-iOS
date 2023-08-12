@@ -9712,6 +9712,7 @@ Sorry for the inconvenience.";
 "Story.Privacy.PostStory" = "Post Story";
 
 "Story.Views.ViewsExpired" = "List of viewers becomes unavailable **24 hours** after the story expires.";
+"Story.Views.ViewsNotRecorded" = "Information about viewers wasn’t recorded.";
 "Story.Views.NoViews" = "Nobody has viewed\nyour story yet.";
 
 "AutoDownloadSettings.Stories" = "Stories";
@@ -9823,6 +9824,7 @@ Sorry for the inconvenience.";
 "Story.ViewList.PremiumUpgradeText" = "List of viewers isn't available after 24 hours of story expiration.\n\nTo unlock viewers' lists for expired and saved stories, subscribe to [Telegram Premium]().";
 "Story.ViewList.PremiumUpgradeAction" = "Learn More";
 "Story.ViewList.PremiumUpgradeInlineText" = "To unlock viewers' lists for expired and saved stories, subscribe to [Telegram Premium]().";
+"Story.ViewList.NotFullyRecorded" = "Information about the other viewers wasn’t recorded.";
 "Story.ViewList.EmptyTextSearch" = "No views found";
 "Story.ViewList.EmptyTextContacts" = "None of your contacts viewed this story.";
 "Story.ViewList.ContextSortReactions" = "Reactions First";
