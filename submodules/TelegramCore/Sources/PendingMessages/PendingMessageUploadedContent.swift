@@ -708,7 +708,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
         }
         let upload: Signal<MultipartUploadResult?, PendingMessageUploadError> = .single(nil)
         |> then(
-            messageMediaPreuploadManager.upload(network: network, postbox: postbox, source: .resource(fileReference.resourceReference(file.resource)), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(file.attributes), userContentType: nil), hintFileSize: hintSize, hintFileIsLarge: hintFileIsLarge)
+            messageMediaPreuploadManager.upload(network: network, postbox: postbox, source: .resource(fileReference.resourceReference(file.resource)), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(file.attributes), userContentType: nil), hintFileSize: hintSize, hintFileIsLarge: hintFileIsLarge, forceNoBigParts: forceNoBigParts)
             |> mapError { _ -> PendingMessageUploadError in return .generic }
             |> map(Optional.init)
         )

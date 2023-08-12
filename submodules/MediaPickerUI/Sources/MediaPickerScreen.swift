@@ -712,7 +712,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                                     }
                                 }
                                 albums.enumerateObjects(options: [.reverse]) { collection, _, _ in
-                                    collections.append(collection)
+                                    let result = PHAsset.fetchAssets(in: collection, options: nil)
+                                    if result.count > 0 {
+                                        collections.append(collection)
+                                    }
                                 }
                                 
                                 var items: [MediaGroupItem] = []
