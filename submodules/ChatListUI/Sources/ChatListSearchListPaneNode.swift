@@ -2117,7 +2117,10 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }
         }
         
-        openMediaMessageImpl = { message, mode in
+        openMediaMessageImpl = { [weak self] message, mode in
+            guard let navigationController = self?.navigationController else {
+                return
+            }
             let _ = context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatLocationContextHolder: nil, message: message._asMessage(), standalone: false, reverseMessageGalleryOrder: true, mode: mode, navigationController: navigationController, dismissInput: {
                 interaction.dismissInput()
             }, present: { c, a in
@@ -2225,6 +2228,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         
         let listInteraction = ListMessageItemInteraction(openMessage: { [weak self] message, mode -> Bool in
             guard let strongSelf = self else {
+                return false
+            }
+            guard let navigationController = strongSelf.navigationController else {
                 return false
             }
             interaction.dismissInput()

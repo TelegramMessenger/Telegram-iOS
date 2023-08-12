@@ -192,6 +192,9 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             openUserGeneratedUrl(context: context, peerId: nil, url: url, concealed: false, present: { c in
                 present(c, nil)
             }, openResolved: { [weak self] resolved in
+                guard let navigationController = self?.navigationController else {
+                    return
+                }
                 context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peerId, navigation in
                     
                 }, sendFile: nil,

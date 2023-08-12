@@ -45,6 +45,7 @@ final class PreferencesTable: Table {
     
     override func clearMemoryCache() {
         assert(self.updatedEntryKeys.isEmpty)
+        self.cachedEntries.removeAll()
     }
     
     override func beforeCommit() {

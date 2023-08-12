@@ -874,6 +874,7 @@ final class StorageUsageScreenComponent: Component {
         deinit {
             self.statsDisposable?.dispose()
             self.messagesDisposable?.dispose()
+            self.cacheSettingsDisposable?.dispose()
             self.keepScreenActiveDisposable?.dispose()
         }
         
