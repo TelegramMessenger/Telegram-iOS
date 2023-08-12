@@ -247,8 +247,11 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
         }
     }
 
-    public func duplicate() -> DrawingEntity {
+    public func duplicate(copy: Bool) -> DrawingEntity {
         let newEntity = DrawingTextEntity(text: self.text, style: self.style, animation: self.animation, font: self.font, alignment: self.alignment, fontSize: self.fontSize, color: self.color)
+        if copy {
+            newEntity.uuid = self.uuid
+        }
         newEntity.referenceDrawingSize = self.referenceDrawingSize
         newEntity.position = self.position
         newEntity.width = self.width

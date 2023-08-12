@@ -9847,6 +9847,8 @@ Sorry for the inconvenience.";
 "Story.StealthMode.CooldownAction" = "Available in %@";
 "Story.StealthMode.UpgradeAction" = "Unlock Stealth Mode";
 
+"Story.ViewLocation" = "View Location";
+
 "Location.AddThisLocation" = "Add This Location";
 "Location.AddMyLocation" = "Add My Current Location";
 "Location.TypeCity" = "City";

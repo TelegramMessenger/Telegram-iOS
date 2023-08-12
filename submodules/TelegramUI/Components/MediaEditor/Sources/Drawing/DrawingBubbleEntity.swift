@@ -22,7 +22,7 @@ public final class DrawingBubbleEntity: DrawingEntity, Codable {
         case stroke
     }
     
-    public let uuid: UUID
+    public var uuid: UUID
     public let isAnimated: Bool
     
     public var drawType: DrawType
@@ -96,8 +96,11 @@ public final class DrawingBubbleEntity: DrawingEntity, Codable {
         }
     }
         
-    public func duplicate() -> DrawingEntity {
+    public func duplicate(copy: Bool) -> DrawingEntity {
         let newEntity = DrawingBubbleEntity(drawType: self.drawType, color: self.color, lineWidth: self.lineWidth)
+        if copy {
+            newEntity.uuid = self.uuid
+        }
         newEntity.referenceDrawingSize = self.referenceDrawingSize
         newEntity.position = self.position
         newEntity.size = self.size

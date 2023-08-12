@@ -69,7 +69,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case isExplicitlyStatic
     }
     
-    public let uuid: UUID
+    public var uuid: UUID
     public let content: Content
     
     public var referenceDrawingSize: CGSize
@@ -221,8 +221,11 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         try container.encode(self.isExplicitlyStatic, forKey: .isExplicitlyStatic)
     }
         
-    public func duplicate() -> DrawingEntity {
+    public func duplicate(copy: Bool) -> DrawingEntity {
         let newEntity = DrawingStickerEntity(content: self.content)
+        if copy {
+            newEntity.uuid = self.uuid
+        }
         newEntity.referenceDrawingSize = self.referenceDrawingSize
         newEntity.position = self.position
         newEntity.scale = self.scale

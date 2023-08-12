@@ -1857,7 +1857,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 initialValues = draft.values
 
                 for entity in draft.values.entities {
-                    self.entitiesView.add(entity.entity, announce: false)
+                    self.entitiesView.add(entity.entity.duplicate(copy: true), announce: false)
                 }
                 
                 if let drawingData = initialValues?.drawing?.pngData() {
@@ -3970,10 +3970,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let entities = self.node.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }
         let codableEntities = DrawingEntitiesView.encodeEntities(entities, entitiesView: self.node.entitiesView)
         mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
-        
+                
         var caption = self.getCaption()
         caption = convertMarkdownToAttributes(caption)
         
+        var hasEntityChanges = false
         let randomId: Int64
         if case let .draft(_, id) = subject, let id {
             randomId = id
@@ -3982,7 +3983,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         var mediaAreas: [MediaArea] = []
-        if case .draft = subject {
+        if case let .draft(draft, _) = subject {
+            if draft.values.entities != codableEntities {
+                hasEntityChanges = true
+            }
         } else {
             mediaAreas = self.initialMediaAreas ?? []
         }
@@ -4010,7 +4014,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         }
         
-        if self.isEditingStory && !self.node.hasAnyChanges {
+        if self.isEditingStory && !(self.node.hasAnyChanges || hasEntityChanges) {
             self.completion(randomId, nil, [], caption, self.state.privacy, stickers, { [weak self] finished in
                 self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                     self?.dismiss()

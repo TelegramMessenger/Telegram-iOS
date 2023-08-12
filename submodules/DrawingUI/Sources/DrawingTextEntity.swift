@@ -210,7 +210,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
     func beginEditing(accessoryView: UIView?) {
         self._isEditing = true
         if !self.textEntity.text.string.isEmpty {
-            let previousEntity = self.textEntity.duplicate() as? DrawingTextEntity
+            let previousEntity = self.textEntity.duplicate(copy: false) as? DrawingTextEntity
             previousEntity?.uuid = self.textEntity.uuid
             self.previousEntity = previousEntity
         }

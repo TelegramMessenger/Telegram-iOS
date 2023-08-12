@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 
 public protocol DrawingEntity: AnyObject {
-    var uuid: UUID { get }
+    var uuid: UUID { get set }
     var isAnimated: Bool { get }
     var center: CGPoint { get }
     
@@ -13,7 +13,7 @@ public protocol DrawingEntity: AnyObject {
     
     var scale: CGFloat { get set }
     
-    func duplicate() -> DrawingEntity
+    func duplicate(copy: Bool) -> DrawingEntity
     
     var renderImage: UIImage? { get set }
     var renderSubEntities: [DrawingEntity]? { get set }
