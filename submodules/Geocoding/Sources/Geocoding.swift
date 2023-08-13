@@ -1,6 +1,7 @@
 import Foundation
 import Contacts
 import CoreLocation
+import MapKit
 import SwiftSignalKit
 
 public func geocodeLocation(address: String, locale: Locale? = nil) -> Signal<[CLPlacemark]?, NoError> {
@@ -69,19 +70,47 @@ public struct ReverseGeocodedPlacemark {
     }
 }
 
+
+private let regions = [
+    (
+        CLLocationCoordinate2D(latitude: 46.046331, longitude: 32.398307),
+        CLLocationCoordinate2D(latitude: 44.326515, longitude: 36.613495)
+    )
+]
+
+private func shouldDisplayActualCountryName(latitude: Double, longitude: Double) -> Bool {
+    let coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    let point = MKMapPoint(coordinate)
+    for region in regions {
+        let p1 = MKMapPoint(region.0)
+        let p2 = MKMapPoint(region.1)
+        let rect = MKMapRect(x: min(p1.x, p2.x), y: min(p1.y, p2.y), width: abs(p1.x - p2.x), height: abs(p1.y - p2.y))
+        if rect.contains(point) {
+            return false
+        }
+    }
+    return true
+}
+
 public func reverseGeocodeLocation(latitude: Double, longitude: Double, locale: Locale? = nil) -> Signal<ReverseGeocodedPlacemark?, NoError> {
     return Signal { subscriber in
         let geocoder = CLGeocoder()
         geocoder.reverseGeocodeLocation(CLLocation(latitude: latitude, longitude: longitude), preferredLocale: locale, completionHandler: { placemarks, _ in
-            if let placemarks = placemarks, let placemark = placemarks.first {
+            if let placemarks, let placemark = placemarks.first {
+                var countryName = placemark.country
+                var countryCode = placemark.isoCountryCode
+                if !shouldDisplayActualCountryName(latitude: latitude, longitude: longitude) {
+                    countryName = nil
+                    countryCode = nil
+                }
                 let result: ReverseGeocodedPlacemark
                 if placemark.thoroughfare == nil && placemark.locality == nil && placemark.country == nil {
                     result = ReverseGeocodedPlacemark(name: placemark.name, street: placemark.name, city: nil, country: nil, countryCode: nil)
                 } else {
                     if placemark.thoroughfare == nil && placemark.locality == nil, let ocean = placemark.ocean {
-                        result = ReverseGeocodedPlacemark(name: ocean, street: nil, city: nil, country: placemark.country, countryCode: placemark.isoCountryCode)
+                        result = ReverseGeocodedPlacemark(name: ocean, street: nil, city: nil, country: countryName, countryCode: countryCode)
                     } else {
-                        result = ReverseGeocodedPlacemark(name: nil, street: placemark.thoroughfare, city: placemark.locality, country: placemark.country, countryCode: placemark.isoCountryCode)
+                        result = ReverseGeocodedPlacemark(name: nil, street: placemark.thoroughfare, city: placemark.locality, country: countryName, countryCode: countryCode)
                     }
                 }
                 subscriber.putNext(result)
