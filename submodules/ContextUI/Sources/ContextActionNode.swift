@@ -131,7 +131,11 @@ public final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
         self.iconNode.isUserInteractionEnabled = false
-        if action.iconSource == nil {
+        if let iconSource = action.iconSource {
+            self.iconNode.clipsToBounds = true
+            self.iconNode.contentMode = iconSource.contentMode
+            self.iconNode.cornerRadius = iconSource.cornerRadius
+        } else {
             self.iconNode.image = action.icon(presentationData.theme)
         }
         

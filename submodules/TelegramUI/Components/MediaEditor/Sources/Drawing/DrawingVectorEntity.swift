@@ -23,7 +23,7 @@ public final class DrawingVectorEntity: DrawingEntity, Codable {
         case twoSidedArrow
     }
     
-    public let uuid: UUID
+    public var uuid: UUID
     public let isAnimated: Bool
     
     public var type: VectorType
@@ -98,8 +98,11 @@ public final class DrawingVectorEntity: DrawingEntity, Codable {
         }
     }
     
-    public func duplicate() -> DrawingEntity {
+    public func duplicate(copy: Bool) -> DrawingEntity {
         let newEntity = DrawingVectorEntity(type: self.type, color: self.color, lineWidth: self.lineWidth)
+        if copy {
+            newEntity.uuid = self.uuid
+        }
         newEntity.drawingSize = self.drawingSize
         newEntity.referenceDrawingSize = self.referenceDrawingSize
         newEntity.start = self.start

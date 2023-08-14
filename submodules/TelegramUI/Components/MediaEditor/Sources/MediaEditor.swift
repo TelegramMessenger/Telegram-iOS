@@ -503,6 +503,12 @@ public final class MediaEditor {
                 }
                 
                 if let player {
+                    player.isMuted = self.values.videoIsMuted
+                    if let trimRange = self.values.videoTrimRange {
+                        self.player?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
+                        self.additionalPlayer?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
+                    }
+
                     if let initialSeekPosition = self.initialSeekPosition {
                         self.initialSeekPosition = nil
                         player.seek(to: CMTime(seconds: initialSeekPosition, preferredTimescale: CMTimeScale(1000)), toleranceBefore: .zero, toleranceAfter: .zero)
@@ -564,7 +570,10 @@ public final class MediaEditor {
         } else if case .forceRendering = mode {
             self.forceRendering = true
         }
-        self.values = f(self.values)
+        let updatedValues = f(self.values)
+        if self.values != updatedValues {
+            self.values = updatedValues
+        }
         if case .skipRendering = mode {
             self.skipRendering = false
         } else if case .forceRendering = mode {

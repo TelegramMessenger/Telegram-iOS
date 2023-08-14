@@ -503,20 +503,19 @@ final class StoryItemSetContainerSendMessage {
             }
             
             let timestamp = Int32(Date().timeIntervalSince1970)
-            if noticeCount < 3, let activeUntilTimestamp = config.stealthModeState.actualizedNow().activeUntilTimestamp, activeUntilTimestamp > timestamp {
+            if noticeCount < 1, let activeUntilTimestamp = config.stealthModeState.actualizedNow().activeUntilTimestamp, activeUntilTimestamp > timestamp {
                 
                 let theme = component.theme
                 let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
                 
-                //TODO:localize
                 let alertController = textAlertController(
                     context: component.context,
                     updatedPresentationData: updatedPresentationData,
-                    title: "You are in Stealth Mode now",
-                    text: "If you send a reply or reaction, the creator of the story will also see you in the list of viewers.",
+                    title: component.strings.Story_AlertStealthModeActiveTitle,
+                    text: component.strings.Story_AlertStealthModeActiveText,
                     actions: [
-                        TextAlertAction(type: .defaultAction, title: "Cancel", action: {}),
-                        TextAlertAction(type: .genericAction, title: "Proceed", action: {
+                        TextAlertAction(type: .defaultAction, title: component.strings.Common_Cancel, action: {}),
+                        TextAlertAction(type: .genericAction, title: component.strings.Story_AlertStealthModeActiveAction, action: {
                             action()
                         })
                     ]
@@ -532,6 +531,11 @@ final class StoryItemSetContainerSendMessage {
                 view.updateIsProgressPaused()
                 
                 component.controller()?.presentInGlobalOverlay(alertController)
+                
+                #if DEBUG
+                #else
+                let _ = ApplicationSpecificNotice.incrementStoryStealthModeReplyCount(accountManager: component.context.sharedContext.accountManager).start()
+                #endif
             } else {
                 action()
             }
@@ -833,7 +837,12 @@ final class StoryItemSetContainerSendMessage {
 
                                 self.videoRecorder.set(.single(nil))
 
-                                self.sendMessages(view: view, peer: peer, messages: [updatedMessage])
+                                self.performWithPossibleStealthModeConfirmation(view: view, action: { [weak self, weak view] in
+                                    guard let self, let view else {
+                                        return
+                                    }
+                                    self.sendMessages(view: view, peer: peer, messages: [updatedMessage])
+                                })
                             }, displaySlowmodeTooltip: { [weak self] view, rect in
                                 //self?.interfaceInteraction?.displaySlowmodeTooltip(view, rect)
                                 let _ = self
@@ -878,9 +887,14 @@ final class StoryItemSetContainerSendMessage {
                             
                             let waveformBuffer: Data? = data.waveform
                             
-                            self.sendMessages(view: view, peer: peer, messages: [.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(data.compressedData.count), attributes: [.Audio(isVoice: true, duration: Int(data.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: nil, replyToStoryId: focusedStoryId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
-                            
-                            HapticFeedback().tap()
+                            self.performWithPossibleStealthModeConfirmation(view: view, action: { [weak self, weak view] in
+                                guard let self, let view else {
+                                    return
+                                }
+                                self.sendMessages(view: view, peer: peer, messages: [.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(data.compressedData.count), attributes: [.Audio(isVoice: true, duration: Int(data.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: nil, replyToStoryId: focusedStoryId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
+                                
+                                HapticFeedback().tap()
+                            })
                         }
                     })
                 } else if let videoRecorderValue = self.videoRecorderValue {
@@ -3059,11 +3073,10 @@ final class StoryItemSetContainerSendMessage {
                 let remainingActiveSeconds = activeUntilTimestamp - timestamp
                 
                 let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
-                //TODO:localize
-                let text = "The creators of stories you will view in the next **\(timeIntervalString(strings: presentationData.strings, value: remainingActiveSeconds))** won't see you in the viewers' lists."
+                let text = component.strings.Story_ToastStealthModeActiveText(timeIntervalString(strings: presentationData.strings, value: remainingActiveSeconds)).string
                 let tooltipScreen = UndoOverlayController(
                     presentationData: presentationData,
-                    content: .actionSucceeded(title: "You are in Stealth Mode", text: text, cancel: "", destructive: false),
+                    content: .actionSucceeded(title: component.strings.Story_ToastStealthModeActiveTitle, text: text, cancel: "", destructive: false),
                     elevatedLayout: false,
                     animateInAsReplacement: false,
                     action: { _ in
@@ -3087,9 +3100,8 @@ final class StoryItemSetContainerSendMessage {
                     let remainingActiveSeconds = max(1, activeUntilTimestamp - timestamp)
                     
                     let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
-                    //TODO:localize
-                    let text = "The creators of stories you will view in the next **\(timeIntervalString(strings: presentationData.strings, value: remainingActiveSeconds))** won't see you in the viewers' lists."
-                    tooltipScreenValue.content = .actionSucceeded(title: "You are in Stealth Mode", text: text, cancel: "", destructive: false)
+                    let text = component.strings.Story_ToastStealthModeActiveText(timeIntervalString(strings: presentationData.strings, value: remainingActiveSeconds)).string
+                    tooltipScreenValue.content = .actionSucceeded(title: component.strings.Story_ToastStealthModeActiveTitle, text: text, cancel: "", destructive: false)
                 })
                 
                 self.tooltipScreen?.dismiss(animated: true)
@@ -3128,11 +3140,10 @@ final class StoryItemSetContainerSendMessage {
                         }
                         
                         let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
-                        //TODO:localize
-                        let text = "The creators of stories you viewed in the last \(timeIntervalString(strings: presentationData.strings, value: pastPeriod)) or will view in the next **\(timeIntervalString(strings: presentationData.strings, value: futurePeriod))** won’t see you in the viewers’ lists."
+                        let text = component.strings.Story_ToastStealthModeActivatedText(timeIntervalString(strings: presentationData.strings, value: pastPeriod), timeIntervalString(strings: presentationData.strings, value: futurePeriod)).string
                         let tooltipScreen = UndoOverlayController(
                             presentationData: presentationData,
-                            content: .actionSucceeded(title: "Stealth Mode On", text: text, cancel: "", destructive: false),
+                            content: .actionSucceeded(title: component.strings.Story_ToastStealthModeActivatedTitle, text: text, cancel: "", destructive: false),
                             elevatedLayout: false,
                             animateInAsReplacement: false,
                             action: { _ in
@@ -3222,7 +3233,7 @@ final class StoryItemSetContainerSendMessage {
             let subject = EngineMessage(stableId: 0, stableVersion: 0, id: EngineMessage.Id(peerId: PeerId(0), namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [.geo(TelegramMediaMap(latitude: venue.latitude, longitude: venue.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: venue.venue, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))], peers: [:], associatedMessages: [:], associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
             
             let context = component.context
-            actions.append(ContextMenuAction(content: .textWithIcon(title: "View Location", icon: generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: .white)), action: { [weak controller, weak view] in
+            actions.append(ContextMenuAction(content: .textWithIcon(title: updatedPresentationData.initial.strings.Story_ViewLocation, icon: generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: .white)), action: { [weak controller, weak view] in
                 let locationController = LocationViewController(
                     context: context,
                     updatedPresentationData: updatedPresentationData,

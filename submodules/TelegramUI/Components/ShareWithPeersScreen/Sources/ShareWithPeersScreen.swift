@@ -1626,7 +1626,7 @@ final class ShareWithPeersScreenComponent: Component {
                     if let searchStateContext = self.searchStateContext, searchStateContext.subject == .search(query: self.navigationTextFieldState.text, onlyContacts: onlyContacts) {
                     } else {
                         self.searchStateDisposable?.dispose()
-                        let searchStateContext = ShareWithPeersScreen.StateContext(context: component.context, subject: .search(query: self.navigationTextFieldState.text, onlyContacts: onlyContacts))
+                        let searchStateContext = ShareWithPeersScreen.StateContext(context: component.context, subject: .search(query: self.navigationTextFieldState.text, onlyContacts: onlyContacts), editing: false)
                         var applyState = false
                         self.searchStateDisposable = (searchStateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
                             guard let self else {
@@ -1667,6 +1667,10 @@ final class ShareWithPeersScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: itemsContainerWidth, height: 1000.0)
             )
+            var isContactsSearch = false
+            if let searchStateContext = self.searchStateContext, case .search(_, true) = searchStateContext.subject {
+                isContactsSearch = true
+            }
             let peerItemSize = self.peerTemplateItem.update(
                 transition: transition,
                 component: AnyComponent(PeerListItemComponent(
@@ -1677,7 +1681,7 @@ final class ShareWithPeersScreenComponent: Component {
                     sideInset: sideInset,
                     title: "Name",
                     peer: nil,
-                    subtitle: self.searchStateContext != nil ? "" : "sub",
+                    subtitle: isContactsSearch ? "" : "sub",
                     subtitleAccessory: .none,
                     presence: nil,
                     selectionState: .editing(isSelected: false, isTinted: false),
@@ -1977,7 +1981,9 @@ final class ShareWithPeersScreenComponent: Component {
                         
                         let proceed = {
                             var savePeers = true
-                            if base == .closeFriends {
+                            if component.stateContext.editing {
+                                savePeers = false
+                            } else if base == .closeFriends {
                                 savePeers = false
                             } else {
                                 if case .stories = component.stateContext.subject {
@@ -2023,7 +2029,7 @@ final class ShareWithPeersScreenComponent: Component {
 
                             }
                             if savePeers {
-                                let _ = (updatePeersListStoredStateInteractively(engine: component.context.engine, base: base, peerIds: self.selectedPeers)
+                                let _ = (updatePeersListStoredState(engine: component.context.engine, base: base, peerIds: self.selectedPeers)
                                 |> deliverOnMainQueue).start(completed: {
                                     complete()
                                 })
@@ -2261,13 +2267,14 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         public enum Subject: Equatable {
             case stories(editing: Bool)
             case chats(blocked: Bool)
-            case contacts(EngineStoryPrivacy.Base)
+            case contacts(base: EngineStoryPrivacy.Base)
             case search(query: String, onlyContacts: Bool)
         }
         
         fileprivate var stateValue: State?
         
         public let subject: Subject
+        public let editing: Bool
         public private(set) var initialPeerIds: Set<EnginePeer.Id> = Set()
         fileprivate let blockedPeersContext: BlockedPeersContext?
         
@@ -2284,11 +2291,14 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         public init(
             context: AccountContext,
             subject: Subject = .chats(blocked: false),
+            editing: Bool,
+            initialSelectedPeers: [EngineStoryPrivacy.Base: [EnginePeer.Id]] = [:],
             initialPeerIds: Set<EnginePeer.Id> = Set(),
             closeFriends: Signal<[EnginePeer], NoError> = .single([]),
             blockedPeersContext: BlockedPeersContext? = nil
         ) {
             self.subject = subject
+            self.editing = editing
             self.initialPeerIds = initialPeerIds
             self.blockedPeersContext = blockedPeersContext
             
@@ -2313,11 +2323,20 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     savedContactsExceptionPeers,
                     savedSelectedPeers
                 ) |> mapToSignal { everyone, contacts, selected -> Signal<([EnginePeer.Id: EnginePeer], [EnginePeer.Id], [EnginePeer.Id], [EnginePeer.Id]), NoError> in
+                    var everyone = everyone
+                    if let initialPeerIds = initialSelectedPeers[.everyone] {
+                        everyone = initialPeerIds
+                    }
                     var everyonePeerSignals: [Signal<EnginePeer?, NoError>] = []
                     if everyone.count < 3 {
                         for peerId in everyone {
                             everyonePeerSignals.append(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)))
                         }
+                    }
+                    
+                    var contacts = contacts
+                    if let initialPeerIds = initialSelectedPeers[.contacts] {
+                        contacts = initialPeerIds
                     }
                     var contactsPeerSignals: [Signal<EnginePeer?, NoError>] = []
                     if contacts.count < 3 {
@@ -2325,8 +2344,13 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                             contactsPeerSignals.append(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)))
                         }
                     }
+                    
+                    var selected = selected
+                    if let initialPeerIds = initialSelectedPeers[.nobody] {
+                        selected = initialPeerIds
+                    }
                     var selectedPeerSignals: [Signal<EnginePeer?, NoError>] = []
-                    if contacts.count < 3 {
+                    if selected.count < 3 {
                         for peerId in selected {
                             selectedPeerSignals.append(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)))
                         }
@@ -2576,7 +2600,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     self.readySubject.set(true)
                 })
             case let .search(query, onlyContacts):
-                let signal: Signal<([EngineRenderedPeer], [EnginePeer.Id: Optional<Int>]), NoError>
+                let signal: Signal<([EngineRenderedPeer], [EnginePeer.Id: Optional<EnginePeer.Presence>], [EnginePeer.Id: Optional<Int>]), NoError>
                 if onlyContacts {
                     signal = combineLatest(
                         context.engine.contacts.searchLocalPeers(query: query),
@@ -2584,23 +2608,31 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     )
                     |> map { peers, contacts in
                         let contactIds = Set(contacts.0.map { $0.id })
-                        return (peers.filter { contactIds.contains($0.peerId) }, [:])
+                        return (peers.filter { contactIds.contains($0.peerId) }, [:], [:])
                     }
                 } else {
                     signal = context.engine.contacts.searchLocalPeers(query: query)
                     |> mapToSignal { peers in
                         return context.engine.data.subscribe(
+                            EngineDataMap(peers.map(\.peerId).map(TelegramEngine.EngineData.Item.Peer.Presence.init)),
                             EngineDataMap(peers.map(\.peerId).map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init))
                         )
-                        |> map { participantCountMap -> ([EngineRenderedPeer], [EnginePeer.Id: Optional<Int>]) in
-                            return (peers, participantCountMap)
+                        |> map { presenceMap, participantCountMap -> ([EngineRenderedPeer], [EnginePeer.Id: Optional<EnginePeer.Presence>], [EnginePeer.Id: Optional<Int>]) in
+                            return (peers, presenceMap, participantCountMap)
                         }
                     }
                 }
                 self.stateDisposable = (signal
-                |> deliverOnMainQueue).start(next: { [weak self] peers, participantCounts in
+                |> deliverOnMainQueue).start(next: { [weak self] peers, presenceMap, participantCounts in
                     guard let self else {
                         return
+                    }
+                    
+                    var presences: [EnginePeer.Id: EnginePeer.Presence] = [:]
+                    for (key, value) in presenceMap {
+                        if let value {
+                            presences[key] = value
+                        }
                     }
                     
                     var participants: [EnginePeer.Id: Int] = [:]
@@ -2638,7 +2670,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                         },
                         peersMap: [:],
                         savedSelectedPeers: [:],
-                        presences: [:],
+                        presences: presences,
                         participants: participants,
                         closeFriendsPeers: [],
                         grayListPeers: []
@@ -2936,7 +2968,7 @@ private func peersListStoredState(engine: TelegramEngine, base: Stories.Item.Pri
     }
 }
 
-private func updatePeersListStoredStateInteractively(engine: TelegramEngine, base: Stories.Item.Privacy.Base, peerIds: [EnginePeer.Id]) -> Signal<Never, NoError> {
+private func updatePeersListStoredState(engine: TelegramEngine, base: Stories.Item.Privacy.Base, peerIds: [EnginePeer.Id]) -> Signal<Never, NoError> {
     let key = EngineDataBuffer(length: 4)
     key.setInt32(0, value: base.rawValue)
     

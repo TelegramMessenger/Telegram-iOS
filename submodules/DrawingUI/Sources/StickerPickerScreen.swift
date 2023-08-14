@@ -2049,7 +2049,7 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
         self.locationAction()
     }
     
-    func update(theme: PresentationTheme, useOpaqueTheme: Bool, availableSize: CGSize, transition: Transition) -> CGSize {
+    func update(theme: PresentationTheme, strings: PresentationStrings, useOpaqueTheme: Bool, availableSize: CGSize, transition: Transition) -> CGSize {
         if useOpaqueTheme {
             self.backgroundLayer.backgroundColor = theme.chat.inputMediaPanel.panelContentControlOpaqueSelectionColor.cgColor
             self.tintBackgroundLayer.backgroundColor = UIColor.white.cgColor
@@ -2065,7 +2065,7 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
         let titleSize = self.title.update(
             transition: .immediate,
             component: AnyComponent(Text(
-                text: "ADD LOCATION",
+                text: strings.MediaEditor_AddLocation.uppercased(),
                 font: Font.with(size: 23.0, design: .camera),
                 color: .white
             )),

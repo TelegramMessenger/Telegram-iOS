@@ -390,6 +390,7 @@ public final class StoryItemSetContainerComponent: Component {
         private let scroller: Scroller
         
         let componentContainerView: UIView
+        let overlayContainerView: SparseContainerView
         let itemsContainerView: UIView
         let controlsContainerView: UIView
         let controlsClippingView: UIView
@@ -440,6 +441,7 @@ public final class StoryItemSetContainerComponent: Component {
         weak var disappearingReactionContextNode: ReactionContextNode?
         var displayLikeReactions: Bool = false
         var waitingForReactionAnimateOutToLike: MessageReaction.Reaction?
+        private weak var standaloneReactionAnimation: StandaloneReactionAnimation?
         
         weak var contextController: ContextController?
         weak var privacyController: ShareWithPeersScreen?
@@ -473,6 +475,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.sendMessageContext = StoryItemSetContainerSendMessage()
             
             self.componentContainerView = UIView()
+            self.overlayContainerView = SparseContainerView()
             
             self.itemsContainerView = UIView()
             
@@ -514,6 +517,7 @@ public final class StoryItemSetContainerComponent: Component {
             super.init(frame: frame)
             
             self.addSubview(self.componentContainerView)
+            self.addSubview(self.overlayContainerView)
 
             self.itemsContainerView.addSubview(self.scroller)
             self.scroller.delegate = self
@@ -530,7 +534,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.componentContainerView.addSubview(self.viewListsContainer)
             
             self.closeButton.addSubview(self.closeButtonIconView)
-            self.addSubview(self.closeButton)
+            self.overlayContainerView.addSubview(self.closeButton)
             self.closeButton.addTarget(self, action: #selector(self.closePressed), for: .touchUpInside)
             
             let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
@@ -548,9 +552,19 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                 }
                 
+                if self.reactionContextNode != nil {
+                    return []
+                }
+                if hasFirstResponder(self) {
+                    return []
+                }
+                
                 if self.itemsContainerView.frame.contains(point) {
-                    if !self.isPointInsideContentArea(point: point) {
-                        return []
+                    if self.viewListDisplayState != .hidden {
+                    } else {
+                        if !self.isPointInsideContentArea(point: point) {
+                            return []
+                        }
                     }
                 }
                 
@@ -840,6 +854,7 @@ public final class StoryItemSetContainerComponent: Component {
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state, let component = self.component, let itemLayout = self.itemLayout {
+                
                 if let _ = self.sendMessageContext.menuController {
                     return
                 }
@@ -882,26 +897,29 @@ public final class StoryItemSetContainerComponent: Component {
                 } else {
                     let referenceSize = self.controlsContainerView.frame.size
                     let point = recognizer.location(in: self.controlsContainerView)
-                                  
-                    var selectedMediaArea: MediaArea?
-                                        
-                    func isPoint(_ point: CGPoint, in area: MediaArea) -> Bool {
-                        let tx = point.x - area.coordinates.x / 100.0 * referenceSize.width
-                        let ty = point.y - area.coordinates.y / 100.0 * referenceSize.height
-                        
-                        let rad = -area.coordinates.rotation * Double.pi / 180.0
-                        let cosTheta = cos(rad)
-                        let sinTheta = sin(rad)
-                        let rotatedX = tx * cosTheta - ty * sinTheta
-                        let rotatedY = tx * sinTheta + ty * cosTheta
-                        
-                        return abs(rotatedX) <= area.coordinates.width / 100.0 * referenceSize.width / 2.0 * 1.1 && abs(rotatedY) <= area.coordinates.height / 100.0 * referenceSize.height / 2.0 * 1.1
-                    }
                     
-                    for area in component.slice.item.storyItem.mediaAreas {
-                         if isPoint(point, in: area) {
-                            selectedMediaArea = area
-                            break
+                    var selectedMediaArea: MediaArea?
+                    
+                    let safeAreaInset: CGFloat = 48.0
+                    if point.x > safeAreaInset && point.x < referenceSize.width - safeAreaInset {
+                        func isPoint(_ point: CGPoint, in area: MediaArea) -> Bool {
+                            let tx = point.x - area.coordinates.x / 100.0 * referenceSize.width
+                            let ty = point.y - area.coordinates.y / 100.0 * referenceSize.height
+                            
+                            let rad = -area.coordinates.rotation * Double.pi / 180.0
+                            let cosTheta = cos(rad)
+                            let sinTheta = sin(rad)
+                            let rotatedX = tx * cosTheta - ty * sinTheta
+                            let rotatedY = tx * sinTheta + ty * cosTheta
+                            
+                            return abs(rotatedX) <= area.coordinates.width / 100.0 * referenceSize.width / 2.0 * 1.1 && abs(rotatedY) <= area.coordinates.height / 100.0 * referenceSize.height / 2.0 * 1.1
+                        }
+                        
+                        for area in component.slice.item.storyItem.mediaAreas {
+                             if isPoint(point, in: area) {
+                                selectedMediaArea = area
+                                break
+                            }
                         }
                     }
                     
@@ -1636,6 +1654,10 @@ public final class StoryItemSetContainerComponent: Component {
                                     footerAlpha = 0.0
                                 }
                                 
+                                if case .regular = component.metrics.widthClass {
+                                    footerAlpha *= itemAlpha
+                                }
+                                
                                 itemTransition.setAlpha(view: footerPanelView, alpha: footerAlpha)
                             }
                         } else if let footerPanel = visibleItem.footerPanel {
@@ -2099,6 +2121,12 @@ public final class StoryItemSetContainerComponent: Component {
                     removeOnCompletion: false
                 )
                 
+                self.overlayContainerView.clipsToBounds = true
+                let overlayToFrame = sourceLocalFrame
+                let overlayToBounds = CGRect(origin: CGPoint(x: overlayToFrame.minX, y: overlayToFrame.minY), size: overlayToFrame.size)
+                self.overlayContainerView.layer.animatePosition(from: CGPoint(), to: overlayToFrame.center.offsetBy(dx: -self.overlayContainerView.center.x, dy: -self.overlayContainerView.center.y), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+                self.overlayContainerView.layer.animateBounds(from: self.overlayContainerView.bounds, to: overlayToBounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                
                 if !transitionOut.destinationIsAvatar {
                     let transitionView = transitionOut.transitionView
                     
@@ -2216,11 +2244,10 @@ public final class StoryItemSetContainerComponent: Component {
                 return
             }
             
-            //TODO:localize
             let tooltipScreen = TooltipScreen(
                 account: component.context.account,
                 sharedContext: component.context.sharedContext,
-                text: .markdown(text: "Long tap for more reactions"),
+                text: .markdown(text: component.strings.Story_LongTapForMoreReactions),
                 balancedTextLayout: true,
                 style: .customBlur(component.theme.rootController.navigationBar.blurredBackgroundColor, 0.0),
                 arrowStyle: .small,
@@ -2267,6 +2294,24 @@ public final class StoryItemSetContainerComponent: Component {
                     } else {
                         tooltipScreen.dismiss()
                     }
+                }
+                
+                if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+                    self.standaloneReactionAnimation = nil
+                    standaloneReactionAnimation.view.removeFromSuperview()
+                }
+                self.displayLikeReactions = false
+                if let reactionContextNode = self.reactionContextNode {
+                    self.reactionContextNode = nil
+                    
+                    let reactionTransition = Transition.immediate
+                    reactionTransition.setAlpha(view: reactionContextNode.view, alpha: 0.0, completion: { [weak reactionContextNode] _ in
+                        reactionContextNode?.view.removeFromSuperview()
+                    })
+                }
+                if let disappearingReactionContextNode = self.disappearingReactionContextNode {
+                    self.disappearingReactionContextNode = nil
+                    disappearingReactionContextNode.view.removeFromSuperview()
                 }
             }
             var itemsTransition = transition
@@ -2349,6 +2394,10 @@ public final class StoryItemSetContainerComponent: Component {
             transition.setBounds(view: self.componentContainerView, bounds: CGRect(origin: CGPoint(), size: availableSize))
             transition.setScale(view: self.componentContainerView, scale: dismissPanScale)
             
+            transition.setPosition(view: self.overlayContainerView, position: CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.5 + dismissPanOffset))
+            transition.setBounds(view: self.overlayContainerView, bounds: CGRect(origin: CGPoint(), size: availableSize))
+            transition.setScale(view: self.overlayContainerView, scale: dismissPanScale)
+            
             var bottomContentInset: CGFloat
             if !component.safeInsets.bottom.isZero {
                 bottomContentInset = component.safeInsets.bottom + 1.0
@@ -2380,8 +2429,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             let inputPlaceholder: String
             if let stealthModeTimeout = component.stealthModeTimeout {
-                //TODO:localize
-                inputPlaceholder = "Stealth Mode active – \(stringForDuration(stealthModeTimeout))"
+                inputPlaceholder = component.strings.Story_StealthModeActivePlaceholder("\(stringForDuration(stealthModeTimeout))").string
             } else {
                 inputPlaceholder = component.strings.Story_InputPlaceholderReplyPrivately
             }
@@ -2915,7 +2963,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     }
                                     
                                     if isBlockedFromStories {
-                                        itemList.append(.action(ContextMenuActionItem(text: "Show My Stories To \(peer.compactDisplayTitle)", icon: { theme in
+                                        itemList.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextShowStoriesTo(peer.compactDisplayTitle).string, icon: { theme in
                                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Stories"), color: theme.contextMenu.primaryColor)
                                         }, action: { [weak self] _, f in
                                             f(.default)
@@ -2929,7 +2977,7 @@ public final class StoryItemSetContainerComponent: Component {
                                             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                                             self.component?.presentController(UndoOverlayController(
                                                 presentationData: presentationData,
-                                                content: .info(title: nil, text: "**\(peer.compactDisplayTitle)** will now see your stories.", timeout: nil),
+                                                content: .info(title: nil, text: component.strings.Story_ToastShowStoriesTo(peer.compactDisplayTitle).string, timeout: nil),
                                                 elevatedLayout: false,
                                                 position: .top,
                                                 animateInAsReplacement: false,
@@ -2938,7 +2986,7 @@ public final class StoryItemSetContainerComponent: Component {
                                             ), nil)
                                         })))
                                     } else {
-                                        itemList.append(.action(ContextMenuActionItem(text: "Hide My Stories From \(peer.compactDisplayTitle)", icon: { theme in
+                                        itemList.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextHideStoriesFrom(peer.compactDisplayTitle).string, icon: { theme in
                                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Stories"), color: theme.contextMenu.primaryColor)
                                         }, action: { [weak self] _, f in
                                             f(.default)
@@ -2950,7 +2998,7 @@ public final class StoryItemSetContainerComponent: Component {
                                             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                                             self.component?.presentController(UndoOverlayController(
                                                 presentationData: presentationData,
-                                                content: .info(title: nil, text: "**\(peer.compactDisplayTitle)** will not see your stories anymore.", timeout: nil),
+                                                content: .info(title: nil, text: component.strings.Story_ToastHideStoriesFrom(peer.compactDisplayTitle).string, timeout: nil),
                                                 elevatedLayout: false,
                                                 position: .top,
                                                 animateInAsReplacement: false,
@@ -2961,8 +3009,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     }
 
                                     if isContact {
-                                        //TODO:localize
-                                        itemList.append(.action(ContextMenuActionItem(text: "Delete Contact", textColor: .destructive, icon: { theme in
+                                        itemList.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextDeleteContact, textColor: .destructive, icon: { theme in
                                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                                         }, action: { [weak self] _, f in
                                             f(.default)
@@ -2984,8 +3031,8 @@ public final class StoryItemSetContainerComponent: Component {
                                                         "info2.info2.Fill": animationBackgroundColor
                                                     ],
                                                     title: nil,
-                                                    text: "**\(peer.compactDisplayTitle)** has been removed from your contacts.",
-                                                    customUndoText: "Undo",
+                                                    text: component.strings.Story_ToastDeletedContact(peer.compactDisplayTitle).string,
+                                                    customUndoText: component.strings.Undo_Undo,
                                                     timeout: nil
                                                 ),
                                                 elevatedLayout: false,
@@ -3031,8 +3078,8 @@ public final class StoryItemSetContainerComponent: Component {
                                                             "info2.info2.Fill": animationBackgroundColor
                                                         ],
                                                         title: nil,
-                                                        text: "**\(peer.compactDisplayTitle)** has been blocked.",
-                                                        customUndoText: "Undo",
+                                                        text: component.strings.Story_ToastUserBlocked(peer.compactDisplayTitle).string,
+                                                        customUndoText: component.strings.Undo_Undo,
                                                         timeout: nil
                                                     ),
                                                     elevatedLayout: false,
@@ -3257,6 +3304,7 @@ public final class StoryItemSetContainerComponent: Component {
                 closeButtonFrame.origin.y -= contentBottomInsetOverflow
                 
                 transition.setFrame(view: self.closeButton, frame: closeButtonFrame)
+                transition.setAlpha(view: self.closeButton, alpha: (component.hideUI || self.isEditingStory) ? 0.0 : 1.0)
                 transition.setFrame(view: self.closeButtonIconView, frame: CGRect(origin: CGPoint(x: floor((closeButtonFrame.width - image.size.width) * 0.5), y: floor((closeButtonFrame.height - image.size.height) * 0.5)), size: image.size))
                 headerRightOffset -= 51.0
             }
@@ -3908,6 +3956,13 @@ public final class StoryItemSetContainerComponent: Component {
                                             guard let self else {
                                                 return
                                             }
+                                            
+                                            if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+                                                self.standaloneReactionAnimation = nil
+                                                standaloneReactionAnimation.view.removeFromSuperview()
+                                            }
+                                            self.standaloneReactionAnimation = standaloneReactionAnimation
+                                            
                                             standaloneReactionAnimation.frame = self.bounds
                                             self.addSubview(standaloneReactionAnimation.view)
                                         }, completion: { [weak targetView, weak reactionContextNode] in
@@ -4085,6 +4140,13 @@ public final class StoryItemSetContainerComponent: Component {
                             guard let self else {
                                 return
                             }
+                            
+                            if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+                                self.standaloneReactionAnimation = nil
+                                standaloneReactionAnimation.view.removeFromSuperview()
+                            }
+                            self.standaloneReactionAnimation = standaloneReactionAnimation
+                            
                             standaloneReactionAnimation.frame = self.bounds
                             self.componentContainerView.addSubview(standaloneReactionAnimation.view)
                         }, completion: { [weak reactionContextNode] in
@@ -4271,22 +4333,34 @@ public final class StoryItemSetContainerComponent: Component {
             self.component?.presentController(controller, nil)
         }
         
-        private func openItemPrivacySettings(initialPrivacy: EngineStoryPrivacy? = nil) {
+        private func openItemPrivacySettings(updatedPrivacy: EngineStoryPrivacy? = nil) {
             guard let component = self.component else {
                 return
             }
             
             let context = component.context
+            let currentPrivacy = component.slice.item.storyItem.privacy ?? EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: [])
             
-            let privacy = initialPrivacy ?? self.component?.slice.item.storyItem.privacy
+            if component.slice.item.storyItem.privacy == nil {
+                Logger.shared.log("EditStoryPrivacy", "Story privacy is unknown")
+            }
+            
+            let privacy = updatedPrivacy ?? component.slice.item.storyItem.privacy
             guard let privacy else {
                 return
+            }
+            
+            var selectedPeers: [EngineStoryPrivacy.Base: [EnginePeer.Id]] = [:]
+            selectedPeers[currentPrivacy.base] = currentPrivacy.additionallyIncludePeers
+            if let updatedPrivacy {
+                selectedPeers[updatedPrivacy.base] = updatedPrivacy.additionallyIncludePeers
             }
             
             let stateContext = ShareWithPeersScreen.StateContext(
                 context: context,
                 subject: .stories(editing: true),
-                initialPeerIds: Set(privacy.additionallyIncludePeers),
+                editing: true,
+                initialSelectedPeers: selectedPeers,
                 closeFriends: component.closeFriends.get(),
                 blockedPeersContext: component.blockedPeers
             )
@@ -4303,6 +4377,8 @@ public final class StoryItemSetContainerComponent: Component {
                             return
                         }
                         if component.slice.item.storyItem.privacy == privacy {
+                            self.privacyController = nil
+                            self.updateIsProgressPaused()
                             return
                         }
                         let _ = component.context.engine.messages.editStoryPrivacy(id: component.slice.item.storyItem.id, privacy: privacy).start()
@@ -4321,7 +4397,7 @@ public final class StoryItemSetContainerComponent: Component {
                             guard let self else {
                                 return
                             }
-                            self.openItemPrivacySettings(initialPrivacy: privacy)
+                            self.openItemPrivacySettings(updatedPrivacy: privacy)
                         })
                     },
                     editBlockedPeers: { [weak self] privacy, _, _ in
@@ -4332,7 +4408,7 @@ public final class StoryItemSetContainerComponent: Component {
                             guard let self else {
                                 return
                             }
-                            self.openItemPrivacySettings(initialPrivacy: privacy)
+                            self.openItemPrivacySettings(updatedPrivacy: privacy)
                         })
                     }
                 )
@@ -4360,11 +4436,12 @@ public final class StoryItemSetContainerComponent: Component {
             } else if privacy.base == .nobody {
                 subject = .chats(blocked: false)
             } else {
-                subject = .contacts(privacy.base)
+                subject = .contacts(base: privacy.base)
             }
             let stateContext = ShareWithPeersScreen.StateContext(
                 context: context,
                 subject: subject,
+                editing: true,
                 initialPeerIds: Set(privacy.additionallyIncludePeers),
                 blockedPeersContext: component.blockedPeers
             )
@@ -4737,7 +4814,6 @@ public final class StoryItemSetContainerComponent: Component {
             
             self.dismissAllTooltips()
             
-            //TODO:localize
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
             let animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
             component.presentController(UndoOverlayController(
@@ -4750,7 +4826,7 @@ public final class StoryItemSetContainerComponent: Component {
                         "info2.info2.Fill": animationBackgroundColor
                     ],
                     title: nil,
-                    text: "Subscribe to [Telegram Premium]() to save other people's unprotected stories to your Gallery.",
+                    text: component.strings.Story_ToastPremiumSaveToGallery,
                     customUndoText: nil,
                     timeout: nil
                 ),
@@ -4788,9 +4864,8 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             let context = component.context
-            //TODO:localize
             var replaceImpl: ((ViewController) -> Void)?
-            let controller = PremiumLimitsListScreen(context: context, subject: .stories, source: .other, order: [.stories], buttonText: "Upgrade Stories", isPremium: false, forceDark: true)
+            let controller = PremiumLimitsListScreen(context: context, subject: .stories, source: .other, order: [.stories], buttonText: component.strings.Story_PremiumUpgradeStoriesButton, isPremium: false, forceDark: true)
             controller.action = { [weak self] in
                 guard let self else {
                     return
@@ -4920,7 +4995,14 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 
                 let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: nil, useDirectRendering: false)
-                self.componentContainerView.addSubnode(standaloneReactionAnimation)
+                self.componentContainerView.addSubview(standaloneReactionAnimation.view)
+                
+                if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+                    self.standaloneReactionAnimation = nil
+                    standaloneReactionAnimation.view.removeFromSuperview()
+                }
+                self.standaloneReactionAnimation = standaloneReactionAnimation
+                
                 standaloneReactionAnimation.frame = self.bounds
                 standaloneReactionAnimation.animateReactionSelection(
                     context: component.context,
@@ -4937,11 +5019,17 @@ public final class StoryItemSetContainerComponent: Component {
                             return
                         }
                         
+                        if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+                            self.standaloneReactionAnimation = nil
+                            standaloneReactionAnimation.view.removeFromSuperview()
+                        }
+                        self.standaloneReactionAnimation = standaloneReactionAnimation
+                        
                         standaloneReactionAnimation.frame = self.bounds
-                        self.componentContainerView.addSubnode(standaloneReactionAnimation)
+                        self.componentContainerView.addSubview(standaloneReactionAnimation.view)
                     },
                     completion: { [weak standaloneReactionAnimation] in
-                        standaloneReactionAnimation?.removeFromSupernode()
+                        standaloneReactionAnimation?.view.removeFromSuperview()
                     }
                 )
             }
@@ -5205,8 +5293,7 @@ public final class StoryItemSetContainerComponent: Component {
             })))
             
             if case let .user(accountUser) = component.slice.peer {
-                //TODO:localize
-                items.append(.action(ContextMenuActionItem(text: "Stealth Mode", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextStealthMode, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/Eye" : "Chat/Context Menu/EyeLocked"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, a in
                     a(.default)
@@ -5437,8 +5524,7 @@ public final class StoryItemSetContainerComponent: Component {
                     })))
                 }
                 
-                //TODO:localize
-                items.append(.action(ContextMenuActionItem(text: "Stealth Mode", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextStealthMode, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/Eye" : "Chat/Context Menu/EyeLocked"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, a in
                     a(.default)

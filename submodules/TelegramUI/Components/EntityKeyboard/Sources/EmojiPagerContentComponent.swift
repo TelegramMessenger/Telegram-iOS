@@ -2213,7 +2213,7 @@ public protocol EmojiContentPeekBehavior: AnyObject {
 public protocol EmojiCustomContentView: UIView {
     var tintContainerView: UIView { get }
     
-    func update(theme: PresentationTheme, useOpaqueTheme: Bool, availableSize: CGSize, transition: Transition) -> CGSize
+    func update(theme: PresentationTheme, strings: PresentationStrings, useOpaqueTheme: Bool, availableSize: CGSize, transition: Transition) -> CGSize
 }
 
 public final class EmojiPagerContentComponent: Component {
@@ -6562,7 +6562,7 @@ public final class EmojiPagerContentComponent: Component {
                     }
                 }
                 let availableCustomContentSize = availableSize
-                let customContentViewSize = customContentView.update(theme: keyboardChildEnvironment.theme, useOpaqueTheme: useOpaqueTheme, availableSize: availableCustomContentSize, transition: customContentViewTransition)
+                let customContentViewSize = customContentView.update(theme: keyboardChildEnvironment.theme, strings: keyboardChildEnvironment.strings, useOpaqueTheme: useOpaqueTheme, availableSize: availableCustomContentSize, transition: customContentViewTransition)
                 customContentViewTransition.setFrame(view: customContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: pagerEnvironment.containerInsets.top + (component.displaySearchWithPlaceholder != nil ? 54.0 : 0.0)), size: customContentViewSize))
                 
                 customContentHeight = customContentViewSize.height

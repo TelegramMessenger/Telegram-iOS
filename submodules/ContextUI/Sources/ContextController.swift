@@ -60,10 +60,14 @@ public enum ContextMenuActionItemFont {
 
 public struct ContextMenuActionItemIconSource {
     public let size: CGSize
+    public let contentMode: UIView.ContentMode
+    public let cornerRadius: CGFloat
     public let signal: Signal<UIImage?, NoError>
     
-    public init(size: CGSize, signal: Signal<UIImage?, NoError>) {
+    public init(size: CGSize, contentMode: UIView.ContentMode = .scaleToFill, cornerRadius: CGFloat = 0.0, signal: Signal<UIImage?, NoError>) {
         self.size = size
+        self.contentMode = contentMode
+        self.cornerRadius = cornerRadius
         self.signal = signal
     }
 }

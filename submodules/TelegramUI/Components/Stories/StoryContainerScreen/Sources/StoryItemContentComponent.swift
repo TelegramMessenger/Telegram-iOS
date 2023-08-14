@@ -719,7 +719,7 @@ final class StoryItemContentComponent: Component {
                 if let current = self.loadingEffectView {
                     loadingEffectView = current
                 } else {
-                    loadingEffectView = StoryItemLoadingEffectView(effectAlpha: 0.1, duration: 1.0, hasBorder: true, playOnce: false)
+                    loadingEffectView = StoryItemLoadingEffectView(effectAlpha: 0.1, borderAlpha: 0.2, duration: 1.0, hasCustomBorder: true, playOnce: false)
                     self.loadingEffectView = loadingEffectView
                     self.addSubview(loadingEffectView)
                 }
@@ -743,21 +743,21 @@ final class StoryItemContentComponent: Component {
                     if let current = self.mediaAreasEffectView {
                         mediaAreasEffectView = current
                     } else {
-                        mediaAreasEffectView = StoryItemLoadingEffectView(effectAlpha: 0.25, duration: 1.5, hasBorder: false, playOnce: true)
+                        mediaAreasEffectView = StoryItemLoadingEffectView(effectAlpha: 0.35, borderAlpha: 0.45, gradientWidth: 150.0, duration: 1.2, hasCustomBorder: false, playOnce: true)
                         self.mediaAreasEffectView = mediaAreasEffectView
                         self.addSubview(mediaAreasEffectView)
                     }
                     mediaAreasEffectView.update(size: availableSize, transition: transition)
                     
-                    let maskView: UIView
-                    if let current = mediaAreasEffectView.mask {
-                        maskView = current
+                    let maskLayer: CALayer
+                    if let current = mediaAreasEffectView.layer.mask {
+                        maskLayer = current
                     } else {
-                        maskView = UIView(frame: CGRect(origin: .zero, size: availableSize))
-                        mediaAreasEffectView.mask = maskView
+                        maskLayer = CALayer()
+                        mediaAreasEffectView.layer.mask = maskLayer
                     }
                     
-                    if maskView.subviews.isEmpty {
+                    if (maskLayer.sublayers ?? []).isEmpty {
                         let referenceSize = availableSize
                         for mediaArea in component.item.mediaAreas {
                             guard case .venue = mediaArea else {
@@ -765,15 +765,26 @@ final class StoryItemContentComponent: Component {
                             }
                             let size = CGSize(width: mediaArea.coordinates.width / 100.0 * referenceSize.width, height: mediaArea.coordinates.height / 100.0 * referenceSize.height)
                             let position = CGPoint(x: mediaArea.coordinates.x / 100.0 * referenceSize.width, y: mediaArea.coordinates.y / 100.0 * referenceSize.height)
+                            let cornerRadius = size.height * 0.18
                             
-                            let view = UIView()
-                            view.backgroundColor = .white
-                            view.bounds = CGRect(origin: .zero, size: size)
-                            view.center = position
-                            view.layer.cornerRadius = size.height * 0.18
-                            maskView.addSubview(view)
+                            let layer = CALayer()
+                            layer.backgroundColor = UIColor.white.cgColor
+                            layer.bounds = CGRect(origin: .zero, size: size)
+                            layer.position = position
+                            layer.cornerRadius = cornerRadius
+                            maskLayer.addSublayer(layer)
                             
-                            view.transform = CGAffineTransformMakeRotation(mediaArea.coordinates.rotation * Double.pi / 180.0)
+                            let borderLayer = CAShapeLayer()
+                            borderLayer.strokeColor = UIColor.white.cgColor
+                            borderLayer.fillColor = UIColor.clear.cgColor
+                            borderLayer.lineWidth = 2.0
+                            borderLayer.path = CGPath(roundedRect: CGRect(origin: .zero, size: size), cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
+                            borderLayer.bounds = CGRect(origin: .zero, size: size)
+                            borderLayer.position = position
+                            mediaAreasEffectView.borderMaskLayer.addSublayer(borderLayer)
+                            
+                            layer.transform = CATransform3DMakeRotation(mediaArea.coordinates.rotation * Double.pi / 180.0, 0.0, 0.0, 1.0)
+                            borderLayer.transform = layer.transform
                         }
                     }
                 } else if let mediaAreasEffectView = self.mediaAreasEffectView {

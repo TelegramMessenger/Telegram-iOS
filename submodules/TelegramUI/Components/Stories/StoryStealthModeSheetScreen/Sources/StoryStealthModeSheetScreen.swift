@@ -137,7 +137,6 @@ private final class StoryStealthModeSheetContentComponent: Component {
                     toast = ComponentView()
                     self.toast = toast
                 }
-                //TODO:localize
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
                 let toastSize = toast.update(
@@ -149,7 +148,7 @@ private final class StoryStealthModeSheetContentComponent: Component {
                             size: CGSize(width: 32.0, height: 32.0)
                         )),
                         content: AnyComponent(MultilineTextComponent(
-                            text: .markdown(text: "Please wait until the **Stealth Mode** is ready to use again", attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil })),
+                            text: .markdown(text: environment.strings.Story_StealthMode_ToastCooldownText, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil })),
                             maximumNumberOfLines: 0
                         ))
                     )),
@@ -247,13 +246,13 @@ private final class StoryStealthModeSheetContentComponent: Component {
             switch component.mode {
             case .control:
                 if remainingCooldownSeconds <= 0 {
-                    buttonText = "Enable Stealth Mode"
+                    buttonText = environment.strings.Story_StealthMode_EnableAction
                 } else {
-                    buttonText = "Available in \(stringForDuration(remainingCooldownSeconds))"
+                    buttonText = environment.strings.Story_StealthMode_CooldownAction(stringForDuration(remainingCooldownSeconds)).string
                 }
                 content = AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(Text(text: buttonText, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)))
             case .upgrade:
-                buttonText = "Unlock Stealth Mode"
+                buttonText = environment.strings.Story_StealthMode_UpgradeAction
                 content = AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(
                     HStack([
                         AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(Text(text: buttonText, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor))),

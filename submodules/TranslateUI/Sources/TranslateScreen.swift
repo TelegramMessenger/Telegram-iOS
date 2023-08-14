@@ -1075,7 +1075,11 @@ public class TranslateScreen: ViewController {
         self.component = AnyComponent(component)
         self.theme = theme
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: context.sharedContext.currentPresentationData.with { $0 }))
+        var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        if let theme {
+            presentationData = presentationData.withUpdated(theme: theme)
+        }
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
     }
     
     required public init(coder aDecoder: NSCoder) {

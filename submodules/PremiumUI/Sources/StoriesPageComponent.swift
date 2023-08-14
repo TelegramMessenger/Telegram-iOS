@@ -309,7 +309,7 @@ private final class StoriesListComponent: CombinedComponent {
         
         return { context in
             let theme = context.component.theme
-//            let strings = context.component.context.sharedContext.currentPresentationData.with { $0 }.strings
+            let strings = context.component.context.sharedContext.currentPresentationData.with { $0 }.strings
             
             let colors = [
                 UIColor(rgb: 0x0275f3),
@@ -343,9 +343,9 @@ private final class StoriesListComponent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "order",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Priority Order",
+                        title: strings.Premium_Stories_Order_Title,
                         titleColor: titleColor,
-                        text: "Get more views as your stories are always displayed first.",
+                        text: strings.Premium_Stories_Order_Text,
                         textColor: textColor,
                         iconName: "Premium/Stories/Order",
                         iconColor: colors[0]
@@ -357,9 +357,9 @@ private final class StoriesListComponent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "stealth",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Stealth Mode",
+                        title: strings.Premium_Stories_Stealth_Title,
                         titleColor: titleColor,
-                        text: "Hide the fact that you viewed other people's stories.",
+                        text: strings.Premium_Stories_Stealth_Text,
                         textColor: textColor,
                         iconName: "Premium/Stories/Stealth",
                         iconColor: colors[1]
@@ -371,9 +371,9 @@ private final class StoriesListComponent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "views",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Permanent Views History",
+                        title: strings.Premium_Stories_Views_Title,
                         titleColor: titleColor,
-                        text: "Check who opens your stories — even after they expire.",
+                        text: strings.Premium_Stories_Views_Text,
                         textColor: textColor,
                         iconName: "Premium/Stories/Views",
                         iconColor: colors[2]
@@ -385,9 +385,9 @@ private final class StoriesListComponent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "expiration",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Expiration Durations",
+                        title: strings.Premium_Stories_Expiration_Title,
                         titleColor: titleColor,
-                        text: "Set custom expiration durations like 6 or 48 hours for your stories.",
+                        text: strings.Premium_Stories_Expiration_Text,
                         textColor: textColor,
                         iconName: "Premium/Stories/Expire",
                         iconColor: colors[3]
@@ -399,9 +399,9 @@ private final class StoriesListComponent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "save",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Save Stories to Gallery",
+                        title: strings.Premium_Stories_Save_Title,
                         titleColor: titleColor,
-                        text: "Save other people's unprotected stories to your Gallery.",
+                        text: strings.Premium_Stories_Save_Text,
                         textColor: textColor,
                         iconName: "Premium/Stories/Save",
                         iconColor: colors[4]
@@ -413,9 +413,9 @@ private final class StoriesListComponent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "captions",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Longer Captions",
+                        title: strings.Premium_Stories_Captions_Title,
                         titleColor: titleColor,
-                        text: "Add ten times longer captions to your stories.",
+                        text: strings.Premium_Stories_Captions_Text,
                         textColor: textColor,
                         iconName: "Premium/Stories/Caption",
                         iconColor: colors[5]
@@ -427,9 +427,9 @@ private final class StoriesListComponent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "format",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Links and Formatting",
+                        title: strings.Premium_Stories_Format_Title,
                         titleColor: titleColor,
-                        text: "Add links and formatting in captions to your stories.",
+                        text: strings.Premium_Stories_Format_Text,
                         textColor: textColor,
                         iconName: "Premium/Stories/Format",
                         iconColor: colors[6]
@@ -581,7 +581,7 @@ final class StoriesPageComponent: CombinedComponent {
             state.isDisplaying = environment.isDisplaying
             
             let theme = context.component.theme
-//            let strings = context.component.context.sharedContext.currentPresentationData.with { $0 }.strings
+            let strings = context.component.context.sharedContext.currentPresentationData.with { $0 }.strings
             
             let topInset: CGFloat = 56.0
             
@@ -641,7 +641,7 @@ final class StoriesPageComponent: CombinedComponent {
             
             let title = title.update(
                 component: MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Upgraded Stories", font: Font.semibold(20.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: strings.Premium_Stories_Title, font: Font.semibold(20.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center,
                     truncationType: .end,
                     maximumNumberOfLines: 1
@@ -652,7 +652,7 @@ final class StoriesPageComponent: CombinedComponent {
             
             let secondaryTitle = secondaryTitle.update(
                 component: MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Exclusive Features in Stories", font: Font.semibold(17.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: strings.Premium_Stories_AdditionalTitle, font: Font.semibold(17.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center,
                     truncationType: .end,
                     maximumNumberOfLines: 1

@@ -1602,7 +1602,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []),
             timeout: 86400,
             isForwardingDisabled: false,
-            pin: false
+            pin: true
         )
     }
     
@@ -1857,7 +1857,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 initialValues = draft.values
 
                 for entity in draft.values.entities {
-                    self.entitiesView.add(entity.entity, announce: false)
+                    self.entitiesView.add(entity.entity.duplicate(copy: true), announce: false)
                 }
                 
                 if let drawingData = initialValues?.drawing?.pngData() {
@@ -2068,6 +2068,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         self.isInteractingWithEntities = isInteracting
                         if !isInteracting {
                             self.controller?.isSavingAvailable = true
+                            self.hasAnyChanges = true
                         }
                         self.requestUpdate(transition: .easeInOut(duration: 0.2))
                     }
@@ -3231,7 +3232,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if self.entitiesView.selectedEntityView != nil || self.isDisplayingTool {
                         bottomInputOffset = inputHeight / 2.0
                     } else {
-                        bottomInputOffset = 0.0 //inputHeight - bottomInset - 17.0
+                        bottomInputOffset = 0.0
                     }
                 }
             }
@@ -3479,6 +3480,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let stateContext = ShareWithPeersScreen.StateContext(
             context: self.context,
             subject: .stories(editing: false),
+            editing: false,
             initialPeerIds: Set(privacy.privacy.additionallyIncludePeers),
             closeFriends: self.closeFriends.get(),
             blockedPeersContext: self.storiesBlockedPeers
@@ -3554,11 +3556,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         } else if privacy.base == .nobody {
             subject = .chats(blocked: false)
         } else {
-            subject = .contacts(privacy.base)
+            subject = .contacts(base: privacy.base)
         }
         let stateContext = ShareWithPeersScreen.StateContext(
             context: self.context,
             subject: subject,
+            editing: false,
             initialPeerIds: Set(privacy.additionallyIncludePeers),
             blockedPeersContext: self.storiesBlockedPeers
         )
@@ -3723,7 +3726,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 
         let controller = UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: text), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
             if case .info = action, let self {
-                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true, dismissed: nil)
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .storiesFormatting, forceDark: true, dismissed: nil)
                 self.push(controller)
             }
             return false }
@@ -3967,10 +3970,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let entities = self.node.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }
         let codableEntities = DrawingEntitiesView.encodeEntities(entities, entitiesView: self.node.entitiesView)
         mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
-        
+                
         var caption = self.getCaption()
         caption = convertMarkdownToAttributes(caption)
         
+        var hasEntityChanges = false
         let randomId: Int64
         if case let .draft(_, id) = subject, let id {
             randomId = id
@@ -3979,7 +3983,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         var mediaAreas: [MediaArea] = []
-        if case .draft = subject {
+        if case let .draft(draft, _) = subject {
+            if draft.values.entities != codableEntities {
+                hasEntityChanges = true
+            }
         } else {
             mediaAreas = self.initialMediaAreas ?? []
         }
@@ -4007,7 +4014,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         }
         
-        if self.isEditingStory && !self.node.hasAnyChanges {
+        if self.isEditingStory && !(self.node.hasAnyChanges || hasEntityChanges) {
             self.completion(randomId, nil, [], caption, self.state.privacy, stickers, { [weak self] finished in
                 self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                     self?.dismiss()

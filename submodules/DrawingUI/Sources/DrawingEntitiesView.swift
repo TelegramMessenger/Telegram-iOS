@@ -460,7 +460,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     }
     
     func duplicate(_ entity: DrawingEntity) -> DrawingEntity {
-        let newEntity = entity.duplicate()
+        let newEntity = entity.duplicate(copy: false)
         self.prepareNewEntity(newEntity, setup: false, relativeTo: entity)
         
         guard let view = makeEntityView(context: self.context, entity: newEntity) else {

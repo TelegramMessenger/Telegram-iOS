@@ -360,7 +360,8 @@ public enum PremiumPerk: CaseIterable {
             .appIcons,
             .animatedEmoji,
             .emojiStatus,
-            .translation
+            .translation,
+            .stories
         ]
     }
     
@@ -522,6 +523,7 @@ struct PremiumIntroConfiguration {
             .doubleLimits,
             .moreUpload,
             .fasterDownload,
+            .translation,
             .voiceToText,
             .noAds,
             .emojiStatus,
@@ -1614,17 +1616,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             )
             context.add(text
                 .position(CGPoint(x: size.width / 2.0, y: size.height + text.size.height / 2.0))
-//                .update(Transition.Update { _, view, _ in
-//                    if let snapshot = view.snapshotView(afterScreenUpdates: false) {
-//                        let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
-//                        view.superview?.addSubview(snapshot)
-//                        transition.setAlpha(view: snapshot, alpha: 0.0, completion: { [weak snapshot] _ in
-//                            snapshot?.removeFromSuperview()
-//                        })
-//                        snapshot.frame = view.frame
-//                        transition.animateAlpha(view: view, from: 0.0, to: 1.0)
-//                    }
-//                })
             )
             size.height += text.size.height
             size.height += 21.0
@@ -1643,7 +1634,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0x548DFF),
                 UIColor(rgb: 0x54A3FF),
                 UIColor(rgb: 0x54bdff),
-                UIColor(rgb: 0x71c8ff)
+                UIColor(rgb: 0x71c8ff),
+                UIColor(rgb: 0xa0daff)
             ]
                         
             let accountContext = context.component.context

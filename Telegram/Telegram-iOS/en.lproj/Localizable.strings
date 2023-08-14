@@ -9712,6 +9712,7 @@ Sorry for the inconvenience.";
 "Story.Privacy.PostStory" = "Post Story";
 
 "Story.Views.ViewsExpired" = "List of viewers becomes unavailable **24 hours** after the story expires.";
+"Story.Views.ViewsNotRecorded" = "Information about viewers wasn’t recorded.";
 "Story.Views.NoViews" = "Nobody has viewed\nyour story yet.";
 
 "AutoDownloadSettings.Stories" = "Stories";
@@ -9756,9 +9757,34 @@ Sorry for the inconvenience.";
 "Premium.New" = "NEW";
 
 "MediaEditor.AddGif" = "Add GIF";
+"MediaEditor.AddLocation" = "Add Location";
 
 "Premium.Stories" = "Upgraded Stories";
 "Premium.StoriesInfo" = "Priority order, stealth mode, permanent views history and more.";
+
+"Premium.Stories.Title" = "Upgraded Stories";
+"Premium.Stories.AdditionalTitle" = "Exclusive Features in Stories";
+
+"Premium.Stories.Order.Title" = "Priority Order";
+"Premium.Stories.Order.Text" = "Get more views as your stories are always displayed first.";
+
+"Premium.Stories.Stealth.Title" = "Stealth Mode";
+"Premium.Stories.Stealth.Text" = "Hide the fact that you viewed other people's stories.";
+
+"Premium.Stories.Views.Title" = "Permanent Views History";
+"Premium.Stories.Views.Text" = "Check who opens your stories — even after they expire.";
+
+"Premium.Stories.Expiration.Title" = "Expiration Durations";
+"Premium.Stories.Expiration.Text" = "Set custom expiration durations like 6 or 48 hours for your stories.";
+
+"Premium.Stories.Save.Title" = "Save Stories to Gallery";
+"Premium.Stories.Save.Text" = "Save other people's unprotected stories to your Gallery.";
+
+"Premium.Stories.Captions.Title" = "Longer Captions";
+"Premium.Stories.Captions.Text" = "Add ten times longer captions to your stories.";
+
+"Premium.Stories.Format.Title" = "Links and Formatting";
+"Premium.Stories.Format.Text" = "Add links and formatting in captions to your stories.";
 
 "Premium.MaxExpiringStoriesText" = "You can post **%@** stories in **24** hours. Subscribe to **Telegram Premium** to increase this limit to **%@**.";
 "Premium.MaxExpiringStoriesNoPremiumText" = "You have reached the limit of **%@** stories per **24** hours.";
@@ -9771,3 +9797,62 @@ Sorry for the inconvenience.";
 "Premium.MaxStoriesMonthlyText" = "You can post **%@** stories in a month. Upgrade to **Telegram Premium** to increase this limit to **%@**.";
 "Premium.MaxStoriesMonthlyNoPremiumText" = "You have reached the limit of **%@** stories per month.";
 "Premium.MaxStoriesMonthlyFinalText" = "You have reached the limit of **%@** stories per month.";
+
+"MediaPicker.Recents" = "Recents";
+
+"Story.LongTapForMoreReactions" = "Long tap for more reactions";
+"Story.StealthModeActivePlaceholder" = "Stealth Mode active – %@";
+
+"Story.ContextShowStoriesTo" = "Show My Stories To %@";
+"Story.ToastShowStoriesTo" = "**%@** will now see your stories.";
+"Story.ContextHideStoriesFrom" = "Hide My Stories From %@";
+"Story.ToastHideStoriesFrom" = "**%@** will not see your stories anymore.";
+"Story.ContextDeleteContact" = "Delete Contact";
+"Story.ToastDeletedContact" = "**%@** has been removed from your contacts.";
+"Story.ToastUserBlocked" = "**%@** has been blocked.";
+"Story.ToastPremiumSaveToGallery" = "Subscribe to [Telegram Premium]() to save other people's unprotected stories to your Gallery.";
+"Story.PremiumUpgradeStoriesButton" = "Upgrade Stories";
+"Story.ContextStealthMode" = "Stealth Mode";
+"Story.AlertStealthModeActiveTitle" = "You are in Stealth Mode now";
+"Story.AlertStealthModeActiveText" = "If you send a reply or reaction, the creator of the story will also see you in the list of viewers.";
+"Story.AlertStealthModeActiveAction" = "Proceed";
+"Story.ToastStealthModeActiveTitle" = "You are in Stealth Mode now";
+"Story.ToastStealthModeActiveText" = "The creators of stories you will view in the next **%@** won't see you in the viewers' lists.";
+"Story.ToastStealthModeActivatedTitle" = "Stealth Mode On";
+"Story.ToastStealthModeActivatedText" = "The creators of stories you viewed in the last **%1$@** or will view in the next **%2$@** won’t see you in the viewers’ lists.";
+
+"Story.ViewList.PremiumUpgradeText" = "List of viewers isn't available after 24 hours of story expiration.\n\nTo unlock viewers' lists for expired and saved stories, subscribe to [Telegram Premium]().";
+"Story.ViewList.PremiumUpgradeAction" = "Learn More";
+"Story.ViewList.PremiumUpgradeInlineText" = "To unlock viewers' lists for expired and saved stories, subscribe to [Telegram Premium]().";
+"Story.ViewList.NotFullyRecorded" = "Information about the other viewers wasn’t recorded.";
+"Story.ViewList.EmptyTextSearch" = "No views found";
+"Story.ViewList.EmptyTextContacts" = "None of your contacts viewed this story.";
+"Story.ViewList.ContextSortReactions" = "Reactions First";
+"Story.ViewList.ContextSortRecent" = "Recent First";
+"Story.ViewList.ContextSortInfo" = "Choose the order for the list of viewers.";
+"Story.ViewList.TabTitleAll" = "All Viewers";
+"Story.ViewList.TabTitleContacts" = "Contacts";
+"Story.ViewList.TitleViewers" = "Viewers";
+"Story.ViewList.TitleEmpty" = "No Views";
+"Story.Footer.NoViews" = "No Views";
+"Story.Footer.ViewCount_1" = "|%d| View";
+"Story.Footer.ViewCount_any" = "|%d| Views";
+"Story.StealthMode.Title" = "Stealth Mode";
+"Story.StealthMode.ControlText" = "Turn Stealth Mode on to hide the fact that you viewed peoples' stories from them.";
+"Story.StealthMode.UpgradeText" = "Subscribe to Telegram Premium to hide the fact that you viewed peoples' stories from them.";
+"Story.StealthMode.RecentTitle" = "Hide Recent Views";
+"Story.StealthMode.RecentText" = "Hide my views in the last **%@**.";
+"Story.StealthMode.NextTitle" = "Hide Next Views";
+"Story.StealthMode.NextText" = "Hide my views in the next **%@**.";
+"Story.StealthMode.ToastCooldownText" = "Please wait until the **Stealth Mode** is ready to use again";
+"Story.StealthMode.EnableAction" = "Enable Stealth Mode";
+"Story.StealthMode.CooldownAction" = "Available in %@";
+"Story.StealthMode.UpgradeAction" = "Unlock Stealth Mode";
+
+"Story.ViewLocation" = "View Location";
+
+"Location.AddThisLocation" = "Add This Location";
+"Location.AddMyLocation" = "Add My Current Location";
+"Location.TypeCity" = "City";
+"Location.TypeStreet" = "Street";
+"Location.TypeLocation" = "Location";

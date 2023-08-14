@@ -79,7 +79,7 @@ func _internal_uploadedPeerPhoto(postbox: Postbox, network: Network, resource: M
 
 func _internal_uploadedPeerVideo(postbox: Postbox, network: Network, messageMediaPreuploadManager: MessageMediaPreuploadManager?, resource: MediaResource) -> Signal<UploadedPeerPhotoData, NoError> {
     if let messageMediaPreuploadManager = messageMediaPreuploadManager {
-        return messageMediaPreuploadManager.upload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .video, userContentType: .video), hintFileSize: nil, hintFileIsLarge: false)
+        return messageMediaPreuploadManager.upload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .video, userContentType: .video), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
         |> map { result -> UploadedPeerPhotoData in
             return UploadedPeerPhotoData(resource: resource, content: .result(result), local: false)
         }
