@@ -694,6 +694,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     case .unconstrained:
                         maxDimensions.width = unboundSize.width
                     }
+                    if message.text.isEmpty {
+                        maxDimensions.width = max(layoutConstants.image.maxDimensions.width, unboundSize.aspectFitted(CGSize(width: maxDimensions.width, height: layoutConstants.image.minDimensions.height)).width)
+                    }
                 }
             } else if let file = media as? TelegramMediaFile, var dimensions = file.dimensions {
                 if let thumbnail = file.previewRepresentations.first {
