@@ -18,10 +18,13 @@ public final class NotificationExceptionsList: Equatable {
     }
 }
 
-func _internal_notificationExceptionsList(accountPeerId: PeerId, postbox: Postbox, network: Network) -> Signal<NotificationExceptionsList, NoError> {
+func _internal_notificationExceptionsList(accountPeerId: PeerId, postbox: Postbox, network: Network, isStories: Bool) -> Signal<NotificationExceptionsList, NoError> {
     var flags: Int32 = 0
-    flags |= 1 << 1
-    flags |= 1 << 2
+    if isStories {
+        flags |= 1 << 2
+    } else {
+        flags |= 1 << 1
+    }
     
     return network.request(Api.functions.account.getNotifyExceptions(flags: flags, peer: nil))
     |> retryRequest

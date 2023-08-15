@@ -637,7 +637,16 @@ public extension TelegramEngine {
         }
 
         public func notificationExceptionsList() -> Signal<NotificationExceptionsList, NoError> {
-            return _internal_notificationExceptionsList(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network)
+            return combineLatest(
+                _internal_notificationExceptionsList(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, isStories: false),
+                _internal_notificationExceptionsList(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, isStories: true)
+            )
+            |> map { lhs, rhs in
+                return NotificationExceptionsList(
+                    peers: lhs.peers.merging(rhs.peers, uniquingKeysWith: { a, _ in a }),
+                    settings: lhs.settings.merging(rhs.settings, uniquingKeysWith: { a, _ in a })
+                )
+            }
         }
 
         public func fetchAndUpdateCachedPeerData(peerId: PeerId) -> Signal<Bool, NoError> {
