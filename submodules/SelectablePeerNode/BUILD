@@ -12,6 +12,7 @@ swift_library(
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/TelegramCore:TelegramCore",
+        "//submodules/Postbox:Postbox",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
@@ -24,6 +25,9 @@ swift_library(
         "//submodules/CheckNode:CheckNode",
         "//submodules/ComponentFlow:ComponentFlow",
         "//submodules/TelegramUI/Components/EmojiStatusComponent:EmojiStatusComponent",
+        "//submodules/TelegramUIPreferences",
+        "//submodules/TelegramUI/Components/AnimationCache",
+        "//submodules/TelegramUI/Components/MultiAnimationRenderer",
     ],
     visibility = [
         "//visibility:public",

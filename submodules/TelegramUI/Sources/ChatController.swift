@@ -100,6 +100,7 @@ import VolumeButtons
 import ChatAvatarNavigationNode
 import ChatContextQuery
 import PeerReportScreen
+import PeerSelectionController
 
 #if DEBUG
 import os.signpost
@@ -265,9 +266,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private let presentationReady = Promise<Bool>()
     
     private var presentationInterfaceState: ChatPresentationInterfaceState
-    var presentationInterfaceStatePromise: ValuePromise<ChatPresentationInterfaceState>
+    let presentationInterfaceStatePromise: ValuePromise<ChatPresentationInterfaceState>
+    public var presentationInterfaceStateSignal: Signal<Any, NoError> {
+        return self.presentationInterfaceStatePromise.get() |> map { $0 }
+    }
     
-    var selectedMessageIds: Set<EngineMessage.Id>? {
+    public var selectedMessageIds: Set<EngineMessage.Id>? {
         return self.presentationInterfaceState.interfaceState.selectionState?.selectedIds
     }
     
@@ -1424,7 +1428,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     strongSelf.canReadHistory.set(false)
                     
-                    let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: source, items: actionsSignal, recognizer: recognizer, gesture: gesture)
+                    let controller = ContextController(presentationData: strongSelf.presentationData, source: source, items: actionsSignal, recognizer: recognizer, gesture: gesture)
                     controller.dismissed = { [weak self] in
                         self?.canReadHistory.set(true)
                     }
@@ -1761,7 +1765,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 strongSelf.canReadHistory.set(false)
                 
-                let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageReactionContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, engine: strongSelf.context.engine, message: message, contentView: sourceView)), items: .single(items), recognizer: nil, gesture: gesture)
+                let controller = ContextController(presentationData: strongSelf.presentationData, source: .extracted(ChatMessageReactionContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, engine: strongSelf.context.engine, message: message, contentView: sourceView)), items: .single(items), recognizer: nil, gesture: gesture)
                 controller.dismissed = { [weak self] in
                     self?.canReadHistory.set(true)
                 }
@@ -3357,7 +3361,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
                     
-                    let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, engine: strongSelf.context.engine, message: message._asMessage(), selectAll: true)), items: .single(ContextController.Items(content: .list(actions))), recognizer: nil)
+                    let controller = ContextController(presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, engine: strongSelf.context.engine, message: message._asMessage(), selectAll: true)), items: .single(ContextController.Items(content: .list(actions))), recognizer: nil)
                     strongSelf.currentContextController = controller
                     strongSelf.forEachController({ controller in
                         if let controller = controller as? TooltipScreen {
@@ -3435,7 +3439,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
                     
-                    let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, engine: strongSelf.context.engine, message: topMessage, selectAll: true)), items: .single(ContextController.Items(content: .list(actions))), recognizer: nil)
+                    let controller = ContextController(presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, engine: strongSelf.context.engine, message: topMessage, selectAll: true)), items: .single(ContextController.Items(content: .list(actions))), recognizer: nil)
                     strongSelf.currentContextController = controller
                     strongSelf.forEachController({ controller in
                         if let controller = controller as? TooltipScreen {
@@ -3941,7 +3945,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 strongSelf.canReadHistory.set(false)
                 
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: galleryController, sourceNode: node, passthroughTouches: false)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+                let contextController = ContextController(presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: galleryController, sourceNode: node, passthroughTouches: false)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
                 contextController.dismissed = { [weak self] in
                     self?.canReadHistory.set(true)
                 }
@@ -4716,7 +4720,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 strongSelf.canReadHistory.set(false)
                 
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: galleryController, sourceNode: node, passthroughTouches: false)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
+                let contextController = ContextController(presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: galleryController, sourceNode: node, passthroughTouches: false)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                 contextController.dismissed = { [weak self] in
                     self?.canReadHistory.set(true)
                 }
@@ -7996,7 +8000,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             )))
             let items = ContextController.Items(content: .list(menuItems))
             
-            let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageNavigationButtonContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, contentNode: strongSelf.chatDisplayNode.navigateButtons.mentionsButton.containerNode)), items: .single(items), recognizer: nil, gesture: gesture)
+            let controller = ContextController(presentationData: strongSelf.presentationData, source: .extracted(ChatMessageNavigationButtonContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, contentNode: strongSelf.chatDisplayNode.navigateButtons.mentionsButton.containerNode)), items: .single(items), recognizer: nil, gesture: gesture)
             
             strongSelf.forEachController({ controller in
                 if let controller = controller as? TooltipScreen {
@@ -8163,7 +8167,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             )))
             let items = ContextController.Items(content: .list(menuItems))
             
-            let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageNavigationButtonContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, contentNode: strongSelf.chatDisplayNode.navigateButtons.reactionsButton.containerNode)), items: .single(items), recognizer: nil, gesture: gesture)
+            let controller = ContextController(presentationData: strongSelf.presentationData, source: .extracted(ChatMessageNavigationButtonContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, contentNode: strongSelf.chatDisplayNode.navigateButtons.reactionsButton.containerNode)), items: .single(items), recognizer: nil, gesture: gesture)
             
             strongSelf.forEachController({ controller in
                 if let controller = controller as? TooltipScreen {
@@ -8645,7 +8649,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
                 strongSelf.canReadHistory.set(false)
                 
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, passthroughTouches: true)), items: items |> map { ContextController.Items(content: .list($0)) })
+                let contextController = ContextController(presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, passthroughTouches: true)), items: items |> map { ContextController.Items(content: .list($0)) })
                 contextController.dismissed = { [weak self] in
                     self?.canReadHistory.set(true)
                 }
@@ -10377,7 +10381,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
             
-            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, passthroughTouches: true)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            let contextController = ContextController(presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, passthroughTouches: true)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             strongSelf.presentInGlobalOverlay(contextController)
         }, joinGroupCall: { [weak self] activeCall in
             guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
@@ -10462,7 +10466,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
             
-            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .reference(ChatControllerContextReferenceContentSource(controller: strongSelf, sourceView: node.view, insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: bottomInset, right: 0.0))), items: .single(ContextController.Items(content: .list(items))), gesture: gesture, workaroundUseLegacyImplementation: true)
+            let contextController = ContextController(presentationData: strongSelf.presentationData, source: .reference(ChatControllerContextReferenceContentSource(controller: strongSelf, sourceView: node.view, insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: bottomInset, right: 0.0))), items: .single(ContextController.Items(content: .list(items))), gesture: gesture, workaroundUseLegacyImplementation: true)
             contextController.dismissed = { [weak self] in
                 if let strongSelf = self {
                     strongSelf.updateChatPresentationInterfaceState(interactive: true, {
@@ -16159,7 +16163,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
                 
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, sourceRect: sourceRect, passthroughTouches: true)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+                let contextController = ContextController(presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, sourceRect: sourceRect, passthroughTouches: true)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
             }
         )

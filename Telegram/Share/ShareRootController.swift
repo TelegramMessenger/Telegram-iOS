@@ -1,6 +1,7 @@
 import UIKit
 import TelegramUI
 import BuildConfig
+import ShareExtensionContext
 
 @objc(ShareRootController)
 class ShareRootController: UIViewController {

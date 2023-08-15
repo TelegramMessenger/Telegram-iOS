@@ -685,12 +685,12 @@ public enum AccountNetworkState: Equatable {
 }
 
 public final class AccountAuxiliaryMethods {
-    public let fetchResource: (Account, MediaResource, Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?
+    public let fetchResource: (Postbox, MediaResource, Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?
     public let fetchResourceMediaReferenceHash: (MediaResource) -> Signal<Data?, NoError>
     public let prepareSecretThumbnailData: (MediaResourceData) -> (PixelDimensions, Data)?
     public let backgroundUpload: (Postbox, Network, MediaResource) -> Signal<String?, NoError>
     
-    public init(fetchResource: @escaping (Account, MediaResource, Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?, fetchResourceMediaReferenceHash: @escaping (MediaResource) -> Signal<Data?, NoError>, prepareSecretThumbnailData: @escaping (MediaResourceData) -> (PixelDimensions, Data)?, backgroundUpload: @escaping (Postbox, Network, MediaResource) -> Signal<String?, NoError>) {
+    public init(fetchResource: @escaping (Postbox, MediaResource, Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>?, fetchResourceMediaReferenceHash: @escaping (MediaResource) -> Signal<Data?, NoError>, prepareSecretThumbnailData: @escaping (MediaResourceData) -> (PixelDimensions, Data)?, backgroundUpload: @escaping (Postbox, Network, MediaResource) -> Signal<String?, NoError>) {
         self.fetchResource = fetchResource
         self.fetchResourceMediaReferenceHash = fetchResourceMediaReferenceHash
         self.prepareSecretThumbnailData = prepareSecretThumbnailData
@@ -1378,7 +1378,7 @@ public typealias TransformOutgoingMessageMedia = (_ postbox: Postbox, _ network:
 public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: FetchCachedResourceRepresentation? = nil, transformOutgoingMessageMedia: TransformOutgoingMessageMedia? = nil) {
     account.postbox.mediaBox.fetchResource = { [weak account] resource, intervals, parameters -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
         if let strongAccount = account {
-            if let result = strongAccount.auxiliaryMethods.fetchResource(strongAccount, resource, intervals, parameters) {
+            if let result = strongAccount.auxiliaryMethods.fetchResource(strongAccount.postbox, resource, intervals, parameters) {
                 return result
             } else if let result = fetchResource(account: strongAccount, resource: resource, intervals: intervals, parameters: parameters) {
                 return result
@@ -1475,6 +1475,9 @@ public func standaloneStateManager(
                             |> mapToSignal { phoneNumber in
                                 Logger.shared.log("StandaloneStateManager", "received phone number")
                                 
+                                let mediaReferenceRevalidationContext = MediaReferenceRevalidationContext()
+                                let networkStatsContext = NetworkStatsContext(postbox: postbox)
+                                
                                 return initializedNetwork(
                                     accountId: id,
                                     arguments: networkArguments,
@@ -1491,6 +1494,31 @@ public func standaloneStateManager(
                                 )
                                 |> map { network -> AccountStateManager? in
                                     Logger.shared.log("StandaloneStateManager", "received network")
+                                    
+                                    postbox.mediaBox.fetchResource = { resource, intervals, parameters -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
+                                        if let result = auxiliaryMethods.fetchResource(
+                                            postbox,
+                                            resource,
+                                            intervals,
+                                            parameters
+                                        ) {
+                                            return result
+                                        } else if let result = fetchResource(
+                                            accountPeerId: authorizedState.peerId,
+                                            postbox: postbox,
+                                            network: network,
+                                            mediaReferenceRevalidationContext: mediaReferenceRevalidationContext,
+                                            networkStatsContext: networkStatsContext,
+                                            isTestingEnvironment: authorizedState.isTestingEnvironment,
+                                            resource: resource,
+                                            intervals: intervals,
+                                            parameters: parameters
+                                        ) {
+                                            return result
+                                        } else {
+                                            return .never()
+                                        }
+                                    }
                                     
                                     return AccountStateManager(
                                         accountPeerId: authorizedState.peerId,

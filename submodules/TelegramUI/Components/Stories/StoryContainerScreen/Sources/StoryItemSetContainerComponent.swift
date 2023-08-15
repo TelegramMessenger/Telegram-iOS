@@ -2243,6 +2243,17 @@ public final class StoryItemSetContainerComponent: Component {
             if !likeButtonView.isDescendant(of: self) {
                 return
             }
+            if likeButtonView.isHidden {
+                return
+            }
+            if likeButtonView.alpha == 0.0 {
+                return
+            }
+            if component.slice.peer.isService {
+                return
+            } else if case .unsupported = component.slice.item.storyItem.media {
+                return
+            }
             
             let tooltipScreen = TooltipScreen(
                 account: component.context.account,
@@ -3103,7 +3114,6 @@ public final class StoryItemSetContainerComponent: Component {
                                     let items = ContextController.Items(content: .list(itemList))
                                     
                                     let controller = ContextController(
-                                        account: component.context.account,
                                         presentationData: presentationData,
                                         source: .extracted(ListContextExtractedContentSource(contentView: sourceView)),
                                         items: .single(items),
@@ -3700,7 +3710,7 @@ public final class StoryItemSetContainerComponent: Component {
                         strings: component.strings,
                         theme: component.theme,
                         text: component.slice.item.storyItem.text,
-                        entities: component.slice.item.storyItem.entities,
+                        entities: component.slice.peer.isPremium ? component.slice.item.storyItem.entities : [],
                         entityFiles: component.slice.item.entityFiles,
                         action: { [weak self] action in
                             guard let self, let component = self.component else {
@@ -5354,7 +5364,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             let contextItems = ContextController.Items(content: .list(items), tip: tip, tipSignal: tipSignal)
             
-            let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .bottom)), items: .single(contextItems), gesture: gesture)
+            let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .bottom)), items: .single(contextItems), gesture: gesture)
             contextController.dismissed = { [weak self] in
                 guard let self else {
                     return
@@ -5638,7 +5648,7 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 let contextItems = ContextController.Items(content: .list(items), tip: tip, tipSignal: tipSignal)
                                 
-                let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .bottom)), items: .single(contextItems), gesture: gesture)
+                let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .bottom)), items: .single(contextItems), gesture: gesture)
                 contextController.dismissed = { [weak self] in
                     guard let self else {
                         return

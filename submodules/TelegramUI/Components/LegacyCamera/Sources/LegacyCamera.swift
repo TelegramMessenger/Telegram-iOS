@@ -244,13 +244,16 @@ public func presentedLegacyShortcutCamera(context: AccountContext, saveCapturedM
             })
             if let parentController = parentController {
                 parentController.present(ShareController(context: context, subject: .fromExternal({ peerIds, _, text, account, silently in
-                    return legacyAssetPickerEnqueueMessages(context: context, account: account, signals: signals!)
+                    guard let account = account as? ShareControllerAppAccountContext else {
+                        return .single(.done)
+                    }
+                    return legacyAssetPickerEnqueueMessages(context: context, account: account.context.account, signals: signals!)
                     |> `catch` { _ -> Signal<[LegacyAssetPickerEnqueueMessage], ShareControllerError> in
                         return .single([])
                     }
                     |> mapToSignal { messages -> Signal<ShareControllerExternalStatus, ShareControllerError> in
                         let resultSignals = peerIds.map({ peerId in
-                            return enqueueMessages(account: account, peerId: peerId, messages: messages.map { $0.message })
+                            return enqueueMessages(account: account.context.account, peerId: peerId, messages: messages.map { $0.message })
                             |> castError(ShareControllerError.self)
                             |> mapToSignal { _ -> Signal<ShareControllerExternalStatus, ShareControllerError> in
                                 return .complete()

@@ -104,6 +104,7 @@ public struct StandaloneSendEnqueueMessage {
     public var replyToMessageId: MessageId?
     public var forwardOptions: ForwardOptions?
     public var isSilent: Bool = false
+    public var groupingKey: Int64? = nil
     
     public init(
         content: Content,
@@ -114,11 +115,16 @@ public struct StandaloneSendEnqueueMessage {
     }
 }
 
-public func standaloneSendEnqueueMessages(account: Account, peerId: PeerId, messages: [StandaloneSendEnqueueMessage]) -> Signal<StandaloneSendMessageStatus, StandaloneSendMessagesError> {
-    #if !DEBUG
-    error
-    #endif
-    
+public func standaloneSendEnqueueMessages(
+    accountPeerId: PeerId,
+    postbox: Postbox,
+    network: Network,
+    stateManager: AccountStateManager,
+    auxiliaryMethods: AccountAuxiliaryMethods,
+    peerId: PeerId,
+    threadId: Int64?,
+    messages: [StandaloneSendEnqueueMessage]
+) -> Signal<StandaloneSendMessageStatus, StandaloneSendMessagesError> {
     let signals: [Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>] = messages.map { message in
         var attributes: [MessageAttribute] = []
         var text: String = ""
@@ -167,7 +173,9 @@ public func standaloneSendEnqueueMessages(account: Account, peerId: PeerId, mess
             attributes.append(NotificationInfoMessageAttribute(flags: .muted))
         }
         
-        let content = messageContentToUpload(accountPeerId: account.peerId, network: account.network, postbox: account.postbox, auxiliaryMethods: account.auxiliaryMethods, transformOutgoingMessageMedia: account.transformOutgoingMessageMedia, messageMediaPreuploadManager: account.messageMediaPreuploadManager, revalidationContext: account.mediaReferenceRevalidationContext, forceReupload: false, isGrouped: false, passFetchProgress: true, forceNoBigParts: false, peerId: peerId, messageId: nil, attributes: attributes, text: text, media: media)
+        let content = messageContentToUpload(accountPeerId: accountPeerId, network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, transformOutgoingMessageMedia: { _, _, _, _ in
+            return .single(nil)
+        }, messageMediaPreuploadManager: MessageMediaPreuploadManager(), revalidationContext: MediaReferenceRevalidationContext(), forceReupload: false, isGrouped: false, passFetchProgress: true, forceNoBigParts: false, peerId: peerId, messageId: nil, attributes: attributes, text: text, media: media)
         let contentResult: Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>
         switch content {
         case let .signal(value, _):
@@ -197,31 +205,29 @@ public func standaloneSendEnqueueMessages(account: Account, peerId: PeerId, mess
         }
         if allDone {
             var sendSignals: [Signal<Never, StandaloneSendMessagesError>] = []
-            sendSignals.removeAll()
             
             for content in allResults {
+                var text: String = ""
                 switch content.content {
-                case let .text(text):
-                    let _ = text
-                    preconditionFailure()
-                case let .media(inputMedia, text):
-                    let _ = inputMedia
-                    let _ = text
-                    preconditionFailure()
-                case let .forward(source):
-                    let _ = source
-                    preconditionFailure()
-                case let .chatContextResult(result):
-                    let _ = result
-                    preconditionFailure()
-                case let .secretMedia(inputFile, size, key):
-                    let _ = inputFile
-                    let _ = size
-                    let _ = key
-                    preconditionFailure()
-                case .messageScreenshot:
-                    return .single(.done)
+                case let .text(textValue):
+                    text = textValue
+                case let .media(_, textValue):
+                    text = textValue
+                default:
+                    break
                 }
+                
+                sendSignals.append(sendUploadedMessageContent(
+                    postbox: postbox,
+                    network: network,
+                    stateManager: stateManager,
+                    accountPeerId: stateManager.accountPeerId,
+                    peerId: peerId,
+                    content: content,
+                    text: text,
+                    attributes: [],
+                    threadId: threadId
+                ))
             }
             
             return combineLatest(sendSignals)
@@ -245,7 +251,9 @@ private func sendUploadedMessageContent(postbox: Postbox, network: Network, stat
             var uniqueId: Int64 = 0
             var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
             var messageEntities: [Api.MessageEntity]?
-            var replyMessageId: Int32?
+            var replyMessageId: Int32? = threadId.flatMap { threadId in
+                makeThreadIdMessageId(peerId: peerId, threadId: threadId).id
+            }
             var replyToStoryId: StoryId?
             var scheduleTime: Int32?
             var sendAsPeerId: PeerId?
@@ -285,6 +293,10 @@ private func sendUploadedMessageContent(postbox: Postbox, network: Network, stat
                 } else if let attribute = attribute as? SendAsMessageAttribute {
                     sendAsPeerId = attribute.peerId
                 }
+            }
+            
+            if uniqueId == 0 {
+                uniqueId = Int64.random(in: Int64.min ... Int64.max)
             }
             
             if case .forward = content.content {

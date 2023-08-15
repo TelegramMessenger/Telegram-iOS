@@ -784,7 +784,7 @@ public class StickerPickerScreen: ViewController {
                     })))
                 }
                 
-                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceView: sourceView, sourceRect: sourceRect)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+                let contextController = ContextController(presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceView: sourceView, sourceRect: sourceRect)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
                 controller.presentInGlobalOverlay(contextController)
             })
         }

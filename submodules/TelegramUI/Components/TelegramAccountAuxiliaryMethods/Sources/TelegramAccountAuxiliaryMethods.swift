@@ -12,13 +12,15 @@ import WallpaperResources
 import AppBundle
 import SwiftSignalKit
 import ICloudResources
+import FetchVideoMediaResource
+import Display
 
-func makeTelegramAccountAuxiliaryMethods(appDelegate: AppDelegate?) -> AccountAuxiliaryMethods {
-    return AccountAuxiliaryMethods(fetchResource: { account, resource, ranges, _ in
+public func makeTelegramAccountAuxiliaryMethods(uploadInBackground: ((Postbox, MediaResource) -> Signal<String?, NoError>)?) -> AccountAuxiliaryMethods {
+    return AccountAuxiliaryMethods(fetchResource: { postbox, resource, ranges, _ in
         if let resource = resource as? VideoLibraryMediaResource {
-            return fetchVideoLibraryMediaResource(account: account, resource: resource)
+            return fetchVideoLibraryMediaResource(postbox: postbox, resource: resource)
         } else if let resource = resource as? LocalFileVideoMediaResource {
-            return fetchLocalFileVideoMediaResource(account: account, resource: resource)
+            return fetchLocalFileVideoMediaResource(postbox: postbox, resource: resource)
         } else if let resource = resource as? LocalFileGifMediaResource {
             return fetchLocalFileGifMediaResource(resource: resource)
         } else if let photoLibraryResource = resource as? PhotoLibraryMediaResource {
@@ -26,7 +28,7 @@ func makeTelegramAccountAuxiliaryMethods(appDelegate: AppDelegate?) -> AccountAu
         } else if let resource = resource as? ICloudFileResource {
             return fetchICloudFileResource(resource: resource)
         } else if let resource = resource as? SecureIdLocalImageResource {
-            return fetchSecureIdLocalImageResource(postbox: account.postbox, resource: resource)
+            return fetchSecureIdLocalImageResource(postbox: postbox, resource: resource)
         } else if let resource = resource as? BundleResource {
             return Signal { subscriber in
                 subscriber.putNext(.reset)
@@ -111,9 +113,24 @@ func makeTelegramAccountAuxiliaryMethods(appDelegate: AppDelegate?) -> AccountAu
             return (PixelDimensions(size), data)
         }
     }, backgroundUpload: { postbox, _, resource in
-        if let appDelegate {
-            return appDelegate.uploadInBackround(postbox: postbox, resource: resource)
+        if let uploadInBackground {
+            return uploadInBackground(postbox, resource)
         }
         return .single(nil)
     })
+}
+
+private func prepareSecretThumbnailData(_ data: EngineMediaResource.ResourceData) -> (CGSize, Data)? {
+    if data.isComplete, let image = UIImage(contentsOfFile: data.path) {
+        if image.size.width < 100 && image.size.height < 100 {
+            if let resultData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+                return (image.size, resultData)
+            }
+        }
+        let scaledSize = image.size.fitted(CGSize(width: 90.0, height: 90.0))
+        if let scaledImage = generateScaledImage(image: image, size: scaledSize, scale: 1.0), let scaledData = scaledImage.jpegData(compressionQuality: 0.4) {
+            return (scaledSize, scaledData)
+        }
+    }
+    return nil
 }

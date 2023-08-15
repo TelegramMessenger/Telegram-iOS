@@ -272,6 +272,10 @@ final class StoryItemSetViewListComponent: Component {
         
         var eventCycleState: EventCycleState?
         
+        var totalCount: Int? {
+            return self.viewListState?.totalCount
+        }
+        
         var hasContent: Bool = false
         var hasContentUpdated: ((Bool) -> Void)?
         
@@ -1208,7 +1212,7 @@ final class StoryItemSetViewListComponent: Component {
             
             let contextItems = ContextController.Items(content: .list(items))
             
-            let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .bottom)), items: .single(contextItems), gesture: nil)
+            let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .bottom)), items: .single(contextItems), gesture: nil)
             
             sourceView.alpha = 0.5
             contextController.dismissed = { [weak self, weak sourceView] in
@@ -1280,7 +1284,7 @@ final class StoryItemSetViewListComponent: Component {
             let titleText: String
             if let views = component.storyItem.views, views.seenCount != 0 {
                 if component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
-                    titleText = component.strings.Story_Footer_Views(Int32(views.seenCount))
+                    titleText = component.strings.Story_ViewList_ViewerCount(Int32(views.seenCount))
                 } else {
                     titleText = component.strings.Story_ViewList_TitleViewers
                 }
@@ -1361,12 +1365,22 @@ final class StoryItemSetViewListComponent: Component {
             if !component.hasPremium, component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
             } else {
                 if let views = component.storyItem.views, views.hasList {
-                    if views.seenCount >= 20 || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
-                        displayModeSelector = true
-                        displaySearchBar = true
-                    }
-                    if views.reactedCount >= 10 || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
-                        displaySortSelector = true
+                    if let currentContentView = self.currentContentView, let totalCount = currentContentView.totalCount {
+                        if totalCount >= 20 || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
+                            displayModeSelector = true
+                            displaySearchBar = true
+                        }
+                        if (views.reactedCount >= 10 && totalCount >= 20) || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
+                            displaySortSelector = true
+                        }
+                    } else {
+                        if views.seenCount >= 20 || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
+                            displayModeSelector = true
+                            displaySearchBar = true
+                        }
+                        if (views.reactedCount >= 10 && views.seenCount >= 20) || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
+                            displaySortSelector = true
+                        }
                     }
                 }
                 if let privacy = component.storyItem.privacy, case .everyone = privacy.base {

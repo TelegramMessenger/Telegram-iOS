@@ -1676,6 +1676,7 @@ private final class StoryContainerScreenComponent: Component {
             for (id, itemSetView) in self.visibleItemSetViews {
                 if !validIds.contains(id) {
                     removedIds.append(id)
+                    itemSetView.view.parentState = nil
                     itemSetView.removeFromSuperview()
                     
                     if let view = itemSetView.view.view as? StoryItemSetContainerComponent.View {

@@ -47,7 +47,7 @@ public extension TelegramEngine {
         }
 
         public func searchRemotePeers(query: String) -> Signal<([FoundPeer], [FoundPeer]), NoError> {
-            return _internal_searchPeers(account: self.account, query: query)
+            return _internal_searchPeers(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, query: query)
         }
 
         public func searchLocalPeers(query: String) -> Signal<[EngineRenderedPeer], NoError> {

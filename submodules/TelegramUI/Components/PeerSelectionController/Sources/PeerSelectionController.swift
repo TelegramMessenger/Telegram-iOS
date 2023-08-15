@@ -296,7 +296,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         
         self.peerSelectionNode.requestOpenPeerFromSearch = { [weak self] peer, threadId in
             if let strongSelf = self {
-                strongSelf.openMessageFromSearchDisposable.set((strongSelf.context.engine.peers.ensurePeerIsLocallyAvailable(peer: peer)
+                strongSelf.openMessageFromSearchDisposable.set((_internal_storedMessageFromSearchPeer(postbox: strongSelf.context.account.postbox, peer: peer._asPeer())
                 |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
                     if let strongSelf = strongSelf, let peerSelected = strongSelf.peerSelected {
                         if case let .channel(peer) = peer, peer.flags.contains(.isForum), threadId == nil, strongSelf.selectForumThreads {

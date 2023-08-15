@@ -16,6 +16,7 @@ import ChatPresentationInterfaceState
 import TextNodeWithEntities
 import AnimationCache
 import MultiAnimationRenderer
+import AccessoryPanelNode
 
 final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()

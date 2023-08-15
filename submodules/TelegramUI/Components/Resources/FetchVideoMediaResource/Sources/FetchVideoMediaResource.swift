@@ -208,7 +208,7 @@ private final class FetchVideoLibraryMediaResourceContext {
 
 private let throttlingContext = FetchVideoLibraryMediaResourceContext()
 
-public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibraryMediaResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibraryMediaResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     let signal = Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> { subscriber in
         subscriber.putNext(.reset)
         let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [resource.localIdentifier], options: nil)
@@ -248,7 +248,7 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                         Logger.shared.log("FetchVideoResource", "Requesting video export")
                         
                         let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, duration: 5.0, image: true, frameRate: 30.0)
-                        let videoExport = MediaEditorVideoExport(account: account, subject: .image(image), configuration: configuration, outputPath: tempFile.path)
+                        let videoExport = MediaEditorVideoExport(postbox: postbox, subject: .image(image), configuration: configuration, outputPath: tempFile.path)
                         videoExport.start()
                                                 
                         let statusDisposable = videoExport.status.start(next: { status in
@@ -339,7 +339,7 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                     if let mediaEditorValues {
                         let duration: Double = avAsset.duration.seconds
                         let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, duration: duration, frameRate: 30.0)
-                        let videoExport = MediaEditorVideoExport(account: account, subject: .video(avAsset), configuration: configuration, outputPath: tempFile.path)
+                        let videoExport = MediaEditorVideoExport(postbox: postbox, subject: .video(avAsset), configuration: configuration, outputPath: tempFile.path)
                         videoExport.start()
                         
                         let statusDisposable = videoExport.status.start(next: { status in
@@ -387,7 +387,7 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                     } else {
                         let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
                             if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
-                                return LegacyPaintEntityRenderer(account: account, adjustments: adjustments)
+                                return LegacyPaintEntityRenderer(postbox: postbox, adjustments: adjustments)
                             } else {
                                 return nil
                             }
@@ -464,7 +464,7 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
     return throttlingContext.wrap(priority: .default, signal: signal)
 }
 
-func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideoMediaResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFileVideoMediaResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     let signal = Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> { subscriber in
         subscriber.putNext(.reset)
         
@@ -497,7 +497,7 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
                 subject = .video(avAsset)
             }
             
-            let videoExport = MediaEditorVideoExport(account: account, subject: subject, configuration: configuration, outputPath: tempFile.path)
+            let videoExport = MediaEditorVideoExport(postbox: postbox, subject: subject, configuration: configuration, outputPath: tempFile.path)
             videoExport.start()
             
             let statusDisposable = videoExport.status.start(next: { status in
@@ -550,7 +550,7 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
         } else {
             let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
                 if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
-                    return LegacyPaintEntityRenderer(account: account, adjustments: adjustments)
+                    return LegacyPaintEntityRenderer(postbox: postbox, adjustments: adjustments)
                 } else {
                     return nil
                 }
@@ -726,7 +726,7 @@ public func fetchVideoLibraryMediaResourceHash(resource: VideoLibraryMediaResour
     }
 }
 
-func fetchLocalFileGifMediaResource(resource: LocalFileGifMediaResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+public func fetchLocalFileGifMediaResource(resource: LocalFileGifMediaResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return Signal { subscriber in
         subscriber.putNext(.reset)
         

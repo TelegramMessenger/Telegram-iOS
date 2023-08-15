@@ -43,7 +43,26 @@ private struct PeersEntry: Comparable, Identifiable {
     }
     
     func item(context: AccountContext) -> ListViewItem {
-        return HorizontalPeerItem(theme: self.theme, strings: self.strings, mode: .list(compact: true), context: context, peer: self.peer, presence: nil, unreadBadge: nil, action: { _ in }, contextAction: nil, isPeerSelected: { _ in return false }, customWidth: nil)
+        return HorizontalPeerItem(
+            theme: self.theme,
+            strings: self.strings,
+            mode: .list(compact: true),
+            accountPeerId: context.account.peerId,
+            postbox: context.account.postbox,
+            network: context.account.network,
+            energyUsageSettings: context.sharedContext.energyUsageSettings,
+            contentSettings: context.currentContentSettings.with { $0 },
+            animationCache: context.animationCache,
+            animationRenderer: context.animationRenderer,
+            resolveInlineStickers: context.engine.stickers.resolveInlineStickers,
+            peer: self.peer,
+            presence: nil,
+            unreadBadge: nil,
+            action: { _ in },
+            contextAction: nil,
+            isPeerSelected: { _ in return false },
+            customWidth: nil
+        )
     }
 }
 

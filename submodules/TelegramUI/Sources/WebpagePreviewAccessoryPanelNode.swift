@@ -8,6 +8,7 @@ import TelegramPresentationData
 import AccountContext
 import TelegramStringFormatting
 import ChatPresentationInterfaceState
+import AccessoryPanelNode
 
 final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     private let webpageDisposable = MetaDisposable()

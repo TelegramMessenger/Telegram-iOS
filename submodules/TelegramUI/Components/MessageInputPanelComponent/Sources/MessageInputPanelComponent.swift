@@ -1006,7 +1006,7 @@ public final class MessageInputPanelComponent: Component {
                             break
                         }
                     },
-                    longPressAction: component.sendMessageOptionsAction,
+                    longPressAction: inputActionButtonMode == .send ? component.sendMessageOptionsAction : nil,
                     switchMediaInputMode: { [weak self] in
                         guard let self else {
                             return

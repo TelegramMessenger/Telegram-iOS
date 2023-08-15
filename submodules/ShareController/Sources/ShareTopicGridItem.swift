@@ -14,7 +14,8 @@ import ComponentFlow
 import EmojiStatusComponent
 
 final class ShareTopicGridItem: GridItem {
-    let context: AccountContext
+    let environment: ShareControllerEnvironment
+    let context: ShareControllerAccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
     let peer: EngineRenderedPeer?
@@ -24,7 +25,8 @@ final class ShareTopicGridItem: GridItem {
     
     let section: GridSection?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: EngineRenderedPeer?, id: Int64, threadInfo: MessageHistoryThreadData, controllerInteraction: ShareControllerInteraction) {
+    init(environment: ShareControllerEnvironment, context: ShareControllerAccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: EngineRenderedPeer?, id: Int64, threadInfo: MessageHistoryThreadData, controllerInteraction: ShareControllerInteraction) {
+        self.environment = environment
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -46,7 +48,7 @@ final class ShareTopicGridItem: GridItem {
 }
 
 final class ShareTopicGridItemNode: GridItemNode {
-    private var currentState: (AccountContext, PresentationTheme, PresentationStrings, EngineRenderedPeer?, MessageHistoryThreadData?)?
+    private var currentState: (ShareControllerAccountContext, PresentationTheme, PresentationStrings, EngineRenderedPeer?, MessageHistoryThreadData?)?
     
     private let iconView: ComponentView<Empty>
     private let textNode: ImmediateTextNode
@@ -113,7 +115,9 @@ final class ShareTopicGridItemNode: GridItemNode {
         let iconSize = self.iconView.update(
             transition: .easeInOut(duration: 0.2),
             component: AnyComponent(EmojiStatusComponent(
-                context: item.context,
+                postbox: item.context.stateManager.postbox,
+                energyUsageSettings: item.environment.energyUsageSettings,
+                resolveInlineStickers: item.context.resolveInlineStickers,
                 animationCache: item.context.animationCache,
                 animationRenderer: item.context.animationRenderer,
                 content: iconContent,

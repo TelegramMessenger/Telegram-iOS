@@ -964,7 +964,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                     let signal = Signal<TelegramMediaResource?, UploadPeerPhotoError> { subscriber in
                         let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
                             if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
-                                return LegacyPaintEntityRenderer(account: context.account, adjustments: adjustments)
+                                return LegacyPaintEntityRenderer(postbox: context.account.postbox, adjustments: adjustments)
                             } else {
                                 return nil
                             }
@@ -1246,7 +1246,6 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                 let source: ContextContentSource = .reference(CreateGroupContextReferenceContentSource(sourceView: sourceNode.labelNode.view))
                 
                 let contextController = ContextController(
-                    account: context.account,
                     presentationData: presentationData,
                     source: source,
                     items: items,

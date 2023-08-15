@@ -2040,7 +2040,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 })))
             }
             
-            let contextController = ContextController(account: strongSelf.context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceView: sourceView, sourceRect: sourceRect)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            let contextController = ContextController(presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceView: sourceView, sourceRect: sourceRect)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             strongSelf.interaction?.presentGlobalOverlayController(contextController, nil)
         })
     }

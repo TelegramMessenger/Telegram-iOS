@@ -1092,7 +1092,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             scheduledTooltip = change
         })
         
-        let contextController = ContextController(account: self.account, presentationData: self.presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.rateButton.referenceNode, shouldBeDismissed: .single(false))), items: items, gesture: gesture)
+        let contextController = ContextController(presentationData: self.presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.rateButton.referenceNode, shouldBeDismissed: .single(false))), items: items, gesture: gesture)
         contextController.dismissed = { [weak self] in
             if let scheduledTooltip, let self, let rate = self.currentRate {
                 self.presentAudioRateTooltip(baseRate: rate, changeType: scheduledTooltip)

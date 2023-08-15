@@ -529,7 +529,7 @@ public func createChannelController(context: AccountContext, mode: CreateChannel
                     let signal = Signal<TelegramMediaResource?, UploadPeerPhotoError> { subscriber in
                         let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
                             if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
-                                return LegacyPaintEntityRenderer(account: context.account, adjustments: adjustments)
+                                return LegacyPaintEntityRenderer(postbox: context.account.postbox, adjustments: adjustments)
                             } else {
                                 return nil
                             }

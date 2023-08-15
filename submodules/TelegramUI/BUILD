@@ -379,6 +379,11 @@ swift_library(
         "//submodules/TelegramUI/Components/PeerReportScreen",
         "//submodules/Utils/VolumeButtons",
         "//submodules/ChatContextQuery",
+        "//submodules/TelegramUI/Components/TelegramUIDeclareEncodables",
+        "//submodules/TelegramUI/Components/TelegramAccountAuxiliaryMethods",
+        "//submodules/TelegramUI/Components/PeerSelectionController",
+        "//submodules/TelegramUI/Components/Chat/AccessoryPanelNode",
+        "//submodules/TelegramUI/Components/Chat/ForwardAccessoryPanelNode",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

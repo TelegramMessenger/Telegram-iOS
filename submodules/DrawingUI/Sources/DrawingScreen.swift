@@ -984,7 +984,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 )
             ]
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
-            let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: UIScreen.main.bounds, customPosition: CGPoint(x: 7.0, y: 3.0))), items: .single(ContextController.Items(content: .list(items))))
+            let contextController = ContextController(presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: UIScreen.main.bounds, customPosition: CGPoint(x: 7.0, y: 3.0))), items: .single(ContextController.Items(content: .list(items))))
             self.present(contextController)
         }
         
@@ -3384,7 +3384,7 @@ public final class DrawingToolsInteraction {
         }
         
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
-        let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: CGRect(origin: .zero, size: CGSize(width: validLayout.size.width, height: validLayout.size.height - (validLayout.inputHeight ?? 0.0))), customPosition: CGPoint(x: 0.0, y: 1.0))), items: .single(ContextController.Items(content: .list(items))))
+        let contextController = ContextController(presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: CGRect(origin: .zero, size: CGSize(width: validLayout.size.width, height: validLayout.size.height - (validLayout.inputHeight ?? 0.0))), customPosition: CGPoint(x: 0.0, y: 1.0))), items: .single(ContextController.Items(content: .list(items))))
         self.present(contextController, .window(.root), nil)
         self.currentFontPicker = contextController
         contextController.view.disablesInteractiveKeyboardGestureRecognizer = true

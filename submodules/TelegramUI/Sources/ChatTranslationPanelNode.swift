@@ -339,7 +339,7 @@ final class ChatTranslationPanelNode: ASDisplayNode {
         }
             
         if let controller = self.interfaceInteraction?.chatController() {
-            let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(TranslationContextReferenceContentSource(controller: controller, sourceNode: node)), items: items, gesture: gesture)
+            let contextController = ContextController(presentationData: presentationData, source: .reference(TranslationContextReferenceContentSource(controller: controller, sourceNode: node)), items: items, gesture: gesture)
             self.interfaceInteraction?.presentGlobalOverlayController(contextController, nil)
         }
     }

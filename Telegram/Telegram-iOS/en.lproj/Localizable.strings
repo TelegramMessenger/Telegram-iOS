@@ -9856,3 +9856,6 @@ Sorry for the inconvenience.";
 "Location.TypeCity" = "City";
 "Location.TypeStreet" = "Street";
 "Location.TypeLocation" = "Location";
+
+"Story.ViewList.ViewerCount_1" = "1 Viewer";
+"Story.ViewList.ViewerCount_any" = "%d Viewers";

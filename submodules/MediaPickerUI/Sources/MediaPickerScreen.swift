@@ -1850,7 +1850,6 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             
             self.titleView.isHighlighted = true
             let contextController = ContextController(
-                account: self.context.account,
                 presentationData: self.presentationData,
                 source: .reference(MediaPickerContextReferenceContentSource(controller: self, sourceNode: self.titleView.contextSourceNode)),
                 items: .single(ContextController.Items(content: .custom(content))),
@@ -2226,7 +2225,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     return ContextController.Items(content: .list(items))
                 }
             
-                let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(MediaPickerContextReferenceContentSource(controller: self, sourceNode: node)), items: items, gesture: gesture)
+                let contextController = ContextController(presentationData: self.presentationData, source: .reference(MediaPickerContextReferenceContentSource(controller: self, sourceNode: node)), items: items, gesture: gesture)
                 self.presentInGlobalOverlay(contextController)
         }
     }

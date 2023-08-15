@@ -9,7 +9,8 @@ import ChatListSearchRecentPeersNode
 import AccountContext
 
 final class ShareControllerRecentPeersGridItem: GridItem {
-    let context: AccountContext
+    let environment: ShareControllerEnvironment
+    let context: ShareControllerAccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
     let controllerInteraction: ShareControllerInteraction
@@ -17,7 +18,8 @@ final class ShareControllerRecentPeersGridItem: GridItem {
     let section: GridSection? = nil
     let fillsRowWithHeight: (CGFloat, Bool)? = (102.0, true)
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ShareControllerInteraction) {
+    init(environment: ShareControllerEnvironment, context: ShareControllerAccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ShareControllerInteraction) {
+        self.environment = environment
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -27,7 +29,7 @@ final class ShareControllerRecentPeersGridItem: GridItem {
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = ShareControllerRecentPeersGridItemNode()
         node.controllerInteraction = self.controllerInteraction
-        node.setup(context: self.context, theme: self.theme, strings: self.strings)
+        node.setup(environment: self.environment, context: self.context, theme: self.theme, strings: self.strings)
         return node
     }
     
@@ -37,12 +39,12 @@ final class ShareControllerRecentPeersGridItem: GridItem {
             return
         }
         node.controllerInteraction = self.controllerInteraction
-        node.setup(context: self.context, theme: self.theme, strings: self.strings)
+        node.setup(environment: self.environment, context: self.context, theme: self.theme, strings: self.strings)
     }
 }
 
 final class ShareControllerRecentPeersGridItemNode: GridItemNode {
-    private var currentState: (AccountContext, PresentationTheme, PresentationStrings)?
+    private var currentState: (ShareControllerAccountContext, PresentationTheme, PresentationStrings)?
     
     var controllerInteraction: ShareControllerInteraction?
     
@@ -52,18 +54,34 @@ final class ShareControllerRecentPeersGridItemNode: GridItemNode {
         super.init()
     }
     
-    func setup(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+    func setup(environment: ShareControllerEnvironment, context: ShareControllerAccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         if self.currentState == nil || self.currentState!.0 !== context || self.currentState!.1 !== theme {
             let peersNode: ChatListSearchRecentPeersNode
             if let currentPeersNode = self.peersNode {
                 peersNode = currentPeersNode
                 peersNode.updateThemeAndStrings(theme: theme, strings: strings)
             } else {
-                peersNode = ChatListSearchRecentPeersNode(context: context, theme: theme, mode: .actionSheet, strings: strings, peerSelected: { [weak self] peer in
-                    self?.controllerInteraction?.togglePeer(EngineRenderedPeer(peer: peer), true)
-                }, peerContextAction: { _, _, gesture, _ in gesture?.cancel() }, isPeerSelected: { [weak self] peerId in
-                    return self?.controllerInteraction?.selectedPeerIds.contains(peerId) ?? false
-                }, share: true)
+                peersNode = ChatListSearchRecentPeersNode(
+                    accountPeerId: context.accountPeerId,
+                    postbox: context.stateManager.postbox,
+                    network: context.stateManager.network,
+                    energyUsageSettings: environment.energyUsageSettings,
+                    contentSettings: context.contentSettings,
+                    animationCache: context.animationCache,
+                    animationRenderer: context.animationRenderer,
+                    resolveInlineStickers: context.resolveInlineStickers,
+                    theme: theme,
+                    mode: .actionSheet,
+                    strings: strings,
+                    peerSelected: { [weak self] peer in
+                        self?.controllerInteraction?.togglePeer(EngineRenderedPeer(peer: peer), true)
+                    },
+                    peerContextAction: { _, _, gesture, _ in gesture?.cancel() },
+                    isPeerSelected: { [weak self] peerId in
+                        return self?.controllerInteraction?.selectedPeerIds.contains(peerId) ?? false
+                    },
+                    share: true
+                )
                 self.peersNode = peersNode
                 self.addSubnode(peersNode)
             }

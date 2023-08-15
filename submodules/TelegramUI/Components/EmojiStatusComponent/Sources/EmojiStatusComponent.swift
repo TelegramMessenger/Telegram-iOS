@@ -14,6 +14,7 @@ import TextFormat
 import Lottie
 import GZip
 import HierarchyTrackingLayer
+import TelegramUIPreferences
 
 public final class EmojiStatusComponent: Component {
     public typealias EnvironmentType = Empty
@@ -52,7 +53,9 @@ public final class EmojiStatusComponent: Component {
         case image(image: UIImage?)
     }
     
-    public let context: AccountContext
+    public let postbox: Postbox
+    public let energyUsageSettings: EnergyUsageSettings
+    public let resolveInlineStickers: ([Int64]) -> Signal<[Int64: TelegramMediaFile], NoError>
     public let animationCache: AnimationCache
     public let animationRenderer: MultiAnimationRenderer
     public let content: Content
@@ -61,7 +64,7 @@ public final class EmojiStatusComponent: Component {
     public let action: (() -> Void)?
     public let emojiFileUpdated: ((TelegramMediaFile?) -> Void)?
     
-    public init(
+    public convenience init(
         context: AccountContext,
         animationCache: AnimationCache,
         animationRenderer: MultiAnimationRenderer,
@@ -71,7 +74,37 @@ public final class EmojiStatusComponent: Component {
         action: (() -> Void)?,
         emojiFileUpdated: ((TelegramMediaFile?) -> Void)? = nil
     ) {
-        self.context = context
+        self.init(
+            postbox: context.account.postbox,
+            energyUsageSettings: context.sharedContext.energyUsageSettings,
+            resolveInlineStickers: { fileIds in
+                return context.engine.stickers.resolveInlineStickers(fileIds: fileIds)
+            },
+            animationCache: animationCache,
+            animationRenderer: animationRenderer,
+            content: content,
+            isVisibleForAnimations: isVisibleForAnimations,
+            useSharedAnimation: useSharedAnimation,
+            action: action,
+            emojiFileUpdated: emojiFileUpdated
+        )
+    }
+    
+    public init(
+        postbox: Postbox,
+        energyUsageSettings: EnergyUsageSettings,
+        resolveInlineStickers: @escaping ([Int64]) -> Signal<[Int64: TelegramMediaFile], NoError>,
+        animationCache: AnimationCache,
+        animationRenderer: MultiAnimationRenderer,
+        content: Content,
+        isVisibleForAnimations: Bool,
+        useSharedAnimation: Bool = false,
+        action: (() -> Void)?,
+        emojiFileUpdated: ((TelegramMediaFile?) -> Void)? = nil
+    ) {
+        self.postbox = postbox
+        self.energyUsageSettings = energyUsageSettings
+        self.resolveInlineStickers = resolveInlineStickers
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
         self.content = content
@@ -83,7 +116,9 @@ public final class EmojiStatusComponent: Component {
     
     public func withVisibleForAnimations(_ isVisibleForAnimations: Bool) -> EmojiStatusComponent {
         return EmojiStatusComponent(
-            context: self.context,
+            postbox: self.postbox,
+            energyUsageSettings: self.energyUsageSettings,
+            resolveInlineStickers: self.resolveInlineStickers,
             animationCache: self.animationCache,
             animationRenderer: self.animationRenderer,
             content: self.content,
@@ -95,7 +130,10 @@ public final class EmojiStatusComponent: Component {
     }
     
     public static func ==(lhs: EmojiStatusComponent, rhs: EmojiStatusComponent) -> Bool {
-        if lhs.context !== rhs.context {
+        if lhs.postbox !== rhs.postbox {
+            return false
+        }
+        if lhs.energyUsageSettings != rhs.energyUsageSettings {
             return false
         }
         if lhs.animationCache !== rhs.animationCache {
@@ -419,7 +457,15 @@ public final class EmojiStatusComponent: Component {
                             loopCount = value
                         }
                         animationLayer = InlineStickerItemLayer(
-                            context: component.context,
+                            context: .custom(InlineStickerItemLayer.Context.Custom(
+                                postbox: component.postbox,
+                                energyUsageSettings: {
+                                    return component.energyUsageSettings
+                                },
+                                resolveInlineStickers: { fileIds in
+                                    return component.resolveInlineStickers(fileIds)
+                                }
+                            )),
                             userLocation: .other,
                             attemptSynchronousLoad: false,
                             emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: emojiFile.fileId.id, file: emojiFile),
@@ -508,7 +554,7 @@ public final class EmojiStatusComponent: Component {
                     }*/
                 } else {
                     if self.emojiFileDisposable == nil {
-                        self.emojiFileDisposable = (component.context.engine.stickers.resolveInlineStickers(fileIds: [emojiFileId])
+                        self.emojiFileDisposable = (component.resolveInlineStickers([emojiFileId])
                         |> deliverOnMainQueue).start(next: { [weak self] result in
                             guard let strongSelf = self else {
                                 return

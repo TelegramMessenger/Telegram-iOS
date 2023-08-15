@@ -433,7 +433,7 @@ final class StoryItemSetContainerSendMessage {
         
         let contextItems = ContextController.Items(content: .list(items))
         
-        let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .top)), items: .single(contextItems), gesture: gesture)
+        let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .top)), items: .single(contextItems), gesture: gesture)
         contextController.dismissed = { [weak view] in
             guard let view else {
                 return

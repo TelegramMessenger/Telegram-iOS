@@ -656,7 +656,7 @@ public final class MediaStreamComponent: CombinedComponent {
                             }
                         }
                         
-                        let contextController = ContextController(account: call.accountContext.account, presentationData: presentationData.withUpdated(theme: defaultDarkPresentationTheme), source: .reference(ReferenceContentSource(sourceView: anchorView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+                        let contextController = ContextController(presentationData: presentationData.withUpdated(theme: defaultDarkPresentationTheme), source: .reference(ReferenceContentSource(sourceView: anchorView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
                         /*contextController.passthroughTouchEvent = { sourceView, point in
                             guard let strongSelf = self else {
                                 return .ignore
