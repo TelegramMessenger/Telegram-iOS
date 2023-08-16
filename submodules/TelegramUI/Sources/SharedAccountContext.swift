@@ -2268,18 +2268,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     (controller.navigationController as? NavigationController)?.popToRoot(animated: false)
                 }
                 
-                if let controller = controller as? ItemListController {
-                    var isOldStorageUsage = false
-                    controller.forEachItemNode { itemNode in
-                        if "\(type(of: itemNode))".contains("StorageUsageItemNode") {
-                            isOldStorageUsage = true
-                        }
-                    }
-                    if isOldStorageUsage {
-                        (controller.navigationController as? NavigationController)?.popToRoot(animated: false)
-                    }
-                }
-                
                 return true
             }, includeAllOverlayControllers: true, excludeRootController: excludeRootController)
             
