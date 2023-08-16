@@ -1206,6 +1206,9 @@ extension UserDefaults {
                     }
                     
                     self.mainWindow.debugAction = nil
+                    if let previousViewController = self.mainWindow.viewController {
+                        previousViewController.view.endEditingWithoutAnimation()
+                    }
                     self.mainWindow.viewController = context.rootController
                     
                     context.isReadyAndPresented.set(context.isReady.get())
@@ -1878,17 +1881,6 @@ extension UserDefaults {
 
     private var lastResignActiveUptime: Int32?
     
-    private func dismissSensitiveViewControllers() {
-        self.mainWindow.forEachViewController { controller in
-            if let controller = controller as? UIViewController {
-                if controller is ActionSheetController || controller.isSensitiveUI {
-                    controller.dismiss(animated: false)
-                }
-            }
-            return true
-        }
-    }
-    
     func applicationWillResignActive(_ application: UIApplication) {
         self.isActiveValue = false
         self.isActivePromise.set(false)
@@ -1951,7 +1943,7 @@ extension UserDefaults {
             }
         })
         
-        self.dismissSensitiveViewControllers()
+        self.mainWindow.dismissSensitiveViewControllers()
         self.lastResignActiveUptime = nil
     }
 
@@ -1992,7 +1984,7 @@ extension UserDefaults {
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         if let lastResignActiveUptime = self.lastResignActiveUptime, getDeviceUptimeSeconds(nil) - lastResignActiveUptime >= 10 {
-            self.dismissSensitiveViewControllers()
+            self.mainWindow.dismissSensitiveViewControllers()
         }
         
         self.isInForegroundValue = true

@@ -83,6 +83,8 @@ public final class AppLockContextImpl: AppLockContext {
     
     private let appContextIsReady: Signal<Bool, NoError>?
     
+    private weak var keyboardCoveringView: UIView?
+    
     public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?, appContextIsReady: Signal<Bool, NoError>? = nil) {
         assert(Queue.mainQueue().isCurrent())
         
@@ -272,10 +274,8 @@ public final class AppLockContextImpl: AppLockContext {
                                 strongSelf.savedNativeViewController = controller
                             }
                         }
-                        UIView.performWithoutAnimation {
-                            strongSelf.rootController?.view.endEditing(true)
-                        }
-                        if let controller = strongSelf.savedNativeViewController, window.keyboardHeight > 0.0 {
+                        strongSelf.rootController?.view.endEditingWithoutAnimation()
+                        if let controller = strongSelf.savedNativeViewController, window.isKeyboardVisible {
                             _hideSafariKeyboard(controller)
                         }
                         
@@ -287,6 +287,7 @@ public final class AppLockContextImpl: AppLockContext {
                                 if strongSelf.coveringView !== window.coveringView {
                                     strongSelf.coveringView?.removeFromSuperview()
                                 }
+                                window.dismissSensitiveViewControllers()
                                 Queue.mainQueue().justDispatch {
                                     strongSelf.syncingWait.set(false)
                                 }
@@ -347,10 +348,9 @@ public final class AppLockContextImpl: AppLockContext {
             if shouldDisplayCoveringView {
                 if strongSelf.coveringView == nil, let window = strongSelf.window {
                     if strongSelf.passcodeController == nil {
-                        UIView.performWithoutAnimation {
-                            strongSelf.rootController?.view.endEditing(true)
-                        }
-                        if let controller = strongSelf.rootController?.presentedViewController, !controller.isBeingDismissed, window.keyboardHeight > 0.0 {
+                        // have to hide keyboard in safari view controller, otherwise accessory view above keyboard stays on screen and is visible in app switcher (seems like ios bug)
+                        // this cannot be delayed until app goes background, probably because keyboard hides with animation though we try to suppress it
+                        if let controller = strongSelf.rootController?.presentedViewController, !controller.isBeingDismissed, window.isKeyboardVisible {
                             _hideSafariKeyboard(controller)
                         }
                     }
@@ -360,6 +360,7 @@ public final class AppLockContextImpl: AppLockContext {
                     if let controller = strongSelf.savedNativeViewController ?? strongSelf.rootController?.presentedViewController, !controller.isBeingDismissed {
                         coveringView.layer.allowsGroupOpacity = false
                         coveringView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                        coveringView.layer.zPosition = CGFloat(Float.greatestFiniteMagnitude)
                         window.hostView.eventView.addSubview(coveringView)
                         coveringView.frame = window.hostView.eventView.bounds
                         coveringView.updateLayout(coveringView.frame.size)
@@ -371,6 +372,19 @@ public final class AppLockContextImpl: AppLockContext {
                     }
                     
                     strongSelf.coveringView = coveringView
+                    
+                    if window.isKeyboardVisible, let keyboardWindow = window.statusBarHost?.keyboardWindow {
+                        // on ipad if screen is shared with other app, keyboard will be outside app bounds
+                        // don't need to cover keyboard in this case, it is not visible if app becomes inactive
+                        if keyboardWindow.frame == window.hostView.eventView.frame {
+                            let keyboardCoveringView = coveringView.duplicate()
+                            keyboardCoveringView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                            keyboardCoveringView.layer.zPosition = CGFloat(Float.greatestFiniteMagnitude)
+                            keyboardWindow.addSubview(keyboardCoveringView)
+                            keyboardCoveringView.frame = keyboardWindow.bounds
+                            strongSelf.keyboardCoveringView = keyboardCoveringView
+                        }
+                    }
                 }
                 
                 if strongSelf.passcodeController == nil, let controller = strongSelf.savedNativeViewController {
@@ -392,46 +406,43 @@ public final class AppLockContextImpl: AppLockContext {
                     
                     strongSelf.savedNativeViewController = nil
                 }
-            } else if strongSelf.passcodeController == nil {
-                if strongSelf.coveringView != nil {
-                    strongSelf.window?.hostView.containerView.windowHost?.forEachController { controller in
-                        if let controller = controller as? ReactivatableInput {
-                            controller.activateInput()
+            } else {
+                strongSelf.keyboardCoveringView?.removeFromSuperview()
+                strongSelf.keyboardCoveringView = nil
+                
+                if strongSelf.passcodeController == nil {
+                    let removeFromSuperviewAnimated: (UIView) -> Void = { coveringView in
+                        coveringView.layer.allowsGroupOpacity = true
+                        coveringView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak coveringView] _ in
+                            coveringView?.removeFromSuperview()
+                        })
+                    }
+                    
+                    if let controller = strongSelf.savedNativeViewController {
+                        let coveringView = strongSelf.coveringView
+                        strongSelf.coveringView = nil
+                        
+                        let tempDupCoveringView = coveringView?.duplicate()
+                        if let tempDupCoveringView {
+                            topPresentedVC(controller).view.addSubview(tempDupCoveringView)
                         }
-                    }
-                }
-                
-                let removeFromSuperviewAnimated: (UIView) -> Void = { coveringView in
-                    coveringView.layer.allowsGroupOpacity = true
-                    coveringView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak coveringView] _ in
-                        coveringView?.removeFromSuperview()
-                    })
-                }
-                
-                if let controller = strongSelf.savedNativeViewController {
-                    let coveringView = strongSelf.coveringView
-                    strongSelf.coveringView = nil
-                    
-                    let tempDupCoveringView = coveringView?.duplicate()
-                    if let tempDupCoveringView {
-                        topPresentedVC(controller).view.addSubview(tempDupCoveringView)
-                    }
-                    
-                    strongSelf.rootController?.present(controller, animated: false, completion: {
-                        if let coveringView {
-                            self?.window?.hostView.eventView.addSubview(coveringView)
-                            tempDupCoveringView?.removeFromSuperview()
+                        
+                        strongSelf.rootController?.present(controller, animated: false, completion: {
+                            if let coveringView {
+                                self?.window?.hostView.eventView.addSubview(coveringView)
+                                tempDupCoveringView?.removeFromSuperview()
+                                removeFromSuperviewAnimated(coveringView)
+                            }
+                            passcodeControllerToDismissAfterSavedNativeControllerPresented?.dismiss(animated: false)
+                        })
+                        strongSelf.savedNativeViewController = nil
+                    } else if let coveringView = strongSelf.coveringView {
+                        strongSelf.coveringView = nil
+                        if coveringView !== strongSelf.window?.coveringView {
                             removeFromSuperviewAnimated(coveringView)
+                        } else {
+                            strongSelf.window?.coveringView = nil
                         }
-                        passcodeControllerToDismissAfterSavedNativeControllerPresented?.dismiss(animated: false)
-                    })
-                    strongSelf.savedNativeViewController = nil
-                } else if let coveringView = strongSelf.coveringView {
-                    strongSelf.coveringView = nil
-                    if coveringView !== strongSelf.window?.coveringView {
-                        removeFromSuperviewAnimated(coveringView)
-                    } else {
-                        strongSelf.window?.coveringView = nil
                     }
                 }
             }

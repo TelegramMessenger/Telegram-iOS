@@ -15,7 +15,7 @@ public enum PasscodeSetupControllerMode {
     case secretEntry(modal: Bool, PasscodeEntryFieldType)
 }
 
-public final class PasscodeSetupController: ViewController, ReactivatableInput {
+public final class PasscodeSetupController: ViewController {
     private var controllerNode: PasscodeSetupControllerNode {
         return self.displayNode as! PasscodeSetupControllerNode
     }
@@ -209,13 +209,5 @@ public final class PasscodeSetupController: ViewController, ReactivatableInput {
     
     @objc private func cancelPressed() {
         self.dismiss()
-    }
-
-    public func passcodeSwitched() {
-        self.dismiss(animated: false)
-    }
-    
-    public func activateInput() {
-        self.controllerNode.activateInput()
     }
 }
