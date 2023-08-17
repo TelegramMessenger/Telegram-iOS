@@ -87,6 +87,11 @@
 "PtgSettings.DefaultCameraForVideos" = "Default Camera for Videos";
 "PtgSettings.DefaultCameraForVideos.Front" = "Front";
 "PtgSettings.DefaultCameraForVideos.Rear" = "Rear";
+"PtgSettings.AddContextMenuHeader" = "Message context menu";
+"PtgSettings.AddContextMenuSaveMessage" = "Add \"Save Message\"";
+"PtgSettings.AddContextMenuShare" = "Add \"Share\"";
+
+"Conversation.ContextMenuSaveMessage" = "Save Message";
 
 "Profile.Id" = "ID";
 "Conversation.IdCopied" = "ID copied to clipboard.";

@@ -22,6 +22,11 @@
 "PtgSettings.DefaultCameraForVideos" = "Камера за умовчанням для відео";
 "PtgSettings.DefaultCameraForVideos.Front" = "Фронтальна";
 "PtgSettings.DefaultCameraForVideos.Rear" = "Задня";
+"PtgSettings.AddContextMenuHeader" = "Контекстне меню повідомлень";
+"PtgSettings.AddContextMenuSaveMessage" = "Додати «Зберегти повідомлення»";
+"PtgSettings.AddContextMenuShare" = "Додати «Поділитися»";
+
+"Conversation.ContextMenuSaveMessage" = "Зберегти повідомлення";
 
 "Profile.Id" = "ID";
 "Conversation.IdCopied" = "ID скопійовано.";

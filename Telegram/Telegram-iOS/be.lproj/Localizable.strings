@@ -87,6 +87,11 @@
 "PtgSettings.DefaultCameraForVideos" = "Камера па змаўчанні для відэа";
 "PtgSettings.DefaultCameraForVideos.Front" = "Франтальная";
 "PtgSettings.DefaultCameraForVideos.Rear" = "Задняя";
+"PtgSettings.AddContextMenuHeader" = "Кантэкстнае меню паведамленняў";
+"PtgSettings.AddContextMenuSaveMessage" = "Дадаць «Захаваць паведамленне»";
+"PtgSettings.AddContextMenuShare" = "Дадаць «Абагуліць»";
+
+"Conversation.ContextMenuSaveMessage" = "Захаваць паведамленне";
 
 "Profile.Id" = "ID";
 "Conversation.IdCopied" = "ID скапіяваны ў буфер абмену.";

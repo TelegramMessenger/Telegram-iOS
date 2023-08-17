@@ -16,6 +16,8 @@ public struct PtgSettings: Codable, Equatable {
     public let hideCommentsInChannels: Bool
     public let hideShareButtonInChannels: Bool
     public let useFullWidthInChannels: Bool
+    public let addContextMenuSaveMessage: Bool
+    public let addContextMenuShare: Bool
     public let testToolsEnabled: Bool?
     
     public static var defaultSettings: PtgSettings {
@@ -29,6 +31,8 @@ public struct PtgSettings: Codable, Equatable {
             hideCommentsInChannels: false,
             hideShareButtonInChannels: false,
             useFullWidthInChannels: false,
+            addContextMenuSaveMessage: false,
+            addContextMenuShare: false,
             testToolsEnabled: nil
         )
     }
@@ -43,6 +47,8 @@ public struct PtgSettings: Codable, Equatable {
         hideCommentsInChannels: Bool,
         hideShareButtonInChannels: Bool,
         useFullWidthInChannels: Bool,
+        addContextMenuSaveMessage: Bool,
+        addContextMenuShare: Bool,
         testToolsEnabled: Bool?
     ) {
         self.showPeerId = showPeerId
@@ -54,6 +60,8 @@ public struct PtgSettings: Codable, Equatable {
         self.hideCommentsInChannels = hideCommentsInChannels
         self.hideShareButtonInChannels = hideShareButtonInChannels
         self.useFullWidthInChannels = useFullWidthInChannels
+        self.addContextMenuSaveMessage = addContextMenuSaveMessage
+        self.addContextMenuShare = addContextMenuShare
         self.testToolsEnabled = testToolsEnabled
     }
     
@@ -69,6 +77,8 @@ public struct PtgSettings: Codable, Equatable {
         self.hideCommentsInChannels = (try container.decodeIfPresent(Int32.self, forKey: "hcic") ?? 0) != 0
         self.hideShareButtonInChannels = (try container.decodeIfPresent(Int32.self, forKey: "hsbic") ?? 0) != 0
         self.useFullWidthInChannels = (try container.decodeIfPresent(Int32.self, forKey: "ufwic") ?? 0) != 0
+        self.addContextMenuSaveMessage = (try container.decodeIfPresent(Int32.self, forKey: "acmsm") ?? 0) != 0
+        self.addContextMenuShare = (try container.decodeIfPresent(Int32.self, forKey: "acms") ?? 0) != 0
         self.testToolsEnabled = try container.decodeIfPresent(Int32.self, forKey: "test").flatMap({ $0 != 0 })
     }
     
@@ -84,6 +94,8 @@ public struct PtgSettings: Codable, Equatable {
         try container.encode((self.hideCommentsInChannels ? 1 : 0) as Int32, forKey: "hcic")
         try container.encode((self.hideShareButtonInChannels ? 1 : 0) as Int32, forKey: "hsbic")
         try container.encode((self.useFullWidthInChannels ? 1 : 0) as Int32, forKey: "ufwic")
+        try container.encode((self.addContextMenuSaveMessage ? 1 : 0) as Int32, forKey: "acmsm")
+        try container.encode((self.addContextMenuShare ? 1 : 0) as Int32, forKey: "acms")
         try container.encodeIfPresent(self.testToolsEnabled.flatMap({ ($0 ? 1 : 0) as Int32 }), forKey: "test")
     }
     

@@ -8368,6 +8368,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let forwardMessageIds = messages.map { $0.id }.sorted()
                 strongSelf.forwardMessages(messageIds: forwardMessageIds)
             }
+        }, saveMessages: { [weak self] messages in
+            if let strongSelf = self, !messages.isEmpty {
+                strongSelf.commitPurposefulAction()
+                strongSelf.saveMessages(messages: messages)
+            }
+        }, shareMessages: { [weak self] messages in
+            if let strongSelf = self, !messages.isEmpty {
+                strongSelf.commitPurposefulAction()
+                
+                let shareController = ShareController(context: strongSelf.context, subject: .messages(messages.sorted(by: { lhs, rhs in
+                    return lhs.index < rhs.index
+                })), externalShare: true, immediateExternalShare: true, updatedPresentationData: strongSelf.updatedPresentationData)
+                strongSelf.chatDisplayNode.dismissInput()
+                strongSelf.present(shareController, in: .window(.root))
+            }
         }, updateForwardOptionsState: { [weak self] f in
             if let strongSelf = self {
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardOptionsState(f($0.forwardOptionsState ?? ChatInterfaceForwardOptionsState(hideNames: false, hideCaptions: false, unhideNamesOnCaptionChange: false))) }) })
@@ -16939,6 +16954,62 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             self.chatDisplayNode.dismissInput()
             self.effectiveNavigationController?.pushViewController(controller)
+        })
+    }
+    
+    private func saveMessages(messages: [Message]) {
+        let _ = self.presentVoiceMessageDiscardAlert(action: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            let peerId = strongSelf.context.account.peerId
+            
+            Queue.mainQueue().after(0.88) {
+                strongSelf.chatDisplayNode.hapticFeedback.success()
+            }
+            
+            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+            strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
+                if case .info = value, let strongSelf = self {
+                    let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.context.account.peerId))
+                    |> deliverOnMainQueue).start(next: { peer in
+                        guard let strongSelf = self, let peer = peer, let navigationController = strongSelf.effectiveNavigationController else {
+                            return
+                        }
+                        
+                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), keepStack: .always, purposefulAction: {}, peekData: nil))
+                    })
+                    return true
+                }
+                return false
+            }), in: .current)
+            
+            let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messages.map { message -> EnqueueMessage in
+                return .forward(source: message.id, threadId: nil, grouping: .auto, attributes: [], correlationId: nil)
+            })
+            |> deliverOnMainQueue).start(next: { messageIds in
+                if let strongSelf = self {
+                    let signals: [Signal<Bool, NoError>] = messageIds.compactMap({ id -> Signal<Bool, NoError>? in
+                        guard let id = id else {
+                            return nil
+                        }
+                        return strongSelf.context.account.pendingMessageManager.pendingMessageStatus(id)
+                        |> mapToSignal { status, _ -> Signal<Bool, NoError> in
+                            if status != nil {
+                                return .never()
+                            } else {
+                                return .single(true)
+                            }
+                        }
+                        |> take(1)
+                    })
+                    if strongSelf.shareStatusDisposable == nil {
+                        strongSelf.shareStatusDisposable = MetaDisposable()
+                    }
+                    strongSelf.shareStatusDisposable?.set((combineLatest(signals)
+                    |> deliverOnMainQueue).start())
+                }
+            })
         })
     }
     

@@ -1598,6 +1598,25 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     interfaceInteraction.forwardMessages(selectAll ? messages : [message])
                     f(.dismissWithoutContent)
                 })))
+                
+                if message.id.peerId != context.account.peerId, context.sharedContext.currentPtgSettings.with({ $0.addContextMenuSaveMessage }) {
+                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuSaveMessage, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        interfaceInteraction.saveMessages(selectAll ? messages : [message])
+                        f(.default)
+                    })))
+                }
+                
+                if data.messageActions.options.contains(.externalShare), context.sharedContext.currentPtgSettings.with({ $0.addContextMenuShare }) {
+                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuShare, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+//                        controllerInteraction.openMessageShareMenu(message.id)
+                        interfaceInteraction.shareMessages(selectAll ? messages : [message])
+                        f(.default)
+                    })))
+                }
             }
         }
         

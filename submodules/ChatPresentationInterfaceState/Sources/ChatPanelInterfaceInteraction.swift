@@ -78,6 +78,8 @@ public final class ChatPanelInterfaceInteraction {
     public let forwardSelectedMessages: () -> Void
     public let forwardCurrentForwardMessages: () -> Void
     public let forwardMessages: ([Message]) -> Void
+    public let saveMessages: ([Message]) -> Void
+    public let shareMessages: ([Message]) -> Void
     public let updateForwardOptionsState: ((ChatInterfaceForwardOptionsState) -> ChatInterfaceForwardOptionsState) -> Void
     public let presentForwardOptions: (ASDisplayNode) -> Void
     public let shareSelectedMessages: () -> Void
@@ -182,6 +184,8 @@ public final class ChatPanelInterfaceInteraction {
         forwardSelectedMessages: @escaping () -> Void,
         forwardCurrentForwardMessages: @escaping () -> Void,
         forwardMessages: @escaping ([Message]) -> Void,
+        saveMessages: @escaping ([Message]) -> Void,
+        shareMessages: @escaping ([Message]) -> Void,
         updateForwardOptionsState: @escaping ((ChatInterfaceForwardOptionsState) -> ChatInterfaceForwardOptionsState) -> Void,
         presentForwardOptions: @escaping (ASDisplayNode) -> Void,
         shareSelectedMessages: @escaping () -> Void,
@@ -285,6 +289,8 @@ public final class ChatPanelInterfaceInteraction {
         self.forwardSelectedMessages = forwardSelectedMessages
         self.forwardCurrentForwardMessages = forwardCurrentForwardMessages
         self.forwardMessages = forwardMessages
+        self.saveMessages = saveMessages
+        self.shareMessages = shareMessages
         self.updateForwardOptionsState = updateForwardOptionsState
         self.presentForwardOptions = presentForwardOptions
         self.shareSelectedMessages = shareSelectedMessages
@@ -396,6 +402,8 @@ public final class ChatPanelInterfaceInteraction {
         }, forwardSelectedMessages: {
         }, forwardCurrentForwardMessages: {
         }, forwardMessages: { _ in
+        }, saveMessages: { _ in
+        }, shareMessages: { _ in
         }, updateForwardOptionsState: { _ in
         }, presentForwardOptions: { _ in
         }, shareSelectedMessages: {
