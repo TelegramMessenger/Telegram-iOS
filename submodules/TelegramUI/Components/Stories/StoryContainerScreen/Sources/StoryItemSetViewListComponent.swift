@@ -272,6 +272,10 @@ final class StoryItemSetViewListComponent: Component {
         
         var eventCycleState: EventCycleState?
         
+        var totalCount: Int? {
+            return self.viewListState?.totalCount
+        }
+        
         var hasContent: Bool = false
         var hasContentUpdated: ((Bool) -> Void)?
         
@@ -1361,12 +1365,22 @@ final class StoryItemSetViewListComponent: Component {
             if !component.hasPremium, component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
             } else {
                 if let views = component.storyItem.views, views.hasList {
-                    if views.seenCount >= 20 || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
-                        displayModeSelector = true
-                        displaySearchBar = true
-                    }
-                    if views.reactedCount >= 10 || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
-                        displaySortSelector = true
+                    if let currentContentView = self.currentContentView, let totalCount = currentContentView.totalCount {
+                        if totalCount >= 20 || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
+                            displayModeSelector = true
+                            displaySearchBar = true
+                        }
+                        if (views.reactedCount >= 10 && totalCount >= 20) || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
+                            displaySortSelector = true
+                        }
+                    } else {
+                        if views.seenCount >= 20 || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
+                            displayModeSelector = true
+                            displaySearchBar = true
+                        }
+                        if (views.reactedCount >= 10 && views.seenCount >= 20) || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
+                            displaySortSelector = true
+                        }
                     }
                 }
                 if let privacy = component.storyItem.privacy, case .everyone = privacy.base {
