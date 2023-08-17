@@ -287,7 +287,7 @@ public final class AvatarNode: ASDisplayNode {
     
     public init(font: UIFont) {
         self.font = font
-        self.imageNode = ImageNode(enableHasImage: true, enableAnimatedTransition: true)
+        self.imageNode = ImageNode(enableHasImage: true, enableAnimatedTransition: true, animateFirstTransition: false)
         
         super.init()
         

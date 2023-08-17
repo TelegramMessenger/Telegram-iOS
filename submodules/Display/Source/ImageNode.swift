@@ -127,7 +127,7 @@ public class ImageNode: ASDisplayNode {
     private var first = true
     private let enableEmpty: Bool
     public var enableAnimatedTransition: Bool
-    public var animateFirstTransition = true
+    public var animateFirstTransition: Bool
     
     private let _contentReady = Promise<Bool>()
     private var didSetReady: Bool = false
@@ -145,7 +145,7 @@ public class ImageNode: ASDisplayNode {
     
     public var contentUpdated: ((UIImage?) -> Void)?
     
-    public init(enableHasImage: Bool = false, enableEmpty: Bool = false, enableAnimatedTransition: Bool = false) {
+    public init(enableHasImage: Bool = false, enableEmpty: Bool = false, enableAnimatedTransition: Bool = false, animateFirstTransition: Bool = true) {
         if enableHasImage {
             self.hasImage = ValuePromise(false, ignoreRepeated: true)
         } else {
@@ -153,6 +153,7 @@ public class ImageNode: ASDisplayNode {
         }
         self.enableEmpty = enableEmpty
         self.enableAnimatedTransition = enableAnimatedTransition
+        self.animateFirstTransition = animateFirstTransition
         super.init()
     }
     
