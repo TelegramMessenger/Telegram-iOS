@@ -15,6 +15,7 @@ import ChatContextQuery
 import TextFormat
 import EmojiSuggestionsComponent
 import AudioToolbox
+import AnimatedTextComponent
 
 public final class MessageInputPanelComponent: Component {
     public struct ContextQueryTypes: OptionSet {
@@ -56,6 +57,26 @@ public final class MessageInputPanelComponent: Component {
         }
     }
     
+    public enum Placeholder: Equatable {
+        public enum CounterItemContent: Equatable {
+            case text(String)
+            case number(Int, minDigits: Int)
+        }
+        
+        public struct CounterItem: Equatable {
+            public var id: Int
+            public var content: CounterItemContent
+            
+            public init(id: Int, content: CounterItemContent) {
+                self.id = id
+                self.content = content
+            }
+        }
+        
+        case plain(String)
+        case counter([CounterItem])
+    }
+    
     public final class ExternalState {
         public fileprivate(set) var isEditing: Bool = false
         public fileprivate(set) var hasText: Bool = false
@@ -75,7 +96,7 @@ public final class MessageInputPanelComponent: Component {
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let style: Style
-    public let placeholder: String
+    public let placeholder: Placeholder
     public let maxLength: Int?
     public let queryTypes: ContextQueryTypes
     public let alwaysDarkWhenHasText: Bool
@@ -124,7 +145,7 @@ public final class MessageInputPanelComponent: Component {
         theme: PresentationTheme,
         strings: PresentationStrings,
         style: Style,
-        placeholder: String,
+        placeholder: Placeholder,
         maxLength: Int?,
         queryTypes: ContextQueryTypes,
         alwaysDarkWhenHasText: Bool,
@@ -560,6 +581,8 @@ public final class MessageInputPanelComponent: Component {
         }
         
         func update(component: MessageInputPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            let previousPlaceholder = self.component?.placeholder
+            
             var insets = UIEdgeInsets(top: 14.0, left: 9.0, bottom: 6.0, right: 41.0)
             
             if let _ = component.attachmentAction {
@@ -642,23 +665,39 @@ public final class MessageInputPanelComponent: Component {
             )
             let isEditing = self.textFieldExternalState.isEditing || component.forceIsEditing
             
+            var placeholderItems: [AnimatedTextComponent.Item] = []
+            switch component.placeholder {
+            case let .plain(string):
+                placeholderItems.append(AnimatedTextComponent.Item(id: AnyHashable(0 as Int), content: .text(string)))
+            case let .counter(items):
+                for item in items {
+                    switch item.content {
+                    case let .text(string):
+                        placeholderItems.append(AnimatedTextComponent.Item(id: AnyHashable(item.id), content: .text(string)))
+                    case let .number(value, minDigits):
+                        placeholderItems.append(AnimatedTextComponent.Item(id: AnyHashable(item.id), content: .number(value, minDigits: minDigits)))
+                    }
+                }
+            }
+            
+            let placeholderTransition: Transition = (previousPlaceholder != nil && previousPlaceholder != component.placeholder) ? Transition(animation: .curve(duration: 0.3, curve: .spring)) : .immediate
             let placeholderSize = self.placeholder.update(
-                transition: .immediate,
-                component: AnyComponent(Text(
-                    text: component.placeholder,
+                transition: placeholderTransition,
+                component: AnyComponent(AnimatedTextComponent(
                     font: Font.regular(17.0),
-                    color: UIColor(rgb: 0xffffff, alpha: 0.3)
+                    color: UIColor(rgb: 0xffffff, alpha: 0.3),
+                    items: placeholderItems
                 )),
                 environment: {},
                 containerSize: availableTextFieldSize
             )
             
             let _ = self.vibrancyPlaceholder.update(
-                transition: .immediate,
-                component: AnyComponent(Text(
-                    text: component.placeholder,
+                transition: placeholderTransition,
+                component: AnyComponent(AnimatedTextComponent(
                     font: Font.regular(17.0),
-                    color: .white
+                    color: .white,
+                    items: placeholderItems
                 )),
                 environment: {},
                 containerSize: availableTextFieldSize

@@ -184,7 +184,7 @@ public final class ButtonTextContentComponent: Component {
                             font: Font.semibold(15.0),
                             color: component.badgeForeground,
                             items: [
-                                AnimatedTextComponent.Item(id: AnyHashable(0), content: .number(component.badge))
+                                AnimatedTextComponent.Item(id: AnyHashable(0), content: .number(component.badge, minDigits: 0))
                             ]
                         ))
                     )),

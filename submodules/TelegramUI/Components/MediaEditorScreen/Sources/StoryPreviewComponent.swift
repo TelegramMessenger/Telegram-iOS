@@ -250,7 +250,7 @@ final class StoryPreviewComponent: Component {
                     theme: presentationData.theme,
                     strings: presentationData.strings,
                     style: .story,
-                    placeholder: presentationData.strings.Story_InputPlaceholderReplyPrivately,
+                    placeholder: .plain(presentationData.strings.Story_InputPlaceholderReplyPrivately),
                     maxLength: nil,
                     queryTypes: [],
                     alwaysDarkWhenHasText: false,
