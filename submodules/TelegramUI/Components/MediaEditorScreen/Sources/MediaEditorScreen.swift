@@ -1100,7 +1100,7 @@ final class MediaEditorScreenComponent: Component {
                     theme: environment.theme,
                     strings: environment.strings,
                     style: .editor,
-                    placeholder: environment.strings.Story_Editor_InputPlaceholderAddCaption,
+                    placeholder: .plain(environment.strings.Story_Editor_InputPlaceholderAddCaption),
                     maxLength: Int(component.context.userLimits.maxStoryCaptionLength),
                     queryTypes: [.mention],
                     alwaysDarkWhenHasText: false,

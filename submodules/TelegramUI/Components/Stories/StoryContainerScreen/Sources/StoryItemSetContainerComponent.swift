@@ -2379,7 +2379,7 @@ public final class StoryItemSetContainerComponent: Component {
                 self.bottomContentGradientLayer.colors = colors
                 self.bottomContentGradientLayer.type = .axial
                 
-                self.contentDimView.backgroundColor = UIColor(white: 0.0, alpha: 0.6)
+                self.contentDimView.backgroundColor = UIColor(white: 0.0, alpha: 0.3)
             }
             
             let wasPanning = self.component?.isPanning ?? false
@@ -2438,11 +2438,23 @@ public final class StoryItemSetContainerComponent: Component {
                 disabledPlaceholder = component.strings.Story_FooterReplyUnavailable
             }
             
-            let inputPlaceholder: String
+            let inputPlaceholder: MessageInputPanelComponent.Placeholder
             if let stealthModeTimeout = component.stealthModeTimeout {
-                inputPlaceholder = component.strings.Story_StealthModeActivePlaceholder("\(stringForDuration(stealthModeTimeout))").string
+                //TODO:localize
+                
+                let minutes = Int(stealthModeTimeout / 60)
+                let seconds = Int(stealthModeTimeout % 60)
+                
+                inputPlaceholder = .counter([
+                    MessageInputPanelComponent.Placeholder.CounterItem(id: 0, content: .text("Stealth Mode active – ")),
+                    MessageInputPanelComponent.Placeholder.CounterItem(id: 1, content: .number(minutes, minDigits: 2)),
+                    MessageInputPanelComponent.Placeholder.CounterItem(id: 2, content: .text(":")),
+                    MessageInputPanelComponent.Placeholder.CounterItem(id: 3, content: .number(seconds, minDigits: 2)),
+                ])
+                
+                //inputPlaceholder = component.strings.Story_StealthModeActivePlaceholder("\(stringForDuration(stealthModeTimeout))").string
             } else {
-                inputPlaceholder = component.strings.Story_InputPlaceholderReplyPrivately
+                inputPlaceholder = .plain(component.strings.Story_InputPlaceholderReplyPrivately)
             }
              
             var keyboardHeight = component.deviceMetrics.standardInputHeight(inLandscape: false)
@@ -3861,6 +3873,7 @@ public final class StoryItemSetContainerComponent: Component {
                 if let current = self.reactionContextNode {
                     reactionContextNode = current
                 } else {
+                    //TODO:localize
                     reactionContextNodeTransition = .immediate
                     reactionContextNode = ReactionContextNode(
                         context: component.context,
@@ -3868,6 +3881,7 @@ public final class StoryItemSetContainerComponent: Component {
                         presentationData: component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme),
                         items: reactionItems.map(ReactionContextItem.reaction),
                         selectedItems: component.slice.item.storyItem.myReaction.flatMap { Set([$0]) } ?? Set(),
+                        title: self.displayLikeReactions ? nil : "Send reaction as a private message",
                         getEmojiContent: { [weak self] animationCache, animationRenderer in
                             guard let self, let component = self.component else {
                                 preconditionFailure()
@@ -3915,6 +3929,7 @@ public final class StoryItemSetContainerComponent: Component {
                     )
                     reactionContextNode.displayTail = self.displayLikeReactions
                     reactionContextNode.forceTailToRight = self.displayLikeReactions
+                    reactionContextNode.forceDark = true
                     self.reactionContextNode = reactionContextNode
                     
                     reactionContextNode.reactionSelected = { [weak self] updateReaction, _ in
