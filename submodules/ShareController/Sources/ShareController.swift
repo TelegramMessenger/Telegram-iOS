@@ -1185,6 +1185,7 @@ public final class ShareController: ViewController {
                 return PostboxViewKey.basicPeer(peerId)
             }
         )
+        |> take(1)
         |> map { views -> [EnginePeer.Id: EnginePeer?] in
             var result: [EnginePeer.Id: EnginePeer?] = [:]
             for peerId in peerIds {
@@ -1782,6 +1783,7 @@ public final class ShareController: ViewController {
             |> `catch` { error -> Signal<[StandaloneSendMessageStatus], ShareControllerError> in
                 Queue.mainQueue().async {
                     let _ = (account.stateManager.postbox.combinedView(keys: [PostboxViewKey.basicPeer(error.peerId)])
+                    |> take(1)
                     |> map { views -> EnginePeer? in
                         if let view = views.views[PostboxViewKey.basicPeer(error.peerId)] as? BasicPeerView {
                             return view.peer.flatMap(EnginePeer.init)

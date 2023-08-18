@@ -786,6 +786,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     return PostboxViewKey.basicPeer(peerId)
                 }
             )
+            |> take(1)
             |> map { views -> [EnginePeer.Id: EnginePeer?] in
                 var result: [EnginePeer.Id: EnginePeer?] = [:]
                 for peerId in peerIds {
