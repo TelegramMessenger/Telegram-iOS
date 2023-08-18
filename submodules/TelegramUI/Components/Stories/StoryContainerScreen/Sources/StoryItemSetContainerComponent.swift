@@ -2363,11 +2363,11 @@ public final class StoryItemSetContainerComponent: Component {
                             component.storyItemSharedState.replyDrafts[StoryId(peerId: previousComponent.slice.peer.id, id: previousComponent.slice.item.storyItem.id)] = value
                         }
                     }
-                    if let draft = component.storyItemSharedState.replyDrafts[StoryId(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id)] {
-                        resetInputContents = .text(draft)
-                    }
-                    component.storyItemSharedState.replyDrafts.removeValue(forKey: StoryId(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id))
                 }
+                if let draft = component.storyItemSharedState.replyDrafts[StoryId(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id)] {
+                    resetInputContents = .text(draft)
+                }
+                component.storyItemSharedState.replyDrafts.removeValue(forKey: StoryId(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id))
                 
                 if let tooltipScreen = self.sendMessageContext.tooltipScreen {
                     if let tooltipScreen = tooltipScreen as? UndoOverlayController, let tag = tooltipScreen.tag as? String, tag == "no_auto_dismiss" {
