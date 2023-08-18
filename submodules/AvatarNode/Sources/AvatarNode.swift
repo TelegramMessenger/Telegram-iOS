@@ -1055,7 +1055,7 @@ public final class AvatarNode: ASDisplayNode {
             )
             if let storyIndicatorView = storyIndicator.view {
                 if storyIndicatorView.superview == nil {
-                    self.view.addSubview(storyIndicatorView)
+                    self.view.insertSubview(storyIndicatorView, aboveSubview: self.contentNode.view)
                 }
                 indicatorTransition.setFrame(view: storyIndicatorView, frame: CGRect(origin: CGPoint(x: (size.width - indicatorSize.width) * 0.5, y: (size.height - indicatorSize.height) * 0.5), size: indicatorSize))
             }

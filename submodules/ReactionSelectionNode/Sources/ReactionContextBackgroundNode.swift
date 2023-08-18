@@ -209,7 +209,7 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         self.backgroundView.update(size: contentBounds.size, transition: transition)
         
         if let vibrancyEffectView = self.vibrancyEffectView {
-            transition.updateFrame(view: vibrancyEffectView, frame: CGRect(origin: CGPoint(x: 10.0, y: 10.0), size: contentBounds.size))
+            transition.updateFrame(view: vibrancyEffectView, frame: CGRect(origin: CGPoint(x: 10.0, y: 10.0), size: contentBounds.size), beginWithCurrentState: true)
         }
     }
     

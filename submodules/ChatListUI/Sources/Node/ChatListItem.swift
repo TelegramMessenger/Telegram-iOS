@@ -1255,7 +1255,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         self.avatarContainerNode.addSubnode(self.avatarNode)
         self.contextContainer.addSubnode(self.avatarContainerNode)
-        self.contextContainer.addSubnode(self.onlineNode)
+        self.avatarNode.addSubnode(self.onlineNode)
         
         self.mainContentContainerNode.addSubnode(self.titleNode)
         self.mainContentContainerNode.addSubnode(self.authorNode)
@@ -3001,9 +3001,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     let onlineFrame: CGRect
                     if onlineIsVoiceChat {
-                        onlineFrame = CGRect(origin: CGPoint(x: avatarFrame.maxX - onlineLayout.width + 1.0 - UIScreenPixel, y: avatarFrame.maxY - onlineLayout.height + 1.0 - UIScreenPixel), size: onlineLayout)
+                        onlineFrame = CGRect(origin: CGPoint(x: avatarFrame.width - onlineLayout.width + 1.0 - UIScreenPixel, y: avatarFrame.height - onlineLayout.height + 1.0 - UIScreenPixel), size: onlineLayout)
                     } else {
-                        onlineFrame = CGRect(origin: CGPoint(x: avatarFrame.maxX - onlineLayout.width - 2.0, y: avatarFrame.maxY - onlineLayout.height - 2.0), size: onlineLayout)
+                        onlineFrame = CGRect(origin: CGPoint(x: avatarFrame.width - onlineLayout.width - 2.0, y: avatarFrame.height - onlineLayout.height - 2.0), size: onlineLayout)
                     }
                     transition.updateFrame(node: strongSelf.onlineNode, frame: onlineFrame)
                     
@@ -3040,11 +3040,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             avatarTimerTransition = .immediate
                             avatarTimerBadge = AvatarBadgeView(frame: CGRect())
                             strongSelf.avatarTimerBadge = avatarTimerBadge
-                            strongSelf.contextContainer.view.addSubview(avatarTimerBadge)
+                            strongSelf.avatarNode.view.addSubview(avatarTimerBadge)
                         }
                         let avatarBadgeSize = CGSize(width: avatarTimerBadgeDiameter, height: avatarTimerBadgeDiameter)
                         avatarTimerBadge.update(size: avatarBadgeSize, text: shortTimeIntervalString(strings: item.presentationData.strings, value: autoremoveTimeout, useLargeFormat: true))
-                        let avatarBadgeFrame = CGRect(origin: CGPoint(x: avatarFrame.maxX - avatarBadgeSize.width, y: avatarFrame.maxY - avatarBadgeSize.height), size: avatarBadgeSize)
+                        let avatarBadgeFrame = CGRect(origin: CGPoint(x: avatarFrame.width - avatarBadgeSize.width, y: avatarFrame.height - avatarBadgeSize.height), size: avatarBadgeSize)
                         avatarTimerTransition.updatePosition(layer: avatarTimerBadge.layer, position: avatarBadgeFrame.center)
                         avatarTimerTransition.updateBounds(layer: avatarTimerBadge.layer, bounds: CGRect(origin: CGPoint(), size: avatarBadgeFrame.size))
                         avatarTimerTransition.updateTransformScale(layer: avatarTimerBadge.layer, scale: autoremoveTimeoutFraction * 1.0 + (1.0 - autoremoveTimeoutFraction) * 0.00001)

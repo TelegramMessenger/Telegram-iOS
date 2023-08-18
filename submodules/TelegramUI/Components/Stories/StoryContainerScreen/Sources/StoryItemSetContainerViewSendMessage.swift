@@ -601,7 +601,8 @@ final class StoryItemSetContainerSendMessage {
                                 }
                             }
                         })
-                        inputPanelView.clearSendMessageInput()
+                        component.storyItemSharedState.replyDrafts.removeValue(forKey: StoryId(peerId: peerId, id: focusedItem.storyItem.id))
+                        inputPanelView.clearSendMessageInput(updateState: true)
                         
                         self.currentInputMode = .text
                         if hasFirstResponder(view) {
@@ -1259,7 +1260,16 @@ final class StoryItemSetContainerSendMessage {
         guard let inputPanelView = view.inputPanel.view as? MessageInputPanelComponent.View else {
             return
         }
-        inputPanelView.clearSendMessageInput()
+        inputPanelView.clearSendMessageInput(updateState: true)
+        
+        guard let component = view.component else {
+            return
+        }
+        let focusedItem = component.slice.item
+        guard let peerId = focusedItem.peerId else {
+            return
+        }
+        component.storyItemSharedState.replyDrafts.removeValue(forKey: StoryId(peerId: peerId, id: focusedItem.storyItem.id))
     }
     
     enum AttachMenuSubject {

@@ -1123,7 +1123,12 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         var scrollFrame = CGRect(origin: CGPoint(x: 0.0, y: self.isExpanded ? (46.0 + 54.0 - 4.0) : self.contentTopInset), size: actualBackgroundFrame.size)
         scrollFrame.origin.y += floorToScreenPixels(self.extensionDistance / 2.0)
         
-        transition.updateFrame(node: self.contentContainer, frame: visualBackgroundFrame, beginWithCurrentState: true)
+        transition.updatePosition(node: self.contentContainer, position: visualBackgroundFrame.center, beginWithCurrentState: true)
+        
+        if !self.contentContainer.bounds.equalTo(CGRect(origin: CGPoint(), size: visualBackgroundFrame.size)) {
+            transition.updateBounds(node: self.contentContainer, bounds: CGRect(origin: CGPoint(), size: visualBackgroundFrame.size), beginWithCurrentState: true)
+        }
+        
         transition.updateFrame(node: self.contentTintContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: visualBackgroundFrame.size), beginWithCurrentState: true)
         transition.updateFrame(view: self.contentContainerMask, frame: CGRect(origin: CGPoint(), size: visualBackgroundFrame.size), beginWithCurrentState: true)
         transition.updateFrame(node: self.scrollNode, frame: scrollFrame, beginWithCurrentState: true)
@@ -1287,11 +1292,12 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             
             self.backgroundNode.animateInFromAnchorRect(size: visualBackgroundFrame.size, sourceBackgroundFrame: sourceBackgroundFrame.offsetBy(dx: -visualBackgroundFrame.minX, dy: -visualBackgroundFrame.minY))
             
+            let xOffset = sourceBackgroundFrame.midX - visualBackgroundFrame.midX
             self.animateInInfo = (sourceBackgroundFrame.minX - visualBackgroundFrame.minX, visualBackgroundFrame.width)
-            self.contentContainer.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: sourceBackgroundFrame.midX - visualBackgroundFrame.midX, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping, additive: true)
+            self.contentContainer.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: xOffset, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping, additive: true)
             self.contentContainer.layer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(x: (sourceBackgroundFrame.minX - visualBackgroundFrame.minX), y: 0.0), size: sourceBackgroundFrame.size)), to: NSValue(cgRect: CGRect(origin: CGPoint(), size: visualBackgroundFrame.size)), keyPath: "bounds", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping)
             
-            self.contentTintContainer.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: sourceBackgroundFrame.midX - visualBackgroundFrame.midX, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping, additive: true)
+            self.contentTintContainer.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: xOffset, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping, additive: true)
             self.contentTintContainer.layer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(x: (sourceBackgroundFrame.minX - visualBackgroundFrame.minX), y: 0.0), size: sourceBackgroundFrame.size)), to: NSValue(cgRect: CGRect(origin: CGPoint(), size: visualBackgroundFrame.size)), keyPath: "bounds", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping)
         } else if let animateOutToAnchorRect = animateOutToAnchorRect {
             let targetBackgroundFrame = self.calculateBackgroundFrame(containerSize: size, insets: backgroundInsets, anchorRect: animateOutToAnchorRect, contentSize: CGSize(width: visibleContentWidth, height: contentHeight), centerAligned: false).0

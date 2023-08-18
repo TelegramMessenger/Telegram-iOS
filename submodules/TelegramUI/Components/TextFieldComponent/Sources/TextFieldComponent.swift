@@ -90,6 +90,7 @@ public final class TextFieldComponent: Component {
     public let textColor: UIColor
     public let insets: UIEdgeInsets
     public let hideKeyboard: Bool
+    public let resetText: NSAttributedString?
     public let formatMenuAvailability: FormatMenuAvailability
     public let lockedFormatAction: () -> Void
     public let present: (ViewController) -> Void
@@ -103,6 +104,7 @@ public final class TextFieldComponent: Component {
         textColor: UIColor,
         insets: UIEdgeInsets,
         hideKeyboard: Bool,
+        resetText: NSAttributedString?,
         formatMenuAvailability: FormatMenuAvailability,
         lockedFormatAction: @escaping () -> Void,
         present: @escaping (ViewController) -> Void,
@@ -115,6 +117,7 @@ public final class TextFieldComponent: Component {
         self.textColor = textColor
         self.insets = insets
         self.hideKeyboard = hideKeyboard
+        self.resetText = resetText
         self.formatMenuAvailability = formatMenuAvailability
         self.lockedFormatAction = lockedFormatAction
         self.present = present
@@ -138,6 +141,9 @@ public final class TextFieldComponent: Component {
             return false
         }
         if lhs.hideKeyboard != rhs.hideKeyboard {
+            return false
+        }
+        if lhs.resetText != rhs.resetText {
             return false
         }
         if lhs.formatMenuAvailability != rhs.formatMenuAvailability {
@@ -523,11 +529,13 @@ public final class TextFieldComponent: Component {
             return self.inputState.inputText
         }
         
-        public func setAttributedText(_ string: NSAttributedString) {
+        public func setAttributedText(_ string: NSAttributedString, updateState: Bool) {
             self.updateInputState { _ in
                 return TextFieldComponent.InputState(inputText: string, selectionRange: string.length ..< string.length)
             }
-            self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+            if updateState {
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+            }
         }
         
         public func activateInput() {
@@ -782,6 +790,10 @@ public final class TextFieldComponent: Component {
                 component.externalState.initialText = nil
                 self.updateInputState { _ in
                     return TextFieldComponent.InputState(inputText: initialText)
+                }
+            } else if let resetText = component.resetText {
+                self.updateInputState { _ in
+                    return TextFieldComponent.InputState(inputText: resetText)
                 }
             }
             

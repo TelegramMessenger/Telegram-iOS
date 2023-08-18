@@ -1104,6 +1104,7 @@ final class MediaEditorScreenComponent: Component {
                     maxLength: Int(component.context.userLimits.maxStoryCaptionLength),
                     queryTypes: [.mention],
                     alwaysDarkWhenHasText: false,
+                    resetInputContents: nil,
                     nextInputMode: { _ in  return nextInputMode },
                     areVoiceMessagesAvailable: false,
                     presentController: { [weak self] c in

@@ -254,6 +254,7 @@ final class StoryPreviewComponent: Component {
                     maxLength: nil,
                     queryTypes: [],
                     alwaysDarkWhenHasText: false,
+                    resetInputContents: nil,
                     nextInputMode: { _ in return .stickers },
                     areVoiceMessagesAvailable: false,
                     presentController: { _ in },

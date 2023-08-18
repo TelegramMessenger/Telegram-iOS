@@ -1700,7 +1700,7 @@ public final class SparseItemGrid: ASDisplayNode {
             if let headerTextView = headerText.view {
                 if headerTextView.superview == nil {
                     headerTextView.layer.anchorPoint = CGPoint()
-                    self.view.addSubview(headerTextView)
+                    self.view.insertSubview(headerTextView, at: 0)
                 }
                 headerTextView.center = headerTextFrame.origin
                 headerTextView.bounds = CGRect(origin: CGPoint(), size: headerTextFrame.size)

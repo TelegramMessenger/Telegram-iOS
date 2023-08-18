@@ -100,6 +100,7 @@ public final class MessageInputPanelComponent: Component {
     public let maxLength: Int?
     public let queryTypes: ContextQueryTypes
     public let alwaysDarkWhenHasText: Bool
+    public let resetInputContents: SendMessageInput?
     public let nextInputMode: (Bool) -> InputMode?
     public let areVoiceMessagesAvailable: Bool
     public let presentController: (ViewController) -> Void
@@ -149,6 +150,7 @@ public final class MessageInputPanelComponent: Component {
         maxLength: Int?,
         queryTypes: ContextQueryTypes,
         alwaysDarkWhenHasText: Bool,
+        resetInputContents: SendMessageInput?,
         nextInputMode: @escaping (Bool) -> InputMode?,
         areVoiceMessagesAvailable: Bool,
         presentController: @escaping (ViewController) -> Void,
@@ -198,6 +200,7 @@ public final class MessageInputPanelComponent: Component {
         self.maxLength = maxLength
         self.queryTypes = queryTypes
         self.alwaysDarkWhenHasText = alwaysDarkWhenHasText
+        self.resetInputContents = resetInputContents
         self.areVoiceMessagesAvailable = areVoiceMessagesAvailable
         self.presentController = presentController
         self.presentInGlobalOverlay = presentInGlobalOverlay
@@ -263,6 +266,9 @@ public final class MessageInputPanelComponent: Component {
             return false
         }
         if lhs.alwaysDarkWhenHasText != rhs.alwaysDarkWhenHasText {
+            return false
+        }
+        if lhs.resetInputContents != rhs.resetInputContents {
             return false
         }
         if lhs.areVoiceMessagesAvailable != rhs.areVoiceMessagesAvailable {
@@ -334,7 +340,7 @@ public final class MessageInputPanelComponent: Component {
         return true
     }
     
-    public enum SendMessageInput {
+    public enum SendMessageInput: Equatable {
         case text(NSAttributedString)
     }
             
@@ -385,6 +391,8 @@ public final class MessageInputPanelComponent: Component {
         
         private var component: MessageInputPanelComponent?
         private weak var state: EmptyComponentState?
+        
+        private var pendingSetMessageInput: SendMessageInput?
         
         public var likeButtonView: UIView? {
             return self.likeButton.view
@@ -451,6 +459,17 @@ public final class MessageInputPanelComponent: Component {
             return .text(textFieldView.getAttributedText())
         }
         
+        public func setSendMessageInput(value: SendMessageInput, updateState: Bool) {
+            if let textFieldView = self.textField.view as? TextFieldComponent.View {
+                switch value {
+                case let .text(text):
+                    textFieldView.setAttributedText(text, updateState: updateState)
+                }
+            } else {
+                self.pendingSetMessageInput = value
+            }
+        }
+        
         public func getAttachmentButtonView() -> UIView? {
             guard let attachmentButtonView = self.attachmentButton.view else {
                 return nil
@@ -458,9 +477,9 @@ public final class MessageInputPanelComponent: Component {
             return attachmentButtonView
         }
         
-        public func clearSendMessageInput() {
+        public func clearSendMessageInput(updateState: Bool) {
             if let textFieldView = self.textField.view as? TextFieldComponent.View {
-                textFieldView.setAttributedText(NSAttributedString())
+                textFieldView.setAttributedText(NSAttributedString(), updateState: updateState)
             }
         }
         
@@ -649,6 +668,12 @@ public final class MessageInputPanelComponent: Component {
                     textColor: UIColor(rgb: 0xffffff),
                     insets: UIEdgeInsets(top: 9.0, left: 8.0, bottom: 10.0, right: 48.0),
                     hideKeyboard: component.hideKeyboard,
+                    resetText: component.resetInputContents.flatMap { resetInputContents in
+                        switch resetInputContents {
+                        case let .text(value):
+                            return value
+                        }
+                    },
                     formatMenuAvailability: component.isFormattingLocked ? .locked : .available,
                     lockedFormatAction: {
                         component.presentTextFormattingTooltip?()
@@ -714,9 +739,12 @@ public final class MessageInputPanelComponent: Component {
             } else if isEditing {
                 fieldBackgroundFrame = fieldFrame
             } else {
-                fieldBackgroundFrame = CGRect(origin: CGPoint(x: mediaInsets.left, y: insets.top), size: CGSize(width: availableSize.width - mediaInsets.left - insets.right, height: textFieldSize.height))
-                if component.likeAction != nil && component.forwardAction != nil {
-                    fieldBackgroundFrame.size.width -= 49.0
+                if component.forwardAction != nil && component.likeAction != nil {
+                    fieldBackgroundFrame = CGRect(origin: CGPoint(x: mediaInsets.left, y: insets.top), size: CGSize(width: availableSize.width - mediaInsets.left - insets.right - 49.0, height: textFieldSize.height))
+                } else if component.forwardAction != nil {
+                    fieldBackgroundFrame = CGRect(origin: CGPoint(x: mediaInsets.left, y: insets.top), size: CGSize(width: availableSize.width - mediaInsets.left - insets.right, height: textFieldSize.height))
+                } else {
+                    fieldBackgroundFrame = CGRect(origin: CGPoint(x: mediaInsets.left, y: insets.top), size: CGSize(width: availableSize.width - mediaInsets.left - 50.0, height: textFieldSize.height))
                 }
             }
                         
@@ -762,12 +790,20 @@ public final class MessageInputPanelComponent: Component {
             
             let size = CGSize(width: availableSize.width, height: textFieldSize.height + insets.top + insets.bottom)
             
-            if let textFieldView = self.textField.view {
+            if let textFieldView = self.textField.view as? TextFieldComponent.View {
                 if textFieldView.superview == nil {
                     self.addSubview(textFieldView)
                     
                     if let viewForOverlayContent = self.viewForOverlayContent {
                         self.addSubview(viewForOverlayContent)
+                    }
+                    
+                    if let pendingSetMessageInput = self.pendingSetMessageInput {
+                        self.pendingSetMessageInput = nil
+                        switch pendingSetMessageInput {
+                        case let .text(text):
+                            textFieldView.setAttributedText(text, updateState: false)
+                        }
                     }
                 }
                 let textFieldFrame = CGRect(origin: CGPoint(x: fieldBackgroundFrame.minX, y: fieldBackgroundFrame.maxY - textFieldSize.height), size: textFieldSize)
@@ -1168,7 +1204,10 @@ public final class MessageInputPanelComponent: Component {
                 if likeButtonView.superview == nil {
                     self.addSubview(likeButtonView)
                 }
-                let likeButtonFrame = CGRect(origin: CGPoint(x: inputActionButtonOriginX, y: size.height - insets.bottom - baseFieldHeight + floor((baseFieldHeight - likeButtonSize.height) * 0.5)), size: likeButtonSize)
+                var likeButtonFrame = CGRect(origin: CGPoint(x: inputActionButtonOriginX, y: size.height - insets.bottom - baseFieldHeight + floor((baseFieldHeight - likeButtonSize.height) * 0.5)), size: likeButtonSize)
+                if component.forwardAction == nil {
+                    likeButtonFrame.origin.x += 3.0
+                }
                 transition.setPosition(view: likeButtonView, position: likeButtonFrame.center)
                 transition.setBounds(view: likeButtonView, bounds: CGRect(origin: CGPoint(), size: likeButtonFrame.size))
                 transition.setAlpha(view: likeButtonView, alpha: displayLikeAction ? 1.0 : 0.0)

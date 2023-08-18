@@ -964,9 +964,6 @@ private final class StoryContainerScreenComponent: Component {
                     }
                     
                     self.didDisplayReactionTooltip = true
-                    #if !DEBUG
-                    let _ = ApplicationSpecificNotice.setDisplayStoryReactionTooltip(accountManager: component.context.sharedContext.accountManager).start()
-                    #endif
                 })
             })
         }
@@ -1557,9 +1554,6 @@ private final class StoryContainerScreenComponent: Component {
                             
                             itemSetTransition.setPosition(view: itemSetView, position: itemFrame.center.offsetBy(dx: 0.0, dy: dismissPanOffset))
                             itemSetTransition.setBounds(view: itemSetView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
-                            
-                            itemSetTransition.setPosition(view: itemSetComponentView.transitionCloneContainerView, position: itemFrame.center.offsetBy(dx: 0.0, dy: dismissPanOffset))
-                            itemSetTransition.setBounds(view: itemSetComponentView.transitionCloneContainerView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
                             
                             itemSetTransition.setPosition(view: itemSetComponentView, position: CGRect(origin: CGPoint(), size: itemFrame.size).center)
                             itemSetTransition.setBounds(view: itemSetComponentView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
