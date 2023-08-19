@@ -343,6 +343,10 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode {
         }
     }
     
+    public var itemSectionId: ItemListSectionId? {
+        return self.item?.sectionId
+    }
+    
     @objc private func actionButtonPressed() {
         self.item?.action?()
     }

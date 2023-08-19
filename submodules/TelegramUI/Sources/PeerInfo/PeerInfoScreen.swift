@@ -8282,7 +8282,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                         return
                                     }
                                     
-                                    let nextController = secretPasscodeController(context: strongSelf.context, passcode: newPasscode)
+                                    let nextController = secretPasscodeController(context: strongSelf.context, passcode: newPasscode, isNew: true)
                                     (controller?.navigationController as? NavigationController)?.replaceTopController(nextController, animated: true)
                                 })
                             }
@@ -8322,7 +8322,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                 }
                                 
                                 if ptgSecretPasscodes.secretPasscodes.contains(where: { $0.passcode == passcode }) {
-                                    let nextController = secretPasscodeController(context: strongSelf.context, passcode: passcode)
+                                    let nextController = secretPasscodeController(context: strongSelf.context, passcode: passcode, isNew: false)
                                     (controller?.navigationController as? NavigationController)?.replaceTopController(nextController, animated: true)
                                     
                                     return true

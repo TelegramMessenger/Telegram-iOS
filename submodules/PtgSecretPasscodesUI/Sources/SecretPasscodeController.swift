@@ -42,7 +42,6 @@ private final class SecretPasscodeControllerArguments {
 }
 
 private enum SecretPasscodeControllerSection: Int32 {
-    case intro
     case state
     case timeout
     case accounts
@@ -52,9 +51,9 @@ private enum SecretPasscodeControllerSection: Int32 {
 }
 
 private enum SecretPasscodeControllerEntry: ItemListNodeEntry {
-    case intro(String)
     case state(String)
     case timeout(String, String)
+    case timeoutDesc(String)
     case accountsHeader(String)
     case accountsAdd(String)
     case account(Int32, PresentationDateTimeFormat, PresentationPersonNameOrder, AccountEntry)
@@ -63,14 +62,13 @@ private enum SecretPasscodeControllerEntry: ItemListNodeEntry {
     case secretChat(Int32, PresentationDateTimeFormat, PresentationPersonNameOrder, SecretChatEntry)
     case changePasscode(String)
     case delete(String)
+    case deleteDesc(String)
     
     var section: ItemListSectionId {
         switch self {
-        case .intro:
-            return SecretPasscodeControllerSection.intro.rawValue
         case .state:
             return SecretPasscodeControllerSection.state.rawValue
-        case .timeout:
+        case .timeout, .timeoutDesc:
             return SecretPasscodeControllerSection.timeout.rawValue
         case .accountsHeader, .accountsAdd, .account:
             return SecretPasscodeControllerSection.accounts.rawValue
@@ -78,15 +76,15 @@ private enum SecretPasscodeControllerEntry: ItemListNodeEntry {
             return SecretPasscodeControllerSection.secretChats.rawValue
         case .changePasscode:
             return SecretPasscodeControllerSection.changePasscode.rawValue
-        case .delete:
+        case .delete, .deleteDesc:
             return SecretPasscodeControllerSection.delete.rawValue
         }
     }
     
     enum StableId: Hashable {
-        case intro
         case state
         case timeout
+        case timeoutDesc
         case accountsHeader
         case accountsAdd
         case account(AccountRecordId)
@@ -95,16 +93,17 @@ private enum SecretPasscodeControllerEntry: ItemListNodeEntry {
         case secretChat(PtgSecretChatId)
         case changePasscode
         case delete
+        case deleteDesc
     }
     
     var stableId: StableId {
         switch self {
-        case .intro:
-            return .intro
         case .state:
             return .state
         case .timeout:
             return .timeout
+        case .timeoutDesc:
+            return .timeoutDesc
         case .accountsHeader:
             return .accountsHeader
         case .accountsAdd:
@@ -121,6 +120,8 @@ private enum SecretPasscodeControllerEntry: ItemListNodeEntry {
             return .changePasscode
         case .delete:
             return .delete
+        case .deleteDesc:
+            return .deleteDesc
         }
     }
     
@@ -130,6 +131,10 @@ private enum SecretPasscodeControllerEntry: ItemListNodeEntry {
         }
         
         switch lhs {
+        case .timeout:
+            return true
+        case .timeoutDesc:
+            return false
         case .accountsHeader, .secretChatsHeader:
             return true
         case .accountsAdd, .secretChatsAdd:
@@ -149,6 +154,10 @@ private enum SecretPasscodeControllerEntry: ItemListNodeEntry {
             default:
                 return false
             }
+        case .delete:
+            return true
+        case .deleteDesc:
+            return false
         default:
             assertionFailure()
             return false
@@ -158,14 +167,14 @@ private enum SecretPasscodeControllerEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! SecretPasscodeControllerArguments
         switch self {
-        case let .intro(text):
-            return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
         case let .state(text):
             return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
         case let .timeout(title, value):
             return ItemListDisclosureItem(presentationData: presentationData, title: title, label: value, sectionId: self.section, style: .blocks, action: {
                 arguments.changeTimeout()
             })
+        case let .timeoutDesc(text), let .deleteDesc(text):
+            return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
         case let .accountsHeader(text), let .secretChatsHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .accountsAdd(title):
@@ -207,11 +216,10 @@ private struct SecretPasscodeControllerState: Equatable {
 private func secretPasscodeControllerEntries(presentationData: PresentationData, state: SecretPasscodeControllerState, accountEntries: [AccountEntry], secretChatEntries: [SecretChatEntry]) -> [SecretPasscodeControllerEntry] {
     var entries: [SecretPasscodeControllerEntry] = []
     
-    entries.append(.intro(presentationData.strings.SecretPasscodeSettings_Intro))
-    
     entries.append(.state(state.settings.active ? presentationData.strings.SecretPasscodeStatus_Revealed : presentationData.strings.SecretPasscodeStatus_Hidden))
     
     entries.append(.timeout(presentationData.strings.SecretPasscodeSettings_AutoHide, autolockStringForTimeout(strings: presentationData.strings, timeout: state.settings.timeout)))
+    entries.append(.timeoutDesc(presentationData.strings.SecretPasscodeSettings_AutoHideDesc))
     
     entries.append(.accountsHeader(presentationData.strings.SecretPasscodeSettings_AccountsHeader.uppercased()))
     entries.append(.accountsAdd(presentationData.strings.SecretPasscodeSettings_AddAccount))
@@ -230,6 +238,7 @@ private func secretPasscodeControllerEntries(presentationData: PresentationData,
     entries.append(.changePasscode(presentationData.strings.SecretPasscodeSettings_ChangePasscode))
     
     entries.append(.delete(presentationData.strings.SecretPasscodeSettings_DeleteSecretPasscode))
+    entries.append(.deleteDesc(presentationData.strings.SecretPasscodeSettings_DeleteSecretPasscodeNotice))
     
     return entries
 }
@@ -327,7 +336,7 @@ private func getSecretChatEntries(sharedContext: SharedAccountContext, secretCha
     }
 }
 
-public func secretPasscodeController(context: AccountContext, passcode: String) -> ViewController {
+public func secretPasscodeController(context: AccountContext, passcode: String, isNew: Bool) -> ViewController {
     let statePromise = Promise<SecretPasscodeControllerState>()
     statePromise.set(context.sharedContext.ptgSecretPasscodes
     |> take(1)
@@ -711,6 +720,26 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
     
     popToControllerImpl = { [weak controller] in
         let _ = (controller?.navigationController as? NavigationController)?.popToViewController(controller!, animated: true)
+    }
+    
+    controller.didAppear = { [weak controller] firstTime in
+        if firstTime && isNew {
+            Queue.mainQueue().after(0.5) {
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let tooltipController = TooltipController(content: .text(presentationData.strings.SecretPasscodeSettings_Intro), baseFontSize: presentationData.listsFontSize.baseDisplaySize, timeout: 10.0, dismissByTapOutside: true)
+                controller?.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
+                    if let controller {
+                        return (controller.displayNode, controller.frameForItemNode({ node in
+                            if let node = node as? ItemListSectionHeaderItemNode, node.itemSectionId == SecretPasscodeControllerSection.accounts.rawValue {
+                                return true
+                            }
+                            return false
+                        })?.offsetBy(dx: 0.0, dy: 20.0) ?? CGRect())
+                    }
+                    return nil
+                }))
+            }
+        }
     }
     
     controller.isSensitiveUI = true

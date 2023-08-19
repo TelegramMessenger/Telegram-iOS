@@ -123,7 +123,11 @@ public final class UndoOverlayController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        (self.displayNode as! UndoOverlayControllerNode).containerLayoutUpdated(layout: layout, transition: transition)
+        let navigationBarHeight = self.navigationLayout(layout: layout).navigationFrame.maxY
+        var nodeLayout = layout
+        nodeLayout.intrinsicInsets.top = max(nodeLayout.intrinsicInsets.top, navigationBarHeight)
+        
+        (self.displayNode as! UndoOverlayControllerNode).containerLayoutUpdated(layout: nodeLayout, transition: transition)
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {
