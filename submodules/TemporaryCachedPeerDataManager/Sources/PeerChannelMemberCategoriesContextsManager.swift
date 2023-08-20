@@ -94,7 +94,7 @@ private final class PeerChannelMemberCategoriesContextsManagerImpl {
                 )
             ) |> restart
             
-            disposable.set(signal.start(next: { [weak context] value in
+            disposable.set((signal |> deliverOnMainQueue).start(next: { [weak context] value in
                 guard let context = context else {
                     return
                 }
@@ -221,7 +221,7 @@ private final class PeerChannelMemberCategoriesContextsManagerImpl {
             context = ProfileDataPhotoPreloadContext(disposable: disposable)
             self.profileDataPhotoPreloadContexts[peerId] = context
             
-            disposable.set(fetch.start(next: { [weak context] value in
+            disposable.set((fetch |> deliverOnMainQueue).start(next: { [weak context] value in
                 guard let context = context else {
                     return
                 }
