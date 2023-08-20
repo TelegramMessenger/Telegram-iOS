@@ -1,7 +1,7 @@
 import Foundation
 
 private final class SignalQueueState<T, E> {
-    var lock = pthread_mutex_t()
+    let lock = createOSUnfairLock()
     var executingSignal = false
     var terminated = false
     
@@ -13,8 +13,6 @@ private final class SignalQueueState<T, E> {
     let throttleMode: Bool
     
     init(subscriber: Subscriber<T, E>, queueMode: Bool, throttleMode: Bool, currentDisposable: MetaDisposable) {
-        pthread_mutex_init(&self.lock, nil)
-        
         self.subscriber = subscriber
         self.queueMode = queueMode
         self.throttleMode = throttleMode
@@ -22,12 +20,11 @@ private final class SignalQueueState<T, E> {
     }
     
     deinit {
-        pthread_mutex_destroy(&self.lock)
     }
     
     func enqueueSignal(_ signal: Signal<T, E>) {
         var startSignal = false
-        pthread_mutex_lock(&self.lock)
+        self.lock.lock()
         if self.queueMode && self.executingSignal {
             if self.throttleMode {
                 self.queuedSignals.removeAll()
@@ -37,7 +34,7 @@ private final class SignalQueueState<T, E> {
             self.executingSignal = true
             startSignal = true
         }
-        pthread_mutex_unlock(&self.lock)
+        self.lock.unlock()
         
         if startSignal {
             let disposable = signal.start(next: { next in
@@ -60,7 +57,7 @@ private final class SignalQueueState<T, E> {
             var nextSignal: Signal<T, E>! = nil
             
             var terminated = false
-            pthread_mutex_lock(&self.lock)
+            self.lock.lock()
             self.executingSignal = false
             if self.queueMode {
                 if self.queuedSignals.count != 0 {
@@ -73,7 +70,7 @@ private final class SignalQueueState<T, E> {
             } else {
                 terminated = self.terminated
             }
-            pthread_mutex_unlock(&self.lock)
+            self.lock.unlock()
             
             if terminated {
                 self.subscriber?.putCompletion()
@@ -101,10 +98,10 @@ private final class SignalQueueState<T, E> {
     
     func beginCompletion() {
         var executingSignal = false
-        pthread_mutex_lock(&self.lock)
+        self.lock.lock()
         executingSignal = self.executingSignal
         self.terminated = true
-        pthread_mutex_unlock(&self.lock)
+        self.lock.unlock()
         
         if !executingSignal {
             self.subscriber?.putCompletion()

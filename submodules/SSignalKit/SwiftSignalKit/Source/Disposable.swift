@@ -12,71 +12,64 @@ final class _EmptyDisposable: Disposable {
 public let EmptyDisposable: Disposable = _EmptyDisposable()
 
 public final class ActionDisposable : Disposable {
-    private var lock = pthread_mutex_t()
+    private let lock = createOSUnfairLock()
     
     private var action: (() -> Void)?
     
     public init(action: @escaping() -> Void) {
         self.action = action
-        
-        pthread_mutex_init(&self.lock, nil)
     }
     
     deinit {
         var freeAction: (() -> Void)?
-        pthread_mutex_lock(&self.lock)
+        self.lock.lock()
         freeAction = self.action
         self.action = nil
-        pthread_mutex_unlock(&self.lock)
+        self.lock.unlock()
         
         if let freeAction = freeAction {
             withExtendedLifetime(freeAction, {})
         }
-        
-        pthread_mutex_destroy(&self.lock)
     }
     
     public func dispose() {
         let disposeAction: (() -> Void)?
         
-        pthread_mutex_lock(&self.lock)
+        self.lock.lock()
         disposeAction = self.action
         self.action = nil
-        pthread_mutex_unlock(&self.lock)
+        self.lock.unlock()
         
         disposeAction?()
     }
 }
 
 public final class MetaDisposable : Disposable {
-    private var lock = pthread_mutex_t()
+    private let lock = createOSUnfairLock()
     private var disposed = false
     private var disposable: Disposable! = nil
     
     public init() {
-        pthread_mutex_init(&self.lock, nil)
     }
     
     deinit {
         var freeDisposable: Disposable?
-        pthread_mutex_lock(&self.lock)
+        self.lock.lock()
         if let disposable = self.disposable {
             freeDisposable = disposable
             self.disposable = nil
         }
-        pthread_mutex_unlock(&self.lock)
+        self.lock.unlock()
         if let freeDisposable = freeDisposable {
             withExtendedLifetime(freeDisposable, { })
         }
-        
-        pthread_mutex_destroy(&self.lock)
     }
     
     public func set(_ disposable: Disposable?) {
         var previousDisposable: Disposable! = nil
         var disposeImmediately = false
         
-        pthread_mutex_lock(&self.lock)
+        self.lock.lock()
         disposeImmediately = self.disposed
         if !disposeImmediately {
             previousDisposable = self.disposable
@@ -86,7 +79,7 @@ public final class MetaDisposable : Disposable {
                 self.disposable = nil
             }
         }
-        pthread_mutex_unlock(&self.lock)
+        self.lock.unlock()
         
         if previousDisposable != nil {
             previousDisposable.dispose()
@@ -103,13 +96,13 @@ public final class MetaDisposable : Disposable {
     {
         var disposable: Disposable! = nil
         
-        pthread_mutex_lock(&self.lock)
+        self.lock.lock()
         if !self.disposed {
             self.disposed = true
             disposable = self.disposable
             self.disposable = nil
         }
-        pthread_mutex_unlock(&self.lock)
+        self.lock.unlock()
         
         if disposable != nil {
             disposable.dispose()
@@ -118,33 +111,33 @@ public final class MetaDisposable : Disposable {
 }
 
 public final class DisposableSet : Disposable {
-    private var lock = pthread_mutex_t()
+    private let lock = createOSUnfairLock()
     private var disposed = false
     private var disposables: [Disposable] = []
     
     public init() {
-        pthread_mutex_init(&self.lock, nil)
     }
     
     deinit {
-        pthread_mutex_lock(&self.lock)
-        self.disposables.removeAll()
-        pthread_mutex_unlock(&self.lock)
+        self.lock.lock()
+        let disposables = self.disposables
+        self.disposables = []
+        self.lock.unlock()
         
-        pthread_mutex_destroy(&self.lock)
+        withExtendedLifetime(disposables, {})
     }
     
     public func add(_ disposable: Disposable) {
         var disposeImmediately = false
         
-        pthread_mutex_lock(&self.lock)
+        self.lock.lock()
         if self.disposed {
             disposeImmediately = true
         } else {
             assert(!self.disposables.contains(where: { $0 === disposable }))
             self.disposables.append(disposable)
         }
-        pthread_mutex_unlock(&self.lock)
+        self.lock.unlock()
         
         if disposeImmediately {
             disposable.dispose()
@@ -152,24 +145,24 @@ public final class DisposableSet : Disposable {
     }
     
     public func remove(_ disposable: Disposable) {
-        pthread_mutex_lock(&self.lock)
+        self.lock.lock()
         if let index = self.disposables.firstIndex(where: { $0 === disposable }) {
             self.disposables.remove(at: index)
         } else {
             assertionFailure()
         }
-        pthread_mutex_unlock(&self.lock)
+        self.lock.unlock()
     }
     
     public func dispose() {
         var disposables: [Disposable] = []
-        pthread_mutex_lock(&self.lock)
+        self.lock.lock()
         if !self.disposed {
             self.disposed = true
             disposables = self.disposables
             self.disposables = []
         }
-        pthread_mutex_unlock(&self.lock)
+        self.lock.unlock()
         
         if disposables.count != 0 {
             for disposable in disposables {
@@ -180,27 +173,27 @@ public final class DisposableSet : Disposable {
 }
 
 public final class DisposableDict<T: Hashable> : Disposable {
-    private var lock = pthread_mutex_t()
+    private let lock = createOSUnfairLock()
     private var disposed = false
     private var disposables: [T: Disposable] = [:]
     
     public init() {
-        pthread_mutex_init(&self.lock, nil)
     }
     
     deinit {
-        pthread_mutex_lock(&self.lock)
-        self.disposables.removeAll()
-        pthread_mutex_unlock(&self.lock)
+        self.lock.lock()
+        let disposables = self.disposables
+        self.disposables = [:]
+        self.lock.unlock()
         
-        pthread_mutex_destroy(&self.lock)
+        withExtendedLifetime(disposables, {})
     }
     
     public func set(_ disposable: Disposable?, forKey key: T) {
         var disposeImmediately = false
         var disposePrevious: Disposable?
         
-        pthread_mutex_lock(&self.lock)
+        self.lock.lock()
         if self.disposed {
             disposeImmediately = true
         } else {
@@ -211,7 +204,7 @@ public final class DisposableDict<T: Hashable> : Disposable {
                 self.disposables.removeValue(forKey: key)
             }
         }
-        pthread_mutex_unlock(&self.lock)
+        self.lock.unlock()
         
         if disposeImmediately {
             disposable?.dispose()
@@ -221,13 +214,13 @@ public final class DisposableDict<T: Hashable> : Disposable {
     
     public func dispose() {
         var disposables: [T: Disposable] = [:]
-        pthread_mutex_lock(&self.lock)
+        self.lock.lock()
         if !self.disposed {
             self.disposed = true
             disposables = self.disposables
             self.disposables = [:]
         }
-        pthread_mutex_unlock(&self.lock)
+        self.lock.unlock()
         
         if disposables.count != 0 {
             for disposable in disposables.values {
