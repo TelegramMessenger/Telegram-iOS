@@ -101,6 +101,7 @@ swift_library(
         "//submodules/GalleryUI",
         "//submodules/MediaPlayer:UniversalMediaPlayer",
         "//submodules/TelegramUniversalVideoContent",
+        "//submodules/TelegramUI/Components/CameraButtonComponent",
     ],
     visibility = [
         "//visibility:public",

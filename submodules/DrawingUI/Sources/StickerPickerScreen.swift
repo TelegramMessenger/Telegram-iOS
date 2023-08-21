@@ -21,6 +21,8 @@ import StickerPackPreviewUI
 import EntityKeyboardGifContent
 import GalleryUI
 import UndoUI
+import CameraButtonComponent
+import BundleIconComponent
 
 public struct StickerPickerInputData: Equatable {
     var emoji: EmojiPagerContentComponent
@@ -526,6 +528,9 @@ public class StickerPickerScreen: ViewController {
             self.storyStickersContentView = StoryStickersContentView(frame: .zero)
             self.storyStickersContentView?.locationAction = { [weak self] in
                 self?.controller?.presentLocationPicker()
+            }
+            self.storyStickersContentView?.audioAction = { [weak self] in
+                self?.controller?.presentAudioPicker()
             }
             
             let gifItems: Signal<EntityKeyboardGifContent?, NoError>
@@ -1946,6 +1951,7 @@ public class StickerPickerScreen: ViewController {
     
     public var presentGallery: () -> Void = { }
     public var presentLocationPicker: () -> Void = { }
+    public var presentAudioPicker: () -> Void = { }
     
     public init(context: AccountContext, inputData: Signal<StickerPickerInputData, NoError>, defaultToEmoji: Bool = false, hasGifs: Bool = false) {
         self.context = context
@@ -2005,92 +2011,315 @@ public class StickerPickerScreen: ViewController {
     }
 }
 
-final class StoryStickersContentView: UIView, EmojiCustomContentView {
-    override public static var layerClass: AnyClass {
-        return PassthroughLayer.self
+private final class CustomContentButton: Component {
+    let theme: PresentationTheme
+    let title: String
+    let iconName: String
+    let useOpaqueTheme: Bool
+    weak var tintContainerView: UIView?
+
+    public init(
+        theme: PresentationTheme,
+        title: String,
+        iconName: String,
+        useOpaqueTheme: Bool,
+        tintContainerView: UIView
+    ) {
+        self.theme = theme
+        self.title = title
+        self.iconName = iconName
+        self.useOpaqueTheme = useOpaqueTheme
+        self.tintContainerView = tintContainerView
     }
     
-    let tintContainerView = UIView()
-    
-    private let backgroundLayer = SimpleLayer()
-    private let tintBackgroundLayer = SimpleLayer()
-    
-    private let iconView: UIImageView
-    private let title: ComponentView<Empty>
-    private let button: HighlightTrackingButton
-    
-    var locationAction: () -> Void = {}
-    
-    override init(frame: CGRect) {
-        self.iconView = UIImageView(image: UIImage(bundleImageName: "Chat/Attach Menu/Location"))
-        self.iconView.tintColor = .white
-        
-        self.title = ComponentView<Empty>()
-        self.button = HighlightTrackingButton()
-        
-        super.init(frame: frame)
-        
-        self.layer.addSublayer(self.backgroundLayer)
-        self.tintContainerView.layer.addSublayer(self.tintBackgroundLayer)
-        
-        self.addSubview(self.iconView)
-        self.addSubview(self.button)
-        
-        self.button.addTarget(self, action: #selector(self.locationPressed), for: .touchUpInside)
-        
-        (self.layer as? PassthroughLayer)?.mirrorLayer = self.tintContainerView.layer
+    public static func ==(lhs: CustomContentButton, rhs: CustomContentButton) -> Bool {
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.iconName != rhs.iconName {
+            return false
+        }
+        if lhs.useOpaqueTheme != rhs.useOpaqueTheme {
+            return false
+        }
+        return true
     }
     
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
+    final class View: UIView {
+        override public static var layerClass: AnyClass {
+            return PassthroughLayer.self
+        }
+                
+        private let backgroundLayer = SimpleLayer()
+        let tintBackgroundLayer = SimpleLayer()
+        
+        private var icon: ComponentView<Empty>
+        private var title: ComponentView<Empty>
+        
+        private var component: CustomContentButton?
     
-    @objc private func locationPressed() {
-        self.locationAction()
-    }
-    
-    func update(theme: PresentationTheme, strings: PresentationStrings, useOpaqueTheme: Bool, availableSize: CGSize, transition: Transition) -> CGSize {
-        if useOpaqueTheme {
-            self.backgroundLayer.backgroundColor = theme.chat.inputMediaPanel.panelContentControlOpaqueSelectionColor.cgColor
-            self.tintBackgroundLayer.backgroundColor = UIColor.white.cgColor
-        } else {
-            self.backgroundLayer.backgroundColor = theme.chat.inputMediaPanel.panelContentControlVibrantSelectionColor.cgColor
-            self.tintBackgroundLayer.backgroundColor = UIColor(white: 1.0, alpha: 0.2).cgColor
+        override init(frame: CGRect) {
+            self.icon = ComponentView<Empty>()
+            self.title = ComponentView<Empty>()
+            
+            super.init(frame: frame)
+            
+            self.isExclusiveTouch = true
+            
+            self.layer.addSublayer(self.backgroundLayer)
         }
         
-        self.backgroundLayer.cornerRadius = 6.0
-        self.tintBackgroundLayer.cornerRadius = 6.0
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
         
-        let size = CGSize(width: availableSize.width, height: 76.0)
-        let titleSize = self.title.update(
-            transition: .immediate,
-            component: AnyComponent(Text(
-                text: strings.MediaEditor_AddLocation.uppercased(),
-                font: Font.with(size: 23.0, design: .camera),
-                color: .white
-            )),
+        func update(component: CustomContentButton, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+//            if component.useOpaqueTheme {
+//                self.backgroundLayer.backgroundColor = component.theme.chat.inputMediaPanel.panelContentControlOpaqueSelectionColor.cgColor
+//                self.tintBackgroundLayer.backgroundColor = UIColor.white.cgColor
+//            } else {
+//                self.backgroundLayer.backgroundColor = component.theme.chat.inputMediaPanel.panelContentControlVibrantSelectionColor.cgColor
+//                self.tintBackgroundLayer.backgroundColor = UIColor(white: 1.0, alpha: 0.2).cgColor
+//            }
+            self.backgroundLayer.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.11).cgColor
+            
+            let iconSize = self.icon.update(
+                transition: .immediate,
+                component: AnyComponent(BundleIconComponent(
+                    name: component.iconName,
+                    tintColor: .white,
+                    maxSize: CGSize(width: 20.0, height: 20.0)
+                )),
+                environment: {},
+                containerSize: availableSize
+            )
+            let titleSize = self.title.update(
+                transition: .immediate,
+                component: AnyComponent(Text(
+                    text: component.title.uppercased(),
+                    font: Font.with(size: 23.0, design: .camera),
+                    color: .white
+                )),
+                environment: {},
+                containerSize: availableSize
+            )
+            
+            let padding: CGFloat = 30.0
+            let spacing: CGFloat = 3.0
+            let buttonSize = CGSize(width: padding + iconSize.width + spacing + titleSize.width + padding, height: 34.0)
+            
+            if let view = self.icon.view {
+                if view.superview == nil {
+                    self.addSubview(view)
+                }
+                transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: padding, y: floorToScreenPixels((buttonSize.height - iconSize.height) / 2.0)), size: iconSize))
+            }
+            if let view = self.title.view {
+                if view.superview == nil {
+                    self.addSubview(view)
+                }
+                transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: padding + iconSize.width + spacing, y: floorToScreenPixels((buttonSize.height - titleSize.height) / 2.0)), size: titleSize))
+            }
+            
+            self.backgroundLayer.cornerRadius = 6.0
+            self.tintBackgroundLayer.cornerRadius = 6.0
+            
+            self.backgroundLayer.frame = CGRect(origin: .zero, size: buttonSize)
+            
+            if self.tintBackgroundLayer.superlayer == nil, let tintContainerView = component.tintContainerView {
+                Queue.mainQueue().justDispatch {
+                    let mappedFrame = self.convert(self.bounds, to: tintContainerView)
+                    self.tintBackgroundLayer.frame = mappedFrame
+                }
+            }
+            
+            return buttonSize
+        }
+    }
+    
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+final class ItemStack<ChildEnvironment: Equatable>: CombinedComponent {
+    typealias EnvironmentType = ChildEnvironment
+
+    private let items: [AnyComponentWithIdentity<ChildEnvironment>]
+    private let padding: CGFloat
+    private let minSpacing: CGFloat
+
+    init(_ items: [AnyComponentWithIdentity<ChildEnvironment>], padding: CGFloat, minSpacing: CGFloat) {
+        self.items = items
+        self.padding = padding
+        self.minSpacing = minSpacing
+    }
+
+    static func ==(lhs: ItemStack<ChildEnvironment>, rhs: ItemStack<ChildEnvironment>) -> Bool {
+        if lhs.items != rhs.items {
+            return false
+        }
+        if lhs.padding != rhs.padding {
+            return false
+        }
+        if lhs.minSpacing != rhs.minSpacing {
+            return false
+        }
+        return true
+    }
+
+    static var body: Body {
+        let children = ChildMap(environment: ChildEnvironment.self, keyedBy: AnyHashable.self)
+
+        return { context in
+            let updatedChildren = context.component.items.map { item in
+                return children[item.id].update(
+                    component: item.component, environment: {
+                        context.environment[ChildEnvironment.self]
+                    },
+                    availableSize: context.availableSize,
+                    transition: context.transition
+                )
+            }
+
+            var groups: [[Int]] = []
+            var currentGroup: [Int] = []
+            for i in 0 ..< updatedChildren.count {
+                var itemsWidth: CGFloat = 0.0
+                for j in currentGroup {
+                    itemsWidth += updatedChildren[j].size.width
+                }
+                itemsWidth += updatedChildren[i].size.width
+                let rowItemsCount = currentGroup.count + 1
+                
+                let remainingWidth = context.availableSize.width - itemsWidth - context.component.padding * 2.0
+                let spacing = remainingWidth / CGFloat(rowItemsCount - 1)
+                if spacing < context.component.minSpacing {
+                    groups.append(currentGroup)
+                } else {
+                    currentGroup.append(i)
+                }
+            }
+            if !currentGroup.isEmpty {
+                groups.append(currentGroup)
+            }
+            
+            var size = CGSize(width: context.availableSize.width, height: 0.0)
+            for group in groups {
+                var groupHeight: CGFloat = 0.0
+                var spacing = context.component.minSpacing
+                var itemsWidth = 0.0
+                for i in group {
+                    let childSize = updatedChildren[i].size
+                    groupHeight = max(groupHeight, childSize.height)
+                    itemsWidth += childSize.width
+                }
+                let remainingWidth = context.availableSize.width - itemsWidth - context.component.padding * 2.0
+                spacing = remainingWidth / CGFloat(group.count - 1)
+                
+                var nextX: CGFloat = context.component.padding
+                for i in group {
+                    let child = updatedChildren[i]
+                    let frame = CGRect(origin: CGPoint(x: nextX, y: size.height + floorToScreenPixels((groupHeight - child.size.height) / 2.0)), size: child.size)
+                    
+                    context.add(child
+                        .position(child.size.centered(in: frame).center)
+                    )
+                    nextX += child.size.width + spacing
+                }
+                size.height += groupHeight
+            }
+
+            return size
+        }
+    }
+}
+
+
+final class StoryStickersContentView: UIView, EmojiCustomContentView {
+    let tintContainerView = UIView()
+
+    private let container = ComponentView<Empty>()
+        
+    var locationAction: () -> Void = {}
+    var audioAction: () -> Void = {}
+            
+    func update(theme: PresentationTheme, strings: PresentationStrings, useOpaqueTheme: Bool, availableSize: CGSize, transition: Transition) -> CGSize {
+        let padding: CGFloat = 22.0
+        let size = self.container.update(
+            transition: transition,
+            component: AnyComponent(
+                ItemStack(
+                    [
+                        AnyComponentWithIdentity(
+                            id: "location",
+                            component: AnyComponent(
+                                CameraButton(
+                                    content: AnyComponentWithIdentity(
+                                        id: "content",
+                                        component: AnyComponent(
+                                            CustomContentButton(
+                                                theme: theme,
+                                                title: "LOCATION",
+                                                iconName: "Chat/Attach Menu/Location",
+                                                useOpaqueTheme: useOpaqueTheme,
+                                                tintContainerView: self.tintContainerView
+                                            )
+                                        )
+                                    ),
+                                    action: { [weak self] in
+                                        if let self {
+                                            self.locationAction()
+                                        }
+                                    })
+                            )
+                        ),
+                        AnyComponentWithIdentity(
+                            id: "audio",
+                            component: AnyComponent(
+                                CameraButton(
+                                    content: AnyComponentWithIdentity(
+                                        id: "audio",
+                                        component: AnyComponent(
+                                            CustomContentButton(
+                                                theme: theme,
+                                                title: "AUDIO",
+                                                iconName: "Media Editor/Audio",
+                                                useOpaqueTheme: useOpaqueTheme,
+                                                tintContainerView: self.tintContainerView
+                                            )
+                                        )
+                                    ),
+                                    action: { [weak self] in
+                                        if let self {
+                                            self.audioAction()
+                                        }
+                                    })
+                            )
+                        )
+                    ],
+                    padding: 18.0,
+                    minSpacing: 8.0
+                )
+            ),
             environment: {},
             containerSize: availableSize
         )
-        let iconSize = CGSize(width: 20.0, height: 20.0)
-        let padding: CGFloat = 6.0
-        let spacing: CGFloat = 3.0
-        let buttonSize = CGSize(width: padding + iconSize.width + spacing + titleSize.width + padding, height: 34.0)
-        let buttonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - buttonSize.width) / 2.0), y: floorToScreenPixels((size.height - buttonSize.height) / 2.0)), size: buttonSize)
-        
-        transition.setFrame(layer: self.backgroundLayer, frame: buttonFrame)
-        transition.setFrame(layer: self.tintBackgroundLayer, frame: buttonFrame)
-        transition.setFrame(view: self.button, frame: buttonFrame)
-        
-        transition.setFrame(view: self.iconView, frame: CGRect(origin: CGPoint(x: padding, y: floorToScreenPixels((buttonSize.height - iconSize.height) / 2.0)).offsetBy(buttonFrame.origin), size: iconSize))
-        if let titleView = self.title.view {
-            if titleView.superview == nil {
-                self.insertSubview(titleView, aboveSubview: self.iconView)
+        if let view = self.container.view {
+            if view.superview == nil {
+                self.addSubview(view)
             }
-            transition.setFrame(view: titleView, frame: CGRect(origin: CGPoint(x: padding + iconSize.width + spacing, y: floorToScreenPixels((buttonSize.height - titleSize.height) / 2.0)).offsetBy(buttonFrame.origin), size: titleSize))
+            view.frame = CGRect(origin: CGPoint(x: 0.0, y: padding), size: size)
         }
         
-        return size
+        return CGSize(width: size.width, height: size.height + padding * 2.0)
     }
 }
 

@@ -5,7 +5,16 @@ import TelegramPresentationData
 import LegacyUI
 
 private class DocumentPickerViewController: UIDocumentPickerViewController {
+    var forceDarkTheme = false
     var didDisappear: (() -> Void)?
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        if #available(iOS 13.0, *), self.forceDarkTheme {
+            self.overrideUserInterfaceStyle = .dark
+        }
+    }
     
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
@@ -54,7 +63,7 @@ public enum LegacyICloudFilePickerMode {
     }
 }
 
-public func legacyICloudFilePicker(theme: PresentationTheme, mode: LegacyICloudFilePickerMode = .default, documentTypes: [String] = ["public.item"], completion: @escaping ([URL]) -> Void) -> ViewController {
+public func legacyICloudFilePicker(theme: PresentationTheme, mode: LegacyICloudFilePickerMode = .default, documentTypes: [String] = ["public.item"], forceDarkTheme: Bool = false, completion: @escaping ([URL]) -> Void) -> ViewController {
     var dismissImpl: (() -> Void)?
     let legacyController = LegacyICloudFileController(presentation: .modal(animateIn: true), theme: theme, completion: { urls in
         dismissImpl?()
@@ -63,6 +72,7 @@ public func legacyICloudFilePicker(theme: PresentationTheme, mode: LegacyICloudF
     legacyController.statusBar.statusBarStyle = .Black
     
     let controller = DocumentPickerViewController(documentTypes: documentTypes, in: mode.documentPickerMode)
+    controller.forceDarkTheme = forceDarkTheme
     controller.didDisappear = {
         dismissImpl?()
     }

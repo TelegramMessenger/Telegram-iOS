@@ -44,8 +44,11 @@ public final class MediaEditor {
 
     private let context: AccountContext
     private let subject: Subject
+    
+    private let clock = CMClockGetHostTimeClock()
     private var player: AVPlayer?
     private var additionalPlayer: AVPlayer?
+    private var audioPlayer: AVPlayer?
     private var timeObserver: Any?
     private var didPlayToEndTimeObserver: NSObjectProtocol?
     
@@ -281,7 +284,10 @@ public final class MediaEditor {
                 additionalVideoPositionChanges: [],
                 drawing: nil,
                 entities: [],
-                toolValues: [:]
+                toolValues: [:],
+                audioTrack: nil,
+                audioTrackTrimRange: nil,
+                audioTrackSamples: nil
             )
         }
         self.valuesPromise.set(.single(self.values))
@@ -336,6 +342,7 @@ public final class MediaEditor {
         }
                 
         let context = self.context
+        let clock = self.clock
         let textureSource: Signal<(TextureSource, UIImage?, AVPlayer?, AVPlayer?, UIColor, UIColor), NoError>
         switch subject {
         case let .image(image, _):
@@ -349,6 +356,11 @@ public final class MediaEditor {
                     
                     let playerItem = AVPlayerItem(asset: asset)
                     let player = AVPlayer(playerItem: playerItem)
+                    if #available(iOS 15.0, *) {
+                        player.sourceClock = clock
+                    } else {
+                        player.masterClock = clock
+                    }
                     player.automaticallyWaitsToMinimizeStalling = false
    
                     if let gradientColors = draft.values.gradientColors {
@@ -391,12 +403,22 @@ public final class MediaEditor {
             textureSource = Signal { subscriber in
                 let asset = AVURLAsset(url: URL(fileURLWithPath: path))
                 let player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+                if #available(iOS 15.0, *) {
+                    player.sourceClock = clock
+                } else {
+                    player.masterClock = clock
+                }
                 player.automaticallyWaitsToMinimizeStalling = false
                 
                 var additionalPlayer: AVPlayer?
                 if let additionalPath {
                     let additionalAsset = AVURLAsset(url: URL(fileURLWithPath: additionalPath))
                     additionalPlayer = AVPlayer(playerItem: AVPlayerItem(asset: additionalAsset))
+                    if #available(iOS 15.0, *) {
+                        additionalPlayer?.sourceClock = clock
+                    } else {
+                        additionalPlayer?.masterClock = clock
+                    }
                     additionalPlayer?.automaticallyWaitsToMinimizeStalling = false
                 }
                 
@@ -521,16 +543,24 @@ public final class MediaEditor {
                         if let audioTracks = player.currentItem?.asset.tracks(withMediaType: .audio) {
                             hasAudio = !audioTracks.isEmpty
                         }
-                        self.playerPlaybackState = (duration, time.seconds, player.rate > 0.0, hasAudio)
+                        if time.seconds > 20000 {
+                            
+                        } else {
+                            self.playerPlaybackState = (duration, time.seconds, player.rate > 0.0, hasAudio)
+                        }
                     }
                     self.didPlayToEndTimeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: player.currentItem, queue: nil, using: { [weak self] notification in
                         if let self {
                             let start = self.values.videoTrimRange?.lowerBound ?? 0.0
                             self.player?.seek(to: CMTime(seconds: start, preferredTimescale: CMTimeScale(1000)))
                             self.additionalPlayer?.seek(to: CMTime(seconds: start, preferredTimescale: CMTimeScale(1000)))
+                            self.audioPlayer?.seek(to: CMTime(seconds: start, preferredTimescale: CMTimeScale(1000)))
                             self.onPlaybackAction(.seek(start))
+                            
                             self.player?.play()
                             self.additionalPlayer?.play()
+                            self.audioPlayer?.play()
+                            
                             Queue.mainQueue().justDispatch {
                                 self.onPlaybackAction(.play)
                             }
@@ -643,9 +673,10 @@ public final class MediaEditor {
         if !play {
             player.pause()
             self.additionalPlayer?.pause()
+            self.audioPlayer?.pause()
             self.onPlaybackAction(.pause)
         }
-        let targetPosition = CMTime(seconds: position, preferredTimescale: CMTimeScale(60.0))
+        let targetPosition = CMTime(seconds: position, preferredTimescale: CMTimeScale(1000.0))
         if self.targetTimePosition?.0 != targetPosition {
             self.targetTimePosition = (targetPosition, play)
             if !self.updatingTimePosition {
@@ -655,6 +686,7 @@ public final class MediaEditor {
         if play {
             player.play()
             self.additionalPlayer?.play()
+            self.audioPlayer?.play()
             self.onPlaybackAction(.play)
         }
     }
@@ -667,34 +699,58 @@ public final class MediaEditor {
         player.pause()
         self.additionalPlayer?.pause()
         
-        let targetPosition = CMTime(seconds: position, preferredTimescale: CMTimeScale(60.0))
+        let targetPosition = CMTime(seconds: position, preferredTimescale: CMTimeScale(1000.0))
         player.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero, completionHandler: {  _ in
             Queue.mainQueue().async {
                 completion()
             }
         })
         self.additionalPlayer?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero)
+        self.audioPlayer?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero)
     }
     
     public var isPlaying: Bool {
         return (self.player?.rate ?? 0.0) > 0.0
     }
     
+    public func togglePlayback() {
+        if self.isPlaying {
+            self.stop()
+        } else {
+            self.play()
+        }
+    }
+    
     public func play() {
-        self.player?.play()
-        self.additionalPlayer?.play()
-        self.onPlaybackAction(.play)
+        self.setRate(1.0)
     }
     
     public func stop() {
-        self.player?.pause()
-        self.additionalPlayer?.pause()
-        self.onPlaybackAction(.pause)
+        self.setRate(0.0)
+    }
+    
+    private func setRate(_ rate: Float) {
+        let hostTime: UInt64 = 0
+        let time: TimeInterval = 0
+        let cmHostTime = CMClockMakeHostTimeFromSystemUnits(hostTime)
+        let cmVTime = CMTimeMakeWithSeconds(time, preferredTimescale: 1000000)
+        let futureTime = CMTimeAdd(cmHostTime, cmVTime)
+        
+        self.player?.setRate(rate, time: .invalid, atHostTime: futureTime)
+        self.additionalPlayer?.setRate(rate, time: .invalid, atHostTime: futureTime)
+        self.audioPlayer?.setRate(rate, time: .invalid, atHostTime: futureTime)
+        
+        if rate > 0.0 {
+            self.onPlaybackAction(.play)
+        } else {
+            self.onPlaybackAction(.pause)
+        }
     }
     
     public func invalidate() {
         self.player?.pause()
         self.additionalPlayer?.pause()
+        self.audioPlayer?.pause()
         self.onPlaybackAction(.pause)
         self.renderer.textureSource?.invalidate()
     }
@@ -715,6 +771,7 @@ public final class MediaEditor {
             }
         })
         self.additionalPlayer?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero)
+        self.audioPlayer?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero)
         self.onPlaybackAction(.seek(targetPosition.seconds))
     }
     
@@ -750,6 +807,34 @@ public final class MediaEditor {
     public func setGradientColors(_ gradientColors: [UIColor]) {
         self.updateValues(mode: .skipRendering) { values in
             return values.withUpdatedGradientColors(gradientColors: gradientColors)
+        }
+    }
+    
+    public func setAudioTrack(_ audioTrack: MediaAudioTrack?) {
+        self.updateValues(mode: .skipRendering) { values in
+            return values.withUpdatedAudioTrack(audioTrack)
+        }
+        
+        if let audioTrack {
+            let audioAsset = AVURLAsset(url: URL(fileURLWithPath: audioTrack.path))
+            let playerItem = AVPlayerItem(asset: audioAsset)
+            let player = AVPlayer(playerItem: playerItem)
+            player.automaticallyWaitsToMinimizeStalling = false
+            self.audioPlayer = player            
+            self.maybeGenerateAudioSamples(asset: audioAsset)
+        } else if let audioPlayer = self.audioPlayer {
+            audioPlayer.pause()
+            self.audioPlayer = nil
+        }
+    }
+    
+    public func setAudioTrackTrimRange(_ trimRange: Range<Double>, apply: Bool) {
+        self.updateValues(mode: .skipRendering) { values in
+            return values.withUpdatedAudioTrackTrimRange(trimRange)
+        }
+        
+        if apply {
+            self.audioPlayer?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
         }
     }
     
@@ -814,6 +899,59 @@ public final class MediaEditor {
                 try handler.perform([faceRequest])
             } catch {
                 print(error)
+            }
+        }
+    }
+    
+    private func maybeGenerateAudioSamples(asset: AVAsset) {
+        Queue.concurrentDefaultQueue().async {
+            guard let audioTrack = asset.tracks(withMediaType: .audio).first else {
+                return
+            }
+            
+            do {
+                let assetReader = try AVAssetReader(asset: asset)
+                
+                let settings: [String: Any] = [
+                    AVFormatIDKey: kAudioFormatLinearPCM,
+                    AVLinearPCMBitDepthKey: 32,
+                    AVLinearPCMIsFloatKey: true,
+                    AVLinearPCMIsBigEndianKey: false,
+                    AVLinearPCMIsNonInterleaved: false
+                ]
+                
+                let assetReaderOutput = AVAssetReaderTrackOutput(track: audioTrack, outputSettings: settings)
+                
+                assetReader.add(assetReaderOutput)
+                
+                assetReader.startReading()
+                
+                var samplesData = Data()
+                var peak: Int32 = 0
+                
+                while let sampleBuffer = assetReaderOutput.copyNextSampleBuffer() {
+                    if let dataBuffer = CMSampleBufferGetDataBuffer(sampleBuffer) {
+                        let length = CMBlockBufferGetDataLength(dataBuffer)
+                        let bytes = UnsafeMutablePointer<Int32>.allocate(capacity: length)
+                        CMBlockBufferCopyDataBytes(dataBuffer, atOffset: 0, dataLength: length, destination: bytes)
+                                                               
+                        let samples = Array(UnsafeBufferPointer(start: bytes, count: length / MemoryLayout<Int32>.size))
+                        if var maxSample = samples.max() {
+                            if maxSample > peak {
+                                peak = maxSample
+                            }
+                            samplesData.append(Data(bytesNoCopy: &maxSample, count: 4, deallocator: .none))
+                        }
+                    
+                        bytes.deallocate()
+                    }
+                }
+                Queue.mainQueue().async {
+                    self.updateValues(mode: .skipRendering) { values in
+                        return values.withUpdatedAudioTrackSamples(MediaAudioTrackSamples(samples: samplesData, peak: peak))
+                    }
+                }
+            } catch {
             }
         }
     }

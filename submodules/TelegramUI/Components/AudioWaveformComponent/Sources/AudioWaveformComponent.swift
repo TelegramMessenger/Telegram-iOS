@@ -545,7 +545,11 @@ public final class AudioWaveformComponent: Component {
                         gravityMultiplierY = 0.5
                     }
                     
-                    context.setFillColor(component.backgroundColor.mixedWith(component.foregroundColor, alpha: colorMixFraction).cgColor)
+                    if component.backgroundColor.alpha > 0.0 {
+                        context.setFillColor(component.backgroundColor.mixedWith(component.foregroundColor, alpha: colorMixFraction).cgColor)
+                    } else {
+                        context.setFillColor(component.foregroundColor.cgColor)
+                    }
                     context.setBlendMode(.copy)
                     
                     let adjustedSampleHeight = sampleHeight - diff
