@@ -964,9 +964,6 @@ private final class StoryContainerScreenComponent: Component {
                     }
                     
                     self.didDisplayReactionTooltip = true
-                    #if !DEBUG
-                    let _ = ApplicationSpecificNotice.setDisplayStoryReactionTooltip(accountManager: component.context.sharedContext.accountManager).start()
-                    #endif
                 })
             })
         }
@@ -1558,9 +1555,6 @@ private final class StoryContainerScreenComponent: Component {
                             itemSetTransition.setPosition(view: itemSetView, position: itemFrame.center.offsetBy(dx: 0.0, dy: dismissPanOffset))
                             itemSetTransition.setBounds(view: itemSetView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
                             
-                            itemSetTransition.setPosition(view: itemSetComponentView.transitionCloneContainerView, position: itemFrame.center.offsetBy(dx: 0.0, dy: dismissPanOffset))
-                            itemSetTransition.setBounds(view: itemSetComponentView.transitionCloneContainerView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
-                            
                             itemSetTransition.setPosition(view: itemSetComponentView, position: CGRect(origin: CGPoint(), size: itemFrame.size).center)
                             itemSetTransition.setBounds(view: itemSetComponentView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
                             
@@ -1676,6 +1670,7 @@ private final class StoryContainerScreenComponent: Component {
             for (id, itemSetView) in self.visibleItemSetViews {
                 if !validIds.contains(id) {
                     removedIds.append(id)
+                    itemSetView.view.parentState = nil
                     itemSetView.removeFromSuperview()
                     
                     if let view = itemSetView.view.view as? StoryItemSetContainerComponent.View {

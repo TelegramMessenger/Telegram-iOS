@@ -217,7 +217,7 @@ public extension TelegramEngine {
         }
 
         public func exportMessageLink(peerId: PeerId, messageId: MessageId, isThread: Bool = false) -> Signal<String?, NoError> {
-            return _internal_exportMessageLink(account: self.account, peerId: peerId, messageId: messageId, isThread: isThread)
+            return _internal_exportMessageLink(postbox: self.account.postbox, network: self.account.network, peerId: peerId, messageId: messageId, isThread: isThread)
         }
         
         public func enqueueOutgoingMessage(

@@ -331,7 +331,7 @@ public extension CALayer {
         
         adjustFrameRate(animation: animation)
         
-        self.add(animation, forKey: keyPath)
+        self.add(animation, forKey: additive ? nil : keyPath)
     }
     
     func animateAdditive(from: NSValue, to: NSValue, keyPath: String, key: String, timingFunction: String, mediaTimingFunction: CAMediaTimingFunction? = nil, duration: Double, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {

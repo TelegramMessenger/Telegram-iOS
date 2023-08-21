@@ -5,6 +5,8 @@ import TelegramCore
 import AccountContext
 import ChatPresentationInterfaceState
 import ChatControllerInteraction
+import AccessoryPanelNode
+import ForwardAccessoryPanelNode
 
 func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: AccessoryPanelNode?, chatControllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> AccessoryPanelNode? {
     if let _ = chatPresentationInterfaceState.interfaceState.selectionState {

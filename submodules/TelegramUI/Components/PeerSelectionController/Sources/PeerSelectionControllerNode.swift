@@ -23,6 +23,7 @@ import TelegramAnimatedStickerNode
 import SolidRoundedButtonNode
 import ContextUI
 import TextFormat
+import ForwardAccessoryPanelNode
 
 final class PeerSelectionControllerNode: ASDisplayNode {
     private let context: AccountContext
@@ -363,17 +364,26 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 return ChatControllerSubject.ForwardOptions(hideNames: state.interfaceState.forwardOptionsState?.hideNames ?? false, hideCaptions: state.interfaceState.forwardOptionsState?.hideCaptions ?? false)
             }
             |> distinctUntilChanged
-
-            let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: strongSelf.context.account.peerId), subject: .forwardedMessages(peerIds: peerIds, ids: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? [], options: forwardOptions), botStart: nil, mode: .standard(previewing: true))
+            
+            let chatController = strongSelf.context.sharedContext.makeChatController(
+                context: strongSelf.context,
+                chatLocation: .peer(id: strongSelf.context.account.peerId),
+                subject: .forwardedMessages(peerIds: peerIds, ids: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? [], options: forwardOptions),
+                botStart: nil,
+                mode: .standard(previewing: true)
+            )
             chatController.canReadHistory.set(false)
             
             let messageIds = strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? []
             let messagesCount: Signal<Int, NoError>
-            if let chatController = chatController as? ChatControllerImpl, messageIds.count > 1 {
+            if messageIds.count > 1 {
                 messagesCount = .single(messageIds.count)
                 |> then(
-                    chatController.presentationInterfaceStatePromise.get()
+                    chatController.presentationInterfaceStateSignal
                     |> map { state -> Int in
+                        guard let state = state as? ChatPresentationInterfaceState else {
+                            return 1
+                        }
                         return state.interfaceState.selectionState?.selectedIds.count ?? 1
                     }
                 )
@@ -509,7 +519,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     guard let strongSelf = self else {
                         return
                     }
-                    if let selectedMessageIds = (chatController as? ChatControllerImpl)?.selectedMessageIds {
+                    if let selectedMessageIds = chatController?.selectedMessageIds {
                         var forwardMessageIds = strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? []
                         forwardMessageIds = forwardMessageIds.filter { selectedMessageIds.contains($0) }
                         strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(forwardMessageIds) }) })
@@ -522,9 +532,9 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 return items
             }
 
-            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, passthroughTouches: true)), items: items |> map { ContextController.Items(content: .list($0)) })
+            let contextController = ContextController(presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, passthroughTouches: true)), items: items |> map { ContextController.Items(content: .list($0)) })
             contextController.dismissedForCancel = { [weak chatController] in
-                if let selectedMessageIds = (chatController as? ChatControllerImpl)?.selectedMessageIds {
+                if let selectedMessageIds = chatController?.selectedMessageIds {
                     var forwardMessageIds = strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? []
                     forwardMessageIds = forwardMessageIds.filter { selectedMessageIds.contains($0) }
                     strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(forwardMessageIds) }) })
@@ -1419,7 +1429,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     }
 }
 
-func stringForAdminRights(strings: PresentationStrings, adminRights: TelegramChatAdminRights, isChannel: Bool) -> String {
+public func stringForAdminRights(strings: PresentationStrings, adminRights: TelegramChatAdminRights, isChannel: Bool) -> String {
     var rights: [String] = []
     func append(_ string: String) {
         rights.append("•  \(string)")

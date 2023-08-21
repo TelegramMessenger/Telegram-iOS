@@ -659,6 +659,9 @@ public protocol ChatController: ViewController {
     
     var purposefulAction: (() -> Void)? { get set }
     
+    var selectedMessageIds: Set<EngineMessage.Id>? { get }
+    var presentationInterfaceStateSignal: Signal<Any, NoError> { get }
+    
     func updatePresentationMode(_ mode: ChatControllerPresentationMode)
     func beginMessageSearch(_ query: String)
     func displayPromoAnnouncement(text: String)

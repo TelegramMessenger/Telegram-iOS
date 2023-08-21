@@ -638,7 +638,6 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                             let items = ContextController.Items(content: .list(itemList))
                             
                             let controller = ContextController(
-                                account: component.context.account,
                                 presentationData: presentationData,
                                 source: .extracted(LinkListContextExtractedContentSource(contentView: sourceView)),
                                 items: .single(items),

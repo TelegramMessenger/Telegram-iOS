@@ -18,6 +18,7 @@ import ChatPresentationInterfaceState
 import TextNodeWithEntities
 import AnimationCache
 import MultiAnimationRenderer
+import AccessoryPanelNode
 
 func textStringForForwardedMessage(_ message: Message, strings: PresentationStrings) -> (text: String, entities: [MessageTextEntity], isMedia: Bool) {
     for media in message.media {
@@ -81,9 +82,9 @@ func textStringForForwardedMessage(_ message: Message, strings: PresentationStri
     return (message.text, message.textEntitiesAttribute?.entities ?? [], false)
 }
 
-final class ForwardAccessoryPanelNode: AccessoryPanelNode {
+public final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()
-    let messageIds: [MessageId]
+    public let messageIds: [MessageId]
     private var messages: [Message] = []
     private var authors: String?
     private var sourcePeer: (peerId: PeerId, displayTitle: String)?
@@ -106,7 +107,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     
     private var validLayout: (size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState)?
     
-    init(context: AccountContext, messageIds: [MessageId], theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, nameDisplayOrder: PresentationPersonNameOrder, forwardOptionsState: ChatInterfaceForwardOptionsState?, animationCache: AnimationCache?, animationRenderer: MultiAnimationRenderer?) {
+    public init(context: AccountContext, messageIds: [MessageId], theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, nameDisplayOrder: PresentationPersonNameOrder, forwardOptionsState: ChatInterfaceForwardOptionsState?, animationCache: AnimationCache?, animationRenderer: MultiAnimationRenderer?) {
         self.context = context
         self.messageIds = messageIds
         self.theme = theme
@@ -275,25 +276,25 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
         self.messageDisposable.dispose()
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    override func animateIn() {
+    override public func animateIn() {
         self.iconNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
     }
     
-    override func animateOut() {
+    override public func animateOut() {
         self.iconNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
     }
     
-    override func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+    override public func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         self.updateThemeAndStrings(theme: theme, strings: strings, forwardOptionsState: self.forwardOptionsState)
     }
     
-    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, forwardOptionsState: ChatInterfaceForwardOptionsState?, force: Bool = false) {
+    public func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, forwardOptionsState: ChatInterfaceForwardOptionsState?, force: Bool = false) {
         if force || self.theme !== theme || self.strings !== strings || self.forwardOptionsState != forwardOptionsState {
             self.theme = theme
             self.strings = strings
@@ -327,11 +328,11 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
         }
     }
 
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+    override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         return CGSize(width: constrainedSize.width, height: 45.0)
     }
 
-    override func updateState(size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState) {
+    override public func updateState(size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState) {
         self.validLayout = (size, inset, interfaceState)
 
         let bounds = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 45.0))
@@ -360,7 +361,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
         self.textNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset, y: 25.0), size: textSize)
     }
     
-    @objc func closePressed() {
+    @objc private func closePressed() {
         guard let (peerId, peerDisplayTitle) = self.sourcePeer else {
             return
         }
@@ -399,7 +400,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     }
     
     private var previousTapTimestamp: Double?
-    @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
+    @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             let timestamp = CFAbsoluteTimeGetCurrent()
             if let previousTapTimestamp = self.previousTapTimestamp, previousTapTimestamp + 1.0 > timestamp {

@@ -191,7 +191,7 @@ final class PeerInfoStoryGridScreenComponent: Component {
                 }
             }
 
-            let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: source)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+            let contextController = ContextController(presentationData: presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: source)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
             contextController.passthroughTouchEvent = { [weak self] sourceView, point in
                 guard let self else {
                     return .ignore

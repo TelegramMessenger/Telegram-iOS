@@ -537,7 +537,7 @@ public class BrowserScreen: ViewController {
                         action(.default)
                     }))]
                 
-                let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: source, items: .single(ContextController.Items(content: .list(items))))
+                let contextController = ContextController(presentationData: self.presentationData, source: source, items: .single(ContextController.Items(content: .list(items))))
                 self.controller?.present(contextController, in: .window(.root))
             })
         }

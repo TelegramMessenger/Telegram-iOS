@@ -52,12 +52,12 @@ public enum PreparedShareItemError {
     case fileTooBig(Int64)
 }
 
-private func preparedShareItem(account: Account, to peerId: PeerId, value: [String: Any]) -> Signal<PreparedShareItem, PreparedShareItemError> {
+private func preparedShareItem(postbox: Postbox, network: Network, to peerId: PeerId, value: [String: Any]) -> Signal<PreparedShareItem, PreparedShareItemError> {
     if let imageData = value["scaledImageData"] as? Data, let dimensions = value["scaledImageDimensions"] as? NSValue {
         let diminsionsSize = dimensions.cgSizeValue
         return .single(.preparing(false))
         |> then(
-            standaloneUploadedImage(account: account, peerId: peerId, text: "", data: imageData, dimensions: PixelDimensions(width: Int32(diminsionsSize.width), height: Int32(diminsionsSize.height)))
+            standaloneUploadedImage(postbox: postbox, network: network, peerId: peerId, text: "", data: imageData, dimensions: PixelDimensions(width: Int32(diminsionsSize.width), height: Int32(diminsionsSize.height)))
             |> mapError { _ -> PreparedShareItemError in
                 return .generic
             }
@@ -76,7 +76,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
         if let scaledImage = scalePhotoImage(image, dimensions: dimensions), let imageData = scaledImage.jpegData(compressionQuality: 0.52) {
             return .single(.preparing(false))
             |> then(
-                standaloneUploadedImage(account: account, peerId: peerId, text: "", data: imageData, dimensions: PixelDimensions(width: Int32(dimensions.width), height: Int32(dimensions.height)))
+                standaloneUploadedImage(postbox: postbox, network: network, peerId: peerId, text: "", data: imageData, dimensions: PixelDimensions(width: Int32(dimensions.width), height: Int32(dimensions.height)))
                 |> mapError { _ -> PreparedShareItemError in
                     return .generic
                 }
@@ -146,7 +146,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
                 let estimatedSize = TGMediaVideoConverter.estimatedSize(for: preset, duration: finalDuration, hasAudio: true)
                 
                 let resource = LocalFileVideoMediaResource(randomId: Int64.random(in: Int64.min ... Int64.max), path: asset.url.path, adjustments: resourceAdjustments)
-                return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .resource(.standalone(resource: resource)), mimeType: "video/mp4", attributes: [.Video(duration: finalDuration, size: PixelDimensions(width: Int32(finalDimensions.width), height: Int32(finalDimensions.height)), flags: flags, preloadSize: nil)], hintFileIsLarge: estimatedSize > 10 * 1024 * 1024)
+                return standaloneUploadedFile(postbox: postbox, network: network, peerId: peerId, text: "", source: .resource(.standalone(resource: resource)), mimeType: "video/mp4", attributes: [.Video(duration: finalDuration, size: PixelDimensions(width: Int32(finalDimensions.width), height: Int32(finalDimensions.height)), flags: flags, preloadSize: nil)], hintFileIsLarge: estimatedSize > 10 * 1024 * 1024)
                 |> mapError { _ -> PreparedShareItemError in
                     return .generic
                 }
@@ -217,7 +217,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
                             mimeType = "animation/gif"
                             attributes = [.ImageSize(size: PixelDimensions(width: Int32(dimensions.width), height: Int32(dimensions.height))), .Animated, .FileName(fileName: fileName ?? "animation.gif")]
                         }
-                        return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(data), mimeType: mimeType, attributes: attributes, hintFileIsLarge: data.count > 10 * 1024 * 1024)
+                        return standaloneUploadedFile(postbox: postbox, network: network, peerId: peerId, text: "", source: .data(data), mimeType: mimeType, attributes: attributes, hintFileIsLarge: data.count > 10 * 1024 * 1024)
                         |> mapError { _ -> PreparedShareItemError in
                             return .generic
                         }
@@ -236,7 +236,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
                 let imageData = scaledImage.jpegData(compressionQuality: 0.54)!
                 return .single(.preparing(false))
                 |> then(
-                    standaloneUploadedImage(account: account, peerId: peerId, text: "", data: imageData, dimensions: PixelDimensions(width: Int32(scaledImage.size.width), height: Int32(scaledImage.size.height)))
+                    standaloneUploadedImage(postbox: postbox, network: network, peerId: peerId, text: "", data: imageData, dimensions: PixelDimensions(width: Int32(scaledImage.size.width), height: Int32(scaledImage.size.height)))
                     |> mapError { _ -> PreparedShareItemError in
                         return .generic
                     }
@@ -259,7 +259,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
             let long = data.count > Int32(1.5 * 1024 * 1024)
             return .single(.preparing(long))
             |> then(
-                standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(data), thumbnailData: thumbnailData, mimeType: mimeType, attributes: [.FileName(fileName: fileName ?? "file")], hintFileIsLarge: data.count > 10 * 1024 * 1024)
+                standaloneUploadedFile(postbox: postbox, network: network, peerId: peerId, text: "", source: .data(data), thumbnailData: thumbnailData, mimeType: mimeType, attributes: [.FileName(fileName: fileName ?? "file")], hintFileIsLarge: data.count > 10 * 1024 * 1024)
                 |> mapError { _ -> PreparedShareItemError in
                     return .generic
                 }
@@ -290,7 +290,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
             let long = audioData.count > Int32(1.5 * 1024 * 1024)
             return .single(.preparing(long))
             |> then(
-                standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(audioData), mimeType: mimeType, attributes: [.Audio(isVoice: isVoice, duration: Int(duration), title: title, performer: artist, waveform: waveform?.makeData()), .FileName(fileName: fileName)], hintFileIsLarge: audioData.count > 10 * 1024 * 1024)
+                standaloneUploadedFile(postbox: postbox, network: network, peerId: peerId, text: "", source: .data(audioData), mimeType: mimeType, attributes: [.Audio(isVoice: isVoice, duration: Int(duration), title: title, performer: artist, waveform: waveform?.makeData()), .FileName(fileName: fileName)], hintFileIsLarge: audioData.count > 10 * 1024 * 1024)
                 |> mapError { _ -> PreparedShareItemError in
                     return .generic
                 }
@@ -345,7 +345,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
     }
 }
 
-public func preparedShareItems(account: Account, to peerId: PeerId, dataItems: [MTSignal], additionalText: String) -> Signal<PreparedShareItems, PreparedShareItemError> {
+public func preparedShareItems(postbox: Postbox, network: Network, to peerId: PeerId, dataItems: [MTSignal]) -> Signal<PreparedShareItems, PreparedShareItemError> {
     var dataSignals: Signal<[String: Any], PreparedShareItemError> = .complete()
     for dataItem in dataItems {
         let wrappedSignal: Signal<[String: Any], NoError> = Signal { subscriber in
@@ -374,7 +374,7 @@ public func preparedShareItems(account: Account, to peerId: PeerId, dataItems: [
     })
     |> mapToSignal { items -> Signal<[PreparedShareItem], PreparedShareItemError> in
         return combineLatest(items.map {
-            preparedShareItem(account: account, to: peerId, value: $0)
+            preparedShareItem(postbox: postbox, network: network, to: peerId, value: $0)
         })
     }
         
@@ -384,21 +384,18 @@ public func preparedShareItems(account: Account, to peerId: PeerId, dataItems: [
         var progresses: [Float] = []
         for item in items {
             switch item {
-                case let .preparing(long):
-                    return .preparing(long)
-                case let .progress(value):
-                    progresses.append(value)
-                case let .userInteractionRequired(value):
-                    return .userInteractionRequired([value])
-                case let .done(content):
-                    result.append(content)
-                    progresses.append(1.0)
+            case let .preparing(long):
+                return .preparing(long)
+            case let .progress(value):
+                progresses.append(value)
+            case let .userInteractionRequired(value):
+                return .userInteractionRequired([value])
+            case let .done(content):
+                result.append(content)
+                progresses.append(1.0)
             }
         }
         if result.count == items.count {
-            if !additionalText.isEmpty {
-                result.insert(PreparedShareItemContent.text(additionalText), at: 0)
-            }
             return .done(result)
         } else {
             let value = progresses.reduce(0.0, +) / Float(progresses.count)
@@ -414,8 +411,8 @@ public func preparedShareItems(account: Account, to peerId: PeerId, dataItems: [
     })
 }
 
-public func sentShareItems(account: Account, to peerIds: [PeerId], threadIds: [PeerId: Int64], items: [PreparedShareItemContent], silently: Bool) -> Signal<Float, Void> {
-    var messages: [EnqueueMessage] = []
+public func sentShareItems(accountPeerId: PeerId, postbox: Postbox, network: Network, stateManager: AccountStateManager, auxiliaryMethods: AccountAuxiliaryMethods, to peerIds: [PeerId], threadIds: [PeerId: Int64], items: [PreparedShareItemContent], silently: Bool, additionalText: String) -> Signal<Float, Void> {
+    var messages: [StandaloneSendEnqueueMessage] = []
     var groupingKey: Int64?
     var mediaTypes: (photo: Int, video: Int, music: Int, other: Int) = (0, 0, 0, 0)
     if items.count > 1 {
@@ -450,45 +447,82 @@ public func sentShareItems(account: Account, to peerIds: [PeerId], threadIds: [P
         groupingKey = Int64.random(in: Int64.min ... Int64.max)
     }
     
-    var attributes: [MessageAttribute] = []
-    if silently {
-        attributes.append(NotificationInfoMessageAttribute(flags: .muted))
-    }
-    
-    var mediaMessages: [EnqueueMessage] = []
+    var mediaMessageCount = 0
+    var consumedText = false
     for item in items {
         switch item {
-            case let .text(text):
-                messages.append(.message(text: text, attributes: attributes, inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
-            case let .media(media):
-                switch media {
-                    case let .media(reference):
-                        let message: EnqueueMessage = .message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: reference, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: groupingKey, correlationId: nil, bubbleUpEmojiOrStickersets: [])
-                        messages.append(message)
-                        mediaMessages.append(message)
-                        
-                }
-                if let _ = groupingKey, mediaMessages.count % 10 == 0 {
-                    groupingKey = Int64.random(in: Int64.min ... Int64.max)
-                }
+        case let .text(text):
+            var message = StandaloneSendEnqueueMessage(
+                content: .text(text: StandaloneSendEnqueueMessage.Text(
+                    string: text,
+                    entities: []
+                )),
+                replyToMessageId: nil
+            )
+            message.isSilent = silently
+            messages.append(message)
+        case let .media(media):
+            switch media {
+            case let .media(reference):
+                var message = StandaloneSendEnqueueMessage(
+                    content: .arbitraryMedia(
+                        media: reference,
+                        text: StandaloneSendEnqueueMessage.Text(
+                            string: additionalText,
+                            entities: []
+                        )
+                    ),
+                    replyToMessageId: nil
+                )
+                consumedText = true
+                message.isSilent = silently
+                message.groupingKey = groupingKey
+                messages.append(message)
+                mediaMessageCount += 1
+            }
+            if let _ = groupingKey, mediaMessageCount % 10 == 0 {
+                groupingKey = Int64.random(in: Int64.min ... Int64.max)
+            }
         }
     }
     
-    return enqueueMessagesToMultiplePeers(account: account, peerIds: peerIds, threadIds: threadIds, messages: messages)
-    |> castError(Void.self)
-    |> mapToSignal { messageIds -> Signal<Float, Void> in
-        return TelegramEngine(account: account).data.subscribe(EngineDataMap(
-            messageIds.map(TelegramEngine.EngineData.Item.Messages.Message.init)
-        ))
-        |> castError(Void.self)
-        |> mapToSignal { messages -> Signal<Float, Void> in
-            for (_, message) in messages {
-                if let message = message, message.flags.contains(.Unsent) {
-                    return .complete()
-                }
+    if !consumedText && !additionalText.isEmpty {
+        var message = StandaloneSendEnqueueMessage(
+            content: .text(text: StandaloneSendEnqueueMessage.Text(
+                string: additionalText,
+                entities: []
+            )),
+            replyToMessageId: nil
+        )
+        message.isSilent = silently
+        messages.append(message)
+    }
+    
+    var peerSignals: Signal<Float, StandaloneSendMessagesError> = .single(0.0)
+    for peerId in peerIds {
+        peerSignals = peerSignals |> then(standaloneSendEnqueueMessages(
+            accountPeerId: accountPeerId,
+            postbox: postbox,
+            network: network,
+            stateManager: stateManager,
+            auxiliaryMethods: auxiliaryMethods,
+            peerId: peerId,
+            threadId: threadIds[peerId],
+            messages: messages
+        )
+        |> mapToSignal { status -> Signal<Float, StandaloneSendMessagesError> in
+            switch status {
+            case let .progress(progress):
+                //return .single(progress)
+                let _ = progress
+                return .complete()
+            case .done:
+                return .complete()
             }
-            return .single(1.0)
-        }
-        |> take(1)
+        })
+    }
+    return peerSignals
+    |> mapError { _ -> Void in
+        return Void()
     }
 }

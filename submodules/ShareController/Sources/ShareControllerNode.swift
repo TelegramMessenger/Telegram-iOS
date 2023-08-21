@@ -22,8 +22,8 @@ enum ShareExternalState {
 }
 
 final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private let sharedContext: SharedAccountContext
-    private var context: AccountContext?
+    private let environment: ShareControllerEnvironment
+    private var context: ShareControllerAccountContext?
     private var presentationData: PresentationData
     private let forceTheme: PresentationTheme?
     private let externalShare: Bool
@@ -87,8 +87,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private let showNames = ValuePromise<Bool>(true)
     
-    init(sharedContext: SharedAccountContext, presentationData: PresentationData, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, fromForeignApp: Bool, forceTheme: PresentationTheme?, fromPublicChannel: Bool, segmentedValues: [ShareControllerSegmentedValue]?) {
-        self.sharedContext = sharedContext
+    init(environment: ShareControllerEnvironment, presentationData: PresentationData, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, fromForeignApp: Bool, forceTheme: PresentationTheme?, fromPublicChannel: Bool, segmentedValues: [ShareControllerSegmentedValue]?) {
+        self.environment = environment
         self.presentationData = presentationData
         self.forceTheme = forceTheme
         self.externalShare = externalShare
@@ -191,7 +191,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             }
         }
         self.actionButtonNode.contextAction = { [weak self] node, gesture in
-            if let strongSelf = self, let context = strongSelf.context, let node = node as? ContextReferenceContentNode {
+            if let strongSelf = self, let node = node as? ContextReferenceContentNode {
                 let presentationData = strongSelf.presentationData
                 let fromForeignApp = strongSelf.fromForeignApp
                 let items: Signal<ContextController.Items, NoError> =
@@ -237,7 +237,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     ])
                     return ContextController.Items(content: .list(items), animationCache: nil)
                 }
-                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(ShareContextReferenceContentSource(sourceNode: node, customPosition: CGPoint(x: 0.0, y: fromForeignApp ? -116.0 : 0.0))), items: items, gesture: gesture)
+                let contextController = ContextController(presentationData: presentationData, source: .reference(ShareContextReferenceContentSource(sourceNode: node, customPosition: CGPoint(x: 0.0, y: fromForeignApp ? -116.0 : 0.0))), items: items, gesture: gesture)
                 contextController.immediateItemsTransitionAnimation = true
                 strongSelf.present?(contextController)
             }
@@ -378,7 +378,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         
         var didPresent = false
         var presentImpl: (() -> Void)?
-        let threads = threadList(context: context, peerId: mainPeer.id)
+        let threads = threadList(accountPeerId: context.accountPeerId, postbox: context.stateManager.postbox, peerId: mainPeer.id)
         |> deliverOnMainQueue
         |> beforeNext { _ in
             if !didPresent {
@@ -388,7 +388,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
         
         let topicsContentNode = ShareTopicsContainerNode(
-            sharedContext: self.sharedContext,
+            environment: self.environment,
             context: context,
             theme: self.presentationData.theme,
             strings: self.presentationData.strings,
@@ -781,9 +781,21 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
         
         if let context = self.context, let tryShare = self.tryShare {
-            let _ = (context.engine.data.get(EngineDataMap(
-                peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:))
-            ))
+            let _ = (context.stateManager.postbox.combinedView(
+                keys: peerIds.map { peerId in
+                    return PostboxViewKey.basicPeer(peerId)
+                }
+            )
+            |> take(1)
+            |> map { views -> [EnginePeer.Id: EnginePeer?] in
+                var result: [EnginePeer.Id: EnginePeer?] = [:]
+                for peerId in peerIds {
+                    if let view = views.views[PostboxViewKey.basicPeer(peerId)] as? BasicPeerView, let peer = view.peer {
+                        result[peerId] = EnginePeer(peer)
+                    }
+                }
+                return result
+            }
             |> deliverOnMainQueue).start(next: { [weak self] peers in
                 guard let self else {
                     return
@@ -839,7 +851,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
         
         if let context = self.context {
-            donateSendMessageIntent(account: context.account, sharedContext: self.sharedContext, intentContext: .share, peerIds: peerIds)
+            self.environment.donateSendMessageIntent(account: context, peerIds: peerIds)
         }
         
         if let signal = self.share?(self.inputFieldNode.text, peerIds, topicIds, showNames, silently) {
@@ -879,7 +891,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 self.completed?(peerIds)
                 
                 let delay: Double
-                if let peerId = peerIds.first, peerIds.count == 1 && peerId == self.context?.account.peerId {
+                if let peerId = peerIds.first, peerIds.count == 1 && peerId == self.context?.accountPeerId {
                     delay = 0.88
                 } else {
                     delay = 0.44
@@ -903,7 +915,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 if fromForeignApp, case let .preparing(long) = status, !transitioned {
                     transitioned = true
                     if long {
-                        strongSelf.transitionToContentNode(ShareProlongedLoadingContainerNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, forceNativeAppearance: true, account: strongSelf.context?.account, sharedContext: strongSelf.sharedContext), fastOut: true)
+                        strongSelf.transitionToContentNode(ShareProlongedLoadingContainerNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, forceNativeAppearance: true, postbox: strongSelf.context?.stateManager.postbox, environment: strongSelf.environment), fastOut: true)
                     } else {
                         strongSelf.transitionToContentNode(ShareLoadingContainerNode(theme: strongSelf.presentationData.theme, forceNativeAppearance: true), fastOut: true)
                     }
@@ -1012,7 +1024,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
     }
     
-    func updatePeers(context: AccountContext, switchableAccounts: [AccountWithInfo], peers: [(EngineRenderedPeer, EnginePeer.Presence?)], accountPeer: EnginePeer, defaultAction: ShareControllerAction?) {
+    func updatePeers(context: ShareControllerAccountContext, switchableAccounts: [ShareControllerSwitchableAccount], peers: [(EngineRenderedPeer, EnginePeer.Presence?)], accountPeer: EnginePeer, defaultAction: ShareControllerAction?) {
         self.context = context
         
         if let peersContentNode = self.peersContentNode, peersContentNode.accountPeer.id == accountPeer.id {
@@ -1022,27 +1034,47 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         
         if let peerId = self.immediatePeerId {
             self.immediatePeerId = nil
-            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.RenderedPeer(id: peerId))
+            let _ = (context.stateManager.postbox.combinedView(keys: [PostboxViewKey.peer(peerId: peerId, components: [])])
+            |> take(1)
+            |> map { views -> EngineRenderedPeer? in
+                guard let view = views.views[PostboxViewKey.peer(peerId: peerId, components: [])] as? PeerView else {
+                    return nil
+                }
+                var peers: [EnginePeer.Id: EnginePeer] = [:]
+                guard let peer = view.peers[peerId] else {
+                    return nil
+                }
+                peers[peer.id] = EnginePeer(peer)
+
+                if let secretChat = peer as? TelegramSecretChat {
+                    guard let mainPeer = view.peers[secretChat.regularPeerId] else {
+                        return nil
+                    }
+                    peers[mainPeer.id] = EnginePeer(mainPeer)
+                }
+
+                return EngineRenderedPeer(peerId: peerId, peers: peers, associatedMedia: view.media)
+            }
             |> deliverOnMainQueue).start(next: { [weak self] peer in
                 if let strongSelf = self, let peer = peer {
-                    strongSelf.controllerInteraction?.togglePeer(peer, peer.peerId != context.account.peerId)
+                    strongSelf.controllerInteraction?.togglePeer(peer, peer.peerId != context.accountPeerId)
                 }
             })
         }
         
         let animated = self.peersContentNode == nil
-        let peersContentNode = SharePeersContainerNode(sharedContext: self.sharedContext, context: context, switchableAccounts: switchableAccounts, theme: self.presentationData.theme, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare, switchToAnotherAccount: { [weak self] in
+        let peersContentNode = SharePeersContainerNode(environment: self.environment, context: context, switchableAccounts: switchableAccounts, theme: self.presentationData.theme, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare, switchToAnotherAccount: { [weak self] in
             self?.switchToAnotherAccount?()
         }, debugAction: { [weak self] in
             self?.debugAction?()
         }, extendedInitialReveal: self.presetText != nil, segmentedValues: self.segmentedValues)
         self.peersContentNode = peersContentNode
         peersContentNode.openSearch = { [weak self] in
-            let _ = (context.engine.peers.recentlySearchedPeers()
+            let _ = (_internal_recentlySearchedPeers(postbox: context.stateManager.postbox)
             |> take(1)
             |> deliverOnMainQueue).start(next: { peers in
                 if let strongSelf = self {
-                    let searchContentNode = ShareSearchContainerNode(sharedContext: strongSelf.sharedContext, context: context, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, controllerInteraction: strongSelf.controllerInteraction!, recentPeers: peers.filter({ $0.peer.peerId.namespace != Namespaces.Peer.SecretChat }).map({ EngineRenderedPeer($0.peer) }))
+                    let searchContentNode = ShareSearchContainerNode(environment: strongSelf.environment, context: context, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, controllerInteraction: strongSelf.controllerInteraction!, recentPeers: peers.filter({ $0.peer.peerId.namespace != Namespaces.Peer.SecretChat }).map({ EngineRenderedPeer($0.peer) }))
                     searchContentNode.cancel = {
                         if let strongSelf = self, let peersContentNode = strongSelf.peersContentNode {
                             strongSelf.transitionToContentNode(peersContentNode)
@@ -1216,7 +1248,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
         transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
         
-        self.transitionToContentNode(ShareProlongedLoadingContainerNode(theme: self.presentationData.theme, strings: self.presentationData.strings, forceNativeAppearance: true, account: self.context?.account, sharedContext: self.sharedContext), fastOut: true)
+        self.transitionToContentNode(ShareProlongedLoadingContainerNode(theme: self.presentationData.theme, strings: self.presentationData.strings, forceNativeAppearance: true, postbox: self.context?.stateManager.postbox, environment: self.environment), fastOut: true)
         let timestamp = CACurrentMediaTime()
         self.shareDisposable.set(signal.start(completed: { [weak self] in
             let minDelay = 0.6
@@ -1307,7 +1339,7 @@ private final class ShareContextReferenceContentSource: ContextReferenceContentS
     }
 }
 
-private func threadList(context: AccountContext, peerId: EnginePeer.Id) -> Signal<EngineChatList, NoError> {
+private func threadList(accountPeerId: EnginePeer.Id, postbox: Postbox, peerId: EnginePeer.Id) -> Signal<EngineChatList, NoError> {
     let viewKey: PostboxViewKey = .messageHistoryThreadIndex(
         id: peerId,
         summaryComponents: ChatListEntrySummaryComponents(
@@ -1315,10 +1347,10 @@ private func threadList(context: AccountContext, peerId: EnginePeer.Id) -> Signa
         )
     )
 
-    return context.account.postbox.combinedView(keys: [viewKey])
+    return postbox.combinedView(keys: [viewKey])
     |> mapToSignal { view -> Signal<CombinedView, NoError> in
-        return context.account.postbox.transaction { transaction -> CombinedView in
-            if let peer = transaction.getPeer(context.account.peerId) {
+        return postbox.transaction { transaction -> CombinedView in
+            if let peer = transaction.getPeer(accountPeerId) {
                 transaction.updatePeersInternal([peer]) { current, _ in
                     return current ?? peer
                 }

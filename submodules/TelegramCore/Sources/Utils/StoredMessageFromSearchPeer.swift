@@ -2,8 +2,8 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-func _internal_storedMessageFromSearchPeer(account: Account, peer: Peer) -> Signal<Peer, NoError> {
-    return account.postbox.transaction { transaction -> Peer in
+public func _internal_storedMessageFromSearchPeer(postbox: Postbox, peer: Peer) -> Signal<Peer, NoError> {
+    return postbox.transaction { transaction -> Peer in
         if transaction.getPeer(peer.id) == nil {
             updatePeersCustom(transaction: transaction, peers: [peer], update: { _, updatedPeer in
                 return updatedPeer

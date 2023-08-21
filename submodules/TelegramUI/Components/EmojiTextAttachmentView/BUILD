@@ -24,6 +24,7 @@ swift_library(
         "//submodules/TelegramUI/Components/VideoAnimationCache:VideoAnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
         "//submodules/ShimmerEffect:ShimmerEffect",
+        "//submodules/TelegramUIPreferences",
     ],
     visibility = [
         "//visibility:public",

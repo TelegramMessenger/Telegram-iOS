@@ -5,10 +5,12 @@ import TelegramApi
 
 public extension TelegramEngine {
     final class HistoryImport {
-        private let account: Account
+        private let postbox: Postbox
+        private let network: Network
 
-        init(account: Account) {
-            self.account = account
+        public init(postbox: Postbox, network: Network) {
+            self.postbox = postbox
+            self.network = network
         }
 
         public struct Session {
@@ -37,7 +39,7 @@ public extension TelegramEngine {
         }
         
         public func getInfo(header: String) -> Signal<ParsedInfo, GetInfoError> {
-            return self.account.network.request(Api.functions.messages.checkHistoryImport(importHead: header))
+            return self.network.request(Api.functions.messages.checkHistoryImport(importHead: header))
             |> mapError { _ -> GetInfoError in
                 return .generic
             }
@@ -56,15 +58,16 @@ public extension TelegramEngine {
         }
         
         public func initSession(peerId: PeerId, file: TempBoxFile, mediaCount: Int32) -> Signal<Session, InitImportError> {
-            let account = self.account
-            return multipartUpload(network: self.account.network, postbox: self.account.postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: true, useLargerParts: true, increaseParallelParts: true, useMultiplexedRequests: false, useCompression: true)
+            let postbox = self.postbox
+            let network = self.network
+            return multipartUpload(network: network, postbox: postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: true, useLargerParts: true, increaseParallelParts: true, useMultiplexedRequests: false, useCompression: true)
             |> mapError { _ -> InitImportError in
                 return .generic
             }
             |> mapToSignal { result -> Signal<Session, InitImportError> in
                 switch result {
                 case let .inputFile(inputFile):
-                    return account.postbox.transaction { transaction -> Api.InputPeer? in
+                    return postbox.transaction { transaction -> Api.InputPeer? in
                         return transaction.getPeer(peerId).flatMap(apiInputPeer)
                     }
                     |> castError(InitImportError.self)
@@ -72,7 +75,7 @@ public extension TelegramEngine {
                         guard let inputPeer = inputPeer else {
                             return .fail(.generic)
                         }
-                        return account.network.request(Api.functions.messages.initHistoryImport(peer: inputPeer, file: inputFile, mediaCount: mediaCount), automaticFloodWait: false)
+                        return network.request(Api.functions.messages.initHistoryImport(peer: inputPeer, file: inputFile, mediaCount: mediaCount), automaticFloodWait: false)
                         |> mapError { error -> InitImportError in
                             if error.errorDescription == "CHAT_ADMIN_REQUIRED" {
                                 return .chatAdminRequired
@@ -123,8 +126,9 @@ public extension TelegramEngine {
                 forceNoBigParts = false
             }
 
-            let account = self.account
-            return multipartUpload(network: self.account.network, postbox: self.account.postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: forceNoBigParts, useLargerParts: true, useMultiplexedRequests: true)
+            let postbox = self.postbox
+            let network = self.network
+            return multipartUpload(network: network, postbox: postbox, source: .tempFile(file), encrypt: false, tag: nil, hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: forceNoBigParts, useLargerParts: true, useMultiplexedRequests: true)
             |> mapError { _ -> UploadMediaError in
                 return .generic
             }
@@ -156,7 +160,7 @@ public extension TelegramEngine {
                 case .inputSecretFile:
                     return .fail(.generic)
                 }
-                return account.network.request(Api.functions.messages.uploadImportedMedia(peer: session.inputPeer, importId: session.id, fileName: fileName, media: inputMedia))
+                return network.request(Api.functions.messages.uploadImportedMedia(peer: session.inputPeer, importId: session.id, fileName: fileName, media: inputMedia))
                 |> mapError { error -> UploadMediaError in
                     switch error.errorDescription {
                     case "CHAT_ADMIN_REQUIRED":
@@ -181,7 +185,7 @@ public extension TelegramEngine {
         }
         
         public func startImport(session: Session) -> Signal<Never, StartImportError> {
-            return self.account.network.request(Api.functions.messages.startHistoryImport(peer: session.inputPeer, importId: session.id))
+            return self.network.request(Api.functions.messages.startHistoryImport(peer: session.inputPeer, importId: session.id))
             |> mapError { _ -> StartImportError in
                 return .generic
             }
@@ -209,8 +213,9 @@ public extension TelegramEngine {
         }
         
         public func checkPeerImport(peerId: PeerId) -> Signal<CheckPeerImportResult, CheckPeerImportError> {
-            let account = self.account
-            return self.account.postbox.transaction { transaction -> Peer? in
+            let postbox = self.postbox
+            let network = self.network
+            return postbox.transaction { transaction -> Peer? in
                 return transaction.getPeer(peerId)
             }
             |> castError(CheckPeerImportError.self)
@@ -222,7 +227,7 @@ public extension TelegramEngine {
                     return .fail(.generic)
                 }
                 
-                return account.network.request(Api.functions.messages.checkHistoryImportPeer(peer: inputPeer))
+                return network.request(Api.functions.messages.checkHistoryImportPeer(peer: inputPeer))
                 |> mapError { error -> CheckPeerImportError in
                     if error.errorDescription == "CHAT_ADMIN_REQUIRED" {
                         return .chatAdminRequired

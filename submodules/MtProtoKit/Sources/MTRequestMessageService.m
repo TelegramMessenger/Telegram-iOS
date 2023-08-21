@@ -121,7 +121,7 @@
             {
                 if (request.requestContext != nil)
                 {
-                    [_dropReponseContexts addObject:[[MTDropResponseContext alloc] initWithDropMessageId:request.requestContext.messageId]];
+                    //[_dropReponseContexts addObject:[[MTDropResponseContext alloc] initWithDropMessageId:request.requestContext.messageId]];
                     anyNewDropRequests = true;
                     if (request.expectedResponseSize >= 512 * 1024) {
                         mergedAskForReconnectionOnDrop = true;

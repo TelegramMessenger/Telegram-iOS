@@ -7,6 +7,7 @@ import MetalKit
 import Display
 import SwiftSignalKit
 import TelegramCore
+import Postbox
 
 public func mediaEditorGenerateGradientImage(size: CGSize, colors: [UIColor]) -> UIImage? {
     UIGraphicsBeginImageContextWithOptions(size, false, 1.0)
@@ -54,7 +55,7 @@ final class MediaEditorComposer {
     private let drawingImage: CIImage?
     private var entities: [MediaEditorComposerEntity]
     
-    init(account: Account, values: MediaEditorValues, dimensions: CGSize, outputDimensions: CGSize, textScale: CGFloat) {
+    init(postbox: Postbox, values: MediaEditorValues, dimensions: CGSize, outputDimensions: CGSize, textScale: CGFloat) {
         self.values = values
         self.dimensions = dimensions
         self.outputDimensions = outputDimensions
@@ -79,7 +80,7 @@ final class MediaEditorComposer {
         
         var entities: [MediaEditorComposerEntity] = []
         for entity in values.entities {
-            entities.append(contentsOf: composerEntitiesForDrawingEntity(account: account, textScale: textScale, entity: entity.entity, colorSpace: colorSpace))
+            entities.append(contentsOf: composerEntitiesForDrawingEntity(postbox: postbox, textScale: textScale, entity: entity.entity, colorSpace: colorSpace))
         }
         self.entities = entities
         
@@ -182,7 +183,7 @@ final class MediaEditorComposer {
     }
 }
 
-public func makeEditorImageComposition(context: CIContext, account: Account, inputImage: UIImage, dimensions: CGSize, values: MediaEditorValues, time: CMTime, textScale: CGFloat, completion: @escaping (UIImage?) -> Void) {
+public func makeEditorImageComposition(context: CIContext, postbox: Postbox, inputImage: UIImage, dimensions: CGSize, values: MediaEditorValues, time: CMTime, textScale: CGFloat, completion: @escaping (UIImage?) -> Void) {
     let colorSpace = CGColorSpaceCreateDeviceRGB()
     let inputImage = CIImage(image: inputImage, options: [.colorSpace: colorSpace])!
     let gradientImage: CIImage
@@ -199,7 +200,7 @@ public func makeEditorImageComposition(context: CIContext, account: Account, inp
     
     var entities: [MediaEditorComposerEntity] = []
     for entity in values.entities {
-        entities.append(contentsOf: composerEntitiesForDrawingEntity(account: account, textScale: textScale, entity: entity.entity, colorSpace: colorSpace))
+        entities.append(contentsOf: composerEntitiesForDrawingEntity(postbox: postbox, textScale: textScale, entity: entity.entity, colorSpace: colorSpace))
     }
     
     makeEditorImageFrameComposition(context: context, inputImage: inputImage, gradientImage: gradientImage, drawingImage: drawingImage, dimensions: dimensions, outputDimensions: dimensions, values: values, entities: entities, time: time, textScale: textScale, completion: { ciImage in

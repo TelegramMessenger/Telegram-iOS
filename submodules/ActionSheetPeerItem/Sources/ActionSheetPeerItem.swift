@@ -3,12 +3,16 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
+import Postbox
 import TelegramPresentationData
 import AvatarNode
 import AccountContext
 
 public class ActionSheetPeerItem: ActionSheetItem {
-    public let context: AccountContext
+    public let accountPeerId: EnginePeer.Id
+    public let postbox: Postbox
+    public let network: Network
+    public let contentSettings: ContentSettings
     public let peer: EnginePeer
     public let theme: PresentationTheme
     public let title: String
@@ -16,8 +20,37 @@ public class ActionSheetPeerItem: ActionSheetItem {
     public let strings: PresentationStrings
     public let action: () -> Void
     
-    public init(context: AccountContext, peer: EnginePeer, title: String, isSelected: Bool, strings: PresentationStrings, theme: PresentationTheme, action: @escaping () -> Void) {
-        self.context = context
+    public convenience init(context: AccountContext, peer: EnginePeer, title: String, isSelected: Bool, strings: PresentationStrings, theme: PresentationTheme, action: @escaping () -> Void) {
+        self.init(
+            accountPeerId: context.account.peerId,
+            postbox: context.account.postbox,
+            network: context.account.network,
+            contentSettings: context.currentContentSettings.with { $0 },
+            peer: peer,
+            title: title,
+            isSelected: isSelected,
+            strings: strings,
+            theme: theme,
+            action: action
+        )
+    }
+        
+    public init(
+        accountPeerId: EnginePeer.Id,
+        postbox: Postbox,
+        network: Network,
+        contentSettings: ContentSettings,
+        peer: EnginePeer,
+        title: String,
+        isSelected: Bool,
+        strings: PresentationStrings,
+        theme: PresentationTheme,
+        action: @escaping () -> Void
+    ) {
+        self.accountPeerId = accountPeerId
+        self.postbox = postbox
+        self.network = network
+        self.contentSettings = contentSettings
         self.peer = peer
         self.title = title
         self.isSelected = isSelected
@@ -121,7 +154,7 @@ public class ActionSheetPeerItemNode: ActionSheetItemNode {
         let textColor: UIColor = self.theme.primaryTextColor
         self.label.attributedText = NSAttributedString(string: item.title, font: defaultFont, textColor: textColor)
         
-        self.avatarNode.setPeer(context: item.context, theme: item.theme, peer: item.peer)
+        self.avatarNode.setPeer(accountPeerId: item.accountPeerId, postbox: item.postbox, network: item.network, contentSettings: item.contentSettings, theme: item.theme, peer: item.peer)
         
         self.checkNode.isHidden = !item.isSelected
         

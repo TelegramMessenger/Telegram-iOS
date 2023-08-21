@@ -52,8 +52,8 @@ private struct ShareTopicEntry: Comparable, Identifiable {
         return lhs.index < rhs.index
     }
     
-    func item(context: AccountContext, interfaceInteraction: ShareControllerInteraction) -> GridItem {
-        return ShareTopicGridItem(context: context, theme: self.theme, strings: self.strings, peer: self.peer, id: self.id, threadInfo: self.threadData, controllerInteraction: interfaceInteraction)
+    func item(environment: ShareControllerEnvironment, context: ShareControllerAccountContext, interfaceInteraction: ShareControllerInteraction) -> GridItem {
+        return ShareTopicGridItem(environment: environment, context: context, theme: self.theme, strings: self.strings, peer: self.peer, id: self.id, threadInfo: self.threadData, controllerInteraction: interfaceInteraction)
     }
 }
 
@@ -64,12 +64,12 @@ private struct ShareGridTransaction {
     let animated: Bool
 }
 
-private func preparedGridEntryTransition(context: AccountContext, from fromEntries: [ShareTopicEntry], to toEntries: [ShareTopicEntry], interfaceInteraction: ShareControllerInteraction) -> ShareGridTransaction {
+private func preparedGridEntryTransition(environment: ShareControllerEnvironment, context: ShareControllerAccountContext, from fromEntries: [ShareTopicEntry], to toEntries: [ShareTopicEntry], interfaceInteraction: ShareControllerInteraction) -> ShareGridTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices
-    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(context: context, interfaceInteraction: interfaceInteraction), previousIndex: $0.2) }
-    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interfaceInteraction: interfaceInteraction)) }
+    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(environment: environment, context: context, interfaceInteraction: interfaceInteraction), previousIndex: $0.2) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(environment: environment, context: context, interfaceInteraction: interfaceInteraction)) }
     
     return ShareGridTransaction(deletions: deletions, insertions: insertions, updates: updates, animated: false)
 }
@@ -157,8 +157,8 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
         
     }
     
-    private let sharedContext: SharedAccountContext
-    private let context: AccountContext
+    private let environment: ShareControllerEnvironment
+    private let context: ShareControllerAccountContext
     private var theme: PresentationTheme
     private let themePromise: Promise<PresentationTheme>
     private let strings: PresentationStrings
@@ -183,8 +183,8 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
     
     var backPressed: () -> Void = {}
     
-    init(sharedContext: SharedAccountContext, context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: EnginePeer, topics: Signal<EngineChatList, NoError>, controllerInteraction: ShareControllerInteraction) {
-        self.sharedContext = sharedContext
+    init(environment: ShareControllerEnvironment, context: ShareControllerAccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: EnginePeer, topics: Signal<EngineChatList, NoError>, controllerInteraction: ShareControllerInteraction) {
+        self.environment = environment
         self.context = context
         self.theme = theme
         self.themePromise = Promise()
@@ -245,7 +245,7 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
                 strongSelf.entries = entries
                 
                 let firstTime = previousEntries == nil
-                let transition = preparedGridEntryTransition(context: context, from: previousEntries ?? [], to: entries, interfaceInteraction: controllerInteraction)
+                let transition = preparedGridEntryTransition(environment: environment, context: context, from: previousEntries ?? [], to: entries, interfaceInteraction: controllerInteraction)
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
             }
         }))

@@ -39,6 +39,7 @@ import AuthorizationUI
 import ManagedFile
 import DeviceProximity
 import MediaEditor
+import TelegramUIDeclareEncodables
 
 #if canImport(AppCenter)
 import AppCenter

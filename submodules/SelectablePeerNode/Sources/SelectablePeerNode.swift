@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
+import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import AvatarNode
@@ -14,6 +15,9 @@ import AccountContext
 import CheckNode
 import ComponentFlow
 import EmojiStatusComponent
+import AnimationCache
+import MultiAnimationRenderer
+import TelegramUIPreferences
 
 private let avatarFont = avatarPlaceholderFont(size: 24.0)
 private let textFont = Font.regular(11.0)
@@ -144,6 +148,30 @@ public final class SelectablePeerNode: ASDisplayNode {
     }
     
     public func setup(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: EngineRenderedPeer, customTitle: String? = nil, iconId: Int64? = nil, iconColor: Int32? = nil, online: Bool = false, numberOfLines: Int = 2, synchronousLoad: Bool) {
+        self.setup(
+            accountPeerId: context.account.peerId,
+            postbox: context.account.postbox,
+            network: context.account.network,
+            energyUsageSettings: context.sharedContext.energyUsageSettings,
+            contentSettings: context.currentContentSettings.with { $0 },
+            animationCache: context.animationCache,
+            animationRenderer: context.animationRenderer,
+            resolveInlineStickers: { fileIds in
+                return context.engine.stickers.resolveInlineStickers(fileIds: fileIds)
+            },
+            theme: theme,
+            strings: strings,
+            peer: peer,
+            customTitle: customTitle,
+            iconId: iconId,
+            iconColor: iconColor,
+            online: online,
+            numberOfLines: numberOfLines,
+            synchronousLoad: synchronousLoad
+        )
+    }
+    
+    public func setup(accountPeerId: EnginePeer.Id, postbox: Postbox, network: Network, energyUsageSettings: EnergyUsageSettings, contentSettings: ContentSettings, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, resolveInlineStickers: @escaping ([Int64]) -> Signal<[Int64: TelegramMediaFile], NoError>, theme: PresentationTheme, strings: PresentationStrings, peer: EngineRenderedPeer, customTitle: String? = nil, iconId: Int64? = nil, iconColor: Int32? = nil, online: Bool = false, numberOfLines: Int = 2, synchronousLoad: Bool) {
         let isFirstTime = self.peer == nil
         self.peer = peer
         guard let mainPeer = peer.chatMainPeer else {
@@ -159,7 +187,7 @@ public final class SelectablePeerNode: ASDisplayNode {
         
         let text: String
         var overrideImage: AvatarNodeImageOverride?
-        if peer.peerId == context.account.peerId {
+        if peer.peerId == accountPeerId {
             text = self.compact ? strings.DeleteAccount_SavedMessages : strings.DialogList_SavedMessages
             overrideImage = .savedMessagesIcon
         } else if peer.peerId.isReplies {
@@ -173,7 +201,7 @@ public final class SelectablePeerNode: ASDisplayNode {
         }
         self.textNode.maximumNumberOfLines = numberOfLines
         self.textNode.attributedText = NSAttributedString(string: customTitle ?? text, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : defaultColor, paragraphAlignment: .center)
-        self.avatarNode.setPeer(context: context, theme: theme, peer: mainPeer, overrideImage: overrideImage, emptyColor: self.theme.avatarPlaceholderColor, clipStyle: isForum ? .roundedRect : .round, synchronousLoad: synchronousLoad)
+        self.avatarNode.setPeer(accountPeerId: accountPeerId, postbox: postbox, network: network, contentSettings: contentSettings, theme: theme, peer: mainPeer, overrideImage: overrideImage, emptyColor: self.theme.avatarPlaceholderColor, clipStyle: isForum ? .roundedRect : .round, synchronousLoad: synchronousLoad)
         
         let onlineLayout = self.onlineNode.asyncLayout()
         let (onlineSize, onlineApply) = onlineLayout(online, false)
@@ -195,9 +223,11 @@ public final class SelectablePeerNode: ASDisplayNode {
             let iconSize = self.iconView.update(
                 transition: .easeInOut(duration: 0.2),
                 component: AnyComponent(EmojiStatusComponent(
-                    context: context,
-                    animationCache: context.animationCache,
-                    animationRenderer: context.animationRenderer,
+                    postbox: postbox,
+                    energyUsageSettings: energyUsageSettings,
+                    resolveInlineStickers: resolveInlineStickers,
+                    animationCache: animationCache,
+                    animationRenderer: animationRenderer,
                     content: iconContent,
                     isVisibleForAnimations: true,
                     action: nil

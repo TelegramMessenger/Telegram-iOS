@@ -30,6 +30,8 @@ public final class StoryContentItem: Equatable {
     }
     
     public final class SharedState {
+        public var replyDrafts: [StoryId: NSAttributedString] = [:]
+        
         public init() {
         }
     }

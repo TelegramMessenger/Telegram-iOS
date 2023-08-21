@@ -423,7 +423,6 @@ public func storageUsageExceptionsScreen(
                 let source: ContextContentSource = .reference(StorageUsageExceptionsContextReferenceContentSource(sourceView: sourceNode.labelNode.view))
                 
                 let contextController = ContextController(
-                    account: context.account,
                     presentationData: presentationData,
                     source: source,
                     items: items,

@@ -41,6 +41,7 @@ import Speak
 import TranslateUI
 import TelegramUIPreferences
 import StoryFooterPanelComponent
+import TelegramNotices
 
 public final class StoryAvailableReactions: Equatable {
     let reactionItems: [ReactionItem]
@@ -349,6 +350,8 @@ public final class StoryItemSetContainerComponent: Component {
         var startContentOffsetY: CGFloat = 0.0
         var accumulatedOffset: CGFloat = 0.0
         var dismissedTooltips: Bool = false
+        var didLockScrolling: Bool = false
+        var contentOffset: CGFloat?
         
         init(fraction: CGFloat, scrollView: UIScrollView?) {
             self.fraction = fraction
@@ -423,6 +426,7 @@ public final class StoryItemSetContainerComponent: Component {
         
         var viewListDisplayState: ViewListDisplayState = .hidden
         private var targetViewListDisplayStateIsFull: Bool = false
+        private var viewListMetrics: (minHeight: CGFloat, maxHeight: CGFloat, currentHeight: CGFloat)?
         
         var isSearchActive: Bool = false
         
@@ -1014,7 +1018,7 @@ public final class StoryItemSetContainerComponent: Component {
                     verticalPanState.fraction = fraction
                 } else {
                     var targetScrollView: UIScrollView?
-                    if self.viewListDisplayState != .hidden, let viewList = self.viewLists[component.slice.item.storyItem.id], let viewListView = viewList.view.view as? StoryItemSetViewListComponent.View {
+                    if case .began = recognizer.state, self.viewListDisplayState != .hidden, let viewList = self.viewLists[component.slice.item.storyItem.id], let viewListView = viewList.view.view as? StoryItemSetViewListComponent.View {
                         if let hitResult = viewListView.hitTest(self.convert(recognizer.location(in: self), to: viewListView), with: nil) {
                             func findTargetScrollView(target: UIView, minParent: UIView) -> UIScrollView? {
                                 if target === viewListView {
@@ -1041,14 +1045,42 @@ public final class StoryItemSetContainerComponent: Component {
                         self.dismissAllTooltips()
                     }
                     
-                    if let scrollView = verticalPanState.scrollView {
+                    if let viewListMetrics = self.viewListMetrics, let scrollView = verticalPanState.scrollView {
                         let relativeTranslationY = recognizer.translation(in: self).y - verticalPanState.startContentOffsetY
                         let overflowY = scrollView.contentOffset.y - relativeTranslationY
                         
-                        verticalPanState.accumulatedOffset += -overflowY
-                        verticalPanState.accumulatedOffset = max(0.0, verticalPanState.accumulatedOffset)
+                        if !verticalPanState.didLockScrolling {
+                            if scrollView.contentOffset.y == 0.0 {
+                                verticalPanState.didLockScrolling = true
+                            }
+                            if let previousContentOffset = verticalPanState.contentOffset, (previousContentOffset < 0.0) != (scrollView.contentOffset.y < 0.0) {
+                                verticalPanState.didLockScrolling = true
+                            }
+                        }
                         
-                        if verticalPanState.accumulatedOffset > 0.0 {
+                        var resetContentOffset = false
+                        if self.viewListDisplayState == .half && verticalPanState.didLockScrolling {
+                            verticalPanState.accumulatedOffset += -overflowY
+                            if scrollView.contentOffset.y > 0.0 {
+                                //verticalPanState.accumulatedOffset = max(0.0, verticalPanState.accumulatedOffset)
+                            }
+                            
+                            let viewListHeight = viewListMetrics.minHeight - verticalPanState.accumulatedOffset
+                            let viewListExpandDistance = viewListHeight - viewListMetrics.maxHeight
+                            let viewListOffsetOverflow = max(0.0, viewListExpandDistance)
+                            resetContentOffset = viewListOffsetOverflow <= 0.0
+                            //print("viewListOffsetOverflow: \(viewListOffsetOverflow)")
+                            
+                            if verticalPanState.accumulatedOffset < -(viewListMetrics.maxHeight - viewListMetrics.minHeight) {
+                                verticalPanState.accumulatedOffset = -(viewListMetrics.maxHeight - viewListMetrics.minHeight)
+                            }
+                        } else {
+                            verticalPanState.accumulatedOffset += -overflowY
+                            verticalPanState.accumulatedOffset = max(0.0, verticalPanState.accumulatedOffset)
+                        }
+                        //print("accumulatedOffset: \(verticalPanState.accumulatedOffset)")
+                        
+                        if verticalPanState.accumulatedOffset > 0.0 || resetContentOffset {
                             scrollView.contentOffset = CGPoint()
                             
                             if self.viewListDisplayState != .hidden, let viewList = self.viewLists[component.slice.item.storyItem.id], let viewListView = viewList.view.view as? StoryItemSetViewListComponent.View {
@@ -1065,6 +1097,7 @@ public final class StoryItemSetContainerComponent: Component {
                             }
                         }
                         
+                        verticalPanState.contentOffset = scrollView.contentOffset.y
                         verticalPanState.startContentOffsetY = recognizer.translation(in: self).y
                     } else {
                         if verticalPanState.fraction <= -0.15 {
@@ -1099,8 +1132,15 @@ public final class StoryItemSetContainerComponent: Component {
                                 }
                                 
                                 self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            } else if verticalPanState.accumulatedOffset < 0.0 && self.targetViewListDisplayStateIsFull {
+                                if verticalPanState.fraction <= -0.05 || velocity.y <= -80.0 {
+                                    self.viewListDisplayState = .full
+                                } else {
+                                    self.viewListDisplayState = .half
+                                }
+                                self.state?.updated(transition: verticalPanState.accumulatedOffset == 0.0 ? .immediate : Transition(animation: .curve(duration: 0.4, curve: .spring)))
                             } else {
-                                self.state?.updated(transition: .immediate)
+                                self.state?.updated(transition: verticalPanState.accumulatedOffset == 0.0 ? .immediate : Transition(animation: .curve(duration: 0.4, curve: .spring)))
                             }
                         } else {
                             if verticalPanState.fraction >= 0.3 || (verticalPanState.fraction >= 0.05 && velocity.y >= 150.0) {
@@ -1654,9 +1694,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     footerAlpha = 0.0
                                 }
                                 
-                                if case .regular = component.metrics.widthClass {
-                                    footerAlpha *= itemAlpha
-                                }
+                                footerAlpha *= itemAlpha
                                 
                                 itemTransition.setAlpha(view: footerPanelView, alpha: footerAlpha)
                             }
@@ -1983,7 +2021,7 @@ public final class StoryItemSetContainerComponent: Component {
                 let contentContainerView = visibleItem.contentContainerView
                 let unclippedContainerView = visibleItem.unclippedContainerView
                 
-                let sourceLocalFrame = sourceView.convert(transitionOut.destinationRect, to: self)
+                let sourceLocalFrame = sourceView.convert(transitionOut.destinationRect, to: self.componentContainerView)
                 let innerSourceLocalFrame = CGRect(origin: CGPoint(x: sourceLocalFrame.minX - contentContainerView.frame.minX, y: sourceLocalFrame.minY - contentContainerView.frame.minY), size: sourceLocalFrame.size)
                 
                 let contentSourceFrame = contentContainerView.frame
@@ -2243,6 +2281,17 @@ public final class StoryItemSetContainerComponent: Component {
             if !likeButtonView.isDescendant(of: self) {
                 return
             }
+            if likeButtonView.isHidden {
+                return
+            }
+            if likeButtonView.alpha == 0.0 {
+                return
+            }
+            if component.slice.peer.isService {
+                return
+            } else if case .unsupported = component.slice.item.storyItem.media {
+                return
+            }
             
             let tooltipScreen = TooltipScreen(
                 account: component.context.account,
@@ -2269,6 +2318,8 @@ public final class StoryItemSetContainerComponent: Component {
             self.sendMessageContext.tooltipScreen = tooltipScreen
             self.updateIsProgressPaused()
             component.controller()?.present(tooltipScreen, in: .current)
+            
+            let _ = ApplicationSpecificNotice.setDisplayStoryReactionTooltip(accountManager: component.context.sharedContext.accountManager).start()
         }
         
         func update(component: StoryItemSetContainerComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
@@ -2276,18 +2327,47 @@ public final class StoryItemSetContainerComponent: Component {
                         
             if self.component == nil {
                 self.sendMessageContext.setup(context: component.context, view: self, inputPanelExternalState: self.inputPanelExternalState, keyboardInputData: component.keyboardInputData)
+                
+                /*#if DEBUG
+                class Target: NSObject {
+                    let f: () -> Void
+                    
+                    init(_ f: @escaping () -> Void) {
+                        self.f = f
+                    }
+                    
+                    @objc func event() {
+                        self.f()
+                    }
+                }
+                let displayLink = CADisplayLink(target: Target { [weak self] in
+                    self?.state?.updated(transition: .easeInOut(duration: 0.3))
+                }, selector: #selector(Target.event))
+                displayLink.add(to: .main, forMode: .common)
+                #endif*/
             }
             
             var itemChanged = false
+            var resetInputContents: MessageInputPanelComponent.SendMessageInput?
             if self.component?.slice.item.storyItem.id != component.slice.item.storyItem.id {
                 itemChanged = self.component != nil
                 self.initializedOffset = false
                 
+                resetInputContents = .text(NSAttributedString())
+                
                 if let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View {
-                    Queue.mainQueue().justDispatch {
-                        inputPanelView.clearSendMessageInput()
+                    if let previousComponent = self.component {
+                        let previousInput = inputPanelView.getSendMessageInput()
+                        switch previousInput {
+                        case let .text(value):
+                            component.storyItemSharedState.replyDrafts[StoryId(peerId: previousComponent.slice.peer.id, id: previousComponent.slice.item.storyItem.id)] = value
+                        }
                     }
                 }
+                if let draft = component.storyItemSharedState.replyDrafts[StoryId(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id)] {
+                    resetInputContents = .text(draft)
+                }
+                component.storyItemSharedState.replyDrafts.removeValue(forKey: StoryId(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id))
                 
                 if let tooltipScreen = self.sendMessageContext.tooltipScreen {
                     if let tooltipScreen = tooltipScreen as? UndoOverlayController, let tag = tooltipScreen.tag as? String, tag == "no_auto_dismiss" {
@@ -2368,7 +2448,7 @@ public final class StoryItemSetContainerComponent: Component {
                 self.bottomContentGradientLayer.colors = colors
                 self.bottomContentGradientLayer.type = .axial
                 
-                self.contentDimView.backgroundColor = UIColor(white: 0.0, alpha: 0.6)
+                self.contentDimView.backgroundColor = UIColor(white: 0.0, alpha: 0.3)
             }
             
             let wasPanning = self.component?.isPanning ?? false
@@ -2394,6 +2474,9 @@ public final class StoryItemSetContainerComponent: Component {
             transition.setBounds(view: self.componentContainerView, bounds: CGRect(origin: CGPoint(), size: availableSize))
             transition.setScale(view: self.componentContainerView, scale: dismissPanScale)
             
+            transition.setPosition(view: self.transitionCloneContainerView, position: CGRect(origin: CGPoint(), size: availableSize).center.offsetBy(dx: 0.0, dy: dismissPanOffset))
+            transition.setBounds(view: self.transitionCloneContainerView, bounds: CGRect(origin: CGPoint(), size: availableSize))
+            
             transition.setPosition(view: self.overlayContainerView, position: CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.5 + dismissPanOffset))
             transition.setBounds(view: self.overlayContainerView, bounds: CGRect(origin: CGPoint(), size: availableSize))
             transition.setScale(view: self.overlayContainerView, scale: dismissPanScale)
@@ -2417,6 +2500,9 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                 }
             }
+            if itemChanged {
+                inputPanelTransition = .immediate
+            }
             
             var isUnsupported = false
             var disabledPlaceholder: String?
@@ -2427,11 +2513,23 @@ public final class StoryItemSetContainerComponent: Component {
                 disabledPlaceholder = component.strings.Story_FooterReplyUnavailable
             }
             
-            let inputPlaceholder: String
+            let inputPlaceholder: MessageInputPanelComponent.Placeholder
             if let stealthModeTimeout = component.stealthModeTimeout {
-                inputPlaceholder = component.strings.Story_StealthModeActivePlaceholder("\(stringForDuration(stealthModeTimeout))").string
+                //TODO:localize
+                
+                let minutes = Int(stealthModeTimeout / 60)
+                let seconds = Int(stealthModeTimeout % 60)
+                
+                inputPlaceholder = .counter([
+                    MessageInputPanelComponent.Placeholder.CounterItem(id: 0, content: .text("Stealth Mode active – ")),
+                    MessageInputPanelComponent.Placeholder.CounterItem(id: 1, content: .number(minutes, minDigits: 2)),
+                    MessageInputPanelComponent.Placeholder.CounterItem(id: 2, content: .text(":")),
+                    MessageInputPanelComponent.Placeholder.CounterItem(id: 3, content: .number(seconds, minDigits: 2)),
+                ])
+                
+                //inputPlaceholder = component.strings.Story_StealthModeActivePlaceholder("\(stringForDuration(stealthModeTimeout))").string
             } else {
-                inputPlaceholder = component.strings.Story_InputPlaceholderReplyPrivately
+                inputPlaceholder = .plain(component.strings.Story_InputPlaceholderReplyPrivately)
             }
              
             var keyboardHeight = component.deviceMetrics.standardInputHeight(inLandscape: false)
@@ -2450,6 +2548,7 @@ public final class StoryItemSetContainerComponent: Component {
                     maxLength: 4096,
                     queryTypes: [.mention, .emoji],
                     alwaysDarkWhenHasText: component.metrics.widthClass == .regular,
+                    resetInputContents: resetInputContents,
                     nextInputMode: { [weak self] hasText in
                         if case .media = self?.sendMessageContext.currentInputMode {
                             return .text
@@ -2811,6 +2910,7 @@ public final class StoryItemSetContainerComponent: Component {
                 viewListHeight = max(minViewListHeight, min(maxViewListHeight, viewListHeight))
                 
                 self.targetViewListDisplayStateIsFull = viewListHeight > midViewListHeight
+                self.viewListMetrics = (midViewListHeight, maxViewListHeight, viewListHeight)
                 
                 let viewListHeightMidFraction: CGFloat = max(0.0, min(1.0, viewListHeight / midViewListHeight))
                 viewListInset = defaultHeight * (1.0 - viewListHeightMidFraction) + viewListHeightMidFraction * midViewListHeight
@@ -3103,7 +3203,6 @@ public final class StoryItemSetContainerComponent: Component {
                                     let items = ContextController.Items(content: .list(itemList))
                                     
                                     let controller = ContextController(
-                                        account: component.context.account,
                                         presentationData: presentationData,
                                         source: .extracted(ListContextExtractedContentSource(contentView: sourceView)),
                                         items: .single(items),
@@ -3197,6 +3296,8 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                     }
                 }
+            } else {
+                self.viewListMetrics = nil
             }
             var removeViewListIds: [Int32] = []
             for (id, viewList) in self.viewLists {
@@ -3700,7 +3801,7 @@ public final class StoryItemSetContainerComponent: Component {
                         strings: component.strings,
                         theme: component.theme,
                         text: component.slice.item.storyItem.text,
-                        entities: component.slice.item.storyItem.entities,
+                        entities: component.slice.peer.isPremium ? component.slice.item.storyItem.entities : [],
                         entityFiles: component.slice.item.entityFiles,
                         action: { [weak self] action in
                             guard let self, let component = self.component else {
@@ -3850,6 +3951,7 @@ public final class StoryItemSetContainerComponent: Component {
                 if let current = self.reactionContextNode {
                     reactionContextNode = current
                 } else {
+                    //TODO:localize
                     reactionContextNodeTransition = .immediate
                     reactionContextNode = ReactionContextNode(
                         context: component.context,
@@ -3857,6 +3959,7 @@ public final class StoryItemSetContainerComponent: Component {
                         presentationData: component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme),
                         items: reactionItems.map(ReactionContextItem.reaction),
                         selectedItems: component.slice.item.storyItem.myReaction.flatMap { Set([$0]) } ?? Set(),
+                        title: self.displayLikeReactions ? nil : "Send reaction as a private message",
                         getEmojiContent: { [weak self] animationCache, animationRenderer in
                             guard let self, let component = self.component else {
                                 preconditionFailure()
@@ -3904,6 +4007,7 @@ public final class StoryItemSetContainerComponent: Component {
                     )
                     reactionContextNode.displayTail = self.displayLikeReactions
                     reactionContextNode.forceTailToRight = self.displayLikeReactions
+                    reactionContextNode.forceDark = true
                     self.reactionContextNode = reactionContextNode
                     
                     reactionContextNode.reactionSelected = { [weak self] updateReaction, _ in
@@ -5354,7 +5458,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             let contextItems = ContextController.Items(content: .list(items), tip: tip, tipSignal: tipSignal)
             
-            let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .bottom)), items: .single(contextItems), gesture: gesture)
+            let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .bottom)), items: .single(contextItems), gesture: gesture)
             contextController.dismissed = { [weak self] in
                 guard let self else {
                     return
@@ -5638,7 +5742,7 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 let contextItems = ContextController.Items(content: .list(items), tip: tip, tipSignal: tipSignal)
                                 
-                let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .bottom)), items: .single(contextItems), gesture: gesture)
+                let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .bottom)), items: .single(contextItems), gesture: gesture)
                 contextController.dismissed = { [weak self] in
                     guard let self else {
                         return

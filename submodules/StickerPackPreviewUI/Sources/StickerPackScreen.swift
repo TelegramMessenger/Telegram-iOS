@@ -838,7 +838,7 @@ private final class StickerPackContainer: ASDisplayNode {
             }
         })))
         
-        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(StickerPackContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+        let contextController = ContextController(presentationData: self.presentationData, source: .reference(StickerPackContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
         self.presentInGlobalOverlay(contextController, nil)
     }
     

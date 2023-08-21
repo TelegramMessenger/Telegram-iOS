@@ -25,6 +25,8 @@ import ChatInputNode
 import ChatEntityKeyboardInputNode
 import ChatControllerInteraction
 import ChatAvatarNavigationNode
+import AccessoryPanelNode
+import ForwardAccessoryPanelNode
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode

@@ -37,6 +37,8 @@ swift_library(
         "//submodules/TelegramUniversalVideoContent:TelegramUniversalVideoContent",
         "//submodules/ComponentFlow:ComponentFlow",
         "//submodules/TelegramUI/Components/EmojiStatusComponent:EmojiStatusComponent",
+        "//submodules/TelegramUI/Components/AnimationCache",
+        "//submodules/TelegramUI/Components/MultiAnimationRenderer",
     ],
     visibility = [
         "//visibility:public",

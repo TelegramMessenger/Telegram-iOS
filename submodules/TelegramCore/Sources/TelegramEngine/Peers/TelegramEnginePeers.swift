@@ -343,7 +343,7 @@ public extension TelegramEngine {
         }
 
         public func createSupergroup(title: String, description: String?, username: String? = nil, isForum: Bool = false, location: (latitude: Double, longitude: Double, address: String)? = nil, isForHistoryImport: Bool = false) -> Signal<PeerId, CreateChannelError> {
-            return _internal_createSupergroup(account: self.account, title: title, description: description, username: username, isForum: isForum, location: location, isForHistoryImport: isForHistoryImport)
+            return _internal_createSupergroup(postbox: self.account.postbox, network: self.account.network, stateManager: account.stateManager, title: title, description: description, username: username, isForum: isForum, location: location, isForHistoryImport: isForHistoryImport)
         }
 
         public func deleteChannel(peerId: PeerId) -> Signal<Void, DeleteChannelError> {
@@ -502,7 +502,7 @@ public extension TelegramEngine {
         }
 
         public func recentPeers() -> Signal<RecentPeers, NoError> {
-            return _internal_recentPeers(account: self.account)
+            return _internal_recentPeers(accountPeerId: self.account.peerId, postbox: self.account.postbox)
         }
 
         public func managedUpdatedRecentPeers() -> Signal<Void, NoError> {
@@ -637,7 +637,16 @@ public extension TelegramEngine {
         }
 
         public func notificationExceptionsList() -> Signal<NotificationExceptionsList, NoError> {
-            return _internal_notificationExceptionsList(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network)
+            return combineLatest(
+                _internal_notificationExceptionsList(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, isStories: false),
+                _internal_notificationExceptionsList(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, isStories: true)
+            )
+            |> map { lhs, rhs in
+                return NotificationExceptionsList(
+                    peers: lhs.peers.merging(rhs.peers, uniquingKeysWith: { a, _ in a }),
+                    settings: lhs.settings.merging(rhs.settings, uniquingKeysWith: { a, _ in a })
+                )
+            }
         }
 
         public func fetchAndUpdateCachedPeerData(peerId: PeerId) -> Signal<Bool, NoError> {
@@ -926,7 +935,7 @@ public extension TelegramEngine {
         }
         
         public func ensurePeerIsLocallyAvailable(peer: EnginePeer) -> Signal<EnginePeer, NoError> {
-            return _internal_storedMessageFromSearchPeer(account: self.account, peer: peer._asPeer())
+            return _internal_storedMessageFromSearchPeer(postbox: self.account.postbox, peer: peer._asPeer())
             |> map { result -> EnginePeer in
                 return EnginePeer(result)
             }
@@ -978,7 +987,7 @@ public extension TelegramEngine {
         }
         
         public func setChannelForumMode(id: EnginePeer.Id, isForum: Bool) -> Signal<Never, NoError> {
-            return _internal_setChannelForumMode(account: self.account, peerId: id, isForum: isForum)
+            return _internal_setChannelForumMode(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: id, isForum: isForum)
         }
         
         public func createForumChannelTopic(id: EnginePeer.Id, title: String, iconColor: Int32, iconFileId: Int64?) -> Signal<Int64, CreateForumChannelTopicError> {

@@ -942,7 +942,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             return
         }
         
-        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: source, items: .single(ContextController.Items(content: .list(actions))), recognizer: recognizer, gesture: gesture)
+        let contextController = ContextController(presentationData: self.presentationData, source: source, items: .single(ContextController.Items(content: .list(actions))), recognizer: recognizer, gesture: gesture)
         controller.window?.presentInGlobalOverlay(contextController)
     }
     

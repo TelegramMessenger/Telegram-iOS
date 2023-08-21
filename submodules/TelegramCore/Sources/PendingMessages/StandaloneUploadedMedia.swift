@@ -52,19 +52,19 @@ private func uploadedThumbnail(network: Network, postbox: Postbox, data: Data) -
     }
 }
 
-public func standaloneUploadedImage(account: Account, peerId: PeerId, text: String, data: Data, thumbnailData: Data? = nil, dimensions: PixelDimensions) -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> {
-    return multipartUpload(network: account.network, postbox: account.postbox, source: .data(data), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: .image, userContentType: .image), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
+public func standaloneUploadedImage(postbox: Postbox, network: Network, peerId: PeerId, text: String, data: Data, thumbnailData: Data? = nil, dimensions: PixelDimensions) -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> {
+    return multipartUpload(network: network, postbox: postbox, source: .data(data), encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: .image, userContentType: .image), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
     |> mapError { _ -> StandaloneUploadMediaError in return .generic }
     |> mapToSignal { next -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
         switch next {
             case let .inputFile(inputFile):
-                return account.postbox.transaction { transaction -> Api.InputPeer? in
+                return postbox.transaction { transaction -> Api.InputPeer? in
                     return transaction.getPeer(peerId).flatMap(apiInputPeer)
                 }
                 |> mapError { _ -> StandaloneUploadMediaError in }
                 |> mapToSignal { inputPeer -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                     if let inputPeer = inputPeer {
-                        return account.network.request(Api.functions.messages.uploadMedia(peer: inputPeer, media: Api.InputMedia.inputMediaUploadedPhoto(flags: 0, file: inputFile, stickers: nil, ttlSeconds: nil)))
+                        return network.request(Api.functions.messages.uploadMedia(peer: inputPeer, media: Api.InputMedia.inputMediaUploadedPhoto(flags: 0, file: inputFile, stickers: nil, ttlSeconds: nil)))
                         |> mapError { _ -> StandaloneUploadMediaError in return .generic }
                         |> mapToSignal { media -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                             switch media {
@@ -84,7 +84,7 @@ public func standaloneUploadedImage(account: Account, peerId: PeerId, text: Stri
                     }
                 }
             case let .inputSecretFile(file, _, key):
-                return account.postbox.transaction { transaction -> Api.InputEncryptedChat? in
+                return postbox.transaction { transaction -> Api.InputEncryptedChat? in
                     if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
                         return Api.InputEncryptedChat.inputEncryptedChat(chatId: Int32(peer.id.id._internalGetInt64Value()), accessHash: peer.accessHash)
                     }
@@ -95,7 +95,7 @@ public func standaloneUploadedImage(account: Account, peerId: PeerId, text: Stri
                     guard let inputChat = inputChat else {
                         return .fail(.generic)
                     }
-                    return account.network.request(Api.functions.messages.uploadEncryptedFile(peer: inputChat, file: file))
+                    return network.request(Api.functions.messages.uploadEncryptedFile(peer: inputChat, file: file))
                     |> mapError { _ -> StandaloneUploadMediaError in return .generic
                     }
                     |> mapToSignal { result -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
@@ -113,15 +113,15 @@ public func standaloneUploadedImage(account: Account, peerId: PeerId, text: Stri
     }
 }
 
-public func standaloneUploadedFile(account: Account, peerId: PeerId, text: String, source: MultipartUploadSource, thumbnailData: Data? = nil, mimeType: String, attributes: [TelegramMediaFileAttribute], hintFileIsLarge: Bool) -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> {
-    let upload = multipartUpload(network: account.network, postbox: account.postbox, source: source, encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(attributes), userContentType: nil), hintFileSize: nil, hintFileIsLarge: hintFileIsLarge, forceNoBigParts: false)
+public func standaloneUploadedFile(postbox: Postbox, network: Network, peerId: PeerId, text: String, source: MultipartUploadSource, thumbnailData: Data? = nil, mimeType: String, attributes: [TelegramMediaFileAttribute], hintFileIsLarge: Bool) -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> {
+    let upload = multipartUpload(network: network, postbox: postbox, source: source, encrypt: peerId.namespace == Namespaces.Peer.SecretChat, tag: TelegramMediaResourceFetchTag(statsCategory: statsCategoryForFileWithAttributes(attributes), userContentType: nil), hintFileSize: nil, hintFileIsLarge: hintFileIsLarge, forceNoBigParts: false)
     |> mapError { _ -> StandaloneUploadMediaError in return .generic }
     
     let uploadThumbnail: Signal<StandaloneUploadMediaThumbnailResult, StandaloneUploadMediaError>
     if let thumbnailData = thumbnailData {
         uploadThumbnail = .single(.pending)
         |> then(
-            uploadedThumbnail(network: account.network, postbox: account.postbox, data: thumbnailData)
+            uploadedThumbnail(network: network, postbox: postbox, data: thumbnailData)
             |> mapError { _ -> StandaloneUploadMediaError in return .generic }
             |> map { result in
                 if let result = result {
@@ -147,7 +147,7 @@ public func standaloneUploadedFile(account: Account, peerId: PeerId, text: Strin
                     default:
                         switch result {
                             case let .inputFile(inputFile):
-                                return account.postbox.transaction { transaction -> Api.InputPeer? in
+                                return postbox.transaction { transaction -> Api.InputPeer? in
                                     return transaction.getPeer(peerId).flatMap(apiInputPeer)
                                     }
                                 |> mapError { _ -> StandaloneUploadMediaError in }
@@ -158,7 +158,7 @@ public func standaloneUploadedFile(account: Account, peerId: PeerId, text: Strin
                                         if let _ = thumbnailFile {
                                             flags |= 1 << 2
                                         }
-                                        return account.network.request(Api.functions.messages.uploadMedia(peer: inputPeer, media: Api.InputMedia.inputMediaUploadedDocument(flags: flags, file: inputFile, thumb: thumbnailFile, mimeType: mimeType, attributes: inputDocumentAttributesFromFileAttributes(attributes), stickers: nil, ttlSeconds: nil)))
+                                        return network.request(Api.functions.messages.uploadMedia(peer: inputPeer, media: Api.InputMedia.inputMediaUploadedDocument(flags: flags, file: inputFile, thumb: thumbnailFile, mimeType: mimeType, attributes: inputDocumentAttributesFromFileAttributes(attributes), stickers: nil, ttlSeconds: nil)))
                                             |> mapError { _ -> StandaloneUploadMediaError in return .generic }
                                             |> mapToSignal { media -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                                                 switch media {
@@ -178,7 +178,7 @@ public func standaloneUploadedFile(account: Account, peerId: PeerId, text: Strin
                                     }
                                 }
                             case let .inputSecretFile(file, _, key):
-                                return account.postbox.transaction { transaction -> Api.InputEncryptedChat? in
+                                return postbox.transaction { transaction -> Api.InputEncryptedChat? in
                                     if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
                                         return Api.InputEncryptedChat.inputEncryptedChat(chatId: Int32(peer.id.id._internalGetInt64Value()), accessHash: peer.accessHash)
                                     }
@@ -189,7 +189,7 @@ public func standaloneUploadedFile(account: Account, peerId: PeerId, text: Strin
                                     guard let inputChat = inputChat else {
                                         return .fail(.generic)
                                     }
-                                    return account.network.request(Api.functions.messages.uploadEncryptedFile(peer: inputChat, file: file))
+                                    return network.request(Api.functions.messages.uploadEncryptedFile(peer: inputChat, file: file))
                                     |> mapError { _ -> StandaloneUploadMediaError in return .generic }
                                     |> mapToSignal { result -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                                         switch result {

@@ -119,6 +119,11 @@ public final class EngineStoryViewListContext {
             if let parentSource = parentSource, (parentSource.listMode == .everyone || parentSource.listMode == listMode), let parentState = parentSource.state, parentState.totalCount <= 100 {
                 self.parentSource = parentSource
                 
+                let matchesMode = parentSource.listMode == listMode
+                if parentState.items.count < 100 && !matchesMode {
+                    parentSource.loadMore()
+                }
+                
                 self.disposable.set((parentSource.statePromise.get()
                 |> mapToSignal { state -> Signal<InternalState, NoError> in
                     let needUpdate: Signal<Void, NoError>
@@ -148,10 +153,10 @@ public final class EngineStoryViewListContext {
                     return needUpdate
                     |> mapToSignal { _ -> Signal<InternalState, NoError> in
                         return account.postbox.transaction { transaction -> InternalState in
-                            if state.canLoadMore {
+                            /*if state.canLoadMore && !matchesMode {
                                 return InternalState(
-                                    totalCount: 0, totalReactedCount: 0, items: [], canLoadMore: true, nextOffset: state.nextOffset)
-                            }
+                                    totalCount: listMode == .everyone ? state.totalCount : 100, totalReactedCount: state.totalReactedCount, items: [], canLoadMore: true, nextOffset: state.nextOffset)
+                            }*/
                             
                             var items: [Item] = []
                             switch listMode {
@@ -188,6 +193,7 @@ public final class EngineStoryViewListContext {
                                 })
                             }
                             
+                            var totalCount = items.count
                             var totalReactedCount = 0
                             for item in items {
                                 if item.reaction != nil {
@@ -195,8 +201,17 @@ public final class EngineStoryViewListContext {
                                 }
                             }
                             
+                            if state.canLoadMore {
+                                totalCount = state.totalCount
+                                totalReactedCount = state.totalReactedCount
+                            }
+                            
                             return InternalState(
-                                totalCount: items.count, totalReactedCount: totalReactedCount, items: items, canLoadMore: false)
+                                totalCount: totalCount,
+                                totalReactedCount: totalReactedCount,
+                                items: items,
+                                canLoadMore: state.canLoadMore
+                            )
                         }
                     }
                 }
@@ -207,7 +222,7 @@ public final class EngineStoryViewListContext {
                     self.updateInternalState(state: state)
                 }))
             } else {
-                let initialState = State(totalCount: views.seenCount, totalReactedCount: views.reactedCount, items: [], loadMoreToken: LoadMoreToken(value: ""))
+                let initialState = State(totalCount: listMode == .everyone ? views.seenCount : 100, totalReactedCount: views.reactedCount, items: [], loadMoreToken: LoadMoreToken(value: ""))
                 let state = InternalState(totalCount: initialState.totalCount, totalReactedCount: initialState.totalReactedCount, items: initialState.items, canLoadMore: initialState.loadMoreToken != nil, nextOffset: nil)
                 self.state = state
                 self.statePromise.set(.single(state))

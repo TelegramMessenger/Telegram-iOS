@@ -3,6 +3,7 @@ import AVFoundation
 import MetalKit
 import SwiftSignalKit
 import TelegramCore
+import Postbox
 
 enum ExportWriterStatus {
     case unknown
@@ -258,7 +259,7 @@ public final class MediaEditorVideoExport {
     
     public private(set) var internalStatus: Status = .idle
     
-    private let account: Account
+    private let postbox: Postbox
     private let subject: Subject
     private let configuration: Configuration
     private let textScale: CGFloat
@@ -296,8 +297,8 @@ public final class MediaEditorVideoExport {
     
     private let semaphore = DispatchSemaphore(value: 0)
     
-    public init(account: Account, subject: Subject, configuration: Configuration, outputPath: String, textScale: CGFloat = 1.0) {
-        self.account = account
+    public init(postbox: Postbox, subject: Subject, configuration: Configuration, outputPath: String, textScale: CGFloat = 1.0) {
+        self.postbox = postbox
         self.subject = subject
         self.configuration = configuration
         self.outputPath = outputPath
@@ -356,7 +357,7 @@ public final class MediaEditorVideoExport {
         guard self.composer == nil else {
             return
         }
-        self.composer = MediaEditorComposer(account: self.account, values: self.configuration.values, dimensions: self.configuration.composerDimensions, outputDimensions: self.configuration.dimensions, textScale: self.textScale)
+        self.composer = MediaEditorComposer(postbox: self.postbox, values: self.configuration.values, dimensions: self.configuration.composerDimensions, outputDimensions: self.configuration.dimensions, textScale: self.textScale)
     }
     
     private func setupWithAsset(_ asset: AVAsset, additionalAsset: AVAsset?) {
