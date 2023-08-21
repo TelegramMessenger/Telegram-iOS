@@ -314,11 +314,14 @@ final class ChatListTable: Table {
         return result
     }
     
-    func getUnreadChatListPeerIds(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, additionalFilter: ((Peer) -> Bool)?, stopOnFirstMatch: Bool, inactiveSecretChatPeerIds: Set<PeerId>) -> [PeerId] {
+    func getUnreadChatListPeerIds(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, additionalFilter: ((Peer) -> Bool)?, stopOnFirstMatch: Bool, reverseOrder: Bool, inactiveSecretChatPeerIds: Set<PeerId>) -> [PeerId] {
         let globalNotificationSettings = postbox.getGlobalNotificationSettings(transaction: currentTransaction)
         
+        let start = reverseOrder ? self.lowerBound(groupId: groupId) : self.upperBound(groupId: groupId)
+        let end = reverseOrder ? self.upperBound(groupId: groupId) : self.lowerBound(groupId: groupId)
+        
         var result: [PeerId] = []
-        self.valueBox.range(self.table, start: self.upperBound(groupId: groupId), end: self.lowerBound(groupId: groupId), keys: { key in
+        self.valueBox.range(self.table, start: start, end: end, keys: { key in
             let (_, _, messageIndex, _) = extractKey(key)
             
             if inactiveSecretChatPeerIds.contains(messageIndex.id.peerId) {

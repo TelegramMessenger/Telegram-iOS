@@ -10,7 +10,7 @@
 "PtgSettings.SuppressForeignAgentNotice" = "Приховувати мітки іноагентів РФ";
 "PtgSettings.EnableQuickReaction" = "Швидкі реакції";
 "PtgSettings.EnableQuickReactionHelp" = "Увімкніть, щоб швидко залишати реакції, двічі торкаючись повідомлень або натискаючи на наявні реакції. Вимкніть, щоб запобігти випадковим реакціям.";
-"PtgSettings.ChannelAppearanceHeader" = "Вигляд каналів";
+"PtgSettings.ChannelAppearanceHeader" = "Подання каналів";
 "PtgSettings.HideReactions" = "Приховувати реакції";
 "PtgSettings.HideComments" = "Приховувати коментарі";
 "PtgSettings.HideShareButton" = "Приховувати кнопку поширення";
@@ -25,6 +25,10 @@
 "PtgSettings.AddContextMenuHeader" = "Контекстне меню повідомлень";
 "PtgSettings.AddContextMenuSaveMessage" = "Додати «Зберегти повідомлення»";
 "PtgSettings.AddContextMenuShare" = "Додати «Поділитися»";
+"PtgSettings.JumpToNextUnreadChannel" = "Перехід у наступний канал";
+"PtgSettings.JumpToNextUnreadChannel.Disabled" = "Вимкнено";
+"PtgSettings.JumpToNextUnreadChannel.TopFirst" = "Верхні спочатку";
+"PtgSettings.JumpToNextUnreadChannel.BottomFirst" = "Нижні спочатку";
 
 "Conversation.ContextMenuSaveMessage" = "Зберегти повідомлення";
 

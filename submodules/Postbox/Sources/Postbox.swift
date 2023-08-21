@@ -427,10 +427,10 @@ public final class Transaction {
         }
     }
     
-    public func getUnreadChatListPeerIds(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, additionalFilter: ((Peer) -> Bool)?, stopOnFirstMatch: Bool, inactiveSecretChatPeerIds: Set<PeerId>) -> [PeerId] {
+    public func getUnreadChatListPeerIds(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, additionalFilter: ((Peer) -> Bool)?, stopOnFirstMatch: Bool, reverseOrder: Bool = false, inactiveSecretChatPeerIds: Set<PeerId>) -> [PeerId] {
         assert(!self.disposed)
         if let postbox = self.postbox {
-            return postbox.chatListTable.getUnreadChatListPeerIds(postbox: postbox, currentTransaction: self, groupId: groupId, filterPredicate: filterPredicate, additionalFilter: additionalFilter, stopOnFirstMatch: stopOnFirstMatch, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
+            return postbox.chatListTable.getUnreadChatListPeerIds(postbox: postbox, currentTransaction: self, groupId: groupId, filterPredicate: filterPredicate, additionalFilter: additionalFilter, stopOnFirstMatch: stopOnFirstMatch, reverseOrder: reverseOrder, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
         } else {
             return []
         }

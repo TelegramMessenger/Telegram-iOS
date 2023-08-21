@@ -75,7 +75,7 @@
 "PtgSettings.SuppressForeignAgentNotice" = "Скрывать метки иноагентов РФ";
 "PtgSettings.EnableQuickReaction" = "Быстрые реакции";
 "PtgSettings.EnableQuickReactionHelp" = "Включите, чтобы быстро отправлять реакции, дважды нажимая на сообщения или нажимая на существующие реакции. Выключите для предотвращения случайных реакций.";
-"PtgSettings.ChannelAppearanceHeader" = "Внешний вид каналов";
+"PtgSettings.ChannelAppearanceHeader" = "Представление каналов";
 "PtgSettings.HideReactions" = "Скрывать реакции";
 "PtgSettings.HideComments" = "Скрывать комментарии";
 "PtgSettings.HideShareButton" = "Скрывать кнопку «Поделиться»";
@@ -90,6 +90,10 @@
 "PtgSettings.AddContextMenuHeader" = "Контекстное меню сообщений";
 "PtgSettings.AddContextMenuSaveMessage" = "Добавить «Сохранить сообщение»";
 "PtgSettings.AddContextMenuShare" = "Добавить «Поделиться»";
+"PtgSettings.JumpToNextUnreadChannel" = "Переход к следующему каналу";
+"PtgSettings.JumpToNextUnreadChannel.Disabled" = "Отключен";
+"PtgSettings.JumpToNextUnreadChannel.TopFirst" = "Верхние сначала";
+"PtgSettings.JumpToNextUnreadChannel.BottomFirst" = "Нижние сначала";
 
 "Conversation.ContextMenuSaveMessage" = "Сохранить сообщение";
 

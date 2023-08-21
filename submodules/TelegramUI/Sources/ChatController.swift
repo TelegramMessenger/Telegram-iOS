@@ -5229,10 +5229,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             } else {
                                 isRegularChat = true
                             }
-                            if isRegularChat, strongSelf.nextChannelToReadDisposable == nil {
+                            if isRegularChat, strongSelf.nextChannelToReadDisposable == nil, let reverseOrder = strongSelf.context.sharedContext.currentPtgSettings.with({ $0.jumpToNextUnreadChannel != .disabled ? $0.jumpToNextUnreadChannel == .bottomFirst : nil }) {
                                 //TODO:loc optimize
                                 strongSelf.nextChannelToReadDisposable = (combineLatest(queue: .mainQueue(),
-                                    strongSelf.context.engine.peers.getNextUnreadChannel(peerId: channel.id, chatListFilterId: strongSelf.currentChatListFilter, getFilterPredicate: chatListFilterPredicate),
+                                    strongSelf.context.engine.peers.getNextUnreadChannel(peerId: channel.id, chatListFilterId: strongSelf.currentChatListFilter, getFilterPredicate: chatListFilterPredicate, reverseOrder: reverseOrder),
                                     ApplicationSpecificNotice.getNextChatSuggestionTip(accountManager: strongSelf.context.sharedContext.accountManager)
                                 )
                                 |> then(.complete() |> delay(1.0, queue: .mainQueue()))
