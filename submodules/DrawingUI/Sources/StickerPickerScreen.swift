@@ -2224,7 +2224,7 @@ final class ItemStack<ChildEnvironment: Equatable>: CombinedComponent {
                 let remainingWidth = context.availableSize.width - itemsWidth - context.component.padding * 2.0
                 spacing = remainingWidth / CGFloat(group.count - 1)
                 
-                var nextX: CGFloat = context.component.padding
+                var nextX: CGFloat = floorToScreenPixels((context.availableSize.width - itemsWidth) / 2.0) //context.component.padding
                 for i in group {
                     let child = updatedChildren[i]
                     let frame = CGRect(origin: CGPoint(x: nextX, y: size.height + floorToScreenPixels((groupHeight - child.size.height) / 2.0)), size: child.size)
@@ -2280,30 +2280,30 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
                                         }
                                     })
                             )
-                        ),
-                        AnyComponentWithIdentity(
-                            id: "audio",
-                            component: AnyComponent(
-                                CameraButton(
-                                    content: AnyComponentWithIdentity(
-                                        id: "audio",
-                                        component: AnyComponent(
-                                            CustomContentButton(
-                                                theme: theme,
-                                                title: "AUDIO",
-                                                iconName: "Media Editor/Audio",
-                                                useOpaqueTheme: useOpaqueTheme,
-                                                tintContainerView: self.tintContainerView
-                                            )
-                                        )
-                                    ),
-                                    action: { [weak self] in
-                                        if let self {
-                                            self.audioAction()
-                                        }
-                                    })
-                            )
                         )
+//                        AnyComponentWithIdentity(
+//                            id: "audio",
+//                            component: AnyComponent(
+//                                CameraButton(
+//                                    content: AnyComponentWithIdentity(
+//                                        id: "audio",
+//                                        component: AnyComponent(
+//                                            CustomContentButton(
+//                                                theme: theme,
+//                                                title: "AUDIO",
+//                                                iconName: "Media Editor/Audio",
+//                                                useOpaqueTheme: useOpaqueTheme,
+//                                                tintContainerView: self.tintContainerView
+//                                            )
+//                                        )
+//                                    ),
+//                                    action: { [weak self] in
+//                                        if let self {
+//                                            self.audioAction()
+//                                        }
+//                                    })
+//                            )
+//                        )
                     ],
                     padding: 18.0,
                     minSpacing: 8.0

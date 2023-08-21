@@ -736,7 +736,7 @@ public final class MessageInputPanelComponent: Component {
             var fieldBackgroundFrame: CGRect
             if hasMediaRecording {
                 fieldBackgroundFrame = CGRect(origin: CGPoint(x: mediaInsets.left, y: insets.top), size: CGSize(width: availableSize.width - mediaInsets.left - mediaInsets.right, height: textFieldSize.height))
-            } else if isEditing {
+            } else if isEditing || component.style == .editor {
                 fieldBackgroundFrame = fieldFrame
             } else {
                 if component.forwardAction != nil && component.likeAction != nil {
