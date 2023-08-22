@@ -380,7 +380,7 @@ final class StoryItemSetViewListComponent: Component {
             }
             
             let actualBounds = self.scrollView.bounds
-            let visibleBounds = actualBounds.insetBy(dx: 0.0, dy: -200.0)
+            let visibleBounds = actualBounds//.insetBy(dx: 0.0, dy: -200.0)
             
             var synchronousLoad = false
             if let hint = transition.userData(PeerListItemComponent.TransitionHint.self) {
@@ -401,6 +401,12 @@ final class StoryItemSetViewListComponent: Component {
                         continue
                     }
                     #endif
+                    
+                    /*if "".isEmpty {
+                        if index > range.lowerBound - 1 {
+                            break
+                        }
+                    }*/
                     
                     let itemFrame = itemLayout.itemFrame(for: index)
                     

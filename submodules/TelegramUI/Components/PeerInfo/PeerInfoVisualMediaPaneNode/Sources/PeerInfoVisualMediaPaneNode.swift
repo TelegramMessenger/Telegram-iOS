@@ -941,7 +941,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
         return self.chatPresentationData.theme.theme.list.itemPlainSeparatorColor
     }
 
-    func createLayer() -> SparseItemGridLayer? {
+    func createLayer(item: SparseItemGrid.Item) -> SparseItemGridLayer? {
         if self.useListItems {
             return nil
         }

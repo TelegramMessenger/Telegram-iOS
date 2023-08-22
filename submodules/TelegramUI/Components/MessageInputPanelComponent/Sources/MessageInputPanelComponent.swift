@@ -451,6 +451,14 @@ public final class MessageInputPanelComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        public func hasFirstResponder() -> Bool {
+            if let textFieldView = self.textField.view as? TextFieldComponent.View {
+                return textFieldView.hasFirstResponder()
+            } else {
+                return false
+            }
+        }
+        
         public func getSendMessageInput() -> SendMessageInput {
             guard let textFieldView = self.textField.view as? TextFieldComponent.View else {
                 return .text(NSAttributedString())

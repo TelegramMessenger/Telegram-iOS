@@ -574,8 +574,8 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
         return self.chatPresentationData.theme.theme.list.itemPlainSeparatorColor
     }
 
-    func createLayer() -> SparseItemGridLayer? {
-        if self.captureProtected {
+    func createLayer(item: SparseItemGrid.Item) -> SparseItemGridLayer? {
+        if let item = item as? VisualMediaItem, item.story.isForwardingDisabled {
             return CaptureProtectedItemLayer()
         } else {
             return GenericItemLayer()

@@ -491,6 +491,33 @@ public final class DirectMediaImageCache {
         
         return GetMediaResult(image: resultImage, blurredImage: blurredImage, loadSignal: self.getLoadSignal(width: width, aspectRatio: aspectRatio, userLocation: userLocation, userContentType: .image, resource: resource.resource, resourceSizeLimit: resource.size))
     }
+    
+    private func getAvatarImageSynchronous(peer: PeerReference, resource: MediaResourceReference, immediateThumbnail: Data?, size: Int, includeBlurred: Bool) -> GetMediaResult? {
+        let immediateThumbnailData: Data? = immediateThumbnail
+        
+        var blurredImage: UIImage?
+        if includeBlurred, let data = immediateThumbnailData.flatMap(decodeTinyThumbnail), let image = loadImage(data: data), let blurredImageValue = generateBlurredThumbnail(image: image, adjustSaturation: true) {
+            blurredImage = blurredImageValue
+        }
+        
+        var resultImage: UIImage?
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: self.getCachePath(resourceId: resource.resource.id, imageType: .square(width: size, aspectRatio: 1.0)))), let image = loadImage(data: data) {
+            return GetMediaResult(image: image, blurredImage: blurredImage, loadSignal: nil)
+        }
+
+        if resultImage == nil {
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: self.getCachePath(resourceId: resource.resource.id, imageType: .blurredThumbnail))), let image = loadImage(data: data) {
+                resultImage = image
+            } else if let data = immediateThumbnailData.flatMap(decodeTinyThumbnail), let image = loadImage(data: data) {
+                if let blurredImageValue = generateBlurredThumbnail(image: image) {
+                    resultImage = blurredImageValue
+                }
+            }
+        }
+        
+        return GetMediaResult(image: resultImage, blurredImage: blurredImage, loadSignal: self.getLoadSignal(width: size, aspectRatio: 1.0, userLocation: .other, userContentType: .avatar, resource: resource, resourceSizeLimit: 1 * 1024 * 1024))
+    }
+
 
     public func getImage(peer: PeerReference, story: EngineStoryItem, media: Media, width: Int, aspectRatio: CGFloat, possibleWidths: [Int], includeBlurred: Bool = false, synchronous: Bool) -> GetMediaResult? {
         if synchronous {
@@ -508,6 +535,39 @@ public final class DirectMediaImageCache {
             }
             return GetMediaResult(image: nil, blurredImage: blurredImage, loadSignal: Signal { subscriber in
                 let result = self.getImageSynchronous(peer: peer, story: story, userLocation: .peer(peer.id), media: media, width: width, aspectRatio: aspectRatio, possibleWidths: possibleWidths, includeBlurred: includeBlurred)
+                guard let result = result else {
+                    subscriber.putNext(nil)
+                    subscriber.putCompletion()
+
+                    return EmptyDisposable
+                }
+
+                if let image = result.image {
+                    subscriber.putNext(image)
+                }
+
+                if let signal = result.loadSignal {
+                    return signal.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+                } else {
+                    subscriber.putCompletion()
+
+                    return EmptyDisposable
+                }
+            }
+            |> runOn(.concurrentDefaultQueue()))
+        }
+    }
+    
+    public func getAvatarImage(peer: PeerReference, resource: MediaResourceReference, immediateThumbnail: Data?, size: Int, includeBlurred: Bool = false, synchronous: Bool) -> GetMediaResult? {
+        if synchronous {
+            return self.getAvatarImageSynchronous(peer: peer, resource: resource, immediateThumbnail: immediateThumbnail, size: size, includeBlurred: includeBlurred)
+        } else {
+            var blurredImage: UIImage?
+            if includeBlurred, let data = immediateThumbnail.flatMap(decodeTinyThumbnail), let image = loadImage(data: data), let blurredImageValue = generateBlurredThumbnail(image: image, adjustSaturation: true) {
+                blurredImage = blurredImageValue
+            }
+            return GetMediaResult(image: nil, blurredImage: blurredImage, loadSignal: Signal { subscriber in
+                let result = self.getAvatarImageSynchronous(peer: peer, resource: resource, immediateThumbnail: immediateThumbnail, size: size, includeBlurred: includeBlurred)
                 guard let result = result else {
                     subscriber.putNext(nil)
                     subscriber.putCompletion()

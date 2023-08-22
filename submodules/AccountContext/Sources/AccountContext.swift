@@ -1027,6 +1027,8 @@ public protocol AccountContext: AnyObject {
     
     var userLimits: EngineConfiguration.UserLimits { get }
     
+    var imageCache: AnyObject? { get }
+    
     func storeSecureIdPassword(password: String)
     func getStoredSecureIdPassword() -> String?
     

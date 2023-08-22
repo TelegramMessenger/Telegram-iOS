@@ -13,6 +13,7 @@ import Emoji
 import Accelerate
 import ComponentFlow
 import AvatarStoryIndicatorComponent
+import DirectMediaImageCache
 
 private let deletedIcon = UIImage(bundleImageName: "Avatar/DeletedIcon")?.precomposed()
 private let phoneIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/PhoneIcon"), color: .white)
@@ -228,6 +229,19 @@ public final class AvatarNode: ASDisplayNode {
     ]
     
     public final class ContentNode: ASDisplayNode {
+        private struct Params: Equatable {
+            let peerId: EnginePeer.Id?
+            let resourceId: String?
+            
+            init(
+                peerId: EnginePeer.Id?,
+                resourceId: String?
+            ) {
+                self.peerId = peerId
+                self.resourceId = resourceId
+            }
+        }
+        
         public var font: UIFont {
             didSet {
                 if oldValue.pointSize != font.pointSize {
@@ -254,6 +268,9 @@ public final class AvatarNode: ASDisplayNode {
         
         public var unroundedImage: UIImage?
         private var currentImage: UIImage?
+        
+        private var params: Params?
+        private var loadDisposable: Disposable?
         
         public var badgeView: AvatarBadgeView? {
             didSet {
@@ -317,6 +334,10 @@ public final class AvatarNode: ASDisplayNode {
                     badgeView.update(content: .image(image))
                 }
             }
+        }
+        
+        deinit {
+            self.loadDisposable?.dispose()
         }
         
         override public func didLoad() {
@@ -496,6 +517,58 @@ public final class AvatarNode: ASDisplayNode {
             }
         }
         
+        func setPeerV2(
+            context genericContext: AccountContext,
+            account: Account? = nil,
+            theme: PresentationTheme,
+            peer: EnginePeer?,
+            authorOfMessage: MessageReference? = nil,
+            overrideImage: AvatarNodeImageOverride? = nil,
+            emptyColor: UIColor? = nil,
+            clipStyle: AvatarNodeClipStyle = .round,
+            synchronousLoad: Bool = false,
+            displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0),
+            storeUnrounded: Bool = false
+        ) {
+            let smallProfileImage = peer?.smallProfileImage
+            let params = Params(
+                peerId: peer?.id,
+                resourceId: smallProfileImage?.resource.id.stringRepresentation
+            )
+            if self.params == params {
+                return
+            }
+            self.params = params
+            
+            switch clipStyle {
+            case .none:
+                self.imageNode.clipsToBounds = false
+                self.imageNode.cornerRadius = 0.0
+            case .round:
+                self.imageNode.clipsToBounds = true
+                self.imageNode.cornerRadius = displayDimensions.height * 0.5
+            case .roundedRect:
+                self.imageNode.clipsToBounds = true
+                self.imageNode.cornerRadius = displayDimensions.height * 0.25
+            }
+            
+            if let imageCache = genericContext.imageCache as? DirectMediaImageCache, let peer, let smallProfileImage = peer.smallProfileImage, let peerReference = PeerReference(peer._asPeer()) {
+                if let result = imageCache.getAvatarImage(peer: peerReference, resource: MediaResourceReference.avatar(peer: peerReference, resource: smallProfileImage.resource), immediateThumbnail: peer.profileImageRepresentations.first?.immediateThumbnailData, size: Int(displayDimensions.width * UIScreenScale), synchronous: synchronousLoad) {
+                    if let image = result.image {
+                        self.imageNode.contents = image.cgImage
+                    }
+                    if let loadSignal = result.loadSignal {
+                        self.loadDisposable = (loadSignal |> deliverOnMainQueue).start(next: { [weak self] image in
+                            guard let self else {
+                                return
+                            }
+                            self.imageNode.contents = image?.cgImage
+                        })
+                    }
+                }
+            }
+        }
+        
         public func setPeer(
             context genericContext: AccountContext,
             account: Account? = nil,
@@ -655,6 +728,10 @@ public final class AvatarNode: ASDisplayNode {
                 context.setBlendMode(.copy)
                 context.setFillColor(UIColor.clear.cgColor)
                 context.fill(bounds)
+            }
+            
+            if !(parameters is AvatarNodeParameters) {
+                return
             }
             
             let colors: [UIColor]
@@ -913,6 +990,32 @@ public final class AvatarNode: ASDisplayNode {
             postbox: postbox,
             network: network,
             contentSettings: contentSettings,
+            theme: theme,
+            peer: peer,
+            authorOfMessage: authorOfMessage,
+            overrideImage: overrideImage,
+            emptyColor: emptyColor,
+            clipStyle: clipStyle,
+            synchronousLoad: synchronousLoad,
+            displayDimensions: displayDimensions,
+            storeUnrounded: storeUnrounded
+        )
+    }
+    
+    public func setPeerV2(
+        context genericContext: AccountContext,
+        theme: PresentationTheme,
+        peer: EnginePeer?,
+        authorOfMessage: MessageReference? = nil,
+        overrideImage: AvatarNodeImageOverride? = nil,
+        emptyColor: UIColor? = nil,
+        clipStyle: AvatarNodeClipStyle = .round,
+        synchronousLoad: Bool = false,
+        displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0),
+        storeUnrounded: Bool = false
+    ) {
+        self.contentNode.setPeerV2(
+            context: genericContext,
             theme: theme,
             peer: peer,
             authorOfMessage: authorOfMessage,

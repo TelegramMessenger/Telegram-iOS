@@ -2324,6 +2324,8 @@ public final class StoryItemSetContainerComponent: Component {
         
         func update(component: StoryItemSetContainerComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let isFirstTime = self.component == nil
+            
+            let startTime1 = CFAbsoluteTimeGetCurrent()
                         
             if self.component == nil {
                 self.sendMessageContext.setup(context: component.context, view: self, inputPanelExternalState: self.inputPanelExternalState, keyboardInputData: component.keyboardInputData)
@@ -2470,6 +2472,8 @@ public final class StoryItemSetContainerComponent: Component {
             
             component.externalState.dismissFraction = dismissFraction
             
+            let startTime2 = CFAbsoluteTimeGetCurrent()
+            
             transition.setPosition(view: self.componentContainerView, position: CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.5 + dismissPanOffset))
             transition.setBounds(view: self.componentContainerView, bounds: CGRect(origin: CGPoint(), size: availableSize))
             transition.setScale(view: self.componentContainerView, scale: dismissPanScale)
@@ -2480,6 +2484,8 @@ public final class StoryItemSetContainerComponent: Component {
             transition.setPosition(view: self.overlayContainerView, position: CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.5 + dismissPanOffset))
             transition.setBounds(view: self.overlayContainerView, bounds: CGRect(origin: CGPoint(), size: availableSize))
             transition.setScale(view: self.overlayContainerView, scale: dismissPanScale)
+            
+            let startTime21 = CFAbsoluteTimeGetCurrent()
             
             var bottomContentInset: CGFloat
             if !component.safeInsets.bottom.isZero {
@@ -2531,220 +2537,242 @@ public final class StoryItemSetContainerComponent: Component {
             } else {
                 inputPlaceholder = .plain(component.strings.Story_InputPlaceholderReplyPrivately)
             }
+            
+            let startTime22 = CFAbsoluteTimeGetCurrent()
+            
+            var currentHasFirstResponder = false
+            if let reactionContextNode = self.reactionContextNode {
+                if hasFirstResponder(reactionContextNode.view) {
+                    currentHasFirstResponder = true
+                }
+            }
+            if let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View {
+                if inputPanelView.hasFirstResponder() {
+                    currentHasFirstResponder = true
+                }
+            }
              
             var keyboardHeight = component.deviceMetrics.standardInputHeight(inLandscape: false)
             let keyboardWasHidden = self.inputPanelExternalState.isKeyboardHidden
-            let inputNodeVisible = self.sendMessageContext.currentInputMode == .media || hasFirstResponder(self)
+            let inputNodeVisible = self.sendMessageContext.currentInputMode == .media || currentHasFirstResponder
             self.inputPanel.parentState = state
-            let inputPanelSize = self.inputPanel.update(
-                transition: inputPanelTransition,
-                component: AnyComponent(MessageInputPanelComponent(
-                    externalState: self.inputPanelExternalState,
-                    context: component.context,
-                    theme: component.theme,
-                    strings: component.strings,
-                    style: .story,
-                    placeholder: inputPlaceholder,
-                    maxLength: 4096,
-                    queryTypes: [.mention, .emoji],
-                    alwaysDarkWhenHasText: component.metrics.widthClass == .regular,
-                    resetInputContents: resetInputContents,
-                    nextInputMode: { [weak self] hasText in
-                        if case .media = self?.sendMessageContext.currentInputMode {
-                            return .text
-                        } else {
-                            return hasText ? .emoji : .stickers
-                        }
-                    },
-                    areVoiceMessagesAvailable: component.slice.additionalPeerData.areVoiceMessagesAvailable,
-                    presentController: { [weak self] c in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        component.presentController(c, nil)
-                    },
-                    presentInGlobalOverlay: { [weak self] c in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        component.presentInGlobalOverlay(c, nil)
-                    },
-                    sendMessageAction: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.sendMessageContext.performSendMessageAction(view: self)
-                    },
-                    sendMessageOptionsAction: { [weak self] sourceView, gesture in
-                        guard let self else {
-                            return
-                        }
-                        self.sendMessageContext.presentSendMessageOptions(view: self, sourceView: sourceView, gesture: gesture)
-                    },
-                    sendStickerAction: { [weak self] sticker in
-                        guard let self else {
-                            return
-                        }
-                        self.sendMessageContext.performSendStickerAction(view: self, fileReference: .standalone(media: sticker))
-                    },
-                    setMediaRecordingActive: { [weak self] isActive, isVideo, sendAction in
-                        guard let self else {
-                            return
-                        }
-                        self.sendMessageContext.setMediaRecordingActive(view: self, isActive: isActive, isVideo: isVideo, sendAction: sendAction)
-                    },
-                    lockMediaRecording: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.sendMessageContext.lockMediaRecording()
-                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
-                    },
-                    stopAndPreviewMediaRecording: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.sendMessageContext.stopMediaRecording(view: self)
-                    },
-                    discardMediaRecordingPreview: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.sendMessageContext.videoRecorderValue?.dismissVideo()
-                        self.sendMessageContext.discardMediaRecordingPreview(view: self)
-                    },
-                    attachmentAction: component.slice.peer.isService ? nil : { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.sendMessageContext.presentAttachmentMenu(view: self, subject: .default)
-                    },
-                    myReaction: component.slice.item.storyItem.myReaction.flatMap { value -> MessageInputPanelComponent.MyReaction? in
-                        var centerAnimation: TelegramMediaFile?
-                        var animationFileId: Int64?
-                        
-                        switch value {
-                        case .builtin:
-                            if let availableReactions = component.availableReactions {
-                                for availableReaction in availableReactions.reactionItems {
-                                    if availableReaction.reaction.rawValue == value {
-                                        centerAnimation = availableReaction.listAnimation
-                                        break
+            var inputPanelSize: CGSize?
+            
+            let startTime23 = CFAbsoluteTimeGetCurrent()
+            
+            if component.slice.peer.id != component.context.account.peerId {
+                inputPanelSize = self.inputPanel.update(
+                    transition: inputPanelTransition,
+                    component: AnyComponent(MessageInputPanelComponent(
+                        externalState: self.inputPanelExternalState,
+                        context: component.context,
+                        theme: component.theme,
+                        strings: component.strings,
+                        style: .story,
+                        placeholder: inputPlaceholder,
+                        maxLength: 4096,
+                        queryTypes: [.mention, .emoji],
+                        alwaysDarkWhenHasText: component.metrics.widthClass == .regular,
+                        resetInputContents: resetInputContents,
+                        nextInputMode: { [weak self] hasText in
+                            if case .media = self?.sendMessageContext.currentInputMode {
+                                return .text
+                            } else {
+                                return hasText ? .emoji : .stickers
+                            }
+                        },
+                        areVoiceMessagesAvailable: component.slice.additionalPeerData.areVoiceMessagesAvailable,
+                        presentController: { [weak self] c in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.presentController(c, nil)
+                        },
+                        presentInGlobalOverlay: { [weak self] c in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.presentInGlobalOverlay(c, nil)
+                        },
+                        sendMessageAction: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.sendMessageContext.performSendMessageAction(view: self)
+                        },
+                        sendMessageOptionsAction: { [weak self] sourceView, gesture in
+                            guard let self else {
+                                return
+                            }
+                            self.sendMessageContext.presentSendMessageOptions(view: self, sourceView: sourceView, gesture: gesture)
+                        },
+                        sendStickerAction: { [weak self] sticker in
+                            guard let self else {
+                                return
+                            }
+                            self.sendMessageContext.performSendStickerAction(view: self, fileReference: .standalone(media: sticker))
+                        },
+                        setMediaRecordingActive: { [weak self] isActive, isVideo, sendAction in
+                            guard let self else {
+                                return
+                            }
+                            self.sendMessageContext.setMediaRecordingActive(view: self, isActive: isActive, isVideo: isVideo, sendAction: sendAction)
+                        },
+                        lockMediaRecording: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.sendMessageContext.lockMediaRecording()
+                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                        },
+                        stopAndPreviewMediaRecording: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.sendMessageContext.stopMediaRecording(view: self)
+                        },
+                        discardMediaRecordingPreview: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.sendMessageContext.videoRecorderValue?.dismissVideo()
+                            self.sendMessageContext.discardMediaRecordingPreview(view: self)
+                        },
+                        attachmentAction: component.slice.peer.isService ? nil : { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.sendMessageContext.presentAttachmentMenu(view: self, subject: .default)
+                        },
+                        myReaction: component.slice.item.storyItem.myReaction.flatMap { value -> MessageInputPanelComponent.MyReaction? in
+                            var centerAnimation: TelegramMediaFile?
+                            var animationFileId: Int64?
+                            
+                            switch value {
+                            case .builtin:
+                                if let availableReactions = component.availableReactions {
+                                    for availableReaction in availableReactions.reactionItems {
+                                        if availableReaction.reaction.rawValue == value {
+                                            centerAnimation = availableReaction.listAnimation
+                                            break
+                                        }
                                     }
                                 }
+                            case let .custom(fileId):
+                                animationFileId = fileId
                             }
-                        case let .custom(fileId):
-                            animationFileId = fileId
-                        }
-                        
-                        if animationFileId == nil && centerAnimation == nil {
-                            return nil
-                        }
-                        
-                        return MessageInputPanelComponent.MyReaction(reaction: value, file: centerAnimation, animationFileId: animationFileId)
-                    },
-                    likeAction: component.slice.peer.isService ? nil : { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.performLikeAction()
-                    },
-                    likeOptionsAction: component.slice.peer.isService ? nil : { [weak self] sourceView, gesture in
-                        gesture?.cancel()
-                        
-                        guard let self else {
-                            return
-                        }
-                        self.performLikeOptionsAction(sourceView: sourceView)
-                    },
-                    inputModeAction: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.sendMessageContext.toggleInputMode()
-                        if !hasFirstResponder(self) {
-                            self.state?.updated(transition: .spring(duration: 0.4))
-                        } else {
-                            self.state?.updated(transition: .immediate)
-                        }
-                    },
-                    timeoutAction: nil,
-                    forwardAction: component.slice.item.storyItem.isPublic ? { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.sendMessageContext.performShareAction(view: self)
-                    } : nil,
-                    moreAction: { [weak self] sourceView, gesture in
-                        guard let self else {
-                            return
-                        }
-                        self.performMoreAction(sourceView: sourceView, gesture: gesture)
-                    },
-                    presentVoiceMessagesUnavailableTooltip: { [weak self] view in
-                        guard let self, let component = self.component, self.voiceMessagesRestrictedTooltipController == nil else {
-                            return
-                        }
-                        let rect = view.convert(view.bounds, to: nil)
-                        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                        let text = presentationData.strings.Conversation_VoiceMessagesRestricted(component.slice.peer.compactDisplayTitle).string
-                        let controller = TooltipController(content: .text(text), baseFontSize: presentationData.listsFontSize.baseDisplaySize, padding: 2.0)
-                        controller.dismissed = { [weak self] _ in
-                            if let self {
-                                self.voiceMessagesRestrictedTooltipController = nil
-                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)))
+                            
+                            if animationFileId == nil && centerAnimation == nil {
+                                return nil
                             }
-                        }
-                        component.presentController(controller, TooltipControllerPresentationArguments(sourceViewAndRect: { [weak self] in
-                            if let self {
-                                return (self, rect)
+                            
+                            return MessageInputPanelComponent.MyReaction(reaction: value, file: centerAnimation, animationFileId: animationFileId)
+                        },
+                        likeAction: component.slice.peer.isService ? nil : { [weak self] in
+                            guard let self else {
+                                return
                             }
-                            return nil
-                        }))
-                        self.voiceMessagesRestrictedTooltipController = controller
-                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)))
-                    },
-                    presentTextLengthLimitTooltip: nil,
-                    presentTextFormattingTooltip: nil,
-                    paste: { [weak self] data in
-                        guard let self else {
-                            return
-                        }
-                        switch data {
-                        case let .images(images):
-                            self.sendMessageContext.presentMediaPasteboard(view: self, subjects: images.map { .image($0) })
-                        case let .video(data):
-                            let tempFilePath = NSTemporaryDirectory() + "\(Int64.random(in: 0...Int64.max)).mp4"
-                            let url = NSURL(fileURLWithPath: tempFilePath) as URL
-                            try? data.write(to: url)
-                            self.sendMessageContext.presentMediaPasteboard(view: self, subjects: [.video(url)])
-                        case let .gif(data):
-                            self.sendMessageContext.enqueueGifData(view: self, data: data)
-                        case let .sticker(image, isMemoji):
-                            self.sendMessageContext.enqueueStickerImage(view: self, image: image, isMemoji: isMemoji)
-                        case .text:
-                            break
-                        }
-                    },
-                    audioRecorder: self.sendMessageContext.audioRecorderValue,
-                    videoRecordingStatus: !self.sendMessageContext.hasRecordedVideoPreview ? self.sendMessageContext.videoRecorderValue?.audioStatus : nil,
-                    isRecordingLocked: self.sendMessageContext.isMediaRecordingLocked,
-                    recordedAudioPreview: self.sendMessageContext.recordedAudioPreview,
-                    hasRecordedVideoPreview: self.sendMessageContext.hasRecordedVideoPreview,
-                    wasRecordingDismissed: self.sendMessageContext.wasRecordingDismissed,
-                    timeoutValue: nil,
-                    timeoutSelected: false,
-                    displayGradient: false,
-                    bottomInset: component.inputHeight != 0.0 || inputNodeVisible ? 0.0 : bottomContentInset,
-                    isFormattingLocked: false,
-                    hideKeyboard: self.sendMessageContext.currentInputMode == .media,
-                    forceIsEditing: self.sendMessageContext.currentInputMode == .media,
-                    disabledPlaceholder: disabledPlaceholder,
-                    storyId: component.slice.item.storyItem.id
-                )),
-                environment: {},
-                containerSize: CGSize(width: inputPanelAvailableWidth, height: 200.0)
-            )
+                            self.performLikeAction()
+                        },
+                        likeOptionsAction: component.slice.peer.isService ? nil : { [weak self] sourceView, gesture in
+                            gesture?.cancel()
+                            
+                            guard let self else {
+                                return
+                            }
+                            self.performLikeOptionsAction(sourceView: sourceView)
+                        },
+                        inputModeAction: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.sendMessageContext.toggleInputMode()
+                            if !hasFirstResponder(self) {
+                                self.state?.updated(transition: .spring(duration: 0.4))
+                            } else {
+                                self.state?.updated(transition: .immediate)
+                            }
+                        },
+                        timeoutAction: nil,
+                        forwardAction: component.slice.item.storyItem.isPublic ? { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.sendMessageContext.performShareAction(view: self)
+                        } : nil,
+                        moreAction: { [weak self] sourceView, gesture in
+                            guard let self else {
+                                return
+                            }
+                            self.performMoreAction(sourceView: sourceView, gesture: gesture)
+                        },
+                        presentVoiceMessagesUnavailableTooltip: { [weak self] view in
+                            guard let self, let component = self.component, self.voiceMessagesRestrictedTooltipController == nil else {
+                                return
+                            }
+                            let rect = view.convert(view.bounds, to: nil)
+                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                            let text = presentationData.strings.Conversation_VoiceMessagesRestricted(component.slice.peer.compactDisplayTitle).string
+                            let controller = TooltipController(content: .text(text), baseFontSize: presentationData.listsFontSize.baseDisplaySize, padding: 2.0)
+                            controller.dismissed = { [weak self] _ in
+                                if let self {
+                                    self.voiceMessagesRestrictedTooltipController = nil
+                                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)))
+                                }
+                            }
+                            component.presentController(controller, TooltipControllerPresentationArguments(sourceViewAndRect: { [weak self] in
+                                if let self {
+                                    return (self, rect)
+                                }
+                                return nil
+                            }))
+                            self.voiceMessagesRestrictedTooltipController = controller
+                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)))
+                        },
+                        presentTextLengthLimitTooltip: nil,
+                        presentTextFormattingTooltip: nil,
+                        paste: { [weak self] data in
+                            guard let self else {
+                                return
+                            }
+                            switch data {
+                            case let .images(images):
+                                self.sendMessageContext.presentMediaPasteboard(view: self, subjects: images.map { .image($0) })
+                            case let .video(data):
+                                let tempFilePath = NSTemporaryDirectory() + "\(Int64.random(in: 0...Int64.max)).mp4"
+                                let url = NSURL(fileURLWithPath: tempFilePath) as URL
+                                try? data.write(to: url)
+                                self.sendMessageContext.presentMediaPasteboard(view: self, subjects: [.video(url)])
+                            case let .gif(data):
+                                self.sendMessageContext.enqueueGifData(view: self, data: data)
+                            case let .sticker(image, isMemoji):
+                                self.sendMessageContext.enqueueStickerImage(view: self, image: image, isMemoji: isMemoji)
+                            case .text:
+                                break
+                            }
+                        },
+                        audioRecorder: self.sendMessageContext.audioRecorderValue,
+                        videoRecordingStatus: !self.sendMessageContext.hasRecordedVideoPreview ? self.sendMessageContext.videoRecorderValue?.audioStatus : nil,
+                        isRecordingLocked: self.sendMessageContext.isMediaRecordingLocked,
+                        recordedAudioPreview: self.sendMessageContext.recordedAudioPreview,
+                        hasRecordedVideoPreview: self.sendMessageContext.hasRecordedVideoPreview,
+                        wasRecordingDismissed: self.sendMessageContext.wasRecordingDismissed,
+                        timeoutValue: nil,
+                        timeoutSelected: false,
+                        displayGradient: false,
+                        bottomInset: component.inputHeight != 0.0 || inputNodeVisible ? 0.0 : bottomContentInset,
+                        isFormattingLocked: false,
+                        hideKeyboard: self.sendMessageContext.currentInputMode == .media,
+                        forceIsEditing: self.sendMessageContext.currentInputMode == .media,
+                        disabledPlaceholder: disabledPlaceholder,
+                        storyId: component.slice.item.storyItem.id
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: inputPanelAvailableWidth, height: 200.0)
+                )
+            }
+            
+            let startTime3 = CFAbsoluteTimeGetCurrent()
             
             var inputPanelInset: CGFloat = component.containerInsets.bottom
             var inputHeight = component.inputHeight
@@ -2816,7 +2844,7 @@ public final class StoryItemSetContainerComponent: Component {
                 inputPanelBottomInset = bottomContentInset
                 if case .regular = component.metrics.widthClass {
                     bottomContentInset += 60.0
-                } else {
+                } else if let inputPanelSize {
                     bottomContentInset += inputPanelSize.height
                 }
                 inputPanelIsOverlay = false
@@ -2831,6 +2859,8 @@ public final class StoryItemSetContainerComponent: Component {
             
             let minimizedHeight = max(100.0, availableSize.height - (325.0 + 12.0))
             let defaultHeight = 60.0 + component.safeInsets.bottom + 1.0
+            
+            let startTime4 = CFAbsoluteTimeGetCurrent()
             
             var validViewListIds: [Int32] = []
             if component.slice.peer.id == component.context.account.peerId, let currentIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
@@ -3310,6 +3340,8 @@ public final class StoryItemSetContainerComponent: Component {
                 self.viewLists.removeValue(forKey: id)
             }
             
+            let startTime5 = CFAbsoluteTimeGetCurrent()
+            
             let itemSize = CGSize(width: availableSize.width, height: ceil(availableSize.width * 1.77778))
             let contentDefaultBottomInset: CGFloat = bottomContentInset
             
@@ -3464,6 +3496,8 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                 }
             }
+            
+            let startTime6 = CFAbsoluteTimeGetCurrent()
             
             let soundButtonState = isSilentVideo || component.isAudioMuted
             let soundButtonSize = self.soundButton.update(
@@ -3748,29 +3782,35 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
+            let startTime7 = CFAbsoluteTimeGetCurrent()
+            
             let topGradientHeight: CGFloat = 90.0
             let topContentGradientRect = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: contentFrame.width, height: topGradientHeight))
             transition.setPosition(view: self.topContentGradientView, position: topContentGradientRect.center)
             transition.setBounds(view: self.topContentGradientView, bounds: CGRect(origin: CGPoint(), size: topContentGradientRect.size))
             
-            let inputPanelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - inputPanelSize.width) / 2.0), y: availableSize.height - inputPanelBottomInset - inputPanelSize.height), size: inputPanelSize)
-            var inputPanelAlpha: CGFloat = component.slice.peer.id == component.context.account.peerId || component.hideUI || self.isEditingStory ? 0.0 : 1.0
-            if case .regular = component.metrics.widthClass {
-                inputPanelAlpha *= component.visibilityFraction
-            }
-            if let inputPanelView = self.inputPanel.view {
-                if inputPanelView.superview == nil {
-                    self.componentContainerView.addSubview(inputPanelView)
+            var inputPanelFrameValue: CGRect?
+            if let inputPanelSize {
+                let inputPanelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - inputPanelSize.width) / 2.0), y: availableSize.height - inputPanelBottomInset - inputPanelSize.height), size: inputPanelSize)
+                inputPanelFrameValue = inputPanelFrame
+                var inputPanelAlpha: CGFloat = component.slice.peer.id == component.context.account.peerId || component.hideUI || self.isEditingStory ? 0.0 : 1.0
+                if case .regular = component.metrics.widthClass {
+                    inputPanelAlpha *= component.visibilityFraction
                 }
-                
-                var inputPanelOffset: CGFloat = 0.0
-                if component.slice.peer.id != component.context.account.peerId && !self.inputPanelExternalState.isEditing {
-                    let bandingOffset = scrollingRubberBandingOffset(offset: verticalPanFraction * availableSize.height, bandingStart: 0.0, range: 10.0)
-                    inputPanelOffset = -max(0.0, min(10.0, bandingOffset))
+                if let inputPanelView = self.inputPanel.view {
+                    if inputPanelView.superview == nil {
+                        self.componentContainerView.addSubview(inputPanelView)
+                    }
+                    
+                    var inputPanelOffset: CGFloat = 0.0
+                    if component.slice.peer.id != component.context.account.peerId && !self.inputPanelExternalState.isEditing {
+                        let bandingOffset = scrollingRubberBandingOffset(offset: verticalPanFraction * availableSize.height, bandingStart: 0.0, range: 10.0)
+                        inputPanelOffset = -max(0.0, min(10.0, bandingOffset))
+                    }
+                    
+                    inputPanelTransition.setFrame(view: inputPanelView, frame: inputPanelFrame.offsetBy(dx: 0.0, dy: inputPanelOffset))
+                    transition.setAlpha(view: inputPanelView, alpha: inputPanelAlpha)
                 }
-                
-                inputPanelTransition.setFrame(view: inputPanelView, frame: inputPanelFrame.offsetBy(dx: 0.0, dy: inputPanelOffset))
-                transition.setAlpha(view: inputPanelView, alpha: inputPanelAlpha)
             }
             
             if let captionItem = self.captionItem, captionItem.itemId != component.slice.item.storyItem.id {
@@ -3915,7 +3955,11 @@ public final class StoryItemSetContainerComponent: Component {
                 likeRect.origin.x -= 30.0
                 reactionsAnchorRect = likeRect
             } else {
-                reactionsAnchorRect = CGRect(origin: CGPoint(x: inputPanelFrame.maxX - 40.0, y: inputPanelFrame.minY + 9.0), size: CGSize(width: 32.0, height: 32.0)).insetBy(dx: -4.0, dy: -4.0)
+                if let inputPanelFrameValue {
+                    reactionsAnchorRect = CGRect(origin: CGPoint(x: inputPanelFrameValue.maxX - 40.0, y: inputPanelFrameValue.minY + 9.0), size: CGSize(width: 32.0, height: 32.0)).insetBy(dx: -4.0, dy: -4.0)
+                } else {
+                    reactionsAnchorRect = CGRect()
+                }
             }
             
             var effectiveDisplayReactions = false
@@ -4297,7 +4341,7 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
-            let bottomGradientHeight = inputPanelSize.height + 32.0
+            let bottomGradientHeight = (inputPanelSize?.height ?? 0.0) + 32.0
             transition.setFrame(layer: self.bottomContentGradientLayer, frame: CGRect(origin: CGPoint(x: contentFrame.minX, y: availableSize.height - inputHeight - bottomGradientHeight), size: CGSize(width: contentFrame.width, height: bottomGradientHeight)))
             //transition.setAlpha(layer: self.bottomContentGradientLayer, alpha: inputPanelIsOverlay ? 1.0 : 0.0)
             transition.setAlpha(layer: self.bottomContentGradientLayer, alpha: 0.0)
@@ -4354,9 +4398,13 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
+            let startTime8 = CFAbsoluteTimeGetCurrent()
+            
             self.ignoreScrolling = false
             
             self.updateScrolling(transition: itemsTransition)
+            
+            let startTime9 = CFAbsoluteTimeGetCurrent()
             
             if let focusedItem, let visibleItem = self.visibleItems[focusedItem.storyItem.id], let index = focusedItem.position {
                 let navigationStripSideInset: CGFloat = 8.0
@@ -4396,8 +4444,27 @@ public final class StoryItemSetContainerComponent: Component {
             component.externalState.derivedMediaSize = contentFrame.size
             if component.slice.peer.id == component.context.account.peerId {
                 component.externalState.derivedBottomInset = availableSize.height - itemsContainerFrame.maxY
+            } else if let inputPanelFrameValue {
+                component.externalState.derivedBottomInset = availableSize.height - min(inputPanelFrameValue.minY, contentFrame.maxY)
             } else {
-                component.externalState.derivedBottomInset = availableSize.height - min(inputPanelFrame.minY, contentFrame.maxY)
+                component.externalState.derivedBottomInset = 0.0
+            }
+            
+            if !"".isEmpty {
+                print("inner update time:\n" +
+                      "  1: \((CFAbsoluteTimeGetCurrent() - startTime1) * 1000.0) ms\n" +
+                      "  2: \((CFAbsoluteTimeGetCurrent() - startTime2) * 1000.0) ms\n" +
+                      "  2.1: \((CFAbsoluteTimeGetCurrent() - startTime21) * 1000.0) ms\n" +
+                      "  2.2: \((CFAbsoluteTimeGetCurrent() - startTime22) * 1000.0) ms\n" +
+                      "  2.3: \((CFAbsoluteTimeGetCurrent() - startTime23) * 1000.0) ms\n" +
+                      "  3: \((CFAbsoluteTimeGetCurrent() - startTime3) * 1000.0) ms\n" +
+                      "  4: \((CFAbsoluteTimeGetCurrent() - startTime4) * 1000.0) ms\n" +
+                      "  5: \((CFAbsoluteTimeGetCurrent() - startTime5) * 1000.0) ms\n" +
+                      "  6: \((CFAbsoluteTimeGetCurrent() - startTime6) * 1000.0) ms\n" +
+                      "  7: \((CFAbsoluteTimeGetCurrent() - startTime7) * 1000.0) ms\n" +
+                      "  8: \((CFAbsoluteTimeGetCurrent() - startTime8) * 1000.0) ms\n" +
+                      "  9: \((CFAbsoluteTimeGetCurrent() - startTime9) * 1000.0) ms\n"
+                )
             }
             
             return contentSize

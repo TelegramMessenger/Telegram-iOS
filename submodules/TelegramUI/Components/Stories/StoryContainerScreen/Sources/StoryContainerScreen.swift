@@ -1210,7 +1210,9 @@ private final class StoryContainerScreenComponent: Component {
                         if component.content.stateValue?.slice == nil {
                             self.environment?.controller()?.dismiss()
                         } else {
+                            let startTime = CFAbsoluteTimeGetCurrent()
                             self.state?.updated(transition: .immediate)
+                            print("update time: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                         }
                     } else {
                         DispatchQueue.main.async { [weak self] in
