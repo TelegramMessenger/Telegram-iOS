@@ -70,6 +70,55 @@ private struct ChatControllerNodeDerivedLayoutState {
     var upperInputPositionBound: CGFloat?
 }
 
+class HistoryNodeContainer: ASDisplayNode {
+    private(set) var secretContainer: UIView?
+    public var isSecret: Bool = false {
+        didSet {
+            if self.isSecret != oldValue {
+                if self.isNodeLoaded {
+                    (self.view as? UITextField)?.isSecureTextEntry = self.isSecret
+                }
+            }
+        }
+    }
+    
+    init(isSecret: Bool) {
+        self.isSecret = isSecret
+        
+        super.init()
+        
+        self.setViewBlock {
+            let captureProtectedView = UITextField(frame: CGRect())
+            captureProtectedView.isSecureTextEntry = self.isSecret
+            self.secretContainer = captureProtectedView.subviews.first
+            return captureProtectedView
+        }
+        
+        let _ = self.view
+    }
+    
+    override func addSubnode(_ subnode: ASDisplayNode) {
+        if let secretContainer = self.secretContainer {
+            secretContainer.addSubnode(subnode)
+        } else {
+            super.addSubnode(subnode)
+        }
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let secretContainer = self.secretContainer {
+            return secretContainer.hitTest(point, with: event)
+        } else {
+            return super.hitTest(point, with: event)
+        }
+    }
+    
+    func updateSize(size: CGSize, transition: ContainedViewLayoutTransition) {
+        /*if let secretContainer = self.secretContainer {
+        }*/
+    }
+}
+
 class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let context: AccountContext
     let chatLocation: ChatLocation
@@ -96,7 +145,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let backgroundNode: WallpaperBackgroundNode
     let historyNode: ChatHistoryListNode
     var blurredHistoryNode: ASImageNode?
-    let historyNodeContainer: ASDisplayNode
+    let historyNodeContainer: HistoryNodeContainer
     let loadingNode: ChatLoadingNode
     private(set) var loadingPlaceholderNode: ChatLoadingPlaceholderNode?
     
@@ -438,9 +487,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         //self.historyScrollingArea = SparseDiscreteScrollingArea()
         //self.historyNode.historyScrollingArea = self.historyScrollingArea
 
-        self.historyNodeContainer = ASDisplayNode()
+        self.historyNodeContainer = HistoryNodeContainer(isSecret: chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat)
+        
         self.historyNodeContainer.addSubnode(self.historyNode)
-        //self.historyNodeContainer.addSubnode(self.historyScrollingArea)
 
         var getContentAreaInScreenSpaceImpl: (() -> CGRect)?
         var onTransitionEventImpl: ((ContainedViewLayoutTransition) -> Void)?
@@ -857,6 +906,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 statusBar.statusBarStyle = .Ignore
             }
         }
+        
+        self.historyNodeContainer.isSecret = self.chatPresentationInterfaceState.copyProtectionEnabled || self.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat
 
         var previousListBottomInset: CGFloat?
         if !self.historyNode.frame.isEmpty {
@@ -1484,6 +1535,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
         transition.updateBounds(node: self.historyNodeContainer, bounds: contentBounds)
         transition.updatePosition(node: self.historyNodeContainer, position: contentBounds.center)
+        self.historyNodeContainer.updateSize(size: contentBounds.size, transition: transition)
         
         transition.updateBounds(node: self.historyNode, bounds: CGRect(origin: CGPoint(), size: contentBounds.size))
         transition.updatePosition(node: self.historyNode, position: CGPoint(x: contentBounds.size.width / 2.0, y: contentBounds.size.height / 2.0))
