@@ -1,0 +1,3 @@
+mode         = .fp16
+extra_cflags = -march=armv8.2a+fp16 -DSKCMS_OPT_INTO_NEON_FP16 -Wno-implicit-float-conversion
+include ninja/android

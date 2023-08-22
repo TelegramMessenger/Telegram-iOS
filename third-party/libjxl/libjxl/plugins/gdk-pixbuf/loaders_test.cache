@@ -1,0 +1,16 @@
+# GdkPixbuf Image Loader Modules file for testing
+# Automatically generated file, do not edit
+# Created by gdk-pixbuf-query-loaders from gdk-pixbuf-2.42.2
+#
+# Generated with:
+#  GDK_PIXBUF_MODULEDIR=`pwd`/build/plugins/gdk-pixbuf/ gdk-pixbuf-query-loaders
+#
+# Modified to use the library from the current working directory at runtime.
+"./libpixbufloader-jxl.so"
+"jxl" 4 "gdk-pixbuf" "JPEG XL image" "BSD-3"
+"image/jxl" ""
+"jxl" ""
+"\377\n" "  " 100
+"...\fJXL \r\n\207\n" "zzz         " 100
+
+

@@ -1,0 +1,3 @@
+usr/lib/*/gdk-pixbuf-*/*/loaders/*
+usr/share/mime/packages/image-jxl.xml
+usr/share/thumbnailers/jxl.thumbnailer

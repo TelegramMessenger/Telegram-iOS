@@ -1,0 +1,110 @@
+From 44a21be2c4de409f80d90cbcc2c20cb3f42e859e Mon Sep 17 00:00:00 2001
+From: Sami Boukortt <sboukortt@google.com>
+Date: Fri, 16 Oct 2020 20:01:02 +0200
+Subject: [PATCH] Fixes for Octave
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Copyright (c) the JPEG XL Project Authors. All rights reserved.
+
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+
+----
+
+ifft2: https://savannah.gnu.org/bugs/?43742
+
+Removing #include <matrix.h>: https://octave.org/doc/v5.2.0/Getting-Started-with-Mex_002dFiles.html
+“One important difference between Octave and MATLAB is that the header
+"matrix.h" is implicitly included through the inclusion of "mex.h".”
+
+Length checks: it appears that functions(…).file for MEX files in Octave
+is empty.
+---
+ fast_conv_fft.m                          | 2 +-
+ matlabPyrTools_1.4_fixed/MEX/corrDn.c    | 1 -
+ matlabPyrTools_1.4_fixed/MEX/pointOp.c   | 1 -
+ matlabPyrTools_1.4_fixed/MEX/upConv.c    | 1 -
+ matlabPyrTools_1.4_fixed/reconSpyr.m     | 2 +-
+ matlabPyrTools_1.4_fixed/reconSpyrLevs.m | 2 +-
+ 6 files changed, 3 insertions(+), 6 deletions(-)
+
+diff --git a/fast_conv_fft.m b/fast_conv_fft.m
+index 65ceef8..b89e54b 100644
+--- a/fast_conv_fft.m
++++ b/fast_conv_fft.m
+@@ -16,7 +16,7 @@ pad_size = (size(fH)-size(X));
+ 
+ fX = fft2( padarray( X, pad_size, pad_value, 'post' ) );
+ 
+-Yl = real(ifft2( fX.*fH, size(fX,1), size(fX,2), 'symmetric' ));
++Yl = real(ifft2( fX.*fH, size(fX,1), size(fX,2)));
+ 
+ Y = Yl(1:size(X,1),1:size(X,2));
+ 
+diff --git a/matlabPyrTools_1.4_fixed/MEX/corrDn.c b/matlabPyrTools_1.4_fixed/MEX/corrDn.c
+index d02e272..17e739e 100755
+--- a/matlabPyrTools_1.4_fixed/MEX/corrDn.c
++++ b/matlabPyrTools_1.4_fixed/MEX/corrDn.c
+@@ -6,7 +6,6 @@ RES = corrDn(IM, FILT, EDGES, STEP, START, STOP);
+ */
+ 
+ #define V4_COMPAT
+-#include <matrix.h>  /* Matlab matrices */
+ #include <mex.h>
+ 
+ #include "convolve.h"
+diff --git a/matlabPyrTools_1.4_fixed/MEX/pointOp.c b/matlabPyrTools_1.4_fixed/MEX/pointOp.c
+index 3623a02..e553adf 100755
+--- a/matlabPyrTools_1.4_fixed/MEX/pointOp.c
++++ b/matlabPyrTools_1.4_fixed/MEX/pointOp.c
+@@ -5,7 +5,6 @@ RES = pointOp(IM, LUT, ORIGIN, INCREMENT, WARNINGS)
+ */
+ 
+ #define V4_COMPAT
+-#include <matrix.h>  /* Matlab matrices */
+ #include <mex.h>
+ 
+ #include <stddef.h>  /* NULL */
+diff --git a/matlabPyrTools_1.4_fixed/MEX/upConv.c b/matlabPyrTools_1.4_fixed/MEX/upConv.c
+index 98a2bec..08fdf75 100755
+--- a/matlabPyrTools_1.4_fixed/MEX/upConv.c
++++ b/matlabPyrTools_1.4_fixed/MEX/upConv.c
+@@ -6,7 +6,6 @@ RES = upConv(IM, FILT, EDGES, STEP, START, STOP, RES);
+ */
+ 
+ #define V4_COMPAT
+-#include <matrix.h>  /* Matlab matrices */
+ #include <mex.h>
+ 
+ #include "convolve.h"
+diff --git a/matlabPyrTools_1.4_fixed/reconSpyr.m b/matlabPyrTools_1.4_fixed/reconSpyr.m
+index 05eeafb..1440d8a 100644
+--- a/matlabPyrTools_1.4_fixed/reconSpyr.m
++++ b/matlabPyrTools_1.4_fixed/reconSpyr.m
+@@ -31,7 +31,7 @@ function res = reconSpyr(pyr, pind, filtfile, edges, levs, bands)
+ % Deterimine whether a MEX version of upConv is available
+ is_mex = true;
+ finfo = functions( @upConv );
+-if( strcmp( finfo.file((end-2):end), '.m') )
++if( length(finfo.file) > 2 && strcmp( finfo.file((end-2):end), '.m') )
+     is_mex = false;
+ end
+ 
+diff --git a/matlabPyrTools_1.4_fixed/reconSpyrLevs.m b/matlabPyrTools_1.4_fixed/reconSpyrLevs.m
+index ac5e2b1..d3b91d5 100644
+--- a/matlabPyrTools_1.4_fixed/reconSpyrLevs.m
++++ b/matlabPyrTools_1.4_fixed/reconSpyrLevs.m
+@@ -11,7 +11,7 @@ function res = reconSpyrLevs(pyr,pind,lofilt,bfilts,edges,levs,bands)
+ % Deterimine whether MEX version of upConv is available
+ is_mex = true;
+ finfo = functions( @upConv );
+-if( strcmp( finfo.file((end-2):end), '.m') )
++if( length(finfo.file) > 2 && strcmp( finfo.file((end-2):end), '.m') )
+     is_mex = false;
+ end
+ 
+-- 
+2.28.0
+

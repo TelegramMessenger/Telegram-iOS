@@ -1,0 +1,95 @@
+jpeg-xl (0.9.0) UNRELEASED; urgency=medium
+
+  * Bump JPEG XL version to 0.9.0.
+
+ -- JPEG XL Maintainers <jpegxl@google.com>  Wed, 11 Jan 2023 16:12:35 +0000
+
+jpeg-xl (0.8) unstable; urgency=medium
+
+  * Bump JPEG XL version to 0.8.
+
+ -- JPEG XL Maintainers <jpegxl@google.com>  Wed, 11 Jan 2023 16:12:34 +0000
+
+jpeg-xl (0.7) unstable; urgency=medium
+
+  * Bump JPEG XL version to 0.7.
+
+ -- JPEG XL Maintainers <jpegxl@google.com>  Mon, 08 Aug 2022 14:43:58 +0000
+
+jpeg-xl (0.6) unstable; urgency=medium
+
+  * Bump JPEG XL version to 0.6.
+
+ -- JPEG XL Maintainers <jpegxl@google.com>  Fri, 10 Sep 2021 16:08:17 +0200
+
+jpeg-xl (0.5.0) unstable; urgency=medium
+
+  * Bump JPEG XL version to 0.5.0.
+
+ -- JPEG XL Maintainers <jpegxl@google.com>  Thu, 12 Aug 2021 23:49:40 +0200
+
+jpeg-xl (0.3.7) UNRELEASED; urgency=medium
+
+  * Bump JPEG XL version to 0.3.7.
+
+ -- Sami Boukortt <sboukortt@google.com>  Mon, 29 Mar 2021 12:14:20 +0200
+
+jpeg-xl (0.3.6) UNRELEASED; urgency=medium
+
+  * Bump JPEG XL version to 0.3.6.
+
+ -- Sami Boukortt <sboukortt@google.com>  Thu, 25 Mar 2021 17:40:58 +0100
+
+jpeg-xl (0.3.5) UNRELEASED; urgency=medium
+
+  * Bump JPEG XL version to 0.3.5.
+
+ -- Sami Boukortt <sboukortt@google.com>  Tue, 23 Mar 2021 15:20:44 +0100
+
+jpeg-xl (0.3.4) UNRELEASED; urgency=medium
+
+  * Bump JPEG XL version to 0.3.4.
+
+ -- Sami Boukortt <sboukortt@google.com>  Tue, 16 Mar 2021 12:13:59 +0100
+
+jpeg-xl (0.3.3) UNRELEASED; urgency=medium
+
+  * Bump JPEG XL version to 0.3.3.
+
+ -- Sami Boukortt <sboukortt@google.com>  Fri, 5 Mar 2021 19:15:26 +0100
+
+jpeg-xl (0.3.2) UNRELEASED; urgency=medium
+
+  * Bump JPEG XL version to 0.3.2.
+
+ -- Alex Deymo <deymo@google.com>  Fri, 12 Feb 2021 21:00:12 +0100
+
+jpeg-xl (0.3.1) UNRELEASED; urgency=medium
+
+  * Bump JPEG XL version to 0.3.1.
+
+ -- Alex Deymo <deymo@google.com>  Tue, 09 Feb 2021 09:48:43 +0100
+
+jpeg-xl (0.3) UNRELEASED; urgency=medium
+
+  * Bump JPEG XL version to 0.3.
+
+ -- Alex Deymo <deymo@google.com>  Wed, 27 Jan 2021 22:36:32 +0100
+
+jpeg-xl (0.2) UNRELEASED; urgency=medium
+
+  * Bump JPEG XL version to 0.2.
+
+ -- Alex Deymo <deymo@google.com>  Wed, 23 Nov 2020 20:42:10 +0100
+
+jpeg-xl (0.1) UNRELEASED; urgency=medium
+
+  * JPEG XL format release candidate.
+
+ -- Alex Deymo <deymo@google.com>  Fri, 13 Nov 2020 17:42:24 +0100
+
+jpeg-xl (0.0.2-1) UNRELEASED; urgency=medium
+
+  * Initial debian package.
+
+ -- Alex Deymo <deymo@google.com>  Tue, 27 Oct 2020 15:27:59 +0100

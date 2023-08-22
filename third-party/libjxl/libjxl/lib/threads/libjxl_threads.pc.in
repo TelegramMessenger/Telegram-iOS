@@ -1,0 +1,13 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=@PKGCONFIG_TARGET_LIBS@
+includedir=@PKGCONFIG_TARGET_INCLUDES@
+
+Name: libjxl_threads
+Description: JPEG XL multi-thread runner using std::threads.
+Version: @JPEGXL_LIBRARY_VERSION@
+Requires.private: @JPEGXL_THREADS_LIBRARY_REQUIRES@
+Libs: -L${libdir} -ljxl_threads
+Libs.private: -lm
+Cflags: -I${includedir}
+Cflags.private: -DJXL_THREADS_STATIC_DEFINE

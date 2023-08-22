@@ -1,0 +1,7 @@
+mode          = .xsan
+extra_cflags  = -fsanitize=address,integer,undefined -fno-sanitize-recover=all
+extra_ldflags = -fsanitize=address,integer,undefined
+include ninja/ios
+
+cc = /usr/bin/clang
+cxx = /usr/bin/clang++

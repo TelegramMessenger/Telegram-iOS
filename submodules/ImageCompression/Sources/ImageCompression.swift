@@ -44,6 +44,14 @@ public func compressImageToJPEG(_ image: UIImage, quality: Float) -> Data? {
     return data as Data
 }
 
+public func compressImageToJPEGXL(_ image: UIImage, quality: Int) -> Data? {
+    return compressJPEGXLData(image, Int32(quality))
+}
+
+public func decompressImageFromJPEGXL(data: Data) -> UIImage? {
+    return decompressJPEGXLData(data)
+}
+
 @available(iOSApplicationExtension 11.0, iOS 11.0, *)
 public func compressImage(_ image: UIImage, quality: Float) -> Data? {
     let data = NSMutableData()
