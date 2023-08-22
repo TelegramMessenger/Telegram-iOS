@@ -24,7 +24,7 @@ public func makeTelegramAccountAuxiliaryMethods(uploadInBackground: ((Postbox, M
         } else if let resource = resource as? LocalFileGifMediaResource {
             return fetchLocalFileGifMediaResource(resource: resource)
         } else if let photoLibraryResource = resource as? PhotoLibraryMediaResource {
-            return fetchPhotoLibraryResource(localIdentifier: photoLibraryResource.localIdentifier)
+            return fetchPhotoLibraryResource(localIdentifier: photoLibraryResource.localIdentifier, width: photoLibraryResource.width, height: photoLibraryResource.height, format: photoLibraryResource.format, quality: photoLibraryResource.quality)
         } else if let resource = resource as? ICloudFileResource {
             return fetchICloudFileResource(resource: resource)
         } else if let resource = resource as? SecureIdLocalImageResource {
