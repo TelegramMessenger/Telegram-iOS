@@ -9758,6 +9758,8 @@ Sorry for the inconvenience.";
 
 "MediaEditor.AddGif" = "Add GIF";
 "MediaEditor.AddLocation" = "Add Location";
+"MediaEditor.AddLocationShort" = "Location";
+"MediaEditor.AddAudio" = "Audio";
 
 "Premium.Stories" = "Upgraded Stories";
 "Premium.StoriesInfo" = "Priority order, stealth mode, permanent views history and more.";

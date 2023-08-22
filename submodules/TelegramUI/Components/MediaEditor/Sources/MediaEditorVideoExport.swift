@@ -361,7 +361,35 @@ public final class MediaEditorVideoExport {
     }
     
     private func setupWithAsset(_ asset: AVAsset, additionalAsset: AVAsset?) {
-        self.reader = try? AVAssetReader(asset: asset)
+        var inputAsset = asset
+        if let audioData = self.configuration.values.audioTrack {
+            let mixComposition = AVMutableComposition()
+               
+            let audioAsset = AVURLAsset(url: URL(fileURLWithPath: audioData.path))
+            
+            guard
+                let videoTrack = mixComposition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
+                let musicTrack = mixComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid),
+                let videoAssetTrack = asset.tracks(withMediaType: .video).first,
+                let musicAssetTrack = audioAsset.tracks(withMediaType: .audio).first,
+                let duration = self.durationValue
+            else {
+                print("error")
+                return
+            }
+            
+            try? videoTrack.insertTimeRange(CMTimeRangeMake(start: .zero, duration: duration), of: videoAssetTrack, at: .zero)
+            
+            if let audioAssetTrack = asset.tracks(withMediaType: .audio).first, let audioTrack = mixComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) {
+                try? audioTrack.insertTimeRange(CMTimeRangeMake(start: .zero, duration: duration), of: audioAssetTrack, at: .zero)
+            }
+            
+            try? musicTrack.insertTimeRange(CMTimeRangeMake(start: .zero, duration: duration), of: musicAssetTrack, at: .zero)
+            
+            inputAsset = mixComposition
+        }
+        
+        self.reader = try? AVAssetReader(asset: inputAsset)
         
         var mirror = false
         if additionalAsset == nil, self.configuration.values.videoIsMirrored {
@@ -392,7 +420,7 @@ public final class MediaEditorVideoExport {
         }
         writer.setup(configuration: self.configuration, outputPath: self.outputPath)
                 
-        let videoTracks = asset.tracks(withMediaType: .video)
+        let videoTracks = inputAsset.tracks(withMediaType: .video)
         let additionalVideoTracks = additionalAsset?.tracks(withMediaType: .video)
         if videoTracks.count > 0 {
             var sourceFrameRate: Float = 0.0
@@ -407,7 +435,7 @@ public final class MediaEditorVideoExport {
                 kCVPixelBufferMetalCompatibilityKey as String: true,
                 AVVideoColorPropertiesKey: colorProperties
             ]
-            if let videoTrack = videoTracks.first, videoTrack.preferredTransform.isIdentity && !self.configuration.values.requiresComposing && additionalAsset == nil {
+            if !"".isEmpty, let videoTrack = videoTracks.first, videoTrack.preferredTransform.isIdentity && !self.configuration.values.requiresComposing && additionalAsset == nil {
             } else {
                 self.setupComposer()
             }
@@ -446,7 +474,7 @@ public final class MediaEditorVideoExport {
             self.videoOutput = nil
         }
         
-        let audioTracks = asset.tracks(withMediaType: .audio)
+        let audioTracks = inputAsset.tracks(withMediaType: .audio)
         if audioTracks.count > 0, !self.configuration.values.videoIsMuted {
             let audioOutput = AVAssetReaderAudioMixOutput(audioTracks: audioTracks, audioSettings: nil)
             audioOutput.alwaysCopiesSampleData = false
@@ -507,7 +535,7 @@ public final class MediaEditorVideoExport {
         }
         
         if cancelled {
-            try? FileManager().removeItem(at: outputUrl)
+            try? FileManager.default.removeItem(at: outputUrl)
             self.internalStatus = .finished
             self.statusValue = .failed(.cancelled)
             return
@@ -517,14 +545,14 @@ public final class MediaEditorVideoExport {
             if let error = writer.error {
                 Logger.shared.log("VideoExport", "Failed with writer error \(error.localizedDescription)")
             }
-            try? FileManager().removeItem(at: outputUrl)
+            try? FileManager.default.removeItem(at: outputUrl)
             self.internalStatus = .finished
             self.statusValue = .failed(.writing(nil))
         } else if let reader = self.reader, reader.status == .failed {
             if let error = reader.error {
                 Logger.shared.log("VideoExport", "Failed with reader error \(error.localizedDescription)")
             }
-            try? FileManager().removeItem(at: outputUrl)
+            try? FileManager.default.removeItem(at: outputUrl)
             writer.cancelWriting()
             self.internalStatus = .finished
             self.statusValue = .failed(.reading(reader.error))
@@ -535,7 +563,7 @@ public final class MediaEditorVideoExport {
                         if let error = writer.error {
                             Logger.shared.log("VideoExport", "Failed after finishWriting with writer error \(error.localizedDescription)")
                         }
-                        try? FileManager().removeItem(at: outputUrl)
+                        try? FileManager.default.removeItem(at: outputUrl)
                         self.internalStatus = .finished
                         self.statusValue = .failed(.writing(nil))
                     } else {
