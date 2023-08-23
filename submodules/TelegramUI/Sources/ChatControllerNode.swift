@@ -145,7 +145,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let backgroundNode: WallpaperBackgroundNode
     let historyNode: ChatHistoryListNode
     var blurredHistoryNode: ASImageNode?
-    let historyNodeContainer: HistoryNodeContainer
+    let historyNodeContainer: ASDisplayNode
     let loadingNode: ChatLoadingNode
     private(set) var loadingPlaceholderNode: ChatLoadingPlaceholderNode?
     
@@ -487,7 +487,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         //self.historyScrollingArea = SparseDiscreteScrollingArea()
         //self.historyNode.historyScrollingArea = self.historyScrollingArea
 
-        self.historyNodeContainer = HistoryNodeContainer(isSecret: chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat)
+        //self.historyNodeContainer = HistoryNodeContainer(isSecret: chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat)
+        self.historyNodeContainer = ASDisplayNode()
         
         self.historyNodeContainer.addSubnode(self.historyNode)
 
@@ -907,7 +908,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        self.historyNodeContainer.isSecret = self.chatPresentationInterfaceState.copyProtectionEnabled || self.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat
+        if let historyNodeContainer = self.historyNodeContainer as? HistoryNodeContainer {
+            historyNodeContainer.isSecret = self.chatPresentationInterfaceState.copyProtectionEnabled || self.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat
+        }
 
         var previousListBottomInset: CGFloat?
         if !self.historyNode.frame.isEmpty {
@@ -1535,7 +1538,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
         transition.updateBounds(node: self.historyNodeContainer, bounds: contentBounds)
         transition.updatePosition(node: self.historyNodeContainer, position: contentBounds.center)
-        self.historyNodeContainer.updateSize(size: contentBounds.size, transition: transition)
+        
+        if let historyNodeContainer = self.historyNodeContainer as? HistoryNodeContainer {
+            historyNodeContainer.updateSize(size: contentBounds.size, transition: transition)
+        }
         
         transition.updateBounds(node: self.historyNode, bounds: CGRect(origin: CGPoint(), size: contentBounds.size))
         transition.updatePosition(node: self.historyNode, position: CGPoint(x: contentBounds.size.width / 2.0, y: contentBounds.size.height / 2.0))
