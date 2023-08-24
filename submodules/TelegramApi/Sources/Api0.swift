@@ -453,6 +453,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1361650766] = { return Api.MaskCoords.parse_maskCoords($0) }
     dict[-1300094593] = { return Api.MediaArea.parse_inputMediaAreaVenue($0) }
     dict[-544523486] = { return Api.MediaArea.parse_mediaAreaGeoPoint($0) }
+    dict[1272429760] = { return Api.MediaArea.parse_mediaAreaSuggestedReaction($0) }
     dict[-1098720356] = { return Api.MediaArea.parse_mediaAreaVenue($0) }
     dict[64088654] = { return Api.MediaAreaCoordinates.parse_mediaAreaCoordinates($0) }
     dict[940666592] = { return Api.Message.parse_message($0) }

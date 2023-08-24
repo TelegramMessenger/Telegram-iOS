@@ -147,7 +147,7 @@ private final class StickerSelectionComponent: Component {
             self.interaction = ChatEntityKeyboardInputNode.Interaction(
                 sendSticker: { [weak self] file, silent, schedule, query, clearInput, sourceView, sourceRect, sourceLayer, _ in
                     if let self, let controller = self.component?.getController() {
-                        controller.completion(.file(file.media))
+                        controller.completion(.file(file.media, .sticker))
                         controller.forEachController { c in
                             if let c = c as? StickerPackScreenImpl {
                                 c.dismiss(animated: true)
@@ -532,6 +532,9 @@ public class StickerPickerScreen: ViewController {
             self.storyStickersContentView?.audioAction = { [weak self] in
                 self?.controller?.presentAudioPicker()
             }
+            self.storyStickersContentView?.reactionAction = { [weak self] in
+                self?.controller?.addReaction()
+            }
             
             let gifItems: Signal<EntityKeyboardGifContent?, NoError>
             if controller.hasGifs {
@@ -864,7 +867,7 @@ public class StickerPickerScreen: ViewController {
                             })
                         })
                     } else if let file = item.itemFile {
-                        strongSelf.controller?.completion(.file(file))
+                        strongSelf.controller?.completion(.file(file, .sticker))
                         strongSelf.controller?.dismiss(animated: true)
                     } else if case let .staticEmoji(emoji) = item.content {
                         if let image = generateImage(CGSize(width: 256.0, height: 256.0), scale: 1.0, rotatedContext: { size, context in
@@ -1263,7 +1266,7 @@ public class StickerPickerScreen: ViewController {
                                             guard let self else {
                                                 return false
                                             }
-                                            self.controller?.completion(.file(fileReference.media))
+                                            self.controller?.completion(.file(fileReference.media, .sticker))
                                             self.controller?.dismiss(animated: true)
                                             return true
                                         }
@@ -1274,7 +1277,7 @@ public class StickerPickerScreen: ViewController {
                             }
                         })
                     } else {
-                        self.controller?.completion(.file(file))
+                        self.controller?.completion(.file(file, .sticker))
                         self.controller?.dismiss(animated: true)
                     }
                 },
@@ -1952,6 +1955,7 @@ public class StickerPickerScreen: ViewController {
     public var presentGallery: () -> Void = { }
     public var presentLocationPicker: () -> Void = { }
     public var presentAudioPicker: () -> Void = { }
+    public var addReaction: () -> Void = { }
     
     public init(context: AccountContext, inputData: Signal<StickerPickerInputData, NoError>, defaultToEmoji: Bool = false, hasGifs: Bool = false) {
         self.context = context
@@ -2011,7 +2015,7 @@ public class StickerPickerScreen: ViewController {
     }
 }
 
-private final class CustomContentButton: Component {
+private final class InteractiveStickerButtonContent: Component {
     let theme: PresentationTheme
     let title: String
     let iconName: String
@@ -2032,7 +2036,7 @@ private final class CustomContentButton: Component {
         self.tintContainerView = tintContainerView
     }
     
-    public static func ==(lhs: CustomContentButton, rhs: CustomContentButton) -> Bool {
+    public static func ==(lhs: InteractiveStickerButtonContent, rhs: InteractiveStickerButtonContent) -> Bool {
         if lhs.theme !== rhs.theme {
             return false
         }
@@ -2059,7 +2063,7 @@ private final class CustomContentButton: Component {
         private var icon: ComponentView<Empty>
         private var title: ComponentView<Empty>
         
-        private var component: CustomContentButton?
+        private var component: InteractiveStickerButtonContent?
     
         override init(frame: CGRect) {
             self.icon = ComponentView<Empty>()
@@ -2076,7 +2080,7 @@ private final class CustomContentButton: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: CustomContentButton, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: InteractiveStickerButtonContent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
 //            if component.useOpaqueTheme {
 //                self.backgroundLayer.backgroundColor = component.theme.chat.inputMediaPanel.panelContentControlOpaqueSelectionColor.cgColor
 //                self.tintBackgroundLayer.backgroundColor = UIColor.white.cgColor
@@ -2107,8 +2111,8 @@ private final class CustomContentButton: Component {
                 containerSize: availableSize
             )
             
-            let padding: CGFloat = 30.0
-            let spacing: CGFloat = 3.0
+            let padding: CGFloat = 7.0
+            let spacing: CGFloat = 4.0
             let buttonSize = CGSize(width: padding + iconSize.width + spacing + titleSize.width + padding, height: 34.0)
             
             if let view = self.icon.view {
@@ -2137,6 +2141,83 @@ private final class CustomContentButton: Component {
             }
             
             return buttonSize
+        }
+    }
+    
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+private final class InteractiveReactionButtonContent: Component {
+    let theme: PresentationTheme
+
+    public init(
+        theme: PresentationTheme
+    ) {
+        self.theme = theme
+    }
+    
+    public static func ==(lhs: InteractiveReactionButtonContent, rhs: InteractiveReactionButtonContent) -> Bool {
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        return true
+    }
+    
+    final class View: UIView {
+        override public static var layerClass: AnyClass {
+            return PassthroughLayer.self
+        }
+                
+        private var icon: ComponentView<Empty>
+        
+        private var component: InteractiveReactionButtonContent?
+    
+        override init(frame: CGRect) {
+            self.icon = ComponentView<Empty>()
+            
+            super.init(frame: frame)
+            
+            self.isExclusiveTouch = true
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: InteractiveReactionButtonContent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+//            if component.useOpaqueTheme {
+//                self.backgroundLayer.backgroundColor = component.theme.chat.inputMediaPanel.panelContentControlOpaqueSelectionColor.cgColor
+//                self.tintBackgroundLayer.backgroundColor = UIColor.white.cgColor
+//            } else {
+//                self.backgroundLayer.backgroundColor = component.theme.chat.inputMediaPanel.panelContentControlVibrantSelectionColor.cgColor
+//                self.tintBackgroundLayer.backgroundColor = UIColor(white: 1.0, alpha: 0.2).cgColor
+//            }
+            
+            let iconSize = self.icon.update(
+                transition: .immediate,
+                component: AnyComponent(BundleIconComponent(
+                    name: "Media Editor/Reaction",
+                    tintColor: nil,
+                    maxSize: CGSize(width: 52.0, height: 52.0)
+                )),
+                environment: {},
+                containerSize: availableSize
+            )
+            
+            if let view = self.icon.view {
+                if view.superview == nil {
+                    self.addSubview(view)
+                }
+                transition.setFrame(view: view, frame: CGRect(origin: .zero, size: iconSize))
+            }
+ 
+            return iconSize
         }
     }
     
@@ -2203,9 +2284,9 @@ final class ItemStack<ChildEnvironment: Equatable>: CombinedComponent {
                 let spacing = remainingWidth / CGFloat(rowItemsCount - 1)
                 if spacing < context.component.minSpacing {
                     groups.append(currentGroup)
-                } else {
-                    currentGroup.append(i)
+                    currentGroup = []
                 }
+                currentGroup.append(i)
             }
             if !currentGroup.isEmpty {
                 groups.append(currentGroup)
@@ -2224,7 +2305,7 @@ final class ItemStack<ChildEnvironment: Equatable>: CombinedComponent {
                 let remainingWidth = context.availableSize.width - itemsWidth - context.component.padding * 2.0
                 spacing = remainingWidth / CGFloat(group.count - 1)
                 
-                var nextX: CGFloat = floorToScreenPixels((context.availableSize.width - itemsWidth) / 2.0) //context.component.padding
+                var nextX: CGFloat = context.component.padding
                 for i in group {
                     let child = updatedChildren[i]
                     let frame = CGRect(origin: CGPoint(x: nextX, y: size.height + floorToScreenPixels((groupHeight - child.size.height) / 2.0)), size: child.size)
@@ -2250,6 +2331,7 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
         
     var locationAction: () -> Void = {}
     var audioAction: () -> Void = {}
+    var reactionAction: () -> Void = {}
             
     func update(theme: PresentationTheme, strings: PresentationStrings, useOpaqueTheme: Bool, availableSize: CGSize, transition: Transition) -> CGSize {
         let padding: CGFloat = 22.0
@@ -2265,7 +2347,7 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
                                     content: AnyComponentWithIdentity(
                                         id: "content",
                                         component: AnyComponent(
-                                            CustomContentButton(
+                                            InteractiveStickerButtonContent(
                                                 theme: theme,
                                                 title: "LOCATION",
                                                 iconName: "Chat/Attach Menu/Location",
@@ -2280,7 +2362,7 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
                                         }
                                     })
                             )
-                        )
+                        ),
 //                        AnyComponentWithIdentity(
 //                            id: "audio",
 //                            component: AnyComponent(
@@ -2288,7 +2370,7 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
 //                                    content: AnyComponentWithIdentity(
 //                                        id: "audio",
 //                                        component: AnyComponent(
-//                                            CustomContentButton(
+//                                            InteractiveStickerButtonContent(
 //                                                theme: theme,
 //                                                title: "AUDIO",
 //                                                iconName: "Media Editor/Audio",
@@ -2303,7 +2385,24 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
 //                                        }
 //                                    })
 //                            )
-//                        )
+//                        ),
+                        AnyComponentWithIdentity(
+                            id: "reaction",
+                            component: AnyComponent(
+                                CameraButton(
+                                    content: AnyComponentWithIdentity(
+                                        id: "reaction",
+                                        component: AnyComponent(
+                                            InteractiveReactionButtonContent(theme: theme)
+                                        )
+                                    ),
+                                    action: { [weak self] in
+                                        if let self {
+                                            self.reactionAction()
+                                        }
+                                    })
+                            )
+                        )
                     ],
                     padding: 18.0,
                     minSpacing: 8.0

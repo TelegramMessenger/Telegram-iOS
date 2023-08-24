@@ -730,15 +730,17 @@ public final class MediaEditor {
     }
     
     private func setRate(_ rate: Float) {
-        let hostTime: UInt64 = 0
+        let hostTime: UInt64 = mach_absolute_time()
         let time: TimeInterval = 0
         let cmHostTime = CMClockMakeHostTimeFromSystemUnits(hostTime)
         let cmVTime = CMTimeMakeWithSeconds(time, preferredTimescale: 1000000)
         let futureTime = CMTimeAdd(cmHostTime, cmVTime)
         
-        self.player?.setRate(rate, time: .invalid, atHostTime: futureTime)
-        self.additionalPlayer?.setRate(rate, time: .invalid, atHostTime: futureTime)
-        self.audioPlayer?.setRate(rate, time: .invalid, atHostTime: futureTime)
+        let itemTime = self.player?.currentItem?.currentTime() ?? .invalid
+        
+        self.player?.setRate(rate, time: itemTime, atHostTime: futureTime)
+        self.additionalPlayer?.setRate(rate, time: itemTime, atHostTime: futureTime)
+        self.audioPlayer?.setRate(rate, time: itemTime, atHostTime: futureTime)
         
         if rate > 0.0 {
             self.onPlaybackAction(.play)
@@ -812,7 +814,7 @@ public final class MediaEditor {
     
     public func setAudioTrack(_ audioTrack: MediaAudioTrack?) {
         self.updateValues(mode: .skipRendering) { values in
-            return values.withUpdatedAudioTrack(audioTrack)
+            return values.withUpdatedAudioTrack(audioTrack).withUpdatedAudioTrackSamples(nil).withUpdatedAudioTrackTrimRange(nil)
         }
         
         if let audioTrack {
@@ -828,12 +830,12 @@ public final class MediaEditor {
         }
     }
     
-    public func setAudioTrackTrimRange(_ trimRange: Range<Double>, apply: Bool) {
+    public func setAudioTrackTrimRange(_ trimRange: Range<Double>?, apply: Bool) {
         self.updateValues(mode: .skipRendering) { values in
             return values.withUpdatedAudioTrackTrimRange(trimRange)
         }
         
-        if apply {
+        if apply, let trimRange {
             self.audioPlayer?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
         }
     }

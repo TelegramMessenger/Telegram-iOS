@@ -122,9 +122,11 @@ public enum MediaArea: Codable, Equatable {
     }
     
     case venue(coordinates: Coordinates, venue: Venue)
+    case reaction(coordinates: Coordinates, reaction: MessageReaction.Reaction)
     
     private enum MediaAreaType: Int32 {
         case venue
+        case reaction
     }
     
     public init(from decoder: Decoder) throws {
@@ -138,6 +140,10 @@ public enum MediaArea: Codable, Equatable {
             let coordinates = try container.decode(MediaArea.Coordinates.self, forKey: .coordinates)
             let venue = try container.decode(MediaArea.Venue.self, forKey: .value)
             self = .venue(coordinates: coordinates, venue: venue)
+        case .reaction:
+            let coordinates = try container.decode(MediaArea.Coordinates.self, forKey: .coordinates)
+            let reaction = try container.decode(MessageReaction.Reaction.self, forKey: .value)
+            self = .reaction(coordinates: coordinates, reaction: reaction)
         }
     }
     
@@ -149,6 +155,10 @@ public enum MediaArea: Codable, Equatable {
             try container.encode(MediaAreaType.venue.rawValue, forKey: .type)
             try container.encode(coordinates, forKey: .coordinates)
             try container.encode(venue, forKey: .value)
+        case let .reaction(coordinates, reaction):
+            try container.encode(MediaAreaType.reaction.rawValue, forKey: .type)
+            try container.encode(coordinates, forKey: .coordinates)
+            try container.encode(reaction, forKey: .value)
         }
     }
 }
@@ -157,6 +167,8 @@ public extension MediaArea {
     var coordinates: Coordinates {
         switch self {
         case let .venue(coordinates, _):
+            return coordinates
+        case let .reaction(coordinates, _):
             return coordinates
         }
     }

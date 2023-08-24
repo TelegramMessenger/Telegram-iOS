@@ -736,7 +736,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             }
             let emojiTextPosition = emojiRect.center.offsetBy(dx: -textSize.width / 2.0, dy: -textSize.height / 2.0)
                         
-            let entity = DrawingStickerEntity(content: .file(file))
+            let entity = DrawingStickerEntity(content: .file(file, .sticker))
             entity.referenceDrawingSize = CGSize(width: itemSize * 4.0, height: itemSize * 4.0)
             entity.scale = scale
             entity.position = textPosition.offsetBy(
@@ -773,7 +773,7 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView {
         
         self.border.lineCap = .round
         self.border.fillColor = UIColor.clear.cgColor
-        self.border.strokeColor = UIColor(rgb: 0xffffff, alpha: 0.5).cgColor
+        self.border.strokeColor = UIColor(rgb: 0xffffff, alpha: 0.75).cgColor
         self.layer.addSublayer(self.border)
         
         for handle in handles {

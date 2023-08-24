@@ -220,6 +220,14 @@ public final class MediaEditorVideoExport {
             }
         }
         
+        var audioTimeRange: CMTimeRange? {
+            if let audioTrimRange = self.values.audioTrackTrimRange {
+                return CMTimeRange(start: CMTime(seconds: audioTrimRange.lowerBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), end: CMTime(seconds: audioTrimRange.upperBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))
+            } else {
+                return nil
+            }
+        }
+        
         var composerDimensions: CGSize {
             return CGSize(width: 1080.0, height: 1920.0)
         }
@@ -364,7 +372,6 @@ public final class MediaEditorVideoExport {
         var inputAsset = asset
         if let audioData = self.configuration.values.audioTrack {
             let mixComposition = AVMutableComposition()
-               
             let audioAsset = AVURLAsset(url: URL(fileURLWithPath: audioData.path))
             
             guard
@@ -378,13 +385,19 @@ public final class MediaEditorVideoExport {
                 return
             }
             
-            try? videoTrack.insertTimeRange(CMTimeRangeMake(start: .zero, duration: duration), of: videoAssetTrack, at: .zero)
+            let timeRange: CMTimeRange = CMTimeRangeMake(start: .zero, duration: duration)
+            
+            try? videoTrack.insertTimeRange(timeRange, of: videoAssetTrack, at: .zero)
             
             if let audioAssetTrack = asset.tracks(withMediaType: .audio).first, let audioTrack = mixComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) {
-                try? audioTrack.insertTimeRange(CMTimeRangeMake(start: .zero, duration: duration), of: audioAssetTrack, at: .zero)
+                try? audioTrack.insertTimeRange(timeRange, of: audioAssetTrack, at: .zero)
             }
             
-            try? musicTrack.insertTimeRange(CMTimeRangeMake(start: .zero, duration: duration), of: musicAssetTrack, at: .zero)
+            var musicRange = timeRange
+            if let audioTrackRange = self.configuration.audioTimeRange {
+                musicRange = audioTrackRange
+            }
+            try? musicTrack.insertTimeRange(musicRange, of: musicAssetTrack, at: .zero)
             
             inputAsset = mixComposition
         }

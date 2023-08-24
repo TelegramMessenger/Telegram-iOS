@@ -19,16 +19,20 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             case rectangle
             case dualPhoto
         }
-        case file(TelegramMediaFile)
+        public enum FileType: Equatable {
+            case sticker
+            case reaction(MessageReaction.Reaction)
+        }
+        case file(TelegramMediaFile, FileType)
         case image(UIImage, ImageType)
         case video(TelegramMediaFile)
         case dualVideoReference
         
         public static func == (lhs: Content, rhs: Content) -> Bool {
             switch lhs {
-            case let .file(lhsFile):
-                if case let .file(rhsFile) = rhs {
-                    return lhsFile.fileId == rhsFile.fileId
+            case let .file(lhsFile, lhsFileType):
+                if case let .file(rhsFile, rhsFileType) = rhs {
+                    return lhsFile.fileId == rhsFile.fileId && lhsFileType == rhsFileType
                 } else {
                     return false
                 }
@@ -56,6 +60,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     private enum CodingKeys: String, CodingKey {
         case uuid
         case file
+        case reaction
         case imagePath
         case videoFile
         case isRectangle
@@ -67,10 +72,11 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case rotation
         case mirrored
         case isExplicitlyStatic
+        case renderImage
     }
     
     public var uuid: UUID
-    public let content: Content
+    public var content: Content
     
     public var referenceDrawingSize: CGSize
     public var position: CGPoint
@@ -94,7 +100,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         switch self.content {
         case let .image(image, _):
             dimensions = image.size
-        case let .file(file):
+        case let .file(file, _):
             dimensions = file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
         case let .video(file):
             dimensions = file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
@@ -108,11 +114,16 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     
     public var isAnimated: Bool {
         switch self.content {
-        case let .file(file):
+        case let .file(file, type):
             if self.isExplicitlyStatic {
                 return false
             } else {
-                return file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm"
+                switch type {
+                case .reaction:
+                    return false
+                default:
+                    return file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm"
+                }
             }
         case .image:
             return false
@@ -160,7 +171,13 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         if let _ = try container.decodeIfPresent(Bool.self, forKey: .dualVideo) {
             self.content = .dualVideoReference
         } else if let file = try container.decodeIfPresent(TelegramMediaFile.self, forKey: .file) {
-            self.content = .file(file)
+            let fileType: Content.FileType
+            if let reaction = try container.decodeIfPresent(MessageReaction.Reaction.self, forKey: .reaction) {
+                fileType = .reaction(reaction)
+            } else {
+                fileType = .sticker
+            }
+            self.content = .file(file, fileType)
         } else if let imagePath = try container.decodeIfPresent(String.self, forKey: .imagePath), let image = UIImage(contentsOfFile: fullEntityMediaPath(imagePath)) {
             let isRectangle = try container.decodeIfPresent(Bool.self, forKey: .isRectangle) ?? false
             let isDualPhoto = try container.decodeIfPresent(Bool.self, forKey: .isDualPhoto) ?? false
@@ -184,14 +201,24 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         self.rotation = try container.decode(CGFloat.self, forKey: .rotation)
         self.mirrored = try container.decode(Bool.self, forKey: .mirrored)
         self.isExplicitlyStatic = try container.decodeIfPresent(Bool.self, forKey: .isExplicitlyStatic) ?? false
+        
+        if let renderImageData = try? container.decodeIfPresent(Data.self, forKey: .renderImage) {
+            self.renderImage = UIImage(data: renderImageData)
+        }
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.uuid, forKey: .uuid)
         switch self.content {
-        case let .file(file):
+        case let .file(file, fileType):
             try container.encode(file, forKey: .file)
+            switch fileType {
+            case let .reaction(reaction):
+                try container.encode(reaction, forKey: .reaction)
+            default:
+                break
+            }
         case let .image(image, imageType):
             let imagePath = "\(self.uuid).png"
             let fullImagePath = fullEntityMediaPath(imagePath)
@@ -219,6 +246,10 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         try container.encode(self.rotation, forKey: .rotation)
         try container.encode(self.mirrored, forKey: .mirrored)
         try container.encode(self.isExplicitlyStatic, forKey: .isExplicitlyStatic)
+        
+        if let renderImage, let data = renderImage.pngData() {
+            try container.encode(data, forKey: .renderImage)
+        }
     }
         
     public func duplicate(copy: Bool) -> DrawingEntity {

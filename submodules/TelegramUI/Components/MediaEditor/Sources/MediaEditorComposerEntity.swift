@@ -63,18 +63,22 @@ private func prerenderTextTransformations(entity: DrawingEntity, image: UIImage,
 
 func composerEntitiesForDrawingEntity(postbox: Postbox, textScale: CGFloat, entity: DrawingEntity, colorSpace: CGColorSpace, tintColor: UIColor? = nil) -> [MediaEditorComposerEntity] {
     if let entity = entity as? DrawingStickerEntity {
-        let content: MediaEditorComposerStickerEntity.Content
-        switch entity.content {
-        case let .file(file):
-            content = .file(file)
-        case let .image(image, _):
-            content = .image(image)
-        case let .video(file):
-            content = .video(file)
-        case .dualVideoReference:
-            return []
+        if case let .file(_, type) = entity.content, case .reaction = type, let renderImage = entity.renderImage, let image = CIImage(image: renderImage, options: [.colorSpace: colorSpace]) {
+            return [MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: false)]
+        } else {
+            let content: MediaEditorComposerStickerEntity.Content
+            switch entity.content {
+            case let .file(file, _):
+                content = .file(file)
+            case let .image(image, _):
+                content = .image(image)
+            case let .video(file):
+                content = .video(file)
+            case .dualVideoReference:
+                return []
+            }
+            return [MediaEditorComposerStickerEntity(postbox: postbox, content: content, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: entity.mirrored, colorSpace: colorSpace, tintColor: tintColor, isStatic: entity.isExplicitlyStatic)]
         }
-        return [MediaEditorComposerStickerEntity(postbox: postbox, content: content, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: entity.mirrored, colorSpace: colorSpace, tintColor: tintColor, isStatic: entity.isExplicitlyStatic)]
     } else if let renderImage = entity.renderImage, let image = CIImage(image: renderImage, options: [.colorSpace: colorSpace]) {
         if let entity = entity as? DrawingBubbleEntity {
             return [MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: 1.0, rotation: entity.rotation, baseSize: entity.size, mirrored: false)]

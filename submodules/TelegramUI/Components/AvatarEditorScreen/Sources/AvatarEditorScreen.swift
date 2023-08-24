@@ -1390,7 +1390,7 @@ final class AvatarEditorScreenComponent: Component {
                     try? backgroundImage.jpegData(compressionQuality: 0.8)?.write(to: tempUrl)
                     
                     let drawingSize = CGSize(width: 1920.0, height: 1920.0)
-                    let entity = DrawingStickerEntity(content: .file(file))
+                    let entity = DrawingStickerEntity(content: .file(file, .sticker))
                     entity.referenceDrawingSize = drawingSize
                     entity.position = CGPoint(x: drawingSize.width / 2.0, y: drawingSize.height / 2.0)
                     entity.scale = 3.3
@@ -1398,7 +1398,7 @@ final class AvatarEditorScreenComponent: Component {
                     var fileId: Int64 = 0
                     var stickerPackId: Int64 = 0
                     var stickerPackAccessHash: Int64 = 0
-                    if case let .file(file) = entity.content {
+                    if case let .file(file, _) = entity.content {
                         if file.isCustomEmoji {
                             fileId = file.fileId.id
                         } else if file.isAnimatedSticker {

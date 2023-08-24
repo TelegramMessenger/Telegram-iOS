@@ -45,6 +45,8 @@ swift_library(
         "//submodules/DeviceAccess",
         "//submodules/LocationUI",
         "//submodules/TelegramUI/Components/AudioWaveformComponent",
+        "//submodules/ReactionSelectionNode",
+        "//submodules/TelegramUI/Components/VolumeSliderContextItem",
     ],
     visibility = [
         "//visibility:public",

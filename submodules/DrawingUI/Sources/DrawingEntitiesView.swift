@@ -7,6 +7,7 @@ import AccountContext
 import MediaEditor
 import ComponentFlow
 import LottieAnimationComponent
+import ReactionSelectionNode
 
 public func decodeDrawingEntities(data: Data) -> [DrawingEntity] {
     if let codableEntities = try? JSONDecoder().decode([CodableDrawingEntity].self, from: data) {
@@ -36,6 +37,9 @@ private func makeEntityView(context: AccountContext, entity: DrawingEntity) -> D
 }
 
 private func prepareForRendering(entityView: DrawingEntityView) {
+    if let entityView = entityView as? DrawingStickerEntityView {
+        entityView.entity.renderImage = entityView.getRenderImage()
+    }
     if let entityView = entityView as? DrawingBubbleEntityView {
         entityView.entity.renderImage = entityView.getRenderImage()
     }
@@ -69,6 +73,8 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     public var getEntityCenterPosition: () -> CGPoint = { return .zero }
     public var getEntityInitialRotation: () -> CGFloat = { return 0.0 }
     public var getEntityAdditionalScale: () -> CGFloat = { return 1.0 }
+    
+    public var getAvailableReactions: () -> [ReactionItem] = { return [] }
     
     public var hasSelectionChanged: (Bool) -> Void = { _ in }
     var selectionChanged: (DrawingEntity?) -> Void = { _ in }
@@ -654,6 +660,8 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                     } else {
                         return
                     }
+                } else if let stickerEntityView = selectedEntityView as? DrawingStickerEntityView {
+                    stickerEntityView.onDeselection()
                 }
                 
                 self.selectedEntityView = nil

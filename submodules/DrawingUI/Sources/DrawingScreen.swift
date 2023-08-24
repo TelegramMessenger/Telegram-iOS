@@ -2880,13 +2880,13 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
         
         var stickers: [Any] = []
         for entity in self.entitiesView.entities {
-            if let sticker = entity as? DrawingStickerEntity, case let .file(file) = sticker.content {
+            if let sticker = entity as? DrawingStickerEntity, case let .file(file, _) = sticker.content {
                 let coder = PostboxEncoder()
                 coder.encodeRootObject(file)
                 stickers.append(coder.makeData())
             } else if let text = entity as? DrawingTextEntity, let subEntities = text.renderSubEntities {
                 for sticker in subEntities {
-                    if let sticker = sticker as? DrawingStickerEntity, case let .file(file) = sticker.content {
+                    if let sticker = sticker as? DrawingStickerEntity, case let .file(file, _) = sticker.content {
                         let coder = PostboxEncoder()
                         coder.encodeRootObject(file)
                         stickers.append(coder.makeData())
@@ -3117,12 +3117,16 @@ public final class DrawingToolsInteraction {
                 }))
             }
             if !isVideo {
-                actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Duplicate, accessibilityLabel: presentationData.strings.Paint_Duplicate), action: { [weak self, weak entityView] in
-                    if let self, let entityView {
-                        let newEntity = self.entitiesView.duplicate(entityView.entity)
-                        self.entitiesView.selectEntity(newEntity)
-                    }
-                }))
+                if let stickerEntity = entityView.entity as? DrawingStickerEntity, case let .file(_, type) = stickerEntity.content, case .reaction = type {
+                    
+                } else {
+                    actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Duplicate, accessibilityLabel: presentationData.strings.Paint_Duplicate), action: { [weak self, weak entityView] in
+                        if let self, let entityView {
+                            let newEntity = self.entitiesView.duplicate(entityView.entity)
+                            self.entitiesView.selectEntity(newEntity)
+                        }
+                    }))
+                }
             }
             let entityFrame = entityView.convert(entityView.selectionBounds, to: node.view).offsetBy(dx: 0.0, dy: -6.0)
             let controller = ContextMenuController(actions: actions)

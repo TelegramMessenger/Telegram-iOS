@@ -3267,6 +3267,16 @@ final class StoryItemSetContainerSendMessage {
                 }
                 controller?.push(locationController)
             }))
+        case let .reaction(_, reaction):
+            if component.slice.peer.id != component.context.account.peerId {
+                self.performWithPossibleStealthModeConfirmation(view: view, action: { [weak view] in
+                    guard let view, let component = view.component else {
+                        return
+                    }
+                    let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: reaction).start()
+                })
+            }
+            return
         }
         
         let referenceSize = view.controlsContainerView.frame.size

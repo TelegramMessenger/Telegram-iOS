@@ -9,6 +9,7 @@ import ViewControllerComponent
 import ComponentDisplayAdapters
 import TelegramPresentationData
 import AccountContext
+import Postbox
 import TelegramCore
 import MultilineTextComponent
 import DrawingUI
@@ -33,6 +34,8 @@ import TextFormat
 import DeviceAccess
 import LocationUI
 import LegacyMediaPickerUI
+import ReactionSelectionNode
+import VolumeSliderContextItem
 
 enum DrawingScreenType {
     case drawing
@@ -271,6 +274,8 @@ final class MediaEditorScreenComponent: Component {
         private var inputMediaNodeStateContext = ChatEntityKeyboardInputNode.StateContext()
         private var inputMediaInteraction: ChatEntityKeyboardInputNode.Interaction?
         private var inputMediaNode: ChatEntityKeyboardInputNode?
+        
+        private var appliedAudioData: VideoScrubberComponent.AudioData?
                 
         private var component: MediaEditorScreenComponent?
         private weak var state: State?
@@ -913,6 +918,7 @@ final class MediaEditorScreenComponent: Component {
             if let controller = environment.controller() as? MediaEditorScreen {
                 mediaEditor = controller.node.mediaEditor
             }
+            let previousAudioData = self.appliedAudioData
             var audioData: VideoScrubberComponent.AudioData?
             if let audioTrack = mediaEditor?.values.audioTrack {
                 let audioSamples = mediaEditor?.values.audioTrackSamples
@@ -923,78 +929,8 @@ final class MediaEditorScreenComponent: Component {
                     peak: audioSamples?.peak ?? 0
                 )
             }
-            
-            var scrubberBottomInset: CGFloat = 0.0
-            if let playerState = state.playerState {
-                let scrubberInset: CGFloat = 9.0
-                let scrubberSize = self.scrubber.update(
-                    transition: transition,
-                    component: AnyComponent(VideoScrubberComponent(
-                        context: component.context,
-                        generationTimestamp: playerState.generationTimestamp,
-                        duration: playerState.duration,
-                        startPosition: playerState.timeRange?.lowerBound ?? 0.0,
-                        endPosition: playerState.timeRange?.upperBound ?? min(playerState.duration, storyMaxVideoDuration),
-                        position: playerState.position,
-                        maxDuration: storyMaxVideoDuration,
-                        isPlaying: playerState.isPlaying,
-                        frames: playerState.frames,
-                        framesUpdateTimestamp: playerState.framesUpdateTimestamp,
-                        audioData: audioData,
-                        videoTrimUpdated: { [weak mediaEditor] start, end, updatedEnd, done in
-                            if let mediaEditor {
-                                mediaEditor.setVideoTrimRange(start..<end, apply: done)
-                                if done {
-                                    mediaEditor.seek(start, andPlay: true)
-                                } else {
-                                    mediaEditor.seek(updatedEnd ? end : start, andPlay: false)
-                                }
-                            }
-                        },
-                        positionUpdated: { position, done in
-                            if let mediaEditor {
-                                mediaEditor.seek(position, andPlay: done)
-                            }
-                        },
-                        audioTrimUpdated: { [weak mediaEditor] start, end, _, done in
-                            if let mediaEditor {
-                                mediaEditor.setAudioTrackTrimRange(start..<end, apply: done)
-                                if done {
-                                    
-                                }
-                            }
-                        }
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: previewSize.width - scrubberInset * 2.0, height: availableSize.height)
-                )
-                
-                let scrubberFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - scrubberSize.width) / 2.0), y: availableSize.height - environment.safeInsets.bottom - scrubberSize.height - 8.0 + controlsBottomInset), size: scrubberSize)
-                if let scrubberView = self.scrubber.view {
-                    var animateIn = false
-                    if scrubberView.superview == nil {
-                        animateIn = true
-                        if let inputPanelBackgroundView = self.inputPanelBackground.view, inputPanelBackgroundView.superview != nil {
-                            self.insertSubview(scrubberView, belowSubview: inputPanelBackgroundView)
-                        } else {
-                            self.addSubview(scrubberView)
-                        }
-                    }
-                    transition.setFrame(view: scrubberView, frame: scrubberFrame)
-                    if !self.animatingButtons {
-                        transition.setAlpha(view: scrubberView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
-                    } else if animateIn {
-                        scrubberView.layer.animatePosition(from: CGPoint(x: 0.0, y: 44.0), to: .zero, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                        scrubberView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                        scrubberView.layer.animateScale(from: 0.6, to: 1.0, duration: 0.2)
-                    }
-                }
-                
-                scrubberBottomInset = scrubberSize.height + 10.0
-            } else {
-                
-            }
-            
+            self.appliedAudioData = audioData
+                        
             var timeoutValue: String
             let timeoutSelected: Bool
             switch component.privacy.timeout {
@@ -1317,7 +1253,7 @@ final class MediaEditorScreenComponent: Component {
                 sizeValue = textEntity.fontSize
             }
             
-            var inputPanelBottomInset: CGFloat = scrubberBottomInset - controlsBottomInset
+            var inputPanelBottomInset: CGFloat = -controlsBottomInset
             if inputHeight > 0.0 {
                 inputPanelBottomInset = inputHeight - environment.safeInsets.bottom
             }
@@ -1330,6 +1266,82 @@ final class MediaEditorScreenComponent: Component {
                 transition.setAlpha(view: inputPanelView, alpha: isEditingTextEntity || component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
             }
             
+            var bottomControlsTransition = transition
+            if let playerState = state.playerState {
+                let scrubberInset: CGFloat = 9.0
+                if (audioData == nil) != (previousAudioData == nil) {
+                    bottomControlsTransition = .easeInOut(duration: 0.25)
+                }
+                let scrubberSize = self.scrubber.update(
+                    transition: transition,
+                    component: AnyComponent(VideoScrubberComponent(
+                        context: component.context,
+                        generationTimestamp: playerState.generationTimestamp,
+                        duration: playerState.duration,
+                        startPosition: playerState.timeRange?.lowerBound ?? 0.0,
+                        endPosition: playerState.timeRange?.upperBound ?? min(playerState.duration, storyMaxVideoDuration),
+                        position: playerState.position,
+                        maxDuration: storyMaxVideoDuration,
+                        isPlaying: playerState.isPlaying,
+                        frames: playerState.frames,
+                        framesUpdateTimestamp: playerState.framesUpdateTimestamp,
+                        audioData: audioData,
+                        videoTrimUpdated: { [weak mediaEditor] start, end, updatedEnd, done in
+                            if let mediaEditor {
+                                mediaEditor.setVideoTrimRange(start..<end, apply: done)
+                                if done {
+                                    mediaEditor.seek(start, andPlay: true)
+                                } else {
+                                    mediaEditor.seek(updatedEnd ? end : start, andPlay: false)
+                                }
+                            }
+                        },
+                        positionUpdated: { position, done in
+                            if let mediaEditor {
+                                mediaEditor.seek(position, andPlay: done)
+                            }
+                        },
+                        audioTrimUpdated: { [weak mediaEditor] start, end, _, done in
+                            if let mediaEditor {
+                                mediaEditor.setAudioTrackTrimRange(start..<end, apply: done)
+                                if done {
+                                    
+                                }
+                            }
+                        },
+                        audioLongPressed: { [weak self] sourceView in
+                            if let self, let controller = self.environment?.controller() as? MediaEditorScreen {
+                                controller.node.presentAudioOptions(sourceView: sourceView)
+                            }
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: previewSize.width - scrubberInset * 2.0, height: availableSize.height)
+                )
+                
+                let scrubberFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - scrubberSize.width) / 2.0), y: availableSize.height - environment.safeInsets.bottom - scrubberSize.height + controlsBottomInset - inputPanelSize.height + 3.0), size: scrubberSize)
+                if let scrubberView = self.scrubber.view {
+                    var animateIn = false
+                    if scrubberView.superview == nil {
+                        animateIn = true
+                        if let inputPanelBackgroundView = self.inputPanelBackground.view, inputPanelBackgroundView.superview != nil {
+                            self.insertSubview(scrubberView, belowSubview: inputPanelBackgroundView)
+                        } else {
+                            self.addSubview(scrubberView)
+                        }
+                    }
+                    bottomControlsTransition.setFrame(view: scrubberView, frame: scrubberFrame)
+                    if !self.animatingButtons {
+                        transition.setAlpha(view: scrubberView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities || isEditingCaption ? 0.0 : 1.0)
+                    } else if animateIn {
+                        scrubberView.layer.animatePosition(from: CGPoint(x: 0.0, y: 44.0), to: .zero, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                        scrubberView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        scrubberView.layer.animateScale(from: 0.6, to: 1.0, duration: 0.2)
+                    }
+                }
+            } else {
+                
+            }
             
             let displayTopButtons = !(self.inputPanelExternalState.isEditing || isEditingTextEntity || component.isDisplayingTool)
                 
@@ -1744,6 +1756,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         private let stickerPickerInputData = Promise<StickerPickerInputData>()
         
+        private var availableReactions: [ReactionItem] = []
+        private var availableReactionsDisposable: Disposable?
+        
         private var dismissPanGestureRecognizer: UIPanGestureRecognizer?
         
         private var isDisplayingTool = false
@@ -1862,9 +1877,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     forceHasPremium: true
                 )
                                 
-                let signal = combineLatest(queue: .mainQueue(),
-                                           emojiItems,
-                                           stickerItems
+                let signal = combineLatest(
+                    queue: .mainQueue(),
+                    emojiItems,
+                    stickerItems
                 ) |> map { emoji, stickers -> StickerPickerInputData in
                     return StickerPickerInputData(emoji: emoji, stickers: stickers, gifs: nil)
                 }
@@ -1892,6 +1908,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 }
             })
+            
+            self.entitiesView.getAvailableReactions = { [weak self] in
+                return self?.availableReactions ?? []
+            }
+            
+            self.availableReactionsDisposable = (allowedStoryReactions(context: controller.context)
+            |> deliverOnMainQueue).start(next: { [weak self] reactions in
+                if let self {
+                    self.availableReactions = reactions
+                }
+            })
         }
         
         deinit {
@@ -1899,6 +1926,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.gradientColorsDisposable?.dispose()
             self.appInForegroundDisposable?.dispose()
             self.playbackPositionDisposable?.dispose()
+            self.availableReactionsDisposable?.dispose()
         }
         
         private func setup(with subject: MediaEditorScreen.Subject) {
@@ -2986,6 +3014,32 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }), in: .window(.root))
         }
         
+        func presentAudioOptions(sourceView: UIView) {
+            let items: [ContextMenuItem] = [
+                .custom(VolumeSliderContextItem(minValue: 0.0, value: 0.75, valueChanged: { _, _ in
+                    
+                }), false),
+                .action(
+                    ContextMenuActionItem(
+                        text: "Remove Audio",
+                        icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.primaryColor)},
+                        action: { [weak self] f in
+                            f.dismissWithResult(.default)
+                            if let self {
+                                self.mediaEditor?.setAudioTrack(nil)
+                                self.requestUpdate(transition: .easeInOut(duration: 0.25))
+//                                strongSelf.insertEntity.invoke(DrawingSimpleShapeEntity(shapeType: .rectangle, drawType: .stroke, color: strongSelf.currentColor, lineWidth: 0.15))
+                            }
+                        }
+                    )
+                )
+            ]
+            
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
+            let contextController = ContextController(presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: UIScreen.main.bounds, customPosition: CGPoint(x: 0.0, y: -3.0))), items: .single(ContextController.Items(content: .list(items))))
+            self.controller?.present(contextController, in: .window(.root))
+        }
+        
         func updateModalTransitionFactor(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
             guard let layout = self.validLayout, case .compact = layout.metrics.widthClass else {
                 return
@@ -3139,7 +3193,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                                 self.controller?.isSavingAvailable = true
                                                 self.controller?.requestLayout(transition: .immediate)
                                                 
-                                                if case let .file(file) = content {
+                                                if case let .file(file, _) = content {
                                                     if file.isCustomEmoji {
                                                         self.defaultToEmoji = true
                                                     } else {
@@ -3175,6 +3229,20 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                             self.stickerScreen = nil
                                             controller?.dismiss(animated: true)
                                             self.presentAudioPicker()
+                                        }
+                                    }
+                                    controller.addReaction = { [weak self, weak controller] in
+                                        if let self {
+                                            self.stickerScreen = nil
+                                            controller?.dismiss(animated: true)
+                                            
+                                            let heart = "❤️".strippedEmoji
+                                            if let reaction = self.availableReactions.first(where: { reaction in
+                                                return reaction.reaction.rawValue == .builtin(heart)
+                                            }) {
+                                                let stickerEntity = DrawingStickerEntity(content: .file(reaction.stillAnimation, .reaction(.builtin(heart))))
+                                                self.interaction?.insertEntity(stickerEntity, scale: 1.33)
+                                            }
                                         }
                                     }
                                     self.stickerScreen = controller
@@ -4123,13 +4191,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         for entity in codableEntities {
             switch entity {
             case let .sticker(stickerEntity):
-                if case let .file(file) = stickerEntity.content {
+                if case let .file(file, fileType) = stickerEntity.content, case .sticker = fileType {
                     stickers.append(file)
                 }
             case let .text(textEntity):
                 if let subEntities = textEntity.renderSubEntities {
                     for entity in subEntities {
-                        if let stickerEntity = entity as? DrawingStickerEntity, case let .file(file) = stickerEntity.content {
+                        if let stickerEntity = entity as? DrawingStickerEntity, case let .file(file, fileType) = stickerEntity.content, case .sticker = fileType {
                             stickers.append(file)
                         }
                     }
@@ -4937,4 +5005,126 @@ func hasFirstResponder(_ view: UIView) -> Bool {
         }
     }
     return false
+}
+
+private func allowedStoryReactions(context: AccountContext) -> Signal<[ReactionItem], NoError> {
+    let viewKey: PostboxViewKey = .orderedItemList(id: Namespaces.OrderedItemList.CloudTopReactions)
+    let topReactions = context.account.postbox.combinedView(keys: [viewKey])
+    |> map { views -> [RecentReactionItem] in
+        guard let view = views.views[viewKey] as? OrderedItemListView else {
+            return []
+        }
+        return view.items.compactMap { item -> RecentReactionItem? in
+            return item.contents.get(RecentReactionItem.self)
+        }
+    }
+
+    return combineLatest(
+        context.engine.stickers.availableReactions(),
+        topReactions
+    )
+    |> take(1)
+    |> map { availableReactions, topReactions -> [ReactionItem] in
+        guard let availableReactions = availableReactions else {
+            return []
+        }
+        
+        var result: [ReactionItem] = []
+        
+        var existingIds = Set<MessageReaction.Reaction>()
+        
+        for topReaction in topReactions {
+            switch topReaction.content {
+            case let .builtin(value):
+                if let reaction = availableReactions.reactions.first(where: { $0.value == .builtin(value) }) {
+                    guard let centerAnimation = reaction.centerAnimation else {
+                        continue
+                    }
+                    guard let aroundAnimation = reaction.aroundAnimation else {
+                        continue
+                    }
+                    
+                    if existingIds.contains(reaction.value) {
+                        continue
+                    }
+                    existingIds.insert(reaction.value)
+                    
+                    result.append(ReactionItem(
+                        reaction: ReactionItem.Reaction(rawValue: reaction.value),
+                        appearAnimation: reaction.appearAnimation,
+                        stillAnimation: reaction.selectAnimation,
+                        listAnimation: centerAnimation,
+                        largeListAnimation: reaction.activateAnimation,
+                        applicationAnimation: aroundAnimation,
+                        largeApplicationAnimation: reaction.effectAnimation,
+                        isCustom: false
+                    ))
+                } else {
+                    continue
+                }
+            case let .custom(file):
+                if existingIds.contains(.custom(file.fileId.id)) {
+                    continue
+                }
+                existingIds.insert(.custom(file.fileId.id))
+                
+                result.append(ReactionItem(
+                    reaction: ReactionItem.Reaction(rawValue: .custom(file.fileId.id)),
+                    appearAnimation: file,
+                    stillAnimation: file,
+                    listAnimation: file,
+                    largeListAnimation: file,
+                    applicationAnimation: nil,
+                    largeApplicationAnimation: nil,
+                    isCustom: true
+                ))
+            }
+        }
+        
+        for reaction in availableReactions.reactions {
+            guard let centerAnimation = reaction.centerAnimation else {
+                continue
+            }
+            guard let aroundAnimation = reaction.aroundAnimation else {
+                continue
+            }
+            if !reaction.isEnabled {
+                continue
+            }
+            
+            if existingIds.contains(reaction.value) {
+                continue
+            }
+            existingIds.insert(reaction.value)
+            
+            result.append(ReactionItem(
+                reaction: ReactionItem.Reaction(rawValue: reaction.value),
+                appearAnimation: reaction.appearAnimation,
+                stillAnimation: reaction.selectAnimation,
+                listAnimation: centerAnimation,
+                largeListAnimation: reaction.activateAnimation,
+                applicationAnimation: aroundAnimation,
+                largeApplicationAnimation: reaction.effectAnimation,
+                isCustom: false
+            ))
+        }
+
+        return result
+    }
+}
+
+private final class ReferenceContentSource: ContextReferenceContentSource {
+    private let sourceView: UIView
+    private let contentArea: CGRect
+    private let customPosition: CGPoint
+    
+    init(sourceView: UIView, contentArea: CGRect, customPosition: CGPoint) {
+        self.sourceView = sourceView
+        self.contentArea = contentArea
+        self.customPosition = customPosition
+    }
+
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: self.contentArea, customPosition: self.customPosition, actionsPosition: .top)
+    }
 }

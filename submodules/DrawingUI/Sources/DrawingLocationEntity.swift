@@ -432,7 +432,7 @@ final class DrawingLocationEntititySelectionView: DrawingEntitySelectionView {
         
         self.border.lineCap = .round
         self.border.fillColor = UIColor.clear.cgColor
-        self.border.strokeColor = UIColor(rgb: 0xffffff, alpha: 0.5).cgColor
+        self.border.strokeColor = UIColor(rgb: 0xffffff, alpha: 0.75).cgColor
         self.layer.addSublayer(self.border)
         
         for handle in handles {
