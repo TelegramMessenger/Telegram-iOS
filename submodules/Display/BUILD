@@ -9,9 +9,6 @@ swift_library(
     copts = [
         "-warnings-as-errors",
     ],
-    linkopts = [
-        "-Wl,-weak-lswiftCoreGraphics",
-    ],
     deps = [
     	"//submodules/ObjCRuntimeUtils:ObjCRuntimeUtils",
     	"//submodules/UIKitRuntimeUtils:UIKitRuntimeUtils",
