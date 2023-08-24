@@ -924,7 +924,7 @@ final class MessageHistoryTable: Table {
                     operationsByPeerId[message.id.peerId]!.append(contentsOf: operations)
                 }
             } else {
-                assertionFailure()
+                //assertionFailure()
             }
         }
     }

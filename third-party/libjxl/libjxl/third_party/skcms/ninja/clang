@@ -1,0 +1,7 @@
+cc     = clang
+cxx    = clang++
+cflags = -fcolor-diagnostics -Weverything -ffp-contract=off
+out    = out/clang$mode
+
+include ninja/local
+include ninja/common

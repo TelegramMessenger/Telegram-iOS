@@ -23,6 +23,7 @@ swift_library(
         "//submodules/FastBlur:FastBlur",
         "//submodules/ComponentFlow",
         "//submodules/TelegramUI/Components/Stories/AvatarStoryIndicatorComponent",
+        "//submodules/DirectMediaImageCache",
     ],
     visibility = [
         "//visibility:public",

@@ -1,0 +1,6 @@
+mode          = .lsan
+extra_cflags  = -fsanitize=leak
+extra_ldflags = -fsanitize=leak
+include ninja/clang
+
+disabled = (uname | grep -qv Linux)

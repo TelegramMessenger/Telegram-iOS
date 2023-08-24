@@ -501,7 +501,22 @@ public final class PeerListItemComponent: Component {
                 }
                 let _ = clipStyle
                 let _ = synchronousLoad
-                self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, clipStyle: clipStyle, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
+                
+                if peer.smallProfileImage != nil {
+                    self.avatarNode.setPeerV2(
+                        context: component.context,
+                        theme: component.theme,
+                        peer: peer,
+                        authorOfMessage: nil,
+                        overrideImage: nil,
+                        emptyColor: nil,
+                        clipStyle: .round,
+                        synchronousLoad: synchronousLoad,
+                        displayDimensions: CGSize(width: avatarSize, height: avatarSize)
+                    )
+                } else {
+                    self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, clipStyle: clipStyle, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
+                }
                 self.avatarNode.setStoryStats(storyStats: component.storyStats.flatMap { storyStats -> AvatarNode.StoryStats in
                     return AvatarNode.StoryStats(
                         totalCount: storyStats.totalCount == 0 ? 0 : 1,

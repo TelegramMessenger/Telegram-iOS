@@ -84,7 +84,7 @@ extension UIImage.Orientation {
 
 private let fetchPhotoWorkers = ThreadPool(threadCount: 3, threadPriority: 0.2)
 
-public func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+public func fetchPhotoLibraryResource(localIdentifier: String, width: Int32?, height: Int32?, format: MediaImageFormat?, quality: Int32?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return Signal { subscriber in
         let queue = ThreadPoolQueue(threadPool: fetchPhotoWorkers)
         
@@ -97,7 +97,12 @@ public func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaRe
             option.isNetworkAccessAllowed = true
             option.isSynchronous = false
             
-            let size = CGSize(width: 1280.0, height: 1280.0)
+            let size: CGSize
+            if let width, let height {
+                size = CGSize(width: CGFloat(width), height: CGFloat(height))
+            } else {
+                size = CGSize(width: 1280.0, height: 1280.0)
+            }
             
             queue.addTask(ThreadPoolTask({ _ in
                 let startTime = CACurrentMediaTime()
@@ -127,14 +132,27 @@ public func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaRe
                                 print("scaled completion \((CACurrentMediaTime() - startTime) * 1000.0) ms")
 #endif
                                 
-                                if let scaledImage = scaledImage, let data = compressImageToJPEG(scaledImage, quality: 0.6) {
-#if DEBUG
-                                    print("compression completion \((CACurrentMediaTime() - startTime) * 1000.0) ms")
-#endif
-                                    subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< Int64(data.count), complete: true))
-                                    subscriber.putCompletion()
-                                } else {
-                                    subscriber.putCompletion()
+                                switch format {
+                                case .none, .jpeg:
+                                    if let scaledImage = scaledImage, let data = compressImageToJPEG(scaledImage, quality: 0.6) {
+    #if DEBUG
+                                        print("compression completion \((CACurrentMediaTime() - startTime) * 1000.0) ms")
+    #endif
+                                        subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< Int64(data.count), complete: true))
+                                        subscriber.putCompletion()
+                                    } else {
+                                        subscriber.putCompletion()
+                                    }
+                                case .jxl:
+                                    if let scaledImage = scaledImage, let data = compressImageToJPEGXL(scaledImage, quality: Int(quality ?? 75)) {
+    #if DEBUG
+                                        print("jpegxl compression completion \((CACurrentMediaTime() - startTime) * 1000.0) ms")
+    #endif
+                                        subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< Int64(data.count), complete: true))
+                                        subscriber.putCompletion()
+                                    } else {
+                                        subscriber.putCompletion()
+                                    }
                                 }
                                 semaphore.signal()
                             }

@@ -264,6 +264,10 @@ public final class TextFieldComponent: Component {
             self.updateEntities()
         }
         
+        public func hasFirstResponder() -> Bool {
+            return self.textView.isFirstResponder
+        }
+        
         public func insertText(_ text: NSAttributedString) {
             self.updateInputState { state in
                 return state.insertText(text)

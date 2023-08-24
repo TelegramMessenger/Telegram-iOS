@@ -31,7 +31,7 @@ public protocol SparseItemGridShimmerLayer: CALayer {
 }
 
 public protocol SparseItemGridBinding: AnyObject {
-    func createLayer() -> SparseItemGridLayer?
+    func createLayer(item: SparseItemGrid.Item) -> SparseItemGridLayer?
     func createView() -> SparseItemGridView?
     func createShimmerLayer() -> SparseItemGridShimmerLayer?
     func bindLayers(items: [SparseItemGrid.Item], layers: [SparseItemGridDisplayItem], size: CGSize, insets: UIEdgeInsets, synchronous: SparseItemGrid.Synchronous)
@@ -982,7 +982,7 @@ public final class SparseItemGrid: ASDisplayNode {
                             itemLayer = current
                             updateLayers.append((itemLayer, index))
                         } else {
-                            itemLayer = VisibleItem(layer: items.itemBinding.createLayer(), view: items.itemBinding.createView())
+                            itemLayer = VisibleItem(layer: items.itemBinding.createLayer(item: item), view: items.itemBinding.createView())
                             self.visibleItems[item.id] = itemLayer
                             
                             bindItems.append(item)
