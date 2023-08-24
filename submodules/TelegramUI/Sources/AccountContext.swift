@@ -576,6 +576,10 @@ public final class AccountContextImpl: AccountContext {
         return message.isPeerOrForwardSourceBroadcastChannel && self.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice }
     }
     
+    public func shouldHideChannelSignature(in message: Message) -> Bool {
+        return message.isPeerBroadcastChannel && self.sharedContext.currentPtgSettings.with { $0.hideSignatureInChannels }
+    }
+    
     public func scheduleGroupCall(peerId: PeerId) {
         let _ = self.sharedContext.callManager?.scheduleGroupCall(context: self, peerId: peerId, endCurrentIfAny: true)
     }

@@ -982,6 +982,7 @@ public protocol AccountContext: AnyObject {
     var immediateIsHidable: Bool { get }
     
     func shouldSuppressForeignAgentNotice(in message: Message) -> Bool
+    func shouldHideChannelSignature(in message: Message) -> Bool
 }
 
 public struct PremiumConfiguration {

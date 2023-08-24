@@ -78,7 +78,7 @@
 "PtgSettings.ChannelAppearanceHeader" = "Представление каналов";
 "PtgSettings.HideReactions" = "Скрывать реакции";
 "PtgSettings.HideComments" = "Скрывать комментарии";
-"PtgSettings.HideShareButton" = "Скрывать кнопку «Поделиться»";
+"PtgSettings.HideShareButton" = "Скрывать кнопку пересылки";
 "PtgSettings.UseFullWidth" = "На всю ширину экрана";
 "PtgSettings.EnableLiveText" = "Сканер текста";
 "PtgSettings.EnableLiveTextHelp" = "Автоматически выполнять распознавание текста и штрих-кодов (например, QR-кода) на каждом изображении, которое вы просматриваете в полноэкранном режиме. Отключите, чтобы сэкономить заряд батареи.";
@@ -94,6 +94,7 @@
 "PtgSettings.JumpToNextUnreadChannel.Disabled" = "Отключен";
 "PtgSettings.JumpToNextUnreadChannel.TopFirst" = "Верхние сначала";
 "PtgSettings.JumpToNextUnreadChannel.BottomFirst" = "Нижние сначала";
+"PtgSettings.HideSignatures" = "Скрывать подписи";
 
 "Conversation.ContextMenuSaveMessage" = "Сохранить сообщение";
 

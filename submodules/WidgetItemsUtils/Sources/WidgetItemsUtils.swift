@@ -1,9 +1,12 @@
+import PtgSettings
+import PtgForeignAgentNoticeRemoval
+
 import Foundation
 import TelegramCore
 import WidgetItems
 
 public extension WidgetDataPeer.Message {
-    init(accountPeerId: EnginePeer.Id, message: EngineMessage) {
+    init(accountPeerId: EnginePeer.Id, message: EngineMessage, ptgSettings: PtgSettings?) {
         var content: WidgetDataPeer.Message.Content = .text
         for media in message.media {
             switch media {
@@ -63,6 +66,17 @@ public extension WidgetDataPeer.Message {
             }
         }
         
-        self.init(author: author, text: message.text, content: content, timestamp: message.timestamp, isPeerOrForwardSourceBroadcastChannel: message._asMessage().isPeerOrForwardSourceBroadcastChannel)
+        var text = message.text
+        if let ptgSettings {
+            var entities = message._asMessage().textEntitiesAttribute?.entities ?? []
+            if message._asMessage().isPeerOrForwardSourceBroadcastChannel && ptgSettings.suppressForeignAgentNotice {
+                (text, entities) = removeForeignAgentNotice(text: text, entities: entities, mayRemoveWholeText: content != .text)
+            }
+            if message._asMessage().isPeerBroadcastChannel && ptgSettings.hideSignatureInChannels, let username = message._asMessage().channelUsername {
+                (text, entities) = removeChannelSignature(text: text, entities: entities, mayRemoveWholeText: content != .text, username: username)
+            }
+        }
+        
+        self.init(author: author, text: text, content: content, timestamp: message.timestamp)
     }
 }

@@ -407,4 +407,11 @@ public extension Message {
         }
         return false
     }
+    
+    var channelUsername: String? {
+        if let channel = self.peers[self.id.peerId] as? TelegramChannel {
+            return channel.username
+        }
+        return nil
+    }
 }

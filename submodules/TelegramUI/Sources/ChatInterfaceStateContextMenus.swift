@@ -1219,26 +1219,34 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     }
                 }
                 
+                // do not remove channel signature for copy, but remove for translate and speak
+                var messageText2 = messageText
+                if !messageText.isEmpty, messageEntities != nil {
+                    if context.shouldHideChannelSignature(in: message), let username = message.channelUsername {
+                        (messageText2, _) = removeChannelSignature(text: messageText, entities: messageEntities!, media: message.media, username: username)
+                    }
+                }
+                
                 var showTranslateIfTopical = false
                 if let peer = chatPresentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, !(peer.addressName ?? "").isEmpty {
                     showTranslateIfTopical = true
                 }
                 
-                let (canTranslate, _) = canTranslateText(context: context, text: messageText, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: showTranslateIfTopical, ignoredLanguages: translationSettings.ignoredLanguages)
+                let (canTranslate, _) = canTranslateText(context: context, text: messageText2, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: showTranslateIfTopical, ignoredLanguages: translationSettings.ignoredLanguages)
                 if canTranslate {
                     actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuTranslate, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Translate"), color: theme.actionSheet.primaryTextColor)
                     }, action: { _, f in
-                        controllerInteraction.performTextSelectionAction(!isCopyProtected, NSAttributedString(string: messageText), .translate)
+                        controllerInteraction.performTextSelectionAction(!isCopyProtected, NSAttributedString(string: messageText2), .translate)
                         f(.default)
                     })))
                 }
                 
-                if isSpeakSelectionEnabled() && !messageText.isEmpty {
+                if isSpeakSelectionEnabled() && !messageText2.isEmpty {
                     actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuSpeak, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.actionSheet.primaryTextColor)
                     }, action: { _, f in
-                        var text = messageText
+                        var text = messageText2
                         if let translationState = chatPresentationInterfaceState.translationState, translationState.isEnabled,
                            let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translationState.toLang }) as? TranslationMessageAttribute, !translation.text.isEmpty {
                             text = translation.text

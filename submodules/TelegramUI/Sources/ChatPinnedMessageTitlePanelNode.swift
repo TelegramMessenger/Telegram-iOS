@@ -676,7 +676,11 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             }
             let (titleLayout, titleApply) = makeTitleLayout(CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), titleStrings)
             
-            let message_ = context.shouldSuppressForeignAgentNotice(in: message) ? removeForeignAgentNotice(message: message) : message
+            var message_ = context.shouldSuppressForeignAgentNotice(in: message) ? removeForeignAgentNotice(message: message) : message
+            
+            if context.shouldHideChannelSignature(in: message) {
+                message_ = removeChannelSignature(message: message_)
+            }
             
             let (textString, _, isText) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message_), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: accountPeerId)
             

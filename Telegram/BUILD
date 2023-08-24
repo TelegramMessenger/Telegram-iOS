@@ -1393,8 +1393,8 @@ swift_library(
         ":WidgetAssets",
     ],
     deps = [
+        "//submodules/PtgSettings:PtgSettings",
         "//submodules/PtgSecretPasscodes:PtgSecretPasscodes",
-        "//submodules/PtgForeignAgentNoticeRemoval:PtgForeignAgentNoticeRemoval",
         
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/WidgetItems:WidgetItems_iOS14",

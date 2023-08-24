@@ -78,7 +78,7 @@
 "PtgSettings.ChannelAppearanceHeader" = "Channel Presentation";
 "PtgSettings.HideReactions" = "Hide Reactions";
 "PtgSettings.HideComments" = "Hide Comments";
-"PtgSettings.HideShareButton" = "Hide Share Button";
+"PtgSettings.HideShareButton" = "Hide Forward Button";
 "PtgSettings.UseFullWidth" = "Use Full Screen Width";
 "PtgSettings.EnableLiveText" = "Live Text";
 "PtgSettings.EnableLiveTextHelp" = "Automatically perform text recognition and bar code detection (e.g. QR-code) on each image you preview in fullscreen. Turn it off to save battery life.";
@@ -94,6 +94,7 @@
 "PtgSettings.JumpToNextUnreadChannel.Disabled" = "Disabled";
 "PtgSettings.JumpToNextUnreadChannel.TopFirst" = "Top First";
 "PtgSettings.JumpToNextUnreadChannel.BottomFirst" = "Bottom First";
+"PtgSettings.HideSignatures" = "Hide Signatures";
 
 "Conversation.ContextMenuSaveMessage" = "Save Message";
 

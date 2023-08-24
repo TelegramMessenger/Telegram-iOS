@@ -122,7 +122,13 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             }
         }
         
-        var messageText = item.context.shouldSuppressForeignAgentNotice(in: message) ? removeForeignAgentNotice(text: message.text, media: message.media) : message.text
+        var message_ = item.context.shouldSuppressForeignAgentNotice(in: message) ? removeForeignAgentNotice(message: message) : message
+        
+        if item.context.shouldHideChannelSignature(in: message) {
+            message_ = removeChannelSignature(message: message_)
+        }
+        
+        var messageText = message_.text
 
         var isFile = false
         inner: for media in message.media {

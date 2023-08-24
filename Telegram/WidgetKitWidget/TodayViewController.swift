@@ -1,6 +1,6 @@
 #if arch(arm64) || arch(x86_64)
 
-import PtgForeignAgentNoticeRemoval
+import PtgSettings
 import PtgSecretPasscodes
 
 import UIKit
@@ -104,11 +104,13 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
     initializeAccountManagement()
     let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
     
+    var ptgSettings: PtgSettings!
     var ptgSecretPasscodes: PtgSecretPasscodes!
     var loggingSettings: LoggingSettings!
     
     let semaphore: DispatchSemaphore = DispatchSemaphore(value: 0)
     let _ = accountManager.transaction({ transaction in
+        ptgSettings = PtgSettings(transaction)
         ptgSecretPasscodes = PtgSecretPasscodes(transaction).withCheckedTimeoutUsingLockStateFile(rootPath: rootPath)
         loggingSettings = transaction.getSharedData(SharedDataKeys.loggingSettings)?.get(LoggingSettings.self) ?? LoggingSettings.defaultSettings
     }).start(completed: {
@@ -198,7 +200,7 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
                 var mappedMessage: WidgetDataPeer.Message?
                 if let index = transaction.getTopPeerMessageIndex(peerId: peer.id) {
                     if let message = transaction.getMessage(index.id) {
-                        mappedMessage = WidgetDataPeer.Message(accountPeerId: state.peerId, message: EngineMessage(message))
+                        mappedMessage = WidgetDataPeer.Message(accountPeerId: state.peerId, message: EngineMessage(message), ptgSettings: ptgSettings)
                     }
                 }
                 
@@ -409,7 +411,7 @@ struct WidgetView: View {
         switch content {
         case let .peer(peer):
             if let message = peer.peer.message {
-                text = (message.isPeerOrForwardSourceBroadcastChannel && self.presentationData.suppressForeignAgentNotice) ? removeForeignAgentNotice(text: message.text, mayRemoveWholeText: message.content != .text) : message.text
+                text = message.text
                 switch message.content {
                 case .text:
                     break

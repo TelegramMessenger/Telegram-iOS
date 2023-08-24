@@ -1,5 +1,3 @@
-import PtgSettings
-
 import Foundation
 import SwiftSignalKit
 import Postbox
@@ -99,7 +97,7 @@ final class WidgetDataContext {
     private var widgetPresentationDataDisposable: Disposable?
     private var notificationPresentationDataDisposable: Disposable?
     
-    init(basePath: String, inForeground: Signal<Bool, NoError>, activeAccounts: Signal<[Account], NoError>, presentationData: Signal<PresentationData, NoError>, appLockContext: AppLockContextImpl, ptgSettings: Signal<PtgSettings, NoError>) {
+    init(basePath: String, inForeground: Signal<Bool, NoError>, activeAccounts: Signal<[Account], NoError>, presentationData: Signal<PresentationData, NoError>, appLockContext: AppLockContextImpl) {
         self.reloadManager = WidgetReloadManager(inForeground: inForeground)
         
         let queue = Queue()
@@ -235,7 +233,7 @@ final class WidgetDataContext {
                             isForum = true
                         }
                         
-                        result.append(WidgetDataPeer(id: peerId.toInt64(), name: name, lastName: lastName, letters: [], avatarPath: nil, badge: nil, message: WidgetDataPeer.Message(accountPeerId: account.peerId, message: message), isForum: isForum))
+                        result.append(WidgetDataPeer(id: peerId.toInt64(), name: name, lastName: lastName, letters: [], avatarPath: nil, badge: nil, message: WidgetDataPeer.Message(accountPeerId: account.peerId, message: message, ptgSettings: nil), isForum: isForum))
                     }
                     result.sort(by: { lhs, rhs in
                         return lhs.id < rhs.id
@@ -261,8 +259,8 @@ final class WidgetDataContext {
             self?.reloadManager.requestReload()
         })
         
-        self.widgetPresentationDataDisposable = (combineLatest(presentationData, ptgSettings)
-        |> map { presentationData, ptgSettings -> WidgetPresentationData in
+        self.widgetPresentationDataDisposable = (presentationData
+        |> map { presentationData -> WidgetPresentationData in
             return WidgetPresentationData(
                 widgetChatsGalleryTitle: presentationData.strings.Widget_ChatsGalleryTitle,
                 widgetChatsGalleryDescription: presentationData.strings.Widget_ChatsGalleryDescription,
@@ -285,8 +283,7 @@ final class WidgetDataContext {
                 autodeleteTimerRemoved: presentationData.strings.Widget_MessageAutoremoveTimerRemoved,
                 generalLockedTitle: presentationData.strings.Intents_ErrorLockedTitle,
                 generalLockedText: presentationData.strings.Intents_ErrorLockedText,
-                chatSavedMessages: presentationData.strings.DialogList_SavedMessages,
-                suppressForeignAgentNotice: ptgSettings.suppressForeignAgentNotice
+                chatSavedMessages: presentationData.strings.DialogList_SavedMessages
             )
         }
         |> distinctUntilChanged).start(next: { value in

@@ -117,7 +117,11 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
             }
             
-            let message_ = arguments.context.shouldSuppressForeignAgentNotice(in: arguments.message) ? removeForeignAgentNotice(message: arguments.message) : arguments.message
+            var message_ = arguments.context.shouldSuppressForeignAgentNotice(in: arguments.message) ? removeForeignAgentNotice(message: arguments.message) : arguments.message
+            
+            if arguments.context.shouldHideChannelSignature(in: arguments.message) {
+                message_ = removeChannelSignature(message: message_)
+            }
             
             let (textString, isMedia, isText) = descriptionStringForMessage(contentSettings: arguments.context.currentContentSettings.with { $0 }, message: EngineMessage(message_), strings: arguments.strings, nameDisplayOrder: arguments.presentationData.nameDisplayOrder, dateTimeFormat: arguments.presentationData.dateTimeFormat, accountPeerId: arguments.context.account.peerId)
             

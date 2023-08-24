@@ -25,6 +25,7 @@ public struct PtgSettings: Codable, Equatable {
     public let addContextMenuSaveMessage: Bool
     public let addContextMenuShare: Bool
     public let jumpToNextUnreadChannel: JumpToNextUnreadChannel
+    public let hideSignatureInChannels: Bool
     public let testToolsEnabled: Bool?
     
     public static var defaultSettings: PtgSettings {
@@ -41,6 +42,7 @@ public struct PtgSettings: Codable, Equatable {
             addContextMenuSaveMessage: false,
             addContextMenuShare: false,
             jumpToNextUnreadChannel: .topFirst,
+            hideSignatureInChannels: false,
             testToolsEnabled: nil
         )
     }
@@ -58,6 +60,7 @@ public struct PtgSettings: Codable, Equatable {
         addContextMenuSaveMessage: Bool,
         addContextMenuShare: Bool,
         jumpToNextUnreadChannel: JumpToNextUnreadChannel,
+        hideSignatureInChannels: Bool,
         testToolsEnabled: Bool?
     ) {
         self.showPeerId = showPeerId
@@ -72,6 +75,7 @@ public struct PtgSettings: Codable, Equatable {
         self.addContextMenuSaveMessage = addContextMenuSaveMessage
         self.addContextMenuShare = addContextMenuShare
         self.jumpToNextUnreadChannel = jumpToNextUnreadChannel
+        self.hideSignatureInChannels = hideSignatureInChannels
         self.testToolsEnabled = testToolsEnabled
     }
     
@@ -90,6 +94,7 @@ public struct PtgSettings: Codable, Equatable {
         self.addContextMenuSaveMessage = (try container.decodeIfPresent(Int32.self, forKey: "acmsm") ?? 0) != 0
         self.addContextMenuShare = (try container.decodeIfPresent(Int32.self, forKey: "acms") ?? 0) != 0
         self.jumpToNextUnreadChannel = (try container.decodeIfPresent(Int32.self, forKey: "jtnuc")).flatMap({ JumpToNextUnreadChannel(rawValue: $0) }) ?? .topFirst
+        self.hideSignatureInChannels = (try container.decodeIfPresent(Int32.self, forKey: "hsic") ?? 0) != 0
         self.testToolsEnabled = try container.decodeIfPresent(Int32.self, forKey: "test").flatMap({ $0 != 0 })
     }
     
@@ -108,6 +113,7 @@ public struct PtgSettings: Codable, Equatable {
         try container.encode((self.addContextMenuSaveMessage ? 1 : 0) as Int32, forKey: "acmsm")
         try container.encode((self.addContextMenuShare ? 1 : 0) as Int32, forKey: "acms")
         try container.encode(self.jumpToNextUnreadChannel.rawValue, forKey: "jtnuc")
+        try container.encode((self.hideSignatureInChannels ? 1 : 0) as Int32, forKey: "hsic")
         try container.encodeIfPresent(self.testToolsEnabled.flatMap({ ($0 ? 1 : 0) as Int32 }), forKey: "test")
     }
     

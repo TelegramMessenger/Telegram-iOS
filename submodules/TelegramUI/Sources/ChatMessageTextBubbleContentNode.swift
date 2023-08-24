@@ -238,7 +238,11 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     rawText = item.presentationData.strings.Conversation_UnsupportedMediaPlaceholder
                     messageEntities = [MessageTextEntity(range: 0..<rawText.count, type: .Italic)]
                 } else {
-                    let message_ = item.context.shouldSuppressForeignAgentNotice(in: item.message) ? removeForeignAgentNotice(message: item.message) : item.message
+                    var message_ = item.context.shouldSuppressForeignAgentNotice(in: item.message) ? removeForeignAgentNotice(message: item.message) : item.message
+                    
+                    if item.context.shouldHideChannelSignature(in: item.message) {
+                        message_ = removeChannelSignature(message: message_)
+                    }
 
                     if let updatingMedia = item.attributes.updatingMedia {
                         rawText = updatingMedia.text

@@ -1078,7 +1078,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             self.widgetDataContext = WidgetDataContext(basePath: self.basePath, inForeground: self.applicationBindings.applicationInForeground, activeAccounts: self.activeAccountContexts
             |> map { _, accounts, _, _ in
                 return accounts.map { $0.1.account }
-            }, presentationData: self.presentationData, appLockContext: self.appLockContext as! AppLockContextImpl, ptgSettings: self.ptgSettings)
+            }, presentationData: self.presentationData, appLockContext: self.appLockContext as! AppLockContextImpl)
             
             let enableSpotlight = accountManager.sharedData(keys: Set([ApplicationSpecificSharedDataKeys.intentsSettings]))
             |> map { sharedData -> Bool in

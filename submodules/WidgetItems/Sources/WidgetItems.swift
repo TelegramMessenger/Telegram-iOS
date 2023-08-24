@@ -233,14 +233,12 @@ public struct WidgetDataPeer: Codable, Equatable {
         public var text: String
         public var content: Content
         public var timestamp: Int32
-        public let isPeerOrForwardSourceBroadcastChannel: Bool
         
-        public init(author: Author?, text: String, content: Content, timestamp: Int32, isPeerOrForwardSourceBroadcastChannel: Bool) {
+        public init(author: Author?, text: String, content: Content, timestamp: Int32) {
             self.author = author
             self.text = text
             self.content = content
             self.timestamp = timestamp
-            self.isPeerOrForwardSourceBroadcastChannel = isPeerOrForwardSourceBroadcastChannel
         }
     }
     
@@ -306,8 +304,6 @@ public struct WidgetPresentationData: Codable, Equatable {
     
     public var chatSavedMessages: String
     
-    public let suppressForeignAgentNotice: Bool
-    
     public init(
         widgetChatsGalleryTitle: String,
         widgetChatsGalleryDescription: String,
@@ -330,8 +326,7 @@ public struct WidgetPresentationData: Codable, Equatable {
         autodeleteTimerRemoved: String,
         generalLockedTitle: String,
         generalLockedText: String,
-        chatSavedMessages: String,
-        suppressForeignAgentNotice: Bool
+        chatSavedMessages: String
     ) {
         self.widgetChatsGalleryTitle = widgetChatsGalleryTitle
         self.widgetChatsGalleryDescription = widgetChatsGalleryDescription
@@ -355,7 +350,6 @@ public struct WidgetPresentationData: Codable, Equatable {
         self.generalLockedTitle = generalLockedTitle
         self.generalLockedText = generalLockedText
         self.chatSavedMessages = chatSavedMessages
-        self.suppressForeignAgentNotice = suppressForeignAgentNotice
     }
     
     public static func getForExtension() -> WidgetPresentationData {
@@ -405,8 +399,7 @@ public extension WidgetPresentationData {
         autodeleteTimerRemoved: "Auto-delete timer disabled",
         generalLockedTitle: "Locked",
         generalLockedText: "Open Vartagram and enter passcode to edit widget.",
-        chatSavedMessages: "Saved Messages",
-        suppressForeignAgentNotice: false
+        chatSavedMessages: "Saved Messages"
     )
 }
 

@@ -34,6 +34,9 @@ public func removeForeignAgentNotice(text: String, entities: [MessageTextEntity]
                 }
             }
         }
+        if matches.count > 0 {
+            break
+        }
     }
     return (newText, newEntities)
 }
@@ -103,11 +106,14 @@ public func removeForeignAgentNotice(attrString string: NSAttributedString) -> N
                 updated!.replaceCharacters(in: match.range, with: replaceWith)
             }
         }
+        if matches.count > 0 {
+            break
+        }
     }
     return updated ?? string
 }
 
-private func mayRemoveWholeText(with media: [Media]) -> Bool {
+func mayRemoveWholeText(with media: [Media]) -> Bool {
     return media.contains { $0 is TelegramMediaImage || $0 is TelegramMediaFile }
 }
 
