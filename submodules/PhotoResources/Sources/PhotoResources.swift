@@ -20,7 +20,7 @@ import MusicAlbumArtResources
 import Svg
 import RangeSet
 import Accelerate
-
+import ImageCompression
 
 private enum ResourceFileData {
     case data(Data)
@@ -2290,6 +2290,12 @@ public func chatMessageImageFile(account: Account, userLocation: MediaResourceUs
                         if thumbnail {
                             fittedSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height)).aspectFilled(arguments.boundingSize)
                         }
+                    }
+                }
+                
+                if fullSizeImage == nil, fileReference.media.mimeType == "image/jxl" {
+                    if let data = try? Data(contentsOf: URL(fileURLWithPath: fullSizePath), options: [.mappedIfSafe]), let image = decompressImageFromJPEGXL(data: data) {
+                        fullSizeImage = image.cgImage
                     }
                 }
             }

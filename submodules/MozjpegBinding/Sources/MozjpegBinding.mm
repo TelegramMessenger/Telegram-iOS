@@ -197,10 +197,10 @@ UIImage * _Nullable decompressJPEGXLData(NSData * _Nonnull data) {
             if (JXL_DEC_SUCCESS != JxlDecoderImageOutBufferSize(dec.get(), &format, &buffer_size)) {
                 return nil;
             }
-            if (buffer_size != xsize * ysize * 16) {
-                return nil;
+            if (buffer_size != xsize * ysize * 4) {
+                //return nil;
             }
-            pixels.resize(xsize * ysize * 4);
+            pixels.resize(buffer_size);
             void* pixels_buffer = (void*)pixels.data();
             size_t pixels_buffer_size = pixels.size() * sizeof(float);
             if (JXL_DEC_SUCCESS != JxlDecoderSetImageOutBuffer(dec.get(), &format, pixels_buffer, pixels_buffer_size)) {
@@ -214,11 +214,28 @@ UIImage * _Nullable decompressJPEGXLData(NSData * _Nonnull data) {
             // It's not required to call JxlDecoderReleaseInput(dec.get()) here since
             // the decoder will be destroyed.
             
-            int targetBytesPerRow = xsize * 4;
-            uint8_t *permuteTargetBuffer = (uint8_t *)malloc(targetBytesPerRow * ysize);
-            memcpy(permuteTargetBuffer, pixels.data(), pixels.size());
-            
-            NSData *resultData = [[NSData alloc] initWithBytesNoCopy:permuteTargetBuffer length:targetBytesPerRow * ysize deallocator:^(void * _Nonnull bytes, __unused NSUInteger length) {
+            int width = xsize;
+            int height = ysize;
+            int sourceBytesPerRow = width * 4;
+            int targetBytesPerRow = width * 4;
+            vImage_Buffer source;
+            source.width = width;
+            source.height = height;
+            source.rowBytes = sourceBytesPerRow;
+            source.data = pixels.data();
+
+            vImage_Buffer permuteTarget;
+            permuteTarget.width = width;
+            permuteTarget.height = height;
+            permuteTarget.rowBytes = targetBytesPerRow;
+
+            unsigned char *permuteTargetBuffer = (uint8_t *)malloc(targetBytesPerRow * height);
+            permuteTarget.data = permuteTargetBuffer;
+
+            const uint8_t permuteMap[4] = {2,1,0,3};
+            vImagePermuteChannels_ARGB8888(&source, &permuteTarget, permuteMap, kvImageDoNotTile);
+
+            NSData *resultData = [[NSData alloc] initWithBytesNoCopy:permuteTargetBuffer length:targetBytesPerRow * height deallocator:^(void * _Nonnull bytes, __unused NSUInteger length) {
                 free(bytes);
             }];
 
@@ -235,7 +252,7 @@ UIImage * _Nullable decompressJPEGXLData(NSData * _Nonnull data) {
                 UIGraphicsEndImageContext();
             });
 
-            CGImageRef cgImg = CGImageCreate(xsize, ysize, 8, 32, targetBytesPerRow, imageColorSpace, bitmapInfo, dataProvider, NULL, true, kCGRenderingIntentDefault);
+            CGImageRef cgImg = CGImageCreate(width, height, 8, 32, targetBytesPerRow, imageColorSpace, bitmapInfo, dataProvider, NULL, true, kCGRenderingIntentDefault);
 
             CGDataProviderRelease(dataProvider);
 

@@ -103,7 +103,8 @@ private let internalMimePrefixes: [String] = [
     "image/jpeg",
     "image/jpg",
     "image/png",
-    "image/heic"
+    "image/heic",
+    "image/jxl"
 ]
 
 public func internalDocumentItemSupportsMimeType(_ type: String, fileName: String?) -> Bool {
