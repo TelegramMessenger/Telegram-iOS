@@ -12,6 +12,7 @@ enum DrawingTextStyle: Equatable {
     case filled
     case semi
     case stroke
+    case blur
     
     init(style: DrawingTextEntity.Style) {
         switch style {
@@ -23,6 +24,8 @@ enum DrawingTextStyle: Equatable {
             self = .semi
         case .stroke:
             self = .stroke
+        case .blur:
+            self = .blur
         }
     }
 }
@@ -501,6 +504,8 @@ final class TextSettingsComponent: CombinedComponent {
             case .semi:
                 styleImage = state.image(.semi)
             case .stroke:
+                styleImage = state.image(.stroke)
+            case .blur:
                 styleImage = state.image(.stroke)
             }
             

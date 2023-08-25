@@ -2283,7 +2283,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
             if gestureRecognizer === self.dismissPanGestureRecognizer {
                 let location = gestureRecognizer.location(in: self.entitiesView)
-                if self.isDisplayingTool || self.entitiesView.hasSelection || self.entitiesView.getView(at: location) != nil {
+                if self.controller?.isEditingStory == true || self.isDisplayingTool || self.entitiesView.hasSelection || self.entitiesView.getView(at: location) != nil {
                     return false
                 }
                 return true
@@ -3028,7 +3028,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             if let self {
                                 self.mediaEditor?.setAudioTrack(nil)
                                 self.requestUpdate(transition: .easeInOut(duration: 0.25))
-//                                strongSelf.insertEntity.invoke(DrawingSimpleShapeEntity(shapeType: .rectangle, drawType: .stroke, color: strongSelf.currentColor, lineWidth: 0.15))
                             }
                         }
                     )
