@@ -86,8 +86,8 @@ jobs:
           mkdir -p $HOME/telegram-configuration
           cp build-system/public-release-configuration.json $HOME/telegram-configuration/
 
-          sed -i '' 's/"api_id": ""/"api_id": "$API_ID"/g' $HOME/telegram-configuration/public-release-configuration.json
-          sed -i '' 's/"api_hash": ""/"api_hash": "$API_HASH"/g' $HOME/telegram-configuration/public-release-configuration.json
+          sed -i '' 's/"api_id": ""/"api_id": "'"$API_ID"'"/g' $HOME/telegram-configuration/public-release-configuration.json
+          sed -i '' 's/"api_hash": ""/"api_hash": "'"$API_HASH"'"/g' $HOME/telegram-configuration/public-release-configuration.json
 
           # prepare provisioning profiles
           PROVISIONING_PATH=$HOME/telegram-configuration/provisioning/profiles
