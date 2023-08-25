@@ -1242,6 +1242,8 @@ private final class DrawingScreenComponent: CombinedComponent {
                                 nextStyle = .regular
                             case .stroke:
                                 nextStyle = .regular
+                            case .blur:
+                                nextStyle = .regular
                             }
                             textEntity.style = nextStyle
                             updateEntityView.invoke((textEntity.uuid, false))
@@ -3514,6 +3516,8 @@ public final class DrawingToolsInteraction {
                                 case .semi:
                                     nextStyle = .regular
                                 case .stroke:
+                                    nextStyle = .regular
+                                case .blur:
                                     nextStyle = .regular
                                 }
                                 textEntity.style = nextStyle

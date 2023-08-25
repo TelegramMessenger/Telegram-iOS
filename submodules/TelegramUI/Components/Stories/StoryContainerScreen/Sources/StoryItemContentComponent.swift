@@ -30,18 +30,22 @@ final class StoryItemContentComponent: Component {
     let strings: PresentationStrings
     let peer: EnginePeer
     let item: EngineStoryItem
+    let availableReactions: StoryAvailableReactions?
     let audioMode: StoryContentItem.AudioMode
     let isVideoBuffering: Bool
     let isCurrent: Bool
+    let activateReaction: (UIView, MessageReaction.Reaction) -> Void
     
-    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer, item: EngineStoryItem, audioMode: StoryContentItem.AudioMode, isVideoBuffering: Bool, isCurrent: Bool) {
+    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer, item: EngineStoryItem, availableReactions: StoryAvailableReactions?, audioMode: StoryContentItem.AudioMode, isVideoBuffering: Bool, isCurrent: Bool, activateReaction: @escaping (UIView, MessageReaction.Reaction) -> Void) {
 		self.context = context
         self.strings = strings
         self.peer = peer
 		self.item = item
+        self.availableReactions = availableReactions
         self.audioMode = audioMode
         self.isVideoBuffering = isVideoBuffering
         self.isCurrent = isCurrent
+        self.activateReaction = activateReaction
 	}
 
 	static func ==(lhs: StoryItemContentComponent, rhs: StoryItemContentComponent) -> Bool {
@@ -57,6 +61,9 @@ final class StoryItemContentComponent: Component {
 		if lhs.item != rhs.item {
 			return false
 		}
+        if lhs.availableReactions != rhs.availableReactions {
+            return false
+        }
         if lhs.isVideoBuffering != rhs.isVideoBuffering {
             return false
         }
@@ -68,6 +75,7 @@ final class StoryItemContentComponent: Component {
 
     final class View: StoryContentItem.View {
         private let imageView: StoryItemImageView
+        private let overlaysView: StoryItemOverlaysView
         private var videoNode: UniversalVideoNode?
         private var loadingEffectView: StoryItemLoadingEffectView?
         
@@ -107,18 +115,27 @@ final class StoryItemContentComponent: Component {
 		override init(frame: CGRect) {
             self.hierarchyTrackingLayer = HierarchyTrackingLayer()
             self.imageView = StoryItemImageView()
+            self.overlaysView = StoryItemOverlaysView()
             
 			super.init(frame: frame)
             
             self.layer.addSublayer(self.hierarchyTrackingLayer)
             
             self.addSubview(self.imageView)
+            self.addSubview(self.overlaysView)
             
             self.hierarchyTrackingLayer.isInHierarchyUpdated = { [weak self] value in
                 guard let self else {
                     return
                 }
                 self.updateProgressMode(update: true)
+            }
+            
+            self.overlaysView.activate = { [weak self] view, reaction in
+                guard let self, let component = self.component else {
+                    return
+                }
+                component.activateReaction(view, reaction)
             }
 		}
         
@@ -449,6 +466,9 @@ final class StoryItemContentComponent: Component {
                     return result
                 }
             }
+            if let result = self.overlaysView.hitTest(self.convert(point, to: self.overlaysView), with: event) {
+                return result
+            }
             return nil
         }
         
@@ -579,11 +599,23 @@ final class StoryItemContentComponent: Component {
                     attemptSynchronous: synchronousLoad,
                     transition: transition
                 )
+                self.overlaysView.update(
+                    context: component.context,
+                    strings: component.strings,
+                    peer: component.peer,
+                    story: component.item,
+                    availableReactions: component.availableReactions,
+                    size: availableSize,
+                    isCaptureProtected: component.item.isForwardingDisabled,
+                    attemptSynchronous: synchronousLoad,
+                    transition: transition
+                )
                 applyState = true
                 if self.imageView.isContentLoaded {
                     self.contentLoaded = true
                 }
                 transition.setFrame(view: self.imageView, frame: CGRect(origin: CGPoint(), size: availableSize))
+                transition.setFrame(view: self.overlaysView, frame: CGRect(origin: CGPoint(), size: availableSize))
                 
                 var dimensions: CGSize?
                 switch messageMedia {
