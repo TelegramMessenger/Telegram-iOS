@@ -2952,9 +2952,6 @@ public final class ChatListNode: ListView {
                     }
                 }
             }
-//            if itemNode is ChatListArchiveTransitionItemNode {
-//                isHiddenItemVisible = true
-//            }
         })
         if isHiddenItemVisible && !self.currentState.hiddenItemShouldBeTemporaryRevealed {
             if self.hapticFeedback == nil {
@@ -2970,11 +2967,11 @@ public final class ChatListNode: ListView {
     }
     
     func updateArchiveTopOffset(offset: CGFloat) {
-        guard !self.currentState.hiddenItemShouldBeTemporaryRevealed else { return }
+        let toggleTemporaryRevealHiddenItems = !self.currentState.hiddenItemShouldBeTemporaryRevealed
         self.updateState { state in
             var state = state
             state.topOffset = offset
-            state.hiddenItemShouldBeTemporaryRevealed = true
+            state.hiddenItemShouldBeTemporaryRevealed = toggleTemporaryRevealHiddenItems
             return state
         }
     }

@@ -2428,9 +2428,11 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         if listView.isDragging {
             var overscrollSelectedId: EnginePeer.Id?
             var overscrollHiddenChatItemsAllowed = false
+            var overscrollFraction: CGFloat?
             if let controller = self.controller, let componentView = controller.chatListHeaderView(), let storyPeerListView = componentView.storyPeerListView() {
                 overscrollSelectedId = storyPeerListView.overscrollSelectedId
                 overscrollHiddenChatItemsAllowed = storyPeerListView.overscrollHiddenChatItemsAllowed
+                overscrollFraction = storyPeerListView.overscrollFraction
             }
             
             if let chatListNode = listView as? ChatListNode {
@@ -2481,52 +2483,64 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                         }
                     }
                 
-                    if self.allowOverscrollItemExpansion {
-                        if overscrollHiddenChatItemsAllowed {
-                            let timestamp = CACurrentMediaTime()
-                            if let _ = self.currentOverscrollItemExpansionTimestamp {
-                            } else {
-                                self.currentOverscrollItemExpansionTimestamp = timestamp
-                            }
-                            
-                            if let currentOverscrollItemExpansionTimestamp = self.currentOverscrollItemExpansionTimestamp, currentOverscrollItemExpansionTimestamp <= timestamp - 0.0 {
-                                self.allowOverscrollItemExpansion = false
-                                
-                                if isPrimary {
-                                    self.mainContainerNode.currentItemNode.revealScrollHiddenItem()
-                                } else {
-                                    self.inlineStackContainerNode?.currentItemNode.revealScrollHiddenItem()
-                                }
-                            }
-                        } else if case let .known(value) = offset, value < 0 {
-                            let difference = value + listView.tempTopInset - 40.0
-                            
-                            let timestamp = CACurrentMediaTime()
-                            if let _ = self.currentOverscrollItemExpansionTimestamp {
-                            } else {
-                                self.currentOverscrollItemExpansionTimestamp = timestamp
-                            }
-                            
-                            if let currentOverscrollItemExpansionTimestamp = self.currentOverscrollItemExpansionTimestamp, currentOverscrollItemExpansionTimestamp <= timestamp - 0.0 {
-                                self.allowOverscrollItemExpansion = false
-                                
-                                if isPrimary {
-                                    self.mainContainerNode.currentItemNode.forEachItemNode { node in
-                                        if let chatNode = node as? ChatListItemNode {
-                                            if case .groupReference(_) = chatNode.item?.content {
-                                                self.mainContainerNode.currentItemNode.updateArchiveTopOffset(offset: CGFloat(abs(difference)))
-                                                chatNode.updateHeightOffsetValue(offset: CGFloat(abs(difference)), transition: self.tempNavigationScrollingTransition ?? .immediate)
-                                            }
+//                    if self.allowOverscrollItemExpansion {
+//                        if overscrollHiddenChatItemsAllowed {
+//                            let timestamp = CACurrentMediaTime()
+//                            if let _ = self.currentOverscrollItemExpansionTimestamp {
+//                            } else {
+//                                self.currentOverscrollItemExpansionTimestamp = timestamp
+//                            }
+//
+//                            if let currentOverscrollItemExpansionTimestamp = self.currentOverscrollItemExpansionTimestamp, currentOverscrollItemExpansionTimestamp <= timestamp - 0.0 {
+//                                self.allowOverscrollItemExpansion = false
+//
+//                                if isPrimary {
+//                                    self.mainContainerNode.currentItemNode.revealScrollHiddenItem()
+//                                } else {
+//                                    self.inlineStackContainerNode?.currentItemNode.revealScrollHiddenItem()
+//                                }
+//                            }
+//                        }
+//                    }
+                    
+                    if
+                        let overscrollFraction, overscrollFraction > 0,
+                            let node = self.mainContainerNode.currentItemNode.itemNodeAtIndex(2) as? ChatListItemNode, node.isNodeLoaded,
+                            let itemHeight = node.currentItemHeight, itemHeight > 0
+                    {
+
+                        let expandedHeight = (overscrollFraction * 2) * itemHeight //listView.tempTopInset - 40.0
+                        print("expandedHeight: \(expandedHeight) overscrollFraction: \(overscrollFraction) itemHeight: \(itemHeight)")
+
+                        let timestamp = CACurrentMediaTime()
+                        if let _ = self.currentOverscrollItemExpansionTimestamp {
+                        } else {
+                            self.currentOverscrollItemExpansionTimestamp = timestamp
+                        }
+
+                        if let currentOverscrollItemExpansionTimestamp = self.currentOverscrollItemExpansionTimestamp, currentOverscrollItemExpansionTimestamp <= timestamp - 0.0 {
+//                            self.allowOverscrollItemExpansion = false
+
+                            if isPrimary {
+                                self.mainContainerNode.currentItemNode.forEachItemNode { node in
+                                    if let chatNode = node as? ChatListItemNode {
+                                        if case let .groupReference(data) = chatNode.item?.content, data.groupId == .archive, expandedHeight != chatNode.item?.hiddenOffsetValue {
+                                            self.mainContainerNode.currentItemNode.updateArchiveTopOffset(offset: expandedHeight)
+                                            chatNode.updateExpandedHeight(height: expandedHeight, transition: .immediate)
+//                                            chatNode.animateFrameTransition(1.0, expandedHeight)
+//                                            chatNode.updateHeightOffsetValue(offset: expandedHeight, transition: self.tempNavigationScrollingTransition ?? .immediate)
                                         }
                                     }
-                                } else {
-                                    self.inlineStackContainerNode?.currentItemNode.revealScrollHiddenItem()
-                                    self.inlineStackContainerNode?.currentItemNode.forEachItemNode { node in
-                                        if let chatNode = node as? ChatListItemNode {
-                                            if case .groupReference(_) = chatNode.item?.content {
-                                                self.inlineStackContainerNode?.currentItemNode.updateArchiveTopOffset(offset: CGFloat(abs(difference)))
-                                                chatNode.updateHeightOffsetValue(offset: CGFloat(abs(difference)), transition: self.tempNavigationScrollingTransition ?? .immediate)
-                                            }
+                                }
+                            } else {
+                                self.inlineStackContainerNode?.currentItemNode.forEachItemNode { node in
+                                    if let chatNode = node as? ChatListItemNode {
+                                        if case let .groupReference(data) = chatNode.item?.content, data.groupId == .archive, expandedHeight != chatNode.item?.hiddenOffsetValue {
+                                            self.inlineStackContainerNode?.currentItemNode.updateArchiveTopOffset(offset: expandedHeight)
+                                            chatNode.updateExpandedHeight(height: expandedHeight, transition: .immediate)
+//                                            chatNode.animateFrameTransition(1.0, expandedHeight)
+
+//                                            chatNode.updateHeightOffsetValue(offset: expandedHeight, transition: self.tempNavigationScrollingTransition ?? .immediate)
                                         }
                                     }
                                 }
