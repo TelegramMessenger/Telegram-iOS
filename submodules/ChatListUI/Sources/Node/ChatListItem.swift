@@ -188,12 +188,18 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
     let selected: Bool
     let enableContextActions: Bool
     let hiddenOffset: Bool
+    var hiddenOffsetValue: CGFloat
     let interaction: ChatListNodeInteraction
     
     public let selectable: Bool = true
     
     public var approximateHeight: CGFloat {
-        return self.hiddenOffset ? 0.0 : 44.0
+//        if case let .groupReference(data) = self.content, data.groupId == .archive {
+//            return hiddenOffsetValue
+//        } else {
+//            return 44.0
+//        }
+        return 44.0
     }
     
     let header: ListViewItemHeader?
@@ -211,7 +217,7 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
         }
     }
     
-    public init(presentationData: ChatListPresentationData, context: AccountContext, chatListLocation: ChatListControllerLocation, filterData: ChatListItemFilterData?, index: EngineChatList.Item.Index, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enableContextActions: Bool, hiddenOffset: Bool, interaction: ChatListNodeInteraction) {
+    public init(presentationData: ChatListPresentationData, context: AccountContext, chatListLocation: ChatListControllerLocation, filterData: ChatListItemFilterData?, index: EngineChatList.Item.Index, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enableContextActions: Bool, hiddenOffset: Bool, hiddenOffsetValue: CGFloat, interaction: ChatListNodeInteraction) {
         self.presentationData = presentationData
         self.chatListLocation = chatListLocation
         self.filterData = filterData
@@ -224,6 +230,7 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
         self.header = header
         self.enableContextActions = enableContextActions
         self.hiddenOffset = hiddenOffset
+        self.hiddenOffsetValue = hiddenOffsetValue
         self.interaction = interaction
     }
     
@@ -932,6 +939,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     
+    let archiveTransitionNode: ChatListArchiveTransitionNode
     let contextContainer: ContextControllerSourceNode
     let mainContentContainerNode: ASDisplayNode
     
@@ -1243,6 +1251,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
+        self.archiveTransitionNode = ChatListArchiveTransitionNode()
+        self.archiveTransitionNode.isLayerBacked = true
+
+        
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.isAccessibilityElement = true
@@ -1251,6 +1263,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.addSubnode(self.separatorNode)
         
         self.addSubnode(self.contextContainer)
+        self.addSubnode(self.archiveTransitionNode)
+
         self.contextContainer.addSubnode(self.mainContentContainerNode)
         
         self.avatarContainerNode.addSubnode(self.avatarNode)
@@ -2692,11 +2706,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: layoutOffset + floor(item.presentationData.fontSize.itemListBaseFontSize * 8.0 / 17.0)), size: CGSize(width: rawContentWidth, height: itemHeight - 12.0 - 9.0))
             
             let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
-            var heightOffset: CGFloat = 0.0
-            if item.hiddenOffset {
-                heightOffset = -itemHeight
+            var heightOffset: CGFloat = .zero
+            if case let .groupReference(data) = item.content, data.groupId == .archive {
+                heightOffset = -(itemHeight-item.hiddenOffsetValue)
             }
-            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: max(0.0, itemHeight + heightOffset)), insets: insets)
+            print("height offset: \(heightOffset) with hiddenOffsetValue: \(item.hiddenOffsetValue) itemHeight: \(itemHeight)")
+            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: itemHeight + heightOffset), insets: insets)
             
             var customActions: [ChatListItemAccessibilityCustomAction] = []
             for option in peerLeftRevealOptions {
@@ -2706,6 +2721,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 customActions.append(ChatListItemAccessibilityCustomAction(name: option.title, target: nil, selector: #selector(ChatListItemNode.performLocalAccessibilityCustomAction(_:)), key: option.key))
             }
             
+            print("layout height: \(layout.contentSize.height)")
             return (layout, { [weak self] synchronousLoads, animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, first, last, firstWithHeader, nextIsPinned, params, countersSize)
@@ -2720,13 +2736,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         animateOnline = false
                     }
                     strongSelf.currentOnline = online
-                    
-                    if item.hiddenOffset {
-                        strongSelf.layer.zPosition = -1.0
-                    }
-                                       
-                    if case .groupReference = item.content {
-                        strongSelf.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, layout.contentSize.height - itemHeight, 0.0)
+                                                           
+                    if case let .groupReference(data) = item.content {
+                        if data.groupId == .archive {
+                            strongSelf.layer.zPosition = -1.0
+                        }
+                        let translationY = layout.contentSize.height - itemHeight
+                        strongSelf.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, translationY, 0.0)
+                        print("set sublayer translation y: \(translationY)")
                     }
                     
                     if let _ = updatedTheme {
@@ -2742,11 +2759,24 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         transition = .immediate
                     }
                     
+                    if case let .groupReference(data) = item.content, data.groupId == .archive {
+                        transition.updateAlpha(node: strongSelf.archiveTransitionNode, alpha: 1.0)
+                        transition.updateAlpha(node: strongSelf.mainContentContainerNode, alpha: .zero)
+                    } else {
+                        transition.updateAlpha(node: strongSelf.archiveTransitionNode, alpha: .zero)
+                        transition.updateAlpha(node: strongSelf.mainContentContainerNode, alpha: 1.0)
+                    }
+                    
                     let contextContainerFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: itemHeight))
 //                    strongSelf.contextContainer.position = contextContainerFrame.center
                     transition.updatePosition(node: strongSelf.contextContainer, position: contextContainerFrame.center)
                     transition.updateBounds(node: strongSelf.contextContainer, bounds: contextContainerFrame.offsetBy(dx: -strongSelf.revealOffset, dy: 0.0))
-                    
+//                    strongSelf.archiveTransitionNode.updateLayout(size: layout.contentSize, synchronousLoads: true)
+//                    print("top offset: \(item.hiddenOffsetValue) hiddenOffset: \(item.hiddenOffset)")
+//                    let archiveTransitionFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: itemHeight))
+//                    transition.updatePosition(node: strongSelf.archiveTransitionNode, position: archiveTransitionFrame.center)
+//                    transition.updateBounds(node: strongSelf.archiveTransitionNode, bounds: archiveTransitionFrame)
+
                     var mainContentFrame: CGRect
                     var mainContentBoundsOffset: CGFloat
                     var mainContentAlpha: CGFloat = 1.0
@@ -3830,6 +3860,32 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.highlightedBackgroundNode.layer.animate(from: 1.0 as NSNumber, to: 0.0 as NSNumber, keyPath: "opacity", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.3, delay: 0.7, completion: { [weak self] _ in
             self?.updateIsHighlighted(transition: .immediate)
         })
+    }
+    
+    func updateHeightOffsetValue(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.item?.hiddenOffsetValue = offset
+        var heightOffset: CGFloat = .zero
+        var layoutHeight: CGFloat = .zero
+        if let item, let currentItemHeight, case let .groupReference(data) = self.item?.content, data.groupId == .archive {
+            heightOffset = -(currentItemHeight-item.hiddenOffsetValue)
+            layoutHeight = currentItemHeight + heightOffset
+            print("height offset: \(heightOffset) with hiddenOffsetValue: \(item.hiddenOffsetValue) currentItemHeight: \(currentItemHeight) layoutHeight: \(layoutHeight)")
+        } else {
+            layoutHeight = self.currentItemHeight ?? offset
+        }
+        
+        let archiveTransitionFrame = CGRect(origin: CGPoint(), size: CGSize(width: self.layout.contentSize.width, height: currentItemHeight ?? offset))
+        let layout = self.asyncLayout()
+//        let (first, last, firstWithHeader, nextIsPinned) = ChatListItem.mergeType(item: item as! ChatListItem, previousItem: previousItem, nextItem: nextItem)
+        if let layoutParams = self.layoutParams {
+            let updatedParams = ListViewItemLayoutParams(width: layoutParams.5.width, leftInset: layoutParams.5.leftInset, rightInset: layoutParams.5.rightInset, availableHeight: layoutHeight)
+            let (nodeLayout, apply) = layout(self.item ?? layoutParams.0, updatedParams, layoutParams.1, layoutParams.2, layoutParams.3, layoutParams.4)
+            apply(true, true)
+            self.contentSize = nodeLayout.contentSize
+            self.insets = nodeLayout.insets
+        }
+        transition.updatePosition(node: self.archiveTransitionNode, position: archiveTransitionFrame.center)
+        transition.updateBounds(node: self.archiveTransitionNode, bounds: archiveTransitionFrame)
     }
     
     func playArchiveAnimation() {

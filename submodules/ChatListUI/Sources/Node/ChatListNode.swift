@@ -246,6 +246,7 @@ public struct ChatListNodeState: Equatable {
     public var pendingRemovalItemIds: Set<ItemId>
     public var pendingClearHistoryPeerIds: Set<ItemId>
     public var hiddenItemShouldBeTemporaryRevealed: Bool
+    public var topOffset: CGFloat
     public var selectedAdditionalCategoryIds: Set<Int>
     public var hiddenPsaPeerId: EnginePeer.Id?
     public var foundPeers: [(EnginePeer, EnginePeer?)]
@@ -265,6 +266,7 @@ public struct ChatListNodeState: Equatable {
         pendingRemovalItemIds: Set<ItemId>,
         pendingClearHistoryPeerIds: Set<ItemId>,
         hiddenItemShouldBeTemporaryRevealed: Bool,
+        topOffset: CGFloat,
         hiddenPsaPeerId: EnginePeer.Id?,
         selectedThreadIds: Set<Int64>,
         archiveStoryState: StoryState?
@@ -280,6 +282,7 @@ public struct ChatListNodeState: Equatable {
         self.pendingRemovalItemIds = pendingRemovalItemIds
         self.pendingClearHistoryPeerIds = pendingClearHistoryPeerIds
         self.hiddenItemShouldBeTemporaryRevealed = hiddenItemShouldBeTemporaryRevealed
+        self.topOffset = topOffset
         self.hiddenPsaPeerId = hiddenPsaPeerId
         self.selectedThreadIds = selectedThreadIds
         self.archiveStoryState = archiveStoryState
@@ -317,6 +320,9 @@ public struct ChatListNodeState: Equatable {
             return false
         }
         if lhs.hiddenItemShouldBeTemporaryRevealed != rhs.hiddenItemShouldBeTemporaryRevealed {
+            return false
+        }
+        if lhs.topOffset != rhs.topOffset {
             return false
         }
         if lhs.hiddenPsaPeerId != rhs.hiddenPsaPeerId {
@@ -419,6 +425,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             header: nil,
                             enableContextActions: true,
                             hiddenOffset: threadInfo?.isHidden == true && !revealed,
+                            hiddenOffsetValue: .zero,
                             interaction: nodeInteraction
                         ), directionHint: entry.directionHint)
                     case let .peers(filter, isSelecting, _, filters, displayAutoremoveTimeout, displayPresence):
@@ -624,6 +631,11 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
             case let .HoleEntry(_, theme):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
             case let .GroupReferenceEntry(groupReferenceEntry):
+//            if groupReferenceEntry.hiddenByDefault && !groupReferenceEntry.revealed {
+//                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListArchiveTransitionItem(theme: groupReferenceEntry.presentationData.theme),
+//                                          directionHint: entry.directionHint)
+//            } else {
+            print("insert group entry which hiddenByDefault: \(groupReferenceEntry.hiddenByDefault) revealed: \(groupReferenceEntry.revealed)")
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(
                     presentationData: groupReferenceEntry.presentationData,
                     context: context,
@@ -649,8 +661,11 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                     header: nil,
                     enableContextActions: true,
                     hiddenOffset: groupReferenceEntry.hiddenByDefault && !groupReferenceEntry.revealed,
+                    hiddenOffsetValue: groupReferenceEntry.topOffset,
                     interaction: nodeInteraction
                 ), directionHint: entry.directionHint)
+
+//            }
             case let .ContactEntry(contactEntry):
                 let header: ChatListSearchItemHeader? = nil
                 
@@ -776,6 +791,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             header: nil,
                             enableContextActions: true,
                             hiddenOffset: threadInfo?.isHidden == true && !revealed,
+                            hiddenOffsetValue: .zero,
                             interaction: nodeInteraction
                     ), directionHint: entry.directionHint)
                     case let .peers(filter, isSelecting, _, filters, displayAutoremoveTimeout, displayPresence):
@@ -935,6 +951,12 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
             case let .HoleEntry(_, theme):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
             case let .GroupReferenceEntry(groupReferenceEntry):
+//            if groupReferenceEntry.hiddenByDefault && !groupReferenceEntry.revealed {
+//                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListArchiveTransitionItem(theme: groupReferenceEntry.presentationData.theme),
+//                                          directionHint: entry.directionHint)
+//            } else {
+            print("update group entry which hiddenByDefault: \(groupReferenceEntry.hiddenByDefault) revealed: \(groupReferenceEntry.revealed) top offset: \(groupReferenceEntry.topOffset)")
+
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(
                         presentationData: groupReferenceEntry.presentationData,
                         context: context,
@@ -960,8 +982,10 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         header: nil,
                         enableContextActions: true,
                         hiddenOffset: groupReferenceEntry.hiddenByDefault && !groupReferenceEntry.revealed,
+                        hiddenOffsetValue: groupReferenceEntry.topOffset,
                         interaction: nodeInteraction
                 ), directionHint: entry.directionHint)
+//            }
             case let .ContactEntry(contactEntry):
                 let header: ChatListSearchItemHeader? = nil
                 
@@ -1253,7 +1277,7 @@ public final class ChatListNode: ListView {
             isSelecting = true
         }
         
-        self.currentState = ChatListNodeState(presentationData: ChatListPresentationData(theme: theme, fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations), editing: isSelecting, peerIdWithRevealedOptions: nil, selectedPeerIds: Set(), foundPeers: [], selectedPeerMap: [:], selectedAdditionalCategoryIds: Set(), peerInputActivities: nil, pendingRemovalItemIds: Set(), pendingClearHistoryPeerIds: Set(), hiddenItemShouldBeTemporaryRevealed: false, hiddenPsaPeerId: nil, selectedThreadIds: Set(), archiveStoryState: nil)
+        self.currentState = ChatListNodeState(presentationData: ChatListPresentationData(theme: theme, fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations), editing: isSelecting, peerIdWithRevealedOptions: nil, selectedPeerIds: Set(), foundPeers: [], selectedPeerMap: [:], selectedAdditionalCategoryIds: Set(), peerInputActivities: nil, pendingRemovalItemIds: Set(), pendingClearHistoryPeerIds: Set(), hiddenItemShouldBeTemporaryRevealed: false, topOffset: .zero, hiddenPsaPeerId: nil, selectedThreadIds: Set(), archiveStoryState: nil)
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
         
         self.theme = theme
@@ -2928,6 +2952,9 @@ public final class ChatListNode: ListView {
                     }
                 }
             }
+//            if itemNode is ChatListArchiveTransitionItemNode {
+//                isHiddenItemVisible = true
+//            }
         })
         if isHiddenItemVisible && !self.currentState.hiddenItemShouldBeTemporaryRevealed {
             if self.hapticFeedback == nil {
@@ -2939,6 +2966,16 @@ public final class ChatListNode: ListView {
                 state.hiddenItemShouldBeTemporaryRevealed = true
                 return state
             }
+        }
+    }
+    
+    func updateArchiveTopOffset(offset: CGFloat) {
+        guard !self.currentState.hiddenItemShouldBeTemporaryRevealed else { return }
+        self.updateState { state in
+            var state = state
+            state.topOffset = offset
+            state.hiddenItemShouldBeTemporaryRevealed = true
+            return state
         }
     }
     

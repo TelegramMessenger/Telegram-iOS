@@ -312,6 +312,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
         var unreadCount: Int
         var revealed: Bool
         var hiddenByDefault: Bool
+        var topOffset: CGFloat
         var storyState: ChatListNodeState.StoryState?
         
         init(
@@ -324,6 +325,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             unreadCount: Int,
             revealed: Bool,
             hiddenByDefault: Bool,
+            topOffset: CGFloat,
             storyState: ChatListNodeState.StoryState?
         ) {
             self.index = index
@@ -335,6 +337,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             self.unreadCount = unreadCount
             self.revealed = revealed
             self.hiddenByDefault = hiddenByDefault
+            self.topOffset = topOffset
             self.storyState = storyState
         }
         
@@ -857,6 +860,7 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
                     unreadCount: groupReference.unreadCount,
                     revealed: state.hiddenItemShouldBeTemporaryRevealed,
                     hiddenByDefault: hideArchivedFolderByDefault,
+                    topOffset: state.topOffset,
                     storyState: mappedStoryState
                 )))
                 if pinningIndex != 0 {
