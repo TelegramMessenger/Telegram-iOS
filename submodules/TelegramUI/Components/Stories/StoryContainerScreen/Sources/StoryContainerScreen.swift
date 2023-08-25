@@ -1471,7 +1471,7 @@ private final class StoryContainerScreenComponent: Component {
                                             environment.controller()?.dismiss()
                                         }
                                         
-                                        let _ = component.context.engine.messages.deleteStories(ids: [slice.item.storyItem.id]).start()
+                                        let _ = component.context.engine.messages.deleteStories(peerId: slice.peer.id, ids: [slice.item.storyItem.id]).start()
                                     }
                                 },
                                 markAsSeen: { [weak self] id in

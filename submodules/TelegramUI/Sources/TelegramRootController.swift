@@ -266,13 +266,15 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     }
     
     @discardableResult
-    public func openStoryCamera(transitionIn: StoryCameraTransitionIn?, transitionedIn: @escaping () -> Void, transitionOut: @escaping (Bool) -> StoryCameraTransitionOut?) -> StoryCameraTransitionInCoordinator? {
+    public func openStoryCamera(transitionIn: StoryCameraTransitionIn?, transitionedIn: @escaping () -> Void, transitionOut: @escaping (Stories.PendingTarget?) -> StoryCameraTransitionOut?) -> StoryCameraTransitionInCoordinator? {
         guard let controller = self.viewControllers.last as? ViewController else {
             return nil
         }
         controller.view.endEditing(true)
         
         let context = self.context
+        
+        var storyTarget: Stories.PendingTarget?
         
         var presentImpl: ((ViewController) -> Void)?
         var returnToCameraImpl: (() -> Void)?
@@ -293,7 +295,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                 }
             },
             transitionOut: { finished in
-                if let transitionOut = transitionOut(finished), let destinationView = transitionOut.destinationView {
+                if let transitionOut = transitionOut(finished ? storyTarget : nil), let destinationView = transitionOut.destinationView {
                     return CameraScreen.TransitionOut(
                         destinationView: destinationView,
                         destinationRect: transitionOut.destinationRect,
@@ -351,7 +353,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                     isEditing: false,
                     transitionIn: transitionIn,
                     transitionOut: { finished, isNew in
-                        if finished, let transitionOut = transitionOut(finished), let destinationView = transitionOut.destinationView {
+                        if finished, let transitionOut = transitionOut(storyTarget), let destinationView = transitionOut.destinationView {
                             return MediaEditorScreen.TransitionOut(
                                 destinationView: destinationView,
                                 destinationRect: transitionOut.destinationRect,
@@ -403,13 +405,21 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                             }
                         }
                         
+                        let target: Stories.PendingTarget
+                        #if DEBUG
+                        target = .peer(PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(2200678799)))
+                        #else
+                        target = .myStories
+                        #endif
+                        storyTarget = target
+                        
                         if let _ = self.chatListController as? ChatListControllerImpl {
                             switch mediaResult {
                             case let .image(image, dimensions):
                                 if let imageData = compressImageToJPEG(image, quality: 0.7) {
                                     let entities = generateChatInputTextEntities(caption)
                                     Logger.shared.log("MediaEditor", "Calling uploadStory for image, randomId \(randomId)")
-                                    let _ = (context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData, stickers: stickers), mediaAreas: mediaAreas, text: caption.string, entities: entities, pin: privacy.pin, privacy: privacy.privacy, isForwardingDisabled: privacy.isForwardingDisabled, period: privacy.timeout, randomId: randomId)
+                                    let _ = (context.engine.messages.uploadStory(target: target, media: .image(dimensions: dimensions, data: imageData, stickers: stickers), mediaAreas: mediaAreas, text: caption.string, entities: entities, pin: privacy.pin, privacy: privacy.privacy, isForwardingDisabled: privacy.isForwardingDisabled, period: privacy.timeout, randomId: randomId)
                                     |> deliverOnMainQueue).start(next: { stableId in
                                         moveStorySource(engine: context.engine, peerId: context.account.peerId, from: randomId, to: Int64(stableId))
                                     })
@@ -443,7 +453,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                     }
                                     Logger.shared.log("MediaEditor", "Calling uploadStory for video, randomId \(randomId)")
                                     let entities = generateChatInputTextEntities(caption)
-                                    let _ = (context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), mediaAreas: mediaAreas, text: caption.string, entities: entities, pin: privacy.pin, privacy: privacy.privacy, isForwardingDisabled: privacy.isForwardingDisabled, period: privacy.timeout, randomId: randomId)
+                                    let _ = (context.engine.messages.uploadStory(target: target, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), mediaAreas: mediaAreas, text: caption.string, entities: entities, pin: privacy.pin, privacy: privacy.privacy, isForwardingDisabled: privacy.isForwardingDisabled, period: privacy.timeout, randomId: randomId)
                                     |> deliverOnMainQueue).start(next: { stableId in
                                         moveStorySource(engine: context.engine, peerId: context.account.peerId, from: randomId, to: Int64(stableId))
                                     })

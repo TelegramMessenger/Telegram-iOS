@@ -671,7 +671,12 @@ public extension TelegramEngine {
                 self.account.postbox.combinedView(keys: [
                     basicPeerKey,
                     storySubscriptionsKey,
-                    PostboxViewKey.storiesState(key: .subscriptions(subscriptionsKey))
+                    PostboxViewKey.storiesState(
+                        key: .subscriptions(subscriptionsKey)
+                    ),
+                    PostboxViewKey.storiesState(
+                        key: .local
+                    )
                 ]))
                 |> mapToSignal { debugTimer, views -> Signal<EngineStorySubscriptions, NoError> in
                     guard let basicPeerView = views.views[basicPeerKey] as? BasicPeerView, let accountPeer = basicPeerView.peer else {
@@ -714,7 +719,19 @@ public extension TelegramEngine {
                     additionalDataKeys.append(contentsOf: subscriptionPeerIds.map { peerId -> PostboxViewKey in
                         return PostboxViewKey.storiesState(key: .peer(peerId))
                     })
-                    additionalDataKeys.append(contentsOf: subscriptionPeerIds.map { peerId -> PostboxViewKey in
+                    
+                    var additionalPeerIds = subscriptionPeerIds
+                    if let view = views.views[PostboxViewKey.storiesState(key: .local)] as? StoryStatesView, let localState = view.value?.get(Stories.LocalState.self) {
+                        for item in localState.items {
+                            if case let .peer(id) = item.target {
+                                if !additionalPeerIds.contains(id) {
+                                    additionalPeerIds.append(id)
+                                }
+                            }
+                        }
+                    }
+                    
+                    additionalDataKeys.append(contentsOf: additionalPeerIds.map { peerId -> PostboxViewKey in
                         return PostboxViewKey.basicPeer(peerId)
                     })
                     
@@ -733,9 +750,18 @@ public extension TelegramEngine {
                             hasMoreToken = ""
                         }
                         
+                        var localState: Stories.LocalState?
+                        if let view = views.views[PostboxViewKey.storiesState(key: .local)] as? StoryStatesView {
+                            localState = view.value?.get(Stories.LocalState.self)
+                        }
+                        
                         var accountPendingItemCount = 0
-                        if let view = views.views[PostboxViewKey.storiesState(key: .local)] as? StoryStatesView, let localState = view.value?.get(Stories.LocalState.self) {
-                            accountPendingItemCount = localState.items.count
+                        if let localState {
+                            for item in localState.items {
+                                if case .myStories = item.target {
+                                    accountPendingItemCount += 1
+                                }
+                            }
                         }
                         
                         var accountItem: EngineStorySubscriptions.Item = EngineStorySubscriptions.Item(
@@ -827,12 +853,20 @@ public extension TelegramEngine {
                                     }
                                 }
                             }
+                            var pendingItemCount = 0
+                            if let localState {
+                                for item in localState.items {
+                                    if case .peer(peerId) = item.target {
+                                        pendingItemCount += 1
+                                    }
+                                }
+                            }
                             
                             let item = EngineStorySubscriptions.Item(
                                 peer: EnginePeer(peer),
                                 hasUnseen: hasUnseen,
                                 hasUnseenCloseFriends: hasUnseenCloseFriends,
-                                hasPending: false,
+                                hasPending: pendingItemCount != 0,
                                 storyCount: itemsView.items.count,
                                 unseenCount: unseenCount,
                                 lastTimestamp: lastEntry.timestamp
@@ -845,7 +879,38 @@ public extension TelegramEngine {
                             }
                         }
                         
+                        if let localState {
+                            for item in localState.items {
+                                if case let .peer(peerId) = item.target, !items.contains(where: { $0.peer.id == peerId }) {
+                                    guard let peerView = views.views[PostboxViewKey.basicPeer(peerId)] as? BasicPeerView else {
+                                        continue
+                                    }
+                                    guard let peer = peerView.peer else {
+                                        continue
+                                    }
+                                    
+                                    let item = EngineStorySubscriptions.Item(
+                                        peer: EnginePeer(peer),
+                                        hasUnseen: false,
+                                        hasUnseenCloseFriends: false,
+                                        hasPending: true,
+                                        storyCount: 0,
+                                        unseenCount: 0,
+                                        lastTimestamp: 0
+                                    )
+                                    items.append(item)
+                                }
+                            }
+                        }
+                        
                         items.sort(by: { lhs, rhs in
+                            if lhs.hasPending != rhs.hasPending {
+                                if lhs.hasPending {
+                                    return true
+                                } else {
+                                    return false
+                                }
+                            }
                             if lhs.hasUnseen != rhs.hasUnseen {
                                 if lhs.hasUnseen {
                                     return true
@@ -1049,8 +1114,8 @@ public extension TelegramEngine {
             }
         }
         
-        public func uploadStory(media: EngineStoryInputMedia, mediaAreas: [MediaArea], text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, isForwardingDisabled: Bool, period: Int, randomId: Int64) -> Signal<Int32, NoError> {
-            return _internal_uploadStory(account: self.account, media: media, mediaAreas: mediaAreas, text: text, entities: entities, pin: pin, privacy: privacy, isForwardingDisabled: isForwardingDisabled, period: period, randomId: randomId)
+        public func uploadStory(target: Stories.PendingTarget, media: EngineStoryInputMedia, mediaAreas: [MediaArea], text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, isForwardingDisabled: Bool, period: Int, randomId: Int64) -> Signal<Int32, NoError> {
+            return _internal_uploadStory(account: self.account, target: target, media: media, mediaAreas: mediaAreas, text: text, entities: entities, pin: pin, privacy: privacy, isForwardingDisabled: isForwardingDisabled, period: period, randomId: randomId)
         }
         
         public func allStoriesUploadEvents() -> Signal<(Int32, Int32), NoError> {
@@ -1060,13 +1125,13 @@ public extension TelegramEngine {
             return pendingStoryManager.allStoriesUploadEvents()
         }
         
-        public func lookUpPendingStoryIdMapping(stableId: Int32) -> Int32? {
-            return self.account.pendingStoryManager?.lookUpPendingStoryIdMapping(stableId: stableId)
+        public func lookUpPendingStoryIdMapping(peerId: EnginePeer.Id, stableId: Int32) -> Int32? {
+            return self.account.pendingStoryManager?.lookUpPendingStoryIdMapping(peerId: peerId, stableId: stableId)
         }
         
-        public func allStoriesUploadProgress() -> Signal<Float?, NoError> {
+        public func allStoriesUploadProgress() -> Signal<[EnginePeer.Id: Float], NoError> {
             guard let pendingStoryManager = self.account.pendingStoryManager else {
-                return .single(nil)
+                return .single([:])
             }
             return pendingStoryManager.allStoriesUploadProgress
         }
@@ -1082,8 +1147,8 @@ public extension TelegramEngine {
             _internal_cancelStoryUpload(account: self.account, stableId: stableId)
         }
         
-        public func editStory(id: Int32, media: EngineStoryInputMedia?, mediaAreas: [MediaArea]?, text: String?, entities: [MessageTextEntity]?, privacy: EngineStoryPrivacy?) -> Signal<StoryUploadResult, NoError> {
-            return _internal_editStory(account: self.account, id: id, media: media, mediaAreas: mediaAreas, text: text, entities: entities, privacy: privacy)
+        public func editStory(peerId: EnginePeer.Id, id: Int32, media: EngineStoryInputMedia?, mediaAreas: [MediaArea]?, text: String?, entities: [MessageTextEntity]?, privacy: EngineStoryPrivacy?) -> Signal<StoryUploadResult, NoError> {
+            return _internal_editStory(account: self.account, peerId: peerId, id: id, media: media, mediaAreas: mediaAreas, text: text, entities: entities, privacy: privacy)
         }
         
         public func editStoryPrivacy(id: Int32, privacy: EngineStoryPrivacy) -> Signal<Never, NoError> {
@@ -1094,16 +1159,16 @@ public extension TelegramEngine {
             return _internal_checkStoriesUploadAvailability(account: self.account)
         }
         
-        public func deleteStories(ids: [Int32]) -> Signal<Never, NoError> {
-            return _internal_deleteStories(account: self.account, ids: ids)
+        public func deleteStories(peerId: EnginePeer.Id, ids: [Int32]) -> Signal<Never, NoError> {
+            return _internal_deleteStories(account: self.account, peerId: peerId, ids: ids)
         }
         
         public func markStoryAsSeen(peerId: EnginePeer.Id, id: Int32, asPinned: Bool) -> Signal<Never, NoError> {
             return _internal_markStoryAsSeen(account: self.account, peerId: peerId, id: id, asPinned: asPinned)
         }
         
-        public func updateStoriesArePinned(ids: [Int32: EngineStoryItem], isPinned: Bool) -> Signal<Never, NoError> {
-            return _internal_updateStoriesArePinned(account: self.account, ids: ids, isPinned: isPinned)
+        public func updateStoriesArePinned(peerId: EnginePeer.Id, ids: [Int32: EngineStoryItem], isPinned: Bool) -> Signal<Never, NoError> {
+            return _internal_updateStoriesArePinned(account: self.account, peerId: peerId, ids: ids, isPinned: isPinned)
         }
         
         public func storyViewList(id: Int32, views: EngineStoryItem.Views, listMode: EngineStoryViewListContext.ListMode, sortMode: EngineStoryViewListContext.SortMode, searchQuery: String? = nil, parentSource: EngineStoryViewListContext? = nil) -> EngineStoryViewListContext {

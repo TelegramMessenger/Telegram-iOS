@@ -1192,7 +1192,8 @@ final class MediaEditorScreenComponent: Component {
                     hideKeyboard: self.currentInputMode == .emoji,
                     forceIsEditing: self.currentInputMode == .emoji,
                     disabledPlaceholder: nil,
-                    storyId: nil
+                    isChannel: false,
+                    storyItem: nil
                 )),
                 environment: {},
                 containerSize: CGSize(width: inputPanelAvailableWidth, height: inputPanelAvailableHeight)

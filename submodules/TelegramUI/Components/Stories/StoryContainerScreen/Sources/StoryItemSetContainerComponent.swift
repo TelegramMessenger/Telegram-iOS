@@ -1563,7 +1563,7 @@ public final class StoryItemSetContainerComponent: Component {
                             view.setProgressMode(itemProgressMode)
                         }
                         
-                        if component.slice.peer.id == component.context.account.peerId {
+                        if component.slice.peer.id == component.context.account.peerId || component.slice.item.storyItem.isPending {
                             let contentViewsShadowView: UIImageView
                             if let current = visibleItem.contentViewsShadowView {
                                 contentViewsShadowView = current
@@ -2561,6 +2561,11 @@ public final class StoryItemSetContainerComponent: Component {
             let startTime23 = CFAbsoluteTimeGetCurrent()
             
             if component.slice.peer.id != component.context.account.peerId {
+                var isChannel = false
+                if case .channel = component.slice.peer {
+                    isChannel = true
+                }
+                
                 inputPanelSize = self.inputPanel.update(
                     transition: inputPanelTransition,
                     component: AnyComponent(MessageInputPanelComponent(
@@ -2765,7 +2770,8 @@ public final class StoryItemSetContainerComponent: Component {
                         hideKeyboard: self.sendMessageContext.currentInputMode == .media,
                         forceIsEditing: self.sendMessageContext.currentInputMode == .media,
                         disabledPlaceholder: disabledPlaceholder,
-                        storyId: component.slice.item.storyItem.id
+                        isChannel: isChannel,
+                        storyItem: component.slice.item.storyItem
                     )),
                     environment: {},
                     containerSize: CGSize(width: inputPanelAvailableWidth, height: 200.0)
@@ -3793,7 +3799,7 @@ public final class StoryItemSetContainerComponent: Component {
             if let inputPanelSize {
                 let inputPanelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - inputPanelSize.width) / 2.0), y: availableSize.height - inputPanelBottomInset - inputPanelSize.height), size: inputPanelSize)
                 inputPanelFrameValue = inputPanelFrame
-                var inputPanelAlpha: CGFloat = component.slice.peer.id == component.context.account.peerId || component.hideUI || self.isEditingStory ? 0.0 : 1.0
+                var inputPanelAlpha: CGFloat = (component.slice.peer.id == component.context.account.peerId || component.hideUI || self.isEditingStory || component.slice.item.storyItem.isPending) ? 0.0 : 1.0
                 if case .regular = component.metrics.widthClass {
                     inputPanelAlpha *= component.visibilityFraction
                 }
@@ -4780,6 +4786,7 @@ public final class StoryItemSetContainerComponent: Component {
                 return
             }
             let context = component.context
+            let peerId = component.slice.peer.id
             let item = component.slice.item.storyItem
             let id = item.id
         
@@ -4827,7 +4834,7 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                 }
             }
-             
+            
             let updateDisposable = MetaDisposable()
             var updateProgressImpl: ((Float) -> Void)?
             let controller = MediaEditorScreen(
@@ -4858,7 +4865,7 @@ public final class StoryItemSetContainerComponent: Component {
                             updateProgressImpl?(0.0)
                             
                             if let imageData = compressImageToJPEG(image, quality: 0.7) {
-                                updateDisposable.set((context.engine.messages.editStory(id: id, media: .image(dimensions: dimensions, data: imageData, stickers: stickers), mediaAreas: mediaAreas, text: updatedText, entities: updatedEntities, privacy: nil)
+                                updateDisposable.set((context.engine.messages.editStory(peerId: peerId, id: id, media: .image(dimensions: dimensions, data: imageData, stickers: stickers), mediaAreas: mediaAreas, text: updatedText, entities: updatedEntities, privacy: nil)
                                 |> deliverOnMainQueue).start(next: { [weak self] result in
                                     guard let self else {
                                         return
@@ -4908,7 +4915,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     }
                                 }
                                 
-                                updateDisposable.set((context.engine.messages.editStory(id: id, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), mediaAreas: mediaAreas, text: updatedText, entities: updatedEntities, privacy: nil)
+                                updateDisposable.set((context.engine.messages.editStory(peerId: peerId, id: id, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), mediaAreas: mediaAreas, text: updatedText, entities: updatedEntities, privacy: nil)
                                 |> deliverOnMainQueue).start(next: { [weak self] result in
                                     guard let self else {
                                         return
@@ -4932,7 +4939,7 @@ public final class StoryItemSetContainerComponent: Component {
                             }
                         }
                     } else if updatedText != nil {
-                        let _ = (context.engine.messages.editStory(id: id, media: nil, mediaAreas: nil, text: updatedText, entities: updatedEntities, privacy: nil)
+                        let _ = (context.engine.messages.editStory(peerId: peerId, id: id, media: nil, mediaAreas: nil, text: updatedText, entities: updatedEntities, privacy: nil)
                         |> deliverOnMainQueue).start(next: { [weak self] result in
                             switch result {
                             case .completed:
@@ -5427,7 +5434,7 @@ public final class StoryItemSetContainerComponent: Component {
                     return
                 }
                 
-                let _ = component.context.engine.messages.updateStoriesArePinned(ids: [component.slice.item.storyItem.id: component.slice.item.storyItem], isPinned: !component.slice.item.storyItem.isPinned).start()
+                let _ = component.context.engine.messages.updateStoriesArePinned(peerId: component.slice.peer.id, ids: [component.slice.item.storyItem.id: component.slice.item.storyItem], isPinned: !component.slice.item.storyItem.isPinned).start()
                 
                 let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                 if component.slice.item.storyItem.isPinned {

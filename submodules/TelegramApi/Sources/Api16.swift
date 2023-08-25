@@ -901,6 +901,62 @@ public extension Api {
     }
 }
 public extension Api {
+    enum PeerStories: TypeConstructorDescription {
+        case peerStories(flags: Int32, peer: Api.Peer, maxReadId: Int32?, stories: [Api.StoryItem])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .peerStories(let flags, let peer, let maxReadId, let stories):
+                    if boxed {
+                        buffer.appendInt32(-1707742823)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(maxReadId!, buffer: buffer, boxed: false)}
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(stories.count))
+                    for item in stories {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .peerStories(let flags, let peer, let maxReadId, let stories):
+                return ("peerStories", [("flags", flags as Any), ("peer", peer as Any), ("maxReadId", maxReadId as Any), ("stories", stories as Any)])
+    }
+    }
+    
+        public static func parse_peerStories(_ reader: BufferReader) -> PeerStories? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Peer?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt32() }
+            var _4: [Api.StoryItem]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StoryItem.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.PeerStories.peerStories(flags: _1!, peer: _2!, maxReadId: _3, stories: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum PhoneCall: TypeConstructorDescription {
         case phoneCall(flags: Int32, id: Int64, accessHash: Int64, date: Int32, adminId: Int64, participantId: Int64, gAOrB: Buffer, keyFingerprint: Int64, protocol: Api.PhoneCallProtocol, connections: [Api.PhoneConnection], startDate: Int32)
         case phoneCallAccepted(flags: Int32, id: Int64, accessHash: Int64, date: Int32, adminId: Int64, participantId: Int64, gB: Buffer, protocol: Api.PhoneCallProtocol)

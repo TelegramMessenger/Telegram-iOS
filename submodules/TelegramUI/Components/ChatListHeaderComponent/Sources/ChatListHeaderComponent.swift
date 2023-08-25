@@ -137,7 +137,7 @@ public final class ChatListHeaderComponent: Component {
     public let storiesIncludeHidden: Bool
     public let storiesFraction: CGFloat
     public let storiesUnlocked: Bool
-    public let uploadProgress: Float?
+    public let uploadProgress: [EnginePeer.Id: Float]
     public let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
@@ -155,7 +155,7 @@ public final class ChatListHeaderComponent: Component {
         storiesIncludeHidden: Bool,
         storiesFraction: CGFloat,
         storiesUnlocked: Bool,
-        uploadProgress: Float?,
+        uploadProgress: [EnginePeer.Id: Float],
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,

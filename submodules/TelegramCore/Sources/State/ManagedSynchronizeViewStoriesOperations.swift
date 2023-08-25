@@ -119,10 +119,10 @@ func managedSynchronizeViewStoriesOperations(postbox: Postbox, network: Network,
 }
 
 private func pushStoriesAreSeen(postbox: Postbox, network: Network, stateManager: AccountStateManager, peer: Peer, operation: SynchronizeViewStoriesOperation) -> Signal<Void, NoError> {
-    guard let inputPeer = apiInputUser(peer) else {
+    guard let inputPeer = apiInputPeer(peer) else {
         return .complete()
     }
-    return network.request(Api.functions.stories.readStories(userId: inputPeer, maxId: operation.storyId))
+    return network.request(Api.functions.stories.readStories(peer: inputPeer, maxId: operation.storyId))
     |> `catch` { _ -> Signal<[Int32], NoError> in
         return .single([])
     }

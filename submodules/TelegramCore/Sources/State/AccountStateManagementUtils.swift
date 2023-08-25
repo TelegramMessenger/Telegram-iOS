@@ -1673,14 +1673,14 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.reloadConfig()
             case let .updateMessageExtendedMedia(peer, msgId, extendedMedia):
                 updatedState.updateExtendedMedia(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), extendedMedia: extendedMedia)
-            case let .updateStory(userId, story):
-                updatedState.updateStory(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), story: story)
-            case let .updateReadStories(userId, id):
-                updatedState.readStories(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), maxId: id)
+            case let .updateStory(peerId, story):
+                updatedState.updateStory(peerId: peerId.peerId, story: story)
+            case let .updateReadStories(peerId, id):
+                updatedState.readStories(peerId: peerId.peerId, maxId: id)
             case let .updateStoriesStealthMode(stealthMode):
                 updatedState.updateStoryStealthMode(stealthMode)
-            case let .updateSentStoryReaction(userId, storyId, reaction):
-                updatedState.updateStorySentReaction(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: storyId, reaction: reaction)
+            case let .updateSentStoryReaction(peerId, storyId, reaction):
+                updatedState.updateStorySentReaction(peerId: peerId.peerId, id: storyId, reaction: reaction)
             default:
                 break
         }

@@ -55,9 +55,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                 PostboxViewKey.storyItems(peerId: peerId),
                 PostboxViewKey.peerPresences(peerIds: Set([peerId]))
             ]
-            if peerId == context.account.peerId {
-                inputKeys.append(PostboxViewKey.storiesState(key: .local))
-            }
+            inputKeys.append(PostboxViewKey.storiesState(key: .local))
             self.disposable = (combineLatest(queue: .mainQueue(),
                 self.currentFocusedIdUpdatedPromise.get(),
                 context.account.postbox.combinedView(
@@ -179,30 +177,39 @@ public final class StoryContentContextImpl: StoryContentContext {
                     )
                 }
                 var totalCount = peerStoryItemsView.items.count
-                if peerId == context.account.peerId, let stateView = views.views[PostboxViewKey.storiesState(key: .local)] as? StoryStatesView, let localState = stateView.value?.get(Stories.LocalState.self) {
+                if let stateView = views.views[PostboxViewKey.storiesState(key: .local)] as? StoryStatesView, let localState = stateView.value?.get(Stories.LocalState.self) {
                     for item in localState.items {
-                        mappedItems.append(EngineStoryItem(
-                            id: item.stableId,
-                            timestamp: item.timestamp,
-                            expirationTimestamp: Int32.max,
-                            media: EngineMedia(item.media),
-                            mediaAreas: item.mediaAreas,
-                            text: item.text,
-                            entities: item.entities,
-                            views: nil,
-                            privacy: item.privacy,
-                            isPinned: item.pin,
-                            isExpired: false,
-                            isPublic: item.privacy.base == .everyone,
-                            isPending: true,
-                            isCloseFriends: item.privacy.base == .closeFriends,
-                            isContacts: item.privacy.base == .contacts,
-                            isSelectedContacts: item.privacy.base == .nobody,
-                            isForwardingDisabled: false,
-                            isEdited: false,
-                            myReaction: nil
-                        ))
-                        totalCount += 1
+                        var matches = false
+                        if peerId == context.account.peerId, case .myStories = item.target {
+                            matches = true
+                        } else if case .peer(peerId) = item.target {
+                            matches = true
+                        }
+                        
+                        if matches {
+                            mappedItems.append(EngineStoryItem(
+                                id: item.stableId,
+                                timestamp: item.timestamp,
+                                expirationTimestamp: Int32.max,
+                                media: EngineMedia(item.media),
+                                mediaAreas: item.mediaAreas,
+                                text: item.text,
+                                entities: item.entities,
+                                views: nil,
+                                privacy: item.privacy,
+                                isPinned: item.pin,
+                                isExpired: false,
+                                isPublic: item.privacy.base == .everyone,
+                                isPending: true,
+                                isCloseFriends: item.privacy.base == .closeFriends,
+                                isContacts: item.privacy.base == .contacts,
+                                isSelectedContacts: item.privacy.base == .nobody,
+                                isForwardingDisabled: false,
+                                isEdited: false,
+                                myReaction: nil
+                            ))
+                            totalCount += 1
+                        }
                     }
                 }
                 
@@ -215,7 +222,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                         if let currentMappedItems = self.currentMappedItems {
                             if let previousIndex = currentMappedItems.firstIndex(where: { $0.id == currentFocusedId }) {
                                 if currentMappedItems[previousIndex].isPending {
-                                    if let updatedId = context.engine.messages.lookUpPendingStoryIdMapping(stableId: currentFocusedId) {
+                                    if let updatedId = context.engine.messages.lookUpPendingStoryIdMapping(peerId: peerId, stableId: currentFocusedId) {
                                         if let index = mappedItems.firstIndex(where: { $0.id == updatedId }) {
                                             focusedIndex = index
                                         }

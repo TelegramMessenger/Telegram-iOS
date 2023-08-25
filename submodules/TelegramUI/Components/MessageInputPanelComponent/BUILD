@@ -34,6 +34,7 @@ swift_library(
         "//submodules/StickerPeekUI",
         "//submodules/Components/ReactionButtonListComponent",
         "//submodules/TelegramUI/Components/AnimatedTextComponent",
+        "//submodules/AnimatedCountLabelNode",
     ],
     visibility = [
         "//visibility:public",

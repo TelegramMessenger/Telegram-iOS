@@ -342,7 +342,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 secondaryTransition: 0.0,
                 storySubscriptions: nil,
                 storiesIncludeHidden: true,
-                uploadProgress: nil,
+                uploadProgress: [:],
                 tabsNode: tabsNode,
                 tabsNodeIsSearch: tabsNodeIsSearch,
                 accessoryPanelContainer: nil,
