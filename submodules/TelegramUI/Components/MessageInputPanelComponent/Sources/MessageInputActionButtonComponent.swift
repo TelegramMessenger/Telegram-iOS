@@ -412,6 +412,21 @@ public final class MessageInputActionButtonComponent: Component {
             if case let .like(reactionValue, reactionFile, animationFileId) = component.mode, let reaction = reactionValue {
                 let reactionIconFrame = CGRect(origin: .zero, size: CGSize(width: 32.0, height: 32.0)).insetBy(dx: 2.0, dy: 2.0)
                 
+                if let previousComponent, previousComponent.mode != component.mode {
+                    if let reactionIconView = self.reactionIconView {
+                        self.reactionIconView = nil
+                        
+                        if !isFirstTimeForStory {
+                            reactionIconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak reactionIconView] _ in
+                                reactionIconView?.removeFromSuperview()
+                            })
+                            reactionIconView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.25, removeOnCompletion: false)
+                        } else {
+                            reactionIconView.removeFromSuperview()
+                        }
+                    }
+                }
+                
                 let reactionIconView: ReactionIconView
                 if let current = self.reactionIconView {
                     reactionIconView = current

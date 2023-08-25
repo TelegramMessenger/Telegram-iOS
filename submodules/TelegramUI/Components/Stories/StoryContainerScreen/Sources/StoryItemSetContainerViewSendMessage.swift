@@ -48,6 +48,7 @@ import TranslateUI
 import TelegramNotices
 import ObjectiveC
 import LocationUI
+import ReactionSelectionNode
 
 private var ObjCKey_DeinitWatcher: Int?
 
@@ -3269,12 +3270,99 @@ final class StoryItemSetContainerSendMessage {
             }))
         case let .reaction(_, reaction):
             if component.slice.peer.id != component.context.account.peerId {
-                self.performWithPossibleStealthModeConfirmation(view: view, action: { [weak view] in
-                    guard let view, let component = view.component else {
+                let animateWithReactionItem: (ReactionItem) -> Void = { [weak self, weak view] reactionItem in
+                    guard let self, let view else {
                         return
                     }
-                    let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: reaction).start()
-                })
+                    
+                    self.performWithPossibleStealthModeConfirmation(view: view, action: { [weak view] in
+                        guard let view, let component = view.component else {
+                            return
+                        }
+                        let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: reaction).start()
+                        
+                        let referenceSize = view.controlsContainerView.frame.size
+                        let size = CGSize(width: 16.0, height: mediaArea.coordinates.height / 100.0 * referenceSize.height * 1.1)
+                        var targetFrame = CGRect(x: mediaArea.coordinates.x / 100.0 * referenceSize.width - size.width / 2.0, y: mediaArea.coordinates.y / 100.0 * referenceSize.height - size.height / 2.0, width: size.width, height: size.height)
+                        let maxSide = min(300.0, max(targetFrame.width, targetFrame.height))
+                        targetFrame = CGSize(width: maxSide, height: maxSide).centered(around: targetFrame.center)
+                        //targetFrame = targetFrame.insetBy(dx: -50.0, dy: -50.0)
+                        targetFrame = view.controlsContainerView.convert(targetFrame, to: view)
+                        
+                        let targetView = UIView(frame: targetFrame)
+                        targetView.isUserInteractionEnabled = false
+                        view.addSubview(targetView)
+                        
+                        let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: nil, useDirectRendering: false)
+                        view.componentContainerView.addSubview(standaloneReactionAnimation.view)
+                        
+                        if let standaloneReactionAnimation = view.standaloneReactionAnimation {
+                            view.standaloneReactionAnimation = nil
+                            standaloneReactionAnimation.view.removeFromSuperview()
+                        }
+                        view.standaloneReactionAnimation = standaloneReactionAnimation
+                        
+                        standaloneReactionAnimation.frame = view.bounds
+                        standaloneReactionAnimation.animateReactionSelection(
+                            context: component.context,
+                            theme: component.theme,
+                            animationCache: component.context.animationCache,
+                            reaction: reactionItem,
+                            avatarPeers: [],
+                            playHaptic: true,
+                            isLarge: false,
+                            hideCenterAnimation: true,
+                            targetView: targetView,
+                            addStandaloneReactionAnimation: { [weak view] standaloneReactionAnimation in
+                                guard let view else {
+                                    return
+                                }
+                                
+                                if let standaloneReactionAnimation = view.standaloneReactionAnimation {
+                                    view.standaloneReactionAnimation = nil
+                                    standaloneReactionAnimation.view.removeFromSuperview()
+                                }
+                                view.standaloneReactionAnimation = standaloneReactionAnimation
+                                
+                                standaloneReactionAnimation.frame = view.bounds
+                                view.componentContainerView.addSubview(standaloneReactionAnimation.view)
+                            },
+                            completion: { [weak targetView, weak standaloneReactionAnimation] in
+                                targetView?.removeFromSuperview()
+                                standaloneReactionAnimation?.view.removeFromSuperview()
+                            }
+                        )
+                    })
+                }
+                
+                switch reaction {
+                case .builtin:
+                    if let availableReactions = component.availableReactions {
+                        for reactionItem in availableReactions.reactionItems {
+                            if reactionItem.reaction.rawValue == reaction {
+                                animateWithReactionItem(reactionItem)
+                                break
+                            }
+                        }
+                    }
+                case let .custom(fileId):
+                    let _ = (component.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
+                    |> deliverOnMainQueue).start(next: { files in
+                        if let itemFile = files[fileId] {
+                            let reactionItem = ReactionItem(
+                                reaction: ReactionItem.Reaction(rawValue: .custom(itemFile.fileId.id)),
+                                appearAnimation: itemFile,
+                                stillAnimation: itemFile,
+                                listAnimation: itemFile,
+                                largeListAnimation: itemFile,
+                                applicationAnimation: nil,
+                                largeApplicationAnimation: nil,
+                                isCustom: true
+                            )
+                            animateWithReactionItem(reactionItem)
+                        }
+                    })
+                }
             }
             return
         }

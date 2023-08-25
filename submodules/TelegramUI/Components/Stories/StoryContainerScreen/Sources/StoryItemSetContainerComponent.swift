@@ -445,7 +445,7 @@ public final class StoryItemSetContainerComponent: Component {
         weak var disappearingReactionContextNode: ReactionContextNode?
         var displayLikeReactions: Bool = false
         var waitingForReactionAnimateOutToLike: MessageReaction.Reaction?
-        private weak var standaloneReactionAnimation: StandaloneReactionAnimation?
+        weak var standaloneReactionAnimation: StandaloneReactionAnimation?
         
         weak var contextController: ContextController?
         weak var privacyController: ShareWithPeersScreen?
