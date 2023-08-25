@@ -37,6 +37,8 @@ jobs:
 
       - name: Build the App
         env:
+          API_ID: ${{ secrets.API_ID }}
+          API_HASH: ${{ secrets.API_HASH }}
           SIGNING_CERTIFICATE_P12_DATA: ${{ secrets.SIGNING_CERTIFICATE_P12_DATA }}
           SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
           PROVISIONING_PROFILE_APP_DATA: ${{ secrets.PROVISIONING_PROFILE_APP_DATA }}
@@ -83,6 +85,9 @@ jobs:
           rm -rf $HOME/telegram-configuration
           mkdir -p $HOME/telegram-configuration
           cp build-system/public-release-configuration.json $HOME/telegram-configuration/
+
+          sed -i '' 's/"api_id": ""/"api_id": "$API_ID"/g' $HOME/telegram-configuration/public-release-configuration.json
+          sed -i '' 's/"api_hash": ""/"api_hash": "$API_HASH"/g' $HOME/telegram-configuration/public-release-configuration.json
 
           # prepare provisioning profiles
           PROVISIONING_PATH=$HOME/telegram-configuration/provisioning/profiles
