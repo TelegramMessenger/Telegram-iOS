@@ -258,23 +258,24 @@ func _internal_canBotSendMessages(postbox: Postbox, network: Network, botId: Pee
     |> switchToLatest
 }
 
-func _internal_allowBotSendMessages(postbox: Postbox, network: Network, botId: PeerId) -> Signal<Bool, NoError> {
-    return postbox.transaction { transaction -> Signal<Bool, NoError> in
+func _internal_allowBotSendMessages(postbox: Postbox, network: Network, stateManager: AccountStateManager, botId: PeerId) -> Signal<Never, NoError> {
+    return postbox.transaction { transaction -> Signal<Never, NoError> in
         guard let bot = transaction.getPeer(botId), let inputUser = apiInputUser(bot) else {
-            return .single(false)
+            return .never()
         }
 
         return network.request(Api.functions.bots.allowSendMessage(bot: inputUser))
-        |> `catch` { _ -> Signal<Api.Bool, NoError> in
-            return .single(.boolFalse)
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
         }
-        |> map { result -> Bool in
-            if case .boolTrue = result {
-                return true
-            } else {
-                return false
+        |> map { updates -> Api.Updates? in
+            if let updates = updates {
+                stateManager.addUpdates(updates)
             }
+            return updates
         }
+        |> ignoreValues
     }
     |> switchToLatest
 }

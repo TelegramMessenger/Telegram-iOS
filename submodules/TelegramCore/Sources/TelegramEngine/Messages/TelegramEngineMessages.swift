@@ -512,8 +512,8 @@ public extension TelegramEngine {
             return _internal_canBotSendMessages(postbox: self.account.postbox, network: self.account.network, botId: botId)
         }
 
-        public func allowBotSendMessages(botId: PeerId) -> Signal<Bool, NoError> {
-            return _internal_allowBotSendMessages(postbox: self.account.postbox, network: self.account.network, botId: botId)
+        public func allowBotSendMessages(botId: PeerId) -> Signal<Never, NoError> {
+            return _internal_allowBotSendMessages(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, sbotId: botId)
         }
 
         public func invokeBotCustomMethod(botId: PeerId, method: String, params: String) -> Signal<String, InvokeBotCustomMethodError> {
