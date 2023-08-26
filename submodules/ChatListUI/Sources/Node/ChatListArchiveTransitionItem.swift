@@ -1,4 +1,4 @@
-import Foundation
+//import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -41,7 +41,8 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         var state: State
         var params: ArchiveAnimationParams
         var isAnimated = false
-        var overlayGradientNode: ASDisplayNode?
+        var overlayGradientNode: ASImageNode?
+        var gradientLayer: CAShapeLayer?
         var releaseTextNode: ASTextNode?
         
         static func degreesToRadians(_ x: CGFloat) -> CGFloat {
@@ -64,24 +65,26 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
             case .swipeDownInit:
                 print("swipe dowm init transition called")
             case .releaseAppear:
+                updateReleaseTextNode(from: textNode)
+                updateGradientOverlay(from: gradientNode)
+                
                 let rotationAnimation = makeArrowRotationAnimation(arrowContainerNode: arrowContainerNode)
                 rotationAnimation.beginTime = .zero
-
-                if self.releaseTextNode == nil {
-                    self.releaseTextNode = ASTextNode()
-                    let attributes: [NSAttributedString.Key: Any] = textNode.attributedText?.attributes(at: 0, effectiveRange: nil) ?? [:]
-                    self.releaseTextNode?.attributedText = NSAttributedString(string: "Release for archive", attributes: attributes)
-                    guard let supernode = textNode.supernode else { return }
-                    supernode.addSubnode(self.releaseTextNode!)
-                    
-                    let textLayout = self.releaseTextNode!.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 100, height: 25), max: CGSize(width: supernode.frame.width - 120, height: 25)))
-                    
-                    self.releaseTextNode?.frame = CGRect(x: -textLayout.size.width, y: supernode.frame.height - textLayout.size.height - 8, width: textLayout.size.width, height: textLayout.size.height)
-                }
                 
                 let textSwipeAnimation = makeTextSwipeAnimation(textNode: textNode)
                 textSwipeAnimation.beginTime = .zero
-
+                
+                if let releaseTextNode {
+                    let releaseTextAppearAnimation = makeTextSwipeAnimation(textNode: releaseTextNode)
+                    releaseTextAppearAnimation.beginTime = .zero
+                }
+                
+//                if overlayGradientNode != nil {
+                    let overlayGradientAnimation = makeGradientOverlay(gradientContainer: gradientNode, arrowContainer: arrowContainerNode)
+                    overlayGradientAnimation.beginTime = .zero
+//                }
+                
+                
             case .swipeDownAppear:
                 let rotationAnimation = makeArrowRotationAnimation(arrowContainerNode: arrowContainerNode)
                 rotationAnimation.beginTime = .zero
@@ -92,7 +95,48 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
             self.isAnimated = true
         }
         
-        func makeArrowRotationAnimation(arrowContainerNode: ASDisplayNode) -> CAAnimation {
+        private mutating func updateGradientOverlay(from gradientNode: ASDisplayNode) {
+            if (self.overlayGradientNode == nil) {
+                self.overlayGradientNode = ASImageNode()
+                self.gradientLayer = CAShapeLayer()
+                self.gradientLayer?.frame = gradientNode.bounds
+                self.gradientLayer?.masksToBounds = true
+                self.gradientLayer?.cornerRadius = 10
+//                self.gradientLayer?.fillColor = UIColor.blue.cgColor
+                self.gradientLayer?.contents = generateGradientImage(size: gradientNode.frame.size, colors: [UIColor(hexString: "#0E7AF1")!, UIColor(hexString: "#69BEFE")!],
+                                                                     locations: [0.0, 1.0], direction: .horizontal)
+                
+//                self.overlayGradientNode?.image = generateGradientImage(size: gradientNode.frame.size, colors: [UIColor(hexString: "#0E7AF1")!, UIColor(hexString: "#69BEFE")!],
+//                                                                        locations: [0.0, 1.0], direction: .horizontal)
+//                self.overlayGradientNode?.isLayerBacked = true
+//                self.overlayGradientNode?.setLayerBlock({
+//                    let layer = CAShapeLayer()
+//                    return layer
+//                })
+                gradientNode.layer.addSublayer(self.gradientLayer!)
+//                gradientNode.addSubnode(self.overlayGradientNode!)
+            }
+            
+            self.overlayGradientNode?.frame = gradientNode.bounds
+        }
+        
+        private mutating func updateReleaseTextNode(from textNode: ASTextNode) {
+            if self.releaseTextNode == nil {
+                self.releaseTextNode = ASTextNode()
+                self.releaseTextNode?.isLayerBacked = true
+                let attributes: [NSAttributedString.Key: Any] = textNode.attributedText?.attributes(at: 0, effectiveRange: nil) ?? [:]
+                self.releaseTextNode?.attributedText = NSAttributedString(string: "Release for archive", attributes: attributes)
+                guard let supernode = textNode.supernode else { return }
+                supernode.addSubnode(self.releaseTextNode!)
+            }
+
+            if let releaseTextNode, let supernode = releaseTextNode.supernode, state != .transitionToArchive {
+                let textLayout = releaseTextNode.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 100, height: 25), max: CGSize(width: supernode.frame.width - 120, height: 25)))
+                self.releaseTextNode?.frame = CGRect(x: -textLayout.size.width, y: supernode.frame.height - textLayout.size.height - 8, width: textLayout.size.width, height: textLayout.size.height)
+            }
+        }
+        
+        private func makeArrowRotationAnimation(arrowContainerNode: ASDisplayNode) -> CAAnimation {
             let rotatedDegree = TransitionAnimation.degreesToRadians(-180)
             let animation = arrowContainerNode.layer.makeAnimation(
                 from: 0.0 as NSNumber,
@@ -100,7 +144,7 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                 keyPath: "transform.rotation.z",
                 timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue,
                 duration: 0.5,
-                removeOnCompletion: false,
+                removeOnCompletion: true,
                 additive: true
             )
             arrowContainerNode.layer.animationKeys()?.filter({ $0 == "arrow_rotation" }).forEach({ arrowContainerNode.layer.cancelAnimationsRecursive(key: $0) })
@@ -108,7 +152,7 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
             return animation
         }
         
-        func makeTextSwipeAnimation(textNode: ASTextNode) -> CAAnimation {
+        private func makeTextSwipeAnimation(textNode: ASTextNode) -> CAAnimation {
             guard let superNode = textNode.supernode else {
                 return CAAnimation()
             }
@@ -134,9 +178,59 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
             return animation
         }
         
-//        func makeGradientOverlay(gradientContainer: ASDisplayNode) -> CAAnimation {
+        private func makeGradientOverlay(gradientContainer: ASDisplayNode, arrowContainer: ASDisplayNode) -> CAAnimation {
+//            guard let overlayGradientNode else { return CAAnimation() }
+//            let startPosition = arrowContainer.convert(arrowContainer.frame.center, to: gradientContainer)
+//            overlayGradientNode.frame = gradientContainer.bounds
 //
-//        }
+//            let startCirclePath = UIBezierPath(ovalIn: arrowContainer.convert(arrowContainer.bounds, to: gradientContainer))
+//            startCirclePath.close()
+//
+//            let gs = gradientContainer.frame.size
+//            let finalRectPath = UIBezierPath(ovalIn: CGRect(x: -gs.width*0.2, y: -gs.width*0.2, width: gs.width+gs.width*0.4, height: gs.width+gs.width*0.4))
+//            finalRectPath.close()
+//
+//            if let shapeLayer = overlayGradientNode.layer as? CAShapeLayer {
+//                shapeLayer.path = startCirclePath.cgPath
+//                shapeLayer.fillColor = UIColor.clear.cgColor
+//                shapeLayer.strokeColor = UIColor.black.cgColor
+//                shapeLayer.masksToBounds = true
+//
+//            }
+//
+//            let animation = overlayGradientNode.layer.springAnimation(from: startCirclePath.cgPath, to: finalRectPath.cgPath, keyPath: "path", duration: 1.0, removeOnCompletion: true, additive: false)
+//            animation.fillMode = .forwards
+//            overlayGradientNode.layer.animationKeys()?.filter({ $0 == "gradient_path_transition" }).forEach({ overlayGradientNode.layer.cancelAnimationsRecursive(key: $0) })
+//            overlayGradientNode.layer.add(animation, forKey: "gradient_path_transition")
+//
+//            return animation
+            guard let gradientLayer else { return CAAnimation() }
+            gradientLayer.frame = gradientContainer.bounds//arrowContainer.convert(arrowContainer.frame, to: gradientContainer)
+            gradientLayer.cornerRadius = 10
+            
+//            let startPosition = arrowContainer.layer.convert(arrowContainer.layer.frame.origin, to: gradientLayer)
+//            let distanceFromCenter = TransitionAnimation.distance(from: arrowContainer.layer.frame.center, to: arrowContainer.layer.frame.origin)
+            
+            let startCirclePath = UIBezierPath(rect: arrowContainer.convert(arrowContainer.bounds, to: gradientContainer))//UIBezierPath(ovalIn: arrowContainer.convert(arrowContainer.bounds, to: gradientContainer))
+            startCirclePath.close()
+
+//            let gs = gradientContainer.frame.size
+            let finalRectPath = UIBezierPath(rect: gradientContainer.bounds)//UIBezierPath(ovalIn: gradientContainer.bounds)
+            finalRectPath.close()
+            
+            gradientLayer.path = startCirclePath.cgPath
+            gradientLayer.fillColor = UIColor.blue.cgColor
+            gradientLayer.strokeColor = UIColor.red.cgColor
+
+            let animation2 = gradientLayer.makeAnimation(from: gradientLayer.cornerRadius as NSNumber, to: 0 as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 3.0, removeOnCompletion: true)
+            let animation = gradientLayer.springAnimation(from: startCirclePath.cgPath, to: finalRectPath.cgPath, keyPath: "path", duration: 3.0, removeOnCompletion: true, additive: false)
+            animation.fillMode = .forwards
+            gradientLayer.removeAllAnimations()
+            gradientLayer.add(animation2, forKey: "gradient_corner")
+            gradientLayer.add(animation, forKey: "gradient_path_transition")
+
+            return animation
+        }
     }
     
     let backgroundNode: ASDisplayNode
@@ -246,8 +340,8 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
 //                guard let arrowNode, finished else { return }
 //                transition.updateTransformScale(layer: arrowNode.layer, scale: 1.0 / scale)
 //            }
-//            animationBackgroundNode.layer.animateScale(from: 1.0, to: 1.07, duration: 0.12, removeOnCompletion: false, completion: { [weak animationBackgroundNode] finished in
-//                animationBackgroundNode?.layer.animateScale(from: 1.07, to: 1.0, duration: 0.12, removeOnCompletion: false)
+//            animationBackgroundNode.layer.animateScale(from: 1.0, to: 1.07, duration: 0.12, removeOnCompletion: true, completion: { [weak animationBackgroundNode] finished in
+//                animationBackgroundNode?.layer.animateScale(from: 1.07, to: 1.0, duration: 0.12, removeOnCompletion: true)
 //            })
 
 //            print("size before: \(size)")
