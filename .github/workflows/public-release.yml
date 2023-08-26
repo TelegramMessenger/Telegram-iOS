@@ -2,6 +2,7 @@ name: Create public release
 
 on:
   workflow_dispatch:
+  push:
 
 jobs:
   build:
