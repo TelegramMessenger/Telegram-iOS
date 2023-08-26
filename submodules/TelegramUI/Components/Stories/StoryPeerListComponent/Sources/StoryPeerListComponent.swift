@@ -833,7 +833,7 @@ public final class StoryPeerListComponent: Component {
                 }
             }
             
-            print("overscrollStage1: \(overscrollStage1) overscrollStage2: \(overscrollStage2) realTimeOverscrollFraction: \(realTimeOverscrollFraction)")
+//            print("overscrollStage1: \(overscrollStage1) overscrollStage2: \(overscrollStage2) realTimeOverscrollFraction: \(realTimeOverscrollFraction)")
             self.overscrollFraction = overscrollStage1
             if overscrollStage1 >= 0.5 {
                 self.overscrollHiddenChatItemsAllowed = true

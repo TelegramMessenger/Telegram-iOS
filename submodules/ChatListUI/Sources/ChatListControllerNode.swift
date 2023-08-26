@@ -2503,10 +2503,20 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
 //                        }
 //                    }
                     
+                    
+//                    if case let .known(value) = offset {
+//                        let listViewOffsetFraction = (value + listView.tempTopInset)/76
+//                        print("#1 listViewOffset: \(value) listViewOffsetFraction: \(listViewOffsetFraction)")
+//                    }
+//                    let scrollViewFraction = listView.scroller.contentOffset.y / 76
+//                    print("#1 overscrollFraction: \(overscrollFraction ?? .zero) scrollViewOffset: \(listView.scroller.contentOffset) topInset: \(listView.tempTopInset) scrollViewFraction: \(scrollViewFraction)")
+
+
                     if
                         let overscrollFraction, overscrollFraction > 0,
-                            let node = self.mainContainerNode.currentItemNode.itemNodeAtIndex(2) as? ChatListItemNode, node.isNodeLoaded,
-                            let itemHeight = node.currentItemHeight, itemHeight > 0
+//                        self.allowOverscrollItemExpansion,
+                        let node = self.mainContainerNode.currentItemNode.itemNodeAtIndex(2) as? ChatListItemNode, node.isNodeLoaded,
+                        let itemHeight = node.currentItemHeight, itemHeight > 0
                     {
 
                         let expandedHeight = (overscrollFraction * 2) * itemHeight //listView.tempTopInset - 40.0
@@ -2519,8 +2529,9 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                         }
 
                         if let currentOverscrollItemExpansionTimestamp = self.currentOverscrollItemExpansionTimestamp, currentOverscrollItemExpansionTimestamp <= timestamp - 0.0 {
-//                            self.allowOverscrollItemExpansion = false
-
+                            if overscrollFraction >= 0.5 {
+                                self.allowOverscrollItemExpansion = false
+                            }
                             if isPrimary {
                                 self.mainContainerNode.currentItemNode.forEachItemNode { node in
                                     if let chatNode = node as? ChatListItemNode {
@@ -2539,7 +2550,6 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                                             self.inlineStackContainerNode?.currentItemNode.updateArchiveTopOffset(offset: expandedHeight)
                                             chatNode.updateExpandedHeight(height: expandedHeight, transition: .immediate)
 //                                            chatNode.animateFrameTransition(1.0, expandedHeight)
-
 //                                            chatNode.updateHeightOffsetValue(offset: expandedHeight, transition: self.tempNavigationScrollingTransition ?? .immediate)
                                         }
                                     }
