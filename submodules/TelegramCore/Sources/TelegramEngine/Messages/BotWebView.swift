@@ -236,3 +236,71 @@ func _internal_requestAppWebView(postbox: Postbox, network: Network, stateManage
     |> castError(RequestAppWebViewError.self)
     |> switchToLatest
 }
+
+func _internal_canBotSendMessages(postbox: Postbox, network: Network, botId: PeerId) -> Signal<Bool, NoError> {
+    return postbox.transaction { transaction -> Signal<Bool, NoError> in
+        guard let bot = transaction.getPeer(botId), let inputUser = apiInputUser(bot) else {
+            return .single(false)
+        }
+
+        return network.request(Api.functions.bots.canSendMessage(bot: inputUser))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> map { result -> Bool in
+            if case .boolTrue = result {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    |> switchToLatest
+}
+
+func _internal_allowBotSendMessages(postbox: Postbox, network: Network, botId: PeerId) -> Signal<Bool, NoError> {
+    return postbox.transaction { transaction -> Signal<Bool, NoError> in
+        guard let bot = transaction.getPeer(botId), let inputUser = apiInputUser(bot) else {
+            return .single(false)
+        }
+
+        return network.request(Api.functions.bots.allowSendMessage(bot: inputUser))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> map { result -> Bool in
+            if case .boolTrue = result {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    |> switchToLatest
+}
+
+public enum InvokeBotCustomMethodError {
+    case generic
+}
+
+func _internal_invokeBotCustomMethod(postbox: Postbox, network: Network, botId: PeerId, method: String, params: String) -> Signal<String, InvokeBotCustomMethodError> {
+    let params = Api.DataJSON.dataJSON(data: params)
+    return postbox.transaction { transaction -> Signal<String, InvokeBotCustomMethodError> in
+        guard let bot = transaction.getPeer(botId), let inputUser = apiInputUser(bot) else {
+            return .fail(.generic)
+        }
+        return network.request(Api.functions.bots.invokeWebViewCustomMethod(bot: inputUser, customMethod: method, params: params))
+        |> mapError { _ -> InvokeBotCustomMethodError in
+            return .generic
+        }
+        |> map { result -> String in
+            if case let .dataJSON(data) = result {
+                return data
+            } else {
+                return ""
+            }
+        }
+    }
+    |> castError(InvokeBotCustomMethodError.self)
+    |> switchToLatest
+}
