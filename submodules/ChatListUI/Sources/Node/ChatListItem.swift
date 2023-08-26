@@ -3903,7 +3903,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             if case .groupReference = item.content {
                 let translationY = currentValue - (self.currentItemHeight ?? 0.0)
                 self.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, translationY, 0.0)
-                print("set sublayer translation y #2: \(translationY)")
             } else {
                 var separatorFrame = self.separatorNode.frame
                 separatorFrame.origin.y = currentValue - UIScreenPixel

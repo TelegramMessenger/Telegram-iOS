@@ -444,7 +444,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 header: nil,
                 enableContextActions: false,
                 hiddenOffset: false,
-                hiddenOffsetValue: .zero,
+                params: .empty,
                 interaction: interaction
             )
         }

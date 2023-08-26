@@ -864,7 +864,7 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
                     unreadCount: groupReference.unreadCount,
                     revealed: state.hiddenItemShouldBeTemporaryRevealed,
                     hiddenByDefault: hideArchivedFolderByDefault,
-                    archiveParams: <#T##ArchiveAnimationParams#>,
+                    archiveParams: state.archiveParams,
                     storyState: mappedStoryState
                 )))
                 if pinningIndex != 0 {

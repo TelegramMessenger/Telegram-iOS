@@ -22,20 +22,121 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
     struct TransitionAnimation {
         enum State {
             case swipeDownInit
-            case swipeDownDisappear
             case releaseAppear
-            case releaseDisappear
             case swipeDownAppear
             case transitionToArchive
+            
+            init(params: ArchiveAnimationParams, previousState: TransitionAnimation.State) {
+                let fraction = params.storiesFraction * 2
+                if fraction < 0.8 {
+                    self = .swipeDownAppear
+                } else if fraction > 0.8 && fraction < 1.0 {
+                    self = .releaseAppear
+                } else {
+                    self = .transitionToArchive
+                }
+            }
         }
         
         var state: State
-        var scrollOffset: CGFloat
-        var storiesFraction: CGFloat
+        var params: ArchiveAnimationParams
+        var isAnimated = false
+        var overlayGradientNode: ASDisplayNode?
+        var releaseTextNode: ASTextNode?
         
         static func degreesToRadians(_ x: CGFloat) -> CGFloat {
             return .pi * x / 180.0
         }
+        
+        static func distance(from: CGPoint, to point: CGPoint) -> CGFloat {
+            return sqrt(pow((point.x - from.x), 2) + pow((point.y - from.y), 2))
+        }
+
+        
+        mutating func animateLayers(gradientNode: ASDisplayNode, textNode: ASTextNode, arrowContainerNode: ASDisplayNode, completion: (() -> Void)?) {
+            CATransaction.begin()
+            CATransaction.setCompletionBlock {
+                completion?()
+            }
+            CATransaction.completionBlock()
+            CATransaction.setAnimationDuration(1.0)
+            switch state {
+            case .swipeDownInit:
+                print("swipe dowm init transition called")
+            case .releaseAppear:
+                let rotationAnimation = makeArrowRotationAnimation(arrowContainerNode: arrowContainerNode)
+                rotationAnimation.beginTime = .zero
+
+                if self.releaseTextNode == nil {
+                    self.releaseTextNode = ASTextNode()
+                    let attributes: [NSAttributedString.Key: Any] = textNode.attributedText?.attributes(at: 0, effectiveRange: nil) ?? [:]
+                    self.releaseTextNode?.attributedText = NSAttributedString(string: "Release for archive", attributes: attributes)
+                    guard let supernode = textNode.supernode else { return }
+                    supernode.addSubnode(self.releaseTextNode!)
+                    
+                    let textLayout = self.releaseTextNode!.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 100, height: 25), max: CGSize(width: supernode.frame.width - 120, height: 25)))
+                    
+                    self.releaseTextNode?.frame = CGRect(x: -textLayout.size.width, y: supernode.frame.height - textLayout.size.height - 8, width: textLayout.size.width, height: textLayout.size.height)
+                }
+                
+                let textSwipeAnimation = makeTextSwipeAnimation(textNode: textNode)
+                textSwipeAnimation.beginTime = .zero
+
+            case .swipeDownAppear:
+                let rotationAnimation = makeArrowRotationAnimation(arrowContainerNode: arrowContainerNode)
+                rotationAnimation.beginTime = .zero
+            case .transitionToArchive:
+                break
+            }
+            CATransaction.commit()
+            self.isAnimated = true
+        }
+        
+        func makeArrowRotationAnimation(arrowContainerNode: ASDisplayNode) -> CAAnimation {
+            let rotatedDegree = TransitionAnimation.degreesToRadians(-180)
+            let animation = arrowContainerNode.layer.makeAnimation(
+                from: 0.0 as NSNumber,
+                to: rotatedDegree as NSNumber,
+                keyPath: "transform.rotation.z",
+                timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue,
+                duration: 0.5,
+                removeOnCompletion: false,
+                additive: true
+            )
+            arrowContainerNode.layer.animationKeys()?.filter({ $0 == "arrow_rotation" }).forEach({ arrowContainerNode.layer.cancelAnimationsRecursive(key: $0) })
+            arrowContainerNode.layer.add(animation, forKey: "arrow_rotation")
+            return animation
+        }
+        
+        func makeTextSwipeAnimation(textNode: ASTextNode) -> CAAnimation {
+            guard let superNode = textNode.supernode else {
+                return CAAnimation()
+            }
+            let targetPosition: CGPoint
+            
+            if textNode.frame.origin.x < 0 {
+                let distanceToCenter = TransitionAnimation.distance(from: textNode.frame.center, to: superNode.frame.center)
+                targetPosition = CGPoint(x: textNode.layer.position.x + distanceToCenter, y: textNode.layer.position.y)
+            } else {
+                targetPosition = CGPoint(x: textNode.position.x + (superNode.frame.width - textNode.frame.center.x) + textNode.frame.width / 2, y: textNode.layer.position.y)
+            }
+        
+            let animation = textNode.layer.springAnimation(
+                from: NSValue(cgPoint: textNode.layer.position),
+                to: NSValue(cgPoint: targetPosition),
+                keyPath: "position",
+                duration: 1.0,
+                removeOnCompletion: true,
+                additive: false
+            )
+            textNode.layer.animationKeys()?.filter({ $0 == "translate_text" }).forEach({ textNode.layer.cancelAnimationsRecursive(key: $0) })
+            textNode.layer.add(animation, forKey: "translate_text")
+            return animation
+        }
+        
+//        func makeGradientOverlay(gradientContainer: ASDisplayNode) -> CAAnimation {
+//
+//        }
     }
     
     let backgroundNode: ASDisplayNode
@@ -47,7 +148,7 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
     let arrowContainerNode: ASDisplayNode
     let arrowAnimationNode: AnimationNode //20x20
     let arrowImageNode: ASImageNode
-    let animation: TransitionAnimation
+    var animation: TransitionAnimation
     
     required override init() {
         self.backgroundNode = ASDisplayNode()
@@ -56,9 +157,9 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         self.backgroundNode.backgroundColor = .clear
         
         self.gradientContainerNode = ASDisplayNode()
-        self.animation = .init(state: .swipeDownInit, scrollOffset: .zero, storiesFraction: .zero)
+        self.animation = .init(state: .swipeDownInit, params: .empty)
         self.titleNode = ASTextNode()
-//        self.titleNode.isLayerBacked = true
+        self.titleNode.isLayerBacked = true
         
         self.gradientComponent = RoundedRectangle(colors: [UIColor(hexString: "#A9AFB7")!,
                                                            UIColor(hexString: "#D3D4DA")!],
@@ -69,8 +170,11 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         self.arrowBackgroundNode.backgroundColor = .white.withAlphaComponent(0.4)
                 
         self.arrowContainerNode = ASDisplayNode()
+        self.arrowContainerNode.isLayerBacked = true
+        
         self.arrowImageNode = ASImageNode()
         self.arrowImageNode.image = UIImage(bundleImageName: "Chat List/Archive/IconArrow")
+        self.arrowImageNode.isLayerBacked = true
         
         let mixedBackgroundColor = UIColor(hexString: "#A9AFB7")!.mixedWith(.white, alpha: 0.4)
         self.arrowAnimationNode = AnimationNode(animation: "anim_arrow_to_archive", colors: [
@@ -99,6 +203,21 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
     func updateLayout(transition: ContainedViewLayoutTransition, size: CGSize, params: ArchiveAnimationParams, presentationData: ChatListPresentationData) {
         let frame = CGRect(origin: .zero, size: size)
         print("frame: \(frame)")
+        
+        var transition = transition
+        
+        guard self.animation.params != params || self.frame.size != size else { return }
+        if self.animation.params != params { print("new params") }
+        if self.frame.size != size { print("new size") }
+
+        self.animation.params = params
+        let previousState = self.animation.state
+        self.animation.state = .init(params: params, previousState: previousState)
+        
+        if self.animation.state != previousState {
+            transition = .immediate
+        }
+        
         if self.gradientContainerView == nil {
             self.gradientContainerView = ComponentHostView<Empty>()
             self.gradientContainerNode.view.addSubview(self.gradientContainerView!)
@@ -170,6 +289,14 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                                                               width: textLayout.size.width,
                                                               height: textLayout.size.height))
         
+        if self.animation.state != previousState {
+            self.animation.animateLayers(gradientNode: self.gradientContainerNode,
+                                         textNode: self.titleNode,
+                                         arrowContainerNode: self.arrowContainerNode) {
+                print("animation finished")
+            }
+        }
+
     }
 }
     
