@@ -188,7 +188,7 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
     let selected: Bool
     let enableContextActions: Bool
     let hiddenOffset: Bool
-    var hiddenOffsetValue: CGFloat
+    var params: ArchiveAnimationParams
     let interaction: ChatListNodeInteraction
     
     public let selectable: Bool = true
@@ -212,7 +212,7 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
         }
     }
     
-    public init(presentationData: ChatListPresentationData, context: AccountContext, chatListLocation: ChatListControllerLocation, filterData: ChatListItemFilterData?, index: EngineChatList.Item.Index, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enableContextActions: Bool, hiddenOffset: Bool, hiddenOffsetValue: CGFloat, interaction: ChatListNodeInteraction) {
+    public init(presentationData: ChatListPresentationData, context: AccountContext, chatListLocation: ChatListControllerLocation, filterData: ChatListItemFilterData?, index: EngineChatList.Item.Index, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enableContextActions: Bool, hiddenOffset: Bool, params: ArchiveAnimationParams, interaction: ChatListNodeInteraction) {
         self.presentationData = presentationData
         self.chatListLocation = chatListLocation
         self.filterData = filterData
@@ -225,7 +225,7 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
         self.header = header
         self.enableContextActions = enableContextActions
         self.hiddenOffset = hiddenOffset
-        self.hiddenOffsetValue = hiddenOffsetValue
+        self.params = params
         self.interaction = interaction
     }
     
@@ -1462,7 +1462,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             }
                             strongSelf.hierarchyTrackingLayer?.removeFromSuperlayer()
                             strongSelf.hierarchyTrackingLayer = nil
-                        }                 
+                        }
                         strongSelf.updateVideoVisibility()
                     } else {
                         if let photo = peer.largeProfileImage, photo.hasVideo {
@@ -2703,8 +2703,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
             var heightOffset: CGFloat = .zero
             if case let .groupReference(data) = item.content, data.groupId == .archive {
-                heightOffset = -(itemHeight-item.hiddenOffsetValue)
-                print("height offset: \(heightOffset) with hiddenOffsetValue: \(item.hiddenOffsetValue) itemHeight: \(itemHeight)")
+                heightOffset = -(itemHeight-item.params.expandedHeight)
+                print("height offset: \(heightOffset) with params: \(item.params) itemHeight: \(itemHeight)")
             }
             let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: itemHeight + heightOffset), insets: insets)
             
@@ -2716,7 +2716,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 customActions.append(ChatListItemAccessibilityCustomAction(name: option.title, target: nil, selector: #selector(ChatListItemNode.performLocalAccessibilityCustomAction(_:)), key: option.key))
             }
             
-            print("layout height: \(layout.contentSize.height)")
+//            print("layout height: \(layout.contentSize.height)")
             return (layout, { [weak self] synchronousLoads, animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, first, last, firstWithHeader, nextIsPinned, params, countersSize)
@@ -2738,7 +2738,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                         let translationY = layout.contentSize.height - itemHeight
                         strongSelf.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, translationY, 0.0)
-                        print("set sublayer translation y: \(translationY)")
+//                        print("set sublayer translation y: \(translationY)")
                     }
                     
                     if let _ = updatedTheme {
@@ -2756,7 +2756,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     if case let .groupReference(data) = item.content, data.groupId == .archive {
                         transition.updateAlpha(node: strongSelf.archiveTransitionNode, alpha: 1.0)
-                        strongSelf.archiveTransitionNode.updateLayout(transition: transition, size: layout.contentSize, storiesFraction: 0.5, scrollOffset: 0.5, presentationData: item.presentationData)
+                        strongSelf.archiveTransitionNode.updateLayout(transition: transition, size: layout.contentSize, params: item.params, presentationData: item.presentationData)
 //                        transition.updateAlpha(node: strongSelf.mainContentContainerNode, alpha: .zero)
                     } else {
                         transition.updateAlpha(node: strongSelf.archiveTransitionNode, alpha: .zero)
@@ -3858,15 +3858,20 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         })
     }
     
-    func updateExpandedHeight(height: CGFloat, transition: ContainedViewLayoutTransition) {
-        guard self.item?.hiddenOffsetValue != height else { return }
-        self.item?.hiddenOffsetValue = height
+    func updateExpandedHeight(transition: ContainedViewLayoutTransition, params: ArchiveAnimationParams) {
+        guard self.item?.params.expandedHeight != params.expandedHeight else { return }
+        self.item?.params = params
 
 //        let archiveTransitionFrame = CGRect(origin: CGPoint(), size: CGSize(width: self.layout.contentSize.width, height: currentItemHeight))
         let layout = self.asyncLayout()
 
         if let layoutParams = self.layoutParams {
-            let updatedParams = ListViewItemLayoutParams(width: layoutParams.5.width, leftInset: layoutParams.5.leftInset, rightInset: layoutParams.5.rightInset, availableHeight: height)
+            let updatedParams = ListViewItemLayoutParams(
+                width: layoutParams.5.width,
+                leftInset: layoutParams.5.leftInset,
+                rightInset: layoutParams.5.rightInset,
+                availableHeight: params.expandedHeight
+            )
             let (nodeLayout, apply) = layout(self.item ?? layoutParams.0, updatedParams, layoutParams.1, layoutParams.2, layoutParams.3, layoutParams.4)
             apply(true, true)
             self.contentSize = nodeLayout.contentSize

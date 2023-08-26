@@ -242,7 +242,7 @@ private final class ChatListShimmerNode: ASDisplayNode {
                     topForumTopicItems: [],
                     autoremoveTimeout: nil,
                     storyState: nil
-                )), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, hiddenOffsetValue: .zero, interaction: interaction)
+                )), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, params: .empty, interaction: interaction)
             }
             
             var itemNodes: [ChatListItemNode] = []
@@ -2528,6 +2528,11 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                             self.currentOverscrollItemExpansionTimestamp = timestamp
                         }
 
+                        var scrollOffset = listView.scroller.contentOffset.y
+                        if case let .known(value) = offset {
+                            scrollOffset = value
+                        }
+                        
                         if let currentOverscrollItemExpansionTimestamp = self.currentOverscrollItemExpansionTimestamp, currentOverscrollItemExpansionTimestamp <= timestamp - 0.0 {
                             if overscrollFraction >= 0.5 {
                                 self.allowOverscrollItemExpansion = false
@@ -2535,9 +2540,17 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                             if isPrimary {
                                 self.mainContainerNode.currentItemNode.forEachItemNode { node in
                                     if let chatNode = node as? ChatListItemNode {
-                                        if case let .groupReference(data) = chatNode.item?.content, data.groupId == .archive, expandedHeight != chatNode.item?.hiddenOffsetValue {
+                                        if case let .groupReference(data) = chatNode.item?.content, data.groupId == .archive, expandedHeight != chatNode.item?.params.expandedHeight {
                                             self.mainContainerNode.currentItemNode.updateArchiveTopOffset(offset: expandedHeight)
-                                            chatNode.updateExpandedHeight(height: expandedHeight, transition: .immediate)
+
+                                            chatNode.updateExpandedHeight(
+                                                transition: .immediate,
+                                                params: .init(
+                                                    scrollOffset: scrollOffset,
+                                                    storiesFraction: overscrollFraction,
+                                                    expandedHeight: expandedHeight
+                                                )
+                                            )
 //                                            chatNode.animateFrameTransition(1.0, expandedHeight)
 //                                            chatNode.updateHeightOffsetValue(offset: expandedHeight, transition: self.tempNavigationScrollingTransition ?? .immediate)
                                         }
@@ -2546,9 +2559,17 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                             } else {
                                 self.inlineStackContainerNode?.currentItemNode.forEachItemNode { node in
                                     if let chatNode = node as? ChatListItemNode {
-                                        if case let .groupReference(data) = chatNode.item?.content, data.groupId == .archive, expandedHeight != chatNode.item?.hiddenOffsetValue {
+                                        if case let .groupReference(data) = chatNode.item?.content, data.groupId == .archive, expandedHeight != chatNode.item?.params.expandedHeight {
                                             self.inlineStackContainerNode?.currentItemNode.updateArchiveTopOffset(offset: expandedHeight)
-                                            chatNode.updateExpandedHeight(height: expandedHeight, transition: .immediate)
+                                            
+                                            chatNode.updateExpandedHeight(
+                                                transition: .immediate,
+                                                params: .init(
+                                                    scrollOffset: scrollOffset,
+                                                    storiesFraction: overscrollFraction,
+                                                    expandedHeight: expandedHeight
+                                                )
+                                            )
 //                                            chatNode.animateFrameTransition(1.0, expandedHeight)
 //                                            chatNode.updateHeightOffsetValue(offset: expandedHeight, transition: self.tempNavigationScrollingTransition ?? .immediate)
                                         }

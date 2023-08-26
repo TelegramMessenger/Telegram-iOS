@@ -850,7 +850,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                                 hasUnseenCloseFriends: stats.hasUnseenCloseFriends
                             )
                         }
-                    )), editing: false, hasActiveRevealControls: false, selected: false, header: tagMask == nil ? header : nil, enableContextActions: false, hiddenOffset: false, hiddenOffsetValue: .zero, interaction: interaction)
+                    )), editing: false, hasActiveRevealControls: false, selected: false, header: tagMask == nil ? header : nil, enableContextActions: false, hiddenOffset: false, params: .empty, interaction: interaction)
                 }
             case let .addContact(phoneNumber, theme, strings):
                 return ContactsAddItem(context: context, theme: theme, strings: strings, phoneNumber: phoneNumber, header: ChatListSearchItemHeader(type: .phoneNumber, theme: theme, strings: strings, actionTitle: nil, action: nil), action: {
@@ -3591,7 +3591,7 @@ public final class ChatListSearchShimmerNode: ASDisplayNode {
                             topForumTopicItems: [],
                             autoremoveTimeout: nil,
                             storyState: nil
-                        )), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, hiddenOffsetValue: .zero, interaction: interaction)
+                        )), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, params: .empty, interaction: interaction)
                     case .media:
                         return nil
                     case .links:
