@@ -920,7 +920,11 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         
                         for area in component.slice.item.storyItem.mediaAreas {
-                             if isPoint(point, in: area) {
+                            if case .reaction = area {
+                                continue
+                            }
+                            
+                            if isPoint(point, in: area) {
                                 selectedMediaArea = area
                                 break
                             }
@@ -1483,9 +1487,16 @@ public final class StoryItemSetContainerComponent: Component {
                             strings: component.strings,
                             peer: component.slice.peer,
                             item: item.storyItem,
+                            availableReactions: component.availableReactions,
                             audioMode: component.audioMode,
                             isVideoBuffering: visibleItem.isBuffering,
-                            isCurrent: index == centralIndex
+                            isCurrent: index == centralIndex,
+                            activateReaction: { [weak self] reactionView, reaction in
+                                guard let self else {
+                                    return
+                                }
+                                self.sendMessageContext.activateInlineReaction(view: self, reactionView: reactionView, reaction: reaction)
+                            }
                         )),
                         environment: {
                             itemEnvironment
