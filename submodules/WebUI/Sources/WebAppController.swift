@@ -1104,7 +1104,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 if result {
                     sendEvent(true)
                 } else {
-                    controller.present(textAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, title: "Allow Sending Messages", text: "Allow \(controller.botName) to send messages?", actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
+                    controller.present(textAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, title: "Allow Sending Messages?", text: "Allow \(controller.botName) to send messages?", actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
                         sendEvent(false)
                     }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: { [weak self] in
                         guard let self else {
@@ -1112,8 +1112,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         }
                         
                         let _ = (self.context.engine.messages.allowBotSendMessages(botId: controller.botId)
-                        |> deliverOnMainQueue).start(next: { result in
-                            sendEvent(result)
+                        |> deliverOnMainQueue).start(completed: {
+                            sendEvent(true)
                         })
                     })]), in: .window(.root))
                 }
