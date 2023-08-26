@@ -2508,19 +2508,19 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
 //                        let listViewOffsetFraction = (value + listView.tempTopInset)/76
 //                        print("#1 listViewOffset: \(value) listViewOffsetFraction: \(listViewOffsetFraction)")
 //                    }
-//                    let scrollViewFraction = listView.scroller.contentOffset.y / 76
+                    let scrollViewFraction = (listView.scroller.contentOffset.y - listView.tempTopInset) / 76
 //                    print("#1 overscrollFraction: \(overscrollFraction ?? .zero) scrollViewOffset: \(listView.scroller.contentOffset) topInset: \(listView.tempTopInset) scrollViewFraction: \(scrollViewFraction)")
+                    print("###1 \noverscrollFraction: \(overscrollFraction ?? .zero) \nscrollViewOffset: \(listView.scroller.contentOffset) \ntopInset: \(listView.tempTopInset) \nscrollViewFraction: \(scrollViewFraction)")
 
 
                     if
                         let overscrollFraction, overscrollFraction > 0,
 //                        self.allowOverscrollItemExpansion,
                         let node = self.mainContainerNode.currentItemNode.itemNodeAtIndex(2) as? ChatListItemNode, node.isNodeLoaded,
-                        let itemHeight = node.currentItemHeight, itemHeight > 0
-                    {
+                        let itemHeight = node.currentItemHeight, itemHeight > 0 {
 
                         let expandedHeight = (overscrollFraction * 2) * itemHeight //listView.tempTopInset - 40.0
-                        print("expandedHeight: \(expandedHeight) overscrollFraction: \(overscrollFraction) itemHeight: \(itemHeight)")
+//                        print("expandedHeight: \(expandedHeight) overscrollFraction: \(overscrollFraction) itemHeight: \(itemHeight)")
 
                         let timestamp = CACurrentMediaTime()
                         if let _ = self.currentOverscrollItemExpansionTimestamp {
@@ -2541,6 +2541,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                                 self.mainContainerNode.currentItemNode.forEachItemNode { node in
                                     if let chatNode = node as? ChatListItemNode {
                                         if case let .groupReference(data) = chatNode.item?.content, data.groupId == .archive, expandedHeight != chatNode.item?.params.expandedHeight {
+                                            print("expandedHeight: \(expandedHeight) overscrollFraction: \(overscrollFraction) itemHeight: \(itemHeight)")
                                             self.mainContainerNode.currentItemNode.updateArchiveTopOffset(params: .init(
                                                 scrollOffset: scrollOffset,
                                                 storiesFraction: overscrollFraction,
@@ -2564,6 +2565,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                                 self.inlineStackContainerNode?.currentItemNode.forEachItemNode { node in
                                     if let chatNode = node as? ChatListItemNode {
                                         if case let .groupReference(data) = chatNode.item?.content, data.groupId == .archive, expandedHeight != chatNode.item?.params.expandedHeight {
+                                            print("expandedHeight: \(expandedHeight) overscrollFraction: \(overscrollFraction) itemHeight: \(itemHeight)")
                                             self.inlineStackContainerNode?.currentItemNode.updateArchiveTopOffset(params: .init(
                                                 scrollOffset: scrollOffset,
                                                 storiesFraction: overscrollFraction,
