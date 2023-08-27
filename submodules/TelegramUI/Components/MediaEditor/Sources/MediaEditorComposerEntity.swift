@@ -63,8 +63,9 @@ private func prerenderTextTransformations(entity: DrawingEntity, image: UIImage,
 
 func composerEntitiesForDrawingEntity(postbox: Postbox, textScale: CGFloat, entity: DrawingEntity, colorSpace: CGColorSpace, tintColor: UIColor? = nil) -> [MediaEditorComposerEntity] {
     if let entity = entity as? DrawingStickerEntity {
-        if case let .file(_, type) = entity.content, case .reaction = type, let renderImage = entity.renderImage, let image = CIImage(image: renderImage, options: [.colorSpace: colorSpace]) {
-            return [MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: false)]
+        if case let .file(_, type) = entity.content, case .reaction = type {
+            return []
+//            return [MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: false)]
         } else {
             let content: MediaEditorComposerStickerEntity.Content
             switch entity.content {

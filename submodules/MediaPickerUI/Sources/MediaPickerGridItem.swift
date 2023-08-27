@@ -455,11 +455,11 @@ final class MediaPickerGridItemNode: GridItemNode {
                 targetSize = CGSize(width: 128.0 * scale, height: 128.0 * scale)
             }
             
-            let assetImageSignal = assetImage(fetchResult: fetchResult, index: index, targetSize: targetSize, exact: false, deliveryMode: .fastFormat, synchronous: true)
-            |> then(
-                assetImage(fetchResult: fetchResult, index: index, targetSize: targetSize, exact: false, deliveryMode: .highQualityFormat, synchronous: false)
-                |> delay(0.03, queue: Queue.concurrentDefaultQueue())
-            )
+            let assetImageSignal = assetImage(fetchResult: fetchResult, index: index, targetSize: targetSize, exact: false, deliveryMode: .opportunistic, synchronous: false)
+//            |> then(
+//                assetImage(fetchResult: fetchResult, index: index, targetSize: targetSize, exact: false, deliveryMode: .highQualityFormat, synchronous: false)
+//                |> delay(0.03, queue: Queue.concurrentDefaultQueue())
+//            )
 
             if stories {
                 self.imageNode.contentUpdated = { [weak self] image in

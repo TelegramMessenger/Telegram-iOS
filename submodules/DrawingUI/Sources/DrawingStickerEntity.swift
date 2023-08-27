@@ -48,6 +48,7 @@ public final class DrawingStickerEntityView: DrawingEntityView {
         
         if case .file(_, .reaction) = entity.content {
             let backgroundNode = ASImageNode()
+            backgroundNode.layer.zPosition = -1000.0
             backgroundNode.image = UIImage(bundleImageName: "Media Editor/ReactionBackground")
             backgroundNode.displaysAsynchronously = false
             self.addSubnode(backgroundNode)
@@ -319,15 +320,13 @@ public final class DrawingStickerEntityView: DrawingEntityView {
             var boundingSize = CGSize(width: sideSize, height: sideSize)
             
             if let backgroundNode = self.backgroundNode {
-                backgroundNode.frame = CGRect(origin: .zero, size: boundingSize)
+                backgroundNode.frame = CGRect(origin: .zero, size: boundingSize).insetBy(dx: -5.0, dy: -5.0)
                 boundingSize = CGSize(width: floor(sideSize * 0.63), height: floor(sideSize * 0.63))
             }
             
             let imageSize = self.dimensions.aspectFitted(boundingSize)
-            var imageFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
-            if case let .file(_, type) = self.stickerEntity.content, case .reaction = type {
-                imageFrame = imageFrame.offsetBy(dx: -3.0, dy: -9.0)
-            }
+            let imageFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
+
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
             self.imageNode.frame = imageFrame
             if let animationNode = self.animationNode {
@@ -348,6 +347,24 @@ public final class DrawingStickerEntityView: DrawingEntityView {
             }
             
             self.update(animated: false)
+        }
+    }
+    
+    private var isReaction: Bool {
+        if case let .file(_, type) = self.stickerEntity.content, case .reaction = type {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    override func animateInsertion() {
+        super.animateInsertion()
+        
+        if self.isReaction {
+            Queue.mainQueue().after(0.2) {
+                let _ = self.selectedTapAction()
+            }
         }
     }
     
@@ -560,10 +577,14 @@ public final class DrawingStickerEntityView: DrawingEntityView {
         self.bounds = CGRect(origin: .zero, size: self.dimensions.aspectFitted(size))
         self.transform = CGAffineTransformScale(CGAffineTransformMakeRotation(self.stickerEntity.rotation), self.stickerEntity.scale, self.stickerEntity.scale)
     
+        let isReaction = self.isReaction
         let staticTransform = CATransform3DMakeScale(self.stickerEntity.mirrored ? -1.0 : 1.0, 1.0, 1.0)
-
+        
         if animated {
-            let isCurrentlyMirrored = ((self.imageNode.layer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0) < 0.0
+            var isCurrentlyMirrored = ((self.imageNode.layer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0) < 0.0
+            if isReaction {
+                isCurrentlyMirrored = ((self.backgroundNode?.layer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0) < 0.0
+            }
             var animationSourceTransform = CATransform3DIdentity
             var animationTargetTransform = CATransform3DIdentity
             if isCurrentlyMirrored {
@@ -574,23 +595,44 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                 animationTargetTransform = CATransform3DRotate(animationTargetTransform, .pi, 0.0, 1.0, 0.0)
                 animationTargetTransform.m34 = -1.0 / self.imageNode.frame.width
             }
-            self.imageNode.transform = animationSourceTransform
-            self.animationNode?.transform = animationSourceTransform
+            if isReaction {
+                self.backgroundNode?.transform = animationSourceTransform
+                
+                let values = [1.0, 0.01, 1.0]
+                let keyTimes = [0.0, 0.5, 1.0]
+                self.animationNode?.layer.animateKeyframes(values: values as [NSNumber], keyTimes: keyTimes as [NSNumber], duration: 0.25, keyPath: "transform.scale.x", timingFunction: CAMediaTimingFunctionName.linear.rawValue)
+            } else {
+                self.imageNode.transform = animationSourceTransform
+                self.animationNode?.transform = animationSourceTransform
+                self.videoNode?.transform = animationSourceTransform
+            }
             UIView.animate(withDuration: 0.25, animations: {
-                self.imageNode.transform = animationTargetTransform
-                self.animationNode?.transform = animationTargetTransform
-                self.videoNode?.transform = animationTargetTransform
+                if isReaction {
+                    self.backgroundNode?.transform = animationTargetTransform
+                } else {
+                    self.imageNode.transform = animationTargetTransform
+                    self.animationNode?.transform = animationTargetTransform
+                    self.videoNode?.transform = animationTargetTransform
+                }
             }, completion: { finished in
-                self.imageNode.transform = staticTransform
-                self.animationNode?.transform = staticTransform
-                self.videoNode?.transform = staticTransform
+                if isReaction {
+                    self.backgroundNode?.transform = staticTransform
+                } else {
+                    self.imageNode.transform = staticTransform
+                    self.animationNode?.transform = staticTransform
+                    self.videoNode?.transform = staticTransform
+                }
             })
         } else {
             CATransaction.begin()
             CATransaction.setDisableActions(true)
-            self.imageNode.transform = staticTransform
-            self.animationNode?.transform = staticTransform
-            self.videoNode?.transform = staticTransform
+            if isReaction {
+                self.backgroundNode?.transform = staticTransform
+            } else {
+                self.imageNode.transform = staticTransform
+                self.animationNode?.transform = staticTransform
+                self.videoNode?.transform = staticTransform
+            }
             CATransaction.commit()
         }
         
@@ -607,12 +649,9 @@ public final class DrawingStickerEntityView: DrawingEntityView {
      
         selectionView.transform = .identity
         let maxSide = max(self.selectionBounds.width, self.selectionBounds.height)
-        var center = self.selectionBounds.center
+        let center = self.selectionBounds.center
                 
         let scale = self.superview?.superview?.layer.value(forKeyPath: "transform.scale.x") as? CGFloat ?? 1.0
-        if case let .file(_, type) = self.stickerEntity.content, case .reaction = type {
-            center = center.offsetBy(dx: -8.0 * scale, dy: -18.0 * scale)
-        }
         
         selectionView.center = self.convert(center, to: selectionView.superview)
         

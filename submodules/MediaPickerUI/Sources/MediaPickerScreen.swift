@@ -676,68 +676,70 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     
                     if !controller.didSetupGroups {
                         controller.didSetupGroups = true
-                        controller.groupsPromise.set(
-                            combineLatest(
-                                self.mediaAssetsContext.fetchAssetsCollections(.album),
-                                self.mediaAssetsContext.fetchAssetsCollections(.smartAlbum)
-                            )
-                            |> map { albums, smartAlbums -> [MediaGroupItem] in
-                                var collections: [PHAssetCollection] = []
-                                smartAlbums.enumerateObjects { collection, _, _ in
-                                    if [.smartAlbumUserLibrary, .smartAlbumFavorites].contains(collection.assetCollectionSubtype) {
-                                        collections.append(collection)
+                        Queue.concurrentDefaultQueue().after(0.3) {
+                            controller.groupsPromise.set(
+                                combineLatest(
+                                    self.mediaAssetsContext.fetchAssetsCollections(.album),
+                                    self.mediaAssetsContext.fetchAssetsCollections(.smartAlbum)
+                                )
+                                |> map { albums, smartAlbums -> [MediaGroupItem] in
+                                    var collections: [PHAssetCollection] = []
+                                    smartAlbums.enumerateObjects { collection, _, _ in
+                                        if [.smartAlbumUserLibrary, .smartAlbumFavorites].contains(collection.assetCollectionSubtype) {
+                                            collections.append(collection)
+                                        }
                                     }
-                                }
-                                smartAlbums.enumerateObjects { collection, index, _ in
-                                    var supportedAlbums: [PHAssetCollectionSubtype] = [
-                                        .smartAlbumBursts,
-                                        .smartAlbumPanoramas,
-                                        .smartAlbumScreenshots,
-                                        .smartAlbumSelfPortraits,
-                                        .smartAlbumSlomoVideos,
-                                        .smartAlbumTimelapses,
-                                        .smartAlbumVideos,
-                                        .smartAlbumAllHidden
-                                    ]
-                                    if #available(iOS 11, *) {
-                                        supportedAlbums.append(.smartAlbumAnimated)
-                                        supportedAlbums.append(.smartAlbumDepthEffect)
-                                        supportedAlbums.append(.smartAlbumLivePhotos)
+                                    smartAlbums.enumerateObjects { collection, index, _ in
+                                        var supportedAlbums: [PHAssetCollectionSubtype] = [
+                                            .smartAlbumBursts,
+                                            .smartAlbumPanoramas,
+                                            .smartAlbumScreenshots,
+                                            .smartAlbumSelfPortraits,
+                                            .smartAlbumSlomoVideos,
+                                            .smartAlbumTimelapses,
+                                            .smartAlbumVideos,
+                                            .smartAlbumAllHidden
+                                        ]
+                                        if #available(iOS 11, *) {
+                                            supportedAlbums.append(.smartAlbumAnimated)
+                                            supportedAlbums.append(.smartAlbumDepthEffect)
+                                            supportedAlbums.append(.smartAlbumLivePhotos)
+                                        }
+                                        if supportedAlbums.contains(collection.assetCollectionSubtype) {
+                                            let result = PHAsset.fetchAssets(in: collection, options: nil)
+                                            if result.count > 0 {
+                                                collections.append(collection)
+                                            }
+                                        }
                                     }
-                                    if supportedAlbums.contains(collection.assetCollectionSubtype) {
+                                    albums.enumerateObjects(options: [.reverse]) { collection, _, _ in
                                         let result = PHAsset.fetchAssets(in: collection, options: nil)
                                         if result.count > 0 {
                                             collections.append(collection)
                                         }
                                     }
-                                }
-                                albums.enumerateObjects(options: [.reverse]) { collection, _, _ in
-                                    let result = PHAsset.fetchAssets(in: collection, options: nil)
-                                    if result.count > 0 {
-                                        collections.append(collection)
-                                    }
-                                }
-                                
-                                var items: [MediaGroupItem] = []
-                                for collection in collections {
-                                    let result = PHAsset.fetchAssets(in: collection, options: nil)
-                                    let firstItem: PHAsset?
-                                    if [.smartAlbumUserLibrary, .smartAlbumFavorites].contains(collection.assetCollectionSubtype) {
-                                        firstItem = result.lastObject
-                                    } else {
-                                        firstItem = result.firstObject
-                                    }
-                                    items.append(
-                                        MediaGroupItem(
-                                            collection: collection,
-                                            firstItem: firstItem,
-                                            count: result.count
+                                    
+                                    var items: [MediaGroupItem] = []
+                                    for collection in collections {
+                                        let result = PHAsset.fetchAssets(in: collection, options: nil)
+                                        let firstItem: PHAsset?
+                                        if [.smartAlbumUserLibrary, .smartAlbumFavorites].contains(collection.assetCollectionSubtype) {
+                                            firstItem = result.lastObject
+                                        } else {
+                                            firstItem = result.firstObject
+                                        }
+                                        items.append(
+                                            MediaGroupItem(
+                                                collection: collection,
+                                                firstItem: firstItem,
+                                                count: result.count
+                                            )
                                         )
-                                    )
+                                    }
+                                    return items
                                 }
-                                return items
-                            }
-                        )
+                            )
+                        }
                     }
                 } else if case .notDetermined = mediaAccess, !self.requestedMediaAccess {
                     self.requestedMediaAccess = true

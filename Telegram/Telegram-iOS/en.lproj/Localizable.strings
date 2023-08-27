@@ -9861,3 +9861,5 @@ Sorry for the inconvenience.";
 
 "Story.ViewList.ViewerCount_1" = "1 Viewer";
 "Story.ViewList.ViewerCount_any" = "%d Viewers";
+
+"AuthSessions.MessageApp" = "You allowed this bot to message you when you opened %@.";

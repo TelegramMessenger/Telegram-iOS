@@ -917,6 +917,20 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         }
                         self.sendClipboardTextEvent(requestId: requestId, fillData: fillData)
                     }
+                case "web_app_request_write_access":
+                    self.requestWriteAccess()
+                case "web_app_request_phone":
+                    self.shareAccountContact()
+                case "web_app_invoke_custom_method":
+                    if let json, let requestId = json["req_id"] as? String, let method = json["method"] as? String, let params = json["params"] {
+                        var paramsString: String?
+                        if let string = params as? String {
+                            paramsString = string
+                        } else if let data1 = try? JSONSerialization.data(withJSONObject: params, options: []), let convertedString = String(data: data1, encoding: String.Encoding.utf8) {
+                            paramsString = convertedString
+                        }
+                        self.invokeCustomMethod(requestId: requestId, method: method, params: paramsString ?? "{}")
+                    }
                 default:
                     break
             }
@@ -959,7 +973,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 var resultString: String?
                 if let string = data as? String {
                     resultString = string
-                } else if let data1 = try? JSONSerialization.data(withJSONObject: data, options: JSONSerialization.WritingOptions.prettyPrinted), let convertedString = String(data: data1, encoding: String.Encoding.utf8) {
+                } else if let data1 = try? JSONSerialization.data(withJSONObject: data, options: []), let convertedString = String(data: data1, encoding: String.Encoding.utf8) {
                     resultString = convertedString
                 }
                 if let resultString = resultString {
@@ -1065,6 +1079,92 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 paramsString = "{req_id: \"\(requestId)\"}"
             }
             self.webView?.sendEvent(name: "clipboard_text_received", data: paramsString)
+        }
+        
+        fileprivate func requestWriteAccess() {
+            guard let controller = self.controller, !self.dismissed else {
+                return
+            }
+            
+            let sendEvent: (Bool) -> Void = { success in
+                var paramsString: String
+                if success {
+                    paramsString = "{status: \"allowed\"}"
+                } else {
+                    paramsString = "{status: \"cancelled\"}"
+                }
+                self.webView?.sendEvent(name: "write_access_requested", data: paramsString)
+            }
+            
+            let _ = (self.context.engine.messages.canBotSendMessages(botId: controller.botId)
+            |> deliverOnMainQueue).start(next: { [weak self] result in
+                guard let self, let controller = self.controller else {
+                    return
+                }
+                if result {
+                    sendEvent(true)
+                } else {
+                    controller.present(textAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, title: "Allow Sending Messages?", text: "Allow \(controller.botName) to send messages?", actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
+                        sendEvent(false)
+                    }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        
+                        let _ = (self.context.engine.messages.allowBotSendMessages(botId: controller.botId)
+                        |> deliverOnMainQueue).start(completed: {
+                            sendEvent(true)
+                        })
+                    })]), in: .window(.root))
+                }
+            })
+        }
+        
+        fileprivate func shareAccountContact() {
+            guard let controller = self.controller else {
+                return
+            }
+            
+            let sendEvent: (Bool) -> Void = { success in
+                var paramsString: String
+                if success {
+                    paramsString = "{status: \"sent\"}"
+                } else {
+                    paramsString = "{status: \"cancelled\"}"
+                }
+                self.webView?.sendEvent(name: "phone_requested", data: paramsString)
+            }
+            
+            controller.present(textAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, title: self.presentationData.strings.Conversation_ShareBotContactConfirmationTitle, text: self.presentationData.strings.Conversation_ShareBotContactConfirmation, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
+                sendEvent(false)
+            }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: { [weak self] in
+                guard let self else {
+                    return
+                }
+                let _ = (self.context.account.postbox.loadedPeerWithId(self.context.account.peerId)
+                |> deliverOnMainQueue).start(next: { [weak self] peer in
+                    if let self, let botId = self.controller?.botId, let peer = peer as? TelegramUser, let phone = peer.phone, !phone.isEmpty {
+                        let _ = enqueueMessages(account: self.context.account, peerId: botId, messages: [
+                            .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaContact(firstName: peer.firstName ?? "", lastName: peer.lastName ?? "", phoneNumber: phone, peerId: peer.id, vCardData: nil)), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+                        ]).start()
+                        sendEvent(true)
+                    }
+                })
+            })]), in: .window(.root))
+        }
+        
+        fileprivate func invokeCustomMethod(requestId: String, method: String, params: String) {
+            guard let controller = self.controller, !self.dismissed else {
+                return
+            }
+            let _ = (self.context.engine.messages.invokeBotCustomMethod(botId: controller.botId, method: method, params: params)
+            |> deliverOnMainQueue).start(next: { [weak self] result in
+                guard let self else {
+                    return
+                }
+                let paramsString = "{req_id: \"\(requestId)\", result: \(result)}"
+                self.webView?.sendEvent(name: "custom_method_invoked", data: paramsString)
+            })
         }
     }
     

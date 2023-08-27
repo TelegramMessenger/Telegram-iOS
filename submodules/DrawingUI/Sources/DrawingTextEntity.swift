@@ -27,6 +27,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         return self.entity as! DrawingTextEntity
     }
     
+    let blurredBackgroundView: BlurredBackgroundView
     let textView: DrawingTextView
     var customEmojiContainerView: CustomEmojiContainerView?
     var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
@@ -35,6 +36,10 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
     var replaceWithImage: (UIImage, Bool) -> Void = { _, _ in }
     
     init(context: AccountContext, entity: DrawingTextEntity) {
+        self.blurredBackgroundView = BlurredBackgroundView(color: UIColor(white: 0.0, alpha: 0.25), enableBlur: true)
+        self.blurredBackgroundView.clipsToBounds = true
+        self.blurredBackgroundView.isHidden = true
+        
         self.textView = DrawingTextView(frame: .zero)
         self.textView.clipsToBounds = false
         
@@ -56,6 +61,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         super.init(context: context, entity: entity)
         
         self.textView.delegate = self
+        self.addSubview(self.blurredBackgroundView)
         self.addSubview(self.textView)
         
         self.emojiViewProvider = { emoji in
@@ -174,6 +180,8 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             textColor = color
         case .stroke:
             textColor = color.lightness > 0.99 ? UIColor.black : UIColor.white
+        case .blur:
+            textColor = color
         }
         
         self.emojiRects = customEmojiRects
@@ -466,6 +474,8 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             textColor = color
         case .stroke:
             textColor = color.lightness > 0.99 ? UIColor.black : UIColor.white
+        case .blur:
+            textColor = color
         }
         
         guard let visualText = text.mutableCopy() as? NSMutableAttributedString else {
@@ -629,6 +639,8 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             self.textView.textColor = color.lightness > 0.99 ? UIColor.black : UIColor.white
             self.textView.strokeColor = color
             self.textView.frameColor = nil
+        case .blur:
+            break
         }
         self.textView.tintColor = self.textView.text.isEmpty ? .white : cursorColor
         

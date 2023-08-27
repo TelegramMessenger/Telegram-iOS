@@ -80,7 +80,13 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     
     public var referenceDrawingSize: CGSize
     public var position: CGPoint
-    public var scale: CGFloat
+    public var scale: CGFloat {
+        didSet {
+            if case let .file(_, type) = self.content, case .reaction = type {
+                self.scale = max(0.75, min(2.0, self.scale))
+            }
+        }
+    }
     public var rotation: CGFloat
     public var mirrored: Bool
     

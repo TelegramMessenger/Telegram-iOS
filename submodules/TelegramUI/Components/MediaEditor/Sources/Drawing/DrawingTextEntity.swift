@@ -61,6 +61,7 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
         case filled
         case semi
         case stroke
+        case blur
     }
     
     public enum Animation: Codable, Equatable {
