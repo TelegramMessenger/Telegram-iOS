@@ -145,24 +145,47 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                 if (self.gradientShapeLayer == nil) {
                     self.gradientShapeLayer = CAShapeLayer()
                     self.gradientShapeLayer?.masksToBounds = true
-                    self.gradientShapeLayer?.cornerRadius = 10
                     self.gradientShapeLayer?.contentsGravity = .center
                     
                     self.gradientShapeLayer?.fillColor = UIColor.clear.cgColor
-                    self.gradientShapeLayer?.strokeColor = UIColor.red.cgColor
-                    self.gradientShapeLayer?.lineWidth = 3.0
+                    self.gradientShapeLayer?.strokeColor = UIColor.clear.cgColor
+                    self.gradientShapeLayer?.lineWidth = 0.0
                     self.gradientShapeLayer?.fillRule = .evenOdd
                     
                 }
+                if (self.gradientMaskLayer == nil) {
+                    self.gradientMaskLayer = CAShapeLayer()
+                }
                 
-                if let gradientShapeLayer, gradientShapeLayer.superlayer == nil {
+                if (self.gradientLayer == nil) {
+                    self.gradientLayer = CALayer()
+                }
+                
+                guard let gradientShapeLayer else { return }
+                
+                
+                if gradientShapeLayer.superlayer == nil {
                     gradientNode.layer.addSublayer(gradientShapeLayer)
                 }
                 
-                if (self.gradientShapeLayer?.frame != gradientNode.bounds || self.gradientShapeLayer?.contents == nil) {
-                    self.gradientShapeLayer?.frame = gradientNode.bounds
-                    self.gradientShapeLayer?.contents = self.getGradientImageOrUpdate()?.cgImage
+                if let gradientMaskLayer, gradientMaskLayer.superlayer == nil {
+                    gradientShapeLayer.addSublayer(gradientMaskLayer)
                 }
+                
+                if (gradientShapeLayer.frame != gradientNode.bounds || gradientShapeLayer.contents == nil) {
+                    gradientShapeLayer.frame = gradientNode.bounds
+                    gradientShapeLayer.contents = self.getGradientImageOrUpdate()?.cgImage
+                }
+                
+                if self.gradientLayer?.superlayer == nil {
+                    gradientShapeLayer.addSublayer(self.gradientLayer!)
+                }
+                
+                self.gradientMaskLayer?.path = gradientShapeLayer.path
+                self.gradientMaskLayer?.frame = gradientShapeLayer.bounds
+                gradientShapeLayer.mask = self.gradientMaskLayer
+                gradientShapeLayer.frame = gradientShapeLayer.bounds
+                
             case .swipeDownInit, .swipeDownAppear, .transitionToArchive:
                 break
             }
@@ -414,7 +437,7 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
 //            size = CGSize(width: ceil(size.width * scale), height: ceil(size.width * scale))
 //
 //            let arrowCenter = (size.height / scale)/2
-//            let scaledArrowCenter = size.height / 2
+//            let scaledArrowCenter = size.height / 2   
 //            let difference = scaledArrowCenter - arrowCenter
 //
 //            let arrowFrame = CGRect(x: floor((arrowBackgroundFrame.width - size.width) / 2.0),

@@ -2430,13 +2430,11 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             var overscrollHiddenChatItemsAllowed = false
             var overscrollFraction: CGFloat?
             var currentFraction: CGFloat?
-            var currentActivityFraction: CGFloat?
             if let controller = self.controller, let componentView = controller.chatListHeaderView(), let storyPeerListView = componentView.storyPeerListView() {
                 overscrollSelectedId = storyPeerListView.overscrollSelectedId
                 overscrollHiddenChatItemsAllowed = storyPeerListView.overscrollHiddenChatItemsAllowed
                 overscrollFraction = storyPeerListView.overscrollFraction
                 currentFraction = storyPeerListView.currentFraction
-                currentActivityFraction = storyPeerListView.currentActivityFraction
             }
             
             if let chatListNode = listView as? ChatListNode {
@@ -2512,10 +2510,10 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
 //                        let listViewOffsetFraction = (value + listView.tempTopInset)/76
 //                        print("#1 listViewOffset: \(value) listViewOffsetFraction: \(listViewOffsetFraction)")
 //                    }
-                    let scrollViewFraction = (listView.scroller.contentOffset.y - listView.tempTopInset) / 76
+//                    let scrollViewFraction = (listView.scroller.contentOffset.y - listView.tempTopInset) / 76
 //                    print("#1 overscrollFraction: \(overscrollFraction ?? .zero) scrollViewOffset: \(listView.scroller.contentOffset) topInset: \(listView.tempTopInset) scrollViewFraction: \(scrollViewFraction)")
-                    print("###1 \noverscrollFraction: \(overscrollFraction ?? .zero) \nscrollViewOffset: \(listView.scroller.contentOffset) \ntopInset: \(listView.tempTopInset) \nscrollViewFraction: \(scrollViewFraction)")
-                    print("###2 currentFraction: \(currentFraction ?? .zero) \ncurrentActivityFraction: \(currentActivityFraction ?? .zero)")
+//                    print("###1 \noverscrollFraction: \(overscrollFraction ?? .zero) \nscrollViewOffset: \(listView.scroller.contentOffset) \ntopInset: \(listView.tempTopInset) \nscrollViewFraction: \(scrollViewFraction)")
+//                    print("###2 currentFraction: \(currentFraction ?? .zero) \ncurrentActivityFraction: \(currentActivityFraction ?? .zero)")
                     
                     
                     var archiveFraction: CGFloat = 0.0
@@ -2524,17 +2522,11 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                         archiveFraction = (overscrollFraction  / 0.5) * 0.8
                         if currentFraction < 0 {
                             let lastOverscrol = max(-1.0, min(1.0, (currentFraction / -0.2))) * 0.2
-                            print("###3\nlastOverscrol: \(archiveFraction)")
-
                             archiveFraction += lastOverscrol
-                            print("###3\nopen archiveFraction before reastriction: \(archiveFraction)")
-
                             archiveFraction = max(-1.0, archiveFraction)
                             archiveFraction = min(1.0, archiveFraction)
-                            print("###3\nopen archiveFraction after: \(archiveFraction)")
                         } else if currentFraction >= 1.0 {
                             archiveFraction = -currentFraction
-                            print("###3\nhide archiveFraction: \(archiveFraction)")
                         }
                     }
                     if
