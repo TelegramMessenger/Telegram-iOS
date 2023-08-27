@@ -1757,7 +1757,7 @@ public class CameraScreen: ViewController {
                 self.backgroundView.alpha = 1.0
             })
             
-            if let layout = self.validLayout, case .regular = layout.metrics.widthClass {
+            if let layout = self.validLayout, layout.metrics.isTablet {
                 self.controller?.statusBar.updateStatusBarStyle(.Hide, animated: true)
             }
             
@@ -2075,12 +2075,7 @@ public class CameraScreen: ViewController {
             let isFirstTime = self.validLayout == nil
             self.validLayout = layout
             
-            let isTablet: Bool
-            if case .regular = layout.metrics.widthClass {
-                isTablet = true
-            } else {
-                isTablet = false
-            }
+            let isTablet = layout.metrics.isTablet
             
             var topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
             let previewSize: CGSize
@@ -2615,7 +2610,7 @@ public class CameraScreen: ViewController {
         self.node.camera?.stopCapture(invalidate: true)
         self.isDismissed = true
         if animated {
-            if let layout = self.validLayout, case .regular = layout.metrics.widthClass {
+            if let layout = self.validLayout, layout.metrics.isTablet {
                 self.statusBar.updateStatusBarStyle(.Ignore, animated: true)
                 self.node.animateOut(completion: {
                     self.dismiss(animated: false)
@@ -2637,7 +2632,7 @@ public class CameraScreen: ViewController {
     }
         
     public func updateTransitionProgress(_ transitionFraction: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) {
-        if let layout = self.validLayout, case .regular = layout.metrics.widthClass {
+        if let layout = self.validLayout, layout.metrics.isTablet {
             return
         }
         
@@ -2683,7 +2678,7 @@ public class CameraScreen: ViewController {
     }
     
     public func completeWithTransitionProgress(_ transitionFraction: CGFloat, velocity: CGFloat, dismissing: Bool) {
-        if let layout = self.validLayout, case .regular = layout.metrics.widthClass {
+        if let layout = self.validLayout, layout.metrics.isTablet {
             return
         }
         if dismissing {

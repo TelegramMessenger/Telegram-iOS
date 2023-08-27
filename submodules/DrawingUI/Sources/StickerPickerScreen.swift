@@ -1527,7 +1527,7 @@ public class StickerPickerScreen: ViewController {
         
         override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
             if let (layout, _) = self.currentLayout {
-                if case .regular = layout.metrics.widthClass {
+                if layout.metrics.isTablet {
                     return false
                 }
             }
@@ -1586,10 +1586,7 @@ public class StickerPickerScreen: ViewController {
                         
             self.dim.frame = CGRect(origin: CGPoint(x: 0.0, y: -layout.size.height), size: CGSize(width: layout.size.width, height: layout.size.height * 3.0))
                         
-            var effectiveExpanded = self.isExpanded
-            if case .regular = layout.metrics.widthClass {
-                effectiveExpanded = true
-            }
+            let effectiveExpanded = self.isExpanded || layout.metrics.isTablet
             
             let isLandscape = layout.orientation == .landscape
             let edgeTopInset = isLandscape ? 0.0 : self.defaultTopInset
