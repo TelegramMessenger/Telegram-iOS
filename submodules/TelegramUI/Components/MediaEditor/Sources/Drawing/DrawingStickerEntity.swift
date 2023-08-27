@@ -20,8 +20,12 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             case dualPhoto
         }
         public enum FileType: Equatable {
+            public enum ReactionStyle: Int32 {
+                case white
+                case black
+            }
             case sticker
-            case reaction(MessageReaction.Reaction)
+            case reaction(MessageReaction.Reaction, ReactionStyle)
         }
         case file(TelegramMediaFile, FileType)
         case image(UIImage, ImageType)
@@ -61,6 +65,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case uuid
         case file
         case reaction
+        case reactionStyle
         case imagePath
         case videoFile
         case isRectangle
@@ -83,7 +88,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     public var scale: CGFloat {
         didSet {
             if case let .file(_, type) = self.content, case .reaction = type {
-                self.scale = max(0.75, min(2.0, self.scale))
+                self.scale = max(0.59, min(1.77, self.scale))
             }
         }
     }
@@ -179,7 +184,11 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         } else if let file = try container.decodeIfPresent(TelegramMediaFile.self, forKey: .file) {
             let fileType: Content.FileType
             if let reaction = try container.decodeIfPresent(MessageReaction.Reaction.self, forKey: .reaction) {
-                fileType = .reaction(reaction)
+                var reactionStyle: Content.FileType.ReactionStyle = .white
+                if let style = try container.decodeIfPresent(Int32.self, forKey: .reactionStyle) {
+                    reactionStyle = DrawingStickerEntity.Content.FileType.ReactionStyle(rawValue: style) ?? .white
+                }
+                fileType = .reaction(reaction, reactionStyle)
             } else {
                 fileType = .sticker
             }
@@ -220,8 +229,9 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case let .file(file, fileType):
             try container.encode(file, forKey: .file)
             switch fileType {
-            case let .reaction(reaction):
+            case let .reaction(reaction, reactionStyle):
                 try container.encode(reaction, forKey: .reaction)
+                try container.encode(reactionStyle.rawValue, forKey: .reactionStyle)
             default:
                 break
             }

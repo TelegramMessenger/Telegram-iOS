@@ -631,6 +631,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         let location = gestureRecognzier.location(in: self)
         if let entityView = self.entity(at: location) {
             self.selectEntity(entityView.entity)
+            entityView.onSelection()
         }
     }
     
@@ -947,6 +948,9 @@ public class DrawingEntityView: UIView {
         let values = [self.entity.scale, self.entity.scale * 0.88, self.entity.scale]
         let keyTimes = [0.0, 0.33, 1.0]
         self.layer.animateKeyframes(values: values as [NSNumber], keyTimes: keyTimes as [NSNumber], duration: 0.3, keyPath: "transform.scale")
+    }
+    
+    func onSelection() {
     }
     
     func selectedTapAction() -> Bool {

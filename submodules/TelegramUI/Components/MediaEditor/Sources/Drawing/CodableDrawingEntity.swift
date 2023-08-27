@@ -99,7 +99,7 @@ public enum CodableDrawingEntity: Equatable {
                 )
             )
         case let .sticker(entity):
-            if case let .file(_, type) = entity.content, case let .reaction(reaction) = type {
+            if case let .file(_, type) = entity.content, case let .reaction(reaction, _) = type {
                 return .reaction(
                     coordinates: coordinates,
                     reaction: reaction

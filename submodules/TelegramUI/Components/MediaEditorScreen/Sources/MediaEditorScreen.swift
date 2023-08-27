@@ -3092,12 +3092,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let isFirstTime = self.validLayout == nil
             self.validLayout = layout
             
-            let isTablet: Bool
-            if case .regular = layout.metrics.widthClass {
-                isTablet = true
-            } else {
-                isTablet = false
-            }
+            let isTablet = layout.metrics.isTablet
 
             var topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
             let previewSize: CGSize
@@ -3239,8 +3234,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                             if let reaction = self.availableReactions.first(where: { reaction in
                                                 return reaction.reaction.rawValue == .builtin(heart)
                                             }) {
-                                                let stickerEntity = DrawingStickerEntity(content: .file(reaction.stillAnimation, .reaction(.builtin(heart))))
-                                                self.interaction?.insertEntity(stickerEntity, scale: 1.33)
+                                                let stickerEntity = DrawingStickerEntity(content: .file(reaction.stillAnimation, .reaction(.builtin(heart), .white)))
+                                                self.interaction?.insertEntity(stickerEntity, scale: 1.175)
                                             }
                                         }
                                     }
