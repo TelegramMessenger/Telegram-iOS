@@ -84,19 +84,24 @@ public enum EnginePeer: Equatable {
             case show
             case hide
         }
+        
+        public typealias StorySettigs = PeerStoryNotificationSettings
 
         public var muteState: MuteState
         public var messageSound: MessageSound
         public var displayPreviews: DisplayPreviews
+        public var storySettings: StorySettigs
 
         public init(
             muteState: MuteState,
             messageSound: MessageSound,
-            displayPreviews: DisplayPreviews
+            displayPreviews: DisplayPreviews,
+            storySettings: StorySettigs
         ) {
             self.muteState = muteState
             self.messageSound = messageSound
             self.displayPreviews = displayPreviews
+            self.storySettings = storySettings
         }
     }
     
@@ -216,11 +221,13 @@ public struct EngineGlobalNotificationSettings: Equatable {
         public var enabled: Bool
         public var displayPreviews: Bool
         public var sound: EnginePeer.NotificationSettings.MessageSound
+        public var storySettings: EnginePeer.NotificationSettings.StorySettigs
         
-        public init(enabled: Bool, displayPreviews: Bool, sound: EnginePeer.NotificationSettings.MessageSound) {
+        public init(enabled: Bool, displayPreviews: Bool, sound: EnginePeer.NotificationSettings.MessageSound, storySettings: EnginePeer.NotificationSettings.StorySettigs) {
             self.enabled = enabled
             self.displayPreviews = displayPreviews
             self.sound = sound
+            self.storySettings = storySettings
         }
     }
     
@@ -327,7 +334,8 @@ public extension EnginePeer.NotificationSettings {
         self.init(
             muteState: MuteState(notificationSettings.muteState),
             messageSound: MessageSound(notificationSettings.messageSound),
-            displayPreviews: DisplayPreviews(notificationSettings.displayPreviews)
+            displayPreviews: DisplayPreviews(notificationSettings.displayPreviews),
+            storySettings: notificationSettings.storySettings
         )
     }
 
@@ -335,7 +343,8 @@ public extension EnginePeer.NotificationSettings {
         return TelegramPeerNotificationSettings(
             muteState: self.muteState._asMuteState(),
             messageSound: self.messageSound._asMessageSound(),
-            displayPreviews: self.displayPreviews._asDisplayPreviews()
+            displayPreviews: self.displayPreviews._asDisplayPreviews(),
+            storySettings: self.storySettings
         )
     }
 }
@@ -594,7 +603,8 @@ public extension EngineGlobalNotificationSettings.CategorySettings {
         self.init(
             enabled: categorySettings.enabled,
             displayPreviews: categorySettings.displayPreviews,
-            sound: EnginePeer.NotificationSettings.MessageSound(categorySettings.sound)
+            sound: EnginePeer.NotificationSettings.MessageSound(categorySettings.sound),
+            storySettings: categorySettings.storySettings
         )
     }
     
@@ -602,7 +612,8 @@ public extension EngineGlobalNotificationSettings.CategorySettings {
         return MessageNotificationSettings(
             enabled: self.enabled,
             displayPreviews: self.displayPreviews,
-            sound: self.sound._asMessageSound()
+            sound: self.sound._asMessageSound(),
+            storySettings: self.storySettings
         )
     }
 }
@@ -614,6 +625,15 @@ public extension EngineGlobalNotificationSettings {
             groupChats: CategorySettings(globalNotificationSettings.groupChats),
             channels: CategorySettings(globalNotificationSettings.channels),
             contactsJoined: globalNotificationSettings.contactsJoined
+        )
+    }
+    
+    func _asGlobalNotificationSettings() -> GlobalNotificationSettingsSet {
+        return GlobalNotificationSettingsSet(
+            privateChats: self.privateChats._asMessageNotificationSettings(),
+            groupChats: self.groupChats._asMessageNotificationSettings(),
+            channels: self.channels._asMessageNotificationSettings(),
+            contactsJoined: self.contactsJoined
         )
     }
 }

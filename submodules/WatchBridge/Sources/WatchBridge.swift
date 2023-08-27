@@ -172,8 +172,8 @@ func makeBridgeMedia(message: Message, strings: PresentationStrings, chatPeer: P
                 
                 for attribute in file.attributes {
                     switch attribute {
-                        case let .Video(duration, size, flags):
-                            bridgeVideo.duration = Int32(clamping: duration)
+                        case let .Video(duration, size, flags, _):
+                            bridgeVideo.duration = Int32(duration)
                             bridgeVideo.dimensions = size.cgSize
                             bridgeVideo.round = flags.contains(.instantRoundVideo)
                         default:
@@ -325,7 +325,13 @@ func makeBridgeMedia(message: Message, strings: PresentationStrings, chatPeer: P
 }
 
 func makeBridgeChat(_ entry: ChatListEntry, strings: PresentationStrings) -> (TGBridgeChat, [Int64 : TGBridgeUser])? {
-    if case let .MessageEntry(index, messages, readState, _, _, renderedPeer, _, _, _, _, hasFailed, _, _) = entry {
+    if case let .MessageEntry(entryData) = entry {
+        let index = entryData.index
+        let messages = entryData.messages
+        let readState = entryData.readState
+        let renderedPeer = entryData.renderedPeer
+        let hasFailed = entryData.hasFailed
+        
         guard index.messageIndex.id.peerId.namespace != Namespaces.Peer.SecretChat else {
             return nil
         }

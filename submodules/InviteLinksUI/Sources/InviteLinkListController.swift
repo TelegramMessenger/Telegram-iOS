@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -956,26 +955,26 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
 }
 
 
-final class InviteLinkContextExtractedContentSource: ContextExtractedContentSource {
-    var keepInPlace: Bool
-    let ignoreContentTouches: Bool = true
-    let blurBackground: Bool
+public final class InviteLinkContextExtractedContentSource: ContextExtractedContentSource {
+    public var keepInPlace: Bool
+    public let ignoreContentTouches: Bool = true
+    public let blurBackground: Bool
     
     private let controller: ViewController
     private let sourceNode: ContextExtractedContentContainingNode
     
-    init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode, keepInPlace: Bool, blurBackground: Bool) {
+    public init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode, keepInPlace: Bool, blurBackground: Bool) {
         self.controller = controller
         self.sourceNode = sourceNode
         self.keepInPlace = keepInPlace
         self.blurBackground = blurBackground
     }
     
-    func takeView() -> ContextControllerTakeViewInfo? {
+    public func takeView() -> ContextControllerTakeViewInfo? {
         return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds)
     }
     
-    func putBack() -> ContextControllerPutBackViewInfo? {
+    public func putBack() -> ContextControllerPutBackViewInfo? {
         return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

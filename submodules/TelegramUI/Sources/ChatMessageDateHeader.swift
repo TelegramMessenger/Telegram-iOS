@@ -118,7 +118,6 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     let labelNode: TextNode
     let backgroundNode: NavigationBackgroundNode
     let stickBackgroundNode: ASImageNode
-    let activateArea: AccessibilityAreaNode
     
     private var backgroundContent: WallpaperBubbleBackgroundNode?
     
@@ -191,16 +190,15 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         }
         self.text = text
         
-        self.activateArea = AccessibilityAreaNode()
-        self.activateArea.accessibilityTraits = .staticText
-        
         super.init(layerBacked: false, dynamicBounce: true, isRotated: true, seeThrough: false)
         
         self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         
         let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
 
-        self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
+        let fullTranslucency: Bool = controllerInteraction?.enableFullTranslucency ?? true
+        
+        self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: fullTranslucency && dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
         self.stickBackgroundNode.alpha = 0.0
 
@@ -210,16 +208,12 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
             self.addSubnode(self.backgroundNode)
         }
         self.addSubnode(self.labelNode)
-        
-        self.addSubnode(self.activateArea)
-        
+                
         let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
         
         let attributedString = NSAttributedString(string: text, font: titleFont, textColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
         let labelLayout = TextNode.asyncLayout(self.labelNode)
-        
-        self.activateArea.accessibilityLabel = text
-        
+                
         let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         let _ = apply()
         self.labelNode.frame = CGRect(origin: CGPoint(), size: size.size)
@@ -236,8 +230,10 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.presentationData = presentationData
         
         let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
+        
+        let fullTranslucency: Bool = self.controllerInteraction?.enableFullTranslucency ?? true
 
-        self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
+        self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: fullTranslucency && dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
         
         let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
@@ -281,9 +277,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.backgroundNode.frame = backgroundFrame
         self.backgroundNode.update(size: backgroundFrame.size, cornerRadius: backgroundFrame.size.height / 2.0, transition: .immediate)
         self.labelNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + chatDateInset, y: backgroundFrame.origin.y + floorToScreenPixels((backgroundSize.height - labelSize.height) / 2.0)), size: labelSize)
-        
-        self.activateArea.frame = backgroundFrame
-        
+                
         if let backgroundContent = self.backgroundContent {
             backgroundContent.allowsGroupOpacity = true
             self.backgroundNode.isHidden = true
@@ -380,8 +374,9 @@ final class ChatMessageAvatarHeader: ListViewItemHeader {
     let presentationData: ChatPresentationData
     let context: AccountContext
     let controllerInteraction: ChatControllerInteraction
+    let storyStats: PeerStoryStats?
 
-    init(timestamp: Int32, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, message: Message, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction) {
+    init(timestamp: Int32, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, message: Message, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction, storyStats: PeerStoryStats?) {
         self.peerId = peerId
         self.peer = peer
         self.messageReference = messageReference
@@ -401,6 +396,7 @@ final class ChatMessageAvatarHeader: ListViewItemHeader {
         self.context = context
         self.controllerInteraction = controllerInteraction
         self.id = ListViewItemNode.HeaderId(space: 1, id: Id(peerId: peerId, timestampId: dateHeaderTimestampId(timestamp: timestamp)))
+        self.storyStats = storyStats
     }
     
     let stickDirection: ListViewItemHeaderStickDirection = .top
@@ -420,14 +416,15 @@ final class ChatMessageAvatarHeader: ListViewItemHeader {
     }
 
     func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
-        return ChatMessageAvatarHeaderNode(peerId: self.peerId, peer: self.peer, messageReference: self.messageReference, adMessageId: self.adMessageId, presentationData: self.presentationData, context: self.context, controllerInteraction: self.controllerInteraction, synchronousLoad: synchronousLoad)
+        return ChatMessageAvatarHeaderNode(peerId: self.peerId, peer: self.peer, messageReference: self.messageReference, adMessageId: self.adMessageId, presentationData: self.presentationData, context: self.context, controllerInteraction: self.controllerInteraction, storyStats: self.storyStats, synchronousLoad: synchronousLoad)
     }
 
     func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
-        guard let node = node as? ChatMessageAvatarHeaderNode, let next = next as? ChatMessageAvatarHeader else {
+        guard let node = node as? ChatMessageAvatarHeaderNode else {
             return
         }
-        node.updatePresentationData(next.presentationData, context: next.context)
+        node.updatePresentationData(self.presentationData, context: self.context)
+        node.updateStoryStats(storyStats: self.storyStats, theme: self.presentationData.theme.theme, force: false)
     }
 }
 
@@ -439,6 +436,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
     private let context: AccountContext
     private var presentationData: ChatPresentationData
     private let controllerInteraction: ChatControllerInteraction
+    private var storyStats: PeerStoryStats?
     
     private let peerId: PeerId
     private let messageReference: MessageReference?
@@ -446,11 +444,13 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
     private let adMessageId: EngineMessage.Id?
 
     private let containerNode: ContextControllerSourceNode
-    private let avatarNode: AvatarNode
+    let avatarNode: AvatarNode
     private var avatarVideoNode: AvatarVideoNode?
         
     private var cachedDataDisposable = MetaDisposable()
     private var hierarchyTrackingLayer: HierarchyTrackingLayer?
+    
+    private var backgroundContent: WallpaperBubbleBackgroundNode?
     
     private var trackingIsInHierarchy: Bool = false {
         didSet {
@@ -465,7 +465,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
         }
     }
     
-    init(peerId: PeerId, peer: Peer?, messageReference: MessageReference?, adMessageId: EngineMessage.Id?, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction, synchronousLoad: Bool) {
+    init(peerId: PeerId, peer: Peer?, messageReference: MessageReference?, adMessageId: EngineMessage.Id?, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction, storyStats: PeerStoryStats?, synchronousLoad: Bool) {
         self.peerId = peerId
         self.peer = peer
         self.messageReference = messageReference
@@ -473,6 +473,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
         self.presentationData = presentationData
         self.context = context
         self.controllerInteraction = controllerInteraction
+        self.storyStats = storyStats
 
         self.containerNode = ContextControllerSourceNode()
 
@@ -487,6 +488,10 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
 
         if let peer = peer {
             self.setPeer(context: context, theme: presentationData.theme.theme, synchronousLoad: synchronousLoad, peer: peer, authorOfMessage: messageReference, emptyColor: .black)
+        }
+        
+        if let storyStats {
+            self.updateStoryStats(storyStats: storyStats, theme: presentationData.theme.theme, force: true)
         }
 
         self.containerNode.activated = { [weak self] gesture, _ in
@@ -522,7 +527,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
         }
         self.avatarNode.setPeer(context: context, theme: theme, peer: EnginePeer(peer), authorOfMessage: authorOfMessage, overrideImage: overrideImage, emptyColor: emptyColor, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: 38.0, height: 38.0))
         
-        if peer.isPremium {
+        if peer.isPremium && context.sharedContext.energyUsageSettings.autoplayVideo {
             self.cachedDataDisposable.set((context.account.postbox.peerView(id: peer.id)
             |> deliverOnMainQueue).start(next: { [weak self] peerView in
                 guard let strongSelf = self else {
@@ -553,7 +558,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                             videoNode = current
                         } else {
                             videoNode = AvatarVideoNode(context: context)
-                            strongSelf.avatarNode.addSubnode(videoNode)
+                            strongSelf.avatarNode.contentNode.addSubnode(videoNode)
                             strongSelf.avatarVideoNode = videoNode
                         }
                         videoNode.update(peer: EnginePeer(peer), photo: photo, size: CGSize(width: 38.0, height: 38.0))
@@ -601,6 +606,55 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
             self.hierarchyTrackingLayer = nil
         }
     }
+    
+    func updateStoryStats(storyStats: PeerStoryStats?, theme: PresentationTheme, force: Bool) {
+        /*if storyStats != nil {
+            var backgroundContent: WallpaperBubbleBackgroundNode?
+            if let current = self.backgroundContent {
+                backgroundContent = current
+            } else {
+                if let backgroundContentValue = self.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+                    backgroundContentValue.clipsToBounds = true
+                    self.backgroundContent = backgroundContentValue
+                    backgroundContent = backgroundContentValue
+                    self.containerNode.insertSubnode(backgroundContentValue, belowSubnode: self.avatarNode)
+                    
+                    let maskLayer = SimpleShapeLayer()
+                    maskLayer.fillColor = nil
+                    maskLayer.strokeColor = UIColor.white.cgColor
+                    maskLayer.lineWidth = 2.0
+                    maskLayer.path = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0)).insetBy(dx: 1.0, dy: 1.0)).cgPath
+                    backgroundContentValue.layer.mask = maskLayer
+                }
+            }
+            
+            if let backgroundContent {
+                backgroundContent.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
+                backgroundContent.cornerRadius = backgroundContent.bounds.width * 0.5
+            }
+        } else {
+            if let backgroundContent = self.backgroundContent {
+                self.backgroundContent = nil
+                backgroundContent.removeFromSupernode()
+            }
+        }
+        
+        if self.storyStats != storyStats || self.presentationData.theme.theme !== theme || force {
+            var colors = AvatarNode.Colors(theme: theme)
+            colors.seenColors = [UIColor(white: 1.0, alpha: 0.2), UIColor(white: 1.0, alpha: 0.2)]
+            self.avatarNode.setStoryStats(storyStats: storyStats.flatMap { storyStats in
+                return AvatarNode.StoryStats(
+                    totalCount: storyStats.totalCount != 0 ? 1 : 0,
+                    unseenCount: storyStats.unseenCount != 0 ? 1 : 0,
+                    hasUnseenCloseFriendsItems: storyStats.hasUnseenCloseFriends
+                )
+            }, presentationParams: AvatarNode.StoryPresentationParams(
+                colors: colors,
+                lineWidth: 2.0,
+                inactiveLineWidth: 2.0
+            ), transition: .immediate)
+        }*/
+    }
 
     override func didLoad() {
         super.didLoad()
@@ -609,9 +663,10 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
     }
 
     func updatePresentationData(_ presentationData: ChatPresentationData, context: AccountContext) {
-        self.presentationData = presentationData
-
-        self.setNeedsLayout()
+        if self.presentationData !== presentationData {
+            self.presentationData = presentationData
+            self.setNeedsLayout()
+        }
     }
 
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
@@ -669,7 +724,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                         self.controllerInteraction.openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: nil, peekData: nil), self.messageReference, .default)
                     } else {
-                        self.controllerInteraction.openPeer(EnginePeer(peer), .info, self.messageReference, .groupParticipant)
+                        self.controllerInteraction.openPeer(EnginePeer(peer), .info, self.messageReference, .groupParticipant(storyStats: nil, avatarHeaderNode: self))
                     }
                 }
             }

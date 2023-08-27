@@ -28,6 +28,7 @@ final class PeerTimeoutPropertiesTable: Table {
     private func lowerBound() -> ValueBoxKey {
         let key = ValueBoxKey(length: 4 + 8)
         key.setInt32(0, value: 0)
+        key.setInt64(4, value: 0)
         return key
     }
     

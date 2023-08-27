@@ -245,10 +245,11 @@ func cachedStickerPack(transaction: Transaction, reference: StickerPackReference
                 }
             }
         case let .name(shortName):
+            let shortName = shortName.lowercased()
             for namespace in namespaces {
                 for info in transaction.getItemCollectionsInfos(namespace: namespace) {
                     if let info = info.1 as? StickerPackCollectionInfo {
-                        if info.shortName == shortName {
+                        if info.shortName.lowercased() == shortName {
                             let items = transaction.getItemCollectionItems(collectionId: info.id)
                             if !items.isEmpty {
                                 return (info, items.compactMap { $0 as? StickerPackItem }, true)

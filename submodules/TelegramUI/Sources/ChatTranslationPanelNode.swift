@@ -634,13 +634,13 @@ private final class TranslationLanguagesContextMenuContent: ContextControllerIte
             
             if minVisibleIndex <= maxVisibleIndex {
                 for index in minVisibleIndex ... maxVisibleIndex {
-                    let height = self.languages[index].0.isEmpty ? separatorHeight : itemHeight
-                    var itemFrame = CGRect(origin: CGPoint(x: 0.0, y: CGFloat(index) * itemHeight), size: CGSize(width: size.width, height: height))
-                    if index > separatorIndex {
-                        itemFrame.origin.y += separatorHeight - itemHeight
-                    }
-                    
                     if index < self.languages.count {
+                        let height = self.languages[index].0.isEmpty ? separatorHeight : itemHeight
+                        var itemFrame = CGRect(origin: CGPoint(x: 0.0, y: CGFloat(index) * itemHeight), size: CGSize(width: size.width, height: height))
+                        if index > separatorIndex {
+                            itemFrame.origin.y += separatorHeight - itemHeight
+                        }
+                        
                         let (languageCode, displayTitle) = self.languages[index]
                         validIds.insert(index)
                         
@@ -690,7 +690,21 @@ private final class TranslationLanguagesContextMenuContent: ContextControllerIte
 
             self.presentationData = presentationData
             
-            let size = CGSize(width: constrainedSize.width, height: CGFloat(self.languages.count) * itemHeight)
+            var separatorIndex = 0
+            for i in 0 ..< self.languages.count {
+                if self.languages[i].0.isEmpty {
+                    separatorIndex = i
+                    break
+                }
+            }
+            
+            var contentHeight: CGFloat
+            if separatorIndex != 0 {
+                contentHeight = CGFloat(self.languages.count - 1) * itemHeight + separatorHeight
+            } else {
+                contentHeight = CGFloat(self.languages.count) * itemHeight
+            }
+            let size = CGSize(width: constrainedSize.width, height: contentHeight)
 
             let containerSize = CGSize(width: size.width, height: min(constrainedSize.height, size.height))
             self.currentSize = containerSize

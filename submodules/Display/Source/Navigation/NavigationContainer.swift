@@ -82,6 +82,7 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
     public private(set) var isReady: Bool = false
     public var isReadyUpdated: (() -> Void)?
     public var controllerRemoved: (ViewController) -> Void
+    public var requestFilterController: (ViewController) -> Void = { _ in }
     public var keyboardViewManager: KeyboardViewManager? {
         didSet {
         }
@@ -115,8 +116,13 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
     private var currentKeyboardLeftEdge: CGFloat = 0.0
     private var additionalKeyboardLeftEdgeOffset: CGFloat = 0.0
     
-    var statusBarStyle: StatusBarStyle = .Ignore
+    var statusBarStyle: StatusBarStyle = .Ignore {
+        didSet {
+        }
+    }
     var statusBarStyleUpdated: ((ContainedViewLayoutTransition) -> Void)?
+    
+    
     
     private var panRecognizer: InteractiveTransitionGestureRecognizer?
     
@@ -211,7 +217,10 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
                 let topController = self.controllers[self.controllers.count - 1]
                 let bottomController = self.controllers[self.controllers.count - 2]
                 
-                if !topController.attemptNavigation({
+                if !topController.attemptNavigation({ [weak self, weak topController] in
+                    if let self, let topController {
+                        self.requestFilterController(topController)
+                    }
                 }) {
                     return
                 }
@@ -316,11 +325,14 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
                 if i == 0 {
                     if canBeClosed {
                         controllers[i].transitionNavigationBar?.previousItem = .close
+                        controllers[i].previousItem = .close
                     } else {
                         controllers[i].transitionNavigationBar?.previousItem = nil
+                        controllers[i].previousItem = nil
                     }
                 } else {
                     controllers[i].transitionNavigationBar?.previousItem = .item(controllers[i - 1].navigationItem)
+                    controllers[i].previousItem = .item(controllers[i - 1].navigationItem)
                 }
             }
         
@@ -430,6 +442,8 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
         }
     }
     
+    public var shouldAnimateDisappearance: Bool = false
+    
     private func topTransition(from fromValue: Child?, to toValue: Child?, transitionType: PendingChild.TransitionType, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         if case .animated = transition, let fromValue = fromValue, let toValue = toValue {
             if let currentTransition = self.state.transition {
@@ -492,9 +506,17 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
                 strongSelf.keyboardViewManager?.dismissEditingWithoutAnimation(view: topTransition.previous.value.view)
                 strongSelf.state.transition = nil
                 
-                topTransition.previous.value.setIgnoreAppearanceMethodInvocations(true)
-                topTransition.previous.value.displayNode.removeFromSupernode()
-                topTransition.previous.value.setIgnoreAppearanceMethodInvocations(false)
+                if strongSelf.shouldAnimateDisappearance {
+                    let displayNode = topTransition.previous.value.displayNode
+                    displayNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak displayNode] _ in
+                        displayNode?.removeFromSupernode()
+                        displayNode?.layer.removeAllAnimations()
+                    })
+                } else {
+                    topTransition.previous.value.setIgnoreAppearanceMethodInvocations(true)
+                    topTransition.previous.value.displayNode.removeFromSupernode()
+                    topTransition.previous.value.setIgnoreAppearanceMethodInvocations(false)
+                }
                 topTransition.previous.value.viewDidDisappear(true)
                 if let toValue = strongSelf.state.top, let layout = strongSelf.state.layout {
                     toValue.value.displayNode.frame = CGRect(origin: CGPoint(), size: layout.size)

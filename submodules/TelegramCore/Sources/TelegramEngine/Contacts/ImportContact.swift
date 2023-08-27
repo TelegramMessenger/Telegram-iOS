@@ -4,6 +4,8 @@ import SwiftSignalKit
 
 
 func _internal_importContact(account: Account, firstName: String, lastName: String, phoneNumber: String) -> Signal<PeerId?, NoError> {
+    let accountPeerId = account.peerId
+    
     let input = Api.InputContact.inputPhoneContact(clientId: 1, phone: phoneNumber, firstName: firstName, lastName: lastName)
     
     return account.network.request(Api.functions.contacts.importContacts(contacts: [input]))
@@ -17,11 +19,10 @@ func _internal_importContact(account: Account, firstName: String, lastName: Stri
                 switch result {
                     case let .importedContacts(_, _, _, users):
                         if let first = users.first {
-                            let user = TelegramUser(user: first)
-                            let peerId = user.id
-                            updatePeers(transaction: transaction, peers: [user], update: { _, updated in
-                                return updated
-                            })
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
+                            
+                            let peerId = first.peerId
+                            
                             var peerIds = transaction.getContactPeerIds()
                             if !peerIds.contains(peerId) {
                                 peerIds.insert(peerId)
@@ -41,6 +42,8 @@ public enum AddContactError {
 }
 
 func _internal_addContactInteractively(account: Account, peerId: PeerId, firstName: String, lastName: String, phoneNumber: String, addToPrivacyExceptions: Bool) -> Signal<Never, AddContactError> {
+    let accountPeerId = account.peerId
+    
     return account.postbox.transaction { transaction -> (Api.InputUser, String)? in
         if let user = transaction.getPeer(peerId) as? TelegramUser, let inputUser = apiInputUser(user) {
             return (inputUser, user.phone == nil ? phoneNumber : "")
@@ -63,22 +66,16 @@ func _internal_addContactInteractively(account: Account, peerId: PeerId, firstNa
         }
         |> mapToSignal { result -> Signal<Never, AddContactError> in
             return account.postbox.transaction { transaction -> Void in
-                var peers: [Peer] = []
+                var peers = AccumulatedPeers()
                 switch result {
-                    case let .updates(_, users, _, _, _):
-                        for user in users {
-                            peers.append(TelegramUser(user: user))
-                        }
-                    case let .updatesCombined(_, users, _, _, _, _):
-                        for user in users {
-                            peers.append(TelegramUser(user: user))
-                        }
-                    default:
-                        break
+                case let .updates(_, users, _, _, _):
+                    peers = AccumulatedPeers(users: users)
+                case let .updatesCombined(_, users, _, _, _, _):
+                    peers = AccumulatedPeers(users: users)
+                default:
+                    break
                 }
-                updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                    return updated
-                })
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: peers)
                 var peerIds = transaction.getContactPeerIds()
                 if !peerIds.contains(peerId) {
                     peerIds.insert(peerId)

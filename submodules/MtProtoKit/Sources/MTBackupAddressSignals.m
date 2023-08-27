@@ -280,6 +280,8 @@ static NSString *makeRandomPadding() {
     
     MTContext *context = [[MTContext alloc] initWithSerialization:currentContext.serialization encryptionProvider:currentContext.encryptionProvider apiEnvironment:apiEnvironment isTestingEnvironment:currentContext.isTestingEnvironment useTempAuthKeys:false];
     
+    context.makeTcpConnectionInterface = currentContext.makeTcpConnectionInterface;
+    
     NSInteger authTokenMasterDatacenterId = 0;
     NSNumber *requiredAuthToken = nil;
     bool allowUnboundEphemeralKeys = true;
@@ -311,7 +313,7 @@ static NSString *makeRandomPadding() {
     
     __weak MTContext *weakCurrentContext = currentContext;
     return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
-        [request setCompleted:^(MTDatacenterAddressListData *result, __unused NSTimeInterval completionTimestamp, id error)
+        [request setCompleted:^(MTDatacenterAddressListData *result, __unused MTRequestResponseInfo *info, id error)
          {
              if (error == nil) {
                  __strong MTContext *strongCurrentContext = weakCurrentContext;

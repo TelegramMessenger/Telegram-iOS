@@ -38,6 +38,11 @@
     return true;
 }
 
+- (bool)isRegional
+{
+    return false;
+}
+
 - (bool)isAvialableForVideo
 {
     return true;

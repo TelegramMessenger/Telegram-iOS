@@ -26,6 +26,8 @@ import AccountUtils
 import ContextUI
 import TelegramCallsUI
 import AuthorizationUI
+import ChatListUI
+import StoryContainerScreen
 
 final class UnauthorizedApplicationContext {
     let sharedContext: SharedAccountContextImpl
@@ -101,8 +103,6 @@ final class AuthorizedApplicationContext {
     let rootController: TelegramRootController
     let notificationController: NotificationContainerController
     
-    private var scheduledOpenNotificationSettings: Bool = false
-    private var scheduledOpenChatWithPeerId: (PeerId, MessageId?, Bool)?
     private let scheduledCallPeerDisposable = MetaDisposable()
     private var scheduledOpenExternalUrl: URL?
         
@@ -395,7 +395,7 @@ final class AuthorizedApplicationContext {
                             }
                             
                             if inAppNotificationSettings.displayPreviews {
-                               let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                                 strongSelf.notificationController.enqueue(ChatMessageNotificationItem(context: strongSelf.context, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, messages: messages, threadData: threadData, tapAction: {
                                     if let strongSelf = self {
                                         var foundOverlay = false
@@ -833,11 +833,7 @@ final class AuthorizedApplicationContext {
     }
     
     func openNotificationSettings() {
-        if self.rootController.rootTabController != nil {
-            self.rootController.pushViewController(notificationsAndSoundsController(context: self.context, exceptionsList: nil))
-        } else {
-            self.scheduledOpenNotificationSettings = true
-        }
+        self.rootController.pushViewController(notificationsAndSoundsController(context: self.context, exceptionsList: nil))
     }
     
     func startCall(peerId: PeerId, isVideo: Bool) {
@@ -857,16 +853,94 @@ final class AuthorizedApplicationContext {
         }))
     }
     
-    func openChatWithPeerId(peerId: PeerId, threadId: Int64?, messageId: MessageId? = nil, activateInput: Bool = false) {
-        var visiblePeerId: PeerId?
-        if let controller = self.rootController.topViewController as? ChatControllerImpl, controller.chatLocation.peerId == peerId, controller.chatLocation.threadId == threadId {
-            visiblePeerId = peerId
-        }
-        
-        if visiblePeerId != peerId || messageId != nil {
-            if self.rootController.rootTabController != nil {
-                let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-                |> deliverOnMainQueue).start(next: { peer in
+    func openChatWithPeerId(peerId: PeerId, threadId: Int64?, messageId: MessageId? = nil, activateInput: Bool = false, storyId: StoryId?) {
+        if let storyId {
+            var controllers = self.rootController.viewControllers
+            controllers = controllers.filter { c in
+                if c is StoryContainerScreen {
+                    return false
+                }
+                return true
+            }
+            self.rootController.setViewControllers(controllers, animated: false)
+            
+            self.rootController.chatListController?.openStoriesFromNotification(peerId: storyId.peerId, storyId: storyId.id)
+
+            /*if let chatListController = self.rootController.chatListController as? ChatListControllerImpl {
+                let _ = (chatListController.context.account.postbox.transaction { transaction -> Bool in
+                    if let peer = transaction.getPeer(storyId.peerId) as? TelegramUser, let storiesHidden = peer.storiesHidden, storiesHidden {
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] isArchived in
+                    guard let self, let chatListController = self.rootController.chatListController as? ChatListControllerImpl else {
+                        return
+                    }
+                    if isArchived {
+                        if let navigationController = (chatListController.navigationController as? NavigationController) {
+                            var viewControllers = navigationController.viewControllers
+                            if let index = viewControllers.firstIndex(where: { c in
+                                if let c = c as? ChatListControllerImpl {
+                                    if case .chatList(groupId: .archive) = c.location {
+                                        return true
+                                    }
+                                }
+                                return false
+                            }) {
+                                (viewControllers[index] as? ChatListControllerImpl)?.scrollToStories()
+                                viewControllers.removeSubrange((index + 1) ..< viewControllers.count)
+                                navigationController.setViewControllers(viewControllers, animated: false)
+                            } else {
+                                let archive = ChatListControllerImpl(context: chatListController.context, location: .chatList(groupId: .archive), controlsHistoryPreload: false, hideNetworkActivityStatus: false, previewing: false, enableDebugActions: false)
+                                archive.onDidAppear = { [weak archive] in
+                                    Queue.mainQueue().after(0.1, {
+                                        guard let archive else {
+                                            return
+                                        }
+                                        if archive.hasStorySubscriptions {
+                                            archive.scrollToStoriesAnimated()
+                                        }
+                                    })
+                                }
+                                navigationController.pushViewController(archive, animated: false, completion: {})
+                            }
+                        }
+                    } else {
+                        chatListController.scrollToStories()
+                        if let navigationController = (chatListController.navigationController as? NavigationController) {
+                            navigationController.popToRoot(animated: true)
+                        }
+                    }
+                })
+            }*/
+        } else {
+            var visiblePeerId: PeerId?
+            if let controller = self.rootController.topViewController as? ChatControllerImpl, controller.chatLocation.peerId == peerId, controller.chatLocation.threadId == threadId {
+                visiblePeerId = peerId
+            }
+            
+            if visiblePeerId != peerId || messageId != nil {
+                let isOutgoingMessage: Signal<Bool, NoError>
+                if let messageId {
+                    let accountPeerId = self.context.account.peerId
+                    isOutgoingMessage = self.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
+                    |> map { message -> Bool in
+                        if let message {
+                            return !message._asMessage().effectivelyIncoming(accountPeerId)
+                        } else {
+                            return false
+                        }
+                    }
+                } else {
+                    isOutgoingMessage = .single(false)
+                }
+                let _ = combineLatest(
+                    queue: Queue.mainQueue(),
+                    self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),
+                    isOutgoingMessage
+                ).start(next: { peer, isOutgoingMessage in
                     guard let peer = peer else {
                         return
                     }
@@ -880,10 +954,8 @@ final class AuthorizedApplicationContext {
                         chatLocation = .peer(peer)
                     }
                     
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: chatLocation, subject: messageId.flatMap { .message(id: .id($0), highlight: true, timecode: nil) }, activateInput: activateInput ? .text : nil))
+                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: chatLocation, subject: isOutgoingMessage ? messageId.flatMap { .message(id: .id($0), highlight: true, timecode: nil) } : nil, activateInput: activateInput ? .text : nil))
                 })
-            } else {
-                self.scheduledOpenChatWithPeerId = (peerId, messageId, activateInput)
             }
         }
     }

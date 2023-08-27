@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import TelegramCore
-import Postbox
 import SwiftSignalKit
 import Display
 import TelegramPresentationData
@@ -141,6 +140,8 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
                         text = strings.Message_Theme
                     } else if content.type == "video" {
                         text = stringForMediaKind(.video, strings: self.strings).0.string
+                    } else if content.type == "telegram_story" {
+                        text = stringForMediaKind(.story, strings: self.strings).0.string
                     } else if let _ = content.image {
                         text = stringForMediaKind(.image, strings: self.strings).0.string
                     }

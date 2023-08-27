@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -23,17 +22,17 @@ private final class GroupStatsControllerArguments {
     let context: AccountContext
     let loadDetailedGraph: (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>
     let openPeer: (EnginePeer) -> Void
-    let openPeerHistory: (PeerId) -> Void
-    let openPeerAdminActions: (PeerId) -> Void
-    let promotePeer: (PeerId) -> Void
+    let openPeerHistory: (EnginePeer.Id) -> Void
+    let openPeerAdminActions: (EnginePeer.Id) -> Void
+    let promotePeer: (EnginePeer.Id) -> Void
     let expandTopPosters: () -> Void
     let expandTopAdmins: () -> Void
     let expandTopInviters: () -> Void
-    let setPostersPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
-    let setAdminsPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
-    let setInvitersPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
+    let setPostersPeerIdWithRevealedOptions: (EnginePeer.Id?, EnginePeer.Id?) -> Void
+    let setAdminsPeerIdWithRevealedOptions: (EnginePeer.Id?, EnginePeer.Id?) -> Void
+    let setInvitersPeerIdWithRevealedOptions: (EnginePeer.Id?, EnginePeer.Id?) -> Void
     
-    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openPeer: @escaping (EnginePeer) -> Void, openPeerHistory: @escaping (PeerId) -> Void, openPeerAdminActions: @escaping (PeerId) -> Void, promotePeer: @escaping (PeerId) -> Void, expandTopPosters: @escaping () -> Void, expandTopAdmins: @escaping () -> Void, expandTopInviters: @escaping () -> Void, setPostersPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setAdminsPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setInvitersPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openPeer: @escaping (EnginePeer) -> Void, openPeerHistory: @escaping (EnginePeer.Id) -> Void, openPeerAdminActions: @escaping (EnginePeer.Id) -> Void, promotePeer: @escaping (EnginePeer.Id) -> Void, expandTopPosters: @escaping () -> Void, expandTopAdmins: @escaping () -> Void, expandTopInviters: @escaping () -> Void, setPostersPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, setAdminsPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, setInvitersPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openPeer = openPeer
@@ -93,15 +92,15 @@ private enum StatsEntry: ItemListNodeEntry {
     case topWeekdaysGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
     
     case topPostersTitle(PresentationTheme, String, String)
-    case topPoster(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, GroupStatsTopPoster, Bool, Bool)
+    case topPoster(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, EnginePeer, GroupStatsTopPoster, Bool, Bool)
     case topPostersExpand(PresentationTheme, String)
     
     case topAdminsTitle(PresentationTheme, String, String)
-    case topAdmin(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, GroupStatsTopAdmin, Bool, Bool)
+    case topAdmin(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, EnginePeer, GroupStatsTopAdmin, Bool, Bool)
     case topAdminsExpand(PresentationTheme, String)
     
     case topInvitersTitle(PresentationTheme, String, String)
-    case topInviter(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, GroupStatsTopInviter, Bool, Bool)
+    case topInviter(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, EnginePeer, GroupStatsTopInviter, Bool, Bool)
     case topInvitersExpand(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -309,7 +308,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     return false
                 }
             case let .topPoster(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsTopPoster, lhsRevealed, lhsCanPromote):
-                if case let .topPoster(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsTopPoster, rhsRevealed, rhsCanPromote) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, arePeersEqual(lhsPeer, rhsPeer), lhsTopPoster == rhsTopPoster, lhsRevealed == rhsRevealed, lhsCanPromote == rhsCanPromote {
+                if case let .topPoster(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsTopPoster, rhsRevealed, rhsCanPromote) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsPeer == rhsPeer, lhsTopPoster == rhsTopPoster, lhsRevealed == rhsRevealed, lhsCanPromote == rhsCanPromote {
                     return true
                 } else {
                     return false
@@ -327,7 +326,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     return false
                 }
             case let .topAdmin(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsTopAdmin, lhsRevealed, lhsCanPromote):
-                if case let .topAdmin(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsTopAdmin, rhsRevealed, rhsCanPromote) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, arePeersEqual(lhsPeer, rhsPeer), lhsTopAdmin == rhsTopAdmin, lhsRevealed == rhsRevealed, lhsCanPromote == rhsCanPromote {
+                if case let .topAdmin(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsTopAdmin, rhsRevealed, rhsCanPromote) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsPeer == rhsPeer, lhsTopAdmin == rhsTopAdmin, lhsRevealed == rhsRevealed, lhsCanPromote == rhsCanPromote {
                     return true
                 } else {
                     return false
@@ -345,7 +344,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     return false
                 }
             case let .topInviter(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPeer, lhsTopInviter, lhsRevealed, lhsCanPromote):
-                if case let .topInviter(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsTopInviter, rhsRevealed, rhsCanPromote) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, arePeersEqual(lhsPeer, rhsPeer), lhsTopInviter == rhsTopInviter, lhsRevealed == rhsRevealed, lhsCanPromote == rhsCanPromote {
+                if case let .topInviter(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPeer, rhsTopInviter, rhsRevealed, rhsCanPromote) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsPeer == rhsPeer, lhsTopInviter == rhsTopInviter, lhsRevealed == rhsRevealed, lhsCanPromote == rhsCanPromote {
                     return true
                 } else {
                     return false
@@ -411,8 +410,8 @@ private enum StatsEntry: ItemListNodeEntry {
                         }))
                     }
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, context: arguments.context, peer: EnginePeer(peer), height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(textComponents.joined(separator: ", "), .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, highlighted: false, selectable: arguments.context.account.peerId != peer.id, sectionId: self.section, action: {
-                    arguments.openPeer(EnginePeer(peer))
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, context: arguments.context, peer: peer, height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(textComponents.joined(separator: ", "), .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, highlighted: false, selectable: arguments.context.account.peerId != peer.id, sectionId: self.section, action: {
+                    arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     arguments.setPostersPeerIdWithRevealedOptions(peerId, fromPeerId)
                 }, removePeer: { _ in })
@@ -442,8 +441,8 @@ private enum StatsEntry: ItemListNodeEntry {
                         }))
                     }
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, context: arguments.context, peer: EnginePeer(peer), height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(textComponents.joined(separator: ", "), .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, highlighted: false, selectable: arguments.context.account.peerId != peer.id, sectionId: self.section, action: {
-                    arguments.openPeer(EnginePeer(peer))
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, context: arguments.context, peer: peer, height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(textComponents.joined(separator: ", "), .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, highlighted: false, selectable: arguments.context.account.peerId != peer.id, sectionId: self.section, action: {
+                    arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     arguments.setAdminsPeerIdWithRevealedOptions(peerId, fromPeerId)
                 }, removePeer: { _ in })
@@ -465,8 +464,8 @@ private enum StatsEntry: ItemListNodeEntry {
                         }))
                     }
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, context: arguments.context, peer: EnginePeer(peer), height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(textComponents.joined(separator: ", "), .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, highlighted: false, selectable: arguments.context.account.peerId != peer.id, sectionId: self.section, action: {
-                    arguments.openPeer(EnginePeer(peer))
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, context: arguments.context, peer: peer, height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(textComponents.joined(separator: ", "), .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, highlighted: false, selectable: arguments.context.account.peerId != peer.id, sectionId: self.section, action: {
+                    arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     arguments.setInvitersPeerIdWithRevealedOptions(peerId, fromPeerId)
                 }, removePeer: { _ in })
@@ -478,7 +477,7 @@ private enum StatsEntry: ItemListNodeEntry {
     }
 }
 
-private func groupStatsControllerEntries(accountPeerId: PeerId, state: GroupStatsState, data: GroupStats?, channelPeer: Peer, peers: [EnginePeer.Id: EnginePeer]?, presentationData: PresentationData) -> [StatsEntry] {
+private func groupStatsControllerEntries(accountPeerId: EnginePeer.Id, state: GroupStatsState, data: GroupStats?, channelPeer: EnginePeer, peers: [EnginePeer.Id: EnginePeer]?, presentationData: PresentationData) -> [StatsEntry] {
     var entries: [StatsEntry] = []
     
     if let data = data {
@@ -545,7 +544,7 @@ private func groupStatsControllerEntries(accountPeerId: PeerId, state: GroupStat
                 
                 for topPoster in topPosters {
                     if let peer = peers[topPoster.peerId], topPoster.messageCount > 0 {
-                        entries.append(.topPoster(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer._asPeer(), topPoster, topPoster.peerId == state.posterPeerIdWithRevealedOptions, canPromote))
+                        entries.append(.topPoster(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, topPoster, topPoster.peerId == state.posterPeerIdWithRevealedOptions, canPromote))
                         index += 1
                     }
                 }
@@ -568,7 +567,7 @@ private func groupStatsControllerEntries(accountPeerId: PeerId, state: GroupStat
                 
                 for topAdmin in data.topAdmins {
                     if let peer = peers[topAdmin.peerId], (topAdmin.deletedCount + topAdmin.kickedCount + topAdmin.bannedCount) > 0 {
-                        entries.append(.topAdmin(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer._asPeer(), topAdmin, topAdmin.peerId == state.adminPeerIdWithRevealedOptions, canPromote))
+                        entries.append(.topAdmin(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, topAdmin, topAdmin.peerId == state.adminPeerIdWithRevealedOptions, canPromote))
                         index += 1
                     }
                 }
@@ -591,7 +590,7 @@ private func groupStatsControllerEntries(accountPeerId: PeerId, state: GroupStat
                 
                 for topInviter in data.topInviters {
                     if let peer = peers[topInviter.peerId], topInviter.inviteCount > 0 {
-                        entries.append(.topInviter(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer._asPeer(), topInviter, topInviter.peerId == state.inviterPeerIdWithRevealedOptions, canPromote))
+                        entries.append(.topInviter(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, topInviter, topInviter.peerId == state.inviterPeerIdWithRevealedOptions, canPromote))
                         index += 1
                     }
                 }
@@ -610,9 +609,9 @@ private struct GroupStatsState: Equatable {
     let topPostersExpanded: Bool
     let topAdminsExpanded: Bool
     let topInvitersExpanded: Bool
-    let posterPeerIdWithRevealedOptions: PeerId?
-    let adminPeerIdWithRevealedOptions: PeerId?
-    let inviterPeerIdWithRevealedOptions: PeerId?
+    let posterPeerIdWithRevealedOptions: EnginePeer.Id?
+    let adminPeerIdWithRevealedOptions: EnginePeer.Id?
+    let inviterPeerIdWithRevealedOptions: EnginePeer.Id?
     
     init() {
         self.topPostersExpanded = false
@@ -623,7 +622,7 @@ private struct GroupStatsState: Equatable {
         self.inviterPeerIdWithRevealedOptions = nil
     }
     
-    init(topPostersExpanded: Bool, topAdminsExpanded: Bool, topInvitersExpanded: Bool, posterPeerIdWithRevealedOptions: PeerId?, adminPeerIdWithRevealedOptions: PeerId?, inviterPeerIdWithRevealedOptions: PeerId?) {
+    init(topPostersExpanded: Bool, topAdminsExpanded: Bool, topInvitersExpanded: Bool, posterPeerIdWithRevealedOptions: EnginePeer.Id?, adminPeerIdWithRevealedOptions: EnginePeer.Id?, inviterPeerIdWithRevealedOptions: EnginePeer.Id?) {
         self.topPostersExpanded = topPostersExpanded
         self.topAdminsExpanded = topAdminsExpanded
         self.topInvitersExpanded = topInvitersExpanded
@@ -666,21 +665,21 @@ private struct GroupStatsState: Equatable {
         return GroupStatsState(topPostersExpanded: self.topPostersExpanded, topAdminsExpanded: self.topAdminsExpanded, topInvitersExpanded: topInvitersExpanded, posterPeerIdWithRevealedOptions: self.posterPeerIdWithRevealedOptions, adminPeerIdWithRevealedOptions: self.adminPeerIdWithRevealedOptions, inviterPeerIdWithRevealedOptions: self.inviterPeerIdWithRevealedOptions)
     }
     
-    func withUpdatedPosterPeerIdWithRevealedOptions(_ posterPeerIdWithRevealedOptions: PeerId?) -> GroupStatsState {
+    func withUpdatedPosterPeerIdWithRevealedOptions(_ posterPeerIdWithRevealedOptions: EnginePeer.Id?) -> GroupStatsState {
         return GroupStatsState(topPostersExpanded: self.topPostersExpanded, topAdminsExpanded: self.topAdminsExpanded, topInvitersExpanded: self.topInvitersExpanded, posterPeerIdWithRevealedOptions: posterPeerIdWithRevealedOptions, adminPeerIdWithRevealedOptions: posterPeerIdWithRevealedOptions != nil ? nil : self.adminPeerIdWithRevealedOptions, inviterPeerIdWithRevealedOptions: posterPeerIdWithRevealedOptions != nil ? nil : self.inviterPeerIdWithRevealedOptions)
     }
     
-    func withUpdatedAdminPeerIdWithRevealedOptions(_ adminPeerIdWithRevealedOptions: PeerId?) -> GroupStatsState {
+    func withUpdatedAdminPeerIdWithRevealedOptions(_ adminPeerIdWithRevealedOptions: EnginePeer.Id?) -> GroupStatsState {
         return GroupStatsState(topPostersExpanded: self.topPostersExpanded, topAdminsExpanded: self.topAdminsExpanded, topInvitersExpanded: self.topInvitersExpanded, posterPeerIdWithRevealedOptions: adminPeerIdWithRevealedOptions != nil ? nil : self.posterPeerIdWithRevealedOptions, adminPeerIdWithRevealedOptions: adminPeerIdWithRevealedOptions, inviterPeerIdWithRevealedOptions: adminPeerIdWithRevealedOptions != nil ? nil : self.inviterPeerIdWithRevealedOptions)
     }
     
-    func withUpdatedInviterPeerIdWithRevealedOptions(_ inviterPeerIdWithRevealedOptions: PeerId?) -> GroupStatsState {
+    func withUpdatedInviterPeerIdWithRevealedOptions(_ inviterPeerIdWithRevealedOptions: EnginePeer.Id?) -> GroupStatsState {
         return GroupStatsState(topPostersExpanded: self.topPostersExpanded, topAdminsExpanded: self.topAdminsExpanded, topInvitersExpanded: self.topInvitersExpanded, posterPeerIdWithRevealedOptions: inviterPeerIdWithRevealedOptions != nil ? nil : self.posterPeerIdWithRevealedOptions, adminPeerIdWithRevealedOptions: inviterPeerIdWithRevealedOptions != nil ? nil : self.adminPeerIdWithRevealedOptions, inviterPeerIdWithRevealedOptions: inviterPeerIdWithRevealedOptions)
     }
 }
 
-private func canEditAdminRights(accountPeerId: PeerId, channelPeer: Peer, initialParticipant: ChannelParticipant?) -> Bool {
-    if let channel = channelPeer as? TelegramChannel {
+private func canEditAdminRights(accountPeerId: EnginePeer.Id, channelPeer: EnginePeer, initialParticipant: ChannelParticipant?) -> Bool {
+    if case let .channel(channel) = channelPeer {
         if channel.flags.contains(.isCreator) {
             return true
         } else if let initialParticipant = initialParticipant {
@@ -697,7 +696,7 @@ private func canEditAdminRights(accountPeerId: PeerId, channelPeer: Peer, initia
         } else {
             return channel.hasPermission(.addAdmins)
         }
-    } else if let group = channelPeer as? TelegramGroup {
+    } else if case let .legacyGroup(group) = channelPeer {
         if case .creator = group.role {
             return true
         } else {
@@ -708,7 +707,7 @@ private func canEditAdminRights(accountPeerId: PeerId, channelPeer: Peer, initia
     }
 }
 
-public func groupStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, statsDatacenterId: Int32?) -> ViewController {
+public func groupStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, statsDatacenterId: Int32?) -> ViewController {
     let statePromise = ValuePromise(GroupStatsState())
     let stateValue = Atomic(value: GroupStatsState())
     let updateState: ((GroupStatsState) -> GroupStatsState) -> Void = { f in
@@ -722,14 +721,13 @@ public func groupStatsController(context: AccountContext, updatedPresentationDat
     let datacenterId: Int32 = statsDatacenterId ?? 0
     
     var openPeerImpl: ((EnginePeer) -> Void)?
-    var openPeerHistoryImpl: ((PeerId) -> Void)?
-    var openPeerAdminActionsImpl: ((PeerId) -> Void)?
-    var promotePeerImpl: ((PeerId) -> Void)?
+    var openPeerHistoryImpl: ((EnginePeer.Id) -> Void)?
+    var openPeerAdminActionsImpl: ((EnginePeer.Id) -> Void)?
+    var promotePeerImpl: ((EnginePeer.Id) -> Void)?
     
-    let peerView = Promise<PeerView>()
-    peerView.set(context.account.viewTracker.peerView(peerId, updateData: true))
+    actionsDisposable.add(context.account.viewTracker.peerView(peerId, updateData: true).start())
         
-    let statsContext = GroupStatsContext(postbox: context.account.postbox, network: context.account.network, datacenterId: datacenterId, peerId: peerId)
+    let statsContext = GroupStatsContext(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, datacenterId: datacenterId, peerId: peerId)
     let dataSignal: Signal<GroupStats?, NoError> = statsContext.state
     |> map { state in
         return state.stats
@@ -844,7 +842,7 @@ public func groupStatsController(context: AccountContext, updatedPresentationDat
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChannelInfo_Stats), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: groupStatsControllerEntries(accountPeerId: context.account.peerId, state: state, data: data, channelPeer: channelPeer, peers: peers, presentationData: presentationData), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: previous == nil, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: groupStatsControllerEntries(accountPeerId: context.account.peerId, state: state, data: data, channelPeer: EnginePeer(channelPeer), peers: peers, presentationData: presentationData), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: previous == nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

@@ -2,9 +2,9 @@ import Foundation
 import UIKit
 import Display
 
-final class InstantPageTile {
-    let frame: CGRect
-    var items: [InstantPageItem] = []
+public final class InstantPageTile {
+    public let frame: CGRect
+    public var items: [InstantPageItem] = []
     
     init(frame: CGRect) {
         self.frame = frame
@@ -19,7 +19,7 @@ final class InstantPageTile {
     }
 }
 
-func instantPageTilesFromLayout(_ layout: InstantPageLayout, boundingWidth: CGFloat) -> [InstantPageTile] {
+public func instantPageTilesFromLayout(_ layout: InstantPageLayout, boundingWidth: CGFloat) -> [InstantPageTile] {
     var tileByOrigin: [Int : InstantPageTile] = [:]
     let tileHeight: CGFloat = 256.0
     
@@ -81,7 +81,7 @@ func instantPageTilesFromLayout(_ layout: InstantPageLayout, boundingWidth: CGFl
     })
 }
 
-func instantPageAccessibilityAreasFromLayout(_ layout: InstantPageLayout, boundingWidth: CGFloat) -> [AccessibilityAreaNode] {
+public func instantPageAccessibilityAreasFromLayout(_ layout: InstantPageLayout, boundingWidth: CGFloat) -> [AccessibilityAreaNode] {
     var result: [AccessibilityAreaNode] = []
     for item in layout.items {
         if let item = item as? InstantPageTextItem {

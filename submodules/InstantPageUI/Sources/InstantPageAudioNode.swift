@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
 import Display
@@ -36,7 +35,7 @@ private func generatePauseButton(color: UIColor) -> UIImage? {
 
 private func titleString(media: InstantPageMedia, theme: InstantPageTheme, strings: PresentationStrings) -> NSAttributedString {
     let string = NSMutableAttributedString()
-    if let file = media.media as? TelegramMediaFile {
+    if case let .file(file) = media.media {
         loop: for attribute in file.attributes {
             if case let .Audio(isVoice, _, title, performer, _) = attribute, !isVoice {
                 let titleText: String = title ?? strings.MediaPlayer_UnknownTrack
@@ -101,7 +100,7 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
         self.scrubbingNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 3.0, lineCap: .round, scrubberHandle: .line, backgroundColor: theme.textCategories.paragraph.color.withAlphaComponent(backgroundAlpha), foregroundColor: theme.textCategories.paragraph.color, bufferingColor: theme.textCategories.paragraph.color.withAlphaComponent(0.5), chapters: []))
         
         let playlistType: MediaManagerPlayerType
-        if let file = self.media.media as? TelegramMediaFile {
+        if case let .file(file) = self.media.media {
             playlistType = file.isVoice ? .voice : .music
         } else {
             playlistType = .music

@@ -1,8 +1,8 @@
 import Foundation
 import UIKit
 import Display
-import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 public protocol ShareContentContainerNode: AnyObject {
     func activate()
@@ -10,5 +10,6 @@ public protocol ShareContentContainerNode: AnyObject {
     func setEnsurePeerVisibleOnLayout(_ peerId: EnginePeer.Id?)
     func setContentOffsetUpdated(_ f: ((CGFloat, ContainedViewLayoutTransition) -> Void)?)
     func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition)
+    func updateTheme(_ theme: PresentationTheme)
     func updateSelectedPeers(animated: Bool)
 }

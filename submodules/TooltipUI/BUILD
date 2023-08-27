@@ -20,6 +20,11 @@ swift_library(
         "//submodules/TextFormat:TextFormat",
         "//submodules/UrlEscaping:UrlEscaping",
         "//submodules/AccountContext:AccountContext",
+        "//submodules/AvatarNode:AvatarNode",
+        "//submodules/ComponentFlow",
+        "//submodules/Markdown",
+        "//submodules/TelegramUI/Components/Stories/AvatarStoryIndicatorComponent",
+        "//submodules/Components/BalancedTextComponent",
     ],
     visibility = [
         "//visibility:public",

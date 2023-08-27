@@ -45,8 +45,12 @@ public class ChatListAdditionalCategoryItem: ItemListItem, ListViewItemWithHeade
         self.action = action
         
         switch appearance {
-        case .option:
-            self.header = ChatListSearchItemHeader(type: .chatTypes, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
+        case let .option(sectionTitle):
+            if let sectionTitle {
+                self.header = ChatListSearchItemHeader(type: .text(sectionTitle, AnyHashable(0)), theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
+            } else {
+                self.header = ChatListSearchItemHeader(type: .chatTypes, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
+            }
         case .action:
             self.header = header
         }

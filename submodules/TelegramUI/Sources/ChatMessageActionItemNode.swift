@@ -38,6 +38,8 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     private var videoContent: NativeVideoContent?
     private var videoStartTimestamp: Double?
     private let fetchDisposable = MetaDisposable()
+    
+    private var leadingIconView: UIImageView?
 
     private var cachedMaskBackgroundImage: (CGPoint, UIImage, [CGRect])?
     private var absoluteRect: (CGRect, CGSize)?
@@ -89,7 +91,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         super.didLoad()
     }
     
-    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    override func transitionNode(messageId: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let imageNode = self.imageNode, self.item?.message.id == messageId {
             return (imageNode, imageNode.bounds, { [weak self] in
                 guard let strongSelf = self, let imageNode = strongSelf.imageNode else {
@@ -167,6 +169,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, message: item.message, accountPeerId: item.context.account.peerId, forForumOverview: forForumOverview)
             
                 var image: TelegramMediaImage?
+                var story: TelegramMediaStory?
                 for media in item.message.media {
                     if let action = media as? TelegramMediaAction {
                         switch action.action {
@@ -175,12 +178,21 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                         default:
                             break
                         }
+                    } else if let media = media as? TelegramMediaStory {
+                        story = media
                     }
                 }
                 
                 let imageSize = CGSize(width: 212.0, height: 212.0)
                 
-                let (labelLayout, apply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                var updatedAttributedString = attributedString
+                if story != nil, let attributedString {
+                    let mutableString = NSMutableAttributedString(attributedString: attributedString)
+                    mutableString.insert(NSAttributedString(string: "    ", font: Font.regular(13.0), textColor: .clear), at: 0)
+                    updatedAttributedString = mutableString
+                }
+                
+                let (labelLayout, apply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: updatedAttributedString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
                 var labelRects = labelLayout.linesRects()
                 if labelRects.count > 1 {
@@ -208,7 +220,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 if let (currentOffset, currentImage, currentRects) = cachedMaskBackgroundImage, currentRects == labelRects {
                     backgroundMaskImage = (currentOffset, currentImage)
                 } else {
-                    backgroundMaskImage = LinkHighlightingNode.generateImage(color: .black, inset: 0.0, innerRadius: 10.0, outerRadius: 10.0, rects: labelRects, useModernPathCalculation: false)
+                    backgroundMaskImage = LinkHighlightingNode.generateImage(color: .white, inset: 0.0, innerRadius: 10.0, outerRadius: 10.0, rects: labelRects, useModernPathCalculation: false)
                     backgroundMaskUpdated = true
                 }
             
@@ -258,7 +270,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.mediaBackgroundNode.image = backgroundImage
                             
                             if let image = image, let video = image.videoRepresentations.last, let id = image.id?.id {
-                                let videoFileReference = FileMediaReference.message(message: MessageReference(item.message), media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: image.representations, videoThumbnails: [], immediateThumbnailData: image.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
+                                let videoFileReference = FileMediaReference.message(message: MessageReference(item.message), media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: image.representations, videoThumbnails: [], immediateThumbnailData: image.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [], preloadSize: nil)]))
                                 let videoContent = NativeVideoContent(id: .profileVideo(id, "action"), userLocation: .peer(item.message.id.peerId), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, storeAfterDownload: nil)
                                 if videoContent.id != strongSelf.videoContent?.id {
                                     let mediaManager = item.context.sharedContext.mediaManager
@@ -306,6 +318,28 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             ))
                             
                             let labelFrame = CGRect(origin: CGPoint(x: 8.0, y: image != nil ? 2 : floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
+                            
+                            if story != nil {
+                                let leadingIconView: UIImageView
+                                if let current = strongSelf.leadingIconView {
+                                    leadingIconView = current
+                                } else {
+                                    leadingIconView = UIImageView()
+                                    strongSelf.leadingIconView = leadingIconView
+                                    strongSelf.view.addSubview(leadingIconView)
+                                }
+                                
+                                leadingIconView.image = PresentationResourcesChat.chatExpiredStoryIndicatorIcon(item.presentationData.theme.theme, type: .free)
+                                
+                                if let lineRect = labelLayout.linesRects().first, let iconImage = leadingIconView.image {
+                                    let iconSize = iconImage.size
+                                    leadingIconView.frame = CGRect(origin: CGPoint(x: lineRect.minX + labelFrame.minX - 1.0, y: labelFrame.minY), size: iconSize)
+                                }
+                            } else if let leadingIconView = strongSelf.leadingIconView {
+                                strongSelf.leadingIconView = nil
+                                leadingIconView.removeFromSuperview()
+                            }
+                            
                             strongSelf.labelNode.textNode.frame = labelFrame
                             strongSelf.backgroundColorNode.backgroundColor = selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
 
@@ -316,7 +350,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                 if let current = strongSelf.dustNode {
                                     dustNode = current
                                 } else {
-                                    dustNode = InvisibleInkDustNode(textNode: nil)
+                                    dustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: item.context.sharedContext.energyUsageSettings.fullTranslucency)
                                     dustNode.isUserInteractionEnabled = false
                                     strongSelf.dustNode = dustNode
                                     strongSelf.insertSubnode(dustNode, aboveSubnode: strongSelf.labelNode.textNode)
@@ -331,29 +365,37 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             let baseBackgroundFrame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
 
                             if let (offset, image) = backgroundMaskImage {
-                                if strongSelf.backgroundNode == nil {
-                                    if let backgroundNode = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
-                                        strongSelf.backgroundNode = backgroundNode
-                                        backgroundNode.addSubnode(strongSelf.backgroundColorNode)
-                                        strongSelf.insertSubnode(backgroundNode, at: 0)
+                                if item.context.sharedContext.energyUsageSettings.fullTranslucency {
+                                    if strongSelf.backgroundNode == nil {
+                                        if let backgroundNode = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+                                            strongSelf.backgroundNode = backgroundNode
+                                            backgroundNode.addSubnode(strongSelf.backgroundColorNode)
+                                            strongSelf.insertSubnode(backgroundNode, at: 0)
+                                        }
+                                    }
+                                    
+                                    if item.controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {
+                                        strongSelf.backgroundColorNode.isHidden = true
+                                    } else {
+                                        strongSelf.backgroundColorNode.isHidden = true
+                                    }
+                                } else {
+                                    if strongSelf.backgroundMaskNode.supernode == nil {
+                                        strongSelf.insertSubnode(strongSelf.backgroundMaskNode, at: 0)
                                     }
                                 }
-                                
-                                if item.controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {
-                                    strongSelf.backgroundColorNode.isHidden = true
-                                } else {
-                                    strongSelf.backgroundColorNode.isHidden = false
-                                }
 
-                                if backgroundMaskUpdated, let backgroundNode = strongSelf.backgroundNode {
-                                    if labelRects.count == 1 {
-                                        backgroundNode.clipsToBounds = true
-                                        backgroundNode.cornerRadius = labelRects[0].height / 2.0
-                                        backgroundNode.view.mask = nil
-                                    } else {
-                                        backgroundNode.clipsToBounds = false
-                                        backgroundNode.cornerRadius = 0.0
-                                        backgroundNode.view.mask = strongSelf.backgroundMaskNode.view
+                                if backgroundMaskUpdated {
+                                    if let backgroundNode = strongSelf.backgroundNode {
+                                        if labelRects.count == 1 {
+                                            backgroundNode.clipsToBounds = true
+                                            backgroundNode.cornerRadius = labelRects[0].height / 2.0
+                                            backgroundNode.view.mask = nil
+                                        } else {
+                                            backgroundNode.clipsToBounds = false
+                                            backgroundNode.cornerRadius = 0.0
+                                            backgroundNode.view.mask = strongSelf.backgroundMaskNode.view
+                                        }
                                     }
                                 }
 
@@ -362,9 +404,14 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     if let (rect, size) = strongSelf.absoluteRect {
                                         strongSelf.updateAbsoluteRect(rect, within: size)
                                     }
+                                    strongSelf.backgroundMaskNode.frame = CGRect(origin: CGPoint(), size: image.size)
+                                    strongSelf.backgroundMaskNode.layer.layerTintColor = nil
+                                } else {
+                                    strongSelf.backgroundMaskNode.frame = CGRect(origin: CGPoint(x: baseBackgroundFrame.minX + offset.x, y: baseBackgroundFrame.minY + offset.y), size: image.size)
+                                    strongSelf.backgroundMaskNode.layer.layerTintColor = selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).cgColor
                                 }
+                                
                                 strongSelf.backgroundMaskNode.image = image
-                                strongSelf.backgroundMaskNode.frame = CGRect(origin: CGPoint(), size: image.size)
 
                                 strongSelf.backgroundColorNode.frame = CGRect(origin: CGPoint(), size: image.size)
 
@@ -489,7 +536,11 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         }
         
         if let backgroundNode = self.backgroundNode, backgroundNode.frame.contains(point) {
-            return .openMessage
+            if let item = self.item, item.message.media.contains(where: { $0 is TelegramMediaStory }) {
+                return .none
+            } else {
+                return .openMessage
+            }
         } else {
             return .none
         }

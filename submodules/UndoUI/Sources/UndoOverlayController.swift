@@ -7,15 +7,15 @@ import AccountContext
 import ComponentFlow
 
 public enum UndoOverlayContent {
-    case removedChat(text: String)
+    case removedChat(title: String, text: String?)
     case archivedChat(peerId: Int64, title: String, text: String, undo: Bool)
     case hidArchive(title: String, text: String, undo: Bool)
     case revealedArchive(title: String, text: String, undo: Bool)
     case succeed(text: String)
-    case info(title: String?, text: String)
+    case info(title: String?, text: String, timeout: Double?)
     case emoji(name: String, text: String)
     case swipeToReply(title: String, text: String)
-    case actionSucceeded(title: String, text: String, cancel: String)
+    case actionSucceeded(title: String, text: String, cancel: String, destructive: Bool)
     case stickersModified(title: String, text: String, undo: Bool, info: StickerPackCollectionInfo, topItem: StickerPackItem?, context: AccountContext)
     case dice(dice: TelegramMediaDice, context: AccountContext, text: String, action: String?)
     case chatAddedToFolder(chatTitle: String, folderTitle: String)
@@ -28,20 +28,21 @@ public enum UndoOverlayContent {
     case importedMessage(text: String)
     case audioRate(rate: CGFloat, text: String)
     case forward(savedMessages: Bool, text: String)
-    case autoDelete(isOn: Bool, title: String?, text: String)
+    case autoDelete(isOn: Bool, title: String?, text: String, customUndoText: String?)
     case gigagroupConversion(text: String)
     case linkRevoked(text: String)
     case voiceChatRecording(text: String)
     case voiceChatFlag(text: String)
     case voiceChatCanSpeak(text: String)
-    case sticker(context: AccountContext, file: TelegramMediaFile, title: String?, text: String, undoText: String?, customAction: (() -> Void)?)
+    case sticker(context: AccountContext, file: TelegramMediaFile, loop: Bool, title: String?, text: String, undoText: String?, customAction: (() -> Void)?)
     case copy(text: String)
     case mediaSaved(text: String)
     case paymentSent(currencyValue: String, itemTitle: String)
     case inviteRequestSent(title: String, text: String)
     case image(image: UIImage, title: String?, text: String, round: Bool, undoText: String?)
     case notificationSoundAdded(title: String, text: String, action: (() -> Void)?)
-    case universal(animation: String, scale: CGFloat, colors: [String: UIColor], title: String?, text: String, customUndoText: String?)
+    case universal(animation: String, scale: CGFloat, colors: [String: UIColor], title: String?, text: String, customUndoText: String?, timeout: Double?)
+    case premiumPaywall(title: String?, text: String, customUndoText: String?, timeout: Double?, linkAction: ((String) -> Void)?)
     case peers(context: AccountContext, peers: [EnginePeer], title: String?, text: String, customUndoText: String?)
 }
 
@@ -68,17 +69,21 @@ public final class UndoOverlayController: ViewController {
     private let animateInAsReplacement: Bool
     private var action: (UndoOverlayAction) -> Bool
     
+    private let blurred: Bool
     private var didPlayPresentationAnimation = false
     private var dismissed = false
     
     public var keepOnParentDismissal = false
     
-    public init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, position: Position = .bottom, animateInAsReplacement: Bool = false, action: @escaping (UndoOverlayAction) -> Bool) {
+    public var tag: Any?
+    
+    public init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, position: Position = .bottom, animateInAsReplacement: Bool = false, blurred: Bool = false, action: @escaping (UndoOverlayAction) -> Bool) {
         self.presentationData = presentationData
         self.content = content
         self.elevatedLayout = elevatedLayout
         self.position = position
         self.animateInAsReplacement = animateInAsReplacement
+        self.blurred = blurred
         self.action = action
         
         super.init(navigationBarPresentationData: nil)
@@ -91,7 +96,7 @@ public final class UndoOverlayController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = UndoOverlayControllerNode(presentationData: self.presentationData, content: self.content, elevatedLayout: self.elevatedLayout, placementPosition: self.position, action: { [weak self] value in
+        self.displayNode = UndoOverlayControllerNode(presentationData: self.presentationData, content: self.content, elevatedLayout: self.elevatedLayout, placementPosition: self.position, blurred: self.blurred, action: { [weak self] value in
             return self?.action(value) ?? false
         }, dismiss: { [weak self] in
             self?.dismiss()

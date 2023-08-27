@@ -43,14 +43,16 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
     let context: MTContext
     let mtProto: MTProto
     let requestService: MTRequestMessageService
+    let useRequestTimeoutTimers: Bool
     private let logPrefix = Atomic<String?>(value: nil)
     
     private var shouldKeepConnectionDisposable: Disposable?
     
-    init(queue: Queue, datacenterId: Int, isMedia: Bool, isCdn: Bool, context: MTContext, masterDatacenterId: Int, usageInfo: MTNetworkUsageCalculationInfo?, shouldKeepConnection: Signal<Bool, NoError>) {
+    init(queue: Queue, datacenterId: Int, isMedia: Bool, isCdn: Bool, context: MTContext, masterDatacenterId: Int, usageInfo: MTNetworkUsageCalculationInfo?, shouldKeepConnection: Signal<Bool, NoError>, useRequestTimeoutTimers: Bool) {
         self.datacenterId = datacenterId
         self.isCdn = isCdn
         self.context = context
+        self.useRequestTimeoutTimers = useRequestTimeoutTimers
 
         var requiredAuthToken: Any?
         var authTokenMasterDatacenterId: Int = 0
@@ -105,7 +107,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         let saveFilePart: (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>)
         if asBigPart {
             let totalParts: Int32
-            if let bigTotalParts = bigTotalParts {
+            if let bigTotalParts = bigTotalParts, bigTotalParts > 0 && bigTotalParts < Int32.max {
                 totalParts = Int32(bigTotalParts)
             } else {
                 totalParts = -1
@@ -115,7 +117,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             saveFilePart = Api.functions.upload.saveFilePart(fileId: fileId, filePart: Int32(index), bytes: Buffer(data: data))
         }
         
-        return multiplexedManager.request(to: .main(datacenterId), consumerId: consumerId, data: wrapMethodBody(saveFilePart, useCompression: useCompression), tag: tag, continueInBackground: true)
+        return multiplexedManager.request(to: .main(datacenterId), consumerId: consumerId, resourceId: nil, data: wrapMethodBody(saveFilePart, useCompression: useCompression), tag: tag, continueInBackground: true, expectedResponseSize: nil)
         |> mapError { error -> UploadPartError in
             if error.errorCode == 400 {
                 return .invalidMedia
@@ -187,6 +189,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
     func webFilePart(location: Api.InputWebFileLocation, offset: Int, length: Int) -> Signal<Data, NoError> {
         return Signal<Data, MTRpcError> { subscriber in
             let request = MTRequest()
+            request.expectedResponseSize = Int32(length)
             
             var updatedLength = roundUp(length, to: 4096)
             while updatedLength % 4096 != 0 || 1048576 % updatedLength != 0 {
@@ -203,6 +206,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             })
             
             request.dependsOnPasswordEntry = false
+            request.needsTimeoutTimer = self.useRequestTimeoutTimers
             
             request.shouldContinueExecutionWithErrorContext = { errorContext in
                 return true
@@ -238,6 +242,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
     func part(location: Api.InputFileLocation, offset: Int64, length: Int) -> Signal<Data, NoError> {
         return Signal<Data, MTRpcError> { subscriber in
             let request = MTRequest()
+            request.expectedResponseSize = Int32(length)
             
             var updatedLength = roundUp(length, to: 4096)
             while updatedLength % 4096 != 0 || 1048576 % updatedLength != 0 {
@@ -254,6 +259,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             })
             
             request.dependsOnPasswordEntry = false
+            request.needsTimeoutTimer = self.useRequestTimeoutTimers
             
             request.shouldContinueExecutionWithErrorContext = { errorContext in
                 return true
@@ -289,9 +295,10 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         |> retryRequest
     }
     
-    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>)) -> Signal<T, MTRpcError> {
+    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), expectedResponseSize: Int32? = nil, automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {
         return Signal { subscriber in
             let request = MTRequest()
+            request.expectedResponseSize = expectedResponseSize ?? 0
             
             request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
                 if let result = data.2.parse(Buffer(data: response)) {
@@ -301,8 +308,15 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             })
             
             request.dependsOnPasswordEntry = false
+            request.needsTimeoutTimer = self.useRequestTimeoutTimers
             
             request.shouldContinueExecutionWithErrorContext = { errorContext in
+                guard let errorContext = errorContext else {
+                    return true
+                }
+                if errorContext.floodWaitSeconds > 0 && !automaticFloodWait {
+                    return false
+                }
                 return true
             }
             
@@ -330,9 +344,10 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         }
     }
     
-    func requestWithAdditionalData<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), automaticFloodWait: Bool = true, failOnServerErrors: Bool = false) -> Signal<(T, Double), (MTRpcError, Double)> {
+    func requestWithAdditionalData<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), automaticFloodWait: Bool = true, failOnServerErrors: Bool = false, expectedResponseSize: Int32? = nil) -> Signal<(T, Double), (MTRpcError, Double)> {
         return Signal { subscriber in
             let request = MTRequest()
+            request.expectedResponseSize = expectedResponseSize ?? 0
             
             request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
                 if let result = data.2.parse(Buffer(data: response)) {
@@ -342,6 +357,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             })
             
             request.dependsOnPasswordEntry = false
+            request.needsTimeoutTimer = self.useRequestTimeoutTimers
             
             request.shouldContinueExecutionWithErrorContext = { errorContext in
                 guard let errorContext = errorContext else {
@@ -356,16 +372,16 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
                 return true
             }
             
-            request.completed = { (boxedResponse, timestamp, error) -> () in
+            request.completed = { (boxedResponse, info, error) -> () in
                 if let error = error {
-                    subscriber.putError((error, timestamp))
+                    subscriber.putError((error, info?.timestamp ?? 0.0))
                 } else {
                     if let result = (boxedResponse as! BoxedMessage).body as? T {
-                        subscriber.putNext((result, timestamp))
+                        subscriber.putNext((result, info?.timestamp ?? 0.0))
                         subscriber.putCompletion()
                     }
                     else {
-                        subscriber.putError((MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"), timestamp))
+                        subscriber.putError((MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"), info?.timestamp ?? 0.0))
                     }
                 }
             }
@@ -380,10 +396,11 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         }
     }
     
-    func rawRequest(_ data: (FunctionDescription, Buffer, (Buffer) -> Any?), automaticFloodWait: Bool = true, failOnServerErrors: Bool = false, logPrefix: String = "") -> Signal<(Any, Double), (MTRpcError, Double)> {
+    func rawRequest(_ data: (FunctionDescription, Buffer, (Buffer) -> Any?), automaticFloodWait: Bool = true, failOnServerErrors: Bool = false, logPrefix: String = "", expectedResponseSize: Int32? = nil) -> Signal<(Any, NetworkResponseInfo), (MTRpcError, Double)> {
         let requestService = self.requestService
         return Signal { subscriber in
             let request = MTRequest()
+            request.expectedResponseSize = expectedResponseSize ?? 0
             
             request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
                 if let result = data.2(Buffer(data: response)) {
@@ -393,6 +410,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             })
             
             request.dependsOnPasswordEntry = false
+            request.needsTimeoutTimer = self.useRequestTimeoutTimers
             
             request.shouldContinueExecutionWithErrorContext = { errorContext in
                 guard let errorContext = errorContext else {
@@ -407,11 +425,16 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
                 return true
             }
             
-            request.completed = { (boxedResponse, timestamp, error) -> () in
+            request.completed = { (boxedResponse, info, error) -> () in
                 if let error = error {
-                    subscriber.putError((error, timestamp))
+                    subscriber.putError((error, info?.timestamp ?? 0))
                 } else {
-                    subscriber.putNext(((boxedResponse as! BoxedMessage).body, timestamp))
+                    let mappedInfo = NetworkResponseInfo(
+                        timestamp: info?.timestamp ?? 0.0,
+                        networkType: info?.networkType == 0 ? .wifi : .cellular,
+                        networkDuration: info?.duration ?? 0.0
+                    )
+                    subscriber.putNext(((boxedResponse as! BoxedMessage).body, mappedInfo))
                     subscriber.putCompletion()
                 }
             }

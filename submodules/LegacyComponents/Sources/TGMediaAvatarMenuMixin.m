@@ -205,7 +205,7 @@
                 return;
             
             [strongController dismissAnimated:true];
-            if (strongSelf != nil) {
+            if (strongSelf != nil && strongSelf.requestAvatarEditor) {
                 strongSelf.requestAvatarEditor(^(UIImage *image, void (^commit)(void)) {
                     __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
                     if (strongSelf == nil)

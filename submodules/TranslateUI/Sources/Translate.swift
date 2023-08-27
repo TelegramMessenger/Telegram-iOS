@@ -138,6 +138,25 @@ public var popularTranslationLanguages = [
 @available(iOS 12.0, *)
 private let languageRecognizer = NLLanguageRecognizer()
 
+public func effectiveIgnoredTranslationLanguages(context: AccountContext, ignoredLanguages: [String]?) -> Set<String> {
+    var baseLang = context.sharedContext.currentPresentationData.with { $0 }.strings.baseLanguageCode
+    let rawSuffix = "-raw"
+    if baseLang.hasSuffix(rawSuffix) {
+        baseLang = String(baseLang.dropLast(rawSuffix.count))
+    }
+    
+    var dontTranslateLanguages = Set<String>()
+    if let ignoredLanguages = ignoredLanguages {
+        dontTranslateLanguages = Set(ignoredLanguages)
+    } else {
+        dontTranslateLanguages.insert(baseLang)
+        for language in systemLanguageCodes() {
+            dontTranslateLanguages.insert(language)
+        }
+    }
+    return dontTranslateLanguages
+}
+
 public func canTranslateText(context: AccountContext, text: String, showTranslate: Bool, showTranslateIfTopical: Bool = false, ignoredLanguages: [String]?) -> (canTranslate: Bool, language: String?) {
     guard showTranslate || showTranslateIfTopical, text.count > 0 else {
         return (false, nil)
@@ -147,13 +166,8 @@ public func canTranslateText(context: AccountContext, text: String, showTranslat
         if context.sharedContext.immediateExperimentalUISettings.disableLanguageRecognition {
             return (true, nil)
         }
-        
-        var dontTranslateLanguages: [String] = []
-        if let ignoredLanguages = ignoredLanguages {
-            dontTranslateLanguages = ignoredLanguages
-        } else {
-            dontTranslateLanguages = [context.sharedContext.currentPresentationData.with { $0 }.strings.baseLanguageCode]
-        }
+                
+        let dontTranslateLanguages = effectiveIgnoredTranslationLanguages(context: context, ignoredLanguages: ignoredLanguages)
         
         let text = String(text.prefix(64))
         languageRecognizer.processString(text)

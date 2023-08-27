@@ -42,12 +42,10 @@ final class ShareSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.textInputNode = TextFieldNode()
         self.textInputNode.fixOffset = false
         let textColor: UIColor = theme.actionSheet.inputTextColor
-        let keyboardAppearance: UIKeyboardAppearance = UIKeyboardAppearance.default
         self.textInputNode.textField.font = Font.regular(16.0)
         self.textInputNode.textField.textColor = textColor
         self.textInputNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(16.0), NSAttributedString.Key.foregroundColor: textColor]
         self.textInputNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
-        self.textInputNode.textField.keyboardAppearance = keyboardAppearance
         self.textInputNode.textField.attributedPlaceholder = NSAttributedString(string: placeholder, font: Font.regular(16.0), textColor: theme.actionSheet.inputPlaceholderColor)
         self.textInputNode.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         self.textInputNode.textField.tintColor = theme.actionSheet.controlAccentColor
@@ -86,6 +84,19 @@ final class ShareSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         }
         
         transition.updateFrame(node: self.textInputNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY + UIScreenPixel), size: CGSize(width: backgroundFrame.size.width - inputInsets.left - inputInsets.right, height: backgroundFrame.size.height)))
+    }
+    
+    func updateTheme(_ theme: PresentationTheme) {
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 16.0, color: theme.actionSheet.inputBackgroundColor)
+        self.searchIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Share/SearchBarSearchIcon"), color: theme.actionSheet.inputPlaceholderColor)
+        self.clearButton.setImage(generateClearIcon(color: theme.actionSheet.inputClearButtonColor), for: [])
+        
+        let textColor: UIColor = theme.actionSheet.inputTextColor
+        self.textInputNode.textField.textColor = textColor
+        self.textInputNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(16.0), NSAttributedString.Key.foregroundColor: textColor]
+        self.textInputNode.textField.attributedPlaceholder = NSAttributedString(string: self.textInputNode.textField.attributedPlaceholder?.string ?? "", font: Font.regular(16.0), textColor: theme.actionSheet.inputPlaceholderColor)
+        self.textInputNode.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
+        self.textInputNode.textField.tintColor = theme.actionSheet.controlAccentColor
     }
     
     func activateInput() {

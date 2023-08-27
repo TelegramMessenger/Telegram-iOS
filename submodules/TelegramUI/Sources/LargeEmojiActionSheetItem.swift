@@ -131,7 +131,7 @@ private final class LargeEmojiActionSheetItemNode: ActionSheetItemNode {
         }
         
         if let immediateThumbnailData = file.immediateThumbnailData {
-            self.placeholderNode.update(backgroundColor: nil, foregroundColor: theme.secondaryTextColor.blitOver(theme.itemBackgroundColor, alpha: 0.55), shimmeringColor: theme.itemBackgroundColor.withAlphaComponent(0.4), data: immediateThumbnailData, size: CGSize(width: 96.0, height: 96.0), imageSize: dimensions.cgSize)
+            self.placeholderNode.update(backgroundColor: nil, foregroundColor: theme.secondaryTextColor.blitOver(theme.itemBackgroundColor, alpha: 0.55), shimmeringColor: theme.itemBackgroundColor.withAlphaComponent(0.4), data: immediateThumbnailData, size: CGSize(width: 96.0, height: 96.0), enableEffect: context.sharedContext.energyUsageSettings.fullTranslucency, imageSize: dimensions.cgSize)
         }
     }
     

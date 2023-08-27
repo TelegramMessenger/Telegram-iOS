@@ -3,6 +3,15 @@ import AVFoundation
 import UIKit
 import MozjpegBinding
 
+public func scaleImageToPixelSize(image: UIImage, size: CGSize) -> UIImage? {
+    UIGraphicsBeginImageContextWithOptions(size, true, 1.0)
+    image.draw(in: CGRect(origin: CGPoint(), size: size), blendMode: .copy, alpha: 1.0)
+    let result = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+    
+    return result
+}
+
 public func extractImageExtraScans(_ data: Data) -> [Int] {
     return extractJPEGDataScans(data).map { item in
         return item.intValue

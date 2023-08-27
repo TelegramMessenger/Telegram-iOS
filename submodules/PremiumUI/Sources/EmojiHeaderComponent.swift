@@ -3,7 +3,6 @@ import UIKit
 import Display
 import ComponentFlow
 import SwiftSignalKit
-import SceneKit
 import GZip
 import AppBundle
 import LegacyComponents
@@ -50,7 +49,7 @@ class EmojiHeaderComponent: Component {
         return lhs.placeholderColor == rhs.placeholderColor && lhs.accentColor == rhs.accentColor && lhs.fileId == rhs.fileId && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations
     }
     
-    final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
+    final class View: UIView, ComponentTaggedView {
         final class Tag {
         }
         
@@ -110,7 +109,9 @@ class EmojiHeaderComponent: Component {
             }
                         
             self.statusView.isHidden = false
-            containerView = containerView.subviews[1].subviews[1]
+            if containerView.subviews.count > 1 && containerView.subviews[1].subviews.count > 1 {
+                containerView = containerView.subviews[1].subviews[1]
+            }
             
             let initialPosition = self.statusView.center
             let targetPosition = self.statusView.superview!.convert(self.statusView.center, to: containerView)

@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import Display
@@ -65,6 +64,9 @@ private struct SharePeerEntry: Comparable, Identifiable {
         if lhs.threadData != rhs.threadData {
             return false
         }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
         
         return true
     }
@@ -100,7 +102,8 @@ private func preparedGridEntryTransition(context: AccountContext, from fromEntri
 final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let sharedContext: SharedAccountContext
     private let context: AccountContext
-    private let theme: PresentationTheme
+    private var theme: PresentationTheme
+    private let themePromise: Promise<PresentationTheme>
     private let strings: PresentationStrings
     private let nameDisplayOrder: PresentationPersonNameOrder
     private let controllerInteraction: ShareControllerInteraction
@@ -136,7 +139,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     var openShare: ((ASDisplayNode, ContextGesture?) -> Void)?
     var segmentedSelectedIndexUpdated: ((Int) -> Void)?
     
-    private var ensurePeerVisibleOnLayout: PeerId?
+    private var ensurePeerVisibleOnLayout: EnginePeer.Id?
     private var validLayout: (CGSize, CGFloat)?
     private var overrideGridOffsetTransition: ContainedViewLayoutTransition?
     
@@ -153,6 +156,8 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.sharedContext = sharedContext
         self.context = context
         self.theme = theme
+        self.themePromise = Promise()
+        self.themePromise.set(.single(theme))
         self.strings = strings
         self.nameDisplayOrder = nameDisplayOrder
         self.controllerInteraction = controllerInteraction
@@ -164,12 +169,12 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         
         self.peersValue.set(.single(peers))
         
-        let items: Signal<[SharePeerEntry], NoError> = combineLatest(self.peersValue.get(), self.foundPeers.get(), self.tick.get())
-        |> map { [weak controllerInteraction] initialPeers, foundPeers, _ -> [SharePeerEntry] in
+        let items: Signal<[SharePeerEntry], NoError> = combineLatest(self.peersValue.get(), self.foundPeers.get(), self.tick.get(), self.themePromise.get())
+        |> map { [weak controllerInteraction] initialPeers, foundPeers, _, theme -> [SharePeerEntry] in
             var entries: [SharePeerEntry] = []
             var index: Int32 = 0
             
-            var existingPeerIds: Set<PeerId> = Set()
+            var existingPeerIds: Set<EnginePeer.Id> = Set()
             entries.append(SharePeerEntry(index: index, peer: EngineRenderedPeer(peer: accountPeer), presence: nil, threadId: nil, threadData: nil, theme: theme, strings: strings))
             existingPeerIds.insert(accountPeer.id)
             index += 1
@@ -303,6 +308,13 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.disposable.dispose()
     }
     
+    func updateTheme(_ theme: PresentationTheme) {
+        self.theme = theme
+        self.themePromise.set(.single(theme))
+        self.contentTitleNode.attributedText = NSAttributedString(string: self.strings.ShareMenu_ShareTo, font: Font.medium(20.0), textColor: self.theme.actionSheet.primaryTextColor)
+        self.updateSelectedPeers(animated: false)
+    }
+    
     private func enqueueTransition(_ transition: ShareGridTransaction, firstTime: Bool) {
         self.enqueuedTransitions.append((transition, firstTime))
         
@@ -325,7 +337,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         }
     }
     
-    func setEnsurePeerVisibleOnLayout(_ peerId: PeerId?) {
+    func setEnsurePeerVisibleOnLayout(_ peerId: EnginePeer.Id?) {
         self.ensurePeerVisibleOnLayout = peerId
     }
     
@@ -684,11 +696,11 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             if node.isHidden {
                 continue
             }
-            if let result = node.hitTest(point.offsetBy(dx: -nodeFrame.minX, dy: -nodeFrame.minY), with: event) {
+            if let result = node.hitTest(point.offsetBy(dx: -self.headerNode.frame.minX, dy: -self.headerNode.frame.minY).offsetBy(dx: -nodeFrame.minX, dy: -nodeFrame.minY), with: event) {
                 return result
             }
         }
-        
+
         return super.hitTest(point, with: event)
     }
     

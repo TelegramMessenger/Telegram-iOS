@@ -330,7 +330,7 @@ private final class AnimatedStickerDirectFrameSourceCache {
             return .notFound
         }
         
-        self.file.seek(position: Int64(index * 4 * 2))
+        let _ = self.file.seek(position: Int64(index * 4 * 2))
         var offset: Int32 = 0
         var length: Int32 = 0
         if self.file.read(&offset, 4) != 4 {
@@ -384,12 +384,12 @@ private final class AnimatedStickerDirectFrameSourceCache {
                         return
                     }
                     
-                    strongSelf.file.seek(position: Int64(index * 4 * 2))
+                    let _ = strongSelf.file.seek(position: Int64(index * 4 * 2))
                     var offset = Int32(currentSize)
                     var length = Int32(compressedData.data.count)
                     let _ = strongSelf.file.write(&offset, count: 4)
                     let _ = strongSelf.file.write(&length, count: 4)
-                    strongSelf.file.seek(position: Int64(currentSize))
+                    let _ = strongSelf.file.seek(position: Int64(currentSize))
                     compressedData.data.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) -> Void in
                         if let baseAddress = buffer.baseAddress {
                             let _ = strongSelf.file.write(baseAddress, count: Int(length))
@@ -427,12 +427,12 @@ private final class AnimatedStickerDirectFrameSourceCache {
                     return
                 }
                 
-                strongSelf.file.seek(position: Int64(index * 4 * 2))
+                let _ = strongSelf.file.seek(position: Int64(index * 4 * 2))
                 var offset = Int32(currentSize)
                 var length = Int32(compressedData.count)
                 let _ = strongSelf.file.write(&offset, count: 4)
                 let _ = strongSelf.file.write(&length, count: 4)
-                strongSelf.file.seek(position: Int64(currentSize))
+                let _ = strongSelf.file.seek(position: Int64(currentSize))
                 compressedData.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) -> Void in
                     if let baseAddress = buffer.baseAddress {
                         let _ = strongSelf.file.write(baseAddress, count: Int(length))
@@ -502,7 +502,7 @@ private final class AnimatedStickerDirectFrameSourceCache {
         
         switch rangeResult {
         case let .range(range):
-            self.file.seek(position: Int64(range.lowerBound))
+            let _ = self.file.seek(position: Int64(range.lowerBound))
             let length = range.upperBound - range.lowerBound
             let compressedData = self.file.readData(count: length)
             if compressedData.count != length {

@@ -20,8 +20,9 @@ public final class GalleryControllerActionInteraction {
     public let addContact: (String) -> Void
     public let storeMediaPlaybackState: (MessageId, Double?, Double) -> Void
     public let editMedia: (MessageId, [UIView], @escaping () -> Void) -> Void
+    public let updateCanReadHistory: (Bool) -> Void
 
-    public init(openUrl: @escaping (String, Bool) -> Void, openUrlIn: @escaping (String) -> Void, openPeerMention: @escaping (String) -> Void, openPeer: @escaping (EnginePeer) -> Void, openHashtag: @escaping (String?, String) -> Void, openBotCommand: @escaping (String) -> Void, addContact: @escaping (String) -> Void, storeMediaPlaybackState: @escaping (MessageId, Double?, Double) -> Void, editMedia: @escaping (MessageId, [UIView], @escaping () -> Void) -> Void) {
+    public init(openUrl: @escaping (String, Bool) -> Void, openUrlIn: @escaping (String) -> Void, openPeerMention: @escaping (String) -> Void, openPeer: @escaping (EnginePeer) -> Void, openHashtag: @escaping (String?, String) -> Void, openBotCommand: @escaping (String) -> Void, addContact: @escaping (String) -> Void, storeMediaPlaybackState: @escaping (MessageId, Double?, Double) -> Void, editMedia: @escaping (MessageId, [UIView], @escaping () -> Void) -> Void, updateCanReadHistory: @escaping (Bool) -> Void) {
         self.openUrl = openUrl
         self.openUrlIn = openUrlIn
         self.openPeerMention = openPeerMention
@@ -31,5 +32,6 @@ public final class GalleryControllerActionInteraction {
         self.addContact = addContact
         self.storeMediaPlaybackState = storeMediaPlaybackState
         self.editMedia = editMedia
+        self.updateCanReadHistory = updateCanReadHistory
     }
 }

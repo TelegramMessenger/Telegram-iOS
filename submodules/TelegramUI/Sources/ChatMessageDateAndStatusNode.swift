@@ -474,7 +474,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                 let serviceColor = serviceMessageColorComponents(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper)
                 dateColor = serviceColor.primaryText
                 
-                blurredBackgroundColor = (selectDateFillStaticColor(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper), dateFillNeedsBlur(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper))
+                blurredBackgroundColor = (selectDateFillStaticColor(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper), arguments.context.sharedContext.energyUsageSettings.fullTranslucency && dateFillNeedsBlur(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper))
                 leftInset = 0.0
                 loadedCheckFullImage = PresentationResourcesChat.chatFreeFullCheck(arguments.presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
                 loadedCheckPartialImage = PresentationResourcesChat.chatFreePartialCheck(arguments.presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
@@ -492,7 +492,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                 let serviceColor = serviceMessageColorComponents(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper)
                 dateColor = serviceColor.primaryText
                 outgoingStatus = status
-                blurredBackgroundColor = (selectDateFillStaticColor(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper), dateFillNeedsBlur(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper))
+                blurredBackgroundColor = (selectDateFillStaticColor(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper), arguments.context.sharedContext.energyUsageSettings.fullTranslucency && dateFillNeedsBlur(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper))
                 leftInset = 0.0
                 loadedCheckFullImage = PresentationResourcesChat.chatFreeFullCheck(arguments.presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
                 loadedCheckPartialImage = PresentationResourcesChat.chatFreePartialCheck(arguments.presentationData.theme.theme, size: checkSize, isDefaultWallpaper: isDefaultWallpaper)
@@ -1366,33 +1366,5 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
 }
 
 func shouldDisplayInlineDateReactions(message: Message, isPremium: Bool, forceInline: Bool) -> Bool {
-    if forceInline {
-        return true
-    }
-    
-    if message.id.peerId.namespace == Namespaces.Peer.CloudUser || message.id.peerId.namespace == Namespaces.Peer.SecretChat {
-        if let chatPeer = message.peers[message.id.peerId] as? TelegramUser, chatPeer.isPremium {
-            return false
-        }
-        if let author = message.author as? TelegramUser, author.isPremium {
-            return false
-        }
-        if isPremium {
-            return false
-        }
-        
-        if let effectiveReactions = message.effectiveReactions {
-            if effectiveReactions.count > 1 {
-                return false
-            }
-            for reaction in effectiveReactions {
-                if case .custom = reaction.value {
-                    return false
-                }
-            }
-        }
-        
-        return true
-    }
-    return false
+    return forceInline
 }

@@ -30,7 +30,7 @@
 @property (nonatomic, copy) void(^ _Nullable focusUpdated)(BOOL focused);
 @property (nonatomic, copy) void(^ _Nullable heightUpdated)(BOOL animated);
 
-- (CGFloat)updateLayoutSize:(CGSize)size sideInset:(CGFloat)sideInset;
+- (CGFloat)updateLayoutSize:(CGSize)size sideInset:(CGFloat)sideInset animated:(bool)animated;
 - (CGFloat)baseHeight;
 
 @end
@@ -57,6 +57,7 @@
 
 @property (nonatomic, copy) void(^ _Nonnull hasSelectionChanged)(bool);
 @property (nonatomic, readonly) BOOL hasSelection;
+@property (nonatomic, readonly) BOOL isEditingText;
 
 - (void)play;
 - (void)pause;
@@ -66,6 +67,7 @@
 - (void)clearSelection;
 - (void)onZoom;
 
+- (void)handlePan:(UIPanGestureRecognizer * _Nonnull)gestureRecognizer;
 - (void)handlePinch:(UIPinchGestureRecognizer * _Nonnull)gestureRecognizer;
 - (void)handleRotate:(UIRotationGestureRecognizer * _Nonnull)gestureRecognizer;
 

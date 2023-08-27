@@ -218,15 +218,19 @@ public final class InitialPresentationDataAndSettings {
     public let callListSettings: CallListSettings
     public let inAppNotificationSettings: InAppNotificationSettings
     public let mediaInputSettings: MediaInputSettings
+    public let mediaDisplaySettings: MediaDisplaySettings
+    public let stickerSettings: StickerSettings
     public let experimentalUISettings: ExperimentalUISettings
     
-    public init(presentationData: PresentationData, automaticMediaDownloadSettings: MediaAutoDownloadSettings, autodownloadSettings: AutodownloadSettings, callListSettings: CallListSettings, inAppNotificationSettings: InAppNotificationSettings, mediaInputSettings: MediaInputSettings, experimentalUISettings: ExperimentalUISettings) {
+    public init(presentationData: PresentationData, automaticMediaDownloadSettings: MediaAutoDownloadSettings, autodownloadSettings: AutodownloadSettings, callListSettings: CallListSettings, inAppNotificationSettings: InAppNotificationSettings, mediaInputSettings: MediaInputSettings, mediaDisplaySettings: MediaDisplaySettings, stickerSettings: StickerSettings, experimentalUISettings: ExperimentalUISettings) {
         self.presentationData = presentationData
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
         self.autodownloadSettings = autodownloadSettings
         self.callListSettings = callListSettings
         self.inAppNotificationSettings = inAppNotificationSettings
         self.mediaInputSettings = mediaInputSettings
+        self.mediaDisplaySettings = mediaDisplaySettings
+        self.stickerSettings = stickerSettings
         self.experimentalUISettings = experimentalUISettings
     }
 }
@@ -240,8 +244,10 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
         var callListSettings: PreferencesEntry?
         var inAppNotificationSettings: PreferencesEntry?
         var mediaInputSettings: PreferencesEntry?
+        var mediaDisplaySettings: PreferencesEntry?
         var experimentalUISettings: PreferencesEntry?
         var contactSynchronizationSettings: PreferencesEntry?
+        var stickerSettings: PreferencesEntry?
         
         init(
             localizationSettings: PreferencesEntry?,
@@ -251,8 +257,10 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
             callListSettings: PreferencesEntry?,
             inAppNotificationSettings: PreferencesEntry?,
             mediaInputSettings: PreferencesEntry?,
+            mediaDisplaySettings: PreferencesEntry?,
             experimentalUISettings: PreferencesEntry?,
-            contactSynchronizationSettings: PreferencesEntry?
+            contactSynchronizationSettings: PreferencesEntry?,
+            stickerSettings: PreferencesEntry?
         ) {
             self.localizationSettings = localizationSettings
             self.presentationThemeSettings = presentationThemeSettings
@@ -261,8 +269,10 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
             self.callListSettings = callListSettings
             self.inAppNotificationSettings = inAppNotificationSettings
             self.mediaInputSettings = mediaInputSettings
+            self.mediaDisplaySettings = mediaDisplaySettings
             self.experimentalUISettings = experimentalUISettings
             self.contactSynchronizationSettings = contactSynchronizationSettings
+            self.stickerSettings = stickerSettings
         }
     }
     
@@ -274,8 +284,10 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
         let callListSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings)
         let inAppNotificationSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings)
         let mediaInputSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.mediaInputSettings)
+        let mediaDisplaySettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.mediaDisplaySettings)
         let experimentalUISettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings)
         let contactSynchronizationSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.contactSynchronizationSettings)
+        let stickerSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.stickerSettings)
         
         return InternalData(
             localizationSettings: localizationSettings,
@@ -285,8 +297,10 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
             callListSettings: callListSettings,
             inAppNotificationSettings: inAppNotificationSettings,
             mediaInputSettings: mediaInputSettings,
+            mediaDisplaySettings: mediaDisplaySettings,
             experimentalUISettings: experimentalUISettings,
-            contactSynchronizationSettings: contactSynchronizationSettings
+            contactSynchronizationSettings: contactSynchronizationSettings,
+            stickerSettings: stickerSettings
         )
     }
     |> deliverOn(Queue(name: "PresentationData-Load", qos: .userInteractive))
@@ -340,6 +354,20 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
             mediaInputSettings = MediaInputSettings.defaultSettings
         }
         
+        let mediaDisplaySettings: MediaDisplaySettings
+        if let value = internalData.mediaDisplaySettings?.get(MediaDisplaySettings.self) {
+            mediaDisplaySettings = value
+        } else {
+            mediaDisplaySettings = MediaDisplaySettings.defaultSettings
+        }
+        
+        let stickerSettings: StickerSettings
+        if let value = internalData.stickerSettings?.get(StickerSettings.self) {
+            stickerSettings = value
+        } else {
+            stickerSettings = StickerSettings.defaultSettings
+        }
+        
         let experimentalUISettings: ExperimentalUISettings = internalData.experimentalUISettings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
         
         let contactSettings: ContactSynchronizationSettings = internalData.contactSynchronizationSettings?.get(ContactSynchronizationSettings.self) ?? ContactSynchronizationSettings.defaultSettings
@@ -369,7 +397,10 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
         let effectiveColors = themeSettings.themeSpecificAccentColors[effectiveTheme.index]
         let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, baseTheme: preferredBaseTheme, accentColor: effectiveColors?.colorFor(baseTheme: preferredBaseTheme ?? .day), bubbleColors: effectiveColors?.customBubbleColors ?? [], baseColor: effectiveColors?.baseColor) ?? defaultPresentationTheme
         
-        let effectiveChatWallpaper: TelegramWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: effectiveTheme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[effectiveTheme.index]) ?? theme.chat.defaultWallpaper
+        var effectiveChatWallpaper: TelegramWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: effectiveTheme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[effectiveTheme.index]) ?? theme.chat.defaultWallpaper
+        if case .builtin = effectiveChatWallpaper {
+            effectiveChatWallpaper = defaultBuiltinWallpaper(data: .legacy, colors: legacyBuiltinWallpaperGradientColors.map(\.rgb))
+        }
         
         let dateTimeFormat = currentDateTimeFormat()
         let stringsValue: PresentationStrings
@@ -385,7 +416,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
         
         let chatBubbleCorners = PresentationChatBubbleCorners(mainRadius: CGFloat(themeSettings.chatBubbleSettings.mainRadius), auxiliaryRadius: CGFloat(themeSettings.chatBubbleSettings.auxiliaryRadius), mergeBubbleCorners: themeSettings.chatBubbleSettings.mergeBubbleCorners)
         
-        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: theme, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: effectiveChatWallpaper, chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, reduceMotion: themeSettings.reduceMotion, largeEmoji: themeSettings.largeEmoji), automaticMediaDownloadSettings: automaticMediaDownloadSettings, autodownloadSettings: autodownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, experimentalUISettings: experimentalUISettings)
+        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: theme, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: effectiveChatWallpaper, chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, reduceMotion: themeSettings.reduceMotion, largeEmoji: themeSettings.largeEmoji), automaticMediaDownloadSettings: automaticMediaDownloadSettings, autodownloadSettings: autodownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, mediaDisplaySettings: mediaDisplaySettings, stickerSettings: stickerSettings, experimentalUISettings: experimentalUISettings)
     }
 }
 
@@ -484,6 +515,43 @@ private func automaticThemeShouldSwitch(_ settings: AutomaticThemeSwitchSetting,
             
             return ActionDisposable {
                 timer.invalidate()
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> distinctUntilChanged
+    }
+}
+
+public func automaticEnergyUsageShouldBeOnNow(settings: MediaAutoDownloadSettings) -> Bool {
+    if settings.energyUsageSettings.activationThreshold <= 4 {
+        return false
+    } else if settings.energyUsageSettings.activationThreshold >= 96 {
+        return true
+    } else {
+        let batteryLevel = UIDevice.current.batteryLevel
+        if batteryLevel < 0.0 {
+            return false
+        } else {
+            return batteryLevel <= Float(settings.energyUsageSettings.activationThreshold) / 100.0
+        }
+    }
+}
+
+public func automaticEnergyUsageShouldBeOn(settings: MediaAutoDownloadSettings) -> Signal<Bool, NoError> {
+    if settings.energyUsageSettings.activationThreshold <= 4 {
+        return .single(false)
+    } else if settings.energyUsageSettings.activationThreshold >= 96 {
+        return .single(true)
+    } else {
+        return Signal { subscriber in
+            subscriber.putNext(automaticEnergyUsageShouldBeOnNow(settings: settings))
+            
+            let observer = NotificationCenter.default.addObserver(forName: UIDevice.batteryLevelDidChangeNotification, object: nil, queue: OperationQueue.main, using: { _ in
+                subscriber.putNext(automaticEnergyUsageShouldBeOnNow(settings: settings))
+            })
+            
+            return ActionDisposable {
+                NotificationCenter.default.removeObserver(observer)
             }
         }
         |> runOn(Queue.mainQueue())
@@ -710,6 +778,10 @@ public func updatedPresentationData(accountManager: AccountManager<TelegramAccou
                             if let baseTheme = themeSettings.themePreferredBaseTheme[effectiveTheme.index], [.classic, .day].contains(baseTheme) {
                                 preferredBaseTheme = baseTheme
                             }
+                        }
+                        
+                        if case .builtin = effectiveChatWallpaper {
+                            effectiveChatWallpaper = defaultBuiltinWallpaper(data: .legacy, colors: legacyBuiltinWallpaperGradientColors.map(\.rgb))
                         }
                         
                         if let colors = effectiveColors, colors.baseColor == .theme {

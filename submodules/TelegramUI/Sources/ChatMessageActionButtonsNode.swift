@@ -11,7 +11,8 @@ import WallpaperBackgroundNode
 private let titleFont = Font.medium(16.0)
 
 private final class ChatMessageActionButtonNode: ASDisplayNode {
-    private let backgroundBlurNode: NavigationBackgroundNode
+    //private let backgroundBlurNode: NavigationBackgroundNode
+    private var backgroundBlurView: PortalView?
     
     private var titleNode: TextNode?
     private var iconNode: ASImageNode?
@@ -32,15 +33,15 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
     private let accessibilityArea: AccessibilityAreaNode
     
     override init() {
-        self.backgroundBlurNode = NavigationBackgroundNode(color: .clear)
-        self.backgroundBlurNode.isUserInteractionEnabled = false
+        //self.backgroundBlurNode = NavigationBackgroundNode(color: .clear)
+        //self.backgroundBlurNode.isUserInteractionEnabled = false
 
         self.accessibilityArea = AccessibilityAreaNode()
         self.accessibilityArea.accessibilityTraits = .button
         
         super.init()
         
-        self.addSubnode(self.backgroundBlurNode)
+        //self.addSubnode(self.backgroundBlurNode)
         self.addSubnode(self.accessibilityArea)
         
         self.accessibilityArea.activate = { [weak self] in
@@ -60,14 +61,24 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
         buttonView.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
-                    strongSelf.backgroundBlurNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.backgroundBlurNode.alpha = 0.55
+                    //strongSelf.backgroundBlurNode.layer.removeAnimation(forKey: "opacity")
+                    //strongSelf.backgroundBlurNode.alpha = 0.55
+                    
+                    if let backgroundBlurView = strongSelf.backgroundBlurView {
+                        backgroundBlurView.view.layer.removeAnimation(forKey: "opacity")
+                        backgroundBlurView.view.alpha = 0.55
+                    }
                     
                     strongSelf.backgroundContent?.layer.removeAnimation(forKey: "opacity")
                     strongSelf.backgroundContent?.alpha = 0.55
                 } else {
-                    strongSelf.backgroundBlurNode.alpha = 1.0
-                    strongSelf.backgroundBlurNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                    //strongSelf.backgroundBlurNode.alpha = 1.0
+                    //strongSelf.backgroundBlurNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                    
+                    if let backgroundBlurView = strongSelf.backgroundBlurView {
+                        backgroundBlurView.view.alpha = 1.0
+                        backgroundBlurView.view.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                    }
                     
                     strongSelf.backgroundContent?.alpha = 1.0
                     strongSelf.backgroundContent?.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
@@ -179,9 +190,20 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                             node.longTapRecognizer?.isEnabled = false
                     }
                     
-                    animation.animator.updateFrame(layer: node.backgroundBlurNode.layer, frame: CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: 42.0)), completion: nil)
-                    node.backgroundBlurNode.update(size: node.backgroundBlurNode.bounds.size, cornerRadius: 0.0, animator: animation.animator)
-                    node.backgroundBlurNode.updateColor(color: selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: theme.theme, wallpaper: theme.wallpaper), transition: .immediate)
+                    //animation.animator.updateFrame(layer: node.backgroundBlurNode.layer, frame: CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: 42.0)), completion: nil)
+                    
+                    if node.backgroundBlurView == nil {
+                        if let backgroundBlurView = backgroundNode?.makeFreeBackground() {
+                            node.backgroundBlurView = backgroundBlurView
+                            node.view.insertSubview(backgroundBlurView.view, at: 0)
+                        }
+                    }
+                    if let backgroundBlurView = node.backgroundBlurView {
+                        animation.animator.updateFrame(layer: backgroundBlurView.view.layer, frame: CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: 42.0)), completion: nil)
+                    }
+                    
+                    /*node.backgroundBlurNode.update(size: node.backgroundBlurNode.bounds.size, cornerRadius: 0.0, animator: animation.animator)
+                    node.backgroundBlurNode.updateColor(color: selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper), enableBlur: context.sharedContext.energyUsageSettings.fullTranslucency && dateFillNeedsBlur(theme: theme.theme, wallpaper: theme.wallpaper), transition: .immediate)*/
                     
                     if backgroundNode?.hasExtraBubbleBackground() == true {
                         if node.backgroundContent == nil, let backgroundContent = backgroundNode?.makeBubbleBackground(for: .free) {
@@ -208,8 +230,9 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                     node.clipsToBounds = true
                     
                     if let backgroundContent = node.backgroundContent {
-                        node.backgroundBlurNode.isHidden = true
-                        backgroundContent.frame = node.backgroundBlurNode.frame
+                        //node.backgroundBlurNode.isHidden = true
+                        node.backgroundBlurView?.view.isHidden = true
+                        backgroundContent.frame = CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: 42.0))
                         
                         node.backgroundColorNode?.frame = backgroundContent.bounds
                         
@@ -220,11 +243,11 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                             backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
                         }
                     } else {
-                        node.backgroundBlurNode.isHidden = false
+                        node.backgroundBlurView?.view.isHidden = false
                     }
                     
                     
-                    let rect = node.backgroundBlurNode.bounds
+                    let rect = CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: 42.0))
                     let maskPath: CGPath?
                     switch position {
                         case .bottomSingle:

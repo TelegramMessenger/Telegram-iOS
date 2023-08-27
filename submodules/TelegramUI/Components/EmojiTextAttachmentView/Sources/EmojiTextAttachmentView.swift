@@ -374,7 +374,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         let isTemplate = file.isCustomTemplateEmoji
         
         let context = self.context
-        if file.isAnimatedSticker || file.isVideoEmoji {
+        if file.isAnimatedSticker || file.isVideoSticker || file.isVideoEmoji {
             let keyframeOnly = self.pixelSize.width >= 120.0
             
             self.disposable = renderer.add(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, unique: self.unique, size: self.pixelSize, fetch: animationCacheFetchFile(context: context, userLocation: self.userLocation, userContentType: .sticker, resource: .media(media: .standalone(media: file), resource: file.resource), type: AnimationCacheAnimationType(file: file), keyframeOnly: keyframeOnly, customColor: isTemplate ? .white : nil))
@@ -453,7 +453,7 @@ public final class EmojiTextAttachmentView: UIView {
         super.init(frame: CGRect())
         
         self.layer.addSublayer(self.contentLayer)
-        self.contentLayer.isVisibleForAnimations = true
+        self.contentLayer.isVisibleForAnimations = context.sharedContext.energyUsageSettings.loopEmoji
     }
     
     required public init?(coder: NSCoder) {

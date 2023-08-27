@@ -174,6 +174,8 @@ extension ChatListFilterIncludePeers {
 }
 
 public struct ChatListFilterData: Equatable, Hashable {
+    public var isShared: Bool
+    public var hasSharedLinks: Bool
     public var categories: ChatListFilterPeerCategories
     public var excludeMuted: Bool
     public var excludeRead: Bool
@@ -182,6 +184,8 @@ public struct ChatListFilterData: Equatable, Hashable {
     public var excludePeers: [PeerId]
     
     public init(
+        isShared: Bool,
+        hasSharedLinks: Bool,
         categories: ChatListFilterPeerCategories,
         excludeMuted: Bool,
         excludeRead: Bool,
@@ -189,6 +193,8 @@ public struct ChatListFilterData: Equatable, Hashable {
         includePeers: ChatListFilterIncludePeers,
         excludePeers: [PeerId]
     ) {
+        self.isShared = isShared
+        self.hasSharedLinks = hasSharedLinks
         self.categories = categories
         self.excludeMuted = excludeMuted
         self.excludeRead = excludeRead
@@ -246,6 +252,8 @@ public enum ChatListFilter: Codable, Equatable {
             let emoticon = try container.decodeIfPresent(String.self, forKey: "emoticon")
             
             let data = ChatListFilterData(
+                isShared: try container.decodeIfPresent(Bool.self, forKey: "isShared") ?? false,
+                hasSharedLinks: try container.decodeIfPresent(Bool.self, forKey: "hasSharedLinks") ?? false,
                 categories: ChatListFilterPeerCategories(rawValue: try container.decode(Int32.self, forKey: "categories")),
                 excludeMuted: (try container.decode(Int32.self, forKey: "excludeMuted")) != 0,
                 excludeRead: (try container.decode(Int32.self, forKey: "excludeRead")) != 0,
@@ -275,6 +283,8 @@ public enum ChatListFilter: Codable, Equatable {
                 try container.encode(title, forKey: "title")
                 try container.encodeIfPresent(emoticon, forKey: "emoticon")
             
+                try container.encode(data.isShared, forKey: "isShared")
+                try container.encode(data.hasSharedLinks, forKey: "hasSharedLinks")
                 try container.encode(data.categories.rawValue, forKey: "categories")
                 try container.encode((data.excludeMuted ? 1 : 0) as Int32, forKey: "excludeMuted")
                 try container.encode((data.excludeRead ? 1 : 0) as Int32, forKey: "excludeRead")
@@ -297,6 +307,8 @@ extension ChatListFilter {
                 title: title,
                 emoticon: emoticon,
                 data: ChatListFilterData(
+                    isShared: false,
+                    hasSharedLinks: false,
                     categories: ChatListFilterPeerCategories(apiFlags: flags),
                     excludeMuted: (flags & (1 << 11)) != 0,
                     excludeRead: (flags & (1 << 12)) != 0,
@@ -338,6 +350,44 @@ extension ChatListFilter {
                     }
                 )
             )
+        case let .dialogFilterChatlist(flags, id, title, emoticon, pinnedPeers, includePeers):
+            self = .filter(
+                id: id,
+                title: title,
+                emoticon: emoticon,
+                data: ChatListFilterData(
+                    isShared: true,
+                    hasSharedLinks: (flags & (1 << 26)) != 0,
+                    categories: [],
+                    excludeMuted: false,
+                    excludeRead: false,
+                    excludeArchived: false,
+                    includePeers: ChatListFilterIncludePeers(rawPeers: includePeers.compactMap { peer -> PeerId? in
+                        switch peer {
+                        case let .inputPeerUser(userId, _):
+                            return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                        case let .inputPeerChat(chatId):
+                            return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId))
+                        case let .inputPeerChannel(channelId, _):
+                            return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
+                        default:
+                            return nil
+                        }
+                    }, rawPinnedPeers: pinnedPeers.compactMap { peer -> PeerId? in
+                        switch peer {
+                        case let .inputPeerUser(userId, _):
+                            return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                        case let .inputPeerChat(chatId):
+                            return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId))
+                        case let .inputPeerChannel(channelId, _):
+                            return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
+                        default:
+                            return nil
+                        }
+                    }),
+                    excludePeers: []
+                )
+            )
         }
     }
     
@@ -346,6 +396,20 @@ extension ChatListFilter {
             case .allChats:
                 return nil
             case let .filter(id, title, emoticon, data):
+            if data.isShared {
+                var flags: Int32 = 0
+                if emoticon != nil {
+                    flags |= 1 << 25
+                }
+                return .dialogFilterChatlist(flags: flags, id: id, title: title, emoticon: emoticon, pinnedPeers: data.includePeers.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
+                    return transaction.getPeer(peerId).flatMap(apiInputPeer)
+                }, includePeers: data.includePeers.peers.compactMap { peerId -> Api.InputPeer? in
+                    if data.includePeers.pinnedPeers.contains(peerId) {
+                        return nil
+                    }
+                    return transaction.getPeer(peerId).flatMap(apiInputPeer)
+                })
+            } else {
                 var flags: Int32 = 0
                 if data.excludeMuted {
                     flags |= 1 << 11
@@ -370,6 +434,7 @@ extension ChatListFilter {
                 }, excludePeers: data.excludePeers.compactMap { peerId -> Api.InputPeer? in
                     return transaction.getPeer(peerId).flatMap(apiInputPeer)
                 })
+            }
         }
     }
 }
@@ -474,6 +539,46 @@ private func requestChatListFilters(accountPeerId: PeerId, postbox: Postbox, net
                             }
                         }
                     }
+                case let .dialogFilterChatlist(_, _, _, _, pinnedPeers, includePeers):
+                    for peer in pinnedPeers + includePeers {
+                        var peerId: PeerId?
+                        switch peer {
+                        case let .inputPeerUser(userId, _):
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                        case let .inputPeerChat(chatId):
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId))
+                        case let .inputPeerChannel(channelId, _):
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
+                        default:
+                            break
+                        }
+                        if let peerId = peerId {
+                            if transaction.getPeer(peerId) == nil && !missingPeerIds.contains(peerId) {
+                                missingPeerIds.insert(peerId)
+                                missingPeers.append(peer)
+                            }
+                        }
+                    }
+                    
+                    for peer in pinnedPeers {
+                        var peerId: PeerId?
+                        switch peer {
+                        case let .inputPeerUser(userId, _):
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                        case let .inputPeerChat(chatId):
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId))
+                        case let .inputPeerChannel(channelId, _):
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
+                        default:
+                            break
+                        }
+                        if let peerId = peerId, !missingChatIds.contains(peerId) {
+                            if transaction.getPeerChatListIndex(peerId) == nil {
+                                missingChatIds.insert(peerId)
+                                missingChats.append(peer)
+                            }
+                        }
+                    }
                 }
             }
             return (filters, missingPeers, missingChats)
@@ -512,13 +617,7 @@ private func requestChatListFilters(accountPeerId: PeerId, postbox: Postbox, net
                 }
                 |> mapToSignal { users -> Signal<Never, NoError> in
                     return postbox.transaction { transaction -> Void in
-                        var peers: [Peer] = []
-                        for user in users {
-                            peers.append(TelegramUser(user: user))
-                        }
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                            return updated
-                        })
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
                     }
                     |> ignoreValues
                 }
@@ -536,18 +635,12 @@ private func requestChatListFilters(accountPeerId: PeerId, postbox: Postbox, net
                 |> mapToSignal { result -> Signal<Never, NoError> in
                     return postbox.transaction { transaction -> Void in
                         if let result = result {
-                            var peers: [Peer] = []
+                            let parsedPeers: AccumulatedPeers
                             switch result {
                             case .chats(let chats), .chatsSlice(_, let chats):
-                                for chat in chats {
-                                    if let peer = parseTelegramGroupOrChannel(chat: chat) {
-                                        peers.append(peer)
-                                    }
-                                }
+                                parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: [])
                             }
-                            updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                                return updated
-                            })
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                         }
                     }
                     |> ignoreValues
@@ -566,18 +659,12 @@ private func requestChatListFilters(accountPeerId: PeerId, postbox: Postbox, net
                 |> mapToSignal { result -> Signal<Never, NoError> in
                     return postbox.transaction { transaction -> Void in
                         if let result = result {
-                            var peers: [Peer] = []
+                            let parsedPeers: AccumulatedPeers
                             switch result {
                             case .chats(let chats), .chatsSlice(_, let chats):
-                                for chat in chats {
-                                    if let peer = parseTelegramGroupOrChannel(chat: chat) {
-                                        peers.append(peer)
-                                    }
-                                }
+                                parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: [])
                             }
-                            updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                                return updated
-                            })
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                         }
                     }
                     |> ignoreValues
@@ -632,24 +719,15 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
         }
         
         return postbox.transaction { transaction -> Void in
-            var peers: [Peer] = []
-            var peerPresences: [PeerId: Api.User] = [:]
             var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
             var ttlPeriods: [PeerId: CachedPeerAutoremoveTimeout] = [:]
             var channelStates: [PeerId: Int32] = [:]
             
+            let parsedPeers: AccumulatedPeers
+            
             switch result {
             case let .peerDialogs(dialogs, messages, chats, users, _):
-                for chat in chats {
-                    if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                        peers.append(groupOrChannel)
-                    }
-                }
-                for user in users {
-                    let telegramUser = TelegramUser(user: user)
-                    peers.append(telegramUser)
-                    peerPresences[telegramUser.id] = user
-                }
+                parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                 
                 var topMessageIds = Set<MessageId>()
                 
@@ -728,15 +806,10 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
                     }
                 }
                 
-                var peerMap: [PeerId: Peer] = [:]
-                for peer in peers {
-                    peerMap[peer.id] = peer
-                }
-                
                 var storeMessages: [StoreMessage] = []
                 for message in messages {
                     var peerIsForum = false
-                    if let peerId = message.peerId, let peer = peerMap[peerId], peer.isForum {
+                    if let peerId = message.peerId, let peer = parsedPeers.get(peerId), peer.isForum {
                         peerIsForum = true
                     }
                     if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
@@ -759,11 +832,7 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
                 }
             }
             
-            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                return updated
-            })
-            
-            updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
+            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
             
             transaction.updateCurrentPeerNotificationSettings(notificationSettings)
             
@@ -789,14 +858,36 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
 }
 
 struct ChatListFiltersState: Codable, Equatable {
+    struct ChatListFilterUpdates: Codable, Equatable {
+        struct MemberCount: Codable, Equatable {
+            var id: PeerId
+            var count: Int32
+        }
+        
+        var folderId: Int32
+        var timestamp: Int32
+        var peerIds: [PeerId]
+        var memberCounts: [MemberCount]
+        
+        init(folderId: Int32, timestamp: Int32, peerIds: [PeerId], memberCounts: [MemberCount]) {
+            self.folderId = folderId
+            self.timestamp = timestamp
+            self.peerIds = peerIds
+            self.memberCounts = memberCounts
+        }
+    }
+    
     var filters: [ChatListFilter]
     var remoteFilters: [ChatListFilter]?
     
-    static var `default` = ChatListFiltersState(filters: [], remoteFilters: nil)
+    var updates: [ChatListFilterUpdates]
     
-    fileprivate init(filters: [ChatListFilter], remoteFilters: [ChatListFilter]?) {
+    static var `default` = ChatListFiltersState(filters: [], remoteFilters: nil, updates: [])
+    
+    fileprivate init(filters: [ChatListFilter], remoteFilters: [ChatListFilter]?, updates: [ChatListFilterUpdates]) {
         self.filters = filters
         self.remoteFilters = remoteFilters
+        self.updates = updates
     }
     
     public init(from decoder: Decoder) throws {
@@ -804,6 +895,7 @@ struct ChatListFiltersState: Codable, Equatable {
 
         self.filters = try container.decode([ChatListFilter].self, forKey: "filters")
         self.remoteFilters = try container.decodeIfPresent([ChatListFilter].self, forKey: "remoteFilters")
+        self.updates = try container.decodeIfPresent([ChatListFilterUpdates].self, forKey: "updates") ?? []
     }
     
     func encode(to encoder: Encoder) throws {
@@ -811,6 +903,14 @@ struct ChatListFiltersState: Codable, Equatable {
 
         try container.encode(self.filters, forKey: "filters")
         try container.encodeIfPresent(self.remoteFilters, forKey: "remoteFilters")
+        try container.encode(self.updates, forKey: "updates")
+    }
+    
+    mutating func normalize() {
+        if self.updates.isEmpty {
+            return
+        }
+        self.updates.removeAll(where: { update in !self.filters.contains(where: { $0.id == update.folderId }) })
     }
 }
 
@@ -835,6 +935,9 @@ func _internal_updateChatListFiltersInteractively(postbox: Postbox, _ f: @escapi
                 hasUpdates = true
             }
             updated = updatedFilters
+            
+            state.normalize()
+            
             return PreferencesEntry(state)
         })
         if hasUpdates {
@@ -853,6 +956,7 @@ func _internal_updateChatListFiltersInteractively(transaction: Transaction, _ f:
             state.filters = updatedFilters
             hasUpdates = true
         }
+        state.normalize()
         return PreferencesEntry(state)
     })
     if hasUpdates {
@@ -860,12 +964,29 @@ func _internal_updateChatListFiltersInteractively(transaction: Transaction, _ f:
     }
 }
 
-
-func _internal_updatedChatListFilters(postbox: Postbox) -> Signal<[ChatListFilter], NoError> {
-    return postbox.preferencesView(keys: [PreferencesKeys.chatListFilters])
-    |> map { preferences -> [ChatListFilter] in
+func _internal_updatedChatListFilters(postbox: Postbox, hiddenIds: Signal<Set<Int32>, NoError> = .single(Set())) -> Signal<[ChatListFilter], NoError> {
+    return combineLatest(
+        postbox.preferencesView(keys: [PreferencesKeys.chatListFilters]),
+        hiddenIds
+    )
+    |> map { preferences, hiddenIds -> [ChatListFilter] in
         let filtersState = preferences.values[PreferencesKeys.chatListFilters]?.get(ChatListFiltersState.self) ?? ChatListFiltersState.default
-        return filtersState.filters
+        return filtersState.filters.filter { filter in
+            if hiddenIds.contains(filter.id) {
+                return false
+            } else {
+                return true
+            }
+        }
+    }
+    |> distinctUntilChanged
+}
+
+func _internal_updatedChatListFiltersState(postbox: Postbox) -> Signal<ChatListFiltersState, NoError> {
+    return postbox.preferencesView(keys: [PreferencesKeys.chatListFilters])
+    |> map { preferences -> ChatListFiltersState in
+        let filtersState = preferences.values[PreferencesKeys.chatListFilters]?.get(ChatListFiltersState.self) ?? ChatListFiltersState.default
+        return filtersState
     }
     |> distinctUntilChanged
 }
@@ -899,11 +1020,17 @@ func _internal_currentChatListFilters(transaction: Transaction) -> [ChatListFilt
     return settings.filters
 }
 
+func _internal_currentChatListFiltersState(transaction: Transaction) -> ChatListFiltersState {
+    let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters)?.get(ChatListFiltersState.self) ?? ChatListFiltersState.default
+    return settings
+}
+
 func updateChatListFiltersState(transaction: Transaction, _ f: (ChatListFiltersState) -> ChatListFiltersState) -> ChatListFiltersState {
     var result: ChatListFiltersState?
     transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFilters, { entry in
         let settings = entry?.get(ChatListFiltersState.self) ?? ChatListFiltersState.default
-        let updated = f(settings)
+        var updated = f(settings)
+        updated.normalize()
         result = updated
         return PreferencesEntry(updated)
     })
@@ -931,6 +1058,8 @@ public struct ChatListFeaturedFilter: Codable, Equatable {
         self.title = try container.decode(String.self, forKey: "title")
         self.description = try container.decode(String.self, forKey: "description")
         self.data = ChatListFilterData(
+            isShared: false,
+            hasSharedLinks: false,
             categories: ChatListFilterPeerCategories(rawValue: try container.decode(Int32.self, forKey: "categories")),
             excludeMuted: (try container.decode(Int32.self, forKey: "excludeMuted")) != 0,
             excludeRead: (try container.decode(Int32.self, forKey: "excludeRead")) != 0,
@@ -1152,6 +1281,14 @@ func requestChatListFiltersSync(transaction: Transaction) {
     }
     
     transaction.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SynchronizeChatListFiltersOperation(content: .sync))
+}
+
+func _internal_chatListFiltersAreSynced(postbox: Postbox) -> Signal<Bool, NoError> {
+    return postbox.mergedOperationLogView(tag: OperationLogTags.SynchronizeChatListFilters, limit: 1)
+    |> map { view -> Bool in
+        return view.entries.isEmpty
+    }
+    |> distinctUntilChanged
 }
 
 func managedChatListFilters(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {

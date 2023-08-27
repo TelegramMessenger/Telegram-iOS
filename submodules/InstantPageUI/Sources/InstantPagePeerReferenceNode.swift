@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
 import Display
@@ -64,13 +63,13 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     private let activityIndicator: ActivityIndicator
     private let checkNode: ASImageNode
     
-    var peer: Peer?
+    var peer: EnginePeer?
     private var peerDisposable: Disposable?
     
     private let joinDisposable = MetaDisposable()
     private var joinState: JoinState = .none
     
-    init(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, initialPeer: Peer, safeInset: CGFloat, transparent: Bool, rtl: Bool, openPeer: @escaping (EnginePeer) -> Void) {
+    init(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, initialPeer: EnginePeer, safeInset: CGFloat, transparent: Bool, rtl: Bool, openPeer: @escaping (EnginePeer) -> Void) {
         self.context = context
         self.strings = strings
         self.nameDisplayOrder = nameDisplayOrder
@@ -146,27 +145,27 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
         self.joinNode.addTarget(self, action: #selector(self.joinPressed), forControlEvents: .touchUpInside)
         
         let account = self.context.account
-        let context = self.context
-        let signal = actualizedPeer(postbox: account.postbox, network: account.network, peer: initialPeer)
-        |> mapToSignal({ peer -> Signal<Peer, NoError> in
+        let engine = context.engine
+        let signal: Signal<EnginePeer, NoError> = actualizedPeer(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, peer: initialPeer._asPeer())
+        |> mapToSignal({ peer -> Signal<EnginePeer, NoError> in
             if let peer = peer as? TelegramChannel, let username = peer.addressName, peer.accessHash == nil {
-                return .single(peer) |> then(context.engine.peers.resolvePeerByName(name: username)
-                |> mapToSignal({ updatedPeer -> Signal<Peer, NoError> in
+                return .single(.channel(peer)) |> then(engine.peers.resolvePeerByName(name: username)
+                |> mapToSignal({ updatedPeer -> Signal<EnginePeer, NoError> in
                     if let updatedPeer = updatedPeer {
-                        return .single(updatedPeer._asPeer())
+                        return .single(updatedPeer)
                     } else {
-                        return .single(peer)
+                        return .single(.channel(peer))
                     }
                 }))
             } else {
-                return .single(peer)
+                return .single(EnginePeer(peer))
             }
         })
     
         self.peerDisposable = (signal |> deliverOnMainQueue).start(next: { [weak self] peer in
             if let strongSelf = self {
                 strongSelf.peer = peer
-                if let peer = peer as? TelegramChannel {
+                if case let .channel(peer) = peer {
                     var joinState = strongSelf.joinState
                     if case .member = peer.participationStatus {
                         switch joinState {
@@ -210,7 +209,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     private func applyThemeAndStrings(themeUpdated: Bool) {
         if let peer = self.peer {
             let textColor = self.transparent ? UIColor.white : self.theme.panelPrimaryColor
-            self.nameNode.attributedText = NSAttributedString(string: EnginePeer(peer).displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: Font.medium(17.0), textColor: textColor)
+            self.nameNode.attributedText = NSAttributedString(string: peer.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: Font.medium(17.0), textColor: textColor)
         }
         let accentColor = self.transparent ? UIColor.white : self.theme.panelAccentColor
         self.joinNode.setAttributedTitle(NSAttributedString(string: self.strings.Channel_JoinChannel, font: Font.medium(17.0), textColor: accentColor), for: [])
@@ -300,7 +299,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     
     @objc func buttonPressed() {
         if let peer = self.peer {
-            self.openPeer(EnginePeer(peer))
+            self.openPeer(peer)
         }
     }
     

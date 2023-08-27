@@ -171,6 +171,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     var isDragging = false
     var beganInteractiveDragging: (() -> Void)?
     var endedInteractiveDragging: ((CLLocationCoordinate2D) -> Void)?
+    var disableHorizontalTransitionGesture = false
     
     var annotationSelected: ((LocationPinAnnotation?) -> Void)?
     var userLocationAnnotationSelected: (() -> Void)?
@@ -249,6 +250,11 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
                 return false
             }
         }
+        
+        self.mapView?.disablesInteractiveTransitionGestureRecognizerNow = { [weak self] in
+            return self?.disableHorizontalTransitionGesture == true
+        }
+        
         self.mapView?.delegate = self
         self.mapView?.mapType = self.mapMode.mapType
         self.mapView?.isRotateEnabled = self.isRotateEnabled

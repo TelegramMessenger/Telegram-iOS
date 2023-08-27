@@ -12,30 +12,21 @@ private func md5(_ data: Data) -> Data {
     }
 }
 
-private func updatedRemoteContactPeers(network: Network, hash: Int64) -> Signal<([Peer], [PeerId: PeerPresence], Int32)?, NoError> {
+private func updatedRemoteContactPeers(network: Network, hash: Int64) -> Signal<(AccumulatedPeers, Int32)?, NoError> {
     return network.request(Api.functions.contacts.getContacts(hash: hash), automaticFloodWait: false)
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.contacts.Contacts?, NoError> in
         return .single(nil)
     }
-    |> map { result -> ([Peer], [PeerId: PeerPresence], Int32)? in
+    |> map { result -> (AccumulatedPeers, Int32)? in
         guard let result = result else {
             return nil
         }
         switch result {
-            case .contactsNotModified:
-                return nil
-            case let .contacts(_, savedCount, users):
-                var peers: [Peer] = []
-                var peerPresences: [PeerId: PeerPresence] = [:]
-                for user in users {
-                    let telegramUser = TelegramUser(user: user)
-                    peers.append(telegramUser)
-                    if let presence = TelegramUserPresence(apiUser: user) {
-                        peerPresences[telegramUser.id] = presence
-                    }
-                }
-                return (peers, peerPresences, savedCount)
+        case .contactsNotModified:
+            return nil
+        case let .contacts(_, savedCount, users):
+            return (AccumulatedPeers(users: users), savedCount)
         }
     }
 }
@@ -60,29 +51,28 @@ func syncContactsOnce(network: Network, postbox: Postbox, accountPeerId: PeerId)
     }
 
     let updatedPeers = initialContactPeerIdsHash
-    |> mapToSignal { hash -> Signal<([Peer], [PeerId: PeerPresence], Int32)?, NoError> in
+    |> mapToSignal { hash -> Signal<(AccumulatedPeers, Int32)?, NoError> in
         return updatedRemoteContactPeers(network: network, hash: hash)
     }
 
     let appliedUpdatedPeers = updatedPeers
     |> mapToSignal { peersAndPresences -> Signal<Never, NoError> in
-        if let (peers, peerPresences, totalCount) = peersAndPresences {
+        if let (peers, totalCount) = peersAndPresences {
             return postbox.transaction { transaction -> Signal<Void, NoError> in
                 let previousIds = transaction.getContactPeerIds()
                 let wasEmpty = previousIds.isEmpty
                 
                 transaction.replaceRemoteContactCount(totalCount)
                 
-                updatePeerPresencesClean(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
-                
                 if wasEmpty {
+                    let users = Array(peers.users.values)
                     var insertSignal: Signal<Void, NoError> = .complete()
-                    for s in stride(from: 0, to: peers.count, by: 500) {
-                        let partPeers = Array(peers[s ..< min(s + 500, peers.count)])
+                    for s in stride(from: 0, to: users.count, by: 500) {
+                        let partUsers = Array(users[s ..< min(s + 500, users.count)])
                         let partSignal = postbox.transaction { transaction -> Void in
-                            updatePeers(transaction: transaction, peers: partPeers, update: { return $1 })
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: partUsers))
                             var updatedIds = transaction.getContactPeerIds()
-                            updatedIds.formUnion(partPeers.map { $0.id })
+                            updatedIds.formUnion(partUsers.map { $0.peerId })
                             transaction.replaceContactPeerIds(updatedIds)
                         }
                         |> delay(0.1, queue: Queue.concurrentDefaultQueue())
@@ -91,7 +81,7 @@ func syncContactsOnce(network: Network, postbox: Postbox, accountPeerId: PeerId)
                     
                     return insertSignal
                 } else {
-                    transaction.replaceContactPeerIds(Set(peers.map { $0.id }))
+                    transaction.replaceContactPeerIds(Set(peers.users.keys))
                     return .complete()
                 }
             }
@@ -118,6 +108,10 @@ func _internal_deleteContactPeerInteractively(account: Account, peerId: PeerId) 
                     account.stateManager.addUpdates(updates)
                 }
                 return account.postbox.transaction { transaction -> Void in
+                    if let user = peer as? TelegramUser {
+                        _internal_updatePeerIsContact(transaction: transaction, user: user, isContact: false)
+                    }
+                    
                     var peerIds = transaction.getContactPeerIds()
                     if peerIds.contains(peerId) {
                         peerIds.remove(peerId)

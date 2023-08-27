@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 
@@ -24,6 +23,15 @@ public enum AudioPlaybackRate: Equatable {
     case x8
     case x16
     case custom(Int32)
+    
+    public var isPreset: Bool {
+        switch self {
+        case .x1, .x1_5, .x2:
+            return true
+        default:
+            return false
+        }
+    }
     
     public var doubleValue: Double {
         return Double(self.rawValue) / 1000.0
@@ -141,7 +149,7 @@ public func updateMusicPlaybackSettingsInteractively(accountManager: AccountMana
             } else {
                 currentSettings = MusicPlaybackSettings.defaultSettings
             }
-            return PreferencesEntry(f(currentSettings))
+            return SharedPreferencesEntry(f(currentSettings))
         })
     }
 }

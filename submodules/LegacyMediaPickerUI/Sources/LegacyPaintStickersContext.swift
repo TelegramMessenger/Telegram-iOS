@@ -10,6 +10,7 @@ import YuvConversion
 import StickerResources
 import DrawingUI
 import SolidRoundedButtonNode
+import MediaEditor
 
 protocol LegacyPaintEntity {
     var position: CGPoint { get }
@@ -142,9 +143,13 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                     }
                 }))
             }
-        case let .image(image):
+        case let .image(image, _):
             self.file = nil
             self.imagePromise.set(.single(image))
+        case .video:
+            self.file = nil
+        case .dualVideoReference:
+            self.file = nil
         }
     }
     
@@ -423,16 +428,18 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
         self.isAvatar = ((adjustments as? TGVideoEditAdjustments)?.documentId ?? 0) != 0
         
         var renderEntities: [LegacyPaintEntity] = []
-        if let account = account, let paintingData = adjustments.paintingData, let entitiesData = paintingData.entitiesData {
+        if let paintingData = adjustments.paintingData, let entitiesData = paintingData.entitiesData {
             let entities = decodeDrawingEntities(data: entitiesData)
             for entity in entities {
-                if let sticker = entity as? DrawingStickerEntity {
+                if let sticker = entity as? DrawingStickerEntity, let account {
                     renderEntities.append(LegacyPaintStickerEntity(account: account, entity: sticker))
                 } else if let text = entity as? DrawingTextEntity {
                     renderEntities.append(LegacyPaintTextEntity(entity: text))
-                    if let renderSubEntities = text.renderSubEntities {
+                    if let renderSubEntities = text.renderSubEntities, let account {
                         for entity in renderSubEntities {
-                            renderEntities.append(LegacyPaintStickerEntity(account: account, entity: entity))
+                            if let entity = entity as? DrawingStickerEntity {
+                                renderEntities.append(LegacyPaintStickerEntity(account: account, entity: entity))
+                            }
                         }
                     }
                 } else if let simpleShape = entity as? DrawingSimpleShapeEntity {
@@ -461,7 +468,7 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
             }
         }
         
-        func gcd(_ a: Int32, _ b: Int32) -> Int32 {
+        func gcd(_ a: Int64, _ b: Int64) -> Int64 {
             let remainder = a % b
             if remainder != 0 {
                 return gcd(b, remainder)
@@ -470,7 +477,7 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
             }
         }
         
-        func lcm(_ x: Int32, _ y: Int32) -> Int32 {
+        func lcm(_ x: Int64, _ y: Int64) -> Int64 {
             return x / gcd(x, y) * y
         }
         
@@ -480,7 +487,7 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
             let minDuration: Double = 3.0
             if durations.count > 1 {
                 let reduced = durations.reduce(1.0) { lhs, rhs -> Double in
-                    return Double(lcm(Int32(lhs * 10.0), Int32(rhs * 10.0)))
+                    return Double(lcm(Int64(lhs * 10.0), Int64(rhs * 10.0)))
                 }
                 result = min(6.0, Double(reduced) / 10.0)
             } else if let duration = durations.first {
@@ -576,7 +583,7 @@ public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersCon
         let interfaceController: TGPhotoDrawingInterfaceController
         
         init(context: AccountContext, size: CGSize, originalSize: CGSize, isVideo: Bool, isAvatar: Bool, entitiesView: (UIView & TGPhotoDrawingEntitiesView)?) {
-            let interfaceController = DrawingScreen(context: context, size: size, originalSize: originalSize, isVideo: isVideo, isAvatar: isAvatar, entitiesView: entitiesView)
+            let interfaceController = DrawingScreen(context: context, size: size, originalSize: originalSize, isVideo: isVideo, isAvatar: isAvatar, drawingView: nil, entitiesView: entitiesView, selectionContainerView: nil)
             self.interfaceController = interfaceController
             self.drawingView = interfaceController.drawingView
             self.drawingEntitiesView = interfaceController.entitiesView

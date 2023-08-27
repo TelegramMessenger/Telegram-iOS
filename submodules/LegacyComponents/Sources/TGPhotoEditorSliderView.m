@@ -16,6 +16,7 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
     
     UIPanGestureRecognizer *_panGestureRecognizer;
     UITapGestureRecognizer *_tapGestureRecognizer;
+    UITapGestureRecognizer *_edgeTapGestureRecognizer;
     UITapGestureRecognizer *_doubleTapGestureRecognizer;
     
     UIColor *_backColor;
@@ -74,6 +75,10 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
         _tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTap:)];
         _tapGestureRecognizer.enabled = false;
         [self addGestureRecognizer:_tapGestureRecognizer];
+        
+        _edgeTapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleEdgeTap:)];
+        _edgeTapGestureRecognizer.enabled = false;
+        [self addGestureRecognizer:_edgeTapGestureRecognizer];
         
         _doubleTapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleDoubleTap:)];
         _doubleTapGestureRecognizer.numberOfTapsRequired = 2;
@@ -195,7 +200,7 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
     }
     
     if (self.displayEdges) {
-        CGContextSetFillColorWithColor(context, _startColor.CGColor);
+        CGContextSetFillColorWithColor(context, _backColor.CGColor);
         [self drawRectangle:endFrame cornerRadius:self.trackCornerRadius context:context];
     }
     
@@ -391,7 +396,9 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
     if (_minimumValue < 0)
     {
         CGFloat knob = knobSize;
-        if ((NSInteger)value == 0)
+        if (fabs(_minimumValue) > 1.0 && (NSInteger)value == 0) {
+            return totalLength / 2;
+        } else if (fabs(value) < 0.01)
         {
             return totalLength / 2;
         }
@@ -492,6 +499,46 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
     {
         [self setValue:nextPosition];
         changed = true;
+    }
+    
+    if (changed)
+    {
+        if (self.interactionBegan != nil)
+            self.interactionBegan();
+        
+        [self setNeedsLayout];
+        [self sendActionsForControlEvents:UIControlEventValueChanged];
+        
+        if (self.interactionEnded != nil)
+            self.interactionEnded();
+        
+        [_feedbackGenerator selectionChanged];
+        [_feedbackGenerator prepare];
+    }
+}
+
+- (void)setEnableEdgeTap:(bool)enableEdgeTap {
+    _enableEdgeTap = enableEdgeTap;
+    _edgeTapGestureRecognizer.enabled = enableEdgeTap;
+}
+
+- (void)handleEdgeTap:(UITapGestureRecognizer *)gestureRecognizer {
+    bool changed = false;
+    
+    if (gestureRecognizer.state == UIGestureRecognizerStateEnded) {
+        CGPoint touchLocation = [gestureRecognizer locationInView:self];
+        CGFloat edgeWidth = 16.0f;
+        if (touchLocation.x < edgeWidth || touchLocation.x > self.bounds.size.width - edgeWidth) {
+            CGRect knobRect = CGRectInset(self.knobView.frame, -8.0, -8.0);
+            if (!CGRectContainsPoint(knobRect, touchLocation)) {
+                if (touchLocation.x < edgeWidth) {
+                    [self setValue:_minimumValue];
+                } else {
+                    [self setValue:_maximumValue];
+                }
+                changed = true;
+            }
+        }
     }
     
     if (changed)

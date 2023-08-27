@@ -208,6 +208,14 @@ public final class ReadBuffer: MemoryBuffer {
         self.offset += length
     }
     
+    public func readData(length: Int) -> Data {
+        var result = Data(count: length)
+        result.withUnsafeMutableBytes { buffer in
+            self.read(buffer.baseAddress!, offset: 0, length: length)
+        }
+        return result
+    }
+    
     public func skip(_ length: Int) {
         self.offset += length
     }
@@ -727,27 +735,57 @@ public final class PostboxDecoder {
         case .Double:
             offset += 8
         case .String:
-            var length: Int32 = 0
-            memcpy(&length, bytes + offset, 4)
-            offset += 4 + Int(length)
+            if offset + 4 > length {
+                offset = 0
+                return false
+            }
+            
+            var valueLength: Int32 = 0
+            memcpy(&valueLength, bytes + offset, 4)
+            offset += 4 + Int(valueLength)
         case .Object:
-            var length: Int32 = 0
-            memcpy(&length, bytes + (offset + 4), 4)
-            offset += 8 + Int(length)
+            if offset + 4 > length {
+                offset = 0
+                return false
+            }
+            
+            var valueLength: Int32 = 0
+            memcpy(&valueLength, bytes + (offset + 4), 4)
+            offset += 8 + Int(valueLength)
         case .Int32Array:
-            var length: Int32 = 0
-            memcpy(&length, bytes + offset, 4)
-            offset += 4 + Int(length) * 4
+            if offset + 4 > length {
+                offset = 0
+                return false
+            }
+            
+            var valueLength: Int32 = 0
+            memcpy(&valueLength, bytes + offset, 4)
+            offset += 4 + Int(valueLength) * 4
         case .Int64Array:
-            var length: Int32 = 0
-            memcpy(&length, bytes + offset, 4)
-            offset += 4 + Int(length) * 8
+            if offset + 4 > length {
+                offset = 0
+                return false
+            }
+            
+            var valueLength: Int32 = 0
+            memcpy(&valueLength, bytes + offset, 4)
+            offset += 4 + Int(valueLength) * 8
         case .ObjectArray:
+            if offset + 4 > length {
+                offset = 0
+                return false
+            }
+            
             var subLength: Int32 = 0
             memcpy(&subLength, bytes + offset, 4)
             offset += 4
             var i: Int32 = 0
             while i < subLength {
+                if offset + 4 + 4 > length {
+                    offset = 0
+                    return false
+                }
+                
                 var objectLength: Int32 = 0
                 memcpy(&objectLength, bytes + (offset + 4), 4)
                 offset += 8 + Int(objectLength)
@@ -759,14 +797,29 @@ public final class PostboxDecoder {
             }
             return true
         case .ObjectDictionary:
-            var length: Int32 = 0
-            memcpy(&length, bytes + offset, 4)
+            if offset + 4 > length {
+                offset = 0
+                return false
+            }
+            
+            var valueLength: Int32 = 0
+            memcpy(&valueLength, bytes + offset, 4)
             offset += 4
             var i: Int32 = 0
-            while i < length {
+            while i < valueLength {
+                if offset + 4 + 4 > length {
+                    offset = 0
+                    return false
+                }
+                
                 var keyLength: Int32 = 0
                 memcpy(&keyLength, bytes + (offset + 4), 4)
                 offset += 8 + Int(keyLength)
+                
+                if offset + 4 + 4 > length {
+                    offset = 0
+                    return false
+                }
                 
                 var valueLength: Int32 = 0
                 memcpy(&valueLength, bytes + (offset + 4), 4)
@@ -774,17 +827,32 @@ public final class PostboxDecoder {
                 i += 1
             }
         case .Bytes:
-            var length: Int32 = 0
-            memcpy(&length, bytes + offset, 4)
-            offset += 4 + Int(length)
+            if offset + 4 > length {
+                offset = 0
+                return false
+            }
+            
+            var valueLength: Int32 = 0
+            memcpy(&valueLength, bytes + offset, 4)
+            offset += 4 + Int(valueLength)
         case .Nil:
             break
         case .StringArray, .BytesArray:
-            var length: Int32 = 0
-            memcpy(&length, bytes + offset, 4)
+            if offset + 4 > length {
+                offset = 0
+                return false
+            }
+            
+            var valueLength: Int32 = 0
+            memcpy(&valueLength, bytes + offset, 4)
             offset += 4
             var i: Int32 = 0
-            while i < length {
+            while i < valueLength {
+                if offset + 4 > length {
+                    offset = 0
+                    return false
+                }
+                
                 var stringLength: Int32 = 0
                 memcpy(&stringLength, bytes + offset, 4)
                 offset += 4 + Int(stringLength)
@@ -1435,7 +1503,9 @@ public final class PostboxDecoder {
             var objectLength: Int32 = 0
             memcpy(&objectLength, self.buffer.memory + self.offset, 4)
             if objectLength < 0 || objectLength > 2 * 1024 * 1024 {
-                preconditionFailure()
+                assertionFailure()
+                self.offset = 0
+                break
             }
 
             let innerBuffer = ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(objectLength), freeWhenDone: false)

@@ -975,7 +975,7 @@ typedef enum GCDAsyncSocketError GCDAsyncSocketError;
  * Called when a socket has completed reading the requested data into memory.
  * Not called if there is an error.
 **/
-- (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag;
+- (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag networkType:(int32_t)networkType;
 
 /**
  * Called when a socket has read in data, but has not yet completed the read.

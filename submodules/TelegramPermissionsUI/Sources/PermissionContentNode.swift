@@ -91,16 +91,19 @@ public final class PermissionContentNode: ASDisplayNode {
         self.titleNode.textAlignment = .center
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
+        self.titleNode.isAccessibilityElement = true
         
         self.subtitleNode = ImmediateTextNode()
         self.subtitleNode.maximumNumberOfLines = 1
         self.subtitleNode.textAlignment = .center
         self.subtitleNode.isUserInteractionEnabled = false
         self.subtitleNode.displaysAsynchronously = false
+        self.subtitleNode.isAccessibilityElement = true
         
         self.textNode = ImmediateTextNode()
         self.textNode.maximumNumberOfLines = 0
         self.textNode.displaysAsynchronously = false
+        self.textNode.isAccessibilityElement = true
         
         self.actionButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: theme), height: 52.0, cornerRadius: 9.0, gloss: true)
         
@@ -108,9 +111,11 @@ public final class PermissionContentNode: ASDisplayNode {
         self.footerNode.textAlignment = .center
         self.footerNode.maximumNumberOfLines = 0
         self.footerNode.displaysAsynchronously = false
+        self.footerNode.isAccessibilityElement = true
         
         self.privacyPolicyButton = HighlightableButtonNode()
         self.privacyPolicyButton.setTitle(secondaryButtonTitle ?? strings.Permissions_PrivacyPolicy, with: Font.regular(17.0), with: theme.list.itemAccentColor, for: .normal)
+        self.privacyPolicyButton.accessibilityLabel = secondaryButtonTitle ?? strings.Permissions_PrivacyPolicy
         
         super.init()
         
@@ -133,10 +138,12 @@ public final class PermissionContentNode: ASDisplayNode {
         
         if let subtitle = subtitle {
             self.subtitleNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: theme.list.freeTextColor, paragraphAlignment: .center)
+            self.subtitleNode.accessibilityLabel = subtitle
         }
         
         if let footerText = footerText {
             self.footerNode.attributedText = NSAttributedString(string: footerText, font: Font.regular(13.0), textColor: theme.list.freeTextColor, paragraphAlignment: .center)
+            self.footerNode.accessibilityLabel = footerText
         }
         
         self.addSubnode(self.iconNode)
@@ -165,12 +172,15 @@ public final class PermissionContentNode: ASDisplayNode {
         let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.list.itemPrimaryTextColor)
         let link = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.list.itemAccentColor, additionalAttributes: [TelegramTextAttributes.URL: ""])
         self.textNode.attributedText = parseMarkdownIntoAttributedString(self.text.replacingOccurrences(of: "]", with: "]()"), attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
+        self.textNode.accessibilityLabel = self.textNode.attributedText?.string
         
         if let subtitle = self.subtitleNode.attributedText?.string {
             self.subtitleNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: theme.list.freeTextColor, paragraphAlignment: .center)
+            self.subtitleNode.accessibilityLabel = subtitle
         }
         if let footerText = self.footerNode.attributedText?.string {
             self.footerNode.attributedText = NSAttributedString(string: footerText, font: Font.regular(13.0), textColor: theme.list.freeTextColor, paragraphAlignment: .center)
+            self.footerNode.accessibilityLabel = footerText
         }
         
         if let privacyPolicyTitle = self.privacyPolicyButton.attributedTitle(for: .normal)?.string {
@@ -203,6 +213,7 @@ public final class PermissionContentNode: ASDisplayNode {
         let smallerSidePadding: CGFloat = 20.0 + insets.left
         
         self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.bold(fontSize), textColor: self.theme.list.itemPrimaryTextColor)
+        self.titleNode.accessibilityLabel = self.title
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))
         let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: size.width - smallerSidePadding * 2.0, height: .greatestFiniteMagnitude))

@@ -76,7 +76,11 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     }
                     if let webpage = webPageContent {
-                        item.controllerInteraction.openUrl(webpage.url, false, nil, nil)
+                        if webpage.story != nil {
+                            let _ = item.controllerInteraction.openMessage(item.message, .default)
+                        } else {
+                            item.controllerInteraction.openUrl(webpage.url, false, nil, nil)
+                        }
                     }
                 }
             }
@@ -149,7 +153,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
 
                 var automaticPlayback = false
                 
-                if let file = webpage.file, (file.isAnimated && item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs) || (!file.isAnimated && item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos) {
+                if let file = webpage.file, (file.isAnimated && item.context.sharedContext.energyUsageSettings.autoplayGif) || (!file.isAnimated && item.context.sharedContext.energyUsageSettings.autoplayVideo) {
                     var automaticDownload: InteractiveMediaNodeAutodownloadMode = .none
                     if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: file) {
                         automaticDownload = .full
@@ -164,12 +168,12 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 switch type {
                     case .instagram, .twitter:
                         if automaticPlayback {
-                            mainMedia = webpage.file ?? webpage.image
+                            mainMedia = webpage.story ?? webpage.file ?? webpage.image
                         } else {
-                            mainMedia = webpage.image ?? webpage.file
+                            mainMedia = webpage.story ?? webpage.image ?? webpage.file
                         }
                     default:
-                        mainMedia = webpage.file ?? webpage.image
+                        mainMedia = webpage.story ?? webpage.file ?? webpage.image
                 }
                 
                 let themeMimeType = "application/x-tgtheme-ios"
@@ -215,6 +219,12 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             flags.insert(.preferMediaInline)
                         }
                         mediaAndFlags = (image, flags)
+                    }
+                } else if let story = mainMedia as? TelegramMediaStory {
+                    mediaAndFlags = (story, [.preferMediaBeforeText, .titleBeforeMedia])
+                    if let storyItem = item.message.associatedStories[story.storyId]?.get(Stories.StoredItem.self), case let .item(itemValue) = storyItem {
+                        text = itemValue.text
+                        entities = itemValue.entities
                     }
                 } else if let type = webpage.type {
                     if type == "telegram_background" {
@@ -318,6 +328,17 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             title = item.presentationData.strings.Conversation_Theme
                             text = nil
                             actionTitle = item.presentationData.strings.Conversation_ViewTheme
+                        case "telegram_botapp":
+                            title = item.presentationData.strings.Conversation_BotApp
+                            actionTitle = item.presentationData.strings.Conversation_OpenBotApp
+                        case "telegram_chatlist":
+                            actionTitle = item.presentationData.strings.Conversation_OpenChatFolder
+                        case "telegram_story":
+                            if let story = webpage.story, let peer = item.message.peers[story.storyId.peerId] {
+                                title = EnginePeer(peer).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                                subtitle = nil
+                            }
+                            actionTitle = item.presentationData.strings.Chat_OpenStory
                         default:
                             break
                     }
@@ -333,7 +354,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 for media in item.message.media {
                     switch media {
-                    case _ as TelegramMediaImage, _ as TelegramMediaFile:
+                    case _ as TelegramMediaImage, _ as TelegramMediaFile, _ as TelegramMediaStory:
                         mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
                     default:
                         break
@@ -349,7 +370,10 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         actionTitle = item.presentationData.strings.Conversation_ViewGroup
                     }
                 } else {
-                    if case let .peer(_, messageId, _) = adAttribute.target, messageId != nil {
+                    if case .webPage = adAttribute.target {
+                        actionTitle = item.presentationData.strings.Conversation_OpenLink
+                        actionIcon = .link
+                    } else if case let .peer(_, messageId, _) = adAttribute.target, messageId != nil {
                         actionTitle = item.presentationData.strings.Conversation_ViewMessage
                     } else {
                         actionTitle = item.presentationData.strings.Conversation_ViewChannel
@@ -511,7 +535,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    override func transitionNode(messageId: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if self.item?.message.id != messageId {
             return nil
         }

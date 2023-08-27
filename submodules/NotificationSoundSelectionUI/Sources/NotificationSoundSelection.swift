@@ -13,7 +13,6 @@ import AppBundle
 import LegacyMediaPickerUI
 import AVFoundation
 import UndoUI
-import Postbox
 
 private struct NotificationSoundSelectionArguments {
     let account: Account
@@ -320,7 +319,7 @@ public func playSound(context: AccountContext, notificationSoundList: Notificati
         return Signal { subscriber in
             var currentPlayer: AudioPlayerWrapper?
             var deactivateImpl: (() -> Void)?
-            let session = context.sharedContext.mediaManager.audioSession.push(audioSessionType: .play, activate: { _ in
+            let session = context.sharedContext.mediaManager.audioSession.push(audioSessionType: .play(mixWithOthers: true), activate: { _ in
                 Queue.mainQueue().async {
                     let filePath = fileNameForNotificationSound(account: context.account, notificationSoundList: notificationSoundList, sound: sound, defaultSound: defaultSound)
                     
@@ -516,20 +515,20 @@ public func presentCustomNotificationSoundFilePicker(context: AccountContext, co
             let fileName = url.lastPathComponent
             
             var maybeUrl: URL?
-            let tempFile = TempBox.shared.tempFile(fileName: "file.mp3")
+            let tempFile = EngineTempBox.shared.tempFile(fileName: "file.mp3")
             do {
                 try FileManager.default.copyItem(at: url, to: URL(fileURLWithPath: tempFile.path))
                 maybeUrl = URL(fileURLWithPath: tempFile.path)
             } catch let e {
                 Logger.shared.log("NotificationSoundSelection", "copy file error \(e)")
-                TempBox.shared.dispose(tempFile)
+                EngineTempBox.shared.dispose(tempFile)
                 souceUrl.stopAccessingSecurityScopedResource()
                 return
             }
             
             guard let url = maybeUrl else {
                 Logger.shared.log("NotificationSoundSelection", "temp url is nil")
-                TempBox.shared.dispose(tempFile)
+                EngineTempBox.shared.dispose(tempFile)
                 souceUrl.stopAccessingSecurityScopedResource()
                 return
             }
@@ -541,10 +540,10 @@ public func presentCustomNotificationSoundFilePicker(context: AccountContext, co
                     let data = try Data(contentsOf: url)
                     
                     if data.count > settings.maxSize {
-                        presentUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLarge_Title, text: presentationData.strings.Notifications_UploadError_TooLarge_Text(dataSizeString(Int64(settings.maxSize), formatting: DataSizeStringFormatting(presentationData: presentationData))).string))
+                        presentUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLarge_Title, text: presentationData.strings.Notifications_UploadError_TooLarge_Text(dataSizeString(Int64(settings.maxSize), formatting: DataSizeStringFormatting(presentationData: presentationData))).string, timeout: nil))
                         
                         souceUrl.stopAccessingSecurityScopedResource()
-                        TempBox.shared.dispose(tempFile)
+                        EngineTempBox.shared.dispose(tempFile)
                         
                         return
                     }
@@ -572,7 +571,7 @@ public func presentCustomNotificationSoundFilePicker(context: AccountContext, co
                             Logger.shared.log("NotificationSoundSelection", "track is nil")
                             
                             url.stopAccessingSecurityScopedResource()
-                            TempBox.shared.dispose(tempFile)
+                            EngineTempBox.shared.dispose(tempFile)
                             
                             return
                         }
@@ -583,18 +582,18 @@ public func presentCustomNotificationSoundFilePicker(context: AccountContext, co
                             Logger.shared.log("NotificationSoundSelection", "duration is zero")
                             
                             souceUrl.stopAccessingSecurityScopedResource()
-                            TempBox.shared.dispose(tempFile)
+                            EngineTempBox.shared.dispose(tempFile)
                             
                             return
                         }
                         
-                        TempBox.shared.dispose(tempFile)
+                        EngineTempBox.shared.dispose(tempFile)
                         
                         Queue.mainQueue().async {
                             if duration > Double(settings.maxDuration) {
                                 souceUrl.stopAccessingSecurityScopedResource()
                                 
-                                presentUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLong_Title(fileName).string, text: presentationData.strings.Notifications_UploadError_TooLong_Text(stringForDuration(Int32(settings.maxDuration))).string))
+                                presentUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLong_Title(fileName).string, text: presentationData.strings.Notifications_UploadError_TooLong_Text(stringForDuration(Int32(settings.maxDuration))).string, timeout: nil))
                             } else {
                                 Logger.shared.log("NotificationSoundSelection", "Uploading sound")
                                 

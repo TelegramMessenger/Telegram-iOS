@@ -427,7 +427,7 @@ private struct CreatePollControllerState: Equatable {
     var isEditingSolution: Bool = false
 }
 
-private func createPollControllerEntries(presentationData: PresentationData, peer: EnginePeer, state: CreatePollControllerState, limitsConfiguration: EngineConfiguration.Limits, defaultIsQuiz: Bool?) -> [CreatePollEntry] {
+private func createPollControllerEntries(presentationData: PresentationData, peer: EnginePeer, state: CreatePollControllerState, limitsConfiguration: EngineConfiguration.UserLimits, defaultIsQuiz: Bool?) -> [CreatePollEntry] {
     var entries: [CreatePollEntry] = []
     
     var textLimitText = ItemListSectionHeaderAccessoryText(value: "", color: .generic)
@@ -436,7 +436,7 @@ private func createPollControllerEntries(presentationData: PresentationData, pee
         textLimitText = ItemListSectionHeaderAccessoryText(value: "\(remainingCount)", color: remainingCount < 0 ? .destructive : .generic)
     }
     entries.append(.textHeader(presentationData.strings.CreatePoll_TextHeader, textLimitText))
-    entries.append(.text(presentationData.strings.CreatePoll_TextPlaceholder, state.text, Int(limitsConfiguration.maxMediaCaptionLength)))
+    entries.append(.text(presentationData.strings.CreatePoll_TextPlaceholder, state.text, Int(limitsConfiguration.maxCaptionLength)))
     let optionsHeaderTitle: String
     if let defaultIsQuiz = defaultIsQuiz, defaultIsQuiz {
         optionsHeaderTitle = presentationData.strings.CreatePoll_QuizOptionsHeader
@@ -536,7 +536,7 @@ private final class CreatePollContext: AttachmentMediaPickerContext {
     func setCaption(_ caption: NSAttributedString) {
     }
     
-    func send(silently: Bool, mode: AttachmentMediaPickerSendMode) {
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode) {
     }
     
     func schedule() {
@@ -557,6 +557,44 @@ public class CreatePollControllerImpl: ItemListController, AttachmentContainable
     
     public var mediaPickerContext: AttachmentMediaPickerContext? {
         return CreatePollContext()
+    }
+    
+    fileprivate var stateValue: Atomic<CreatePollControllerState>?
+    
+    private var hasContent: Bool {
+        if let stateValue {
+            let state = stateValue.with { $0 }
+            var hasNonEmptyOptions = false
+            for i in 0 ..< state.options.count {
+                let optionText = state.options[i].item.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !optionText.isEmpty {
+                    hasNonEmptyOptions = true
+                }
+            }
+            if hasNonEmptyOptions || !state.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return true
+            } else {
+                return false
+            }
+        } else {
+            return false
+        }
+    }
+    
+    var context: AccountContext?
+    public func requestDismiss(completion: @escaping () -> Void) {
+        if self.hasContent, let context = self.context {
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            self.present(textAlertController(context: context, updatedPresentationData: nil, title: nil, text: presentationData.strings.CreatePoll_CancelConfirmation, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
+                completion()
+            })]), in: .window(.root))
+        } else {
+            completion()
+        }
+    }
+    
+    public func shouldDismissImmediately() -> Bool {
+        return !self.hasContent
     }
 }
 
@@ -579,7 +617,6 @@ public func createPollController(context: AccountContext, updatedPresentationDat
     var ensureSolutionVisibleImpl: (() -> Void)?
     var ensureQuestionVisibleImpl: (() -> Void)?
     var displayQuizTooltipImpl: ((Bool) -> Void)?
-    var attemptNavigationImpl: (() -> Bool)?
     
     let actionsDisposable = DisposableSet()
     
@@ -829,14 +866,13 @@ public func createPollController(context: AccountContext, updatedPresentationDat
     let signal = combineLatest(queue: .mainQueue(),
         presentationData,
         statePromise.get(),
-        context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.Limits())
+        context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false))
     )
     |> map { presentationData, state, limitsConfiguration -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var presentationData = presentationData
-        if presentationData.theme.list.blocksBackgroundColor.rgb == presentationData.theme.list.plainBackgroundColor.rgb {
-            let updatedTheme = presentationData.theme.withModalBlocksBackground()
-            presentationData = presentationData.withUpdated(theme: updatedTheme)
-        }
+        
+        let updatedTheme = presentationData.theme.withModalBlocksBackground()
+        presentationData = presentationData.withUpdated(theme: updatedTheme)
         
         var enabled = true
         if processPollText(state.text).isEmpty {
@@ -923,9 +959,7 @@ public func createPollController(context: AccountContext, updatedPresentationDat
         })
         
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
-            if let attemptNavigationImpl = attemptNavigationImpl, attemptNavigationImpl() {
-                dismissImpl?()
-            }
+            dismissImpl?()
         })
         
         let optionIds = state.options.map { $0.item.id }
@@ -966,6 +1000,8 @@ public func createPollController(context: AccountContext, updatedPresentationDat
     
     weak var currentTooltipController: TooltipController?
     let controller = CreatePollControllerImpl(context: context, state: signal)
+    controller.context = context
+    controller.stateValue = stateValue
     controller.navigationPresentation = .modal
     controller.visibleBottomContentOffsetChanged = { [weak controller] _ in
         controller?.updateTabBarAlpha(1.0, .immediate)
@@ -1193,31 +1229,6 @@ public func createPollController(context: AccountContext, updatedPresentationDat
         
         return .single(didReorder)
     })
-    attemptNavigationImpl = {
-        let state = stateValue.with { $0 }
-        var hasNonEmptyOptions = false
-        for i in 0 ..< state.options.count {
-            let optionText = state.options[i].item.text.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !optionText.isEmpty {
-                hasNonEmptyOptions = true
-            }
-        }
-        if hasNonEmptyOptions || !state.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.CreatePoll_CancelConfirmation, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
-                dismissImpl?()
-            })]), nil)
-            return false
-        } else {
-            return true
-        }
-    }
-    controller.attemptNavigation = { _ in
-        if let attemptNavigationImpl = attemptNavigationImpl, attemptNavigationImpl() {
-            return true
-        }
-        return false
-    }
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)
     }

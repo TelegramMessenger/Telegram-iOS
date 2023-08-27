@@ -26,6 +26,6 @@ public enum MediaFrameSourceSeekError {
 public protocol MediaFrameSource {
     func addEventSink(_ f: @escaping (MediaTrackEvent) -> Void) -> Int
     func removeEventSink(_ index: Int)
-    func generateFrames(until timestamp: Double)
+    func generateFrames(until timestamp: Double, types: [MediaTrackFrameType])
     func seek(timestamp: Double) -> Signal<QueueLocalObject<MediaFrameSourceSeekResult>, MediaFrameSourceSeekError>
 }

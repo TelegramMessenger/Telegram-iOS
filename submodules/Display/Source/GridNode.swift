@@ -492,7 +492,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                     
                     let effectiveWidth = gridLayout.size.width - itemInsets.left - itemInsets.right
                     
-                    let itemsInRow = Int(effectiveWidth / defaultItemSize.width)
+                    let itemsInRow = max(1, Int(effectiveWidth / defaultItemSize.width))
                     let itemsInRowWidth = CGFloat(itemsInRow) * defaultItemSize.width
                     let remainingWidth = max(0.0, effectiveWidth - itemsInRowWidth)
                     

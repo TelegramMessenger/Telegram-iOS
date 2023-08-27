@@ -11,8 +11,9 @@ import AccountContext
 import LegacyUI
 import LegacyMediaPickerUI
 import LocalMediaResources
+import ImageBlur
 
-func presentCustomWallpaperPicker(context: AccountContext, present: @escaping (ViewController) -> Void) {
+func presentCustomWallpaperPicker(context: AccountContext, present: @escaping (ViewController) -> Void, push: @escaping (ViewController) -> Void) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let _ = legacyWallpaperPicker(context: context, presentationData: presentationData).start(next: { generator in
         let legacyController = LegacyController(presentation: .modal(animateIn: true), theme: presentationData.theme)
@@ -24,9 +25,9 @@ func presentCustomWallpaperPicker(context: AccountContext, present: @escaping (V
         controller.selectionBlock = { [weak legacyController] asset, _ in
             if let asset = asset {
                 let controller = WallpaperGalleryController(context: context, source: .asset(asset.backingAsset))
-                controller.apply = { [weak legacyController, weak controller] wallpaper, mode, cropRect in
+                controller.apply = { [weak legacyController, weak controller] wallpaper, mode, editedImage, cropRect, brightness in
                     if let legacyController = legacyController, let controller = controller {
-                        uploadCustomWallpaper(context: context, wallpaper: wallpaper, mode: mode, cropRect: cropRect, completion: { [weak legacyController, weak controller] in
+                        uploadCustomWallpaper(context: context, wallpaper: wallpaper, mode: mode, editedImage: nil, cropRect: cropRect, brightness: brightness, completion: { [weak legacyController, weak controller] in
                             if let legacyController = legacyController, let controller = controller {
                                 legacyController.dismiss()
                                 controller.dismiss(forceAway: true)
@@ -34,7 +35,7 @@ func presentCustomWallpaperPicker(context: AccountContext, present: @escaping (V
                         })
                     }
                 }
-                present(controller)
+                push(controller)
             }
         }
         controller.dismissalBlock = { [weak legacyController] in
@@ -46,8 +47,8 @@ func presentCustomWallpaperPicker(context: AccountContext, present: @escaping (V
     })
 }
 
-func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, cropRect: CGRect?, completion: @escaping () -> Void) {
-    let imageSignal: Signal<UIImage, NoError>
+func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, editedImage: UIImage?, cropRect: CGRect?, brightness: CGFloat?, completion: @escaping () -> Void) {
+    var imageSignal: Signal<UIImage, NoError>
     switch wallpaper {
         case let .wallpaper(wallpaper, _):
             switch wallpaper {
@@ -111,6 +112,10 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
             }
     }
     
+    if let editedImage {
+        imageSignal = .single(editedImage)
+    }
+    
     let _ = (imageSignal
     |> map { image -> UIImage in
         var croppedImage = UIImage()
@@ -130,12 +135,12 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
         
         if let data = croppedImage.jpegData(compressionQuality: 0.8), let thumbnailImage = thumbnailImage, let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
             let thumbnailResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-            context.sharedContext.accountManager.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData)
-            context.account.postbox.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData)
+            context.sharedContext.accountManager.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData, synchronous: true)
+            context.account.postbox.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData, synchronous: true)
             
             let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-            context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
-            context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+            context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+            context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
             
             let autoNightModeTriggered = context.sharedContext.currentPresentationData.with {$0 }.autoNightModeTriggered
             let accountManager = context.sharedContext.accountManager
@@ -193,4 +198,197 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
         }
         return croppedImage
     }).start()
+}
+
+public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, editedImage: UIImage?, cropRect: CGRect?, brightness: CGFloat?, peerId: PeerId, completion: @escaping () -> Void) {
+    var imageSignal: Signal<UIImage, NoError>
+    switch wallpaper {
+        case let .wallpaper(wallpaper, _):
+            imageSignal = .complete()
+            switch wallpaper {
+                case let .file(file):
+                    if let path = context.account.postbox.mediaBox.completedResourcePath(file.file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead), let image = UIImage(data: data) {
+                        context.sharedContext.accountManager.mediaBox.storeResourceData(file.file.resource.id, data: data, synchronous: true)
+                        let _ = context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
+                        let _ = context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start()
+                     
+                        imageSignal = .single(image)
+                    }
+                case let .image(representations, _):
+                    for representation in representations {
+                        let resource = representation.resource
+                        if let path = context.account.postbox.mediaBox.completedResourcePath(resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                            context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                            let _ = context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
+                        }
+                    }
+                default:
+                    break
+            }
+            completion()
+        case let .asset(asset):
+            imageSignal = fetchPhotoLibraryImage(localIdentifier: asset.localIdentifier, thumbnail: false)
+            |> filter { value in
+                return !(value?.1 ?? true)
+            }
+            |> mapToSignal { result -> Signal<UIImage, NoError> in
+                if let result = result {
+                    return .single(result.0)
+                } else {
+                    return .complete()
+                }
+            }
+        case let .contextResult(result):
+            var imageResource: TelegramMediaResource?
+            switch result {
+                case let .externalReference(externalReference):
+                    if let content = externalReference.content {
+                        imageResource = content.resource
+                    }
+                case let .internalReference(internalReference):
+                    if let image = internalReference.image {
+                        if let imageRepresentation = imageRepresentationLargerThan(image.representations, size: PixelDimensions(width: 1000, height: 800)) {
+                            imageResource = imageRepresentation.resource
+                        }
+                    }
+            }
+            
+            if let imageResource = imageResource {
+                imageSignal = .single(context.account.postbox.mediaBox.completedResourcePath(imageResource))
+                |> mapToSignal { path -> Signal<UIImage, NoError> in
+                    if let path = path, let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedIfSafe]), let image = UIImage(data: data) {
+                        return .single(image)
+                    } else {
+                        return .complete()
+                    }
+                }
+            } else {
+                imageSignal = .complete()
+            }
+    }
+    
+    if let editedImage {
+        imageSignal = .single(editedImage)
+    }
+    
+    let _ = (imageSignal
+    |> map { image -> UIImage in
+        var croppedImage = UIImage()
+        
+        let finalCropRect: CGRect
+        if let cropRect = cropRect {
+            finalCropRect = cropRect
+        } else {
+            let screenSize = TGScreenSize()
+            let fittedSize = TGScaleToFit(screenSize, image.size)
+            finalCropRect = CGRect(x: (image.size.width - fittedSize.width) / 2.0, y: (image.size.height - fittedSize.height) / 2.0, width: fittedSize.width, height: fittedSize.height)
+        }
+        croppedImage = TGPhotoEditorCrop(image, nil, .up, 0.0, finalCropRect, false, CGSize(width: 1440.0, height: 2960.0), image.size, true)
+                
+        let thumbnailDimensions = finalCropRect.size.fitted(CGSize(width: 320.0, height: 320.0))
+        let thumbnailImage = generateScaledImage(image: croppedImage, size: thumbnailDimensions, scale: 1.0)
+        
+        if let data = croppedImage.jpegData(compressionQuality: 0.8), let thumbnailImage = thumbnailImage, let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
+            let thumbnailResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+            context.sharedContext.accountManager.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData, synchronous: true)
+            context.account.postbox.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData, synchronous: true)
+            
+            let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+            context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+            context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+            
+            let _ = context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start()
+            
+            var intensity: Int32?
+            if let brightness {
+                intensity = max(0, min(100, Int32(brightness * 100.0)))
+            }
+            
+            Queue.mainQueue().after(0.05) {
+                let settings = WallpaperSettings(blur: mode.contains(.blur), motion: mode.contains(.motion), colors: [], intensity: intensity)
+                let temporaryWallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false), TelegramMediaImageRepresentation(dimensions: PixelDimensions(croppedImage.size), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)], settings)
+                
+                context.account.pendingPeerMediaUploadManager.add(peerId: peerId, content: .wallpaper(temporaryWallpaper))
+                
+                Queue.mainQueue().after(0.05) {
+                    completion()
+                }
+            }
+        }
+        return croppedImage
+    }).start()
+}
+
+class LegacyWallpaperItem: NSObject, TGMediaEditableItem, TGMediaSelectableItem {
+    var isVideo: Bool {
+        return false
+    }
+    
+    var uniqueIdentifier: String! {
+        return self.asset.localIdentifier
+    }
+    
+    let asset: PHAsset
+    let screenImage: UIImage
+    private(set) var thumbnailResource: TelegramMediaResource?
+    private(set) var imageResource: TelegramMediaResource?
+    let dimensions: CGSize
+
+
+    init(asset: PHAsset, screenImage: UIImage, dimensions: CGSize) {
+        self.asset = asset
+        self.screenImage = screenImage
+        self.dimensions = dimensions
+    }
+    
+    var originalSize: CGSize {
+        return self.dimensions
+    }
+    
+    func thumbnailImageSignal() -> SSignal! {
+        return SSignal.complete()
+//        return SSignal(generator: { subscriber -> SDisposable? in
+//            let disposable = self.thumbnailImage.start(next: { image in
+//                subscriber.putNext(image)
+//                subscriber.putCompletion()
+//            })
+//
+//            return SBlockDisposable(block: {
+//                disposable.dispose()
+//            })
+//        })
+    }
+    
+    func screenImageSignal(_ position: TimeInterval) -> SSignal! {
+        return SSignal.single(self.screenImage)
+    }
+    
+    var originalImage: Signal<UIImage, NoError> {
+        return fetchPhotoLibraryImage(localIdentifier: self.asset.localIdentifier, thumbnail: false)
+        |> filter { value in
+            return !(value?.1 ?? true)
+        }
+        |> mapToSignal { result -> Signal<UIImage, NoError> in
+            if let result = result {
+                return .single(result.0)
+            } else {
+                return .complete()
+            }
+        }
+    }
+    
+    func originalImageSignal(_ position: TimeInterval) -> SSignal! {
+        return SSignal(generator: { subscriber -> SDisposable? in
+            let disposable = self.originalImage.start(next: { image in
+                subscriber.putNext(image)
+                if !image.degraded() {
+                    subscriber.putCompletion()
+                }
+            })
+            
+            return SBlockDisposable(block: {
+                disposable.dispose()
+            })
+        })
+    }
 }

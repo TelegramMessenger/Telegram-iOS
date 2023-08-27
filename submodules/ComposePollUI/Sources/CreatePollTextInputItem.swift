@@ -617,6 +617,10 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
         }
     }
     
+    public func selectAll() {
+        self.textNode.textView.selectAll(nil)
+    }
+    
     public func animateError() {
         self.textNode.layer.addShakeAnimation()
     }

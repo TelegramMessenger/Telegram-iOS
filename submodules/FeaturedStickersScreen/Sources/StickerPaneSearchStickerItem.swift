@@ -11,6 +11,8 @@ import AccountContext
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ChatPresentationInterfaceState
+import EmojiTextAttachmentView
+import TextFormat
 
 final class StickerPaneSearchStickerSection: GridSection {
     let code: String
@@ -50,10 +52,11 @@ final class StickerPaneSearchStickerSectionNode: ASDisplayNode {
         
         super.init()
         
-        self.addSubnode(self.titleNode)
         self.titleNode.attributedText = NSAttributedString(string: code, font: sectionTitleFont, textColor: theme.chat.inputMediaPanel.stickersSectionTextColor)
         self.titleNode.maximumNumberOfLines = 1
         self.titleNode.truncationMode = .byTruncatingTail
+        
+        self.addSubnode(self.titleNode)
     }
     
     override func layout() {
@@ -67,16 +70,18 @@ final class StickerPaneSearchStickerSectionNode: ASDisplayNode {
 }
 
 public final class StickerPaneSearchStickerItem: GridItem {
-    public let account: Account
+    public let context: AccountContext
+    public let theme: PresentationTheme
     public let code: String?
     public let stickerItem: FoundStickerItem
-    public let selected: (ASDisplayNode, CGRect) -> Void
+    public let selected: (ASDisplayNode, CALayer, CGRect) -> Void
     public let inputNodeInteraction: ChatMediaInputNodeInteraction
     
     public let section: GridSection?
     
-    public init(account: Account, code: String?, stickerItem: FoundStickerItem, inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, selected: @escaping (ASDisplayNode, CGRect) -> Void) {
-        self.account = account
+    public init(context: AccountContext, theme: PresentationTheme, code: String?, stickerItem: FoundStickerItem, inputNodeInteraction: ChatMediaInputNodeInteraction, selected: @escaping (ASDisplayNode, CALayer, CGRect) -> Void) {
+        self.context = context
+        self.theme = theme
         self.stickerItem = stickerItem
         self.inputNodeInteraction = inputNodeInteraction
         self.selected = selected
@@ -87,7 +92,7 @@ public final class StickerPaneSearchStickerItem: GridItem {
     public func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = StickerPaneSearchStickerItemNode()
         node.inputNodeInteraction = self.inputNodeInteraction
-        node.setup(account: self.account, stickerItem: self.stickerItem, code: self.code)
+        node.setup(context: self.context, theme: self.theme, stickerItem: self.stickerItem, code: self.code)
         node.selected = self.selected
         return node
     }
@@ -98,7 +103,7 @@ public final class StickerPaneSearchStickerItem: GridItem {
             return
         }
         node.inputNodeInteraction = self.inputNodeInteraction
-        node.setup(account: self.account, stickerItem: self.stickerItem, code: self.code)
+        node.setup(context: self.context, theme: self.theme, stickerItem: self.stickerItem, code: self.code)
         node.selected = self.selected
     }
 }
@@ -106,9 +111,8 @@ public final class StickerPaneSearchStickerItem: GridItem {
 private let textFont = Font.regular(20.0)
 
 public final class StickerPaneSearchStickerItemNode: GridItemNode {
-    private var currentState: (Account, FoundStickerItem, CGSize)?
-    public let imageNode: TransformImageNode
-    public private(set) var animationNode: AnimatedStickerNode?
+    private var currentState: (AccountContext, FoundStickerItem, CGSize)?
+    var itemLayer: InlineStickerItemLayer?
     private let textNode: ASTextNode
     
     private let stickerFetchedDisposable = MetaDisposable()
@@ -124,22 +128,21 @@ public final class StickerPaneSearchStickerItemNode: GridItemNode {
     private var isPlaying = false
     
     public var inputNodeInteraction: ChatMediaInputNodeInteraction?
-    public var selected: ((ASDisplayNode, CGRect) -> Void)?
-    
+    public var selected: ((ASDisplayNode, CALayer, CGRect) -> Void)?
+        
     public var stickerItem: FoundStickerItem? {
         return self.currentState?.1
     }
     
     public override init() {
-        self.imageNode = TransformImageNode()
         self.textNode = ASTextNode()
         self.textNode.isUserInteractionEnabled = false
         
         super.init()
         
-        self.addSubnode(self.imageNode)
-        self.addSubnode(self.textNode)
         self.textNode.maximumNumberOfLines = 1
+        
+        self.addSubnode(self.textNode)
     }
     
     deinit {
@@ -149,39 +152,43 @@ public final class StickerPaneSearchStickerItemNode: GridItemNode {
     public override func didLoad() {
         super.didLoad()
         
-        self.imageNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
+        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
     }
     
-    func setup(account: Account, stickerItem: FoundStickerItem, code: String?) {
-        if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem {
+    func setup(context: AccountContext, theme: PresentationTheme, stickerItem: FoundStickerItem, code: String?) {
+        if self.currentState == nil || self.currentState!.0 !== context || self.currentState!.1 != stickerItem {
             self.textNode.attributedText = NSAttributedString(string: code ?? "", font: textFont, textColor: .black)
             
-            if let dimensions = stickerItem.file.dimensions {
-                if stickerItem.file.isAnimatedSticker || stickerItem.file.isVideoSticker {
-                    if self.animationNode == nil {
-                        let animationNode = DefaultAnimatedStickerNodeImpl()
-                        animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
-                        self.animationNode = animationNode
-                        self.insertSubnode(animationNode, belowSubnode: self.textNode)
-                    }
-                    let dimensions = stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-                    let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
-                    self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: stickerItem.file.resource, isVideo: stickerItem.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
-                    self.animationNode?.visibility = self.isVisibleInGrid
-                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
-                } else {
-                    if let animationNode = self.animationNode {
-                        animationNode.visibility = false
-                        self.animationNode = nil
-                        animationNode.removeFromSupernode()
-                    }
-                    self.imageNode.setSignal(chatMessageSticker(account: account, userLocation: .other, file: stickerItem.file, small: true))
-                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
-                }
-                
-                self.currentState = (account, stickerItem, dimensions.cgSize)
-                self.setNeedsLayout()
+            let file = stickerItem.file
+            let itemDimensions = file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
+            let playbackItemSize = CGSize(width: 96.0, height: 96.0)
+             
+            let itemPlaybackSize = itemDimensions.aspectFitted(playbackItemSize)
+            
+            let itemLayer: InlineStickerItemLayer
+            if let current = self.itemLayer {
+                itemLayer = current
+                itemLayer.dynamicColor = .white
+            } else {
+                itemLayer = InlineStickerItemLayer(
+                    context: context,
+                    userLocation: .other,
+                    attemptSynchronousLoad: false,
+                    emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file),
+                    file: file,
+                    cache: context.animationCache,
+                    renderer: context.animationRenderer,
+                    placeholderColor: theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.1),
+                    pointSize: itemPlaybackSize,
+                    dynamicColor: .white
+                )
+                self.itemLayer = itemLayer
+                self.layer.insertSublayer(itemLayer, at: 0)
             }
+            
+            self.currentState = (context, stickerItem, itemDimensions)
+            self.setNeedsLayout()
+            self.updateVisibility()
         }
     }
     
@@ -191,43 +198,44 @@ public final class StickerPaneSearchStickerItemNode: GridItemNode {
         let bounds = self.bounds
         let boundingSize = bounds.insetBy(dx: 6.0, dy: 6.0).size
         
-        if let (_, _, mediaDimensions) = self.currentState {
-            let imageSize = mediaDimensions.aspectFitted(boundingSize)
-            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
-            
-            let imageFrame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
-            self.imageNode.frame = imageFrame
-            
-            if let animationNode = self.animationNode {
-                animationNode.frame = imageFrame
-                animationNode.updateLayout(size: imageSize)
+        if let (_, _, itemDimensions) = self.currentState {
+            let itemSize = itemDimensions.aspectFitted(boundingSize)
+            let itemFrame = CGRect(origin: CGPoint(x: floor((bounds.size.width - itemSize.width) / 2.0), y: (bounds.size.height - itemSize.height) / 2.0), size: itemSize)
+            if let itemLayer = self.itemLayer {
+                itemLayer.frame = itemFrame
             }
-            
             let textSize = self.textNode.measure(CGSize(width: bounds.size.width - 24.0, height: CGFloat.greatestFiniteMagnitude))
             self.textNode.frame = CGRect(origin: CGPoint(x: bounds.size.width - textSize.width, y: bounds.size.height - textSize.height), size: textSize)
         }
     }
     
     @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {
-        self.selected?(self, self.bounds)
+        guard let itemLayer = self.itemLayer else {
+            return
+        }
+        self.selected?(self, itemLayer, self.bounds)
     }
     
     public func transitionNode() -> ASDisplayNode? {
-        return self.imageNode
+        return self
     }
     
     public func updateVisibility() {
-        let isPlaying = self.isVisibleInGrid
-        if self.isPlaying != isPlaying {
+        guard let context = self.currentState?.0 else {
+            return
+        }
+        
+        let isPlaying = self.isVisibleInGrid && context.sharedContext.energyUsageSettings.loopStickers
+        if self.isPlaying != isPlaying, let itemLayer = self.itemLayer {
             self.isPlaying = isPlaying
-            self.animationNode?.visibility = isPlaying
+            itemLayer.isVisibleForAnimations = isPlaying
         }
     }
     
     public func updatePreviewing(animated: Bool) {
         var isPreviewing = false
         if let (_, item, _) = self.currentState, let interaction = self.inputNodeInteraction {
-            isPreviewing = interaction.previewedStickerPackItem == .found(item)
+            isPreviewing = interaction.previewedStickerPackItemFile?.id == item.file.id
         }
         if self.currentIsPreviewing != isPreviewing {
             self.currentIsPreviewing = isPreviewing

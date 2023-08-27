@@ -4,7 +4,7 @@ import Display
 import AsyncDisplayKit
 
 final class WallpaperCropNode: ASDisplayNode, UIScrollViewDelegate {
-    private let scrollNode: ASScrollNode
+    let scrollNode: ASScrollNode
     
     private var ignoreZoom = false
     private var ignoreZoomTransition: ContainedViewLayoutTransition?

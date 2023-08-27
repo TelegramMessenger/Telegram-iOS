@@ -5,10 +5,12 @@ import TelegramApi
 public final class MessageReadStats {
     public let reactionCount: Int
     public let peers: [EnginePeer]
+    public let readTimestamps: [EnginePeer.Id: Int32]
 
-    public init(reactionCount: Int, peers: [EnginePeer]) {
+    public init(reactionCount: Int, peers: [EnginePeer], readTimestamps: [EnginePeer.Id: Int32]) {
         self.reactionCount = reactionCount
         self.peers = peers
+        self.readTimestamps = readTimestamps
     }
 }
 
@@ -24,9 +26,18 @@ func _internal_messageReadStats(account: Account, id: MessageId) -> Signal<Messa
             return .single(nil)
         }
 
-        let readPeers: Signal<[Int64]?, NoError> = account.network.request(Api.functions.messages.getMessageReadParticipants(peer: inputPeer, msgId: id.id))
-        |> map(Optional.init)
-        |> `catch` { _ -> Signal<[Int64]?, NoError> in
+        let readPeers: Signal<[(Int64, Int32)]?, NoError> = account.network.request(Api.functions.messages.getMessageReadParticipants(peer: inputPeer, msgId: id.id))
+        |> map { result -> [(Int64, Int32)]? in
+            var items: [(Int64, Int32)] = []
+            for item in result {
+                switch item {
+                case let .readParticipantDate(userId, date):
+                    items.append((userId, date))
+                }
+            }
+            return items
+        }
+        |> `catch` { _ -> Signal<[(Int64, Int32)]?, NoError> in
             return .single(nil)
         }
         
@@ -43,15 +54,17 @@ func _internal_messageReadStats(account: Account, id: MessageId) -> Signal<Messa
         
         return combineLatest(readPeers, reactionCount)
         |> mapToSignal { result, reactionCount -> Signal<MessageReadStats?, NoError> in
-            return account.postbox.transaction { transaction -> (peerIds: [PeerId], missingPeerIds: [PeerId]) in
+            return account.postbox.transaction { transaction -> (peerIds: [PeerId], readTimestamps: [PeerId: Int32], missingPeerIds: [PeerId]) in
                 var peerIds: [PeerId] = []
+                var readTimestamps: [PeerId: Int32] = [:]
                 var missingPeerIds: [PeerId] = []
 
                 let authorId = transaction.getMessage(id)?.author?.id
 
                 if let result = result {
-                    for id in result {
+                    for (id, timestamp) in result {
                         let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id))
+                        readTimestamps[peerId] = timestamp
                         if peerId == account.peerId {
                             continue
                         }
@@ -65,14 +78,14 @@ func _internal_messageReadStats(account: Account, id: MessageId) -> Signal<Messa
                     }
                 }
 
-                return (peerIds: peerIds, missingPeerIds: missingPeerIds)
+                return (peerIds: peerIds, readTimestamps: readTimestamps, missingPeerIds: missingPeerIds)
             }
-            |> mapToSignal { peerIds, missingPeerIds -> Signal<MessageReadStats?, NoError> in
+            |> mapToSignal { peerIds, readTimestamps, missingPeerIds -> Signal<MessageReadStats?, NoError> in
                 if missingPeerIds.isEmpty || id.peerId.namespace != Namespaces.Peer.CloudChannel {
                     return account.postbox.transaction { transaction -> MessageReadStats? in
                         return MessageReadStats(reactionCount: reactionCount, peers: peerIds.compactMap { peerId -> EnginePeer? in
                             return transaction.getPeer(peerId).flatMap(EnginePeer.init)
-                        })
+                        }, readTimestamps: readTimestamps)
                     }
                 } else {
                     return _internal_channelMembers(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, peerId: id.peerId, category: .recent(.all), offset: 0, limit: 50, hash: 0)
@@ -80,7 +93,7 @@ func _internal_messageReadStats(account: Account, id: MessageId) -> Signal<Messa
                         return account.postbox.transaction { transaction -> MessageReadStats? in
                             return MessageReadStats(reactionCount: reactionCount, peers: peerIds.compactMap { peerId -> EnginePeer? in
                                 return transaction.getPeer(peerId).flatMap(EnginePeer.init)
-                            })
+                            }, readTimestamps: readTimestamps)
                         }
                     }
                 }

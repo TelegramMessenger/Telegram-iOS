@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 
 
-public final class TelegramMediaUnsupported: Media {
+public final class TelegramMediaUnsupported: Media, Equatable {
     public let id: MediaId? = nil
     public let peerIds: [PeerId] = []
     
@@ -13,6 +13,10 @@ public final class TelegramMediaUnsupported: Media {
     }
     
     public func encode(_ encoder: PostboxEncoder) {
+    }
+    
+    public static func ==(lhs: TelegramMediaUnsupported, rhs: TelegramMediaUnsupported) -> Bool {
+        return lhs.isEqual(to: rhs)
     }
     
     public func isEqual(to other: Media) -> Bool {

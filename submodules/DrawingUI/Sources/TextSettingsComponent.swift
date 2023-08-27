@@ -4,8 +4,8 @@ import Display
 import ComponentFlow
 import LegacyComponents
 import TelegramCore
-import Postbox
 import LottieAnimationComponent
+import MediaEditor
 
 enum DrawingTextStyle: Equatable {
     case regular
@@ -98,7 +98,7 @@ enum DrawingTextFont: Equatable, Hashable {
     func uiFont(size: CGFloat) -> UIFont {
         switch self {
         case .sanFrancisco:
-            return Font.with(size: size, design: .round, weight: .semibold)
+            return Font.with(size: size, design: .regular, weight: .semibold)
         case let .other(font, _):
             return UIFont(name: font, size: size) ?? Font.semibold(size)
         }
@@ -579,12 +579,13 @@ final class TextSettingsComponent: CombinedComponent {
                 )
             }
                  
+            let presentFontPicker = component.presentFontPicker
             let font = font.update(
                 component: TextFontComponent(
                     selectedValue: component.font,
                     tag: component.fontTag,
                     tapped: {
-                        component.presentFontPicker()
+                        presentFontPicker()
                     }
                 ),
                 availableSize: CGSize(width: fontAvailableWidth, height: 30.0),
@@ -621,7 +622,7 @@ private func generateKnobImage() -> UIImage? {
     return image?.stretchableImage(withLeftCapWidth: Int(margin + side * 0.5), topCapHeight: Int(margin + side * 0.5))
 }
 
-final class TextSizeSliderComponent: Component {
+public final class TextSizeSliderComponent: Component {
     let value: CGFloat
     let tag: AnyObject?
     let updated: (CGFloat) -> Void
@@ -646,7 +647,7 @@ final class TextSizeSliderComponent: Component {
         return true
     }
     
-    final class View: UIView, UIGestureRecognizerDelegate, ComponentTaggedView {
+    public final class View: UIView, UIGestureRecognizerDelegate, ComponentTaggedView {
         private var validSize: CGSize?
         
         private let backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x888888, alpha: 0.3))
@@ -739,7 +740,7 @@ final class TextSizeSliderComponent: Component {
             }
         }
         
-        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
             return true
         }
         
@@ -787,11 +788,11 @@ final class TextSizeSliderComponent: Component {
         }
     }
     
-    func makeView() -> View {
+    public func makeView() -> View {
         return View()
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         view.updated = self.updated
         view.released = self.released
         return view.updateLayout(size: availableSize, component: self, transition: transition)

@@ -77,13 +77,17 @@ private func translationSettingsControllerEntries(theme: PresentationTheme, stri
     if let ignoredLanguages = settings.ignoredLanguages {
         selectedLanguages = Set(ignoredLanguages)
     } else {
-        var langCode = strings.baseLanguageCode
-        if langCode == "nb" {
-            langCode = "no"
-        } else if langCode == "pt-br" {
-            langCode = "pt"
+        var activeLanguage = strings.baseLanguageCode
+        let rawSuffix = "-raw"
+        if activeLanguage.hasSuffix(rawSuffix) {
+            activeLanguage = String(activeLanguage.dropLast(rawSuffix.count))
         }
-        selectedLanguages = Set([langCode])
+        if activeLanguage == "nb" {
+            activeLanguage = "no"
+        } else if activeLanguage == "pt-br" {
+            activeLanguage = "pt"
+        }
+        selectedLanguages = Set([activeLanguage])
         for language in systemLanguageCodes() {
             selectedLanguages.insert(language)
         }
@@ -114,7 +118,11 @@ public func translationSettingsController(context: AccountContext) -> ViewContro
     let actionsDisposable = DisposableSet()
     
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-    let interfaceLanguageCode = presentationData.strings.baseLanguageCode
+    var interfaceLanguageCode = presentationData.strings.baseLanguageCode
+    let rawSuffix = "-raw"
+    if interfaceLanguageCode.hasSuffix(rawSuffix) {
+        interfaceLanguageCode = String(interfaceLanguageCode.dropLast(rawSuffix.count))
+    }
     
     let arguments = TranslationSettingsControllerArguments(context: context, updateLanguageSelected: { code, value in
         let _ = updateTranslationSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
@@ -185,7 +193,12 @@ public func translationSettingsController(context: AccountContext) -> ViewContro
                 if let ignoredLanguages = settings.ignoredLanguages {
                     selectedLanguages = Set(ignoredLanguages)
                 } else {
-                    selectedLanguages = Set([presentationData.strings.baseLanguageCode])
+                    var activeLanguage = presentationData.strings.baseLanguageCode
+                    let rawSuffix = "-raw"
+                    if activeLanguage.hasSuffix(rawSuffix) {
+                        activeLanguage = String(activeLanguage.dropLast(rawSuffix.count))
+                    }
+                    selectedLanguages = Set([activeLanguage])
                     for language in systemLanguageCodes() {
                         selectedLanguages.insert(language)
                     }

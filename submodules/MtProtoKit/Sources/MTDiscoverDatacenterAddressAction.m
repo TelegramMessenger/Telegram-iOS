@@ -106,7 +106,7 @@
             [request setPayload:getConfigData metadata:@"getConfig" shortMetadata:@"getConfig" responseParser:responseParser];
             
             __weak MTDiscoverDatacenterAddressAction *weakSelf = self;
-            [request setCompleted:^(MTDatacenterAddressListData *result, __unused NSTimeInterval completionTimestamp, id error)
+            [request setCompleted:^(MTDatacenterAddressListData *result, __unused MTRequestResponseInfo *info, id error)
             {
                 __strong MTDiscoverDatacenterAddressAction *strongSelf = weakSelf;
                 if (strongSelf != nil) {

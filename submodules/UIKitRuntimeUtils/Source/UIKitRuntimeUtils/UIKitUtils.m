@@ -185,13 +185,13 @@ UIView<UIKitPortalViewProtocol> * _Nullable makePortalView(bool matchPosition) {
             return nil;
         }
         
-        if (@available(iOS 13.0, *)) {
+        if (@available(iOS 14.0, *)) {
             view.forwardsClientHitTestingToSourceView = false;
         }
         view.matchesPosition = matchPosition;
         view.matchesTransform = matchPosition;
         view.matchesAlpha = false;
-        if (@available(iOS 13.0, *)) {
+        if (@available(iOS 14.0, *)) {
             view.allowsHitTesting = false;
         }
         
@@ -199,4 +199,14 @@ UIView<UIKitPortalViewProtocol> * _Nullable makePortalView(bool matchPosition) {
     } else {
         return nil;
     }
+}
+
+@protocol GraphicsFilterProtocol <NSObject>
+    
+- (NSObject * _Nullable)filterWithName:(NSString * _Nonnull)name;
+
+@end
+
+NSObject * _Nullable makeBlurFilter() {
+    return [(id<GraphicsFilterProtocol>)NSClassFromString(@"CAFilter") filterWithName:@"gaussianBlur"];
 }

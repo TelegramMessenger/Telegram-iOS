@@ -16,6 +16,7 @@ swift_library(
         "//submodules/rlottie:RLottieBinding",
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/AppBundle",
+        "//submodules/GZip",
     ],
     visibility = [
         "//visibility:public",

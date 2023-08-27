@@ -302,7 +302,7 @@ public func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize], 
                         innerPositionFlags.insert(.right)
                     }
                     
-                    if positionFlags == .none {
+                    if positionFlags == [] {
                         innerPositionFlags = .inside
                     }
                     

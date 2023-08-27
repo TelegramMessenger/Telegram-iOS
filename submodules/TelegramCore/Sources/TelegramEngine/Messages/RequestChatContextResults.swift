@@ -99,6 +99,7 @@ func _internal_requestChatContextResults(account: Account, botId: PeerId, peerId
                                     nextOffset: nil,
                                     presentation: cachedResult.presentation,
                                     switchPeer: cachedResult.switchPeer,
+                                    webView: cachedResult.webView,
                                     results: cachedResult.results,
                                     cacheTimeout: 0
                                 )

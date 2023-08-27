@@ -466,7 +466,7 @@ public func threadNotificationExceptionsScreen(context: AccountContext, peerId: 
             let canRemove = true
             let defaultSound: PeerMessageSound = globalSettings.groupChats.sound._asMessageSound()
             
-            pushControllerImpl?(notificationPeerExceptionController(context: context, peer: peer._asPeer(), customTitle: item.info.title, threadId: item.threadId, canRemove: canRemove, defaultSound: defaultSound, updatePeerSound: { _, sound in
+            pushControllerImpl?(notificationPeerExceptionController(context: context, peer: peer, customTitle: item.info.title, threadId: item.threadId, isStories: nil, canRemove: canRemove, defaultSound: defaultSound, defaultStoriesSound: defaultSound, updatePeerSound: { _, sound in
                 let _ = (updateThreadSound(item.threadId, sound)
                 |> deliverOnMainQueue).start(next: { _ in
                     updateState { value in
@@ -496,6 +496,9 @@ public func threadNotificationExceptionsScreen(context: AccountContext, peerId: 
                     }
                     updated(stateValue.with({ $0 }).notificationExceptions)
                 })
+            }, updatePeerStoriesMuted: { _, _ in
+            }, updatePeerStoriesHideSender: { _, _ in
+            }, updatePeerStorySound: { _, _ in
             }, removePeerFromExceptions: {
                 let _ = context.engine.peers.removeCustomThreadNotificationSettings(peerId: peerId, threadIds: [item.threadId]).start()
                 updateState { current in

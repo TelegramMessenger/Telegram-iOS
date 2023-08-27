@@ -7,24 +7,28 @@ import PersistentStringHash
 public final class VideoMediaResourceAdjustments: PostboxCoding, Equatable {
     public let data: MemoryBuffer
     public let digest: MemoryBuffer
+    public let isStory: Bool
     
-    public init(data: MemoryBuffer, digest: MemoryBuffer) {
+    public init(data: MemoryBuffer, digest: MemoryBuffer, isStory: Bool) {
         self.data = data
         self.digest = digest
+        self.isStory = isStory
     }
     
     public init(decoder: PostboxDecoder) {
         self.data = decoder.decodeBytesForKey("d")!
         self.digest = decoder.decodeBytesForKey("h")!
+        self.isStory = decoder.decodeBoolForKey("s", orElse: false)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeBytes(self.data, forKey: "d")
         encoder.encodeBytes(self.digest, forKey: "h")
+        encoder.encodeBool(self.isStory, forKey: "s")
     }
     
     public static func ==(lhs: VideoMediaResourceAdjustments, rhs: VideoMediaResourceAdjustments) -> Bool {
-        return lhs.data == rhs.data && lhs.digest == rhs.digest
+        return lhs.data == rhs.data && lhs.digest == rhs.digest && lhs.isStory == rhs.isStory
     }
 }
 

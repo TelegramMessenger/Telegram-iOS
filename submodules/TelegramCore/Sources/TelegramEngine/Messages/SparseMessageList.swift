@@ -801,6 +801,7 @@ public final class SparseMessageCalendar {
             }
 
             let account = self.account
+            let accountPeerId = account.peerId
             let peerId = self.peerId
             let messageTag = self.messageTag
             self.disposable.set((self.account.postbox.transaction { transaction -> Peer? in
@@ -830,19 +831,8 @@ public final class SparseMessageCalendar {
                         switch result {
                         case let .searchResultsCalendar(_, _, minDate, minMsgId, _, periods, messages, chats, users):
                             var parsedMessages: [StoreMessage] = []
-                            var peers: [Peer] = []
-                            var peerPresences: [PeerId: Api.User] = [:]
-
-                            for chat in chats {
-                                if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                    peers.append(groupOrChannel)
-                                }
-                            }
-                            for user in users {
-                                let telegramUser = TelegramUser(user: user)
-                                peers.append(telegramUser)
-                                peerPresences[telegramUser.id] = user
-                            }
+                            
+                            let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
 
                             for message in messages {
                                 if let parsedMessage = StoreMessage(apiMessage: message, peerIsForum: peer.isForum) {
@@ -850,8 +840,7 @@ public final class SparseMessageCalendar {
                                 }
                             }
 
-                            updatePeers(transaction: transaction, peers: peers, update: { _, updated in updated })
-                            updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                             let _ = transaction.addMessages(parsedMessages, location: .Random)
 
                             var minMessageId: Int32?

@@ -10,6 +10,7 @@ public final class SolidRoundedButtonComponent: Component {
     
     public let title: String?
     public let label: String?
+    public let badge: String?
     public let icon: UIImage?
     public let theme: SolidRoundedButtonTheme
     public let font: SolidRoundedButtonFont
@@ -28,6 +29,7 @@ public final class SolidRoundedButtonComponent: Component {
     public init(
         title: String? = nil,
         label: String? = nil,
+        badge: String? = nil,
         icon: UIImage? = nil,
         theme: SolidRoundedButtonTheme,
         font: SolidRoundedButtonFont = .bold,
@@ -45,6 +47,7 @@ public final class SolidRoundedButtonComponent: Component {
     ) {
         self.title = title
         self.label = label
+        self.badge = badge
         self.icon = icon
         self.theme = theme
         self.font = font
@@ -66,6 +69,9 @@ public final class SolidRoundedButtonComponent: Component {
             return false
         }
         if lhs.label != rhs.label {
+            return false
+        }
+        if lhs.badge != rhs.badge {
             return false
         }
         if lhs.icon !== rhs.icon {
@@ -121,6 +127,7 @@ public final class SolidRoundedButtonComponent: Component {
                 let button = SolidRoundedButtonView(
                     title: component.title,
                     label: component.label,
+                    badge: component.badge,
                     icon: component.icon,
                     theme: component.theme,
                     font: component.font,
@@ -141,6 +148,7 @@ public final class SolidRoundedButtonComponent: Component {
             if let button = self.button {
                 button.title = component.title
                 button.label = component.label
+                button.badge = component.badge
                 button.iconPosition = component.iconPosition
                 button.iconSpacing = component.iconSpacing
                 button.icon = component.iconName.flatMap { UIImage(bundleImageName: $0) }

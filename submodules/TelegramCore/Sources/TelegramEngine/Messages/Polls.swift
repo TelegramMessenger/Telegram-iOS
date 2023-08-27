@@ -250,6 +250,7 @@ private final class PollResultsOptionContext {
         let messageId = self.messageId
         let opaqueIdentifier = self.opaqueIdentifier
         let account = self.account
+        let accountPeerId = account.peerId
         let nextOffset = self.nextOffset
         let populateCache = self.populateCache
         self.disposable.set((self.account.postbox.transaction { transaction -> Api.InputPeer? in
@@ -272,24 +273,19 @@ private final class PollResultsOptionContext {
                             return ([], 0, nil)
                         }
                         switch result {
-                        case let .votesList(_, count, votes, users, nextOffset):
-                            var peers: [Peer] = []
-                            for apiUser in users {
-                                peers.append(TelegramUser(user: apiUser))
-                            }
-                            updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                                return updated
-                            })
+                        case let .votesList(_, count, votes, chats, users, nextOffset):
+                            let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                             var resultPeers: [RenderedPeer] = []
                             for vote in votes {
                                 let peerId: PeerId
                                 switch vote {
-                                case let .messageUserVote(userId, _, _):
-                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
-                                case let .messageUserVoteInputOption(userId, _):
-                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
-                                case let .messageUserVoteMultiple(userId, _, _):
-                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                                case let .messagePeerVote(peerIdValue, _, _):
+                                    peerId = peerIdValue.peerId
+                                case let .messagePeerVoteInputOption(peerIdValue, _):
+                                    peerId = peerIdValue.peerId
+                                case let .messagePeerVoteMultiple(peerIdValue, _, _):
+                                    peerId = peerIdValue.peerId
                                 }
                                 if let peer = transaction.getPeer(peerId) {
                                     resultPeers.append(RenderedPeer(peer: peer))

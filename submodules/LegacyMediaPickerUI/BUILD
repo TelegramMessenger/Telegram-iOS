@@ -30,6 +30,7 @@ swift_library(
         "//submodules/AttachmentUI:AttachmentUI",
         "//submodules/DrawingUI:DrawingUI",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
+        "//submodules/TelegramUI/Components/MediaEditor",
     ],
     visibility = [
         "//visibility:public",

@@ -33,7 +33,7 @@ final class StickerPackPreviewInteraction {
 }
 
 final class StickerPackPreviewGridItem: GridItem {
-    let account: Account
+    let context: AccountContext
     let stickerItem: StickerPackItem?
     let interaction: StickerPackPreviewInteraction
     let theme: PresentationTheme
@@ -43,8 +43,8 @@ final class StickerPackPreviewGridItem: GridItem {
     
     let section: GridSection? = nil
         
-    init(account: Account, stickerItem: StickerPackItem?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isPremium: Bool, isLocked: Bool, isEmpty: Bool) {
-        self.account = account
+    init(context: AccountContext, stickerItem: StickerPackItem?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isPremium: Bool, isLocked: Bool, isEmpty: Bool) {
+        self.context = context
         self.stickerItem = stickerItem
         self.interaction = interaction
         self.theme = theme
@@ -55,7 +55,7 @@ final class StickerPackPreviewGridItem: GridItem {
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = StickerPackPreviewGridItemNode()
-        node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isLocked: self.isLocked, isPremium: self.isPremium, isEmpty: self.isEmpty)
+        node.setup(context: self.context, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isLocked: self.isLocked, isPremium: self.isPremium, isEmpty: self.isEmpty)
         return node
     }
     
@@ -64,14 +64,14 @@ final class StickerPackPreviewGridItem: GridItem {
             assertionFailure()
             return
         }
-        node.setup(account: self.account, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isLocked: self.isLocked, isPremium: self.isPremium, isEmpty: self.isEmpty)
+        node.setup(context: self.context, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isLocked: self.isLocked, isPremium: self.isPremium, isEmpty: self.isEmpty)
     }
 }
 
 private let textFont = Font.regular(20.0)
 
 final class StickerPackPreviewGridItemNode: GridItemNode {
-    private var currentState: (Account, StickerPackItem?)?
+    private var currentState: (AccountContext, StickerPackItem?)?
     private var isLocked: Bool?
     private var isPremium: Bool?
     private var isEmpty: Bool?
@@ -173,11 +173,11 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     }
     
     private var setupTimestamp: Double?
-    func setup(account: Account, stickerItem: StickerPackItem?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isLocked: Bool, isPremium: Bool, isEmpty: Bool) {
+    func setup(context: AccountContext, stickerItem: StickerPackItem?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isLocked: Bool, isPremium: Bool, isEmpty: Bool) {
         self.interaction = interaction
         self.theme = theme
         
-        if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem || self.isLocked != isLocked || self.isPremium != isPremium || self.isEmpty != isEmpty {
+        if self.currentState == nil || self.currentState!.0 !== context || self.currentState!.1 != stickerItem || self.isLocked != isLocked || self.isPremium != isPremium || self.isEmpty != isEmpty {
             self.isLocked = isLocked
             
             if isLocked {
@@ -229,9 +229,9 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                 if stickerItem.file.isAnimatedSticker || stickerItem.file.isVideoSticker {
                     let dimensions = stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     if stickerItem.file.isVideoSticker {
-                        self.imageNode.setSignal(chatMessageSticker(account: account, userLocation: .other, file: stickerItem.file, small: true))
+                        self.imageNode.setSignal(chatMessageSticker(account: context.account, userLocation: .other, file: stickerItem.file, small: true))
                     } else {
-                        self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: account.postbox, userLocation: .other, file: stickerItem.file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))))
+                        self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: context.account.postbox, userLocation: .other, file: stickerItem.file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))))
                     }
                     
                     if self.animationNode == nil {
@@ -255,14 +255,14 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                         }
                     }
                     let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
-                    self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: stickerItem.file.resource, isVideo: stickerItem.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
+                    self.animationNode?.setup(source: AnimatedStickerResourceSource(account: context.account, resource: stickerItem.file.resource, isVideo: stickerItem.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
                     
                     self.animationNode?.visibility = visibility
                                         
-                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
                     
                     if stickerItem.file.isPremiumSticker, let effect = stickerItem.file.videoThumbnails.first {
-                        self.effectFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: stickerPackFileReference(stickerItem.file), resource: effect.resource).start())
+                        self.effectFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: stickerPackFileReference(stickerItem.file), resource: effect.resource).start())
                     }
                 } else {
                     if let animationNode = self.animationNode {
@@ -270,8 +270,8 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                         self.animationNode = nil
                         animationNode.removeFromSupernode()
                     }
-                    self.imageNode.setSignal(chatMessageSticker(account: account, userLocation: .other, file: stickerItem.file, small: true))
-                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
+                    self.imageNode.setSignal(chatMessageSticker(account: context.account, userLocation: .other, file: stickerItem.file, small: true))
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
                 }
             } else {
                 if isEmpty {
@@ -287,7 +287,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
             self.animationNode?.alpha = isLocked ? 0.5 : 1.0
             self.imageNode.alpha = isLocked ? 0.5 : 1.0
             
-            self.currentState = (account, stickerItem)
+            self.currentState = (context, stickerItem)
             self.setNeedsLayout()
         }
         self.isEmpty = isEmpty
@@ -322,8 +322,8 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         let placeholderFrame = imageFrame
         self.placeholderNode.frame = imageFrame
     
-        if let theme = self.theme, let (_, stickerItem) = self.currentState, let item = stickerItem {
-            self.placeholderNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: item.file.immediateThumbnailData, size: placeholderFrame.size)
+        if let theme = self.theme, let (context, stickerItem) = self.currentState, let item = stickerItem {
+            self.placeholderNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: item.file.immediateThumbnailData, size: placeholderFrame.size, enableEffect: context.sharedContext.energyUsageSettings.fullTranslucency)
         }
         
         if let lockBackground = self.lockBackground, let lockTintView = self.lockTintView, let lockIconNode = self.lockIconNode {

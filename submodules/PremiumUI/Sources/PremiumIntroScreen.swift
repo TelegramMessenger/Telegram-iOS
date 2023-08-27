@@ -3,8 +3,8 @@ import UIKit
 import Display
 import ComponentFlow
 import SwiftSignalKit
-import Postbox
 import TelegramCore
+import Postbox
 import TelegramPresentationData
 import PresentationDataUtils
 import ViewControllerComponent
@@ -14,6 +14,7 @@ import MultilineTextComponent
 import MultilineTextWithEntitiesComponent
 import BundleIconComponent
 import SolidRoundedButtonComponent
+import BlurredBackgroundComponent
 import Markdown
 import InAppPurchaseManager
 import ConfettiEffect
@@ -171,6 +172,54 @@ public enum PremiumSource: Equatable {
             } else {
                 return false
             }
+        case .linksPerSharedFolder:
+            if case .linksPerSharedFolder = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .membershipInSharedFolders:
+            if case .membershipInSharedFolders = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .stories:
+            if case .stories = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .storiesDownload:
+            if case .storiesDownload = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .storiesStealthMode:
+            if case .storiesStealthMode = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .storiesPermanentViews:
+            if case .storiesPermanentViews = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .storiesFormatting:
+            if case .storiesFormatting = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .storiesExpirationDurations:
+            if case .storiesExpirationDurations = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
@@ -191,71 +240,95 @@ public enum PremiumSource: Equatable {
     case appIcons
     case animatedEmoji
     case deeplink(String?)
-    case profile(PeerId)
-    case emojiStatus(PeerId, Int64, TelegramMediaFile?, LoadedStickerPack?)
-    case gift(from: PeerId, to: PeerId, duration: Int32)
+    case profile(EnginePeer.Id)
+    case emojiStatus(EnginePeer.Id, Int64, TelegramMediaFile?, LoadedStickerPack?)
+    case gift(from: EnginePeer.Id, to: EnginePeer.Id, duration: Int32)
     case giftTerms
     case voiceToText
     case fasterDownload
     case translation
+    case linksPerSharedFolder
+    case membershipInSharedFolders
+    case stories
+    case storiesDownload
+    case storiesStealthMode
+    case storiesPermanentViews
+    case storiesFormatting
+    case storiesExpirationDurations
     
     var identifier: String? {
         switch self {
-            case .settings:
-                return "settings"
-            case .stickers:
-                return "premium_stickers"
-            case .reactions:
-                return "infinite_reactions"
-            case .ads:
-                return "no_ads"
-            case .upload:
-                return "more_upload"
-            case .appIcons:
-                return "app_icons"
-            case .groupsAndChannels:
-                return "double_limits__channels"
-            case .pinnedChats:
-                return "double_limits__dialog_pinned"
-            case .publicLinks:
-                return "double_limits__channels_public"
-            case .savedGifs:
-                return "double_limits__saved_gifs"
-            case .savedStickers:
-                return "double_limits__stickers_faved"
-            case .folders:
-                return "double_limits__dialog_filters"
-            case .chatsPerFolder:
-                return "double_limits__dialog_filters_chats"
-            case .accounts:
-                return "double_limits__accounts"
-            case .about:
-                return "double_limits__about"
-            case .animatedEmoji:
-                return "animated_emoji"
-            case let .profile(id):
-                return "profile__\(id.id._internalGetInt64Value())"
-            case .emojiStatus:
-                return "emoji_status"
-            case .voiceToText:
-                return "voice_to_text"
-            case .fasterDownload:
-                return "faster_download"
-            case .gift, .giftTerms:
-                return nil
-            case let .deeplink(reference):
-                if let reference = reference {
-                    return "deeplink_\(reference)"
-                } else {
-                    return "deeplink"
-                }
-            case .translation:
-                return "translations"
+        case .settings:
+            return "settings"
+        case .stickers:
+            return "premium_stickers"
+        case .reactions:
+            return "infinite_reactions"
+        case .ads:
+            return "no_ads"
+        case .upload:
+            return "more_upload"
+        case .appIcons:
+            return "app_icons"
+        case .groupsAndChannels:
+            return "double_limits__channels"
+        case .pinnedChats:
+            return "double_limits__dialog_pinned"
+        case .publicLinks:
+            return "double_limits__channels_public"
+        case .savedGifs:
+            return "double_limits__saved_gifs"
+        case .savedStickers:
+            return "double_limits__stickers_faved"
+        case .folders:
+            return "double_limits__dialog_filters"
+        case .chatsPerFolder:
+            return "double_limits__dialog_filters_chats"
+        case .accounts:
+            return "double_limits__accounts"
+        case .about:
+            return "double_limits__about"
+        case .animatedEmoji:
+            return "animated_emoji"
+        case let .profile(id):
+            return "profile__\(id.id._internalGetInt64Value())"
+        case .emojiStatus:
+            return "emoji_status"
+        case .voiceToText:
+            return "voice_to_text"
+        case .fasterDownload:
+            return "faster_download"
+        case .gift, .giftTerms:
+            return nil
+        case let .deeplink(reference):
+            if let reference = reference {
+                return "deeplink_\(reference)"
+            } else {
+                return "deeplink"
+            }
+        case .translation:
+            return "translations"
+        case .linksPerSharedFolder:
+            return "double_limits__community_invites"
+        case .membershipInSharedFolders:
+            return "double_limits__communities_joined"
+        case .stories:
+            return "stories"
+        case .storiesDownload:
+            return "stories__save_stories_to_gallery"
+        case .storiesStealthMode:
+            return "stories__stealth_mode"
+        case .storiesPermanentViews:
+            return "stories__permanent_views_history"
+        case .storiesFormatting:
+            return "stories__links_and_formatting"
+        case .storiesExpirationDurations:
+            return "stories__expiration_durations"
         }
     }
 }
 
-enum PremiumPerk: CaseIterable {
+public enum PremiumPerk: CaseIterable {
     case doubleLimits
     case moreUpload
     case fasterDownload
@@ -270,8 +343,9 @@ enum PremiumPerk: CaseIterable {
     case animatedEmoji
     case emojiStatus
     case translation
+    case stories
     
-    static var allCases: [PremiumPerk] {
+    public static var allCases: [PremiumPerk] {
         return [
             .doubleLimits,
             .moreUpload,
@@ -286,7 +360,8 @@ enum PremiumPerk: CaseIterable {
             .appIcons,
             .animatedEmoji,
             .emojiStatus,
-            .translation
+            .translation,
+            .stories
         ]
     }
     
@@ -302,133 +377,141 @@ enum PremiumPerk: CaseIterable {
     
     var identifier: String {
         switch self {
-            case .doubleLimits:
-                return "double_limits"
-            case .moreUpload:
-                return "more_upload"
-            case .fasterDownload:
-                return "faster_download"
-            case .voiceToText:
-                return "voice_to_text"
-            case .noAds:
-                return "no_ads"
-            case .uniqueReactions:
-                return "infinite_reactions"
-            case .premiumStickers:
-                return "premium_stickers"
-            case .advancedChatManagement:
-                return "advanced_chat_management"
-            case .profileBadge:
-                return "profile_badge"
-            case .animatedUserpics:
-                return "animated_userpics"
-            case .appIcons:
-                return "app_icons"
-            case .animatedEmoji:
-                return "animated_emoji"
-            case .emojiStatus:
-                return "emoji_status"
-            case .translation:
-                return "translations"
+        case .doubleLimits:
+            return "double_limits"
+        case .moreUpload:
+            return "more_upload"
+        case .fasterDownload:
+            return "faster_download"
+        case .voiceToText:
+            return "voice_to_text"
+        case .noAds:
+            return "no_ads"
+        case .uniqueReactions:
+            return "infinite_reactions"
+        case .premiumStickers:
+            return "premium_stickers"
+        case .advancedChatManagement:
+            return "advanced_chat_management"
+        case .profileBadge:
+            return "profile_badge"
+        case .animatedUserpics:
+            return "animated_userpics"
+        case .appIcons:
+            return "app_icons"
+        case .animatedEmoji:
+            return "animated_emoji"
+        case .emojiStatus:
+            return "emoji_status"
+        case .translation:
+            return "translations"
+        case .stories:
+            return "stories"
         }
     }
     
     func title(strings: PresentationStrings) -> String {
         switch self {
-            case .doubleLimits:
-                return strings.Premium_DoubledLimits
-            case .moreUpload:
-                return strings.Premium_UploadSize
-            case .fasterDownload:
-                return strings.Premium_FasterSpeed
-            case .voiceToText:
-                return strings.Premium_VoiceToText
-            case .noAds:
-                return strings.Premium_NoAds
-            case .uniqueReactions:
-                return strings.Premium_InfiniteReactions
-            case .premiumStickers:
-                return strings.Premium_Stickers
-            case .advancedChatManagement:
-                return strings.Premium_ChatManagement
-            case .profileBadge:
-                return strings.Premium_Badge
-            case .animatedUserpics:
-                return strings.Premium_Avatar
-            case .appIcons:
-                return strings.Premium_AppIcon
-            case .animatedEmoji:
-                return strings.Premium_AnimatedEmoji
-            case .emojiStatus:
-                return strings.Premium_EmojiStatus
-            case .translation:
-                return strings.Premium_Translation
+        case .doubleLimits:
+            return strings.Premium_DoubledLimits
+        case .moreUpload:
+            return strings.Premium_UploadSize
+        case .fasterDownload:
+            return strings.Premium_FasterSpeed
+        case .voiceToText:
+            return strings.Premium_VoiceToText
+        case .noAds:
+            return strings.Premium_NoAds
+        case .uniqueReactions:
+            return strings.Premium_InfiniteReactions
+        case .premiumStickers:
+            return strings.Premium_Stickers
+        case .advancedChatManagement:
+            return strings.Premium_ChatManagement
+        case .profileBadge:
+            return strings.Premium_Badge
+        case .animatedUserpics:
+            return strings.Premium_Avatar
+        case .appIcons:
+            return strings.Premium_AppIcon
+        case .animatedEmoji:
+            return strings.Premium_AnimatedEmoji
+        case .emojiStatus:
+            return strings.Premium_EmojiStatus
+        case .translation:
+            return strings.Premium_Translation
+        case .stories:
+            return strings.Premium_Stories
         }
     }
     
     func subtitle(strings: PresentationStrings) -> String {
         switch self {
-            case .doubleLimits:
-                return strings.Premium_DoubledLimitsInfo
-            case .moreUpload:
-                return strings.Premium_UploadSizeInfo
-            case .fasterDownload:
-                return strings.Premium_FasterSpeedInfo
-            case .voiceToText:
-                return strings.Premium_VoiceToTextInfo
-            case .noAds:
-                return strings.Premium_NoAdsInfo
-            case .uniqueReactions:
-                return strings.Premium_InfiniteReactionsInfo
-            case .premiumStickers:
-                return strings.Premium_StickersInfo
-            case .advancedChatManagement:
-                return strings.Premium_ChatManagementInfo
-            case .profileBadge:
-                return strings.Premium_BadgeInfo
-            case .animatedUserpics:
-                return strings.Premium_AvatarInfo
-            case .appIcons:
-                return strings.Premium_AppIconInfo
-            case .animatedEmoji:
-                return strings.Premium_AnimatedEmojiInfo
-            case .emojiStatus:
-                return strings.Premium_EmojiStatusInfo
-            case .translation:
-                return strings.Premium_TranslationInfo
+        case .doubleLimits:
+            return strings.Premium_DoubledLimitsInfo
+        case .moreUpload:
+            return strings.Premium_UploadSizeInfo
+        case .fasterDownload:
+            return strings.Premium_FasterSpeedInfo
+        case .voiceToText:
+            return strings.Premium_VoiceToTextInfo
+        case .noAds:
+            return strings.Premium_NoAdsInfo
+        case .uniqueReactions:
+            return strings.Premium_InfiniteReactionsInfo
+        case .premiumStickers:
+            return strings.Premium_StickersInfo
+        case .advancedChatManagement:
+            return strings.Premium_ChatManagementInfo
+        case .profileBadge:
+            return strings.Premium_BadgeInfo
+        case .animatedUserpics:
+            return strings.Premium_AvatarInfo
+        case .appIcons:
+            return strings.Premium_AppIconInfo
+        case .animatedEmoji:
+            return strings.Premium_AnimatedEmojiInfo
+        case .emojiStatus:
+            return strings.Premium_EmojiStatusInfo
+        case .translation:
+            return strings.Premium_TranslationInfo
+        case .stories:
+            return strings.Premium_StoriesInfo
         }
     }
     
     var iconName: String {
         switch self {
-            case .doubleLimits:
-                return "Premium/Perk/Limits"
-            case .moreUpload:
-                return "Premium/Perk/Upload"
-            case .fasterDownload:
-                return "Premium/Perk/Speed"
-            case .voiceToText:
-                return "Premium/Perk/Voice"
-            case .noAds:
-                return "Premium/Perk/NoAds"
-            case .uniqueReactions:
-                return "Premium/Perk/Reactions"
-            case .premiumStickers:
-                return "Premium/Perk/Stickers"
-            case .advancedChatManagement:
-                return "Premium/Perk/Chat"
-            case .profileBadge:
-                return "Premium/Perk/Badge"
-            case .animatedUserpics:
-                return "Premium/Perk/Avatar"
-            case .appIcons:
-                return "Premium/Perk/AppIcon"
-            case .animatedEmoji:
-                return "Premium/Perk/Emoji"
-            case .emojiStatus:
-                return "Premium/Perk/Status"
-            case .translation:
-                return "Premium/Perk/Translation"
+        case .doubleLimits:
+            return "Premium/Perk/Limits"
+        case .moreUpload:
+            return "Premium/Perk/Upload"
+        case .fasterDownload:
+            return "Premium/Perk/Speed"
+        case .voiceToText:
+            return "Premium/Perk/Voice"
+        case .noAds:
+            return "Premium/Perk/NoAds"
+        case .uniqueReactions:
+            return "Premium/Perk/Reactions"
+        case .premiumStickers:
+            return "Premium/Perk/Stickers"
+        case .advancedChatManagement:
+            return "Premium/Perk/Chat"
+        case .profileBadge:
+            return "Premium/Perk/Badge"
+        case .animatedUserpics:
+            return "Premium/Perk/Avatar"
+        case .appIcons:
+            return "Premium/Perk/AppIcon"
+        case .animatedEmoji:
+            return "Premium/Perk/Emoji"
+        case .emojiStatus:
+            return "Premium/Perk/Status"
+        case .translation:
+            return "Premium/Perk/Translation"
+        case .stories:
+            return "Premium/Perk/Stories"
         }
     }
 }
@@ -436,9 +519,11 @@ enum PremiumPerk: CaseIterable {
 struct PremiumIntroConfiguration {
     static var defaultValue: PremiumIntroConfiguration {
         return PremiumIntroConfiguration(perks: [
+            .stories,
             .doubleLimits,
             .moreUpload,
             .fasterDownload,
+            .translation,
             .voiceToText,
             .noAds,
             .emojiStatus,
@@ -1045,6 +1130,8 @@ final class PerkComponent: CombinedComponent {
     let subtitle: String
     let subtitleColor: UIColor
     let arrowColor: UIColor
+    let accentColor: UIColor
+    let badge: String?
     
     init(
         iconName: String,
@@ -1053,7 +1140,9 @@ final class PerkComponent: CombinedComponent {
         titleColor: UIColor,
         subtitle: String,
         subtitleColor: UIColor,
-        arrowColor: UIColor
+        arrowColor: UIColor,
+        accentColor: UIColor,
+        badge: String? = nil
     ) {
         self.iconName = iconName
         self.iconBackgroundColors = iconBackgroundColors
@@ -1062,6 +1151,8 @@ final class PerkComponent: CombinedComponent {
         self.subtitle = subtitle
         self.subtitleColor = subtitleColor
         self.arrowColor = arrowColor
+        self.accentColor = accentColor
+        self.badge = badge
     }
     
     static func ==(lhs: PerkComponent, rhs: PerkComponent) -> Bool {
@@ -1086,6 +1177,12 @@ final class PerkComponent: CombinedComponent {
         if lhs.arrowColor != rhs.arrowColor {
             return false
         }
+        if lhs.accentColor != rhs.accentColor {
+            return false
+        }
+        if lhs.badge != rhs.badge {
+            return false
+        }
         return true
     }
     
@@ -1095,6 +1192,8 @@ final class PerkComponent: CombinedComponent {
         let title = Child(MultilineTextComponent.self)
         let subtitle = Child(MultilineTextComponent.self)
         let arrow = Child(BundleIconComponent.self)
+        let badgeBackground = Child(RoundedRectangle.self)
+        let badgeText = Child(MultilineTextComponent.self)
 
         return { context in
             let component = context.component
@@ -1178,6 +1277,32 @@ final class PerkComponent: CombinedComponent {
                 .position(CGPoint(x: iconBackground.size.width + sideInset + title.size.width / 2.0, y: textTopInset + title.size.height / 2.0))
             )
             
+            if let badge = component.badge {
+                let badgeText = badgeText.update(
+                    component: MultilineTextComponent(text: .plain(NSAttributedString(string: badge, font: Font.semibold(11.0), textColor: .white))),
+                    availableSize: context.availableSize,
+                    transition: context.transition
+                )
+                
+                let badgeWidth = badgeText.size.width + 7.0
+                let badgeBackground = badgeBackground.update(
+                    component: RoundedRectangle(
+                        colors: [component.accentColor],
+                        cornerRadius: 5.0,
+                        gradientDirection: .vertical),
+                    availableSize: CGSize(width: badgeWidth, height: 16.0),
+                    transition: context.transition
+                )
+                
+                context.add(badgeBackground
+                    .position(CGPoint(x: iconBackground.size.width + sideInset + title.size.width + badgeWidth / 2.0 + 8.0, y: textTopInset + title.size.height / 2.0 - 1.0))
+                )
+                
+                context.add(badgeText
+                    .position(CGPoint(x: iconBackground.size.width + sideInset + title.size.width + badgeWidth / 2.0 + 8.0, y: textTopInset + title.size.height / 2.0 - 1.0))
+                )
+            }
+            
             context.add(subtitle
                 .position(CGPoint(x: iconBackground.size.width + sideInset + subtitle.size.width / 2.0, y: textTopInset + title.size.height + spacing + subtitle.size.height / 2.0))
             )
@@ -1198,6 +1323,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
     
     let context: AccountContext
     let source: PremiumSource
+    let forceDark: Bool
     let isPremium: Bool?
     let justBought: Bool
     let otherPeerName: String?
@@ -1213,6 +1339,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
     init(
         context: AccountContext,
         source: PremiumSource,
+        forceDark: Bool,
         isPremium: Bool?,
         justBought: Bool,
         otherPeerName: String?,
@@ -1227,6 +1354,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
     ) {
         self.context = context
         self.source = source
+        self.forceDark = forceDark
         self.isPremium = isPremium
         self.justBought = justBought
         self.otherPeerName = otherPeerName
@@ -1248,6 +1376,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             return false
         }
         if lhs.isPremium != rhs.isPremium {
+            return false
+        }
+        if lhs.forceDark != rhs.forceDark {
             return false
         }
         if lhs.justBought != rhs.justBought {
@@ -1485,17 +1616,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             )
             context.add(text
                 .position(CGPoint(x: size.width / 2.0, y: size.height + text.size.height / 2.0))
-//                .update(Transition.Update { _, view, _ in
-//                    if let snapshot = view.snapshotView(afterScreenUpdates: false) {
-//                        let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
-//                        view.superview?.addSubview(snapshot)
-//                        transition.setAlpha(view: snapshot, alpha: 0.0, completion: { [weak snapshot] _ in
-//                            snapshot?.removeFromSuperview()
-//                        })
-//                        snapshot.frame = view.frame
-//                        transition.animateAlpha(view: view, from: 0.0, to: 1.0)
-//                    }
-//                })
             )
             size.height += text.size.height
             size.height += 21.0
@@ -1514,7 +1634,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0x548DFF),
                 UIColor(rgb: 0x54A3FF),
                 UIColor(rgb: 0x54bdff),
-                UIColor(rgb: 0x71c8ff)
+                UIColor(rgb: 0x71c8ff),
+                UIColor(rgb: 0xa0daff)
             ]
                         
             let accountContext = context.component.context
@@ -1640,7 +1761,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     }
                 }
             }
-                        
+             
+            let forceDark = context.component.forceDark
             let layoutPerks = {
                 var i = 0
                 var perksItems: [SectionGroupComponent.Item] = []
@@ -1659,7 +1781,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                     titleColor: titleColor,
                                     subtitle: perk.subtitle(strings: strings),
                                     subtitleColor: subtitleColor,
-                                    arrowColor: arrowColor
+                                    arrowColor: arrowColor,
+                                    accentColor: accentColor,
+                                    badge: perk.identifier == "stories" ? strings.Premium_New : nil
                                 )
                             )
                         ),
@@ -1695,12 +1819,13 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 demoSubject = .emojiStatus
                             case .translation:
                                 demoSubject = .translation
+                            case .stories:
+                                demoSubject = .stories
                             }
                             
                             let isPremium = state?.isPremium == true
-                            
                             var dismissImpl: (() -> Void)?
-                            let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .intro(state?.price), order: state?.configuration.perks, buttonText: isPremium ? strings.Common_OK : (state?.isAnnual == true ? strings.Premium_SubscribeForAnnual(state?.price ?? "—").string :  strings.Premium_SubscribeFor(state?.price ?? "–").string), isPremium: isPremium)
+                            let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .intro(state?.price), order: state?.configuration.perks, buttonText: isPremium ? strings.Common_OK : (state?.isAnnual == true ? strings.Premium_SubscribeForAnnual(state?.price ?? "—").string :  strings.Premium_SubscribeFor(state?.price ?? "–").string), isPremium: isPremium, forceDark: forceDark)
                             controller.action = { [weak state] in
                                 dismissImpl?()
                                 if state?.isPremium == false {
@@ -1881,7 +2006,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         horizontalAlignment: .natural,
                         maximumNumberOfLines: 0,
                         lineSpacing: 0.0,
-                        highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.3),
+                        highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.2),
                         highlightAction: { attributes in
                             if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
                                 return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
@@ -1915,71 +2040,21 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
     }
 }
 
-class BlurredRectangle: Component {
-    let color: UIColor
-    let radius: CGFloat
-
-    init(color: UIColor, radius: CGFloat = 0.0) {
-        self.color = color
-        self.radius = radius
-    }
-
-    static func ==(lhs: BlurredRectangle, rhs: BlurredRectangle) -> Bool {
-        if !lhs.color.isEqual(rhs.color) {
-            return false
-        }
-        if lhs.radius != rhs.radius {
-            return false
-        }
-        return true
-    }
-
-    final class View: UIView {
-        private let background: NavigationBackgroundNode
-
-        init() {
-            self.background = NavigationBackgroundNode(color: .clear)
-
-            super.init(frame: CGRect())
-
-            self.addSubview(self.background.view)
-        }
-
-        required init?(coder aDecoder: NSCoder) {
-            preconditionFailure()
-        }
-
-        func update(component: BlurredRectangle, availableSize: CGSize, transition: Transition) -> CGSize {
-            transition.setFrame(view: self.background.view, frame: CGRect(origin: CGPoint(), size: availableSize))
-            self.background.updateColor(color: component.color, transition: .immediate)
-            self.background.update(size: availableSize, cornerRadius: component.radius, transition: .immediate)
-
-            return availableSize
-        }
-    }
-
-    func makeView() -> View {
-        return View()
-    }
-
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, transition: transition)
-    }
-}
-
 private final class PremiumIntroScreenComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
     let source: PremiumSource
+    let forceDark: Bool
     let updateInProgress: (Bool) -> Void
     let present: (ViewController) -> Void
     let push: (ViewController) -> Void
     let completion: () -> Void
     
-    init(context: AccountContext, source: PremiumSource, updateInProgress: @escaping (Bool) -> Void, present: @escaping (ViewController) -> Void, push: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
+    init(context: AccountContext, source: PremiumSource, forceDark: Bool, updateInProgress: @escaping (Bool) -> Void, present: @escaping (ViewController) -> Void, push: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
         self.context = context
         self.source = source
+        self.forceDark = forceDark
         self.updateInProgress = updateInProgress
         self.present = present
         self.push = push
@@ -1991,6 +2066,9 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             return false
         }
         if lhs.source != rhs.source {
+            return false
+        }
+        if lhs.forceDark != rhs.forceDark {
             return false
         }
         return true
@@ -2072,23 +2150,22 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 availableProducts = .single([])
             }
             
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let otherPeerName: Signal<String?, NoError>
             if case let .gift(fromPeerId, toPeerId, _) = source {
                 let otherPeerId = fromPeerId != context.account.peerId ? fromPeerId : toPeerId
                 otherPeerName = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: otherPeerId))
                 |> map { peer -> String? in
-                    return peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                    return peer?.compactDisplayTitle
                 }
             } else if case let .profile(peerId) = source {
                 otherPeerName = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                 |> map { peer -> String? in
-                    return peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                    return peer?.compactDisplayTitle
                 }
             } else if case let .emojiStatus(peerId, _, _, _) = source {
                 otherPeerName = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                 |> map { peer -> String? in
-                    return peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                    return peer?.compactDisplayTitle
                 }
             } else {
                 otherPeerName = .single(nil)
@@ -2298,11 +2375,11 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         let scrollContent = Child(ScrollComponent<EnvironmentType>.self)
         let star = Child(PremiumStarComponent.self)
         let emoji = Child(EmojiHeaderComponent.self)
-        let topPanel = Child(BlurredRectangle.self)
+        let topPanel = Child(BlurredBackgroundComponent.self)
         let topSeparator = Child(Rectangle.self)
         let title = Child(MultilineTextComponent.self)
         let secondaryTitle = Child(MultilineTextWithEntitiesComponent.self)
-        let bottomPanel = Child(BlurredRectangle.self)
+        let bottomPanel = Child(BlurredBackgroundComponent.self)
         let bottomSeparator = Child(Rectangle.self)
         let button = Child(SolidRoundedButtonComponent.self)
         
@@ -2335,7 +2412,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         isVisible: starIsVisible,
                         hasIdleAnimations: state.hasIdleAnimations
                     ),
-                    availableSize: CGSize(width: min(390.0, context.availableSize.width), height: 220.0),
+                    availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
                     transition: context.transition
                 )
             } else {
@@ -2345,13 +2422,13 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         isVisible: starIsVisible,
                         hasIdleAnimations: state.hasIdleAnimations
                     ),
-                    availableSize: CGSize(width: min(390.0, context.availableSize.width), height: 220.0),
+                    availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
                     transition: context.transition
                 )
             }
             
             let topPanel = topPanel.update(
-                component: BlurredRectangle(
+                component: BlurredBackgroundComponent(
                     color: environment.theme.rootController.navigationBar.blurredBackgroundColor
                 ),
                 availableSize: CGSize(width: context.availableSize.width, height: environment.navigationHeight),
@@ -2393,26 +2470,12 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 availableSize: context.availableSize,
                 transition: context.transition
             )
-            
-            let textColor = environment.theme.list.itemPrimaryTextColor
-            let accentColor: UIColor
-            if case .emojiStatus = context.component.source {
-                accentColor = environment.theme.list.itemAccentColor
-            } else {
-                accentColor = UIColor(rgb: 0x597cf5)
-            }
-            
-            let textFont = Font.bold(18.0)
-            let boldTextFont = Font.bold(18.0)
-            
-            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: accentColor), linkAttribute: { _ in
-                return nil
-            })
-            
+
             var loadedEmojiPack: LoadedStickerPack?
             var highlightableLinks = false
             let secondaryTitleText: String
-            if let otherPeerName = state.otherPeerName {
+            var isAnonymous = false
+            if var otherPeerName = state.otherPeerName {
                 if case let .emojiStatus(_, _, file, maybeEmojiPack) = context.component.source, let emojiPack = maybeEmojiPack, case let .result(info, _, _) = emojiPack {
                     loadedEmojiPack = maybeEmojiPack
                     highlightableLinks = true
@@ -2444,6 +2507,10 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                             secondaryTitleText = ""
                         }
                     } else {
+                        if fromPeerId.namespace == Namespaces.Peer.CloudUser && fromPeerId.id._internalGetInt64Value() == 777000 {
+                            isAnonymous = true
+                            otherPeerName = environment.strings.Premium_GiftedTitle_Someone
+                        }
                         if duration == 12 {
                             secondaryTitleText = environment.strings.Premium_GiftedTitle_12Month(otherPeerName).string
                         } else if duration == 6 {
@@ -2460,6 +2527,20 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             } else {
                 secondaryTitleText = ""
             }
+            
+            let textColor = environment.theme.list.itemPrimaryTextColor
+            let accentColor: UIColor
+            if case .emojiStatus = context.component.source {
+                accentColor = environment.theme.list.itemAccentColor
+            } else {
+                accentColor = UIColor(rgb: 0x597cf5)
+            }
+            
+            let textFont = Font.bold(18.0)
+            let boldTextFont = Font.bold(18.0)
+            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: isAnonymous ? textColor : accentColor), linkAttribute: { _ in
+                return nil
+            })
             
             let secondaryAttributedText = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(secondaryTitleText, attributes: markdownAttributes))
             if let emojiFile = state.emojiFile {
@@ -2516,6 +2597,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     content: AnyComponent(PremiumIntroScreenContentComponent(
                         context: context.component.context,
                         source: context.component.source,
+                        forceDark: context.component.forceDark,
                         isPremium: state.isPremium,
                         justBought: state.justBought,
                         otherPeerName: state.otherPeerName,
@@ -2608,17 +2690,6 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: max(topInset + 160.0 - titleOffset, environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)))
                 .scale(titleScale)
                 .opacity(titleAlpha)
-//                .update(Transition.Update { _, view, _ in
-//                    if let snapshot = view.snapshotView(afterScreenUpdates: false) {
-//                        let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
-//                        view.superview?.addSubview(snapshot)
-//                        transition.setAlpha(view: snapshot, alpha: 0.0, completion: { [weak snapshot] _ in
-//                            snapshot?.removeFromSuperview()
-//                        })
-//                        snapshot.frame = view.frame
-//                        transition.animateAlpha(view: view, from: 0.0, to: titleAlpha)
-//                    }
-//                })
             )
             
             context.add(secondaryTitle
@@ -2670,7 +2741,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     transition: context.transition)
                                
                 let bottomPanel = bottomPanel.update(
-                    component: BlurredRectangle(
+                    component: BlurredBackgroundComponent(
                         color: environment.theme.rootController.tabBar.backgroundColor
                     ),
                     availableSize: CGSize(width: context.availableSize.width, height: bottomPanelPadding + button.size.height + bottomInset),
@@ -2750,7 +2821,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
     public weak var containerView: UIView?
     public var animationColor: UIColor?
     
-    public init(context: AccountContext, modal: Bool = true, source: PremiumSource) {
+    public init(context: AccountContext, modal: Bool = true, source: PremiumSource, forceDark: Bool = false) {
         self.context = context
             
         var updateInProgressImpl: ((Bool) -> Void)?
@@ -2760,6 +2831,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
         super.init(context: context, component: PremiumIntroScreenComponent(
             context: context,
             source: source,
+            forceDark: forceDark,
             updateInProgress: { inProgress in
                 updateInProgressImpl?(inProgress)
             },
@@ -2772,12 +2844,12 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
             completion: {
                 completionImpl?()
             }
-        ), navigationBarAppearance: .transparent)
+        ), navigationBarAppearance: .transparent, theme: forceDark ? .dark : .default)
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         if modal {
-            let cancelItem = UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+            let cancelItem = UIBarButtonItem(title: presentationData.strings.Common_Close, style: .plain, target: self, action: #selector(self.cancelPressed))
             self.navigationItem.setLeftBarButton(cancelItem, animated: false)
             self.navigationPresentation = .modal
         } else {
@@ -2813,6 +2885,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
     
     @objc private func cancelPressed() {
         self.dismiss()
+        self.wasDismissed?()
     }
     
     public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

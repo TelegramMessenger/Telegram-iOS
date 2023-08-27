@@ -130,7 +130,39 @@ func pushPeerNotificationSettings(postbox: Postbox, network: Network, peerId: Pe
                     if sound != nil {
                         flags |= (1 << 3)
                     }
-                    let inputSettings = Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: flags, showPreviews: showPreviews, silent: nil, muteUntil: muteUntil, sound: sound)
+                    
+                    let storiesMuted: Api.Bool?
+                    switch settings.storySettings.mute {
+                    case .default:
+                        storiesMuted = nil
+                    case .muted:
+                        storiesMuted = .boolTrue
+                    case .unmuted:
+                        storiesMuted = .boolFalse
+                    }
+                    if storiesMuted != nil {
+                        flags |= (1 << 6)
+                    }
+                    
+                    let storiesHideSender: Api.Bool?
+                    switch settings.storySettings.hideSender {
+                    case .default:
+                        storiesHideSender = nil
+                    case .hide:
+                        storiesHideSender = .boolTrue
+                    case .show:
+                        storiesHideSender = .boolFalse
+                    }
+                    if storiesHideSender != nil {
+                        flags |= (1 << 7)
+                    }
+                    
+                    let storiesSound: Api.NotificationSound? = settings.storySettings.sound.apiSound
+                    if storiesSound != nil {
+                        flags |= (1 << 8)
+                    }
+                    
+                    let inputSettings = Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: flags, showPreviews: showPreviews, silent: nil, muteUntil: muteUntil, sound: sound, storiesMuted: storiesMuted, storiesHideSender: storiesHideSender, storiesSound: storiesSound)
                     return network.request(Api.functions.account.updateNotifySettings(peer: .inputNotifyForumTopic(peer: inputPeer, topMsgId: Int32(clamping: threadId)), settings: inputSettings))
                     |> `catch` { _ -> Signal<Api.Bool, NoError> in
                         return .single(.boolFalse)
@@ -173,7 +205,39 @@ func pushPeerNotificationSettings(postbox: Postbox, network: Network, peerId: Pe
                     if sound != nil {
                         flags |= (1 << 3)
                     }
-                    let inputSettings = Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: flags, showPreviews: showPreviews, silent: nil, muteUntil: muteUntil, sound: sound)
+                    
+                    let storiesMuted: Api.Bool?
+                    switch settings.storySettings.mute {
+                    case .default:
+                        storiesMuted = nil
+                    case .muted:
+                        storiesMuted = .boolTrue
+                    case .unmuted:
+                        storiesMuted = .boolFalse
+                    }
+                    if storiesMuted != nil {
+                        flags |= (1 << 6)
+                    }
+                    
+                    let storiesHideSender: Api.Bool?
+                    switch settings.storySettings.hideSender {
+                    case .default:
+                        storiesHideSender = nil
+                    case .hide:
+                        storiesHideSender = .boolTrue
+                    case .show:
+                        storiesHideSender = .boolFalse
+                    }
+                    if storiesHideSender != nil {
+                        flags |= (1 << 7)
+                    }
+                    
+                    let storiesSound: Api.NotificationSound? = settings.storySettings.sound.apiSound
+                    if storiesSound != nil {
+                        flags |= (1 << 8)
+                    }
+                    
+                    let inputSettings = Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: flags, showPreviews: showPreviews, silent: nil, muteUntil: muteUntil, sound: sound, storiesMuted: storiesMuted, storiesHideSender: storiesHideSender, storiesSound: storiesSound)
                     return network.request(Api.functions.account.updateNotifySettings(peer: .inputNotifyPeer(peer: inputPeer), settings: inputSettings))
                     |> `catch` { _ -> Signal<Api.Bool, NoError> in
                         return .single(.boolFalse)

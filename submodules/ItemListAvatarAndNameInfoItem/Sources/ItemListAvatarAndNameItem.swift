@@ -1118,6 +1118,10 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
         self.inputFirstField?.becomeFirstResponder()
     }
     
+    public func selectAll() {
+        self.inputFirstField?.selectAll(nil)
+    }
+    
     override public func longTapped() {
         self.item?.longTapAction?()
     }

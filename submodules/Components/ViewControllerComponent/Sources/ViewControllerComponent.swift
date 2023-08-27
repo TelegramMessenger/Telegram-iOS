@@ -7,6 +7,17 @@ import TelegramPresentationData
 import AccountContext
 import ComponentDisplayAdapters
 
+private func resolveTheme(baseTheme: PresentationTheme, theme: ViewControllerComponentContainer.Theme) -> PresentationTheme {
+    switch theme {
+    case .default:
+        return baseTheme
+    case let .custom(value):
+        return value
+    case .dark:
+        return customizeDefaultDarkPresentationTheme(theme: defaultDarkPresentationTheme, editing: false, title: nil, accentColor: baseTheme.list.itemAccentColor, backgroundColors: [], bubbleColors: [], animateBubbleColors: false, wallpaper: nil, baseColor: nil)
+    }
+}
+
 open class ViewControllerComponentContainer: ViewController {
     public enum NavigationBarAppearance {
         case none
@@ -18,6 +29,17 @@ open class ViewControllerComponentContainer: ViewController {
         case none
         case ignore
         case `default`
+    }
+    
+    public enum PresentationMode {
+        case `default`
+        case modal
+    }
+    
+    public enum Theme {
+        case `default`
+        case dark
+        case custom(PresentationTheme)
     }
     
     public final class Environment: Equatable {
@@ -116,19 +138,21 @@ open class ViewControllerComponentContainer: ViewController {
         private weak var controller: ViewControllerComponentContainer?
         
         private var component: AnyComponent<ViewControllerComponentContainer.Environment>
-        var theme: PresentationTheme?
+        let theme: Theme
+        var resolvedTheme: PresentationTheme
         public let hostView: ComponentHostView<ViewControllerComponentContainer.Environment>
         
         private var currentIsVisible: Bool = false
         private var currentLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
         
-        init(context: AccountContext, controller: ViewControllerComponentContainer, component: AnyComponent<ViewControllerComponentContainer.Environment>, theme: PresentationTheme?) {
+        init(context: AccountContext, controller: ViewControllerComponentContainer, component: AnyComponent<ViewControllerComponentContainer.Environment>, theme: Theme) {
             self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
             self.controller = controller
             
             self.component = component
             self.theme = theme
+            self.resolvedTheme = resolveTheme(baseTheme: self.presentationData.theme, theme: theme)
             self.hostView = ComponentHostView()
             
             super.init()
@@ -147,7 +171,7 @@ open class ViewControllerComponentContainer: ViewController {
                 metrics: layout.metrics,
                 deviceMetrics: layout.deviceMetrics,
                 isVisible: self.currentIsVisible,
-                theme: self.theme ?? self.presentationData.theme,
+                theme: self.resolvedTheme,
                 strings: self.presentationData.strings,
                 dateTimeFormat: self.presentationData.dateTimeFormat,
                 controller: { [weak self] in
@@ -160,6 +184,7 @@ open class ViewControllerComponentContainer: ViewController {
                 environment: {
                     environment
                 },
+                forceUpdate: self.controller?.forceNextUpdate ?? false,
                 containerSize: layout.size
             )
             transition.setFrame(view: self.hostView, frame: CGRect(origin: CGPoint(), size: layout.size), completion: nil)
@@ -192,13 +217,15 @@ open class ViewControllerComponentContainer: ViewController {
     }
     
     private let context: AccountContext
-    private var theme: PresentationTheme?
+    private var theme: Theme
     private let component: AnyComponent<ViewControllerComponentContainer.Environment>
     
     private var presentationDataDisposable: Disposable?
     public private(set) var validLayout: ContainerViewLayout?
     
-    public init<C: Component>(context: AccountContext, component: C, navigationBarAppearance: NavigationBarAppearance, statusBarStyle: StatusBarStyle = .default, theme: PresentationTheme? = nil) where C.EnvironmentType == ViewControllerComponentContainer.Environment {
+    public var wasDismissed: (() -> Void)?
+    
+    public init<C: Component>(context: AccountContext, component: C, navigationBarAppearance: NavigationBarAppearance, statusBarStyle: StatusBarStyle = .default, presentationMode: PresentationMode = .default, theme: Theme = .default) where C.EnvironmentType == ViewControllerComponentContainer.Environment {
         self.context = context
         self.component = AnyComponent(component)
         self.theme = theme
@@ -219,7 +246,13 @@ open class ViewControllerComponentContainer: ViewController {
         self.presentationDataDisposable = (self.context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
-                strongSelf.node.presentationData = presentationData
+                var theme = presentationData.theme
+                if case .modal = presentationMode {
+                    theme = theme.withModalBlocksBackground()
+                }
+
+                strongSelf.node.presentationData = presentationData.withUpdated(theme: theme)
+                strongSelf.node.resolvedTheme = resolveTheme(baseTheme: presentationData.theme, theme: strongSelf.theme)
         
                 switch statusBarStyle {
                     case .none:
@@ -260,6 +293,15 @@ open class ViewControllerComponentContainer: ViewController {
         self.displayNodeDidLoad()
     }
     
+    private var didDismiss = false
+    open override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        if !self.didDismiss {
+            self.didDismiss = true
+            self.wasDismissed?()
+        }
+    }
+    
     override open func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
@@ -273,7 +315,16 @@ open class ViewControllerComponentContainer: ViewController {
     }
     
     open override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
-        super.dismiss(animated: flag, completion: completion)
+        super.dismiss(animated: flag, completion: {
+            completion?()
+        })
+    }
+    
+    fileprivate var forceNextUpdate = false
+    public func requestLayout(forceUpdate: Bool, transition: ContainedViewLayoutTransition) {
+        self.forceNextUpdate = forceUpdate
+        self.requestLayout(transition: transition)
+        self.forceNextUpdate = false
     }
     
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

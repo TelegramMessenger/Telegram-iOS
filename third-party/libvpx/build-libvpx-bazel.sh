@@ -23,7 +23,8 @@ CONFIGURE_ARGS="--disable-docs
                 --disable-vp9-temporal-denoising
                 --disable-unit-tests
                 --enable-realtime-only
-                --enable-multi-res-encoding"
+                --enable-multi-res-encoding
+                --size-limit=8192x8192"
 DIST_DIR="_dist"
 FRAMEWORK_DIR="VPX.framework"
 FRAMEWORK_LIB="VPX.framework/VPX"

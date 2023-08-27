@@ -117,6 +117,46 @@ public extension Api {
     }
 }
 public extension Api {
+    enum ReadParticipantDate: TypeConstructorDescription {
+        case readParticipantDate(userId: Int64, date: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .readParticipantDate(let userId, let date):
+                    if boxed {
+                        buffer.appendInt32(1246753138)
+                    }
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .readParticipantDate(let userId, let date):
+                return ("readParticipantDate", [("userId", userId as Any), ("date", date as Any)])
+    }
+    }
+    
+        public static func parse_readParticipantDate(_ reader: BufferReader) -> ReadParticipantDate? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ReadParticipantDate.readParticipantDate(userId: _1!, date: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum ReceivedNotifyMessage: TypeConstructorDescription {
         case receivedNotifyMessage(id: Int32, flags: Int32)
     

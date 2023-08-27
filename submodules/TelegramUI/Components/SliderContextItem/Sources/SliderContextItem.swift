@@ -2,8 +2,10 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
+import SwiftSignalKit
 import ContextUI
 import TelegramPresentationData
+import AnimatedCountLabelNode
 
 public final class SliderContextItem: ContextMenuCustomItem {
     private let minValue: CGFloat
@@ -23,21 +25,23 @@ public final class SliderContextItem: ContextMenuCustomItem {
     }
 }
 
-private let textFont = Font.regular(17.0)
+private let textFont = Font.with(size: 17.0, design: .regular, traits: .monospacedNumbers)
 
 private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode {
     private var presentationData: PresentationData
     
-    private let backgroundTextNode: ImmediateTextNode
+    private(set) var vibrancyEffectView: UIVisualEffectView?
+    private let backgroundTextNode: ImmediateAnimatedCountLabelNode
+    private let dimBackgroundTextNode: ImmediateAnimatedCountLabelNode
     
     private let foregroundNode: ASDisplayNode
-    private let foregroundTextNode: ImmediateTextNode
+    private let foregroundTextNode: ImmediateAnimatedCountLabelNode
     
     let minValue: CGFloat
     let maxValue: CGFloat
     var value: CGFloat = 1.0 {
         didSet {
-            self.updateValue()
+            self.updateValue(transition: .animated(duration: 0.2, curve: .spring))
         }
     }
     
@@ -51,36 +55,81 @@ private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode 
         self.maxValue = maxValue
         self.value = value
         self.valueChanged = valueChanged
-                
-        self.backgroundTextNode = ImmediateTextNode()
-        self.backgroundTextNode.isAccessibilityElement = false
-        self.backgroundTextNode.isUserInteractionEnabled = false
-        self.backgroundTextNode.displaysAsynchronously = false
-        self.backgroundTextNode.textAlignment = .left
         
+        self.backgroundTextNode = ImmediateAnimatedCountLabelNode()
+        self.backgroundTextNode.alwaysOneDirection = true
+        
+        self.dimBackgroundTextNode = ImmediateAnimatedCountLabelNode()
+        self.dimBackgroundTextNode.alwaysOneDirection = true
+                
         self.foregroundNode = ASDisplayNode()
         self.foregroundNode.clipsToBounds = true
         self.foregroundNode.isAccessibilityElement = false
         self.foregroundNode.backgroundColor = UIColor(rgb: 0xffffff)
         self.foregroundNode.isUserInteractionEnabled = false
         
-        self.foregroundTextNode = ImmediateTextNode()
-        self.foregroundTextNode.isAccessibilityElement = false
-        self.foregroundTextNode.isUserInteractionEnabled = false
-        self.foregroundTextNode.displaysAsynchronously = false
-        self.foregroundTextNode.textAlignment = .left
+        self.foregroundTextNode = ImmediateAnimatedCountLabelNode()
+        self.foregroundTextNode.alwaysOneDirection = true
         
         super.init()
         
         self.isUserInteractionEnabled = true
         
+        if presentationData.theme.overallDarkAppearance {
+            
+        } else {
+            let style: UIBlurEffect.Style
+            style = .extraLight
+            let blurEffect = UIBlurEffect(style: style)
+            let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
+            let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
+            
+            self.vibrancyEffectView = vibrancyEffectView
+        }
+        
         self.addSubnode(self.backgroundTextNode)
+        self.addSubnode(self.dimBackgroundTextNode)
         self.addSubnode(self.foregroundNode)
         self.foregroundNode.addSubnode(self.foregroundTextNode)
+        
+        let stringValue = "1.0x"
+        
+        let dimBackgroundTextColor = self.vibrancyEffectView != nil ? UIColor(white: 0.0, alpha: 0.15) : .clear
+        let backgroundTextColor = self.vibrancyEffectView != nil ? UIColor(white: 1.0, alpha: 0.7) : self.presentationData.theme.contextMenu.secondaryColor
+        let foregroundTextColor = UIColor.black
+        
+        var dimBackgroundSegments: [AnimatedCountLabelNode.Segment] = []
+        var backgroundSegments: [AnimatedCountLabelNode.Segment] = []
+        var foregroundSegments: [AnimatedCountLabelNode.Segment] = []
+        var textCount = 0
+        for char in stringValue {
+            if let intValue = Int(String(char)) {
+                dimBackgroundSegments.append(.number(intValue, NSAttributedString(string: String(char), font: textFont, textColor: dimBackgroundTextColor)))
+                backgroundSegments.append(.number(intValue, NSAttributedString(string: String(char), font: textFont, textColor: backgroundTextColor)))
+                foregroundSegments.append(.number(intValue, NSAttributedString(string: String(char), font: textFont, textColor: foregroundTextColor)))
+            } else {
+                dimBackgroundSegments.append(.text(textCount, NSAttributedString(string: String(char), font: textFont, textColor: dimBackgroundTextColor)))
+                backgroundSegments.append(.text(textCount, NSAttributedString(string: String(char), font: textFont, textColor: backgroundTextColor)))
+                foregroundSegments.append(.text(textCount, NSAttributedString(string: String(char), font: textFont, textColor: foregroundTextColor)))
+                textCount += 1
+            }
+        }
+        self.dimBackgroundTextNode.segments = dimBackgroundSegments
+        self.backgroundTextNode.segments = backgroundSegments
+        self.foregroundTextNode.segments = foregroundSegments
     }
     
     override func didLoad() {
         super.didLoad()
+        
+        if let vibrancyEffectView = self.vibrancyEffectView {
+            Queue.mainQueue().after(0.05) {
+                if let effectNode = findEffectNode(node: self.supernode) {
+                    effectNode.effectView?.contentView.insertSubview(vibrancyEffectView, at: 0)
+                    vibrancyEffectView.contentView.addSubnode(self.backgroundTextNode)
+                }
+            }
+        }
         
         let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
         self.view.addGestureRecognizer(panGestureRecognizer)
@@ -101,28 +150,51 @@ private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode 
         let value = (self.value - self.minValue) / range
         transition.updateFrameAdditive(node: self.foregroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: value * width, height: self.frame.height)))
         
-        var stringValue = String(format: "%.1fx", self.value)
-        if stringValue.hasSuffix(".0x") {
-            stringValue = stringValue.replacingOccurrences(of: ".0x", with: "x")
-        }
-        self.backgroundTextNode.attributedText = NSAttributedString(string: stringValue, font: textFont, textColor: UIColor(rgb: 0xffffff))
-        self.foregroundTextNode.attributedText = NSAttributedString(string: stringValue, font: textFont, textColor: UIColor(rgb: 0x000000))
+        let stringValue = String(format: "%.1fx", self.value)
         
-        let _ = self.backgroundTextNode.updateLayout(CGSize(width: 70.0, height: .greatestFiniteMagnitude))
-        let _ = self.foregroundTextNode.updateLayout(CGSize(width: 70.0, height: .greatestFiniteMagnitude))
+        let dimBackgroundTextColor = self.vibrancyEffectView != nil ? UIColor(white: 0.0, alpha: 0.15) : .clear
+        let backgroundTextColor = self.vibrancyEffectView != nil ? UIColor(white: 1.0, alpha: 0.7) : self.presentationData.theme.contextMenu.secondaryColor
+        let foregroundTextColor = UIColor.black
+        
+        var dimBackgroundSegments: [AnimatedCountLabelNode.Segment] = []
+        var backgroundSegments: [AnimatedCountLabelNode.Segment] = []
+        var foregroundSegments: [AnimatedCountLabelNode.Segment] = []
+        var textCount = 0
+        for char in stringValue {
+            if let intValue = Int(String(char)) {
+                dimBackgroundSegments.append(.number(intValue, NSAttributedString(string: String(char), font: textFont, textColor: dimBackgroundTextColor)))
+                backgroundSegments.append(.number(intValue, NSAttributedString(string: String(char), font: textFont, textColor: backgroundTextColor)))
+                foregroundSegments.append(.number(intValue, NSAttributedString(string: String(char), font: textFont, textColor: foregroundTextColor)))
+            } else {
+                dimBackgroundSegments.append(.text(textCount, NSAttributedString(string: String(char), font: textFont, textColor: dimBackgroundTextColor)))
+                backgroundSegments.append(.text(textCount, NSAttributedString(string: String(char), font: textFont, textColor: backgroundTextColor)))
+                foregroundSegments.append(.text(textCount, NSAttributedString(string: String(char), font: textFont, textColor: foregroundTextColor)))
+                textCount += 1
+            }
+        }
+        self.dimBackgroundTextNode.segments = dimBackgroundSegments
+        self.backgroundTextNode.segments = backgroundSegments
+        self.foregroundTextNode.segments = foregroundSegments
+        
+        let _ = self.dimBackgroundTextNode.updateLayout(size: CGSize(width: 70.0, height: .greatestFiniteMagnitude), animated: transition.isAnimated)
+        let _ = self.backgroundTextNode.updateLayout(size: CGSize(width: 70.0, height: .greatestFiniteMagnitude), animated: transition.isAnimated)
+        let _ = self.foregroundTextNode.updateLayout(size: CGSize(width: 70.0, height: .greatestFiniteMagnitude), animated: transition.isAnimated)
     }
     
     func updateLayout(constrainedWidth: CGFloat, constrainedHeight: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
         let valueWidth: CGFloat = 70.0
         let height: CGFloat = 45.0
-        
-        var textSize = self.backgroundTextNode.updateLayout(CGSize(width: valueWidth, height: .greatestFiniteMagnitude))
-        textSize.width = valueWidth
+                
+        var backgroundTextSize = self.backgroundTextNode.updateLayout(size: CGSize(width: 70.0, height: .greatestFiniteMagnitude), animated: true)
+        backgroundTextSize.width = valueWidth
         
         return (CGSize(width: height * 3.0, height: height), { size, transition in
             let leftInset: CGFloat = 17.0
             
-            let textFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((size.height - textSize.height) / 2.0)), size: textSize)
+            self.vibrancyEffectView?.frame = CGRect(origin: .zero, size: size)
+            
+            let textFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((height - backgroundTextSize.height) / 2.0)), size: backgroundTextSize)
+            transition.updateFrameAdditive(node: self.dimBackgroundTextNode, frame: textFrame)
             transition.updateFrameAdditive(node: self.backgroundTextNode, frame: textFrame)
             transition.updateFrameAdditive(node: self.foregroundTextNode, frame: textFrame)
                         
@@ -168,7 +240,7 @@ private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode 
     @objc private func tapGesture(_ gestureRecognizer: UITapGestureRecognizer) {
         let range = self.maxValue - self.minValue
         let location = gestureRecognizer.location(in: gestureRecognizer.view)
-        self.value = max(self.minValue, min(self.maxValue, location.x / range))
+        self.value = max(self.minValue, min(self.maxValue, self.minValue + location.x / self.bounds.width * range))
         self.valueChanged(self.value, true)
     }
     
@@ -180,5 +252,20 @@ private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode 
     }
     
     func performAction() {
+    }
+}
+
+private func findEffectNode(node: ASDisplayNode?) -> NavigationBackgroundNode? {
+    if let node = node {
+        if let subnodes = node.subnodes {
+            for node in subnodes {
+                if let effectNode = node as? NavigationBackgroundNode {
+                    return effectNode
+                }
+            }
+        }
+        return findEffectNode(node: node.supernode)
+    } else {
+        return nil
     }
 }

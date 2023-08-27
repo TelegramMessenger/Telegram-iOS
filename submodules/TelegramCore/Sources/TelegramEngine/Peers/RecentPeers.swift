@@ -8,7 +8,7 @@ public enum RecentPeers {
     case disabled
 }
 
-private func cachedRecentPeersEntryId() -> ItemCacheEntryId {
+func cachedRecentPeersEntryId() -> ItemCacheEntryId {
     return ItemCacheEntryId(collectionId: 101, key: CachedRecentPeers.cacheKey())
 }
 
@@ -65,18 +65,10 @@ func _internal_managedUpdatedRecentPeers(accountPeerId: PeerId, postbox: Postbox
         return postbox.transaction { transaction -> Void in
             switch result {
                 case let .topPeers(_, _, users):
-                    var peers: [Peer] = []
-                    var peerPresences: [PeerId: Api.User] = [:]
-                    for user in users {
-                        let telegramUser = TelegramUser(user: user)
-                        peers.append(telegramUser)
-                        peerPresences[telegramUser.id] = user
-                    }
-                    updatePeers(transaction: transaction, peers: peers, update: { return $1 })
-                    
-                    updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
+                    let parsedPeers = AccumulatedPeers(users: users)
+                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
 
-                    if let entry = CodableEntry(CachedRecentPeers(enabled: true, ids: peers.map { $0.id })) {
+                    if let entry = CodableEntry(CachedRecentPeers(enabled: true, ids: users.map { $0.peerId })) {
                         transaction.putItemCacheEntry(id: cachedRecentPeersEntryId(), entry: entry)
                     }
                 case .topPeersNotModified:
@@ -155,59 +147,52 @@ func _internal_updateRecentPeersEnabled(postbox: Postbox, network: Network, enab
 
 func _internal_managedRecentlyUsedInlineBots(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
     let remotePeers = network.request(Api.functions.contacts.getTopPeers(flags: 1 << 2, offset: 0, limit: 16, hash: 0))
-        |> retryRequest
-        |> map { result -> ([Peer], [PeerId: Api.User], [(PeerId, Double)])? in
-            switch result {
-                case .topPeersDisabled:
-                    break
-                case let .topPeers(categories, _, users):
-                    var peers: [Peer] = []
-                    var peerPresences: [PeerId: Api.User] = [:]
-                    for user in users {
-                        let telegramUser = TelegramUser(user: user)
-                        peers.append(telegramUser)
-                        peerPresences[telegramUser.id] = user
-                    }
-                    var peersWithRating: [(PeerId, Double)] = []
-                    for category in categories {
-                        switch category {
-                            case let .topPeerCategoryPeers(_, _, topPeers):
-                                for topPeer in topPeers {
-                                    switch topPeer {
-                                        case let .topPeer(apiPeer, rating):
-                                            peersWithRating.append((apiPeer.peerId, rating))
-                                    }
-                                }
+    |> retryRequest
+    |> map { result -> (AccumulatedPeers, [(PeerId, Double)])? in
+        switch result {
+        case .topPeersDisabled:
+            break
+        case let .topPeers(categories, _, users):
+            let parsedPeers = AccumulatedPeers(users: users)
+            
+            var peersWithRating: [(PeerId, Double)] = []
+            for category in categories {
+                switch category {
+                case let .topPeerCategoryPeers(_, _, topPeers):
+                    for topPeer in topPeers {
+                        switch topPeer {
+                        case let .topPeer(apiPeer, rating):
+                            peersWithRating.append((apiPeer.peerId, rating))
                         }
                     }
-                    return (peers, peerPresences, peersWithRating)
-                case .topPeersNotModified:
-                    break
+                }
             }
-            return ([], [:], [])
+            return (parsedPeers, peersWithRating)
+        case .topPeersNotModified:
+            break
+        }
+        return (AccumulatedPeers(), [])
     }
     
     let updatedRemotePeers = remotePeers
-        |> mapToSignal { peersAndPresences -> Signal<Void, NoError> in
-            if let (peers, peerPresences, peersWithRating) = peersAndPresences {
-                return postbox.transaction { transaction -> Void in
-                    updatePeers(transaction: transaction, peers: peers, update: { return $1 })
-                    
-                    updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
-                    
-                    let sortedPeersWithRating = peersWithRating.sorted(by: { $0.1 > $1.1 })
-                    
-                    transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudRecentInlineBots, items: sortedPeersWithRating.compactMap { (peerId, rating) in
-                        if let entry = CodableEntry(RecentPeerItem(rating: rating)) {
-                            return OrderedItemListEntry(id: RecentPeerItemId(peerId).rawValue, contents: entry)
-                        } else {
-                            return nil
-                        }
-                    })
-                }
-            } else {
-                return .complete()
+    |> mapToSignal { peersAndPresences -> Signal<Void, NoError> in
+        if let (parsedPeers, peersWithRating) = peersAndPresences {
+            return postbox.transaction { transaction -> Void in
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                
+                let sortedPeersWithRating = peersWithRating.sorted(by: { $0.1 > $1.1 })
+                
+                transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudRecentInlineBots, items: sortedPeersWithRating.compactMap { (peerId, rating) in
+                    if let entry = CodableEntry(RecentPeerItem(rating: rating)) {
+                        return OrderedItemListEntry(id: RecentPeerItemId(peerId).rawValue, contents: entry)
+                    } else {
+                        return nil
+                    }
+                })
             }
+        } else {
+            return .complete()
+        }
     }
     
     return updatedRemotePeers

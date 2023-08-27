@@ -10,6 +10,7 @@ public enum ChatTextInputAccessoryItem: Equatable {
         case silentPost
         case messageAutoremoveTimeout
         case scheduledMessages
+        case gift
     }
     
     public enum InputMode: Hashable {
@@ -25,6 +26,7 @@ public enum ChatTextInputAccessoryItem: Equatable {
     case silentPost(Bool)
     case messageAutoremoveTimeout(Int32?)
     case scheduledMessages
+    case gift
     
     public var key: Key {
         switch self {
@@ -40,6 +42,8 @@ public enum ChatTextInputAccessoryItem: Equatable {
             return .messageAutoremoveTimeout
         case .scheduledMessages:
             return .scheduledMessages
+        case .gift:
+            return .gift
         }
     }
 }

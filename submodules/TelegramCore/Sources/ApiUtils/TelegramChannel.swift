@@ -111,7 +111,8 @@ public extension TelegramChannel {
                         .banSendStickers,
                         .banSendPolls,
                         .banSendFiles,
-                        .banSendInline
+                        .banSendInline,
+                        .banSendMusic
                     ]
                     
                     if let bannedRights = self.bannedRights, bannedRights.flags.intersection(flags) == flags {
@@ -217,7 +218,7 @@ public extension TelegramChannel {
                     if let defaultBannedRights = self.defaultBannedRights, defaultBannedRights.flags.contains(.banChangeInfo) {
                         return false
                     }
-                    return false
+                    return true
                 }
             case .addAdmins:
                 if let adminRights = self.adminRights, adminRights.rights.contains(.canAddAdmins) {

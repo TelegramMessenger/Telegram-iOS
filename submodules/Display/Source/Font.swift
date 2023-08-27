@@ -8,6 +8,21 @@ public struct Font {
         case monospace
         case round
         case camera
+        
+        var key: String {
+            switch self {
+            case .regular:
+                return "regular"
+            case .serif:
+                return "serif"
+            case .monospace:
+                return "monospace"
+            case .round:
+                return "round"
+            case .camera:
+                return "camera"
+            }
+        }
     }
     
     public struct Traits: OptionSet {
@@ -27,6 +42,7 @@ public struct Font {
     
     public enum Weight {
         case regular
+        case thin
         case light
         case medium
         case semibold
@@ -44,6 +60,8 @@ public struct Font {
         
         var weight: UIFont.Weight {
             switch self {
+                case .thin:
+                    return .thin
                 case .light:
                     return .light
                 case .medium:
@@ -58,9 +76,60 @@ public struct Font {
                     return .regular
             }
         }
+        
+        var key: String {
+            switch self {
+            case .regular:
+                return "regular"
+            case .thin:
+                return "thin"
+            case .light:
+                return "light"
+            case .medium:
+                return "medium"
+            case .semibold:
+                return "semibold"
+            case .bold:
+                return "bold"
+            case .heavy:
+                return "heavy"
+            }
+        }
     }
     
+    private final class Cache {
+        private var lock: pthread_rwlock_t
+        private var fonts: [String: UIFont] = [:]
+        
+        init() {
+            self.lock = pthread_rwlock_t()
+            let status = pthread_rwlock_init(&self.lock, nil)
+            assert(status == 0)
+        }
+        
+        func get(_ key: String) -> UIFont? {
+            let font: UIFont?
+            pthread_rwlock_rdlock(&self.lock)
+            font = self.fonts[key]
+            pthread_rwlock_unlock(&self.lock)
+            return font
+        }
+        
+        func set(_ font: UIFont, key: String) {
+            pthread_rwlock_wrlock(&self.lock)
+            self.fonts[key] = font
+            pthread_rwlock_unlock(&self.lock)
+        }
+    }
+
+    private static let cache = Cache()
+    
     public static func with(size: CGFloat, design: Design = .regular, weight: Weight = .regular, traits: Traits = []) -> UIFont {
+        let key = "\(size)_\(design.key)_\(weight.key)_\(traits.rawValue)"
+        
+        if let cachedFont = self.cache.get(key) {
+            return cachedFont
+        }
         if #available(iOS 13.0, *), design != .camera {
             let descriptor: UIFontDescriptor
             if #available(iOS 14.0, *) {
@@ -101,45 +170,51 @@ public struct Font {
                 }
             }
          
+            let font: UIFont
             if let updatedDescriptor = updatedDescriptor {
-                return UIFont(descriptor: updatedDescriptor, size: size)
+                font = UIFont(descriptor: updatedDescriptor, size: size)
             } else {
-                return UIFont(descriptor: descriptor, size: size)
+                font = UIFont(descriptor: descriptor, size: size)
             }
+            
+            self.cache.set(font, key: key)
+            
+            return font
         } else {
+            let font: UIFont
             switch design {
                 case .regular:
                     if traits.contains(.italic) {
                         if let descriptor = UIFont.systemFont(ofSize: size, weight: weight.weight).fontDescriptor.withSymbolicTraits([.traitItalic]) {
-                            return UIFont(descriptor: descriptor, size: size)
+                            font = UIFont(descriptor: descriptor, size: size)
                         } else {
-                            return UIFont.italicSystemFont(ofSize: size)
+                            font = UIFont.italicSystemFont(ofSize: size)
                         }
                     } else {
                         return UIFont.systemFont(ofSize: size, weight: weight.weight)
                     }
                 case .serif:
                     if weight.isBold && traits.contains(.italic) {
-                        return UIFont(name: "Georgia-BoldItalic", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
+                        font = UIFont(name: "Georgia-BoldItalic", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
                     } else if weight.isBold {
-                        return UIFont(name: "Georgia-Bold", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
+                        font = UIFont(name: "Georgia-Bold", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
                     } else if traits.contains(.italic) {
-                        return UIFont(name: "Georgia-Italic", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
+                        font = UIFont(name: "Georgia-Italic", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
                     } else {
-                        return UIFont(name: "Georgia", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
+                        font = UIFont(name: "Georgia", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
                     }
                 case .monospace:
                     if weight.isBold && traits.contains(.italic) {
-                        return UIFont(name: "Menlo-BoldItalic", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
+                        font = UIFont(name: "Menlo-BoldItalic", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
                     } else if weight.isBold {
-                        return UIFont(name: "Menlo-Bold", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
+                        font = UIFont(name: "Menlo-Bold", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
                     } else if traits.contains(.italic) {
-                        return UIFont(name: "Menlo-Italic", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
+                        font = UIFont(name: "Menlo-Italic", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
                     } else {
-                        return UIFont(name: "Menlo", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
+                        font = UIFont(name: "Menlo", size: size - 1.0) ?? UIFont.systemFont(ofSize: size)
                     }
                 case .round:
-                    return UIFont(name: ".SFCompactRounded-Semibold", size: size) ?? UIFont.systemFont(ofSize: size)
+                    font = UIFont(name: ".SFCompactRounded-Semibold", size: size) ?? UIFont.systemFont(ofSize: size)
                 case .camera:
                     func encodeText(string: String, key: Int16) -> String {
                         let nsString = string as NSString
@@ -152,11 +227,15 @@ public struct Font {
                         return result as String
                     }
                     if case .semibold = weight {
-                        return UIFont(name: encodeText(string: "TGDbnfsb.Tfnjcpme", key: -1), size: size) ?? UIFont.systemFont(ofSize: size, weight: weight.weight)
+                        font = UIFont(name: encodeText(string: "TGDbnfsb.Tfnjcpme", key: -1), size: size) ?? UIFont.systemFont(ofSize: size, weight: weight.weight)
                     } else {
-                        return UIFont(name: encodeText(string: "TGDbnfsb.Sfhvmbs", key: -1), size: size) ?? UIFont.systemFont(ofSize: size, weight: weight.weight)
+                        font = UIFont(name: encodeText(string: "TGDbnfsb.Sfhvmbs", key: -1), size: size) ?? UIFont.systemFont(ofSize: size, weight: weight.weight)
                     }
             }
+            
+            self.cache.set(font, key: key)
+            
+            return font
         }
     }
     

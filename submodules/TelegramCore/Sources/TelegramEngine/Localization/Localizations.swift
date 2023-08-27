@@ -3,20 +3,19 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-
 func _internal_currentlySuggestedLocalization(network: Network, extractKeys: [String]) -> Signal<SuggestedLocalizationInfo?, NoError> {
     return network.request(Api.functions.help.getConfig())
-        |> retryRequest
-        |> mapToSignal { result -> Signal<SuggestedLocalizationInfo?, NoError> in
-            switch result {
-                case let .config(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, suggestedLangCode, _, _, _):
-                    if let suggestedLangCode = suggestedLangCode {
-                        return _internal_suggestedLocalizationInfo(network: network, languageCode: suggestedLangCode, extractKeys: extractKeys) |> map(Optional.init)
-                    } else {
-                        return .single(nil)
-                    }
+    |> retryRequest
+    |> mapToSignal { result -> Signal<SuggestedLocalizationInfo?, NoError> in
+        switch result {
+        case let .config(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, suggestedLangCode, _, _, _, _):
+            if let suggestedLangCode = suggestedLangCode {
+                return _internal_suggestedLocalizationInfo(network: network, languageCode: suggestedLangCode, extractKeys: extractKeys) |> map(Optional.init)
+            } else {
+                return .single(nil)
             }
         }
+    }
 }
 
 func _internal_suggestedLocalizationInfo(network: Network, languageCode: String, extractKeys: [String]) -> Signal<SuggestedLocalizationInfo, NoError> {

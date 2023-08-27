@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import SwiftSignalKit
 import Display
 import TelegramCore
 import TelegramPresentationData
@@ -8,14 +9,15 @@ import ActivityIndicator
 import WallpaperBackgroundNode
 import ShimmerEffect
 import ChatPresentationInterfaceState
+import AccountContext
 
 final class ChatLoadingNode: ASDisplayNode {
     private let backgroundNode: NavigationBackgroundNode
     private let activityIndicator: ActivityIndicator
     private let offset: CGPoint
     
-    init(theme: PresentationTheme, chatWallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners) {
-        self.backgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: theme, wallpaper: chatWallpaper), enableBlur: dateFillNeedsBlur(theme: theme, wallpaper: chatWallpaper))
+    init(context: AccountContext, theme: PresentationTheme, chatWallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners) {
+        self.backgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: theme, wallpaper: chatWallpaper), enableBlur: context.sharedContext.energyUsageSettings.fullTranslucency && dateFillNeedsBlur(theme: theme, wallpaper: chatWallpaper))
         
         let serviceColor = serviceMessageColorComponents(theme: theme, wallpaper: chatWallpaper)
         self.activityIndicator = ActivityIndicator(type: .custom(serviceColor.primaryText, 22.0, 2.0, false), speed: .regular)
@@ -134,6 +136,8 @@ final class ChatLoadingPlaceholderMessageContainer {
 final class ChatLoadingPlaceholderNode: ASDisplayNode {
     private weak var backgroundNode: WallpaperBackgroundNode?
     
+    private let context: AccountContext
+    
     private let maskNode: ASDisplayNode
     private let borderMaskNode: ASDisplayNode
     
@@ -149,9 +153,10 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
     
     private var absolutePosition: (CGRect, CGSize)?
     
-    private var validLayout: (CGSize, UIEdgeInsets)?
+    private var validLayout: (CGSize, UIEdgeInsets, LayoutMetrics)?
     
-    init(theme: PresentationTheme, chatWallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners, backgroundNode: WallpaperBackgroundNode) {
+    init(context: AccountContext, theme: PresentationTheme, chatWallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners, backgroundNode: WallpaperBackgroundNode) {
+        self.context = context
         self.backgroundNode = backgroundNode
         
         self.maskNode = ASDisplayNode()
@@ -185,13 +190,13 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.backgroundColorNode)
         
-        if DeviceMetrics.performance.isGraphicallyCapable {
+        if context.sharedContext.energyUsageSettings.fullTranslucency {
             self.containerNode.addSubnode(self.effectNode)
         }
         
         self.addSubnode(self.borderNode)
         
-        if DeviceMetrics.performance.isGraphicallyCapable {
+        if context.sharedContext.energyUsageSettings.fullTranslucency {
             self.borderNode.addSubnode(self.borderEffectNode)
         }
     }
@@ -202,8 +207,12 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         self.containerNode.view.mask = self.maskNode.view
         self.borderNode.view.mask = self.borderMaskNode.view
         
-        if DeviceMetrics.performance.isGraphicallyCapable {
-            self.backgroundNode?.updateIsLooping(true)
+        if self.context.sharedContext.energyUsageSettings.fullTranslucency {
+            Queue.mainQueue().after(0.3) {
+                if !self.didAnimateOut {
+                    self.backgroundNode?.updateIsLooping(true)
+                }
+            }
         }
     }
     
@@ -275,11 +284,12 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         self.borderMaskNode.bounds = self.borderMaskNode.bounds.offsetBy(dx: 0.0, dy: inset)
     }
         
+    private var didAnimateOut = false
     func animateOut(_ historyNode: ChatHistoryNode, completion: @escaping () -> Void = {}) {
-        guard let listNode = historyNode as? ListView, let (size, _) = self.validLayout else {
+        guard let listNode = historyNode as? ListView, let (size, _, _) = self.validLayout else {
             return
         }
-        
+        self.didAnimateOut = true
         self.backgroundNode?.updateIsLooping(false)
         
         let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .spring)
@@ -356,7 +366,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
                 let messageContainer = self.messageContainers[k]
                 let messageSize = messageContainer.frame.size
                 
-                messageContainer.update(size: size, hasAvatar: self.chatType != .channel, rect: CGRect(origin: CGPoint(x: 0.0, y: offset - messageSize.height), size: messageSize), transition: transition)
+                messageContainer.update(size: size, hasAvatar: self.chatType != .channel && self.chatType != .user, rect: CGRect(origin: CGPoint(x: 0.0, y: offset - messageSize.height), size: messageSize), transition: transition)
                 offset -= messageSize.height
             }
         }
@@ -384,6 +394,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
     
     enum ChatType: Equatable {
         case generic
+        case user
         case group
         case channel
     }
@@ -391,7 +402,9 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
     func updatePresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState) {
         var chatType: ChatType = .channel
         if let peer = chatPresentationInterfaceState.renderedPeer?.peer {
-            if peer is TelegramGroup {
+            if peer is TelegramUser {
+                chatType = .user
+            } else if peer is TelegramGroup {
                 chatType = .group
             } else if let channel = peer as? TelegramChannel {
                 if case .group = channel.info {
@@ -404,14 +417,14 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         
         if self.chatType != chatType {
             self.chatType = chatType
-            if let (size, insets) = self.validLayout {
-                self.updateLayout(size: size, insets: insets, transition: .immediate)
+            if let (size, insets, metrics) = self.validLayout {
+                self.updateLayout(size: size, insets: insets, metrics: metrics, transition: .immediate)
             }
         }
     }
     
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
-        self.validLayout = (size, insets)
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, metrics: LayoutMetrics, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, insets, metrics)
         
         let bounds = CGRect(origin: .zero, size: size)
                 
@@ -431,22 +444,27 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         
         let shortHeight: CGFloat = 71.0
         let tallHeight: CGFloat = 93.0
+        
+        var width = size.width
+        if case .regular = metrics.widthClass, abs(size.width - size.height) < 0.2 * size.height {
+            width *= 0.7
+        }
 
         let dimensions: [CGSize] = [
-            CGSize(width: floorToScreenPixels(0.47 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.58 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.69 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.47 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.58 * size.width), height: shortHeight),
-            CGSize(width: floorToScreenPixels(0.36 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.47 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.36 * size.width), height: shortHeight),
-            CGSize(width: floorToScreenPixels(0.58 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.69 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.58 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.36 * size.width), height: shortHeight),
-            CGSize(width: floorToScreenPixels(0.47 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.58 * size.width), height: tallHeight)
+            CGSize(width: floorToScreenPixels(0.47 * width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.58 * width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.69 * width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.47 * width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.58 * width), height: shortHeight),
+            CGSize(width: floorToScreenPixels(0.36 * width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.47 * width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.36 * width), height: shortHeight),
+            CGSize(width: floorToScreenPixels(0.58 * width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.69 * width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.58 * width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.36 * width), height: shortHeight),
+            CGSize(width: floorToScreenPixels(0.47 * width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.58 * width), height: tallHeight)
         ].map {
             if self.chatType == .channel {
                 return CGSize(width: floor($0.width * 1.3), height: floor($0.height * 1.8))
@@ -460,7 +478,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         
         for messageContainer in self.messageContainers {
             let messageSize = dimensions[index % 14]
-            messageContainer.update(size: bounds.size, hasAvatar: self.chatType != .channel, rect: CGRect(origin: CGPoint(x: 0.0, y: bounds.size.height - insets.bottom - offset - messageSize.height), size: messageSize), transition: transition)
+            messageContainer.update(size: bounds.size, hasAvatar: self.chatType != .channel && self.chatType != .user, rect: CGRect(origin: CGPoint(x: 0.0, y: bounds.size.height - insets.bottom - offset - messageSize.height), size: messageSize), transition: transition)
             offset += messageSize.height
             index += 1
         }
@@ -468,7 +486,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         if self.backgroundNode?.hasExtraBubbleBackground() == true {
             self.backgroundColorNode.isHidden = true
         } else {
-            self.backgroundColorNode.isHidden = false
+            self.backgroundColorNode.isHidden = true
         }
         
         if let backgroundNode = self.backgroundNode, let backgroundContent = backgroundNode.makeBubbleBackground(for: .free) {

@@ -5,6 +5,7 @@ import AccountContext
 import AlertUI
 import PresentationDataUtils
 import SettingsUI
+import StorageUsageScreen
 
 private func totalDiskSpace() -> Int64 {
     do {
@@ -31,7 +32,9 @@ func checkAvailableDiskSpace(context: AccountContext, threshold: Int64 = 100 * 1
     
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let controller = textAlertController(context: context, title: nil, text: presentationData.strings.Cache_LowDiskSpaceText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
-        push(storageUsageController(context: context, isModal: true))
+        push(StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { category in
+            return storageUsageExceptionsScreen(context: context, category: category)
+        }))
     }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
     push(controller)
     

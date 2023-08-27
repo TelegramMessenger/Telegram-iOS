@@ -50,7 +50,7 @@ public final class PlatformVideoContent: UniversalVideoContent {
         case file(FileMediaReference)
         case url(String)
         
-        var duration: Int32? {
+        var duration: Double? {
             switch self {
             case let .file(file):
                 return file.media.duration
@@ -74,7 +74,7 @@ public final class PlatformVideoContent: UniversalVideoContent {
     let userLocation: MediaResourceUserLocation
     let content: Content
     public let dimensions: CGSize
-    public let duration: Int32
+    public let duration: Double
     let streamVideo: Bool
     let loopVideo: Bool
     let enableSound: Bool
@@ -87,7 +87,7 @@ public final class PlatformVideoContent: UniversalVideoContent {
         self.nativeId = id
         self.content = content
         self.dimensions = self.content.dimensions?.cgSize ?? CGSize(width: 480, height: 320)
-        self.duration = self.content.duration ?? 0
+        self.duration = self.content.duration ?? 0.0
         self.streamVideo = streamVideo
         self.loopVideo = loopVideo
         self.enableSound = enableSound
@@ -388,7 +388,7 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
             self._status.set(MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: true, progress: 0.0, display: true), soundEnabled: true))
         }
         if !self.hasAudioSession {
-            self.audioSessionDisposable.set(self.audioSessionManager.push(audioSessionType: .play, activate: { [weak self] _ in
+            self.audioSessionDisposable.set(self.audioSessionManager.push(audioSessionType: .play(mixWithOthers: false), activate: { [weak self] _ in
                 self?.hasAudioSession = true
                 self?.player.play()
             }, deactivate: { [weak self] _ in
@@ -428,6 +428,12 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
     }
     
     func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
+    }
+    
+    func setSoundMuted(soundMuted: Bool) {
+    }
+    
+    func continueWithOverridingAmbientMode(isAmbient: Bool) {
     }
     
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool) {

@@ -1,6 +1,5 @@
 import Foundation
 import UIKit
-import Postbox
 import TelegramCore
 import TelegramUIPreferences
 
@@ -123,7 +122,7 @@ struct TelegramWallpaperStandardizedCodable: Codable {
                         }
                         
                         if let slug = slug {
-                            self.value = .file(TelegramWallpaper.File(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: !colors.isEmpty, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: WallpaperDataResource(slug: slug), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, colors: colors.map { $0.argb }, intensity: intensity, rotation: rotation)))
+                            self.value = .file(TelegramWallpaper.File(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: !colors.isEmpty, isDark: false, slug: slug, file: TelegramMediaFile(fileId: EngineMedia.Id(namespace: 0, id: 0), partialReference: nil, resource: WallpaperDataResource(slug: slug), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, colors: colors.map { $0.argb }, intensity: intensity, rotation: rotation)))
                         } else if colors.count > 1 {
                             self.value = .gradient(TelegramWallpaper.Gradient(id: nil, colors: colors.map { $0.argb }, settings: WallpaperSettings(blur: blur, motion: motion, rotation: rotation)))
                         } else {
@@ -996,46 +995,54 @@ extension PresentationThemeChatList: Codable {
         case pinnedArchiveAvatar
         case unpinnedArchiveAvatar
         case onlineDot
+        case storyUnseen
+        case storyUnseenPrivate
+        case storySeen
     }
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         let codingPath = decoder.codingPath.map { $0.stringValue }.joined(separator: ".")
-        self.init(backgroundColor: try decodeColor(values, .bg),
-                  itemSeparatorColor: try decodeColor(values, .itemSeparator),
-                  itemBackgroundColor: try decodeColor(values, .itemBg),
-                  pinnedItemBackgroundColor: try decodeColor(values, .pinnedItemBg),
-                  itemHighlightedBackgroundColor: try decodeColor(values, .itemHighlightedBg),
-                  pinnedItemHighlightedBackgroundColor: try decodeColor(values, .pinnedItemHighlightedBg, fallbackKey: "\(codingPath).itemHighlightedBg"),
-                  itemSelectedBackgroundColor: try decodeColor(values, .itemSelectedBg),
-                  titleColor: try decodeColor(values, .title),
-                  secretTitleColor: try decodeColor(values, .secretTitle),
-                  dateTextColor: try decodeColor(values, .dateText),
-                  authorNameColor: try decodeColor(values, .authorName),
-                  messageTextColor: try decodeColor(values, .messageText),
-                  messageHighlightedTextColor: try decodeColor(values, .messageHighlightedText),
-                  messageDraftTextColor: try decodeColor(values, .messageDraftText),
-                  checkmarkColor: try decodeColor(values, .checkmark),
-                  pendingIndicatorColor: try decodeColor(values, .pendingIndicator),
-                  failedFillColor: try decodeColor(values, .failedFill),
-                  failedForegroundColor: try decodeColor(values, .failedFg),
-                  muteIconColor: try decodeColor(values, .muteIcon),
-                  unreadBadgeActiveBackgroundColor: try decodeColor(values, .unreadBadgeActiveBg),
-                  unreadBadgeActiveTextColor: try decodeColor(values, .unreadBadgeActiveText),
-                  unreadBadgeInactiveBackgroundColor: try decodeColor(values, .unreadBadgeInactiveBg),
-                  unreadBadgeInactiveTextColor: try decodeColor(values, .unreadBadgeInactiveText),
-                  reactionBadgeActiveBackgroundColor: try decodeColor(values, .reactionBadgeActiveBg, fallbackKey: "\(codingPath).unreadBadgeActiveBg"),
-                  pinnedBadgeColor: try decodeColor(values, .pinnedBadge),
-                  pinnedSearchBarColor: try decodeColor(values, .pinnedSearchBar),
-                  regularSearchBarColor: try decodeColor(values, .regularSearchBar),
-                  sectionHeaderFillColor: try decodeColor(values, .sectionHeaderBg),
-                  sectionHeaderTextColor: try decodeColor(values, .sectionHeaderText),
-                  verifiedIconFillColor: try decodeColor(values, .verifiedIconBg),
-                  verifiedIconForegroundColor: try decodeColor(values, .verifiedIconFg),
-                  secretIconColor: try decodeColor(values, .secretIcon),
-                  pinnedArchiveAvatarColor: try values.decode(PresentationThemeArchiveAvatarColors.self, forKey: .pinnedArchiveAvatar),
-                  unpinnedArchiveAvatarColor: try values.decode(PresentationThemeArchiveAvatarColors.self, forKey: .unpinnedArchiveAvatar),
-                  onlineDotColor: try decodeColor(values, .onlineDot))
+        self.init(
+            backgroundColor: try decodeColor(values, .bg),
+            itemSeparatorColor: try decodeColor(values, .itemSeparator),
+            itemBackgroundColor: try decodeColor(values, .itemBg),
+            pinnedItemBackgroundColor: try decodeColor(values, .pinnedItemBg),
+            itemHighlightedBackgroundColor: try decodeColor(values, .itemHighlightedBg),
+            pinnedItemHighlightedBackgroundColor: try decodeColor(values, .pinnedItemHighlightedBg, fallbackKey: "\(codingPath).itemHighlightedBg"),
+            itemSelectedBackgroundColor: try decodeColor(values, .itemSelectedBg),
+            titleColor: try decodeColor(values, .title),
+            secretTitleColor: try decodeColor(values, .secretTitle),
+            dateTextColor: try decodeColor(values, .dateText),
+            authorNameColor: try decodeColor(values, .authorName),
+            messageTextColor: try decodeColor(values, .messageText),
+            messageHighlightedTextColor: try decodeColor(values, .messageHighlightedText),
+            messageDraftTextColor: try decodeColor(values, .messageDraftText),
+            checkmarkColor: try decodeColor(values, .checkmark),
+            pendingIndicatorColor: try decodeColor(values, .pendingIndicator),
+            failedFillColor: try decodeColor(values, .failedFill),
+            failedForegroundColor: try decodeColor(values, .failedFg),
+            muteIconColor: try decodeColor(values, .muteIcon),
+            unreadBadgeActiveBackgroundColor: try decodeColor(values, .unreadBadgeActiveBg),
+            unreadBadgeActiveTextColor: try decodeColor(values, .unreadBadgeActiveText),
+            unreadBadgeInactiveBackgroundColor: try decodeColor(values, .unreadBadgeInactiveBg),
+            unreadBadgeInactiveTextColor: try decodeColor(values, .unreadBadgeInactiveText),
+            reactionBadgeActiveBackgroundColor: try decodeColor(values, .reactionBadgeActiveBg, fallbackKey: "\(codingPath).unreadBadgeActiveBg"),
+            pinnedBadgeColor: try decodeColor(values, .pinnedBadge),
+            pinnedSearchBarColor: try decodeColor(values, .pinnedSearchBar),
+            regularSearchBarColor: try decodeColor(values, .regularSearchBar),
+            sectionHeaderFillColor: try decodeColor(values, .sectionHeaderBg),
+            sectionHeaderTextColor: try decodeColor(values, .sectionHeaderText),
+            verifiedIconFillColor: try decodeColor(values, .verifiedIconBg),
+            verifiedIconForegroundColor: try decodeColor(values, .verifiedIconFg),
+            secretIconColor: try decodeColor(values, .secretIcon),
+            pinnedArchiveAvatarColor: try values.decode(PresentationThemeArchiveAvatarColors.self, forKey: .pinnedArchiveAvatar),
+            unpinnedArchiveAvatarColor: try values.decode(PresentationThemeArchiveAvatarColors.self, forKey: .unpinnedArchiveAvatar),
+            onlineDotColor: try decodeColor(values, .onlineDot),
+            storyUnseenColors: (try? values.decode(PresentationThemeGradientColors.self, forKey: .storyUnseen)) ?? PresentationThemeGradientColors(topColor: UIColor(rgb: 0x34C76F), bottomColor: UIColor(rgb: 0x3DA1FD)),
+            storyUnseenPrivateColors: (try? values.decode(PresentationThemeGradientColors.self, forKey: .storyUnseenPrivate)) ?? PresentationThemeGradientColors(topColor: UIColor(rgb: 0x7CD636), bottomColor: UIColor(rgb: 0x26B470)),
+            storySeenColors: (try? values.decode(PresentationThemeGradientColors.self, forKey: .storySeen)) ?? PresentationThemeGradientColors(topColor: UIColor(rgb: 0xD8D8E1), bottomColor: UIColor(rgb: 0xD8D8E1))
+        )
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -1075,6 +1082,9 @@ extension PresentationThemeChatList: Codable {
         try values.encode(self.pinnedArchiveAvatarColor, forKey: .pinnedArchiveAvatar)
         try values.encode(self.unpinnedArchiveAvatarColor, forKey: .unpinnedArchiveAvatar)
         try encodeColor(&values, self.onlineDotColor, .onlineDot)
+        try values.encode(self.storyUnseenColors, forKey: .storyUnseen)
+        try values.encode(self.storyUnseenPrivateColors, forKey: .storyUnseenPrivate)
+        try values.encode(self.storySeenColors, forKey: .storySeen)
     }
 }
 

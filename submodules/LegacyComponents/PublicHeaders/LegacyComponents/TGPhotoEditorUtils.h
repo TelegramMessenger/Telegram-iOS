@@ -46,6 +46,8 @@ CGSize TGPhotoThumbnailSizeForCurrentScreen();
 CGSize TGPhotoEditorScreenImageMaxSize();
     
 extern const CGSize TGPhotoEditorResultImageMaxSize;
+extern const CGSize TGPhotoEditorResultImageWallpaperMaxSize;
+extern const CGSize TGPhotoEditorResultImageAvatarMaxSize;
     
 #ifdef __cplusplus
 }

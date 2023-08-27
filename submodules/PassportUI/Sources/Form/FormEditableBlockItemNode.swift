@@ -259,7 +259,7 @@ class FormEditableBlockItemNode<Item: FormControllerItem>: ASDisplayNode, FormCo
             }, tapticAction: { [weak self] in
                     self?.hapticImpact()
             })
-            revealNode.setOptions(self.revealOptions.left, isLeft: true)
+            revealNode.setOptions(self.revealOptions.left, isLeft: true, enableAnimations: true)
             self.leftRevealNode = revealNode
             
             if let (size, leftInset, _) = self.validLayout {
@@ -281,7 +281,7 @@ class FormEditableBlockItemNode<Item: FormControllerItem>: ASDisplayNode, FormCo
                 }, tapticAction: { [weak self] in
                     self?.hapticImpact()
             })
-            revealNode.setOptions(self.revealOptions.right, isLeft: false)
+            revealNode.setOptions(self.revealOptions.right, isLeft: false, enableAnimations: true)
             self.rightRevealNode = revealNode
             
             if let (size, _, rightInset) = self.validLayout {

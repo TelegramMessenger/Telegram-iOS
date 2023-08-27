@@ -354,21 +354,6 @@ final class ChatHistoryPreloadManager {
             return disposable
         }
         
-        /*let signal = self.postbox.tailChatListView(groupId: .root, count: 20, summaryComponents: ChatListEntrySummaryComponents())
-        |> map { view -> [ChatHistoryPreloadItem] in
-            var result: [ChatHistoryPreloadItem] = []
-            for entry in view.0.entries {
-                if case let .MessageEntry(index, _, readState, isMuted, _, _, _, _, _, _) = entry {
-                    var hasUnread = false
-                    if let readState = readState {
-                        hasUnread = readState.count != 0
-                    }
-                    result.append(ChatHistoryPreloadItem(index: index, isMuted: isMuted, hasUnread: hasUnread))
-                }
-            }
-            return result
-        }*/
-        
         self.automaticChatListDisposable.set((combineLatest(queue: .mainQueue(), self.preloadItemsSignal, additionalPeerIds)
         |> delay(1.0, queue: .mainQueue())
         |> deliverOnMainQueue).start(next: { [weak self] loadItems, additionalPeerIds in

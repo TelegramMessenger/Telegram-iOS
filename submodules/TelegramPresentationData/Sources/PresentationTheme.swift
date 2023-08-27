@@ -591,6 +591,9 @@ public final class PresentationThemeChatList {
     public let pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors
     public let unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors
     public let onlineDotColor: UIColor
+    public let storyUnseenColors: PresentationThemeGradientColors
+    public let storyUnseenPrivateColors: PresentationThemeGradientColors
+    public let storySeenColors: PresentationThemeGradientColors
     
     init(
         backgroundColor: UIColor,
@@ -627,7 +630,10 @@ public final class PresentationThemeChatList {
         secretIconColor: UIColor,
         pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors,
         unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors,
-        onlineDotColor: UIColor
+        onlineDotColor: UIColor,
+        storyUnseenColors: PresentationThemeGradientColors,
+        storyUnseenPrivateColors: PresentationThemeGradientColors,
+        storySeenColors: PresentationThemeGradientColors
     ) {
         self.backgroundColor = backgroundColor
         self.itemSeparatorColor = itemSeparatorColor
@@ -664,6 +670,9 @@ public final class PresentationThemeChatList {
         self.pinnedArchiveAvatarColor = pinnedArchiveAvatarColor
         self.unpinnedArchiveAvatarColor = unpinnedArchiveAvatarColor
         self.onlineDotColor = onlineDotColor
+        self.storyUnseenColors = storyUnseenColors
+        self.storyUnseenPrivateColors = storyUnseenPrivateColors
+        self.storySeenColors = storySeenColors
     }
     
     public func withUpdated(
@@ -701,7 +710,10 @@ public final class PresentationThemeChatList {
         secretIconColor: UIColor? = nil,
         pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors? = nil,
         unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors? = nil,
-        onlineDotColor: UIColor? = nil
+        onlineDotColor: UIColor? = nil,
+        storyUnseenColors: PresentationThemeGradientColors? = nil,
+        storyUnseenPrivateColors: PresentationThemeGradientColors? = nil,
+        storySeenColors: PresentationThemeGradientColors? = nil
     ) -> PresentationThemeChatList {
         return PresentationThemeChatList(
             backgroundColor: backgroundColor ?? self.backgroundColor,
@@ -738,7 +750,10 @@ public final class PresentationThemeChatList {
             secretIconColor: secretIconColor ?? self.secretIconColor,
             pinnedArchiveAvatarColor: pinnedArchiveAvatarColor ?? self.pinnedArchiveAvatarColor,
             unpinnedArchiveAvatarColor: unpinnedArchiveAvatarColor ?? self.unpinnedArchiveAvatarColor,
-            onlineDotColor: onlineDotColor ?? self.onlineDotColor
+            onlineDotColor: onlineDotColor ?? self.onlineDotColor,
+            storyUnseenColors: storyUnseenColors ?? self.storyUnseenColors,
+            storyUnseenPrivateColors: storyUnseenPrivateColors ?? self.storyUnseenPrivateColors,
+            storySeenColors: storySeenColors ?? self.storySeenColors
         )
     }
 }
@@ -1603,7 +1618,11 @@ public final class PresentationTheme: Equatable {
     }
     
     public func withModalBlocksBackground() -> PresentationTheme {
-        let list = self.list.withUpdated(blocksBackgroundColor: self.list.modalBlocksBackgroundColor, itemBlocksBackgroundColor: self.list.itemModalBlocksBackgroundColor)
-        return PresentationTheme(name: self.name, index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: list, chatList: self.chatList, chat: self.chat, actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, chart: self.chart, preview: self.preview)
+        if self.list.blocksBackgroundColor.rgb == self.list.plainBackgroundColor.rgb {
+            let list = self.list.withUpdated(blocksBackgroundColor: self.list.modalBlocksBackgroundColor, itemBlocksBackgroundColor: self.list.itemModalBlocksBackgroundColor)
+            return PresentationTheme(name: self.name, index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: list, chatList: self.chatList, chat: self.chat, actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, chart: self.chart, preview: self.preview)
+        } else {
+            return self
+        }
     }
 }

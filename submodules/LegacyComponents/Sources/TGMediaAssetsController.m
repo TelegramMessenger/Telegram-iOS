@@ -1711,9 +1711,9 @@
     }
 }
 
-- (void)send:(bool)silently
+- (void)send:(bool)silently whenOnline:(bool)whenOnlne
 {
-    [self completeWithCurrentItem:nil silentPosting:silently scheduleTime:0];
+    [self completeWithCurrentItem:nil silentPosting:silently scheduleTime:whenOnlne ? 0x7ffffffe : 0];
 }
 
 - (void)schedule:(bool)media {

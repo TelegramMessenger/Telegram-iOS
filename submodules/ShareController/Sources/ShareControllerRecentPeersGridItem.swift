@@ -4,7 +4,6 @@ import Display
 import TelegramCore
 import SwiftSignalKit
 import AsyncDisplayKit
-import Postbox
 import TelegramPresentationData
 import ChatListSearchRecentPeersNode
 import AccountContext
@@ -54,7 +53,7 @@ final class ShareControllerRecentPeersGridItemNode: GridItemNode {
     }
     
     func setup(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
-        if self.currentState == nil || self.currentState!.0 !== context {
+        if self.currentState == nil || self.currentState!.0 !== context || self.currentState!.1 !== theme {
             let peersNode: ChatListSearchRecentPeersNode
             if let currentPeersNode = self.peersNode {
                 peersNode = currentPeersNode

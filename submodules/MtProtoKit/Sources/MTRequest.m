@@ -5,6 +5,20 @@
 #import <os/lock.h>
 #import <libkern/OSAtomic.h>
 
+@implementation MTRequestResponseInfo
+
+- (instancetype)initWithNetworkType:(int32_t)networkType timestamp:(double)timestamp duration:(double)duration {
+    self = [super init];
+    if (self != nil) {
+        _networkType = networkType;
+        _timestamp = timestamp;
+        _duration = duration;
+    }
+    return self;
+}
+
+@end
+
 @interface MTRequestInternalId : NSObject <NSCopying>
 {
     NSUInteger _value;

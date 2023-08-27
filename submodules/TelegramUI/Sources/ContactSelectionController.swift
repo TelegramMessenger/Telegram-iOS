@@ -343,7 +343,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         self.deactivateSearch()
     }
     
-    public var mediaPickerContext: AttachmentMediaPickerContext {
+    public var mediaPickerContext: AttachmentMediaPickerContext? {
         return ContactsPickerContext(controller: self)
     }
     
@@ -444,8 +444,8 @@ final class ContactsPickerContext: AttachmentMediaPickerContext {
         self.controller?.caption = caption
     }
     
-    func send(silently: Bool, mode: AttachmentMediaPickerSendMode) {
-        self.controller?.contactsNode.requestMultipleAction?(silently, nil)
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode) {
+        self.controller?.contactsNode.requestMultipleAction?(mode == .silently, mode == .whenOnline ? scheduleWhenOnlineTimestamp : nil)
     }
     
     func schedule() {

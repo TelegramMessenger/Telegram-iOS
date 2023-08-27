@@ -7,22 +7,31 @@ import TelegramPresentationData
 import AccountContext
 import ContextUI
 import TelegramCore
-import ChatPresentationInterfaceState
 import TextFormat
 
 public final class ChatSendMessageActionSheetController: ViewController {
+    public enum SendMode {
+        case generic
+        case silently
+        case whenOnline
+    }
     private var controllerNode: ChatSendMessageActionSheetControllerNode {
         return self.displayNode as! ChatSendMessageActionSheetControllerNode
     }
     
     private let context: AccountContext
-    private let interfaceState: ChatPresentationInterfaceState
+    
+    private let peerId: EnginePeer.Id?
+    private let forwardMessageIds: [EngineMessage.Id]?
+    private let hasEntityKeyboard: Bool
+    
     private let gesture: ContextGesture
     private let sourceSendButton: ASDisplayNode
     private let textInputNode: EditableTextNode
     private let attachment: Bool
+    private let canSendWhenOnline: Bool
     private let completion: () -> Void
-    private let sendMessage: (Bool) -> Void
+    private let sendMessage: (SendMode) -> Void
     private let schedule: () -> Void
     
     private var presentationData: PresentationData
@@ -36,13 +45,16 @@ public final class ChatSendMessageActionSheetController: ViewController {
     
     public var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
 
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, interfaceState: ChatPresentationInterfaceState, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, attachment: Bool = false, completion: @escaping () -> Void, sendMessage: @escaping (Bool) -> Void, schedule: @escaping () -> Void) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id?, forwardMessageIds: [EngineMessage.Id]?, hasEntityKeyboard: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, attachment: Bool = false, canSendWhenOnline: Bool, completion: @escaping () -> Void, sendMessage: @escaping (SendMode) -> Void, schedule: @escaping () -> Void) {
         self.context = context
-        self.interfaceState = interfaceState
+        self.peerId = peerId
+        self.forwardMessageIds = forwardMessageIds
+        self.hasEntityKeyboard = hasEntityKeyboard
         self.gesture = gesture
         self.sourceSendButton = sourceSendButton
         self.textInputNode = textInputNode
         self.attachment = attachment
+        self.canSendWhenOnline = canSendWhenOnline
         self.completion = completion
         self.sendMessage = sendMessage
         self.schedule = schedule
@@ -77,29 +89,27 @@ public final class ChatSendMessageActionSheetController: ViewController {
     
     override public func loadDisplayNode() {
         var forwardedCount: Int?
-        if let forwardMessageIds = self.interfaceState.interfaceState.forwardMessageIds, forwardMessageIds.count > 0 {
+        if let forwardMessageIds = self.forwardMessageIds, forwardMessageIds.count > 0 {
             forwardedCount = forwardMessageIds.count
         }
         
         var reminders = false
         var isSecret = false
         var canSchedule = false
-        var hasEntityKeyboard = false
-        if let peerId = self.interfaceState.chatLocation.peerId {
+        if let peerId = self.peerId {
             reminders = peerId == context.account.peerId
             isSecret = peerId.namespace == Namespaces.Peer.SecretChat
             canSchedule = !isSecret
         }
         
-        if case .media = self.interfaceState.inputMode {
-            hasEntityKeyboard = true
-        }
-        
-        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, presentationData: self.presentationData, reminders: reminders, gesture: gesture, sourceSendButton: self.sourceSendButton, textInputNode: self.textInputNode, attachment: self.attachment, forwardedCount: forwardedCount, hasEntityKeyboard: hasEntityKeyboard, emojiViewProvider: self.emojiViewProvider, send: { [weak self] in
-            self?.sendMessage(false)
+        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, presentationData: self.presentationData, reminders: reminders, gesture: gesture, sourceSendButton: self.sourceSendButton, textInputNode: self.textInputNode, attachment: self.attachment, canSendWhenOnline: self.canSendWhenOnline, forwardedCount: forwardedCount, hasEntityKeyboard: self.hasEntityKeyboard, emojiViewProvider: self.emojiViewProvider, send: { [weak self] in
+            self?.sendMessage(.generic)
             self?.dismiss(cancel: false)
         }, sendSilently: { [weak self] in
-            self?.sendMessage(true)
+            self?.sendMessage(.silently)
+            self?.dismiss(cancel: false)
+        }, sendWhenOnline: { [weak self] in
+            self?.sendMessage(.whenOnline)
             self?.dismiss(cancel: false)
         }, schedule: !canSchedule ? nil : { [weak self] in
             self?.schedule()

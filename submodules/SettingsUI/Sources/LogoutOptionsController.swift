@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import LegacyComponents
 import TelegramPresentationData
@@ -15,6 +14,7 @@ import PresentationDataUtils
 import UrlHandling
 import AccountUtils
 import PremiumUI
+import StorageUsageScreen
 
 private struct LogoutOptionsItemArguments {
     let addAccount: () -> Void
@@ -181,7 +181,9 @@ public func logoutOptionsController(context: AccountContext, navigationControlle
         })
         dismissImpl?()
     }, clearCache: {
-        pushControllerImpl?(storageUsageController(context: context))
+        pushControllerImpl?(StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { category in
+            return storageUsageExceptionsScreen(context: context, category: category)
+        }))
         dismissImpl?()
     }, changePhoneNumber: {
         let introController = PrivacyIntroController(context: context, mode: .changePhoneNumber(phoneNumber), proceedAction: {
@@ -190,7 +192,7 @@ public func logoutOptionsController(context: AccountContext, navigationControlle
         pushControllerImpl?(introController)
         dismissImpl?()
     }, contactSupport: { [weak navigationController] in
-        let supportPeer = Promise<PeerId?>()
+        let supportPeer = Promise<EnginePeer.Id?>()
         supportPeer.set(context.engine.peers.supportPeerId())
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

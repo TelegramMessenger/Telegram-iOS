@@ -12,6 +12,8 @@ import EntityKeyboard
 import ChatControllerInteraction
 import MultiplexedVideoNode
 import FeaturedStickersScreen
+import StickerPeekUI
+import EntityKeyboardGifContent
 
 private let searchBarHeight: CGFloat = 52.0
 
@@ -35,8 +37,9 @@ public final class PaneSearchContainerNode: ASDisplayNode, EntitySearchContainer
     private let context: AccountContext
     private let mode: ChatMediaInputSearchMode
     public private(set) var contentNode: PaneSearchContentNode & ASDisplayNode
-    private let controllerInteraction: ChatControllerInteraction
+    private let interaction: ChatEntityKeyboardInputNode.Interaction
     private let inputNodeInteraction: ChatMediaInputNodeInteraction
+    private let peekBehavior: EmojiContentPeekBehavior?
     
     private let backgroundNode: ASDisplayNode
     private let searchBar: PaneSearchBarNode
@@ -51,16 +54,17 @@ public final class PaneSearchContainerNode: ASDisplayNode, EntitySearchContainer
         return self.contentNode.ready
     }
     
-    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, mode: ChatMediaInputSearchMode, trendingGifsPromise: Promise<ChatMediaInputGifPaneTrendingState?>, cancel: @escaping () -> Void) {
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, interaction: ChatEntityKeyboardInputNode.Interaction, inputNodeInteraction: ChatMediaInputNodeInteraction, mode: ChatMediaInputSearchMode, stickerActionTitle: String? = nil, trendingGifsPromise: Promise<ChatMediaInputGifPaneTrendingState?>, cancel: @escaping () -> Void, peekBehavior: EmojiContentPeekBehavior?) {
         self.context = context
         self.mode = mode
-        self.controllerInteraction = controllerInteraction
+        self.interaction = interaction
         self.inputNodeInteraction = inputNodeInteraction
+        self.peekBehavior = peekBehavior
         switch mode {
         case .gif:
-            self.contentNode = GifPaneSearchContentNode(context: context, theme: theme, strings: strings, controllerInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction, trendingPromise: trendingGifsPromise)
+            self.contentNode = GifPaneSearchContentNode(context: context, theme: theme, strings: strings, interaction: interaction, inputNodeInteraction: inputNodeInteraction, trendingPromise: trendingGifsPromise)
         case .sticker, .trending:
-            self.contentNode = StickerPaneSearchContentNode(context: context, theme: theme, strings: strings, controllerInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction)
+            self.contentNode = StickerPaneSearchContentNode(context: context, theme: theme, strings: strings, interaction: interaction, inputNodeInteraction: inputNodeInteraction, stickerActionTitle: stickerActionTitle)
         }
         self.backgroundNode = ASDisplayNode()
         
@@ -102,6 +106,41 @@ public final class PaneSearchContainerNode: ASDisplayNode, EntitySearchContainer
             contentNode.openGifContextMenu = { [weak self] file, node, rect, gesture, isSaved in
                 self?.openGifContextMenu?(file, node, rect, gesture, isSaved)
             }
+        }
+        
+        if let contentNode = self.contentNode as? StickerPaneSearchContentNode, let peekBehavior = self.peekBehavior {
+            peekBehavior.setGestureRecognizerEnabled(view: self.contentNode.view, isEnabled: true, itemAtPoint: { [weak contentNode] point in
+                guard let contentNode else {
+                    return nil
+                }
+                guard let (itemNode, item) = contentNode.itemAt(point: point) else {
+                    return nil
+                }
+                
+                var maybeFile: TelegramMediaFile?
+                if let item = item as? StickerPreviewPeekItem {
+                    switch item {
+                    case let .found(foundItem):
+                        maybeFile = foundItem.file
+                    case let .pack(fileValue):
+                        maybeFile = fileValue
+                    }
+                }
+                guard let file = maybeFile else {
+                    return nil
+                }
+                
+                var groupId: AnyHashable = AnyHashable("search")
+                for attribute in file.attributes {
+                    if case let .Sticker(_, packReference, _) = attribute {
+                        if case let .id(id, _) = packReference {
+                            groupId = AnyHashable(ItemCollectionId(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: id))
+                        }
+                    }
+                }
+                
+                return (groupId, itemNode.layer, file)
+            })
         }
     }
     

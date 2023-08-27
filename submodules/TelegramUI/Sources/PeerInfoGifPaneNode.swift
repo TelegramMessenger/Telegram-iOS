@@ -15,6 +15,7 @@ import ListMessageItem
 import ChatMessageInteractiveMediaBadge
 import SoftwareVideo
 import ChatControllerInteraction
+import PeerInfoVisualMediaPaneNode
 
 private final class FrameSequenceThumbnailNode: ASDisplayNode {
     private let context: AccountContext
@@ -64,9 +65,11 @@ private final class FrameSequenceThumbnailNode: ASDisplayNode {
             
             let source = UniversalSoftwareVideoSource(
                 mediaBox: self.context.account.postbox.mediaBox,
-                userLocation: userLocation,
-                userContentType: .other,
-                fileReference: self.file,
+                source: .file(
+                    userLocation: userLocation,
+                    userContentType: .other,
+                    fileReference: self.file
+                ),
                 automaticallyFetchHeader: true
             )
             self.sources.append(source)
@@ -290,7 +293,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
             }
         }
         
-        if let file = media as? TelegramMediaFile, file.isAnimated {
+        if let file = media as? TelegramMediaFile, file.isAnimated, self.context.sharedContext.energyUsageSettings.autoplayGif {
             if self.videoLayerFrameManager == nil {
                 let sampleBufferLayer: SampleBufferLayer
                 if let current = self.sampleBufferLayer {
@@ -373,7 +376,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                         })
                         
                         if let duration = file.duration {
-                            let durationString = stringForDuration(duration)
+                            let durationString = stringForDuration(Int32(duration))
                             
                             var badgeContent: ChatMessageInteractiveMediaBadgeContent?
                             var mediaDownloadState: ChatMessageInteractiveMediaDownloadState?

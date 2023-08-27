@@ -1,6 +1,5 @@
 import Foundation
 import UIKit
-import Postbox
 import TelegramCore
 
 enum StickerVerificationStatus {
@@ -74,7 +73,7 @@ public class ImportStickerPack {
         let emojis: [String]
         let keywords: String
         let uuid: UUID
-        var resource: MediaResource?
+        var resource: EngineMediaResource?
         
         init(content: Content, emojis: [String], keywords: String, uuid: UUID = UUID()) {
             self.content = content

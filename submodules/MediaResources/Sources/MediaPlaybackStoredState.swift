@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramUIPreferences
 
@@ -29,8 +28,8 @@ public final class MediaPlaybackStoredState: Codable {
     }
 }
 
-public func mediaPlaybackStoredState(engine: TelegramEngine, messageId: MessageId) -> Signal<MediaPlaybackStoredState?, NoError> {
-    let key = ValueBoxKey(length: 20)
+public func mediaPlaybackStoredState(engine: TelegramEngine, messageId: EngineMessage.Id) -> Signal<MediaPlaybackStoredState?, NoError> {
+    let key = EngineDataBuffer(length: 20)
     key.setInt32(0, value: messageId.namespace)
     key.setInt32(4, value: messageId.peerId.namespace._internalGetInt32Value())
     key.setInt64(8, value: messageId.peerId.id._internalGetInt64Value())
@@ -42,8 +41,8 @@ public func mediaPlaybackStoredState(engine: TelegramEngine, messageId: MessageI
     }
 }
 
-public func updateMediaPlaybackStoredStateInteractively(engine: TelegramEngine, messageId: MessageId, state: MediaPlaybackStoredState?) -> Signal<Never, NoError> {
-    let key = ValueBoxKey(length: 20)
+public func updateMediaPlaybackStoredStateInteractively(engine: TelegramEngine, messageId: EngineMessage.Id, state: MediaPlaybackStoredState?) -> Signal<Never, NoError> {
+    let key = EngineDataBuffer(length: 20)
     key.setInt32(0, value: messageId.namespace)
     key.setInt32(4, value: messageId.peerId.namespace._internalGetInt32Value())
     key.setInt64(8, value: messageId.peerId.id._internalGetInt64Value())

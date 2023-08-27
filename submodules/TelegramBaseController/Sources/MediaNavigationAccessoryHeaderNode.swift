@@ -18,6 +18,10 @@ import SliderContextItem
 private let titleFont = Font.regular(12.0)
 private let subtitleFont = Font.regular(10.0)
 
+private func normalizeValue(_ value: CGFloat) -> CGFloat {
+    return round(value * 10.0) / 10.0
+}
+
 private class MediaHeaderItemNode: ASDisplayNode {
     private let titleNode: TextNode
     private let subtitleNode: TextNode
@@ -53,13 +57,15 @@ private class MediaHeaderItemNode: ASDisplayNode {
                     subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: theme.rootController.navigationBar.secondaryTextColor)
                 case let .voice(author, peer):
                     rateButtonHidden = false
-                    let titleText: String = author.flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
+                    let titleText: String = author?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
                     let subtitleText: String
                     if let peer = peer {
-                        if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                        if case let .channel(peer) = peer, case .broadcast = peer.info {
                             subtitleText = strings.MusicPlayer_VoiceNote
-                        } else if peer is TelegramGroup || peer is TelegramChannel {
-                            subtitleText = EnginePeer(peer).displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+                        } else if case .legacyGroup = peer {
+                            subtitleText = peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+                        } else if case .channel = peer {
+                            subtitleText = peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
                         } else {
                             subtitleText = strings.MusicPlayer_VoiceNote
                         }
@@ -71,13 +77,14 @@ private class MediaHeaderItemNode: ASDisplayNode {
                     subtitleString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: theme.rootController.navigationBar.secondaryTextColor)
                 case let .instantVideo(author, peer, timestamp):
                     rateButtonHidden = false
-                    let titleText: String = author.flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
+                    let titleText: String = author?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
                     var subtitleText: String
                     
                     if let peer = peer {
-                        if peer is TelegramGroup || peer is TelegramChannel {
-                            subtitleText = EnginePeer(peer).displayTitle(strings: strings, displayOrder: nameDisplayOrder)
-                        } else {
+                        switch peer {
+                        case .legacyGroup, .channel:
+                            subtitleText = peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+                        default:
                             subtitleText = strings.Message_VideoMessage
                         }
                     } else {
@@ -155,7 +162,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
     private let closeButton: HighlightableButtonNode
     private let actionButton: HighlightTrackingButtonNode
     private let playPauseIconNode: PlayPauseIconNode
-    private let rateButton: RateButton
+    private let rateButton: AudioRateButton
     private let accessibilityAreaNode: AccessibilityAreaNode
     
     private let scrubbingNode: MediaPlayerScrubbingNode
@@ -174,7 +181,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
     
     public var tapAction: (() -> Void)?
     public var close: (() -> Void)?
-    public var setRate: ((AudioPlaybackRate, Bool) -> Void)?
+    public var setRate: ((AudioPlaybackRate, MediaNavigationAccessoryPanel.ChangeType) -> Void)?
     public var togglePlayPause: (() -> Void)?
     public var playPrevious: (() -> Void)?
     public var playNext: (() -> Void)?
@@ -209,6 +216,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         }
     }
     
+    private weak var tooltipController: TooltipScreen?
     private let dismissedPromise = ValuePromise<Bool>(false)
     
     public init(context: AccountContext, presentationData: PresentationData) {
@@ -241,8 +249,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         self.closeButton.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 2.0)
         self.closeButton.displaysAsynchronously = false
         
-        self.rateButton = RateButton()
-        
+        self.rateButton = AudioRateButton()
         self.rateButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -4.0, bottom: -8.0, right: -4.0)
         self.rateButton.displaysAsynchronously = false
         
@@ -421,6 +428,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
             return
         }
         
+        self.tooltipController?.dismiss()
         self.dismissedPromise.set(true)
 
         transition.updatePosition(node: self.separatorNode, position: self.separatorNode.position.offsetBy(dx: 0.0, dy: size.height))
@@ -431,7 +439,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         
         let minHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
         
-        let inset: CGFloat = 40.0 + leftInset
+        let inset: CGFloat = 45.0 + leftInset
         let constrainedSize = CGSize(width: size.width - inset * 2.0, height: size.height)
         let (titleString, subtitleString, rateButtonHidden) = self.currentItemNode.updateLayout(size: constrainedSize, leftInset: leftInset, rightInset: rightInset, theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, nameDisplayOrder: self.nameDisplayOrder, playbackItem: self.playbackItems?.0, transition: transition)
         self.accessibilityAreaNode.accessibilityLabel = "\(titleString?.string ?? ""). \(subtitleString?.string ?? "")"
@@ -471,7 +479,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 44.0 - rightInset, y: 0.0), size: CGSize(width: 44.0, height: minHeight)))
         let rateButtonSize = CGSize(width: 30.0, height: minHeight)
-        transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 33.0 - closeButtonSize.width - rateButtonSize.width - rightInset, y: -4.0), size: rateButtonSize))
+        transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 27.0 - closeButtonSize.width - rateButtonSize.width - rightInset, y: -4.0), size: rateButtonSize))
         
         transition.updateFrame(node: self.playPauseIconNode, frame: CGRect(origin: CGPoint(x: 6.0, y: 4.0 + UIScreenPixel), size: CGSize(width: 28.0, height: 28.0)))
         transition.updateFrame(node: self.actionButton, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
@@ -487,29 +495,45 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
     }
     
     @objc public func rateButtonPressed() {
+        var changeType: MediaNavigationAccessoryPanel.ChangeType = .preset
         let nextRate: AudioPlaybackRate
         if let rate = self.playbackBaseRate {
             switch rate {
+            case .x0_5, .x2:
+                nextRate = .x1
             case .x1:
                 nextRate = .x1_5
             case .x1_5:
                 nextRate = .x2
             default:
-                nextRate = .x1
+                if rate.doubleValue < 0.5 {
+                    nextRate = .x0_5
+                } else if rate.doubleValue < 1.0 {
+                    nextRate = .x1
+                } else if rate.doubleValue < 1.5 {
+                    nextRate = .x1_5
+                } else if rate.doubleValue < 2.0 {
+                    nextRate = .x2
+                } else {
+                    nextRate = .x1
+                }
+                changeType = .sliderCommit(rate.doubleValue, nextRate.doubleValue)
             }
         } else {
-            nextRate = .x2
+            nextRate = .x1_5
         }
-        self.setRate?(nextRate, false)
+        self.setRate?(nextRate, changeType)
         
         let frame = self.rateButton.view.convert(self.rateButton.bounds, to: nil)
         
         let _ = (ApplicationSpecificNotice.incrementAudioRateOptionsTip(accountManager: self.context.sharedContext.accountManager)
         |> deliverOnMainQueue).start(next: { [weak self] value in
-            if let strongSelf = self, let controller = strongSelf.getController?(), value == 4 {
-                controller.present(TooltipScreen(account: strongSelf.context.account, text: strongSelf.strings.Conversation_AudioRateOptionsTooltip, style: .default, icon: nil, location: .point(frame.offsetBy(dx: 0.0, dy: 4.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _ in
+            if let strongSelf = self, let controller = strongSelf.getController?(), value == 2 {
+                let tooltipController = TooltipScreen(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, text: .plain(text: strongSelf.strings.Conversation_AudioRateOptionsTooltip), style: .default, icon: nil, location: .point(frame.offsetBy(dx: 0.0, dy: 4.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _, _ in
                     return .dismiss(consume: false)
-                }), in: .window(.root))
+                })
+                controller.present(tooltipController, in: .window(.root))
+                strongSelf.tooltipController = tooltipController
             }
         })
     }
@@ -524,47 +548,59 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         return speedList
     }
     
-    private func contextMenuSpeedItems(dismiss: @escaping () -> Void) -> Signal<[ContextMenuItem], NoError> {
-        var items: [ContextMenuItem] = []
+    private func contextMenuSpeedItems(scheduleTooltip: @escaping (MediaNavigationAccessoryPanel.ChangeType?) -> Void) -> Signal<ContextController.Items, NoError> {
+        var presetItems: [ContextMenuItem] = []
 
-//        items.append(.custom(SliderContextItem(minValue: 0.05, maxValue: 2.5, value: self.playbackBaseRate?.doubleValue ?? 1.0, valueChanged: { [weak self] newValue, finished in
-//            self?.setRate?(AudioPlaybackRate(newValue), true)
-//            if finished {
-//                dismiss()
-//            }
-//        }), true))
+        let previousRate = self.playbackBaseRate
+        let previousValue = self.playbackBaseRate?.doubleValue ?? 1.0
+        let sliderValuePromise = ValuePromise<Double?>(nil)
+        let sliderItem: ContextMenuItem = .custom(SliderContextItem(minValue: 0.2, maxValue: 2.5, value: previousValue, valueChanged: { [weak self] newValue, finished in
+            let newValue = normalizeValue(newValue)
+            self?.setRate?(AudioPlaybackRate(newValue), .sliderChange)
+            sliderValuePromise.set(newValue)
+            if finished {
+                scheduleTooltip(.sliderCommit(previousValue, newValue))
+            }
+        }), true)
         
-//        items.append(.separator)
-        
+        let theme = self.context.sharedContext.currentPresentationData.with { $0 }.theme
         for (text, _, rate) in self.speedList(strings: self.strings) {
             let isSelected = self.playbackBaseRate == rate
-            items.append(.action(ContextMenuActionItem(text: text, icon: { theme in
-                if isSelected {
+            presetItems.append(.action(ContextMenuActionItem(text: text, icon: { _ in return nil }, iconSource: ContextMenuActionItemIconSource(size: CGSize(width: 24.0, height: 24.0), signal: sliderValuePromise.get()
+            |> map { value in
+                if isSelected && value == nil {
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
                 } else {
                     return nil
                 }
-            }, action: { [weak self] _, f in
+            }), action: { [weak self] _, f in
+                scheduleTooltip(nil)
                 f(.default)
                 
-                self?.setRate?(rate, true)
+                if let previousRate, previousRate.isPreset {
+                    self?.setRate?(rate, .preset)
+                } else {
+                    self?.setRate?(rate, .sliderCommit(previousValue, rate.doubleValue))
+                }
             })))
         }
 
-        return .single(items)
+        return .single(ContextController.Items(content: .twoLists(presetItems, [sliderItem])))
     }
     
     private func openRateMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {
         guard let controller = self.getController?() else {
             return
         }
-        var dismissImpl: (() -> Void)?
-        let items: Signal<[ContextMenuItem], NoError> = self.contextMenuSpeedItems(dismiss: {
-            dismissImpl?()
+        var scheduledTooltip: MediaNavigationAccessoryPanel.ChangeType?
+        let items = self.contextMenuSpeedItems(scheduleTooltip: { change in
+            scheduledTooltip = change
         })
-        let contextController = ContextController(account: self.context.account, presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.rateButton.referenceNode, shouldBeDismissed: self.dismissedPromise.get())), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
-        dismissImpl = { [weak contextController] in
-            contextController?.dismiss()
+        let contextController = ContextController(account: self.context.account, presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.rateButton.referenceNode, shouldBeDismissed: self.dismissedPromise.get())), items: items, gesture: gesture)
+        contextController.dismissed = { [weak self] in
+            if let scheduledTooltip, let self, let rate = self.playbackBaseRate {
+                self.setRate?(rate, scheduledTooltip)
+            }
         }
         self.presentInGlobalOverlay?(contextController)
     }
@@ -668,20 +704,20 @@ private func optionsRateImage(rate: String, color: UIColor = .white) -> UIImage?
     })
 }
 
-private final class RateButton: HighlightableButtonNode {
-    enum Content {
+public final class AudioRateButton: HighlightableButtonNode {
+    public enum Content {
         case image(UIImage?)
     }
 
-    let referenceNode: ContextReferenceContentNode
+    public let referenceNode: ContextReferenceContentNode
     let containerNode: ContextControllerSourceNode
     private let iconNode: ASImageNode
 
-    var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
+    public var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
 
     private let wide: Bool
 
-    init(wide: Bool = false) {
+    public init(wide: Bool = false) {
         self.wide = wide
 
         self.referenceNode = ContextReferenceContentNode()
@@ -722,7 +758,7 @@ private final class RateButton: HighlightableButtonNode {
     }
 
     private var content: Content?
-    func setContent(_ content: Content, animated: Bool = false) {
+    public func setContent(_ content: Content, animated: Bool = false) {
         if animated {
             if let snapshotView = self.referenceNode.view.snapshotContentTree() {
                 snapshotView.frame = self.referenceNode.frame
@@ -760,12 +796,12 @@ private final class RateButton: HighlightableButtonNode {
         }
     }
 
-    override func didLoad() {
+    public override func didLoad() {
         super.didLoad()
         self.view.isOpaque = false
     }
 
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+    public override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         return CGSize(width: wide ? 32.0 : 22.0, height: 44.0)
     }
 

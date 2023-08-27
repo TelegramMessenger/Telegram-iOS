@@ -11,9 +11,10 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ShimmerEffect
 import TelegramPresentationData
+import AccountContext
 
 final class HorizontalStickerGridItem: GridItem {
-    let account: Account
+    let context: AccountContext
     let file: TelegramMediaFile
     let theme: PresentationTheme
     let isPreviewed: (HorizontalStickerGridItem) -> Bool
@@ -21,8 +22,8 @@ final class HorizontalStickerGridItem: GridItem {
     
     let section: GridSection? = nil
     
-    init(account: Account, file: TelegramMediaFile, theme: PresentationTheme, isPreviewed: @escaping (HorizontalStickerGridItem) -> Bool, sendSticker: @escaping (FileMediaReference, UIView, CGRect) -> Void) {
-        self.account = account
+    init(context: AccountContext, file: TelegramMediaFile, theme: PresentationTheme, isPreviewed: @escaping (HorizontalStickerGridItem) -> Bool, sendSticker: @escaping (FileMediaReference, UIView, CGRect) -> Void) {
+        self.context = context
         self.file = file
         self.theme = theme
         self.isPreviewed = isPreviewed
@@ -31,7 +32,7 @@ final class HorizontalStickerGridItem: GridItem {
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = HorizontalStickerGridItemNode()
-        node.setup(account: self.account, item: self)
+        node.setup(context: self.context, item: self)
         node.sendSticker = self.sendSticker
         return node
     }
@@ -41,13 +42,13 @@ final class HorizontalStickerGridItem: GridItem {
             assertionFailure()
             return
         }
-        node.setup(account: self.account, item: self)
+        node.setup(context: self.context, item: self)
         node.sendSticker = self.sendSticker
     }
 }
 
 final class HorizontalStickerGridItemNode: GridItemNode {
-    private var currentState: (Account, HorizontalStickerGridItem, CGSize)?
+    private var currentState: (AccountContext, HorizontalStickerGridItem, CGSize)?
     let imageNode: TransformImageNode
     private(set) var animationNode: AnimatedStickerNode?
     private(set) var placeholderNode: StickerShimmerEffectNode?
@@ -137,8 +138,8 @@ final class HorizontalStickerGridItemNode: GridItemNode {
         self.imageNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
     }
     
-    func setup(account: Account, item: HorizontalStickerGridItem) {
-        if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1.file.id != item.file.id {
+    func setup(context: AccountContext, item: HorizontalStickerGridItem) {
+        if self.currentState == nil || self.currentState!.0 !== context || self.currentState!.1.file.id != item.file.id {
             if let dimensions = item.file.dimensions {
                 if item.file.isAnimatedSticker || item.file.isVideoSticker {
                     let animationNode: AnimatedStickerNode
@@ -161,9 +162,9 @@ final class HorizontalStickerGridItemNode: GridItemNode {
                     let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
                     
                     if item.file.isVideoSticker {
-                        self.imageNode.setSignal(chatMessageSticker(postbox: account.postbox, userLocation: .other, file: item.file, small: true, synchronousLoad: false))
+                        self.imageNode.setSignal(chatMessageSticker(postbox: context.account.postbox, userLocation: .other, file: item.file, small: true, synchronousLoad: false))
                     } else {
-                        self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: account.postbox, userLocation: .other, file: item.file, small: true, size: fittedDimensions, synchronousLoad: false))
+                        self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: context.account.postbox, userLocation: .other, file: item.file, small: true, size: fittedDimensions, synchronousLoad: false))
                     }
                     animationNode.started = { [weak self] in
                         guard let strongSelf = self else {
@@ -181,19 +182,19 @@ final class HorizontalStickerGridItemNode: GridItemNode {
                             strongSelf.removePlaceholder(animated: false)
                         }
                     }
-                    animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource, isVideo: item.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
+                    animationNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: item.file.resource, isVideo: item.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
                     
-                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: stickerPackFileReference(item.file), resource: item.file.resource).start())
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: stickerPackFileReference(item.file), resource: item.file.resource).start())
                 } else {
                     self.imageNode.alpha = 1.0
-                    self.imageNode.setSignal(chatMessageSticker(account: account, userLocation: .other, file: item.file, small: true))
+                    self.imageNode.setSignal(chatMessageSticker(account: context.account, userLocation: .other, file: item.file, small: true))
                     
                     if let currentAnimationNode = self.animationNode {
                         self.animationNode = nil
                         currentAnimationNode.removeFromSupernode()
                     }
                     
-                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: stickerPackFileReference(item.file), resource: chatMessageStickerResource(file: item.file, small: true)).start())
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: stickerPackFileReference(item.file), resource: chatMessageStickerResource(file: item.file, small: true)).start())
                 }
                 
                 if item.file.isPremiumSticker {
@@ -237,7 +238,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
                     lockIconNode.removeFromSupernode()
                 }
                 
-                self.currentState = (account, item, dimensions.cgSize)
+                self.currentState = (context, item, dimensions.cgSize)
                 self.setNeedsLayout()
             }
         }
@@ -254,8 +255,8 @@ final class HorizontalStickerGridItemNode: GridItemNode {
         if let placeholderNode = self.placeholderNode {
             placeholderNode.frame = bounds
             
-            if let theme = self.currentState?.1.theme, let file = self.currentState?.1.file {
-                placeholderNode.update(backgroundColor: theme.list.plainBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor.mixedWith(theme.list.plainBackgroundColor, alpha: 0.4), shimmeringColor: theme.list.mediaPlaceholderColor.withAlphaComponent(0.3), data: file.immediateThumbnailData, size: bounds.size)
+            if let context = self.currentState?.0, let theme = self.currentState?.1.theme, let file = self.currentState?.1.file {
+                placeholderNode.update(backgroundColor: theme.list.plainBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor.mixedWith(theme.list.plainBackgroundColor, alpha: 0.4), shimmeringColor: theme.list.mediaPlaceholderColor.withAlphaComponent(0.3), data: file.immediateThumbnailData, size: bounds.size, enableEffect: context.sharedContext.energyUsageSettings.fullTranslucency)
             }
         }
         

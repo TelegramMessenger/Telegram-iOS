@@ -46,6 +46,9 @@ public enum ContextMenuActionItemTextColor {
 public enum ContextMenuActionResult {
     case `default`
     case dismissWithoutContent
+    /// Temporary
+    static var safeStreamRecordingDismissWithoutContent: ContextMenuActionResult { .dismissWithoutContent }
+    
     case custom(ContainedViewLayoutTransition)
 }
 
@@ -57,10 +60,14 @@ public enum ContextMenuActionItemFont {
 
 public struct ContextMenuActionItemIconSource {
     public let size: CGSize
+    public let contentMode: UIView.ContentMode
+    public let cornerRadius: CGFloat
     public let signal: Signal<UIImage?, NoError>
     
-    public init(size: CGSize, signal: Signal<UIImage?, NoError>) {
+    public init(size: CGSize, contentMode: UIView.ContentMode = .scaleToFill, cornerRadius: CGFloat = 0.0, signal: Signal<UIImage?, NoError>) {
         self.size = size
+        self.contentMode = contentMode
+        self.cornerRadius = cornerRadius
         self.signal = signal
     }
 }
@@ -75,13 +82,20 @@ public enum ContextMenuActionBadgeColor {
     case inactive
 }
 
-public struct ContextMenuActionBadge {
+public struct ContextMenuActionBadge: Equatable {
+    public enum Style {
+        case badge
+        case label
+    }
+    
     public var value: String
     public var color: ContextMenuActionBadgeColor
+    public var style: Style
     
-    public init(value: String, color: ContextMenuActionBadgeColor) {
+    public init(value: String, color: ContextMenuActionBadgeColor, style: Style = .badge) {
         self.value = value
         self.color = color
+        self.style = style
     }
 }
 
@@ -106,6 +120,7 @@ public final class ContextMenuActionItem {
     public let parseMarkdown: Bool
     public let badge: ContextMenuActionBadge?
     public let icon: (PresentationTheme) -> UIImage?
+    public let additionalLeftIcon: ((PresentationTheme) -> UIImage?)?
     public let iconSource: ContextMenuActionItemIconSource?
     public let iconPosition: ContextMenuActionItemIconPosition
     public let animationName: String?
@@ -122,6 +137,7 @@ public final class ContextMenuActionItem {
         parseMarkdown: Bool = false,
         badge: ContextMenuActionBadge? = nil,
         icon: @escaping (PresentationTheme) -> UIImage?,
+        additionalLeftIcon: ((PresentationTheme) -> UIImage?)? = nil,
         iconSource: ContextMenuActionItemIconSource? = nil,
         iconPosition: ContextMenuActionItemIconPosition = .right,
         animationName: String? = nil,
@@ -138,6 +154,7 @@ public final class ContextMenuActionItem {
             parseMarkdown: parseMarkdown,
             badge: badge,
             icon: icon,
+            additionalLeftIcon: additionalLeftIcon,
             iconSource: iconSource,
             iconPosition: iconPosition,
             animationName: animationName,
@@ -160,6 +177,7 @@ public final class ContextMenuActionItem {
         parseMarkdown: Bool = false,
         badge: ContextMenuActionBadge? = nil,
         icon: @escaping (PresentationTheme) -> UIImage?,
+        additionalLeftIcon: ((PresentationTheme) -> UIImage?)? = nil,
         iconSource: ContextMenuActionItemIconSource? = nil,
         iconPosition: ContextMenuActionItemIconPosition = .right,
         animationName: String? = nil,
@@ -175,6 +193,7 @@ public final class ContextMenuActionItem {
         self.parseMarkdown = parseMarkdown
         self.badge = badge
         self.icon = icon
+        self.additionalLeftIcon = additionalLeftIcon
         self.iconSource = iconSource
         self.iconPosition = iconPosition
         self.animationName = animationName
@@ -994,15 +1013,16 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         if let _ = self.presentationNode {
             self.currentPresentationStateTransition = .animateOut(result: initialResult, completion: completion)
             if let validLayout = self.validLayout {
-                if case .custom = initialResult {
+                if case let .custom(transition) = initialResult {
                     self.delayLayoutUpdate = true
-                    Queue.mainQueue().after(0.05) {
+                    Queue.mainQueue().after(0.1) {
                         self.delayLayoutUpdate = false
                         self.updateLayout(
                             layout: validLayout,
-                            transition: .animated(duration: 0.35, curve: .easeInOut),
+                            transition: transition,
                             previousActionsContainerNode: nil
                         )
+                        self.isAnimatingOut = true
                     }
                 } else {
                     self.updateLayout(
@@ -2201,16 +2221,22 @@ public extension ContextLocationContentSource {
 }
 
 public final class ContextControllerReferenceViewInfo {
+    public enum ActionsPosition {
+        case bottom
+        case top
+    }
     public let referenceView: UIView
     public let contentAreaInScreenSpace: CGRect
     public let insets: UIEdgeInsets
     public let customPosition: CGPoint?
+    public let actionsPosition: ActionsPosition
     
-    public init(referenceView: UIView, contentAreaInScreenSpace: CGRect, insets: UIEdgeInsets = UIEdgeInsets(), customPosition: CGPoint? = nil) {
+    public init(referenceView: UIView, contentAreaInScreenSpace: CGRect, insets: UIEdgeInsets = UIEdgeInsets(), customPosition: CGPoint? = nil, actionsPosition: ActionsPosition = .bottom) {
         self.referenceView = referenceView
         self.contentAreaInScreenSpace = contentAreaInScreenSpace
         self.insets = insets
         self.customPosition = customPosition
+        self.actionsPosition = actionsPosition
     }
 }
 
@@ -2337,6 +2363,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     public struct Items {
         public enum Content {
             case list([ContextMenuItem])
+            case twoLists([ContextMenuItem], [ContextMenuItem])
             case custom(ContextControllerItemsContent)
         }
         

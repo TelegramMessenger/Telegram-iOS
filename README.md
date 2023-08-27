@@ -11,86 +11,85 @@ There are several things we require from **all developers** for the moment.
 3. Please study our [**security guidelines**](https://core.telegram.org/mtproto/security_guidelines) and take good care of your users' data and privacy.
 4. Please remember to publish **your** code too in order to comply with the licences.
 
-# Compilation Guide
+# Quick Compilation Guide
 
-1. Install Xcode (directly from https://developer.apple.com/download/more or using the App Store).
-2. Clone the project from GitHub:
+## Get the Code
 
 ```
 git clone --recursive -j8 https://github.com/TelegramMessenger/Telegram-iOS.git
 ```
 
-3. Adjust configuration parameters
+## Setup Xcode
+
+Install Xcode (directly from https://developer.apple.com/download/applications or using the App Store).
+
+## Adjust Configuration
+
+1. Generate a random identifier:
+```
+openssl rand -hex 8
+```
+2. Create a new Xcode project. Use `Telegram` as the Product Name. Use `org.{identifier from step 1}` as the Organization Identifier.
+3. Open `Keychain Access` and navigate to `Certificates`. Locate `Apple Development: your@email.address (XXXXXXXXXX)` and double tap the certificate. Under `Details`, locate `Organizational Unit`. This is the Team ID.
+4. Edit `build-system/template_minimal_development_configuration.json`. Use data from the previous steps.
+
+## Generate an Xcode project
 
 ```
-mkdir -p $HOME/telegram-configuration
-mkdir -p $HOME/telegram-provisioning
-cp build-system/appstore-configuration.json $HOME/telegram-configuration/configuration.json
-cp -R build-system/fake-codesigning $HOME/telegram-provisioning/ 
+python3 build-system/Make/Make.py \
+    --cacheDir="$HOME/telegram-bazel-cache" \
+    generateProject \
+    --configurationPath=build-system/template_minimal_development_configuration.json \
+    --xcodeManagedCodesigning
 ```
 
-- Modify the values in `configuration.json`
-- Replace the provisioning profiles in `profiles` with valid files
+# Advanced Compilation Guide
 
-4. (Optional) Create a build cache directory to speed up rebuilds
+## Xcode
 
+1. Copy and edit `build-system/appstore-configuration.json`.
+2. Copy `build-system/fake-codesigning`. Create and download provisioning profiles, using the `profiles` folder as a reference for the entitlements.
+3. Generate an Xcode project:
 ```
-mkdir -p "$HOME/telegram-bazel-cache"
+python3 build-system/Make/Make.py \
+    --cacheDir="$HOME/telegram-bazel-cache" \
+    generateProject \
+    --configurationPath=configuration_from_step_1.json \
+    --codesigningInformationPath=directory_from_step_2
 ```
 
-5. Build the app
+## IPA
 
+1. Repeat the steps from the previous section. Use distribution provisioning profiles.
+2. Run:
 ```
 python3 build-system/Make/Make.py \
     --cacheDir="$HOME/telegram-bazel-cache" \
     build \
-    --configurationPath=path-to-configuration.json \
-    --codesigningInformationPath=path-to-provisioning-data \
+    --configurationPath=...see previous section... \
+    --codesigningInformationPath=...see previous section... \
     --buildNumber=100001 \
-    --configuration=release_universal
+    --configuration=release_arm64
 ```
 
-6. (Optional) Generate an Xcode project
+## Tips
 
+## Codesigning is not required for simulator-only builds
+
+Add `--disableProvisioningProfiles`:
 ```
 python3 build-system/Make/Make.py \
     --cacheDir="$HOME/telegram-bazel-cache" \
     generateProject \
     --configurationPath=path-to-configuration.json \
     --codesigningInformationPath=path-to-provisioning-data \
-    --disableExtensions
-```
-
-It is possible to generate a project that does not require any codesigning certificates to be installed: add `--disableProvisioningProfiles` flag:
-```
-python3 build-system/Make/Make.py \
-    --cacheDir="$HOME/telegram-bazel-cache" \
-    generateProject \
-    --configurationPath=path-to-configuration.json \
-    --codesigningInformationPath=path-to-provisioning-data \
-    --disableExtensions \
     --disableProvisioningProfiles
 ```
 
+## Versions
 
-Tip: use `--disableExtensions` when developing to speed up development by not building application extensions and the WatchOS app.
-
-
-# Tips
-
-Bazel is used to build the app. To simplify the development setup a helper script is provided (`build-system/Make/Make.py`). See help:
+Each release is built using a specific Xcode version (see `versions.json`). The helper script checks the versions of the installed software and reports an error if they don't match the ones specified in `versions.json`. It is possible to bypass these checks:
 
 ```
-python3 build-system/Make/Make.py --help
-python3 build-system/Make/Make.py build --help
-python3 build-system/Make/Make.py generateProject --help
-```
-
-Bazel is automatically downloaded when running Make.py for the first time. If you wish to use your own build of Bazel, pass `--bazel=path-to-bazel`. If your Bazel version differs from that in `versions.json`, you may use `--overrideBazelVersion` to skip the version check.
-
-Each release is built using specific Xcode and Bazel versions (see `versions.json`). The helper script checks the versions of installed software and reports an error if they don't match the ones specified in `versions.json`. There are flags that allow to bypass these checks:
-
-```
-python3 build-system/Make/Make.py --overrideBazelVersion build ... # Don't check the version of Bazel
 python3 build-system/Make/Make.py --overrideXcodeVersion build ... # Don't check the version of Xcode
 ```

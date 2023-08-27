@@ -465,8 +465,15 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                 if let languages = translationSettings.ignoredLanguages {
                     ignoredLanguages = languages
                 } else {
-                    if let activeLanguage = activeLanguageCode, supportedTranslationLanguages.contains(activeLanguage) {
-                        ignoredLanguages = [activeLanguage]
+                    
+                    if var activeLanguage = activeLanguageCode {
+                        let rawSuffix = "-raw"
+                        if activeLanguage.hasSuffix(rawSuffix) {
+                            activeLanguage = String(activeLanguage.dropLast(rawSuffix.count))
+                        }
+                        if supportedTranslationLanguages.contains(activeLanguage) {
+                            ignoredLanguages = [activeLanguage]
+                        }
                     }
                     let systemLanguages = systemLanguageCodes()
                     for systemLanguage in systemLanguages {

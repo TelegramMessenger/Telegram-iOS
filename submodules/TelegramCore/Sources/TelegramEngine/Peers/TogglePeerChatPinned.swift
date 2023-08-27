@@ -17,7 +17,6 @@ func _internal_toggleItemPinned(postbox: Postbox, accountPeerId: PeerId, locatio
         let isPremium = transaction.getPeer(accountPeerId)?.isPremium ?? false
         
         let appConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? .defaultValue
-        let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue
         let userLimitsConfiguration = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: isPremium)
         
         switch location {
@@ -46,7 +45,7 @@ func _internal_toggleItemPinned(postbox: Postbox, accountPeerId: PeerId, locatio
             if case .root = groupId {
                 limitCount = Int(userLimitsConfiguration.maxPinnedChatCount)
             } else {
-                limitCount = Int(limitsConfiguration.maxArchivedPinnedChatCount)
+                limitCount = Int(userLimitsConfiguration.maxArchivedPinnedChatCount)
             }
             
             let count = sameKind.count + additionalCount

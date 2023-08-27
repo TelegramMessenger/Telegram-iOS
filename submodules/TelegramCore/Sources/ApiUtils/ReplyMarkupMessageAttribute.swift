@@ -17,8 +17,25 @@ extension ReplyMarkupButton {
                 self.init(title: text, titleWhenForwarded: nil, action: .requestMap)
             case let .keyboardButtonRequestPhone(text):
                 self.init(title: text, titleWhenForwarded: nil, action: .requestPhone)
-            case let .keyboardButtonSwitchInline(flags, text, query):
-                self.init(title: text, titleWhenForwarded: nil, action: .switchInline(samePeer: (flags & (1 << 0)) != 0, query: query))
+            case let .keyboardButtonSwitchInline(flags, text, query, types):
+                var peerTypes = ReplyMarkupButtonAction.PeerTypes()
+                if let types = types {
+                    for type in types {
+                        switch type {
+                        case .inlineQueryPeerTypePM:
+                            peerTypes.insert(.users)
+                        case .inlineQueryPeerTypeBotPM:
+                            peerTypes.insert(.bots)
+                        case .inlineQueryPeerTypeBroadcast:
+                            peerTypes.insert(.channels)
+                        case .inlineQueryPeerTypeChat, .inlineQueryPeerTypeMegagroup:
+                            peerTypes.insert(.groups)
+                        case .inlineQueryPeerTypeSameBotPM:
+                            break
+                        }
+                    }
+                }
+                self.init(title: text, titleWhenForwarded: nil, action: .switchInline(samePeer: (flags & (1 << 0)) != 0, query: query, peerTypes: peerTypes))
             case let .keyboardButtonUrl(text, url):
                 self.init(title: text, titleWhenForwarded: nil, action: .url(url))
             case let .keyboardButtonGame(text):

@@ -68,6 +68,7 @@
                             @[@"492960", @"492960", @13, @(STPCardBrandVisa)],
                             @[@"8600", @"8600", @16, @(STPCardBrandOther)],
                             @[@"9860", @"9860", @16, @(STPCardBrandOther)],
+                            @[@"2", @"2", @16, @(STPCardBrandUnknown)],
                             ];
         NSMutableArray *binRanges = [NSMutableArray array];
         for (NSArray *range in ranges) {

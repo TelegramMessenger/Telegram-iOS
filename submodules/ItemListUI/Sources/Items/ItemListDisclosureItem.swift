@@ -469,7 +469,11 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                         if case let .channel(channel) = iconPeer, channel.flags.contains(.isForum) {
                             clipStyle = .roundedRect
                         }
-                        avatarNode.setPeer(context: context, theme: item.presentationData.theme, peer: iconPeer, clipStyle: clipStyle)
+                        var overrideImage: AvatarNodeImageOverride?
+                        if iconPeer.id == context.account.peerId {
+                            overrideImage = .savedMessagesIcon
+                        }
+                        avatarNode.setPeer(context: context, theme: item.presentationData.theme, peer: iconPeer, overrideImage: overrideImage, clipStyle: clipStyle)
                     } else if let avatarNode = strongSelf.avatarNode {
                         strongSelf.avatarNode = nil
                         avatarNode.removeFromSupernode()

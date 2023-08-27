@@ -64,6 +64,18 @@ public final class GroupCallPanelData {
         self.activeSpeakers = activeSpeakers
         self.groupCall = groupCall
     }
+    
+    public func withInfo(_ info: GroupCallInfo) -> GroupCallPanelData {
+        return GroupCallPanelData(
+            peerId: self.peerId,
+            isChannel: self.isChannel,
+            info: info,
+            topParticipants: self.topParticipants,
+            participantCount: self.participantCount,
+            activeSpeakers: self.activeSpeakers,
+            groupCall: self.groupCall
+        )
+    }
 }
 
 private final class FakeAudioLevelGenerator {
@@ -149,7 +161,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     private let hapticFeedback = HapticFeedback()
     
     private var currentData: GroupCallPanelData?
-    private var validLayout: (CGSize, CGFloat, CGFloat)?
+    private var validLayout: (CGSize, CGFloat, CGFloat, Bool)?
     
     public init(context: AccountContext, presentationData: PresentationData, tapAction: @escaping () -> Void) {
         self.context = context
@@ -188,6 +200,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.separatorNode.isLayerBacked = true
         
         super.init()
+        
+        self.clipsToBounds = true
 
         self.addSubnode(self.contentNode)
 
@@ -302,8 +316,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         
         self.updateJoinButton()
         
-        if let (size, leftInset, rightInset) = self.validLayout {
-            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
+        if let (size, leftInset, rightInset, isHidden) = self.validLayout {
+            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, isHidden: isHidden, transition: .immediate)
         }
     }
     
@@ -409,8 +423,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                         strongSelf.avatarsContent = strongSelf.avatarsContext.update(peers: summaryState.topParticipants.map { EnginePeer($0.peer) }, animated: false)
                     }
                     
-                    if let (size, leftInset, rightInset) = strongSelf.validLayout {
-                        strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
+                    if let (size, leftInset, rightInset, isHidden) = strongSelf.validLayout {
+                        strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, isHidden: isHidden, transition: .immediate)
                     }
                 }))
                 
@@ -427,8 +441,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                     
                     strongSelf.callState = callState
                     
-                    if let (size, leftInset, rightInset) = strongSelf.validLayout {
-                        strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: transition)
+                    if let (size, leftInset, rightInset, isHidden) = strongSelf.validLayout {
+                        strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, isHidden: isHidden, transition: transition)
                     }
                 }))
                 
@@ -438,7 +452,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                         return
                     }
                     
-                    if strongSelf.audioLevelView == nil {
+                    if strongSelf.audioLevelView == nil, strongSelf.context.sharedContext.energyUsageSettings.fullTranslucency {
                         let blobFrame = CGRect(origin: CGPoint(), size: CGSize(width: 36.0, height: 36.0)).insetBy(dx: -12.0, dy: -12.0)
                         
                         let audioLevelView = VoiceBlobView(
@@ -548,16 +562,16 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                         }
                     }
                     self.previewImage = image
-                    if let (size, leftInset, rightInset) = self.validLayout {
-                        self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .animated(duration: 0.2, curve: .easeInOut))
+                    if let (size, leftInset, rightInset, isHidden) = self.validLayout {
+                        self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, isHidden: isHidden, transition: .animated(duration: 0.2, curve: .easeInOut))
                     }
                 })
             }
         }
         #endif
         
-        if let (size, leftInset, rightInset) = self.validLayout {
-            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .animated(duration: 0.2, curve: .easeInOut))
+        if let (size, leftInset, rightInset, isHidden) = self.validLayout {
+            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, isHidden: isHidden, transition: .animated(duration: 0.2, curve: .easeInOut))
         }
         
         if updateAudioLevels {
@@ -598,14 +612,15 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.avatarsNode.updateAudioLevels(color: self.theme.chat.inputPanel.actionControlFillColor, backgroundColor: self.theme.chat.inputPanel.actionControlFillColor, levels: levels)
     }
     
-    public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
-        self.validLayout = (size, leftInset, rightInset)
+    public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, isHidden: Bool, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, leftInset, rightInset, isHidden)
         
         let staticTransition: ContainedViewLayoutTransition = .immediate
         
         let panelHeight = size.height
         
-        transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(), size: size))
+        transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: isHidden ? -size.height : 0.0), size: size))
+        transition.updateAlpha(node: self.contentNode, alpha: isHidden ? 0.0 : 1.0)
         
         self.tapButton.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width - 7.0 - 36.0 - 7.0, height: panelHeight))
         
@@ -649,8 +664,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             
             if self.updateTimer == nil {
                 let timer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] in
-                    if let strongSelf = self, let (size, leftInset, rightInset) = strongSelf.validLayout {
-                        strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
+                    if let strongSelf = self, let (size, leftInset, rightInset, isHidden) = strongSelf.validLayout {
+                        strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, isHidden: isHidden, transition: .immediate)
                     }
                 }, queue: Queue.mainQueue())
                 self.updateTimer = timer
@@ -691,7 +706,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                 previewImageNode.cornerRadius = 8.0
                 previewImageNode.contentMode = .scaleAspectFill
                 self.previewImageNode = previewImageNode
-                self.addSubnode(previewImageNode)
+                self.contentNode.addSubnode(previewImageNode)
             }
             previewImageNode.image = previewImage
             let previewSize = CGSize(width: 40.0, height: 40.0)
@@ -757,13 +772,10 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     }
     
     public func animateIn(_ transition: ContainedViewLayoutTransition) {
-        self.clipsToBounds = true
         let contentPosition = self.contentNode.layer.position
-        transition.animatePosition(node: self.contentNode, from: CGPoint(x: contentPosition.x, y: contentPosition.y - 50.0), completion: { [weak self] _ in
-            self?.clipsToBounds = false
-        })
+        transition.animatePosition(node: self.contentNode, from: CGPoint(x: contentPosition.x, y: contentPosition.y - 50.0))
 
-        guard let (size, _, _) = self.validLayout else {
+        guard let (size, _, _, _) = self.validLayout else {
             return
         }
 
@@ -771,14 +783,12 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     }
     
     public func animateOut(_ transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
-        self.clipsToBounds = true
         let contentPosition = self.contentNode.layer.position
-        transition.animatePosition(node: self.contentNode, to: CGPoint(x: contentPosition.x, y: contentPosition.y - 50.0), removeOnCompletion: false, completion: { [weak self] _ in
-            self?.clipsToBounds = false
+        transition.animatePosition(node: self.contentNode, to: CGPoint(x: contentPosition.x, y: contentPosition.y - 50.0), removeOnCompletion: false, completion: { _ in
             completion()
         })
 
-        guard let (size, _, _) = self.validLayout else {
+        guard let (size, _, _, _) = self.validLayout else {
             return
         }
 

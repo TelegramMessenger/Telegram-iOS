@@ -41,6 +41,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
     }
     
     private let context: AccountContext
+    private let forceTheme: PresentationTheme?
     private var initialFocusId: ItemCollectionId?
     private let hasPremiumForUse: Bool
     private let hasPremiumForInstallation: Bool
@@ -56,7 +57,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
     private var itemGroups: [EmojiPagerContentComponent.ItemGroup] = []
     
     public var onCancel: (() -> Void)?
-    
+        
     private let emojiSearchDisposable = MetaDisposable()
     private let emojiSearchState = Promise<EmojiSearchState>(EmojiSearchState(result: nil, isSearching: false))
     private var emojiSearchStateValue = EmojiSearchState(result: nil, isSearching: false) {
@@ -70,6 +71,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
 
     public init(
         context: AccountContext,
+        forceTheme: PresentationTheme?,
         items: [FeaturedStickerPackItem],
         initialFocusId: ItemCollectionId?,
         hasPremiumForUse: Bool,
@@ -77,12 +79,17 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
         parentInputInteraction: EmojiPagerContentComponent.InputInteraction
     ) {
         self.context = context
+        self.forceTheme = forceTheme
         self.initialFocusId = initialFocusId
         self.hasPremiumForUse = hasPremiumForUse
         self.hasPremiumForInstallation = hasPremiumForInstallation
         self.parentInputInteraction = parentInputInteraction
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        if let forceTheme {
+            presentationData = presentationData.withUpdated(theme: forceTheme)
+        }
+        self.presentationData = presentationData
         
         self.panelHostView = PagerExternalTopPanelContainer()
         self.inputInteractionHolder = EmojiPagerContentComponent.InputInteractionHolder()
@@ -400,8 +407,11 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
             customLayout: nil,
             externalBackground: nil,
             externalExpansionView: nil,
+            customContentView: nil,
             useOpaqueTheme: true,
-            hideBackground: false
+            hideBackground: false,
+            stateContext: nil,
+            addImage: nil
         )
         
         self.dataDisposable = (
@@ -450,6 +460,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
             itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: "main", version: 0),
             searchState: .empty(hasResults: false),
             warpContentsOnEdges: false,
+            hideBackground: false,
             displaySearchWithPlaceholder: self.presentationData.strings.EmojiSearch_SearchEmojiPlaceholder,
             searchCategories: nil,
             searchInitiallyHidden: false,
@@ -490,6 +501,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                 externalBottomPanelContainer: nil,
                 displayTopPanelBackground: .blur,
                 topPanelExtensionUpdated: { _, _ in },
+                topPanelScrollingOffset: { _, _ in },
                 hideInputUpdated: { _, _, _ in },
                 hideTopPanelUpdated: { _, _ in
                 },
@@ -504,6 +516,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                 displayBottomPanel: false,
                 isExpanded: false,
                 clipContentToTopPanel: false,
+                useExternalSearchContainer: false,
                 hidePanels: true
             )),
             environment: {},

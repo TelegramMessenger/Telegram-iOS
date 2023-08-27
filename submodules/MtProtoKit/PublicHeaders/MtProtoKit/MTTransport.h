@@ -26,11 +26,13 @@
 - (void)transportConnectionProblemsStatusChanged:(MTTransport * _Nonnull)transport scheme:(MTTransportScheme * _Nonnull)scheme hasConnectionProblems:(bool)hasConnectionProblems isProbablyHttp:(bool)isProbablyHttp;
 
 - (void)transportReadyForTransaction:(MTTransport * _Nonnull)transport scheme:(MTTransportScheme * _Nonnull)scheme transportSpecificTransaction:(MTMessageTransaction * _Nonnull)transportSpecificTransaction forceConfirmations:(bool)forceConfirmations transactionReady:(void (^ _Nonnull)(NSArray * _Nonnull))transactionReady;
-- (void)transportHasIncomingData:(MTTransport * _Nonnull)transport scheme:(MTTransportScheme * _Nonnull)scheme data:(NSData * _Nonnull)data transactionId:(id _Nonnull)transactionId requestTransactionAfterProcessing:(bool)requestTransactionAfterProcessing decodeResult:(void (^ _Nonnull)(id _Nonnull transactionId, bool success))decodeResult;
+- (void)transportHasIncomingData:(MTTransport * _Nonnull)transport scheme:(MTTransportScheme * _Nonnull)scheme networkType:(int32_t)networkType data:(NSData * _Nonnull)data transactionId:(id _Nonnull)transactionId requestTransactionAfterProcessing:(bool)requestTransactionAfterProcessing decodeResult:(void (^ _Nonnull)(id _Nonnull transactionId, bool success))decodeResult;
 - (void)transportTransactionsMayHaveFailed:(MTTransport * _Nonnull)transport transactionIds:(NSArray * _Nonnull)transactionIds;
 - (void)transportReceivedQuickAck:(MTTransport * _Nonnull)transport quickAckId:(int32_t)quickAckId;
 - (void)transportDecodeProgressToken:(MTTransport * _Nonnull)transport scheme:(MTTransportScheme * _Nonnull)scheme data:(NSData * _Nonnull)data token:(int64_t)token completion:(void (^ _Nonnull)(int64_t token, id _Nonnull progressToken))completion;
 - (void)transportUpdatedDataReceiveProgress:(MTTransport * _Nonnull)transport progressToken:(id _Nonnull)progressToken packetLength:(NSInteger)packetLength progress:(float)progress;
+
+- (void)transportActivityUpdated:(MTTransport * _Nonnull)transport;
 
 @end
 
@@ -55,7 +57,7 @@
 - (void)stop;
 - (void)updateConnectionState;
 - (void)setDelegateNeedsTransaction;
-- (void)_processIncomingData:(NSData * _Nonnull)data scheme:(MTTransportScheme * _Nonnull)scheme transactionId:(id _Nonnull)transactionId requestTransactionAfterProcessing:(bool)requestTransactionAfterProcessing decodeResult:(void (^ _Nonnull)(id _Nonnull transactionId, bool success))decodeResult;
+- (void)_processIncomingData:(NSData * _Nonnull)data scheme:(MTTransportScheme * _Nonnull)scheme networkType:(int32_t)networkType transactionId:(id _Nonnull)transactionId requestTransactionAfterProcessing:(bool)requestTransactionAfterProcessing decodeResult:(void (^ _Nonnull)(id _Nonnull transactionId, bool success))decodeResult;
 - (void)_networkAvailabilityChanged:(bool)networkAvailable;
 
 - (void)activeTransactionIds:(void (^ _Nonnull)(NSArray * _Nonnull activeTransactionId))completion;

@@ -1,0 +1,46 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+swift_library(
+    name = "ShareWithPeersScreen",
+    module_name = "ShareWithPeersScreen",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
+    deps = [
+        "//submodules/AsyncDisplayKit",
+        "//submodules/Display",
+        "//submodules/Postbox",
+        "//submodules/TelegramCore",
+        "//submodules/SSignalKit/SwiftSignalKit",
+        "//submodules/ComponentFlow",
+        "//submodules/Components/ViewControllerComponent",
+        "//submodules/Components/ComponentDisplayAdapters",
+        "//submodules/Components/MultilineTextComponent",
+        "//submodules/TelegramPresentationData",
+        "//submodules/TelegramUIPreferences",
+        "//submodules/AccountContext",
+        "//submodules/AppBundle",
+        "//submodules/TelegramStringFormatting",
+        "//submodules/PresentationDataUtils",
+        "//submodules/Components/SolidRoundedButtonComponent",
+        "//submodules/TelegramUI/Components/ButtonComponent",
+        "//submodules/TelegramUI/Components/PlainButtonComponent",
+        "//submodules/TelegramUI/Components/AnimatedCounterComponent",
+        "//submodules/TelegramUI/Components/TokenListTextField",
+        "//submodules/Components/BundleIconComponent",
+        "//submodules/AvatarNode",
+        "//submodules/CheckNode",
+        "//submodules/LocalizedPeerData",
+        "//submodules/TelegramUI/Components/Stories/PeerListItemComponent",
+        "//submodules/TelegramUI/Components/LottieComponent",
+        "//submodules/TelegramUI/Components/SwitchComponent",
+        "//submodules/TooltipUI",
+        "//submodules/OverlayStatusController",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)

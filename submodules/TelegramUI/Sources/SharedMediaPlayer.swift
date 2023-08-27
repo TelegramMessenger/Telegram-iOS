@@ -9,7 +9,6 @@ import TelegramAudio
 import AccountContext
 import TelegramUniversalVideoContent
 import DeviceProximity
-import RaiseToListen
 
 private enum SharedMediaPlaybackItem: Equatable {
     case audio(MediaPlayer)
@@ -117,13 +116,11 @@ final class SharedMediaPlayer {
     private let audioSession: ManagedAudioSession
     private let overlayMediaManager: OverlayMediaManager
     private let playerIndex: Int32
-    private let playlist: SharedMediaPlaylist
+    let playlist: SharedMediaPlaylist
     
     private var playbackRate: AudioPlaybackRate
     
-    //private var proximityManagerIndex: Int?
-    private var raiseToListen: RaiseToListenManager?
-    
+    private var proximityManagerIndex: Int?
     private let controlPlaybackWithProximity: Bool
     private var forceAudioToSpeaker = false
     
@@ -182,7 +179,7 @@ final class SharedMediaPlayer {
     
     let type: MediaManagerPlayerType
     
-    init(mediaManager: MediaManager, inForeground: Signal<Bool, NoError>, account: Account, audioSession: ManagedAudioSession, overlayMediaManager: OverlayMediaManager, playlist: SharedMediaPlaylist, initialOrder: MusicPlaybackSettingsOrder, initialLooping: MusicPlaybackSettingsLooping, initialPlaybackRate: AudioPlaybackRate, playerIndex: Int32, controlPlaybackWithProximity: Bool, type: MediaManagerPlayerType) {
+    init(mediaManager: MediaManager, inForeground: Signal<Bool, NoError>, account: Account, audioSession: ManagedAudioSession, overlayMediaManager: OverlayMediaManager, playlist: SharedMediaPlaylist, initialOrder: MusicPlaybackSettingsOrder, initialLooping: MusicPlaybackSettingsLooping, initialPlaybackRate: AudioPlaybackRate, playerIndex: Int32, controlPlaybackWithProximity: Bool, type: MediaManagerPlayerType, continueInstantVideoLoopAfterFinish: Bool) {
         self.mediaManager = mediaManager
         self.account = account
         self.audioSession = audioSession
@@ -197,6 +194,8 @@ final class SharedMediaPlayer {
         
         if controlPlaybackWithProximity {
             self.forceAudioToSpeaker = !DeviceProximityManager.shared().currentValue()
+        } else {
+            self.forceAudioToSpeaker = true
         }
         
         playlist.currentItemDisappeared = { [weak self] in
@@ -231,13 +230,13 @@ final class SharedMediaPlayer {
                             case .voice, .music:
                                 switch playbackData.source {
                                     case let .telegramFile(fileReference, _):
-                                    strongSelf.playbackItem = .audio(MediaPlayer(audioSessionManager: strongSelf.audioSession, postbox: strongSelf.account.postbox, userLocation: .other,  userContentType: .audio, resourceReference: fileReference.resourceReference(fileReference.media.resource), streamable: playbackData.type == .music ? .conservative : .none, video: false, preferSoftwareDecoding: false, enableSound: true, baseRate: rateValue, fetchAutomatically: true, playAndRecord: controlPlaybackWithProximity))
+                                    strongSelf.playbackItem = .audio(MediaPlayer(audioSessionManager: strongSelf.audioSession, postbox: strongSelf.account.postbox, userLocation: .other,  userContentType: .audio, resourceReference: fileReference.resourceReference(fileReference.media.resource), streamable: playbackData.type == .music ? .conservative : .none, video: false, preferSoftwareDecoding: false, enableSound: true, baseRate: rateValue, fetchAutomatically: true, playAndRecord: controlPlaybackWithProximity, isAudioVideoMessage: playbackData.type == .voice))
                                 }
                             case .instantVideo:
                                 if let mediaManager = strongSelf.mediaManager, let item = item as? MessageMediaPlaylistItem {
                                     switch playbackData.source {
                                         case let .telegramFile(fileReference, _):
-                                            let videoNode = OverlayInstantVideoNode(postbox: strongSelf.account.postbox, audioSession: strongSelf.audioSession, manager: mediaManager.universalVideoManager, content: NativeVideoContent(id: .message(item.message.stableId, fileReference.media.fileId), userLocation: .peer(item.message.id.peerId), fileReference: fileReference, enableSound: false, baseRate: rateValue, captureProtected: item.message.isCopyProtected(), storeAfterDownload: nil), close: { [weak mediaManager] in
+                                            let videoNode = OverlayInstantVideoNode(postbox: strongSelf.account.postbox, audioSession: strongSelf.audioSession, manager: mediaManager.universalVideoManager, content: NativeVideoContent(id: .message(item.message.stableId, fileReference.media.fileId), userLocation: .peer(item.message.id.peerId), fileReference: fileReference, enableSound: false, baseRate: rateValue, isAudioVideoMessage: true, captureProtected: item.message.isCopyProtected(), storeAfterDownload: nil), close: { [weak mediaManager] in
                                                 mediaManager?.setPlaylist(nil, type: .voice, control: .playback(.pause))
                                             })
                                             strongSelf.playbackItem = .instantVideo(videoNode)
@@ -310,7 +309,11 @@ final class SharedMediaPlayer {
                                 case let .audio(player):
                                     player.pause()
                                 case let .instantVideo(node):
-                                    node.setSoundEnabled(false)
+                                    if continueInstantVideoLoopAfterFinish {
+                                        node.setSoundEnabled(false)
+                                    } else {
+                                        node.pause()
+                                    }
                             }
                         }
                         strongSelf.playedToEnd?()
@@ -349,10 +352,9 @@ final class SharedMediaPlayer {
                         } else {
                             strongSelf.playbackStateValue.set(.single(nil))
                             if !state.loading {
-                                strongSelf.raiseToListen = nil
-//                                if let proximityManagerIndex = strongSelf.proximityManagerIndex {
-//                                    DeviceProximityManager.shared().remove(proximityManagerIndex)
-//                                }
+                                if let proximityManagerIndex = strongSelf.proximityManagerIndex {
+                                    DeviceProximityManager.shared().remove(proximityManagerIndex)
+                                }
                             }
                         }
                     }
@@ -366,44 +368,21 @@ final class SharedMediaPlayer {
         })
         
         if controlPlaybackWithProximity {
-            self.raiseToListen = RaiseToListenManager(shouldActivate: {
-                return true
-            }, activate: { [weak self] in
-                if let strongSelf = self {
-                    let forceAudioToSpeaker = false
-                    if strongSelf.forceAudioToSpeaker != forceAudioToSpeaker {
-                        strongSelf.forceAudioToSpeaker = forceAudioToSpeaker
-                        strongSelf.playbackItem?.setForceAudioToSpeaker(forceAudioToSpeaker)
-                        if !forceAudioToSpeaker {
-                            strongSelf.control(.playback(.play))
+            self.proximityManagerIndex = DeviceProximityManager.shared().add { [weak self] value in
+                let forceAudioToSpeaker = !value
+                if let strongSelf = self, strongSelf.forceAudioToSpeaker != forceAudioToSpeaker {
+                    strongSelf.forceAudioToSpeaker = forceAudioToSpeaker
+                    strongSelf.playbackItem?.setForceAudioToSpeaker(forceAudioToSpeaker)
+                    if !forceAudioToSpeaker {
+                        if let playbackStateValue = strongSelf._playbackStateValue, case let .item(item) = playbackStateValue, item.status.timestamp < 1.5 {
+                            strongSelf.control(.seek(0.0))
                         }
+                        strongSelf.control(.playback(.play))
+                    } else {
+                        strongSelf.control(.playback(.pause))
                     }
                 }
-            }, deactivate: { [weak self] in
-                if let strongSelf = self {
-                    let forceAudioToSpeaker = true
-                    if strongSelf.forceAudioToSpeaker != forceAudioToSpeaker {
-                        strongSelf.forceAudioToSpeaker = forceAudioToSpeaker
-                        strongSelf.playbackItem?.setForceAudioToSpeaker(forceAudioToSpeaker)
-                        if forceAudioToSpeaker {
-                            strongSelf.control(.playback(.pause))
-                        }
-                    }
-                }
-            })
-            self.raiseToListen?.enabled = true
-//            self.proximityManagerIndex = DeviceProximityManager.shared().add { [weak self] value in
-//                let forceAudioToSpeaker = !value
-//                if let strongSelf = self, strongSelf.forceAudioToSpeaker != forceAudioToSpeaker {
-//                    strongSelf.forceAudioToSpeaker = forceAudioToSpeaker
-//                    strongSelf.playbackItem?.setForceAudioToSpeaker(forceAudioToSpeaker)
-//                    if !forceAudioToSpeaker {
-//                        strongSelf.control(.playback(.play))
-//                    } else {
-//                        strongSelf.control(.playback(.pause))
-//                    }
-//                }
-//            }
+            }
         }
     }
     
@@ -414,9 +393,9 @@ final class SharedMediaPlayer {
         self.playbackStateValueDisposable?.dispose()
         self.prefetchDisposable.dispose()
         
-//        if let proximityManagerIndex = self.proximityManagerIndex {
-//            DeviceProximityManager.shared().remove(proximityManagerIndex)
-//        }
+        if let proximityManagerIndex = self.proximityManagerIndex {
+            DeviceProximityManager.shared().remove(proximityManagerIndex)
+        }
         
         if let playbackItem = self.playbackItem {
             switch playbackItem {

@@ -9,7 +9,7 @@ genrule(
     cmd_bash =
 """
 set -x
-    core_count="`sysctl -n hw.logicalcpu`"
+    core_count=`PATH="$$PATH:/usr/sbin" sysctl -n hw.logicalcpu`
     BUILD_DIR="$(RULEDIR)/build"
     rm -rf "$$BUILD_DIR"
     mkdir -p "$$BUILD_DIR"

@@ -81,6 +81,9 @@ public final class EngineMessage: Equatable {
     public var associatedThreadInfo: Message.AssociatedThreadInfo? {
         return self.impl.associatedThreadInfo
     }
+    public var associatedStories: [StoryId: CodableEntry] {
+        return self.impl.associatedStories
+    }
     
     public var index: MessageIndex {
         return self.impl.index
@@ -108,7 +111,8 @@ public final class EngineMessage: Equatable {
         associatedMessages: [EngineMessage.Id: EngineMessage],
         associatedMessageIds: [EngineMessage.Id],
         associatedMedia: [MediaId: Media],
-        associatedThreadInfo: Message.AssociatedThreadInfo?
+        associatedThreadInfo: Message.AssociatedThreadInfo?,
+        associatedStories: [StoryId: CodableEntry]
     ) {
         var mappedPeers: [PeerId: Peer] = [:]
         for (id, peer) in peers {
@@ -142,7 +146,8 @@ public final class EngineMessage: Equatable {
             associatedMessages: SimpleDictionary(mappedAssociatedMessages),
             associatedMessageIds: associatedMessageIds,
             associatedMedia: associatedMedia,
-            associatedThreadInfo: associatedThreadInfo
+            associatedThreadInfo: associatedThreadInfo,
+            associatedStories: associatedStories
         )
     }
 

@@ -572,7 +572,7 @@ private final class WallpaperBlurNode: ASDisplayNode {
 
         super.init()
 
-        self.addSubnode(self.colorNode)
+        //self.addSubnode(self.colorNode)
     }
 
     func update(rect: CGRect, within size: CGSize, color: UIColor, wallpaperNode: WallpaperBackgroundNode?, transition: ContainedViewLayoutTransition) {

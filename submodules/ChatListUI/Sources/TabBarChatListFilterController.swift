@@ -9,7 +9,7 @@ import Postbox
 import TelegramUIPreferences
 import TelegramCore
 
-func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> {
+public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> {
     return context.engine.peers.updatedChatListFilters()
     |> distinctUntilChanged
     |> mapToSignal { filters -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> in
@@ -32,8 +32,11 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
         for groupId in additionalGroupIds {
             unreadCountItems.append(.totalInGroup(groupId))
         }
+        
+        let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.globalNotifications]))
         let unreadKey: PostboxViewKey = .unreadCounts(items: unreadCountItems)
         var keys: [PostboxViewKey] = []
+        keys.append(globalNotificationsKey)
         keys.append(unreadKey)
         for peerId in additionalPeerIds {
             keys.append(.basicPeer(peerId))
@@ -43,6 +46,13 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
         |> map { view -> (Int, [(ChatListFilter, Int, Bool)]) in
             guard let unreadCounts = view.views[unreadKey] as? UnreadMessageCountsView else {
                 return (0, [])
+            }
+            
+            var globalNotificationSettings: GlobalNotificationSettingsSet
+            if let settingsView = view.views[globalNotificationsKey] as? PreferencesView, let settings = settingsView.values[PreferencesKeys.globalNotifications]?.get(GlobalNotificationSettings.self) {
+                globalNotificationSettings = settings.effective
+            } else {
+                globalNotificationSettings = GlobalNotificationSettings.defaultSettings.effective
             }
             
             var result: [(ChatListFilter, Int, Bool)] = []
@@ -66,7 +76,28 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
                                 peerCount = max(1, peerCount)
                             }
                             
-                            if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings, case .muted = notificationSettings.muteState {
+                            var isMuted = false
+                            if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
+                                if case .muted = notificationSettings.muteState {
+                                    isMuted = true
+                                } else if case .default = notificationSettings.muteState {
+                                    if let peer = peerView.peer {
+                                        if peer is TelegramUser {
+                                            isMuted = !globalNotificationSettings.privateChats.enabled
+                                        } else if peer is TelegramGroup {
+                                            isMuted = !globalNotificationSettings.groupChats.enabled
+                                        } else if let channel = peer as? TelegramChannel {
+                                            switch channel.info {
+                                            case .group:
+                                                isMuted = !globalNotificationSettings.groupChats.enabled
+                                            case .broadcast:
+                                                isMuted = !globalNotificationSettings.channels.enabled
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            if isMuted {
                                 peerTagAndCount[peerId] = (tag, peerCount, false, peerView.groupId, true)
                             } else {
                                 peerTagAndCount[peerId] = (tag, peerCount, true, peerView.groupId, false)
@@ -175,8 +206,9 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
                     }
                     for peerId in data.excludePeers {
                         if let (tag, peerCount, _, groupIdValue, isMuted) = peerTagAndCount[peerId], peerCount != 0, let groupId = groupIdValue {
-                            var matches = true
+                            var matches = false
                             if tags.contains(tag) {
+                                matches = true
                                 if isMuted && data.excludeMuted {
                                     matches = false
                                 }

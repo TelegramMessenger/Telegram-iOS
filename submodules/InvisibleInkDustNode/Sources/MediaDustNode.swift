@@ -92,6 +92,7 @@ public class MediaDustLayer: CALayer {
 public class MediaDustNode: ASDisplayNode {
     private var currentParams: (size: CGSize, color: UIColor)?
     private var animColor: CGColor?
+    private let enableAnimations: Bool
         
     private var emitterNode: ASDisplayNode
     private var emitter: CAEmitterCell?
@@ -101,13 +102,18 @@ public class MediaDustNode: ASDisplayNode {
     private let emitterSpotNode: ASImageNode
     private let emitterMaskFillNode: ASDisplayNode
     
+    private var staticNode: ASImageNode?
+    private var staticParams: CGSize?
+    
     public var isRevealed = false
     private var isExploding = false
     
     public var revealed: () -> Void = {}
     public var tapped: () -> Void = {}
     
-    public override init() {
+    public init(enableAnimations: Bool) {
+        self.enableAnimations = enableAnimations
+        
         self.emitterNode = ASDisplayNode()
         self.emitterNode.isUserInteractionEnabled = false
         self.emitterNode.clipsToBounds = true
@@ -132,65 +138,71 @@ public class MediaDustNode: ASDisplayNode {
     public override func didLoad() {
         super.didLoad()
         
-        let emitter = CAEmitterCell()
-        emitter.color = UIColor(rgb: 0xffffff, alpha: 0.0).cgColor
-        emitter.contents = UIImage(bundleImageName: "Components/TextSpeckle")?.cgImage
-        emitter.contentsScale = 1.8
-        emitter.emissionRange = .pi * 2.0
-        emitter.lifetime = 8.0
-        emitter.scale = 0.5
-        emitter.velocityRange = 0.0
-        emitter.name = "dustCell"
-        emitter.alphaRange = 1.0
-        emitter.setValue("point", forKey: "particleType")
-        emitter.setValue(1.0, forKey: "mass")
-        emitter.setValue(0.01, forKey: "massRange")
-        self.emitter = emitter
-        
-        let alphaBehavior = createEmitterBehavior(type: "valueOverLife")
-        alphaBehavior.setValue("color.alpha", forKey: "keyPath")
-        alphaBehavior.setValue([0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1], forKey: "values")
-        alphaBehavior.setValue(true, forKey: "additive")
-        
-        let scaleBehavior = createEmitterBehavior(type: "valueOverLife")
-        scaleBehavior.setValue("scale", forKey: "keyPath")
-        scaleBehavior.setValue([0.0, 0.5], forKey: "values")
-        scaleBehavior.setValue([0.0, 0.05], forKey: "locations")
-        
-        let randomAttractor0 = createEmitterBehavior(type: "simpleAttractor")
-        randomAttractor0.setValue("randomAttractor0", forKey: "name")
-        randomAttractor0.setValue(20, forKey: "falloff")
-        randomAttractor0.setValue(35, forKey: "radius")
-        randomAttractor0.setValue(5, forKey: "stiffness")
-        randomAttractor0.setValue(NSValue(cgPoint: .zero), forKey: "position")
-        
-        let randomAttractor1 = createEmitterBehavior(type: "simpleAttractor")
-        randomAttractor1.setValue("randomAttractor1", forKey: "name")
-        randomAttractor1.setValue(20, forKey: "falloff")
-        randomAttractor1.setValue(35, forKey: "radius")
-        randomAttractor1.setValue(5, forKey: "stiffness")
-        randomAttractor1.setValue(NSValue(cgPoint: .zero), forKey: "position")
-        
-        let fingerAttractor = createEmitterBehavior(type: "simpleAttractor")
-        fingerAttractor.setValue("fingerAttractor", forKey: "name")
-        
-        let behaviors = [randomAttractor0, randomAttractor1, fingerAttractor, alphaBehavior, scaleBehavior]
-    
-        let emitterLayer = CAEmitterLayer()
-        emitterLayer.masksToBounds = true
-        emitterLayer.allowsGroupOpacity = true
-        emitterLayer.lifetime = 1
-        emitterLayer.emitterCells = [emitter]
-        emitterLayer.seed = arc4random()
-        emitterLayer.emitterShape = .rectangle
-        emitterLayer.setValue(behaviors, forKey: "emitterBehaviors")
-        
-        emitterLayer.setValue(4.0, forKeyPath: "emitterBehaviors.fingerAttractor.stiffness")
-        emitterLayer.setValue(false, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
-        
-        self.emitterLayer = emitterLayer
-        
-        self.emitterNode.layer.addSublayer(emitterLayer)
+        if self.enableAnimations {
+            let emitter = CAEmitterCell()
+            emitter.color = UIColor(rgb: 0xffffff, alpha: 0.0).cgColor
+            emitter.contents = UIImage(bundleImageName: "Components/TextSpeckle")?.cgImage
+            emitter.contentsScale = 1.8
+            emitter.emissionRange = .pi * 2.0
+            emitter.lifetime = 8.0
+            emitter.scale = 0.5
+            emitter.velocityRange = 0.0
+            emitter.name = "dustCell"
+            emitter.alphaRange = 1.0
+            emitter.setValue("point", forKey: "particleType")
+            emitter.setValue(1.0, forKey: "mass")
+            emitter.setValue(0.01, forKey: "massRange")
+            self.emitter = emitter
+            
+            let alphaBehavior = createEmitterBehavior(type: "valueOverLife")
+            alphaBehavior.setValue("color.alpha", forKey: "keyPath")
+            alphaBehavior.setValue([0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1], forKey: "values")
+            alphaBehavior.setValue(true, forKey: "additive")
+            
+            let scaleBehavior = createEmitterBehavior(type: "valueOverLife")
+            scaleBehavior.setValue("scale", forKey: "keyPath")
+            scaleBehavior.setValue([0.0, 0.5], forKey: "values")
+            scaleBehavior.setValue([0.0, 0.05], forKey: "locations")
+            
+            let randomAttractor0 = createEmitterBehavior(type: "simpleAttractor")
+            randomAttractor0.setValue("randomAttractor0", forKey: "name")
+            randomAttractor0.setValue(20, forKey: "falloff")
+            randomAttractor0.setValue(35, forKey: "radius")
+            randomAttractor0.setValue(5, forKey: "stiffness")
+            randomAttractor0.setValue(NSValue(cgPoint: .zero), forKey: "position")
+            
+            let randomAttractor1 = createEmitterBehavior(type: "simpleAttractor")
+            randomAttractor1.setValue("randomAttractor1", forKey: "name")
+            randomAttractor1.setValue(20, forKey: "falloff")
+            randomAttractor1.setValue(35, forKey: "radius")
+            randomAttractor1.setValue(5, forKey: "stiffness")
+            randomAttractor1.setValue(NSValue(cgPoint: .zero), forKey: "position")
+            
+            let fingerAttractor = createEmitterBehavior(type: "simpleAttractor")
+            fingerAttractor.setValue("fingerAttractor", forKey: "name")
+            
+            let behaviors = [randomAttractor0, randomAttractor1, fingerAttractor, alphaBehavior, scaleBehavior]
+            
+            let emitterLayer = CAEmitterLayer()
+            emitterLayer.masksToBounds = true
+            emitterLayer.allowsGroupOpacity = true
+            emitterLayer.lifetime = 1
+            emitterLayer.emitterCells = [emitter]
+            emitterLayer.seed = arc4random()
+            emitterLayer.emitterShape = .rectangle
+            emitterLayer.setValue(behaviors, forKey: "emitterBehaviors")
+            
+            emitterLayer.setValue(4.0, forKeyPath: "emitterBehaviors.fingerAttractor.stiffness")
+            emitterLayer.setValue(false, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
+            
+            self.emitterLayer = emitterLayer
+            
+            self.emitterNode.layer.addSublayer(emitterLayer)
+        } else {
+            let staticNode = ASImageNode()
+            self.staticNode = staticNode
+            self.addSubnode(staticNode)
+        }
         
         self.updateEmitter()
         
@@ -207,49 +219,57 @@ public class MediaDustNode: ASDisplayNode {
         self.tapped()
         
         self.isRevealed = true
-        self.isExploding = true
         
-        let position = gestureRecognizer.location(in: self.view)
-        self.emitterLayer?.setValue(true, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
-        self.emitterLayer?.setValue(position, forKeyPath: "emitterBehaviors.fingerAttractor.position")
-        
-        let maskSize = self.emitterNode.frame.size
-        Queue.concurrentDefaultQueue().async {
-            let emitterMaskImage = generateMaskImage(size: maskSize, position: position, inverse: true)
+        if self.enableAnimations {
+            self.isExploding = true
             
-            Queue.mainQueue().async {
-                self.emitterSpotNode.image = emitterMaskImage
-            }
-        }
-           
-        Queue.mainQueue().after(0.1 * UIView.animationDurationFactor()) {
-            let xFactor = (position.x / self.emitterNode.frame.width - 0.5) * 2.0
-            let yFactor = (position.y / self.emitterNode.frame.height - 0.5) * 2.0
-            let maxFactor = max(abs(xFactor), abs(yFactor))
-
-            let scaleAddition = maxFactor * 4.0
-            let durationAddition = -maxFactor * 0.2
+            let position = gestureRecognizer.location(in: self.view)
+            self.emitterLayer?.setValue(true, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
+            self.emitterLayer?.setValue(position, forKeyPath: "emitterBehaviors.fingerAttractor.position")
             
-            self.supernode?.view.mask = self.emitterMaskNode.view
-            self.emitterSpotNode.frame = CGRect(x: 0.0, y: 0.0, width: self.emitterMaskNode.frame.width * 3.0, height: self.emitterMaskNode.frame.height * 3.0)
-            
-            self.emitterSpotNode.layer.anchorPoint = CGPoint(x: position.x / self.emitterMaskNode.frame.width, y: position.y / self.emitterMaskNode.frame.height)
-            self.emitterSpotNode.position = position
-            self.emitterSpotNode.layer.animateScale(from: 0.3333, to: 10.5 + scaleAddition, duration: 0.45 + durationAddition, removeOnCompletion: false, completion: { [weak self] _ in
-                self?.revealed()
-                self?.alpha = 0.0
-                self?.supernode?.view.mask = nil
+            let maskSize = self.emitterNode.frame.size
+            Queue.concurrentDefaultQueue().async {
+                let emitterMaskImage = generateMaskImage(size: maskSize, position: position, inverse: true)
                 
-            })
-            self.emitterMaskFillNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
-        }
-        
-        Queue.mainQueue().after(0.8 * UIView.animationDurationFactor()) {
-            self.isExploding = false
-            self.emitterLayer?.setValue(false, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
+                Queue.mainQueue().async {
+                    self.emitterSpotNode.image = emitterMaskImage
+                }
+            }
             
-            self.emitterSpotNode.layer.removeAllAnimations()
-            self.emitterMaskFillNode.layer.removeAllAnimations()
+            Queue.mainQueue().after(0.1 * UIView.animationDurationFactor()) {
+                let xFactor = (position.x / self.emitterNode.frame.width - 0.5) * 2.0
+                let yFactor = (position.y / self.emitterNode.frame.height - 0.5) * 2.0
+                let maxFactor = max(abs(xFactor), abs(yFactor))
+                
+                let scaleAddition = maxFactor * 4.0
+                let durationAddition = -maxFactor * 0.2
+                
+                self.supernode?.view.mask = self.emitterMaskNode.view
+                self.emitterSpotNode.frame = CGRect(x: 0.0, y: 0.0, width: self.emitterMaskNode.frame.width * 3.0, height: self.emitterMaskNode.frame.height * 3.0)
+                
+                self.emitterSpotNode.layer.anchorPoint = CGPoint(x: position.x / self.emitterMaskNode.frame.width, y: position.y / self.emitterMaskNode.frame.height)
+                self.emitterSpotNode.position = position
+                self.emitterSpotNode.layer.animateScale(from: 0.3333, to: 10.5 + scaleAddition, duration: 0.45 + durationAddition, removeOnCompletion: false, completion: { [weak self] _ in
+                    self?.revealed()
+                    self?.alpha = 0.0
+                    self?.supernode?.view.mask = nil
+                    
+                })
+                self.emitterMaskFillNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            }
+            
+            Queue.mainQueue().after(0.8 * UIView.animationDurationFactor()) {
+                self.isExploding = false
+                self.emitterLayer?.setValue(false, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
+                
+                self.emitterSpotNode.layer.removeAllAnimations()
+                self.emitterMaskFillNode.layer.removeAllAnimations()
+            }
+        } else {
+            self.supernode?.alpha = 0.0
+            self.supernode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, completion: { [weak self] _ in
+                self?.revealed()
+            })
         }
     }
         
@@ -327,18 +347,49 @@ public class MediaDustNode: ASDisplayNode {
         guard let (size, _) = self.currentParams else {
             return
         }
-        
-        self.emitterLayer?.frame = CGRect(origin: CGPoint(), size: size)
-        self.emitterLayer?.emitterSize = size
-        self.emitterLayer?.emitterPosition = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
-        
-        let radius = max(size.width, size.height)
-        self.emitterLayer?.setValue(max(size.width, size.height), forKeyPath: "emitterBehaviors.fingerAttractor.radius")
-        self.emitterLayer?.setValue(radius * -0.5, forKeyPath: "emitterBehaviors.fingerAttractor.falloff")
-        
-        let square = Float(size.width * size.height)
-        Queue.mainQueue().async {
-            self.emitter?.birthRate = min(100000.0, square * 0.02)
+        if self.enableAnimations {
+            self.emitterLayer?.frame = CGRect(origin: CGPoint(), size: size)
+            self.emitterLayer?.emitterSize = size
+            self.emitterLayer?.emitterPosition = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+            
+            let radius = max(size.width, size.height)
+            self.emitterLayer?.setValue(max(size.width, size.height), forKeyPath: "emitterBehaviors.fingerAttractor.radius")
+            self.emitterLayer?.setValue(radius * -0.5, forKeyPath: "emitterBehaviors.fingerAttractor.falloff")
+            
+            let square = Float(size.width * size.height)
+            Queue.mainQueue().async {
+                self.emitter?.birthRate = min(100000.0, square * 0.02)
+            }
+        } else {
+            if let staticParams = self.staticParams, staticParams == size && self.staticNode?.image != nil {
+                return
+            }
+            self.staticParams = size
+            
+            let start = CACurrentMediaTime()
+            
+            Queue.concurrentDefaultQueue().async {
+                var generator = ArbitraryRandomNumberGenerator(seed: 1)
+                let image = generateImage(size, rotatedContext: { size, context in
+                    let bounds = CGRect(origin: .zero, size: size)
+                    context.clear(bounds)
+                    
+                    context.setFillColor(UIColor.white.cgColor)
+                    let rect = CGRect(origin: .zero, size: size)
+                    
+                    let rate = Int(rect.width * rect.height * 0.04)
+                    for _ in 0 ..< rate {
+                        let location = CGPoint(x: .random(in: rect.minX ..< rect.maxX, using: &generator), y: .random(in: rect.minY ..< rect.maxY, using: &generator))
+                        context.fillEllipse(in: CGRect(origin: location, size: CGSize(width: 1.0, height: 1.0)))
+                    }
+                })
+                Queue.mainQueue().async {
+                    self.staticNode?.image = image
+                }
+            }
+            self.staticNode?.frame = CGRect(origin: CGPoint(), size: size)
+            
+            print("total draw \(CACurrentMediaTime() - start)")
         }
     }
         
@@ -350,6 +401,8 @@ public class MediaDustNode: ASDisplayNode {
         
         self.emitterMaskNode.frame = bounds
         self.emitterMaskFillNode.frame = bounds
+        
+        self.staticNode?.frame = bounds
         
         if self.isNodeLoaded {
             self.updateEmitter()

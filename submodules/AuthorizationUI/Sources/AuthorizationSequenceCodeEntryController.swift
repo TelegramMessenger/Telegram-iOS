@@ -23,6 +23,8 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
     
     var reset: (() -> Void)?
     var requestNextOption: (() -> Void)?
+    var resetEmail: (() -> Void)?
+    var retryResetEmail: (() -> Void)?
     
     var data: (String, String?, SentAuthorizationCodeType, AuthorizationCodeNextType?, Int32?)?
     var termsOfService: (UnauthorizedAccountTermsOfService, Bool)?
@@ -109,13 +111,21 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
             self?.navigationItem.rightBarButtonItem?.isEnabled = value
         }
         
+        self.controllerNode.reset = { [weak self] in
+            self?.resetEmail?()
+        }
+        
+        self.controllerNode.retryReset = { [weak self] in
+            self?.retryResetEmail?()
+        }
+        
         self.controllerNode.present = { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }
         
         if let (number, email, codeType, nextType, timeout) = self.data {
             var appleSignInAllowed = false
-            if case let .email(_, _, _, appleSignInAllowedValue, _) = codeType {
+            if case let .email(_, _, _, _, appleSignInAllowedValue, _) = codeType {
                 appleSignInAllowed = appleSignInAllowedValue
             }
             self.controllerNode.updateData(number: number, email: email, codeType: codeType, nextType: nextType, timeout: timeout, appleSignInAllowed: appleSignInAllowed)
@@ -164,7 +174,7 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
             self.data = (number, email, codeType, nextType, timeout)
                         
             var appleSignInAllowed = false
-            if case let .email(_, _, _, appleSignInAllowedValue, _) = codeType {
+            if case let .email(_, _, _, _, appleSignInAllowedValue, _) = codeType {
                 appleSignInAllowed = appleSignInAllowedValue
             }
             
@@ -204,7 +214,7 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
                 minimalCodeLength = Int(length)
             case let .missedCall(_, length):
                 minimalCodeLength = Int(length)
-            case let .email(_, length, _, _, _):
+            case let .email(_, length, _, _, _, _):
                 minimalCodeLength = Int(length)
             case let .fragment(_, length):
                 minimalCodeLength = Int(length)

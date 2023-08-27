@@ -199,7 +199,7 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
         })
     }
     
-    func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    func transitionNode(messageId: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         return nil
     }
     
@@ -251,6 +251,10 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     }
     
     func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
+        return nil
+    }
+    
+    func targetForStoryTransition(id: StoryId) -> UIView? {
         return nil
     }
     

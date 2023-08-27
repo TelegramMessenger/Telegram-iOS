@@ -35,6 +35,3 @@ build --spawn_strategy=standalone
 build --strategy=SwiftCompile=standalone
 build --define RULES_SWIFT_BUILD_DUMMY_WORKER=1
 
-#build --linkopt=-fuse-ld=/Users/ali/Downloads/ld64.lld
-#build --linkopt=-fuse-ld=/Users/ali/build/zld/build/Build/Products/Release/zld
-#build --linkopt=-Wl,-zld_original_ld_path,__BAZEL_XCODE_DEVELOPER_DIR__/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld

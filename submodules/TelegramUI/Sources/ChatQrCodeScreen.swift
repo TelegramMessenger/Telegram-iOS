@@ -516,7 +516,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                         strongSelf.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: item.context.account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: MediaResourceReference.media(media: .standalone(media: file), resource: file.resource)).start())
                         
                         let thumbnailDimensions = PixelDimensions(width: 512, height: 512)
-                        strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.2), shimmeringColor: UIColor(rgb: 0xffffff, alpha: 0.3), data: file.immediateThumbnailData, size: emojiFrame.size, imageSize: thumbnailDimensions.cgSize)
+                        strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.2), shimmeringColor: UIColor(rgb: 0xffffff, alpha: 0.3), data: file.immediateThumbnailData, size: emojiFrame.size, enableEffect: item.context.sharedContext.energyUsageSettings.fullTranslucency, imageSize: thumbnailDimensions.cgSize)
                         strongSelf.placeholderNode.frame = emojiFrame
                     }
                     
@@ -723,6 +723,16 @@ private func iconColors(theme: PresentationTheme) -> [String: UIColor] {
     colors["Sunny.Path 43.Path.Stroke 1"] = accentColor
     colors["Path 10.Path.Fill 1"] = accentColor
     colors["Path 11.Path.Fill 1"] = accentColor
+    return colors
+}
+
+private func interpolateColors(from: [String: UIColor], to: [String: UIColor], fraction: CGFloat) -> [String: UIColor] {
+    var colors: [String: UIColor] = [:]
+    for (key, fromValue) in from {
+        if let toValue = to[key] {
+            colors[key] = fromValue.interpolateTo(toValue, fraction: fraction)
+        }
+    }
     return colors
 }
 
@@ -1149,11 +1159,11 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.switchThemeButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
-                    strongSelf.animationNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.animationNode.alpha = 0.4
+                    strongSelf.animationContainerNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.animationContainerNode.alpha = 0.4
                 } else {
-                    strongSelf.animationNode.alpha = 1.0
-                    strongSelf.animationNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    strongSelf.animationContainerNode.alpha = 1.0
+                    strongSelf.animationContainerNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
             }
         }
@@ -1233,6 +1243,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         })
     }
     
+    private var switchThemeIconAnimator: DisplayLinkAnimator?
     func updatePresentationData(_ presentationData: PresentationData) {
         guard !self.animatedOut else {
             return
@@ -1250,22 +1261,20 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.cancelButton.setImage(closeButtonImage(theme: self.presentationData.theme), for: .normal)
         self.doneButton.updateTheme(SolidRoundedButtonTheme(theme: self.presentationData.theme))
         
-        if self.animationNode.isPlaying {
-            if let animationNode = self.animationNode.makeCopy(colors: iconColors(theme: self.presentationData.theme), progress: 0.2) {
-                let previousAnimationNode = self.animationNode
-                self.animationNode = animationNode
-                
-                animationNode.completion = { [weak previousAnimationNode] in
-                    previousAnimationNode?.removeFromSupernode()
-                }
-                animationNode.isUserInteractionEnabled = false
-                animationNode.frame = previousAnimationNode.frame
-                previousAnimationNode.supernode?.insertSubnode(animationNode, belowSubnode: previousAnimationNode)
-                previousAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: ChatQrCodeScreen.themeCrossfadeDuration, removeOnCompletion: false)
-                animationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        let previousIconColors = iconColors(theme: previousTheme)
+        let newIconColors = iconColors(theme: self.presentationData.theme)
+        
+        if !self.switchThemeButton.isUserInteractionEnabled {
+            Queue.mainQueue().after(ChatThemeScreen.themeCrossfadeDelay) {
+                self.switchThemeIconAnimator = DisplayLinkAnimator(duration: ChatThemeScreen.themeCrossfadeDuration * UIView.animationDurationFactor(), from: 0.0, to: 1.0, update: { [weak self] value in
+                    self?.animationNode.setColors(colors: interpolateColors(from: previousIconColors, to: newIconColors, fraction: value))
+                }, completion: { [weak self] in
+                    self?.switchThemeIconAnimator?.invalidate()
+                    self?.switchThemeIconAnimator = nil
+                })
             }
         } else {
-            self.animationNode.setAnimation(name: self.isDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: iconColors(theme: self.presentationData.theme))
+            self.animationNode.setAnimation(name: self.isDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: newIconColors)
         }
     }
         
@@ -1292,7 +1301,9 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         
         self.animateCrossfade(animateIcon: false)
         self.animationNode.setAnimation(name: self.isDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: iconColors(theme: self.presentationData.theme))
-        self.animationNode.playOnce()
+        Queue.mainQueue().justDispatch {
+            self.animationNode.playOnce()
+        }
         
         let isDarkAppearance = !self.isDarkAppearance
         
@@ -1437,7 +1448,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         let switchThemeFrame = CGRect(origin: CGPoint(x: 3.0, y: 6.0), size: switchThemeSize)
         transition.updateFrame(node: self.switchThemeButton, frame: switchThemeFrame)
         transition.updateFrame(node: self.animationContainerNode, frame: switchThemeFrame.insetBy(dx: 9.0, dy: 9.0))
-        transition.updateFrame(node: self.animationNode, frame: CGRect(origin: CGPoint(), size: self.animationContainerNode.frame.size))
+        transition.updateFrameAsPositionAndBounds(node: self.animationNode, frame: CGRect(origin: CGPoint(), size: self.animationContainerNode.frame.size))
         
         let cancelSize = CGSize(width: 44.0, height: 44.0)
         let cancelFrame = CGRect(origin: CGPoint(x: contentFrame.width - cancelSize.width - 3.0, y: 6.0), size: cancelSize)
@@ -1531,7 +1542,7 @@ private class QrContentNode: ASDisplayNode, ContentNode {
                 
         self.containerNode = ASDisplayNode()
         
-        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false, useExperimentalImplementation: context.sharedContext.immediateExperimentalUISettings.experimentalBackground)
+        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false)
         
         self.codeBackgroundNode = ASDisplayNode()
         self.codeBackgroundNode.backgroundColor = .white
@@ -1852,7 +1863,14 @@ private class QrContentNode: ASDisplayNode, ContentNode {
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
         
         transition.updateFrame(node: self.wallpaperBackgroundNode, frame: CGRect(origin: CGPoint(), size: size))
-        self.wallpaperBackgroundNode.updateLayout(size: size, transition: transition)
+        
+        let displayMode: WallpaperDisplayMode
+        if max(size.width, size.height) > 1000.0 {
+            displayMode = .aspectFit
+        } else {
+            displayMode = .aspectFill
+        }
+        self.wallpaperBackgroundNode.updateLayout(size: size, displayMode: displayMode, transition: transition)
         
         let textLength = self.codeTextNode.attributedText?.string.count ?? 0
         
@@ -2015,7 +2033,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
         
         self.containerNode = ASDisplayNode()
         
-        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false, useExperimentalImplementation: context.sharedContext.immediateExperimentalUISettings.experimentalBackground)
+        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false)
         
         self.backgroundNode = ASDisplayNode()
         self.backgroundImageNode = ASImageNode()
@@ -2195,7 +2213,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
         
         transition.updateFrame(node: self.wallpaperBackgroundNode, frame: CGRect(origin: CGPoint(), size: size))
-        self.wallpaperBackgroundNode.updateLayout(size: size, transition: transition)
+        self.wallpaperBackgroundNode.updateLayout(size: size, displayMode: .aspectFill, transition: transition)
         
         let inset: CGFloat = 24.0
         let contentInset: CGFloat = 16.0
@@ -2254,7 +2272,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
                     mediaSize = dimensions.aspectFitted(mediaFitSize)
                     mediaFrame = CGRect(origin: CGPoint(x: 3.0, y: 63.0), size: mediaSize)
                     
-                    mediaDuration = video.duration ?? 0
+                    mediaDuration = video.duration.flatMap(Int32.init) ?? 0
                     
                     if !wasInitialized {
                         if self.isStatic {

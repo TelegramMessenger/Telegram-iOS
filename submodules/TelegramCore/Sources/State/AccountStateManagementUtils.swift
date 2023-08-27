@@ -203,6 +203,20 @@ private func locallyGeneratedMessageTimestampsFromUpdateGroups(_ groups: [Update
     return messageTimestamps
 }
 
+private func associatedStoredStories(_ groups: [UpdateGroup]) -> [StoryId: UpdatesStoredStory] {
+    var storedStories: [StoryId: UpdatesStoredStory] = [:]
+    storedStories.removeAll()
+    
+    return storedStories
+}
+
+private func associatedStoredStories(_ difference: Api.updates.Difference) -> [StoryId: UpdatesStoredStory] {
+    var storedStories: [StoryId: UpdatesStoredStory] = [:]
+    storedStories.removeAll()
+    
+    return storedStories
+}
+
 private func peerIdsFromDifference(_ difference: Api.updates.Difference) -> Set<PeerId> {
     var peerIds = Set<PeerId>()
     
@@ -421,7 +435,7 @@ private func locallyGeneratedMessageTimestampsFromDifference(_ difference: Api.u
     return messageTimestamps
 }
 
-func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<PeerId>, activeChannelIds: Set<PeerId>, referencedReplyMessageIds: ReferencedReplyMessageIds, referencedGeneralMessageIds: Set<MessageId>, peerIdsRequiringLocalChatState: Set<PeerId>, locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]) -> AccountMutableState {
+func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<PeerId>, activeChannelIds: Set<PeerId>, referencedReplyMessageIds: ReferencedReplyMessageIds, referencedGeneralMessageIds: Set<MessageId>, peerIdsRequiringLocalChatState: Set<PeerId>, locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]], storedStories: [StoryId: UpdatesStoredStory]) -> AccountMutableState {
     var peers: [PeerId: Peer] = [:]
     var channelStates: [PeerId: AccountStateChannelState] = [:]
     
@@ -515,7 +529,7 @@ func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<PeerId>, a
         }
     }
     
-    let state = AccountMutableState(initialState: AccountInitialState(state: (transaction.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestamps, cloudReadStates: cloudReadStates, channelsToPollExplicitely: channelsToPollExplicitely), initialPeers: peers, initialReferencedReplyMessageIds: referencedReplyMessageIds, initialReferencedGeneralMessageIds: referencedGeneralMessageIds, initialStoredMessages: storedMessages, initialReadInboxMaxIds: readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: storedMessagesByPeerIdAndTimestamp)
+    let state = AccountMutableState(initialState: AccountInitialState(state: (transaction.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestamps, cloudReadStates: cloudReadStates, channelsToPollExplicitely: channelsToPollExplicitely), initialPeers: peers, initialReferencedReplyMessageIds: referencedReplyMessageIds, initialReferencedGeneralMessageIds: referencedGeneralMessageIds, initialStoredMessages: storedMessages, initialStoredStories: storedStories, initialReadInboxMaxIds: readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: storedMessagesByPeerIdAndTimestamp)
     return state
 }
 
@@ -526,7 +540,7 @@ func initialStateWithUpdateGroups(postbox: Postbox, groups: [UpdateGroup]) -> Si
         let associatedMessageIds = associatedMessageIdsFromUpdateGroups(groups)
         let peerIdsRequiringLocalChatState = peerIdsRequiringLocalChatStateFromUpdateGroups(groups)
         
-        return initialStateWithPeerIds(transaction, peerIds: peerIds, activeChannelIds: activeChannelIds, referencedReplyMessageIds: associatedMessageIds.replyIds, referencedGeneralMessageIds: associatedMessageIds.generalIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromUpdateGroups(groups))
+        return initialStateWithPeerIds(transaction, peerIds: peerIds, activeChannelIds: activeChannelIds, referencedReplyMessageIds: associatedMessageIds.replyIds, referencedGeneralMessageIds: associatedMessageIds.generalIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromUpdateGroups(groups), storedStories: associatedStoredStories(groups))
     }
 }
 
@@ -536,7 +550,7 @@ func initialStateWithDifference(postbox: Postbox, difference: Api.updates.Differ
         let activeChannelIds = activeChannelsFromDifference(difference)
         let associatedMessageIds = associatedMessageIdsFromDifference(difference)
         let peerIdsRequiringLocalChatState = peerIdsRequiringLocalChatStateFromDifference(difference)
-        return initialStateWithPeerIds(transaction, peerIds: peerIds, activeChannelIds: activeChannelIds, referencedReplyMessageIds: associatedMessageIds.replyIds, referencedGeneralMessageIds: associatedMessageIds.generalIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromDifference(difference))
+        return initialStateWithPeerIds(transaction, peerIds: peerIds, activeChannelIds: activeChannelIds, referencedReplyMessageIds: associatedMessageIds.replyIds, referencedGeneralMessageIds: associatedMessageIds.generalIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromDifference(difference), storedStories: associatedStoredStories(difference))
     }
 }
 
@@ -711,6 +725,11 @@ func finalStateWithDifference(accountPeerId: PeerId, postbox: Postbox, network: 
         if let preCachedResources = message.preCachedResources {
             for (resource, data) in preCachedResources {
                 updatedState.addPreCachedResource(resource, data: data)
+            }
+        }
+        if let preCachedStories = message.preCachedStories {
+            for (id, story) in preCachedStories {
+                updatedState.addPreCachedStory(id: id, story: story)
             }
         }
         var peerIsForum = false
@@ -940,6 +959,11 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                                     updatedState.addPreCachedResource(resource, data: data)
                                 }
                             }
+                            if let preCachedStories = apiMessage.preCachedStories {
+                                for (id, story) in preCachedStories {
+                                    updatedState.addPreCachedStory(id: id, story: story)
+                                }
+                            }
                             var attributes = message.attributes
                             attributes.append(ChannelMessageStateVersionAttribute(pts: pts))
                             updatedState.editMessage(messageId, message: message.withUpdatedAttributes(attributes))
@@ -1006,6 +1030,11 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                             updatedState.addPreCachedResource(resource, data: data)
                         }
                     }
+                    if let preCachedStories = apiMessage.preCachedStories {
+                        for (id, story) in preCachedStories {
+                            updatedState.addPreCachedStory(id: id, story: story)
+                        }
+                    }
                     updatedState.editMessage(messageId, message: message)
                     for media in message.media {
                         if let media = media as? TelegramMediaAction {
@@ -1034,6 +1063,11 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                             if let preCachedResources = apiMessage.preCachedResources {
                                 for (resource, data) in preCachedResources {
                                     updatedState.addPreCachedResource(resource, data: data)
+                                }
+                            }
+                            if let preCachedStories = apiMessage.preCachedStories {
+                                for (id, story) in preCachedStories {
+                                    updatedState.addPreCachedStory(id: id, story: story)
                                 }
                             }
                             var attributes = message.attributes
@@ -1068,6 +1102,11 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                             updatedState.addPreCachedResource(resource, data: data)
                         }
                     }
+                    if let preCachedStories = apiMessage.preCachedStories {
+                        for (id, story) in preCachedStories {
+                            updatedState.addPreCachedStory(id: id, story: story)
+                        }
+                    }
                     updatedState.addMessages([message], location: .UpperHistoryBlock)
                 }
             case let .updateServiceNotification(flags, date, type, text, media, entities):
@@ -1080,7 +1119,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                     if updatedState.peers[peerId] == nil {
                         updatedState.updatePeer(peerId, { peer in
                             if peer == nil {
-                                return TelegramUser(id: peerId, accessHash: nil, firstName: "Telegram Notifications", lastName: nil, username: nil, phone: nil, photo: [], botInfo: BotUserInfo(flags: [], inlinePlaceholder: nil), restrictionInfo: nil, flags: [.isVerified], emojiStatus: nil, usernames: [])
+                                return TelegramUser(id: peerId, accessHash: nil, firstName: "Telegram Notifications", lastName: nil, username: nil, phone: nil, photo: [], botInfo: BotUserInfo(flags: [], inlinePlaceholder: nil), restrictionInfo: nil, flags: [.isVerified], emojiStatus: nil, usernames: [], storiesHidden: nil)
                             } else {
                                 return peer
                             }
@@ -1287,7 +1326,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         channelsToPoll[peerId] = nil
                     }
                 }
-            case let .updatePeerBlocked(peerId, blocked):
+            case let .updatePeerBlocked(flags, peerId):
                 let userPeerId = peerId.peerId
                 updatedState.updateCachedPeerData(userPeerId, { current in
                     let previous: CachedUserData
@@ -1296,7 +1335,13 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                     } else {
                         previous = CachedUserData()
                     }
-                    return previous.withUpdatedIsBlocked(blocked == .boolTrue)
+                    var userFlags = previous.flags
+                    if (flags & (1 << 1)) != 0 {
+                        userFlags.insert(.isBlockedFromStories)
+                    } else {
+                        userFlags.remove(.isBlockedFromStories)
+                    }
+                    return previous.withUpdatedIsBlocked((flags & (1 << 0)) != 0).withUpdatedFlags(userFlags)
                 })
             case let .updateUserStatus(userId, status):
                 updatedState.mergePeerPresences([PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)): status], explicit: true)
@@ -1628,6 +1673,14 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.reloadConfig()
             case let .updateMessageExtendedMedia(peer, msgId, extendedMedia):
                 updatedState.updateExtendedMedia(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), extendedMedia: extendedMedia)
+            case let .updateStory(userId, story):
+                updatedState.updateStory(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), story: story)
+            case let .updateReadStories(userId, id):
+                updatedState.readStories(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), maxId: id)
+            case let .updateStoriesStealthMode(stealthMode):
+                updatedState.updateStoryStealthMode(stealthMode)
+            case let .updateSentStoryReaction(userId, storyId, reaction):
+                updatedState.updateStorySentReaction(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: storyId, reaction: reaction)
             default:
                 break
         }
@@ -1697,9 +1750,12 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
         |> mapToSignal { finalState in
             return resolveAssociatedMessages(postbox: postbox, network: network, state: finalState)
             |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
-                return resolveMissingPeerChatInfos(network: network, state: resultingState)
-                |> map { resultingState, resolveError -> AccountFinalState in
-                    return AccountFinalState(state: resultingState, shouldPoll: shouldPoll || hadError || resolveError, incomplete: missingUpdates, missingUpdatesFromChannels: Set(), discard: resolveError)
+                return resolveAssociatedStories(postbox: postbox, network: network, accountPeerId: accountPeerId, state: finalState)
+                |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
+                    return resolveMissingPeerChatInfos(network: network, state: resultingState)
+                    |> map { resultingState, resolveError -> AccountFinalState in
+                        return AccountFinalState(state: resultingState, shouldPoll: shouldPoll || hadError || resolveError, incomplete: missingUpdates, missingUpdatesFromChannels: Set(), discard: resolveError)
+                    }
                 }
             }
         }
@@ -1826,7 +1882,7 @@ func resolveForumThreads(postbox: Postbox, network: Network, state: AccountMutab
     }
 }
 
-func resolveForumThreads(postbox: Postbox, network: Network, ids: [MessageId]) -> Signal<Void, NoError> {
+func resolveForumThreads(accountPeerId: PeerId, postbox: Postbox, network: Network, ids: [MessageId]) -> Signal<Void, NoError> {
     let forumThreadIds = Set(ids)
     
     if forumThreadIds.isEmpty {
@@ -1919,20 +1975,8 @@ func resolveForumThreads(postbox: Postbox, network: Network, ids: [MessageId]) -
                             }
                         }
                         
-                        var peers: [Peer] = []
-                        for user in users {
-                            if let telegramUser = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
-                                peers.append(telegramUser)
-                            }
-                        }
-                        for chat in chats {
-                            if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
-                                peers.append(groupOrChannel)
-                            }
-                        }
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                            return updated
-                        })
+                        let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                         
                         let _ = transaction.addMessages(storeMessages, location: .Random)
                     }
@@ -1948,7 +1992,7 @@ func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: Fe
     
     for message in fetchedChatList.storeMessages {
         if let threadId = message.threadId {
-            if let channel = fetchedChatList.peers.first(where: { $0.id == message.id.peerId }) as? TelegramChannel, case .group = channel.info, channel.flags.contains(.isForum) {
+            if let channel = fetchedChatList.peers.peers.first(where: { $0.key == message.id.peerId })?.value as? TelegramChannel, case .group = channel.info, channel.flags.contains(.isForum) {
                 forumThreadIds.insert(MessageId(peerId: message.id.peerId, namespace: message.id.namespace, id: Int32(clamping: threadId)))
             }
         }
@@ -1971,7 +2015,7 @@ func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: Fe
             } else {
                 var signals: [Signal<(Peer, Api.messages.ForumTopics)?, NoError>] = []
                 for (peerId, threadIds) in missingForumThreadIds {
-                    guard let peer = fetchedChatList.peers.first(where: { $0.id == peerId }), let inputChannel = apiInputChannel(peer) else {
+                    guard let peer = fetchedChatList.peers.get(peerId), let inputChannel = apiInputChannel(peer) else {
                         Logger.shared.log("resolveForumThreads", "can't fetch thread infos \(threadIds) for peer \(peerId): can't create inputChannel")
                         continue
                     }
@@ -1996,12 +2040,7 @@ func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: Fe
                             
                             switch result {
                             case let .forumTopics(_, _, topics, messages, chats, users, _):
-                                fetchedChatList.peers.append(contentsOf: chats.compactMap { chat in
-                                    return parseTelegramGroupOrChannel(chat: chat)
-                                })
-                                fetchedChatList.peers.append(contentsOf: users.compactMap { user in
-                                    return TelegramUser(user: user)
-                                })
+                                fetchedChatList.peers = fetchedChatList.peers.union(with: AccumulatedPeers(chats: chats, users: users))
                                 
                                 for message in messages {
                                     if let message = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
@@ -2050,6 +2089,112 @@ func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: Fe
         }
         |> switchToLatest
     }
+}
+
+func resolveStories<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, accountPeerId: PeerId, storyIds: Set<StoryId>, additionalPeers: AccumulatedPeers, result: T) -> Signal<T, NoError> {
+    var storyBuckets: [PeerId: [Int32]] = [:]
+    for id in storyIds {
+        if storyBuckets[id.peerId] == nil {
+            storyBuckets[id.peerId] = []
+        }
+        storyBuckets[id.peerId]?.append(id.id)
+    }
+    
+    var signals: [Signal<Never, NoError>] = []
+    for (peerId, allIds) in storyBuckets {
+        var idOffset = 0
+        while idOffset < allIds.count {
+            let bucketLength = min(100, allIds.count - idOffset)
+            let ids = Array(allIds[idOffset ..< (idOffset + bucketLength)])
+            signals.append(_internal_getStoriesById(accountPeerId: accountPeerId, postbox: postbox, source: source, peerId: peerId, peerReference: additionalPeers.get(peerId).flatMap(PeerReference.init), ids: ids, allowFloodWait: false)
+            |> mapToSignal { result -> Signal<Never, NoError> in
+                if let result = result {
+                    return postbox.transaction { transaction -> Void in
+                        for id in ids {
+                            let current = transaction.getStory(id: StoryId(peerId: peerId, id: id))
+                            var updated: CodableEntry?
+                            if let updatedItem = result.first(where: { $0.id == id }) {
+                                if let entry = CodableEntry(updatedItem) {
+                                    updated = entry
+                                }
+                            } else {
+                                updated = CodableEntry(data: Data())
+                            }
+                            if current != updated {
+                                transaction.setStory(id: StoryId(peerId: peerId, id: id), value: updated ?? CodableEntry(data: Data()))
+                            }
+                        }
+                    }
+                    |> ignoreValues
+                } else {
+                    return .complete()
+                }
+            })
+            idOffset += bucketLength
+        }
+    }
+    
+    return combineLatest(signals)
+    |> ignoreValues
+    |> map { _ -> T in
+    }
+    |> then(.single(result))
+}
+
+func resolveAssociatedStories(postbox: Postbox, network: Network, accountPeerId: PeerId, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
+    return postbox.transaction { transaction -> Signal<AccountMutableState, NoError> in
+        var missingStoryIds = Set<StoryId>()
+        
+        for operation in state.operations {
+            switch operation {
+            case let .AddMessages(messages, _):
+                for message in messages {
+                    for media in message.media {
+                        for id in media.storyIds {
+                            if let existing = transaction.getStory(id: id), case .item = existing.get(Stories.StoredItem.self) {
+                            } else if state.preCachedStories[id] != nil {
+                            } else {
+                                missingStoryIds.insert(id)
+                            }
+                        }
+                    }
+                }
+            default:
+                break
+            }
+        }
+        
+        if !missingStoryIds.isEmpty {
+            return resolveStories(postbox: postbox, source: .network(network), accountPeerId: accountPeerId, storyIds: missingStoryIds, additionalPeers: AccumulatedPeers(peers: Array(state.insertedPeers.values)), result: state)
+        } else {
+            return .single(state)
+        }
+    }
+    |> switchToLatest
+}
+
+func resolveAssociatedStories<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, accountPeerId: PeerId, messages: [StoreMessage], additionalPeers: AccumulatedPeers, result: T) -> Signal<T, NoError> {
+    return postbox.transaction { transaction -> Signal<T, NoError> in
+        var missingStoryIds = Set<StoryId>()
+        
+        for message in messages {
+            for media in message.media {
+                for id in media.storyIds {
+                    if let existing = transaction.getStory(id: id), case .item = existing.get(Stories.StoredItem.self) {
+                    } else {
+                        missingStoryIds.insert(id)
+                    }
+                }
+            }
+        }
+        
+        if !missingStoryIds.isEmpty {
+            return resolveStories(postbox: postbox, source: source, accountPeerId: accountPeerId, storyIds: missingStoryIds, additionalPeers: additionalPeers, result: result)
+        } else {
+            return .single(result)
+        }
+    }
+    |> switchToLatest
 }
 
 func extractEmojiFileIds(message: StoreMessage, fileIds: inout Set<Int64>) {
@@ -2380,10 +2525,13 @@ func pollChannelOnce(accountPeerId: PeerId, postbox: Postbox, network: Network, 
                 peerChatInfos[peerId] = PeerChatInfo(notificationSettings: notificationSettings)
             }
         }
-        let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), peerIdsRequiringLocalChatState: Set(), channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:], channelsToPollExplicitely: Set()), initialPeers: initialPeers, initialReferencedReplyMessageIds: ReferencedReplyMessageIds(), initialReferencedGeneralMessageIds: Set(), initialStoredMessages: Set(), initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
+        let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), peerIdsRequiringLocalChatState: Set(), channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:], channelsToPollExplicitely: Set()), initialPeers: initialPeers, initialReferencedReplyMessageIds: ReferencedReplyMessageIds(), initialReferencedGeneralMessageIds: Set(), initialStoredMessages: Set(), initialStoredStories: [:], initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
         return pollChannel(accountPeerId: accountPeerId, postbox: postbox, network: network, peer: peer, state: initialState)
         |> mapToSignal { (finalState, _, timeout) -> Signal<Int32, NoError> in
             return resolveAssociatedMessages(postbox: postbox, network: network, state: finalState)
+            |> mapToSignal { resultingState -> Signal<AccountMutableState, NoError> in
+                return resolveAssociatedStories(postbox: postbox, network: network, accountPeerId: accountPeerId, state: finalState)
+            }
             |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
                 return resolveMissingPeerChatInfos(network: network, state: resultingState)
                 |> map { resultingState, _ -> AccountFinalState in
@@ -2434,10 +2582,13 @@ public func standalonePollChannelOnce(accountPeerId: PeerId, postbox: Postbox, n
                 peerChatInfos[peerId] = PeerChatInfo(notificationSettings: notificationSettings)
             }
         }
-        let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), peerIdsRequiringLocalChatState: Set(), channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:], channelsToPollExplicitely: Set()), initialPeers: initialPeers, initialReferencedReplyMessageIds: ReferencedReplyMessageIds(), initialReferencedGeneralMessageIds: Set(), initialStoredMessages: Set(), initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
+        let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), peerIdsRequiringLocalChatState: Set(), channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:], channelsToPollExplicitely: Set()), initialPeers: initialPeers, initialReferencedReplyMessageIds: ReferencedReplyMessageIds(), initialReferencedGeneralMessageIds: Set(), initialStoredMessages: Set(), initialStoredStories: [:], initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
         return pollChannel(accountPeerId: accountPeerId, postbox: postbox, network: network, peer: peer, state: initialState)
         |> mapToSignal { (finalState, _, timeout) -> Signal<Never, NoError> in
             return resolveAssociatedMessages(postbox: postbox, network: network, state: finalState)
+            |> mapToSignal { resultingState -> Signal<AccountMutableState, NoError> in
+                return resolveAssociatedStories(postbox: postbox, network: network, accountPeerId: accountPeerId, state: finalState)
+            }
             |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
                 return resolveMissingPeerChatInfos(network: network, state: resultingState)
                 |> map { resultingState, _ -> AccountFinalState in
@@ -2646,7 +2797,7 @@ func resetChannels(accountPeerId: PeerId, postbox: Postbox, network: Network, pe
             // TODO: delete messages later than top
             return resolveAssociatedMessages(postbox: postbox, network: network, state: updatedState)
             |> mapToSignal { resultingState -> Signal<AccountMutableState, NoError> in
-                return .single(resultingState)
+                return resolveAssociatedStories(postbox: postbox, network: network, accountPeerId: accountPeerId, state: updatedState)
             }
         }
     }
@@ -2717,6 +2868,11 @@ private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Netwo
                                 updatedState.addPreCachedResource(resource, data: data)
                             }
                         }
+                        if let preCachedStories = apiMessage.preCachedStories {
+                            for (id, story) in preCachedStories {
+                                updatedState.addPreCachedStory(id: id, story: story)
+                            }
+                        }
                         updatedState.addMessages([message], location: .UpperHistoryBlock)
                         if case let .Id(id) = message.id {
                             updatedState.updateChannelSynchronizedUntilMessage(id.peerId, id: id.id)
@@ -2744,6 +2900,11 @@ private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Netwo
                             if let preCachedResources = apiMessage.preCachedResources {
                                 for (resource, data) in preCachedResources {
                                     updatedState.addPreCachedResource(resource, data: data)
+                                }
+                            }
+                            if let preCachedStories = apiMessage.preCachedStories {
+                                for (id, story) in preCachedStories {
+                                    updatedState.addPreCachedStory(id: id, story: story)
                                 }
                             }
                             var attributes = message.attributes
@@ -2795,8 +2956,11 @@ private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Netwo
                 }
                 
                 return resolveForumThreads(postbox: postbox, network: network, state: updatedState)
-                |> map { updatedState -> (AccountMutableState, Bool, Int32?) in
-                    return (updatedState, true, apiTimeout)
+                |> mapToSignal { updatedState in
+                    return resolveAssociatedStories(postbox: postbox, network: network, accountPeerId: accountPeerId, state: updatedState)
+                    |> map { updatedState -> (AccountMutableState, Bool, Int32?) in
+                        return (updatedState, true, apiTimeout)
+                    }
                 }
             case let .channelDifferenceEmpty(_, pts, timeout):
                 var updatedState = state
@@ -2858,6 +3022,11 @@ private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Netwo
                             if let preCachedResources = apiMessage.preCachedResources {
                                 for (resource, data) in preCachedResources {
                                     updatedState.addPreCachedResource(resource, data: data)
+                                }
+                            }
+                            if let preCachedStories = apiMessage.preCachedStories {
+                                for (id, story) in preCachedStories {
+                                    updatedState.addPreCachedStory(id: id, story: story)
                                 }
                             }
                             
@@ -3000,7 +3169,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddScheduledMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -3102,6 +3271,7 @@ func replayFinalState(
     var updatedCalls: [Api.PhoneCall] = []
     var addedCallSignalingData: [(Int64, Data)] = []
     var updatedGroupCallParticipants: [(Int64, GroupCallParticipantsContext.Update)] = []
+    var storyUpdates: [InternalStoryUpdate] = []
     var updatedPeersNearby: [PeerNearby]?
     var isContactUpdates: [(PeerId, Bool)] = []
     var stickerPackOperations: [AccountStateUpdateStickerPacksOperation] = []
@@ -3121,6 +3291,16 @@ func replayFinalState(
     
     var holesFromPreviousStateMessageIds: [MessageId] = []
     var clearHolesFromPreviousStateForChannelMessagesWithPts: [PeerIdAndMessageNamespace: Int32] = [:]
+    
+    for (id, story) in finalState.state.preCachedStories {
+        if let storyItem = Stories.StoredItem(apiStoryItem: story, peerId: id.peerId, transaction: transaction) {
+            if let entry = CodableEntry(storyItem) {
+                transaction.setStory(id: id, value: entry)
+            }
+        } else {
+            transaction.setStory(id: id, value: CodableEntry(data: Data()))
+        }
+    }
     
     for (peerId, namespaces) in finalState.state.namespacesWithHolesFromPreviousState {
         for (namespace, namespaceState) in namespaces {
@@ -3405,6 +3585,22 @@ func replayFinalState(
                                             for (space, _) in holesAtHistoryStart {
                                                 transaction.removeHole(peerId: chatPeerId, threadId: nil, namespace: Namespaces.Message.Cloud, space: space, range: 1 ... id.id)
                                             }
+                                    case let .setChatWallpaper(wallpaper), let .setSameChatWallpaper(wallpaper):
+                                        if message.authorId == accountPeerId {
+                                            transaction.updatePeerCachedData(peerIds: [message.id.peerId], update: { peerId, current in
+                                                var current = current
+                                                if current == nil {
+                                                    if peerId.namespace == Namespaces.Peer.CloudUser {
+                                                        current = CachedUserData()
+                                                    }
+                                                }
+                                                if let cachedData = current as? CachedUserData {
+                                                    return cachedData.withUpdatedWallpaper(wallpaper)
+                                                } else {
+                                                    return current
+                                                }
+                                            })
+                                        }
                                         default:
                                             break
                                     }
@@ -3842,32 +4038,17 @@ func replayFinalState(
                         transaction.globalNotificationSettingsUpdated()
                 }
             case let .MergeApiChats(chats):
-                var peers: [Peer] = []
-                for chat in chats {
-                    if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
-                        peers.append(groupOrChannel)
-                    }
-                }
-                updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                    return updated
-                })
+                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: [])
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
             case let .MergeApiUsers(users):
-                var peers: [Peer] = []
-                for user in users {
-                    if let telegramUser = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
-                        peers.append(telegramUser)
-                    }
-                }
-            
-                if let updatedAccountPeer = peers.first(where: { $0.id == accountPeerId }) as? TelegramUser, let previousAccountPeer = transaction.getPeer(accountPeerId) as? TelegramUser {
+                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [], users: users)
+                if let updatedAccountPeer = parsedPeers.get(accountPeerId) as? TelegramUser, let previousAccountPeer = transaction.getPeer(accountPeerId) as? TelegramUser {
                     if updatedAccountPeer.isPremium != previousAccountPeer.isPremium {
                         isPremiumUpdated = true
                     }
                 }
             
-                updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                    return updated
-                })
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                 updateContacts(transaction: transaction, apiUsers: users)
             case let .UpdatePeer(id, f):
                 if let peer = f(transaction.getPeer(id)) {
@@ -3877,7 +4058,7 @@ func replayFinalState(
                         }
                     }
                     
-                    updatePeers(transaction: transaction, peers: [peer], update: { _, updated in
+                    updatePeersCustom(transaction: transaction, peers: [peer], update: { _, updated in
                         return updated
                     })
                 }
@@ -4306,6 +4487,136 @@ func replayFinalState(
                     }
                     transaction.replaceMessageTagSummary(peerId: topicId.peerId, threadId: Int64(topicId.id), tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: data.unreadMentionCount, maxId: data.topMessageId)
                     transaction.replaceMessageTagSummary(peerId: topicId.peerId, threadId: Int64(topicId.id), tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, count: data.unreadReactionCount, maxId: data.topMessageId)
+                }
+            case let .UpdateStory(peerId, story):
+                var updatedPeerEntries: [StoryItemsTableEntry] = transaction.getStoryItems(peerId: peerId)
+                let previousEntryStory = updatedPeerEntries.first(where: { item in
+                    return item.id == story.id
+                }).flatMap { item -> Stories.Item? in
+                    if let value = item.value.get(Stories.StoredItem.self), case let .item(item) = value {
+                        return item
+                    } else {
+                        return nil
+                    }
+                }
+            
+                if let storedItem = Stories.StoredItem(apiStoryItem: story, existingItem: previousEntryStory, peerId: peerId, transaction: transaction) {
+                    if let currentIndex = updatedPeerEntries.firstIndex(where: { $0.id == storedItem.id }) {
+                        if case .item = storedItem {
+                            if let codedEntry = CodableEntry(storedItem) {
+                                updatedPeerEntries[currentIndex] = StoryItemsTableEntry(value: codedEntry, id: storedItem.id, expirationTimestamp: storedItem.expirationTimestamp, isCloseFriends: storedItem.isCloseFriends)
+                            }
+                        }
+                    } else {
+                        if let codedEntry = CodableEntry(storedItem) {
+                            updatedPeerEntries.append(StoryItemsTableEntry(value: codedEntry, id: storedItem.id, expirationTimestamp: storedItem.expirationTimestamp, isCloseFriends: storedItem.isCloseFriends))
+                        }
+                    }
+                    if case .item = storedItem {
+                        if let codedEntry = CodableEntry(storedItem) {
+                            transaction.setStory(id: StoryId(peerId: peerId, id: storedItem.id), value: codedEntry)
+                        }
+                    }
+                } else {
+                    if case let .storyItemDeleted(id) = story {
+                        if let index = updatedPeerEntries.firstIndex(where: { $0.id == id }) {
+                            updatedPeerEntries.remove(at: index)
+                        }
+                    }
+                }
+                
+                var appliedMaxReadId: Int32?
+                if let currentState = transaction.getPeerStoryState(peerId: peerId)?.entry.get(Stories.PeerState.self) {
+                    if let appliedMaxReadIdValue = appliedMaxReadId {
+                        appliedMaxReadId = max(appliedMaxReadIdValue, currentState.maxReadId)
+                    } else {
+                        appliedMaxReadId = currentState.maxReadId
+                    }
+                }
+                
+                transaction.setStoryItems(peerId: peerId, items: updatedPeerEntries)
+                transaction.setPeerStoryState(peerId: peerId, state: Stories.PeerState(
+                    maxReadId: appliedMaxReadId ?? 0
+                ).postboxRepresentation)
+                
+                if let parsedItem = Stories.StoredItem(apiStoryItem: story, peerId: peerId, transaction: transaction) {
+                    storyUpdates.append(InternalStoryUpdate.added(peerId: peerId, item: parsedItem))
+                } else {
+                    storyUpdates.append(InternalStoryUpdate.deleted(peerId: peerId, id: story.id))
+                }
+            case let .UpdateReadStories(peerId, maxId):
+                var appliedMaxReadId = maxId
+                if let currentState = transaction.getPeerStoryState(peerId: peerId)?.entry.get(Stories.PeerState.self) {
+                    appliedMaxReadId = max(appliedMaxReadId, currentState.maxReadId)
+                }
+                
+                transaction.setPeerStoryState(peerId: peerId, state: Stories.PeerState(
+                    maxReadId: appliedMaxReadId
+                ).postboxRepresentation)
+            
+                storyUpdates.append(InternalStoryUpdate.read(peerId: peerId, maxId: maxId))
+            case let .UpdateStoryStealthMode(data):
+                var configuration = _internal_getStoryConfigurationState(transaction: transaction)
+                configuration.stealthModeState = Stories.StealthModeState(apiMode: data)
+                _internal_setStoryConfigurationState(transaction: transaction, state: configuration)
+            case let .UpdateStorySentReaction(peerId, id, reaction):
+                var updatedPeerEntries: [StoryItemsTableEntry] = transaction.getStoryItems(peerId: peerId)
+                
+                if let index = updatedPeerEntries.firstIndex(where: { item in
+                    return item.id == id
+                }) {
+                    if let value = updatedPeerEntries[index].value.get(Stories.StoredItem.self), case let .item(item) = value {
+                        let updatedItem: Stories.StoredItem = .item(Stories.Item(
+                            id: item.id,
+                            timestamp: item.timestamp,
+                            expirationTimestamp: item.expirationTimestamp,
+                            media: item.media,
+                            mediaAreas: item.mediaAreas,
+                            text: item.text,
+                            entities: item.entities,
+                            views: item.views,
+                            privacy: item.privacy,
+                            isPinned: item.isPinned,
+                            isExpired: item.isExpired,
+                            isPublic: item.isPublic,
+                            isCloseFriends: item.isCloseFriends,
+                            isContacts: item.isContacts,
+                            isSelectedContacts: item.isSelectedContacts,
+                            isForwardingDisabled: item.isForwardingDisabled,
+                            isEdited: item.isEdited,
+                            myReaction: MessageReaction.Reaction(apiReaction: reaction)
+                        ))
+                        if let entry = CodableEntry(updatedItem) {
+                            updatedPeerEntries[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: item.expirationTimestamp, isCloseFriends: item.isCloseFriends)
+                        }
+                    }
+                }
+                transaction.setStoryItems(peerId: peerId, items: updatedPeerEntries)
+            
+                if let value = transaction.getStory(id: StoryId(peerId: peerId, id: id))?.get(Stories.StoredItem.self), case let .item(item) = value {
+                    let updatedItem: Stories.StoredItem = .item(Stories.Item(
+                        id: item.id,
+                        timestamp: item.timestamp,
+                        expirationTimestamp: item.expirationTimestamp,
+                        media: item.media,
+                        mediaAreas: item.mediaAreas,
+                        text: item.text,
+                        entities: item.entities,
+                        views: item.views,
+                        privacy: item.privacy,
+                        isPinned: item.isPinned,
+                        isExpired: item.isExpired,
+                        isPublic: item.isPublic,
+                        isCloseFriends: item.isCloseFriends,
+                        isContacts: item.isContacts,
+                        isSelectedContacts: item.isSelectedContacts,
+                        isForwardingDisabled: item.isForwardingDisabled,
+                        isEdited: item.isEdited,
+                        myReaction: MessageReaction.Reaction(apiReaction: reaction)
+                    ))
+                    if let entry = CodableEntry(updatedItem) {
+                        transaction.setStory(id: StoryId(peerId: peerId, id: id), value: entry)
+                    }
                 }
         }
     }
@@ -4761,5 +5072,18 @@ func replayFinalState(
         requestChatListFiltersSync(transaction: transaction)
     }
     
-    return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, addedReactionEvents: addedReactionEvents, wasScheduledMessageIds: wasScheduledMessageIds, addedSecretMessageIds: addedSecretMessageIds, deletedMessageIds: deletedMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, addedCallSignalingData: addedCallSignalingData, updatedGroupCallParticipants: updatedGroupCallParticipants, updatedPeersNearby: updatedPeersNearby, isContactUpdates: isContactUpdates, delayNotificatonsUntil: delayNotificatonsUntil, updatedIncomingThreadReadStates: updatedIncomingThreadReadStates, updatedOutgoingThreadReadStates: updatedOutgoingThreadReadStates, updateConfig: updateConfig, isPremiumUpdated: isPremiumUpdated)
+    for update in storyUpdates {
+        switch update {
+        case let .added(peerId, _):
+            if shouldKeepUserStoriesInFeed(peerId: peerId, isContact: transaction.isPeerContact(peerId: peerId)) {
+                if !transaction.storySubscriptionsContains(key: .hidden, peerId: peerId) && !transaction.storySubscriptionsContains(key: .filtered, peerId: peerId) {
+                    _internal_addSynchronizePeerStoriesOperation(peerId: peerId, transaction: transaction)
+                }
+            }
+        default:
+            break
+        }
+    }
+    
+    return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, addedReactionEvents: addedReactionEvents, wasScheduledMessageIds: wasScheduledMessageIds, addedSecretMessageIds: addedSecretMessageIds, deletedMessageIds: deletedMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, addedCallSignalingData: addedCallSignalingData, updatedGroupCallParticipants: updatedGroupCallParticipants, storyUpdates: storyUpdates, updatedPeersNearby: updatedPeersNearby, isContactUpdates: isContactUpdates, delayNotificatonsUntil: delayNotificatonsUntil, updatedIncomingThreadReadStates: updatedIncomingThreadReadStates, updatedOutgoingThreadReadStates: updatedOutgoingThreadReadStates, updateConfig: updateConfig, isPremiumUpdated: isPremiumUpdated)
 }

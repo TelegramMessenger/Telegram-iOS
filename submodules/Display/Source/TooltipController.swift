@@ -100,6 +100,7 @@ open class TooltipController: ViewController, StandalonePresentableController {
     
     public private(set) var content: TooltipControllerContent
     private let baseFontSize: CGFloat
+    private let balancedTextLayout: Bool
     
     open func updateContent(_ content: TooltipControllerContent, animated: Bool, extendTimer: Bool, arrowOnBottom: Bool = true) {
         if self.content != content {
@@ -123,21 +124,24 @@ open class TooltipController: ViewController, StandalonePresentableController {
     private var timeoutTimer: SwiftSignalKit.Timer?
     
     private var padding: CGFloat
+    private var innerPadding: UIEdgeInsets
     
     private var layout: ContainerViewLayout?
     private var initialArrowOnBottom: Bool
     
     public var dismissed: ((Bool) -> Void)?
     
-    public init(content: TooltipControllerContent, baseFontSize: CGFloat, timeout: Double = 2.0, dismissByTapOutside: Bool = false, dismissByTapOutsideSource: Bool = false, dismissImmediatelyOnLayoutUpdate: Bool = false, arrowOnBottom: Bool = true, padding: CGFloat = 8.0) {
+    public init(content: TooltipControllerContent, baseFontSize: CGFloat, balancedTextLayout: Bool = false, timeout: Double = 2.0, dismissByTapOutside: Bool = false, dismissByTapOutsideSource: Bool = false, dismissImmediatelyOnLayoutUpdate: Bool = false, arrowOnBottom: Bool = true, padding: CGFloat = 8.0, innerPadding: UIEdgeInsets = UIEdgeInsets()) {
         self.content = content
         self.baseFontSize = baseFontSize
+        self.balancedTextLayout = balancedTextLayout
         self.timeout = timeout
         self.dismissByTapOutside = dismissByTapOutside
         self.dismissByTapOutsideSource = dismissByTapOutsideSource
         self.dismissImmediatelyOnLayoutUpdate = dismissImmediatelyOnLayoutUpdate
         self.initialArrowOnBottom = arrowOnBottom
         self.padding = padding
+        self.innerPadding = innerPadding
         
         super.init(navigationBarPresentationData: nil)
         
@@ -153,10 +157,11 @@ open class TooltipController: ViewController, StandalonePresentableController {
     }
     
     override open func loadDisplayNode() {
-        self.displayNode = TooltipControllerNode(content: self.content, baseFontSize: self.baseFontSize, dismiss: { [weak self] tappedInside in
+        self.displayNode = TooltipControllerNode(content: self.content, baseFontSize: self.baseFontSize, balancedTextLayout: self.balancedTextLayout, dismiss: { [weak self] tappedInside in
             self?.dismiss(tappedInside: tappedInside)
         }, dismissByTapOutside: self.dismissByTapOutside, dismissByTapOutsideSource: self.dismissByTapOutsideSource)
         self.controllerNode.padding = self.padding
+        self.controllerNode.innerPadding = self.innerPadding
         self.controllerNode.arrowOnBottom = self.initialArrowOnBottom
         self.displayNodeDidLoad()
     }

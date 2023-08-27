@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 
@@ -7,10 +6,10 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public struct AccountReactionOverrides: Equatable, Codable {
         public struct Item: Equatable, Codable {
             public var key: MessageReaction.Reaction
-            public var messageId: MessageId
-            public var mediaId: MediaId
+            public var messageId: EngineMessage.Id
+            public var mediaId: EngineMedia.Id
             
-            public init(key: MessageReaction.Reaction, messageId: MessageId, mediaId: MediaId) {
+            public init(key: MessageReaction.Reaction, messageId: EngineMessage.Id, mediaId: EngineMedia.Id) {
                 self.key = key
                 self.messageId = messageId
                 self.mediaId = mediaId
@@ -40,7 +39,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var experimentalCompatibility: Bool
     public var enableDebugDataDisplay: Bool
     public var acceleratedStickers: Bool
-    public var experimentalBackground: Bool
     public var inlineStickers: Bool
     public var localTranscription: Bool
     public var enableReactionOverrides: Bool
@@ -51,6 +49,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var disableLanguageRecognition: Bool
     public var disableImageContentAnalysis: Bool
     public var disableBackgroundAnimation: Bool
+    public var logLanguageRecognition: Bool
+    public var storiesExperiment: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -68,7 +68,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
             experimentalCompatibility: false,
             enableDebugDataDisplay: false,
             acceleratedStickers: false,
-            experimentalBackground: false,
             inlineStickers: false,
             localTranscription: false,
             enableReactionOverrides: false,
@@ -78,7 +77,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
             disableQuickReaction: false,
             disableLanguageRecognition: false,
             disableImageContentAnalysis: false,
-            disableBackgroundAnimation: false
+            disableBackgroundAnimation: false,
+            logLanguageRecognition: false,
+            storiesExperiment: false
         )
     }
     
@@ -97,7 +98,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         experimentalCompatibility: Bool,
         enableDebugDataDisplay: Bool,
         acceleratedStickers: Bool,
-        experimentalBackground: Bool,
         inlineStickers: Bool,
         localTranscription: Bool,
         enableReactionOverrides: Bool,
@@ -107,7 +107,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
         disableQuickReaction: Bool,
         disableLanguageRecognition: Bool,
         disableImageContentAnalysis: Bool,
-        disableBackgroundAnimation: Bool
+        disableBackgroundAnimation: Bool,
+        logLanguageRecognition: Bool,
+        storiesExperiment: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -123,7 +125,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.experimentalCompatibility = experimentalCompatibility
         self.enableDebugDataDisplay = enableDebugDataDisplay
         self.acceleratedStickers = acceleratedStickers
-        self.experimentalBackground = experimentalBackground
         self.inlineStickers = inlineStickers
         self.localTranscription = localTranscription
         self.enableReactionOverrides = enableReactionOverrides
@@ -134,6 +135,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.disableLanguageRecognition = disableLanguageRecognition
         self.disableImageContentAnalysis = disableImageContentAnalysis
         self.disableBackgroundAnimation = disableBackgroundAnimation
+        self.logLanguageRecognition = logLanguageRecognition
+        self.storiesExperiment = storiesExperiment
     }
     
     public init(from decoder: Decoder) throws {
@@ -153,7 +156,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.experimentalCompatibility = (try container.decodeIfPresent(Int32.self, forKey: "experimentalCompatibility") ?? 0) != 0
         self.enableDebugDataDisplay = (try container.decodeIfPresent(Int32.self, forKey: "enableDebugDataDisplay") ?? 0) != 0
         self.acceleratedStickers = (try container.decodeIfPresent(Int32.self, forKey: "acceleratedStickers") ?? 0) != 0
-        self.experimentalBackground = (try container.decodeIfPresent(Int32.self, forKey: "experimentalBackground") ?? 0) != 0
         self.inlineStickers = (try container.decodeIfPresent(Int32.self, forKey: "inlineStickers") ?? 0) != 0
         self.localTranscription = (try container.decodeIfPresent(Int32.self, forKey: "localTranscription") ?? 0) != 0
         self.enableReactionOverrides = try container.decodeIfPresent(Bool.self, forKey: "enableReactionOverrides") ?? false
@@ -164,6 +166,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.disableLanguageRecognition = try container.decodeIfPresent(Bool.self, forKey: "disableLanguageRecognition") ?? false
         self.disableImageContentAnalysis = try container.decodeIfPresent(Bool.self, forKey: "disableImageContentAnalysis") ?? false
         self.disableBackgroundAnimation = try container.decodeIfPresent(Bool.self, forKey: "disableBackgroundAnimation") ?? false
+        self.logLanguageRecognition = try container.decodeIfPresent(Bool.self, forKey: "logLanguageRecognition") ?? false
+        self.storiesExperiment = try container.decodeIfPresent(Bool.self, forKey: "storiesExperiment") ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -183,7 +187,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode((self.experimentalCompatibility ? 1 : 0) as Int32, forKey: "experimentalCompatibility")
         try container.encode((self.enableDebugDataDisplay ? 1 : 0) as Int32, forKey: "enableDebugDataDisplay")
         try container.encode((self.acceleratedStickers ? 1 : 0) as Int32, forKey: "acceleratedStickers")
-        try container.encode((self.experimentalBackground ? 1 : 0) as Int32, forKey: "experimentalBackground")
         try container.encode((self.inlineStickers ? 1 : 0) as Int32, forKey: "inlineStickers")
         try container.encode((self.localTranscription ? 1 : 0) as Int32, forKey: "localTranscription")
         try container.encode(self.enableReactionOverrides, forKey: "enableReactionOverrides")
@@ -194,6 +197,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode(self.disableLanguageRecognition, forKey: "disableLanguageRecognition")
         try container.encode(self.disableImageContentAnalysis, forKey: "disableImageContentAnalysis")
         try container.encode(self.disableBackgroundAnimation, forKey: "disableBackgroundAnimation")
+        try container.encode(self.logLanguageRecognition, forKey: "logLanguageRecognition")
+        try container.encode(self.storiesExperiment, forKey: "storiesExperiment")
     }
 }
 
@@ -206,7 +211,7 @@ public func updateExperimentalUISettingsInteractively(accountManager: AccountMan
             } else {
                 currentSettings = .defaultSettings
             }
-            return PreferencesEntry(f(currentSettings))
+            return SharedPreferencesEntry(f(currentSettings))
         })
     }
 }

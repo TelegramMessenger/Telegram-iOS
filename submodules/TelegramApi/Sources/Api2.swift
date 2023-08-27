@@ -700,7 +700,7 @@ public extension Api {
         case channelAdminLogEventActionExportedInviteRevoke(invite: Api.ExportedChatInvite)
         case channelAdminLogEventActionParticipantInvite(participant: Api.ChannelParticipant)
         case channelAdminLogEventActionParticipantJoin
-        case channelAdminLogEventActionParticipantJoinByInvite(invite: Api.ExportedChatInvite)
+        case channelAdminLogEventActionParticipantJoinByInvite(flags: Int32, invite: Api.ExportedChatInvite)
         case channelAdminLogEventActionParticipantJoinByRequest(invite: Api.ExportedChatInvite, approvedBy: Int64)
         case channelAdminLogEventActionParticipantLeave
         case channelAdminLogEventActionParticipantMute(participant: Api.GroupCallParticipant)
@@ -878,10 +878,11 @@ public extension Api {
                     }
                     
                     break
-                case .channelAdminLogEventActionParticipantJoinByInvite(let invite):
+                case .channelAdminLogEventActionParticipantJoinByInvite(let flags, let invite):
                     if boxed {
-                        buffer.appendInt32(1557846647)
+                        buffer.appendInt32(-23084712)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     invite.serialize(buffer, true)
                     break
                 case .channelAdminLogEventActionParticipantJoinByRequest(let invite, let approvedBy):
@@ -1059,8 +1060,8 @@ public extension Api {
                 return ("channelAdminLogEventActionParticipantInvite", [("participant", participant as Any)])
                 case .channelAdminLogEventActionParticipantJoin:
                 return ("channelAdminLogEventActionParticipantJoin", [])
-                case .channelAdminLogEventActionParticipantJoinByInvite(let invite):
-                return ("channelAdminLogEventActionParticipantJoinByInvite", [("invite", invite as Any)])
+                case .channelAdminLogEventActionParticipantJoinByInvite(let flags, let invite):
+                return ("channelAdminLogEventActionParticipantJoinByInvite", [("flags", flags as Any), ("invite", invite as Any)])
                 case .channelAdminLogEventActionParticipantJoinByRequest(let invite, let approvedBy):
                 return ("channelAdminLogEventActionParticipantJoinByRequest", [("invite", invite as Any), ("approvedBy", approvedBy as Any)])
                 case .channelAdminLogEventActionParticipantLeave:
@@ -1431,13 +1432,16 @@ public extension Api {
             return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantJoin
         }
         public static func parse_channelAdminLogEventActionParticipantJoinByInvite(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
-            var _1: Api.ExportedChatInvite?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.ExportedChatInvite?
             if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
+                _2 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantJoinByInvite(invite: _1!)
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantJoinByInvite(flags: _1!, invite: _2!)
             }
             else {
                 return nil

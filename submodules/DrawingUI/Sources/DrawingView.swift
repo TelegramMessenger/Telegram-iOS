@@ -6,6 +6,7 @@ import ComponentFlow
 import LegacyComponents
 import AppBundle
 import ImageBlur
+import MediaEditor
 
 protocol DrawingRenderLayer: CALayer {
     
@@ -103,6 +104,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
     private var isDrawing = false
     private var drawingGestureStartTimestamp: Double?
     
+    var animationsEnabled = true
+    
     private func loadTemplates() {
         func load(_ name: String) {
             if let url = getAppBundle().url(forResource: name, withExtension: "json"),
@@ -135,7 +138,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
     
     private let pencilInteraction: UIInteraction?
         
-    init(size: CGSize) {
+    public init(size: CGSize) {
         self.imageSize = size
         self.screenSize = size
         
@@ -173,10 +176,6 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
         
         super.init(frame: CGRect(origin: .zero, size: size))
     
-        Queue.mainQueue().async {
-            self.loadTemplates()
-        }
-        
         if #available(iOS 12.1, *), let pencilInteraction = self.pencilInteraction as? UIPencilInteraction {
             pencilInteraction.delegate = self
             self.addInteraction(pencilInteraction)
@@ -392,11 +391,14 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
     }
     
     public func setup(withDrawing drawingData: Data?) {
+        self.undoStack = []
+        self.redoStack = []
         if let drawingData = drawingData, let image = UIImage(data: drawingData) {
             self.hasOpaqueData = true
             
             if let context = DrawingContext(size: image.size, scale: 1.0, opaque: false) {
                 context.withFlippedContext { context in
+                    context.clear(CGRect(origin: .zero, size: image.size))
                     if let cgImage = image.cgImage {
                         context.draw(cgImage, in: CGRect(origin: .zero, size: image.size))
                     }
@@ -407,11 +409,15 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
             }
             self.layer.contents = image.cgImage
             self.updateInternalState()
+        } else {
+            self.drawingImage = nil
+            self.layer.contents = nil
+            self.updateInternalState()
         }
     }
     
     var hasOpaqueData = false
-    var drawingData: Data? {
+    public var drawingData: Data? {
         guard !self.undoStack.isEmpty || self.hasOpaqueData else {
             return nil
         }
@@ -896,7 +902,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
         self.stateUpdated(NavigationState(
             canUndo: !self.undoStack.isEmpty,
             canRedo: !self.redoStack.isEmpty,
-            canClear: !self.undoStack.isEmpty || self.hasOpaqueData || !(self.entitiesView?.entities.isEmpty ?? true),
+            canClear: !self.undoStack.isEmpty || self.hasOpaqueData || (self.entitiesView?.hasEntities ?? false),
             canZoomOut: self.zoomScale > 1.0 + .ulpOfOne,
             isDrawing: self.isDrawing
         ))
@@ -920,7 +926,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                 hasArrow: false,
                 isEraser: false,
                 isBlur: false,
-                blurredImage: nil
+                blurredImage: nil,
+                animationsEnabled: self.animationsEnabled
             )
             element = penTool
         case .arrow:
@@ -931,7 +938,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                 hasArrow: true,
                 isEraser: false,
                 isBlur: false,
-                blurredImage: nil
+                blurredImage: nil,
+                animationsEnabled: self.animationsEnabled
             )
             element = penTool
         case .marker:
@@ -956,7 +964,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                 hasArrow: false,
                 isEraser: false,
                 isBlur: true,
-                blurredImage: self.preparedBlurredImage
+                blurredImage: self.preparedBlurredImage,
+                animationsEnabled: self.animationsEnabled
             )
             element = penTool
         case .eraser:
@@ -967,7 +976,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                 hasArrow: false,
                 isEraser: true,
                 isBlur: false,
-                blurredImage: nil
+                blurredImage: nil,
+                animationsEnabled: self.animationsEnabled
             )
             element = penTool
         }

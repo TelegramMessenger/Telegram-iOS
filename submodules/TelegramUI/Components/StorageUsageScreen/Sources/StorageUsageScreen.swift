@@ -9,9 +9,9 @@ import ComponentDisplayAdapters
 import TelegramPresentationData
 import AccountContext
 import TelegramCore
+import Postbox
 import MultilineTextComponent
 import EmojiStatusComponent
-import Postbox
 import Markdown
 import ContextUI
 import AnimatedAvatarSetNode
@@ -23,6 +23,7 @@ import TelegramAnimatedStickerNode
 import TelegramStringFormatting
 import GalleryData
 import AnimatedTextComponent
+import BottomButtonPanelComponent
 
 #if DEBUG
 import os.signpost
@@ -105,6 +106,8 @@ private extension StorageUsageScreenComponent.Category {
             self = .avatars
         case .misc:
             self = .misc
+        case .stories:
+            self = .stories
         }
     }
 }
@@ -263,6 +266,7 @@ final class StorageUsageScreenComponent: Component {
         case stickers
         case avatars
         case misc
+        case stories
         
         var color: UIColor {
             switch self {
@@ -282,6 +286,8 @@ final class StorageUsageScreenComponent: Component {
                 return UIColor(rgb: 0xAF52DE)
             case .misc:
                 return UIColor(rgb: 0xFF9500)
+            case .stories:
+                return UIColor(rgb: 0xFF2D55)
             }
         }
         
@@ -303,6 +309,8 @@ final class StorageUsageScreenComponent: Component {
                 return strings.StorageManagement_SectionAvatars
             case .misc:
                 return strings.StorageManagement_SectionMiscellaneous
+            case .stories:
+                return strings.StorageManagement_SectionStories
             }
         }
         
@@ -323,6 +331,8 @@ final class StorageUsageScreenComponent: Component {
             case .avatars:
                 return "Settings/Storage/ParticleAvatars"
             case .misc:
+                return "Settings/Storage/ParticleOther"
+            case .stories:
                 return "Settings/Storage/ParticleOther"
             }
         }
@@ -571,7 +581,7 @@ final class StorageUsageScreenComponent: Component {
                         for item in imageItems.items {
                             if deselectedPhotos.contains(item.message.id) {
                                 selectedSize -= item.size
-                                clearExcludeMessages.append(item.message)
+                                clearExcludeMessages.append(item.message._asMessage())
                             }
                         }
                     }
@@ -581,7 +591,7 @@ final class StorageUsageScreenComponent: Component {
                         for item in imageItems.items {
                             if selectedPhotos.contains(item.message.id) {
                                 selectedSize += item.size
-                                clearIncludeMessages.append(item.message)
+                                clearIncludeMessages.append(item.message._asMessage())
                             }
                         }
                     }
@@ -593,7 +603,7 @@ final class StorageUsageScreenComponent: Component {
                         for item in imageItems.items {
                             if deselectedVideos.contains(item.message.id) {
                                 selectedSize -= item.size
-                                clearExcludeMessages.append(item.message)
+                                clearExcludeMessages.append(item.message._asMessage())
                             }
                         }
                     }
@@ -603,7 +613,7 @@ final class StorageUsageScreenComponent: Component {
                         for item in imageItems.items {
                             if selectedVideos.contains(item.message.id) {
                                 selectedSize += item.size
-                                clearIncludeMessages.append(item.message)
+                                clearIncludeMessages.append(item.message._asMessage())
                             }
                         }
                     }
@@ -1207,7 +1217,7 @@ final class StorageUsageScreenComponent: Component {
                 
                 let selectionPanelSize = selectionPanel.update(
                     transition: selectionPanelTransition,
-                    component: AnyComponent(StorageUsageScreenSelectionPanelComponent(
+                    component: AnyComponent(BottomButtonPanelComponent(
                         theme: environment.theme,
                         title: bottomPanelSelectionData.isComplete ? environment.strings.StorageManagement_ClearCache : environment.strings.StorageManagement_ClearSelected,
                         label: bottomPanelSelectionData.size == 0 ? nil : dataSizeString(Int(bottomPanelSelectionData.size), formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: ".")),
@@ -1253,7 +1263,8 @@ final class StorageUsageScreenComponent: Component {
                 .music,
                 .stickers,
                 .avatars,
-                .misc
+                .misc,
+                .stories
             ]
             
             var listCategories: [StorageCategoriesComponent.CategoryData] = []
@@ -1285,6 +1296,8 @@ final class StorageUsageScreenComponent: Component {
                         mappedCategory = .avatars
                     case .misc:
                         mappedCategory = .misc
+                    case .stories:
+                        mappedCategory = .stories
                     case .other:
                         continue
                     }
@@ -1772,7 +1785,7 @@ final class StorageUsageScreenComponent: Component {
                 contentHeight += 8.0
                 
                 var keepContentHeight: CGFloat = 0.0
-                for i in 0 ..< 3 {
+                for i in 0 ..< 4 {
                     let item: ComponentView<Empty>
                     if let current = self.keepDurationItems[i] {
                         item = current
@@ -1794,6 +1807,10 @@ final class StorageUsageScreenComponent: Component {
                         iconName = "Settings/Menu/GroupChats"
                         title = environment.strings.Notifications_GroupChats
                         mappedCategory = .groups
+                    case 3:
+                        iconName = "Settings/Menu/Stories"
+                        title = environment.strings.Notifications_Stories
+                        mappedCategory = .stories
                     default:
                         iconName = "Settings/Menu/Channels"
                         title = environment.strings.Notifications_Channels
@@ -1809,8 +1826,10 @@ final class StorageUsageScreenComponent: Component {
                     }
                     
                     var subtitle: String?
-                    if let cacheSettingsExceptionCount = self.cacheSettingsExceptionCount, let categoryCount = cacheSettingsExceptionCount[mappedCategory] {
-                        subtitle = environment.strings.CacheEvictionMenu_CategoryExceptions(Int32(categoryCount))
+                    if mappedCategory != .stories {
+                        if let cacheSettingsExceptionCount = self.cacheSettingsExceptionCount, let categoryCount = cacheSettingsExceptionCount[mappedCategory] {
+                            subtitle = environment.strings.CacheEvictionMenu_CategoryExceptions(Int32(categoryCount))
+                        }
                     }
                     
                     let itemSize = item.update(
@@ -1821,7 +1840,7 @@ final class StorageUsageScreenComponent: Component {
                             title: title,
                             subtitle: subtitle,
                             value: optionText,
-                            hasNext: i != 3 - 1,
+                            hasNext: i != 4 - 1,
                             action: { [weak self] sourceView in
                                 guard let self else {
                                     return
@@ -2214,7 +2233,7 @@ final class StorageUsageScreenComponent: Component {
                 
                 let clearingSize = CGSize(width: availableSize.width, height: availableSize.height)
                 clearingNode.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - clearingSize.width) / 2.0), y: floor((availableSize.height - clearingSize.height) / 2.0)), size: clearingSize)
-                clearingNode.updateLayout(size: clearingSize, transition: .immediate)
+                clearingNode.updateLayout(size: clearingSize, bottomInset: environment.safeInsets.bottom, transition: .immediate)
                 
                 if animateIn {
                     clearingNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.4)
@@ -2258,7 +2277,7 @@ final class StorageUsageScreenComponent: Component {
             }
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-            controller.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(size, formatting: DataSizeStringFormatting(presentationData: presentationData)))", stringForDeviceType()).string), elevatedLayout: false, action: { _ in return false }), in: .window(.root))
+            controller.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(size, formatting: DataSizeStringFormatting(presentationData: presentationData)))", stringForDeviceType()).string), elevatedLayout: false, action: { _ in return false }), in: .current)
         }
         
         private func reloadStats(firstTime: Bool, completion: @escaping () -> Void) {
@@ -2356,7 +2375,7 @@ final class StorageUsageScreenComponent: Component {
                                 
                                 if matches {
                                     result.imageItems.append(StorageMediaGridPanelComponent.Item(
-                                        message: message,
+                                        message: EngineMessage(message),
                                         size: messageSize
                                     ))
                                 }
@@ -2721,14 +2740,14 @@ final class StorageUsageScreenComponent: Component {
                     }
                     self.controller?()?.present(c, in: .window(.root), with: a, blockInteraction: true)
                 },
-                transitionNode: { [weak self] messageId, media in
+                transitionNode: { [weak self] messageId, media, _ in
                     guard let self else {
                         return nil
                     }
                     
                     if let panelContainerView = self.panelContainer.view as? StorageUsagePanelContainerComponent.View {
                         if let currentPanelView = panelContainerView.currentPanelView as? StorageMediaGridPanelComponent.View {
-                            return currentPanelView.transitionNodeForGallery(messageId: messageId, media: media)
+                            return currentPanelView.transitionNodeForGallery(messageId: messageId, media: EngineMedia(media))
                         }
                     }
                     
@@ -2793,11 +2812,8 @@ final class StorageUsageScreenComponent: Component {
                         return
                     }
                     let _ = self
-                }, editMedia: { [weak self] messageId, snapshots, transitionCompletion in
-                    guard let self else {
-                        return
-                    }
-                    let _ = self
+                }, editMedia: { _, _, _ in
+                }, updateCanReadHistory: { _ in
                 }),
                 centralItemUpdated: { [weak self] messageId in
                     //let _ = self?.paneContainerNode.requestExpandTabs?()
@@ -2871,6 +2887,8 @@ final class StorageUsageScreenComponent: Component {
                         mappedCategories.append(.avatars)
                     case .misc:
                         mappedCategories.append(.misc)
+                    case .stories:
+                        mappedCategories.append(.stories)
                     }
                 }
                 
@@ -2880,7 +2898,12 @@ final class StorageUsageScreenComponent: Component {
                 let totalSize = aggregatedData.selectedSize
                 
                 let _ = (component.context.engine.resources.clearStorage(peerId: component.peer?.id, categories: mappedCategories, includeMessages: aggregatedData.clearIncludeMessages, excludeMessages: aggregatedData.clearExcludeMessages)
-                |> deliverOnMainQueue).start(completed: { [weak self] in
+                |> deliverOnMainQueue).start(next: { [weak self] progress in
+                    guard let self else {
+                        return
+                    }
+                    self.updateClearProgress(progress: progress)
+                }, completed: { [weak self] in
                     guard let self, let _ = self.component else {
                         return
                     }
@@ -2915,45 +2938,55 @@ final class StorageUsageScreenComponent: Component {
                             mappedCategories.append(.avatars)
                         case .misc:
                             mappedCategories.append(.misc)
+                        case .stories:
+                            mappedCategories.append(.stories)
                         }
                     }
                     
                     self.isClearing = true
                     self.state?.updated(transition: .immediate)
                     
+                    var totalSize: Int64 = 0
+                    
+                    let contextStats = aggregatedData.contextStats
+                    
+                    for category in aggregatedData.selectedCategories {
+                        let mappedCategory: StorageUsageStats.CategoryKey
+                        switch category {
+                        case .photos:
+                            mappedCategory = .photos
+                        case .videos:
+                            mappedCategory = .videos
+                        case .files:
+                            mappedCategory = .files
+                        case .music:
+                            mappedCategory = .music
+                        case .other:
+                            continue
+                        case .stickers:
+                            mappedCategory = .stickers
+                        case .avatars:
+                            mappedCategory = .avatars
+                        case .misc:
+                            mappedCategory = .misc
+                        case .stories:
+                            mappedCategory = .stories
+                        }
+                        
+                        if let value = contextStats.categories[mappedCategory] {
+                            totalSize += value.size
+                        }
+                    }
+                    
                     let _ = (component.context.engine.resources.clearStorage(peerId: component.peer?.id, categories: mappedCategories, includeMessages: [], excludeMessages: [])
-                    |> deliverOnMainQueue).start(completed: { [weak self] in
-                        guard let self, let _ = self.component, let aggregatedData = self.aggregatedData else {
+                    |> deliverOnMainQueue).start(next: { [weak self] progress in
+                        guard let self else {
                             return
                         }
-                        var totalSize: Int64 = 0
-                        
-                        let contextStats = aggregatedData.contextStats
-                        
-                        for category in aggregatedData.selectedCategories {
-                            let mappedCategory: StorageUsageStats.CategoryKey
-                            switch category {
-                            case .photos:
-                                mappedCategory = .photos
-                            case .videos:
-                                mappedCategory = .videos
-                            case .files:
-                                mappedCategory = .files
-                            case .music:
-                                mappedCategory = .music
-                            case .other:
-                                continue
-                            case .stickers:
-                                mappedCategory = .stickers
-                            case .avatars:
-                                mappedCategory = .avatars
-                            case .misc:
-                                mappedCategory = .misc
-                            }
-                            
-                            if let value = contextStats.categories[mappedCategory] {
-                                totalSize += value.size
-                            }
+                        self.updateClearProgress(progress: progress)
+                    }, completed: { [weak self] in
+                        guard let self else {
+                            return
                         }
                         
                         self.reloadStats(firstTime: false, completion: { [weak self] in
@@ -2994,7 +3027,12 @@ final class StorageUsageScreenComponent: Component {
                     }
                     
                     let _ = (component.context.engine.resources.clearStorage(peerIds: aggregatedData.selectionState.selectedPeers, includeMessages: includeMessages, excludeMessages: excludeMessages)
-                    |> deliverOnMainQueue).start(completed: { [weak self] in
+                    |> deliverOnMainQueue).start(next: { [weak self] progress in
+                        guard let self else {
+                            return
+                        }
+                        self.updateClearProgress(progress: progress)
+                    }, completed: { [weak self] in
                         guard let self else {
                             return
                         }
@@ -3009,6 +3047,12 @@ final class StorageUsageScreenComponent: Component {
                         })
                     })
                 }
+            }
+        }
+        
+        private func updateClearProgress(progress: Float) {
+            if let clearingNode = self.clearingNode {
+                clearingNode.setProgress(progress)
             }
         }
         
@@ -3129,12 +3173,23 @@ final class StorageUsageScreenComponent: Component {
                 var subItems: [ContextMenuItem] = []
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 
-                var presetValues: [Int32] = [
-                    Int32.max,
-                    31 * 24 * 60 * 60,
-                    7 * 24 * 60 * 60,
-                    1 * 24 * 60 * 60
-                ]
+                var presetValues: [Int32]
+                
+                if case .stories = mappedCategory {
+                    presetValues = [
+                        7 * 24 * 60 * 60,
+                        2 * 24 * 60 * 60,
+                        1 * 24 * 60 * 60
+                    ]
+                } else {
+                    presetValues = [
+                        Int32.max,
+                        31 * 24 * 60 * 60,
+                        7 * 24 * 60 * 60,
+                        1 * 24 * 60 * 60
+                    ]
+                }
+                
                 if currentValue != 0 && !presetValues.contains(currentValue) {
                     presetValues.append(currentValue)
                     presetValues.sort(by: >)
@@ -3161,30 +3216,32 @@ final class StorageUsageScreenComponent: Component {
                 
                 subItems.append(.separator)
                 
-                if peerExceptions.isEmpty {
-                    let exceptionsText = presentationData.strings.GroupInfo_Permissions_AddException
-                    subItems.append(.action(ContextMenuActionItem(text: exceptionsText, icon: { theme in
-                        if case .privateChats = mappedCategory {
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
-                        } else {
-                            return generateTintedImage(image: UIImage(bundleImageName: "Location/CreateGroupIcon"), color: theme.contextMenu.primaryColor)
-                        }
-                    }, action: { _, f in
-                        f(.default)
-                        
-                        if let exceptionsController = makeStorageUsageExceptionsScreen(mappedCategory) {
-                            pushControllerImpl?(exceptionsController)
-                        }
-                    })))
-                } else {
-                    subItems.append(.custom(MultiplePeerAvatarsContextItem(context: context, peers: peerExceptions.prefix(3).map { EnginePeer($0.peer.peer) }, totalCount: peerExceptions.count, action: { c, _ in
-                        c.dismiss(completion: {
+                if mappedCategory != .stories {
+                    if peerExceptions.isEmpty {
+                        let exceptionsText = presentationData.strings.GroupInfo_Permissions_AddException
+                        subItems.append(.action(ContextMenuActionItem(text: exceptionsText, icon: { theme in
+                            if case .privateChats = mappedCategory {
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
+                            } else {
+                                return generateTintedImage(image: UIImage(bundleImageName: "Location/CreateGroupIcon"), color: theme.contextMenu.primaryColor)
+                            }
+                        }, action: { _, f in
+                            f(.default)
                             
-                        })
-                        if let exceptionsController = makeStorageUsageExceptionsScreen(mappedCategory) {
-                            pushControllerImpl?(exceptionsController)
-                        }
-                    }), false))
+                            if let exceptionsController = makeStorageUsageExceptionsScreen(mappedCategory) {
+                                pushControllerImpl?(exceptionsController)
+                            }
+                        })))
+                    } else {
+                        subItems.append(.custom(MultiplePeerAvatarsContextItem(context: context, peers: peerExceptions.prefix(3).map { EnginePeer($0.peer.peer) }, totalCount: peerExceptions.count, action: { c, _ in
+                            c.dismiss(completion: {
+                                
+                            })
+                            if let exceptionsController = makeStorageUsageExceptionsScreen(mappedCategory) {
+                                pushControllerImpl?(exceptionsController)
+                            }
+                        }), false))
+                    }
                 }
                 
                 if let sourceLabelView = sourceView.labelView {
@@ -3475,7 +3532,7 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode {
     
     private let progressDisposable = MetaDisposable()
     
-    private var validLayout: CGSize?
+    private var validLayout: (CGSize, CGFloat)?
     
     init(presentationData: PresentationData) {
         self.presentationData = presentationData
@@ -3507,8 +3564,8 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode {
         self.addSubnode(self.animationNode)
         self.addSubnode(self.progressTextNode)
         self.addSubnode(self.descriptionTextNode)
-        //self.addSubnode(self.progressBackgroundNode)
-        //self.addSubnode(self.progressForegroundNode)
+        self.addSubnode(self.progressBackgroundNode)
+        self.addSubnode(self.progressForegroundNode)
     }
     
     deinit {
@@ -3525,16 +3582,16 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode {
     }
     
     private var progress: Float = 0.0
-    private func setProgress(_ progress: Float) {
+    func setProgress(_ progress: Float) {
         self.progress = progress
         
-        if let size = self.validLayout {
-            self.updateLayout(size: size, transition: .animated(duration: 0.5, curve: .linear))
+        if let (size, bottomInset) = self.validLayout {
+            self.updateLayout(size: size, bottomInset: bottomInset, transition: .animated(duration: 0.5, curve: .linear))
         }
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        self.validLayout = size
+    func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, bottomInset)
         
         transition.updateFrame(view: self.blurredView, frame: CGRect(origin: CGPoint(), size: size))
         self.blurredView.update(size: size, transition: transition)
@@ -3550,9 +3607,14 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode {
         self.animationNode.frame = animationFrame
         self.animationNode.updateLayout(size: imageSize)
         
-        let progressFrame = CGRect(x: inset, y: size.height - inset - progressHeight, width: size.width - inset * 2.0, height: progressHeight)
+        var bottomInset = bottomInset
+        if bottomInset.isZero {
+            bottomInset = inset
+        }
+        
+        let progressFrame = CGRect(x: inset, y: size.height - bottomInset - progressHeight, width: size.width - inset * 2.0, height: progressHeight)
         self.progressBackgroundNode.frame = progressFrame
-        let progressForegroundFrame = CGRect(x: inset, y: size.height - inset - progressHeight, width: floorToScreenPixels(progressFrame.width * CGFloat(self.progress)), height: progressHeight)
+        let progressForegroundFrame = CGRect(x: inset, y: size.height - bottomInset - progressHeight, width: floorToScreenPixels(progressFrame.width * CGFloat(self.progress)), height: progressHeight)
         if !self.progressForegroundNode.frame.origin.x.isZero {
             transition.updateFrame(node: self.progressForegroundNode, frame: progressForegroundFrame, beginWithCurrentState: true)
         } else {
@@ -3562,8 +3624,10 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode {
         self.descriptionTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ClearCache_KeepOpenedDescription, font: Font.regular(15.0), textColor: self.presentationData.theme.actionSheet.secondaryTextColor)
         let descriptionTextSize = self.descriptionTextNode.updateLayout(CGSize(width: size.width - inset * 3.0, height: size.height))
         var descriptionTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - descriptionTextSize.width) / 2.0), y: animationFrame.maxY + 52.0), size: descriptionTextSize)
+        
+        let progressText: String = "\(Int(self.progress * 100.0))%"
        
-        self.progressTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ClearCache_NoProgress, font: Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+        self.progressTextNode.attributedText = NSAttributedString(string: progressText, font: Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
         let progressTextSize = self.progressTextNode.updateLayout(size)
         var progressTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - progressTextSize.width) / 2.0), y: descriptionTextFrame.minY - spacing - progressTextSize.height), size: progressTextSize)
         

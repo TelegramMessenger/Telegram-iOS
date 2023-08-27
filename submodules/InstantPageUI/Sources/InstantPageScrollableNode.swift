@@ -2,11 +2,10 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import TelegramCore
-import Postbox
 import Display
 import TelegramPresentationData
 
-protocol InstantPageScrollableItem: AnyObject, InstantPageItem {
+public protocol InstantPageScrollableItem: AnyObject, InstantPageItem {
     var contentSize: CGSize { get }
     var horizontalInset: CGFloat { get }
     var isRTL: Bool { get }
@@ -23,8 +22,8 @@ private final class InstantPageScrollableContentNodeParameters: NSObject {
     }
 }
 
-final class InstantPageScrollableContentNode: ASDisplayNode {
-    let item: InstantPageScrollableItem
+public final class InstantPageScrollableContentNode: ASDisplayNode {
+    public let item: InstantPageScrollableItem
     
     init(item: InstantPageScrollableItem, additionalNodes: [InstantPageNode]) {
         self.item = item
@@ -38,7 +37,7 @@ final class InstantPageScrollableContentNode: ASDisplayNode {
         }
     }
     
-    override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
+    public override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
         return InstantPageScrollableContentNodeParameters(item: self.item)
     }
     

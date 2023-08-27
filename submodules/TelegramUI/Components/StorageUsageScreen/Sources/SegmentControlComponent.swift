@@ -11,7 +11,6 @@ import AccountContext
 import TelegramCore
 import MultilineTextComponent
 import EmojiStatusComponent
-import Postbox
 import TelegramStringFormatting
 import CheckNode
 import SegmentedControlNode

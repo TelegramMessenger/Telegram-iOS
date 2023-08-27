@@ -50,7 +50,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
             var isAnimated = false
             inner: for attribute in file.attributes {
                 switch attribute {
-                    case let .Video(_, _, flags):
+                    case let .Video(_, _, flags, _):
                         if flags.contains(.instantRoundVideo) {
                             refinedTag = .voiceOrInstantVideo
                         } else {
@@ -108,7 +108,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
     if let textEntities = textEntities, !textEntities.isEmpty && !tags.contains(.webPage) {
         for entity in textEntities {
             switch entity.type {
-                case .Url, .Email:
+                case .Url, .TextUrl, .Email:
                     if media.isEmpty || !(media.first is TelegramMediaWebpage) {
                         tags.insert(.webPage)
                     }
@@ -142,7 +142,7 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
 
 func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
     switch message {
-        case let .message(_, _, fromId, chatPeerId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _, _, _, _, _, _):
+        case let .message(_, _, fromId, chatPeerId, fwdHeader, viaBotId, replyTo, _, _, media, _, entities, _, _, _, _, _, _, _, _, _):
             let peerId: PeerId = chatPeerId.peerId
             
             var result = [peerId]
@@ -190,6 +190,18 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
                     }
                 }
             }
+        
+            if let replyTo = replyTo {
+                switch replyTo {
+                case let .messageReplyStoryHeader(userId, _):
+                    let storyPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                    if !result.contains(storyPeerId) {
+                        result.append(storyPeerId)
+                    }
+                default:
+                    break
+                }
+            }
             
             return result
         case .messageEmpty:
@@ -205,7 +217,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             }
             
             switch action {
-            case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall, .messageActionSetMessagesTTL, .messageActionGroupCallScheduled, .messageActionSetChatTheme, .messageActionChatJoinedByRequest, .messageActionWebViewDataSent, .messageActionWebViewDataSentMe, .messageActionGiftPremium, .messageActionTopicCreate, .messageActionTopicEdit, .messageActionSuggestProfilePhoto, .messageActionAttachMenuBotAllowed:
+            case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall, .messageActionSetMessagesTTL, .messageActionGroupCallScheduled, .messageActionSetChatTheme, .messageActionChatJoinedByRequest, .messageActionWebViewDataSent, .messageActionWebViewDataSentMe, .messageActionGiftPremium, .messageActionTopicCreate, .messageActionTopicEdit, .messageActionSuggestProfilePhoto, .messageActionSetChatWallPaper, .messageActionSetSameChatWallPaper:
                     break
                 case let .messageActionChannelMigrateFrom(_, chatId):
                     result.append(PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId)))
@@ -250,6 +262,8 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: Refere
                     var replyIds = ReferencedReplyMessageIds()
                     replyIds.add(sourceId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), targetId: targetId)
                     return (replyIds, [])
+                case .messageReplyStoryHeader:
+                    break
                 }
             }
         case .messageEmpty:
@@ -262,6 +276,8 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: Refere
                     var replyIds = ReferencedReplyMessageIds()
                     replyIds.add(sourceId: MessageId(peerId: chatPeerId.peerId, namespace: Namespaces.Message.Cloud, id: id), targetId: targetId)
                     return (replyIds, [])
+                case .messageReplyStoryHeader:
+                    break
                 }
             }
     }
@@ -292,7 +308,7 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
         case let .messageMediaGeoLive(_, geo, heading, period, proximityNotificationRadius):
             let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: period, liveProximityNotificationRadius: proximityNotificationRadius, heading: heading)
             return (mediaMap, nil, nil, nil)
-        case let .messageMediaDocument(flags, document, ttlSeconds):
+        case let .messageMediaDocument(flags, document, _, ttlSeconds):
             if let document = document {
                 if let mediaFile = telegramMediaFileFromApiDocument(document) {
                     return (mediaFile, ttlSeconds, (flags & (1 << 3)) != 0, (flags & (1 << 4)) != 0)
@@ -364,11 +380,71 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
             }
         case let .messageMediaDice(value, emoticon):
             return (TelegramMediaDice(emoji: emoticon, value: value), nil, nil, nil)
+        case let .messageMediaStory(flags, userId, id, _):
+            let isMention = (flags & (1 << 1)) != 0
+            return (TelegramMediaStory(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: id), isMention: isMention), nil, nil, nil)
         }
     }
     
     return (nil, nil, nil, nil)
 }
+
+func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
+    func coodinatesFromApiMediaAreaCoordinates(_ coordinates: Api.MediaAreaCoordinates) -> MediaArea.Coordinates {
+        switch coordinates {
+        case let .mediaAreaCoordinates(x, y, width, height, rotation):
+            return MediaArea.Coordinates(x: x, y: y, width: width, height: height, rotation: rotation)
+        }
+    }
+    switch mediaArea {
+    case .inputMediaAreaVenue:
+        return nil
+    case let .mediaAreaGeoPoint(coordinates, geo):
+        let latitude: Double
+        let longitude: Double
+        switch geo {
+        case let .geoPoint(_, long, lat, _, _):
+            latitude = lat
+            longitude = long
+        case .geoPointEmpty:
+            latitude = 0.0
+            longitude = 0.0
+        }
+        return .venue(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), venue: MediaArea.Venue(latitude: latitude, longitude: longitude, venue: nil, queryId: nil, resultId: nil))
+    case let .mediaAreaVenue(coordinates, geo, title, address, provider, venueId, venueType):
+        let latitude: Double
+        let longitude: Double
+        switch geo {
+        case let .geoPoint(_, long, lat, _, _):
+            latitude = lat
+            longitude = long
+        case .geoPointEmpty:
+            latitude = 0.0
+            longitude = 0.0
+        }
+        return .venue(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), venue: MediaArea.Venue(latitude: latitude, longitude: longitude, venue: MapVenue(title: title, address: address, provider: provider, id: venueId, type: venueType), queryId: nil, resultId: nil))
+    }
+}
+
+func apiMediaAreasFromMediaAreas(_ mediaAreas: [MediaArea]) -> [Api.MediaArea] {
+    var apiMediaAreas: [Api.MediaArea] = []
+    for area in mediaAreas {
+        let coordinates = area.coordinates
+        let inputCoordinates = Api.MediaAreaCoordinates.mediaAreaCoordinates(x: coordinates.x, y: coordinates.y, w: coordinates.width, h: coordinates.height, rotation: coordinates.rotation)
+        switch area {
+        case let .venue(_, venue):
+            if let queryId = venue.queryId, let resultId = venue.resultId {
+                apiMediaAreas.append(.inputMediaAreaVenue(coordinates: inputCoordinates, queryId: queryId, resultId: resultId))
+            } else if let venueInfo = venue.venue {
+                apiMediaAreas.append(.mediaAreaVenue(coordinates: inputCoordinates, geo: .geoPoint(flags: 0, long: venue.longitude, lat: venue.latitude, accessHash: 0, accuracyRadius: nil), title: venueInfo.title, address: venueInfo.address ?? "", provider: venueInfo.provider ?? "", venueId: venueInfo.id ?? "", venueType: venueInfo.type ?? ""))
+            } else {
+                apiMediaAreas.append(.mediaAreaGeoPoint(coordinates: inputCoordinates, geo: .geoPoint(flags: 0, long: venue.longitude, lat: venue.latitude, accessHash: 0, accuracyRadius: nil)))
+            }
+        }
+    }
+    return apiMediaAreas
+}
+
 
 func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [MessageTextEntity] {
     var result: [MessageTextEntity] = []
@@ -479,6 +555,8 @@ extension StoreMessage {
                             }
                         }
                         attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
+                    case let .messageReplyStoryHeader(userId, storyId):
+                        attributes.append(ReplyStoryAttribute(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: storyId)))
                     }
                 }
             
@@ -728,6 +806,8 @@ extension StoreMessage {
                             break
                         }
                         attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
+                    case let .messageReplyStoryHeader(userId, storyId):
+                        attributes.append(ReplyStoryAttribute(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: storyId)))
                     }
                 } else {
                     switch action {

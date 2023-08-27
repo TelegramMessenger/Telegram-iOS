@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -91,7 +90,7 @@ private struct LanguageSelectionControllerState: Equatable {
     var toLanguage: String
 }
 
-public func languageSelectionController(context: AccountContext, fromLanguage: String, toLanguage: String, completion: @escaping (String, String) -> Void) -> ViewController {
+public func languageSelectionController(context: AccountContext, forceTheme: PresentationTheme? = nil, fromLanguage: String, toLanguage: String, completion: @escaping (String, String) -> Void) -> ViewController {
     let statePromise = ValuePromise(LanguageSelectionControllerState(section: .translation, fromLanguage: fromLanguage, toLanguage: toLanguage), ignoreRepeated: true)
     let stateValue = Atomic(value: LanguageSelectionControllerState(section: .translation, fromLanguage: fromLanguage, toLanguage: toLanguage))
     let updateState: ((LanguageSelectionControllerState) -> LanguageSelectionControllerState) -> Void = { f in
@@ -150,6 +149,10 @@ public func languageSelectionController(context: AccountContext, fromLanguage: S
 
     let signal = combineLatest(queue: Queue.mainQueue(), context.sharedContext.presentationData, statePromise.get())
     |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        var presentationData = presentationData
+        if let forceTheme {
+            presentationData = presentationData.withUpdated(theme: forceTheme)
+        }
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .sectionControl([presentationData.strings.Translate_Languages_Original, presentationData.strings.Translate_Languages_Translation], 1), leftNavigationButton: ItemListNavigationButton(content: .none, style: .regular, enabled: false, action: {}), rightNavigationButton: ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
             completion(state.fromLanguage, state.toLanguage)
             dismissImpl?()

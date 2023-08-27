@@ -9,7 +9,7 @@ public enum ConvertGroupToSupergroupError {
     case tooManyChannels
 }
 
-func _internal_convertGroupToSupergroup(account: Account, peerId: PeerId) -> Signal<PeerId, ConvertGroupToSupergroupError> {
+func _internal_convertGroupToSupergroup(account: Account, peerId: PeerId, additionalProcessing: ((EnginePeer.Id) -> Signal<Never, NoError>)?) -> Signal<PeerId, ConvertGroupToSupergroupError> {
     return account.network.request(Api.functions.messages.migrateChat(chatId: peerId.id._internalGetInt64Value()))
     |> mapError { error -> ConvertGroupToSupergroupError in
         if error.errorDescription == "CHANNELS_TOO_MUCH" {
@@ -20,7 +20,6 @@ func _internal_convertGroupToSupergroup(account: Account, peerId: PeerId) -> Sig
     }
     |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.generic))
     |> mapToSignal { updates -> Signal<PeerId, ConvertGroupToSupergroupError> in
-        account.stateManager.addUpdates(updates)
         var createdPeerId: PeerId?
         for message in updates.messages {
             if apiMessagePeerId(message) != peerId {
@@ -30,19 +29,35 @@ func _internal_convertGroupToSupergroup(account: Account, peerId: PeerId) -> Sig
         }
         
         if let createdPeerId = createdPeerId {
-            return account.postbox.multiplePeersView([createdPeerId])
-            |> filter { view in
-                return view.peers[createdPeerId] != nil
+            let additionalProcessingValue: Signal<Never, NoError> = additionalProcessing?(createdPeerId) ?? Signal<Never, NoError>.complete()
+            
+            return additionalProcessingValue
+            |> map { _ -> Bool in }
+            |> castError(ConvertGroupToSupergroupError.self)
+            |> then(Signal<Bool, ConvertGroupToSupergroupError>.single(true))
+            |> mapToSignal { _ ->Signal<PeerId, ConvertGroupToSupergroupError> in
+                account.stateManager.addUpdates(updates)
+                
+                return _internal_fetchAndUpdateCachedPeerData(accountPeerId: account.peerId, peerId: createdPeerId, network: account.network, postbox: account.postbox)
+                |> castError(ConvertGroupToSupergroupError.self)
+                |> mapToSignal { _ -> Signal<PeerId, ConvertGroupToSupergroupError> in
+                    return account.postbox.multiplePeersView([createdPeerId])
+                    |> filter { view in
+                        return view.peers[createdPeerId] != nil
+                    }
+                    |> take(1)
+                    |> map { _ in
+                        return createdPeerId
+                    }
+                    |> mapError { _ -> ConvertGroupToSupergroupError in
+                    }
+                    |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.generic))
+                }
             }
-            |> take(1)
-            |> map { _ in
-                return createdPeerId
-            }
-            |> mapError { _ -> ConvertGroupToSupergroupError in
-            }
-            |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.generic))
+        } else {
+            account.stateManager.addUpdates(updates)
+            return .fail(.generic)
         }
-        return .fail(.generic)
     }
 }
 

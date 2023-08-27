@@ -389,7 +389,7 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
     UIView *parentView = nil;
     
     if (self.beginTransitionOut != nil)
-        referenceView = self.beginTransitionOut(&referenceFrame, &parentView);
+        referenceView = self.beginTransitionOut(&referenceFrame, &parentView, saving);
     
     UIView *toTransitionView = nil;
     CGRect targetFrame = CGRectZero;

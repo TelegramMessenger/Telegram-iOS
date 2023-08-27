@@ -87,6 +87,10 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         
         self.pager.dismiss = { [weak self] in
             if let strongSelf = self {
+                if let galleryController = strongSelf.galleryController(), galleryController.navigationController != nil {
+                    galleryController.dismiss(animated: true)
+                    return
+                }
                 var interfaceAnimationCompleted = false
                 var contentAnimationCompleted = true
                 

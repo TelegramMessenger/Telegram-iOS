@@ -181,12 +181,50 @@ public enum ReplyMarkupButtonRequestPeerType: Codable, Equatable {
 }
 
 public enum ReplyMarkupButtonAction: PostboxCoding, Equatable {
+    public struct PeerTypes: OptionSet {
+        public var rawValue: Int32
+        
+        public init(rawValue: Int32) {
+            self.rawValue = rawValue
+        }
+        
+        public init() {
+            self.rawValue = 0
+        }
+        
+        public static let users = PeerTypes(rawValue: 1 << 0)
+        public static let bots = PeerTypes(rawValue: 1 << 1)
+        public static let channels = PeerTypes(rawValue: 1 << 2)
+        public static let groups = PeerTypes(rawValue: 1 << 3)
+        
+        public var requestPeerTypes: [ReplyMarkupButtonRequestPeerType]? {
+            if self.isEmpty {
+                return nil
+            }
+            
+            var types: [ReplyMarkupButtonRequestPeerType] = []
+            if self.contains(.users) {
+                types.append(.user(.init(isBot: false, isPremium: nil)))
+            }
+            if self.contains(.bots) {
+                types.append(.user(.init(isBot: true, isPremium: nil)))
+            }
+            if self.contains(.channels) {
+                types.append(.channel(.init(isCreator: false, hasUsername: nil, userAdminRights: nil, botAdminRights: nil)))
+            }
+            if self.contains(.groups) {
+                types.append(.group(.init(isCreator: false, hasUsername: nil, isForum: nil, botParticipant: false, userAdminRights: nil, botAdminRights: nil)))
+            }
+            return types
+        }
+    }
+    
     case text
     case url(String)
     case callback(requiresPassword: Bool, data: MemoryBuffer)
     case requestPhone
     case requestMap
-    case switchInline(samePeer: Bool, query: String)
+    case switchInline(samePeer: Bool, query: String, peerTypes: PeerTypes)
     case openWebApp
     case payment
     case urlAuth(url: String, buttonId: Int32)
@@ -208,7 +246,7 @@ public enum ReplyMarkupButtonAction: PostboxCoding, Equatable {
             case 4:
                 self = .requestMap
             case 5:
-                self = .switchInline(samePeer: decoder.decodeInt32ForKey("s", orElse: 0) != 0, query: decoder.decodeStringForKey("q", orElse: ""))
+                self = .switchInline(samePeer: decoder.decodeInt32ForKey("s", orElse: 0) != 0, query: decoder.decodeStringForKey("q", orElse: ""), peerTypes: PeerTypes(rawValue: decoder.decodeInt32ForKey("pt", orElse: 0)))
             case 6:
                 self = .openWebApp
             case 7:
@@ -243,10 +281,11 @@ public enum ReplyMarkupButtonAction: PostboxCoding, Equatable {
             encoder.encodeInt32(3, forKey: "v")
         case .requestMap:
             encoder.encodeInt32(4, forKey: "v")
-        case let .switchInline(samePeer, query):
+        case let .switchInline(samePeer, query, peerTypes):
             encoder.encodeInt32(5, forKey: "v")
             encoder.encodeInt32(samePeer ? 1 : 0, forKey: "s")
             encoder.encodeString(query, forKey: "q")
+            encoder.encodeInt32(peerTypes.rawValue, forKey: "pt")
         case .openWebApp:
             encoder.encodeInt32(6, forKey: "v")
         case .payment:

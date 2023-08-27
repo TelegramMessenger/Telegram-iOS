@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramCore
 import SwiftSignalKit
-import Postbox
 import TelegramUIPreferences
 import AccountContext
 import UniversalMediaPlayer
@@ -162,6 +161,9 @@ private final class FetchManagerCategoryContext {
             previousPriorityKey = nil
             let (mediaReference, resourceReference, statsCategory, episode) = takeNew()
             entry = FetchManagerLocationEntry(id: id, episode: episode, mediaReference: mediaReference, resourceReference: resourceReference, statsCategory: statsCategory)
+            
+            Logger.shared.log("FetchManager", "[\(entry.id.location)] Adding entry \(entry.resourceReference.resource.id.stringRepresentation) (\(self.entries.count) in queue)")
+            
             self.entries[id] = entry
         } else {
             return
@@ -237,7 +239,7 @@ private final class FetchManagerCategoryContext {
                     }
                     activeContext.disposable?.dispose()
                     let postbox = self.postbox
-                    Logger.shared.log("FetchManager", "Begin fetching \(entry.resourceReference.resource.id.stringRepresentation) ranges: \(String(describing: parsedRanges))")
+                    Logger.shared.log("FetchManager", "[\(entry.id.location)] Begin fetching \(entry.resourceReference.resource.id.stringRepresentation) ranges: \(String(describing: parsedRanges))")
                     
                     var userLocation: MediaResourceUserLocation = .other
                     switch entry.id.location {
@@ -402,7 +404,7 @@ private final class FetchManagerCategoryContext {
                     } else if ranges.isEmpty {
                     } else {
                         let postbox = self.postbox
-                        Logger.shared.log("FetchManager", "Begin fetching \(entry.resourceReference.resource.id.stringRepresentation) ranges: \(String(describing: parsedRanges))")
+                        Logger.shared.log("FetchManager", "[\(entry.id.location)] Begin fetching \(entry.resourceReference.resource.id.stringRepresentation) ranges: \(String(describing: parsedRanges))")
                         
                         var userLocation: MediaResourceUserLocation = .other
                         switch entry.id.location {

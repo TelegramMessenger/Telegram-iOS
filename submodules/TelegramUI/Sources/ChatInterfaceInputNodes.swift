@@ -9,7 +9,7 @@ import ChatControllerInteraction
 import ChatInputNode
 import ChatEntityKeyboardInputNode
 
-func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentNode: ChatInputNode?, interfaceInteraction: ChatPanelInterfaceInteraction?, inputMediaNode: ChatMediaInputNode?, controllerInteraction: ChatControllerInteraction, inputPanelNode: ChatInputPanelNode?, makeMediaInputNode: () -> ChatInputNode?) -> ChatInputNode? {
+func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentNode: ChatInputNode?, interfaceInteraction: ChatPanelInterfaceInteraction?, controllerInteraction: ChatControllerInteraction, inputPanelNode: ChatInputPanelNode?, makeMediaInputNode: () -> ChatInputNode?) -> ChatInputNode? {
     if let inputPanelNode = inputPanelNode, !(inputPanelNode is ChatTextInputPanelNode) {
         return nil
     }
@@ -17,8 +17,6 @@ func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState:
     case .media:
         if let currentNode = currentNode as? ChatEntityKeyboardInputNode {
             return currentNode
-        } else if let inputMediaNode = inputMediaNode {
-            return inputMediaNode
         } else if let inputMediaNode = makeMediaInputNode() {
             inputMediaNode.interfaceInteraction = interfaceInteraction
             return inputMediaNode

@@ -127,10 +127,8 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                     case _ as TelegramMediaImage:
                         if message.text.isEmpty {
                             messageText = strings.Message_Photo
-                        } else if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-                            if enableMediaEmoji {
-                                messageText = "🖼 \(messageText)"
-                            }
+                        } else if enableMediaEmoji {
+                            messageText = "🖼 \(messageText)"
                         }
                     case let fileMedia as TelegramMediaFile:
                         var processed = false
@@ -179,7 +177,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                         processed = true
                                         break inner
                                     }
-                                case let .Video(_, _, flags):
+                                case let .Video(_, _, flags, _):
                                     if flags.contains(.instantRoundVideo) {
                                         messageText = strings.Message_VideoMessage
                                         processed = true
@@ -188,7 +186,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                         if message.text.isEmpty {
                                             messageText = strings.Message_Video
                                             processed = true
-                                        } else if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
+                                        } else {
                                             if enableMediaEmoji {
                                                 if !fileMedia.isAnimated {
                                                     messageText = "📹 \(messageText)"
@@ -297,6 +295,16 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                         messageText = "📊 \(poll.text)"
                     case let dice as TelegramMediaDice:
                         messageText = dice.emoji
+                    case let story as TelegramMediaStory:
+                        if story.isMention, let peer {
+                            if message.flags.contains(.Incoming) {
+                                messageText = strings.Conversation_StoryMentionTextIncoming(peer.compactDisplayTitle).string
+                            } else {
+                                messageText = strings.Conversation_StoryMentionTextOutgoing(peer.compactDisplayTitle).string
+                            }
+                        } else {
+                            messageText = strings.Notification_Story
+                        }
                     default:
                         break
                 }

@@ -20,6 +20,7 @@ swift_library(
         "//submodules/StringPluralization:StringPluralization",
         "//submodules/Sunrise:Sunrise",
         "//submodules/TinyThumbnail:TinyThumbnail",
+        "//submodules/FastBlur:FastBlur",
         "//Telegram:PresentationStrings",
     ],
     visibility = [

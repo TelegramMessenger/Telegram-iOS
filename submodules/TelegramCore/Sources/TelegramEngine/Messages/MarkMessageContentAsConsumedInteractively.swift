@@ -53,7 +53,7 @@ func _internal_markMessageContentAsConsumedInteractively(postbox: Postbox, messa
                     if attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0 {
                         var timeout = attribute.timeout
                         if let duration = message.secretMediaDuration {
-                            timeout = max(timeout, duration)
+                            timeout = max(timeout, Int32(duration))
                         }
                         updatedAttributes[i] = AutoremoveTimeoutMessageAttribute(timeout: timeout, countdownBeginTime: timestamp)
                         updateMessage = true
@@ -84,7 +84,7 @@ func _internal_markMessageContentAsConsumedInteractively(postbox: Postbox, messa
                     if attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0 {
                         var timeout = attribute.timeout
                         if let duration = message.secretMediaDuration {
-                            timeout = max(timeout, duration)
+                            timeout = max(timeout, Int32(duration))
                         }
                         updatedAttributes[i] = AutoclearTimeoutMessageAttribute(timeout: timeout, countdownBeginTime: timestamp)
                         updateMessage = true

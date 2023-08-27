@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
-import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
@@ -15,8 +14,8 @@ public enum ChannelMembersSearchControllerMode {
 }
 
 public enum ChannelMembersSearchFilter {
-    case exclude([PeerId])
-    case disable([PeerId])
+    case exclude([EnginePeer.Id])
+    case disable([EnginePeer.Id])
     case excludeNonMembers
     case excludeBots
 }
@@ -25,10 +24,10 @@ public final class ChannelMembersSearchController: ViewController {
     private let queue = Queue()
     
     private let context: AccountContext
-    private let peerId: PeerId
+    private let peerId: EnginePeer.Id
     private let mode: ChannelMembersSearchControllerMode
     private let filters: [ChannelMembersSearchFilter]
-    private let openPeer: (Peer, RenderedChannelParticipant?) -> Void
+    private let openPeer: (EnginePeer, RenderedChannelParticipant?) -> Void
     
     public var copyInviteLink: (() -> Void)?
     
@@ -44,7 +43,7 @@ public final class ChannelMembersSearchController: ViewController {
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, forceTheme: PresentationTheme? = nil, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter] = [], openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, forceTheme: PresentationTheme? = nil, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter] = [], openPeer: @escaping (EnginePeer, RenderedChannelParticipant?) -> Void) {
         self.context = context
         self.peerId = peerId
         self.mode = mode

@@ -31,3 +31,19 @@ public func textAlertController(sharedContext: SharedAccountContext, title: Stri
 public func richTextAlertController(context: AccountContext, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true, dismissAutomatically: Bool = true) -> AlertController {
     return richTextAlertController(alertContext: AlertControllerContext(theme: AlertControllerTheme(presentationData: context.sharedContext.currentPresentationData.with { $0 }), themeSignal: context.sharedContext.presentationData |> map { presentationData in AlertControllerTheme(presentationData: presentationData) }), title: title, text: text, actions: actions, actionLayout: actionLayout, allowInputInset: allowInputInset, dismissAutomatically: dismissAutomatically)
 }
+
+public func textWithEntitiesAlertController(context: AccountContext, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true, dismissAutomatically: Bool = true) -> AlertController {
+    return textWithEntitiesAlertController(
+        alertContext: AlertControllerContext(
+            theme: AlertControllerTheme(presentationData: context.sharedContext.currentPresentationData.with { $0 }),
+            themeSignal: context.sharedContext.presentationData |> map { presentationData in AlertControllerTheme(presentationData: presentationData) }
+        ),
+        title: title,
+        text: text,
+        actions: actions,
+        actionLayout: actionLayout,
+        allowInputInset: allowInputInset,
+        dismissAutomatically: dismissAutomatically
+    )
+}
+

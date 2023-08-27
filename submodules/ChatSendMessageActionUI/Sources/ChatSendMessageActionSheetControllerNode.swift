@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 import Display
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
@@ -17,15 +16,18 @@ private let rightInset: CGFloat = 16.0
 
 private enum ChatSendMessageActionIcon {
     case sendWithoutSound
+    case sendWhenOnline
     case schedule
     
     func image(theme: PresentationTheme) -> UIImage? {
         let imageName: String
         switch self {
-            case .sendWithoutSound:
-                imageName = "Chat/Input/Menu/SilentIcon"
-            case .schedule:
-                imageName = "Chat/Input/Menu/ScheduleIcon"
+        case .sendWithoutSound:
+            imageName = "Chat/Input/Menu/SilentIcon"
+        case .sendWhenOnline:
+            imageName = "Chat/Input/Menu/WhenOnlineIcon"
+        case .schedule:
+            imageName = "Chat/Input/Menu/ScheduleIcon"
         }
         return generateTintedImage(image: UIImage(bundleImageName: imageName), color: theme.contextMenu.primaryColor)
     }
@@ -191,7 +193,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     
     private var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
     
-    init(context: AccountContext, presentationData: PresentationData, reminders: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, attachment: Bool, forwardedCount: Int?, hasEntityKeyboard: Bool, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?, send: (() -> Void)?, sendSilently: (() -> Void)?, schedule: (() -> Void)?, cancel: (() -> Void)?) {
+    init(context: AccountContext, presentationData: PresentationData, reminders: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, attachment: Bool, canSendWhenOnline: Bool, forwardedCount: Int?, hasEntityKeyboard: Bool, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?, send: (() -> Void)?, sendSilently: (() -> Void)?, sendWhenOnline: (() -> Void)?, schedule: (() -> Void)?, cancel: (() -> Void)?) {
         self.context = context
         self.presentationData = presentationData
         self.sourceSendButton = sourceSendButton
@@ -206,15 +208,6 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.cancel = cancel
                 
         self.effectView = UIVisualEffectView()
-        if #available(iOS 9.0, *) {
-        } else {
-            if self.presentationData.theme.rootController.keyboardColor == .dark {
-                self.effectView.effect = UIBlurEffect(style: .dark)
-            } else {
-                self.effectView.effect = UIBlurEffect(style: .light)
-            }
-            self.effectView.alpha = 0.0
-        }
         
         self.dimNode = ASDisplayNode()
         self.dimNode.alpha = 1.0
@@ -249,6 +242,11 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             contentNodes.append(ActionSheetItemNode(theme: self.presentationData.theme, title: self.presentationData.strings.Conversation_SendMessage_SendSilently, icon: .sendWithoutSound, hasSeparator: true, action: {
                 sendSilently?()
             }))
+            if canSendWhenOnline {
+                contentNodes.append(ActionSheetItemNode(theme: self.presentationData.theme, title: self.presentationData.strings.Conversation_SendMessage_SendWhenOnline, icon: .sendWhenOnline, hasSeparator: true, action: {
+                    sendWhenOnline?()
+                }))
+            }
         }
         if let _ = schedule {
             contentNodes.append(ActionSheetItemNode(theme: self.presentationData.theme, title: reminders ? self.presentationData.strings.Conversation_SendMessage_SetReminder: self.presentationData.strings.Conversation_SendMessage_ScheduleMessage, icon: .schedule, hasSeparator: false, action: {
@@ -422,14 +420,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         }
         self.presentationData = presentationData
         
-        if #available(iOS 9.0, *) {
-        } else {
-            if self.presentationData.theme.rootController.keyboardColor == .dark {
-                self.effectView.effect = UIBlurEffect(style: .dark)
-            } else {
-                self.effectView.effect = UIBlurEffect(style: .light)
-            }
-        }
+        self.effectView.effect = makeCustomZoomBlurEffect(isLight: self.presentationData.theme.rootController.keyboardColor == .light)
         
         self.dimNode.backgroundColor = presentationData.theme.contextMenu.dimColor
         
@@ -457,11 +448,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.textInputNode.textView.setContentOffset(self.textInputNode.textView.contentOffset, animated: false)
         
         UIView.animate(withDuration: 0.2, animations: {
-            if #available(iOS 9.0, *) {
-                self.effectView.effect = makeCustomZoomBlurEffect(isLight: !self.presentationData.theme.overallDarkAppearance)
-            } else {
-                self.effectView.alpha = 1.0
-            }
+            self.effectView.effect = makeCustomZoomBlurEffect(isLight: self.presentationData.theme.rootController.keyboardColor == .light)
         }, completion: { _ in })
         self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.contentContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -554,12 +541,8 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             }
         }
         
-        UIView.animate(withDuration: 0.4, animations: {
-            if #available(iOS 9.0, *) {
-                self.effectView.effect = nil
-            } else {
-                self.effectView.alpha = 0.0
-            }
+        UIView.animate(withDuration: 0.2, animations: {
+            self.effectView.effect = nil
         }, completion: { _ in
             completedEffect = true
             intermediateCompletion()
@@ -588,7 +571,6 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         }
         
         let duration = 0.4
-        
         self.sendButtonNode.layer.animatePosition(from: self.sendButtonNode.position, to: self.sendButtonFrame.center, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
             completedButton = true
             intermediateCompletion()
@@ -705,7 +687,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             sendButtonFrame.origin.y -= menuHeightWithInset
         }
         sendButtonFrame.origin.y = min(sendButtonFrame.origin.y + contentOffset, layout.size.height - layout.intrinsicInsets.bottom - initialSendButtonFrame.height)
-        transition.updateFrame(node: self.sendButtonNode, frame: sendButtonFrame)
+        transition.updateFrameAsPositionAndBounds(node: self.sendButtonNode, frame: sendButtonFrame)
         
         var messageFrame = self.textFieldFrame
         messageFrame.size.width += 32.0

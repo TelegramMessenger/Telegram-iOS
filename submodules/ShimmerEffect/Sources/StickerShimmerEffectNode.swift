@@ -90,6 +90,8 @@ public class StickerShimmerEffectNode: ASDisplayNode {
         self.backdropNode = backdropNode
         self.insertSubnode(backdropNode, at: 0)
         
+        backdropNode.isHidden = self.effectNode.isHidden
+        
         self.effectNode.layer.compositingFilter = "screenBlendMode"
     }
     
@@ -97,7 +99,7 @@ public class StickerShimmerEffectNode: ASDisplayNode {
         self.effectNode.updateAbsoluteRect(rect, within: containerSize)
     }
     
-    public func update(backgroundColor: UIColor?, foregroundColor: UIColor, shimmeringColor: UIColor, data: Data?, size: CGSize, imageSize: CGSize = CGSize(width: 512.0, height: 512.0)) {
+    public func update(backgroundColor: UIColor?, foregroundColor: UIColor, shimmeringColor: UIColor, data: Data?, size: CGSize, enableEffect: Bool, imageSize: CGSize = CGSize(width: 512.0, height: 512.0)) {
         if data == nil {
             return
         }
@@ -112,13 +114,18 @@ public class StickerShimmerEffectNode: ASDisplayNode {
         self.currentSize = size
         
         self.backgroundNode.backgroundColor = foregroundColor
+        //self.backgroundNode.isHidden = true//!enableEffect
         
-        self.effectNode.update(backgroundColor: backgroundColor == nil ? .clear : foregroundColor, foregroundColor: shimmeringColor, horizontal: true, effectSize: nil, globalTimeOffset: true, duration: nil)
+        if enableEffect {
+            self.effectNode.update(backgroundColor: backgroundColor == nil ? .clear : foregroundColor, foregroundColor: shimmeringColor, horizontal: true, effectSize: nil, globalTimeOffset: true, duration: nil)
+        }
+        self.effectNode.isHidden = !enableEffect
+        self.backdropNode?.isHidden = !enableEffect
         
         let bounds = CGRect(origin: CGPoint(), size: size)
-        let image = generateStickerPlaceholderImage(data: data, size: size, imageSize: imageSize, backgroundColor: backgroundColor, foregroundColor: .black)
+        let image = generateStickerPlaceholderImage(data: data, size: size, imageSize: imageSize, backgroundColor: backgroundColor, foregroundColor: enableEffect ? .black : foregroundColor)
                         
-        if backgroundColor == nil {
+        if backgroundColor == nil && enableEffect {
             self.foregroundNode.image = nil
             
             let maskView: UIImageView

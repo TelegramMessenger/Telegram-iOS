@@ -31,7 +31,7 @@ final class InChatPrefetchManager {
     
     init(context: AccountContext) {
         self.context = context
-        self.settings = context.sharedContext.currentAutomaticMediaDownloadSettings.with { $0 }
+        self.settings = context.sharedContext.currentAutomaticMediaDownloadSettings
     }
     
     func updateAutoDownloadSettings(_ settings: MediaAutoDownloadSettings) {

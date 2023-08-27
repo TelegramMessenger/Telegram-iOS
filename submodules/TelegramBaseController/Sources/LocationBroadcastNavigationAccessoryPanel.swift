@@ -36,7 +36,7 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
     private let closeButton: HighlightableButtonNode
     private let separatorNode: ASDisplayNode
     
-    private var validLayout: (CGSize, CGFloat, CGFloat)?
+    private var validLayout: (CGSize, CGFloat, CGFloat, Bool)?
     private var peersAndMode: ([EnginePeer], LocationBroadcastNavigationAccessoryPanelMode, Bool)?
     
     init(accountPeerId: EnginePeer.Id, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, tapAction: @escaping () -> Void, close: @escaping () -> Void) {
@@ -75,6 +75,8 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
         
         super.init()
         
+        self.clipsToBounds = true
+        
         self.addSubnode(self.contentNode)
         
         self.contentNode.addSubnode(self.iconNode)
@@ -105,10 +107,11 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
         self.separatorNode.backgroundColor = theme.rootController.navigationBar.separatorColor
     }
     
-    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
-        self.validLayout = (size, leftInset, rightInset)
+    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, isHidden: Bool, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, leftInset, rightInset, isHidden)
         
-        transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(), size: size))
+        transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: isHidden ? -size.height : 0.0), size: size))
+        transition.updateAlpha(node: self.contentNode, alpha: isHidden ? 0.0 : 1.0)
         
         let titleString = NSAttributedString(string: self.strings.Conversation_LiveLocation, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
         var subtitleString: NSAttributedString?
@@ -179,20 +182,17 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
     
     func update(peers: [EnginePeer], mode: LocationBroadcastNavigationAccessoryPanelMode, canClose: Bool) {
         self.peersAndMode = (peers, mode, canClose)
-        if let layout = validLayout {
-            self.updateLayout(size: layout.0, leftInset: layout.1, rightInset: layout.2, transition: .immediate)
+        if let (size, leftInset, rightInset, isHidden) = self.validLayout {
+            self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, isHidden: isHidden, transition: .immediate)
         }
     }
     
     func animateIn(_ transition: ContainedViewLayoutTransition) {
-        self.clipsToBounds = true
         let contentPosition = self.contentNode.layer.position
 
-        transition.animatePosition(node: self.contentNode, from: CGPoint(x: contentPosition.x, y: contentPosition.y - 37.0), completion: { [weak self] _ in
-            self?.clipsToBounds = false
-        })
+        transition.animatePosition(node: self.contentNode, from: CGPoint(x: contentPosition.x, y: contentPosition.y - 37.0))
 
-        guard let (size, _, _) = self.validLayout else {
+        guard let (size, _, _, _) = self.validLayout else {
             return
         }
 
@@ -200,14 +200,12 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
     }
     
     func animateOut(_ transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
-        self.clipsToBounds = true
         let contentPosition = self.contentNode.layer.position
-        transition.animatePosition(node: self.contentNode, to: CGPoint(x: contentPosition.x, y: contentPosition.y - 37.0), removeOnCompletion: false, completion: { [weak self] _ in
-            self?.clipsToBounds = false
+        transition.animatePosition(node: self.contentNode, to: CGPoint(x: contentPosition.x, y: contentPosition.y - 37.0), removeOnCompletion: false, completion: { _ in
             completion()
         })
 
-        guard let (size, _, _) = self.validLayout else {
+        guard let (size, _, _, _) = self.validLayout else {
             return
         }
 

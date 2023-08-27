@@ -210,7 +210,7 @@ final class CommandMenuChatInputPanelItemNode: ListViewItemNode {
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 130.0, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (commandLayout, commandApply) = makeCommandLayout(TextNodeLayoutArguments(attributedString: commandString, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: 120.0, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (commandLayout, commandApply) = makeCommandLayout(TextNodeLayoutArguments(attributedString: commandString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - rightInset - textLayout.size.width - 16.0, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: max(CommandMenuChatInputPanelItemNode.itemHeight, textLayout.size.height + 14.0)), insets: UIEdgeInsets())
                         

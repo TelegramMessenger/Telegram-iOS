@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Lottie
+import GZip
 import AppBundle
 import Display
 
@@ -32,7 +33,15 @@ public final class AnimationNode: ASDisplayNode {
         super.init()
         
         self.setViewBlock({
-            if let animationName = animationName, let url = getAppBundle().url(forResource: animationName, withExtension: "json"), let animation = Animation.filepath(url.path) {
+            var animation: Animation?
+            if let animationName {
+                if let url = getAppBundle().url(forResource: animationName, withExtension: "json"), let maybeAnimation = Animation.filepath(url.path) {
+                    animation = maybeAnimation
+                } else if let url = getAppBundle().url(forResource: animationName, withExtension: "tgs"), let data = try? Data(contentsOf: URL(fileURLWithPath: url.path)), let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) {
+                    animation = try? Animation.from(data: unpackedData, strategy: .codable)
+                }
+            }
+            if let animation {
                 let view = AnimationView(animation: animation, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
                 view.animationSpeed = self.speed
                 view.backgroundColor = .clear
@@ -104,6 +113,16 @@ public final class AnimationNode: ASDisplayNode {
         self.animationView()?.currentProgress = 1.0
     }
     
+    public func setProgress(_ progress: CGFloat) {
+        self.animationView()?.currentProgress = progress
+    }
+    
+    public func animate(from: CGFloat, to: CGFloat, completion: @escaping () -> Void) {
+        self.animationView()?.play(fromProgress: from, toProgress: to, completion: { _ in
+            completion()
+        })
+    }
+    
     public func setAnimation(name: String, colors: [String: UIColor]? = nil) {
         self.currentParams = (name, colors)
         if let url = getAppBundle().url(forResource: name, withExtension: "json"), let animation = Animation.filepath(url.path) {
@@ -115,6 +134,12 @@ public final class AnimationNode: ASDisplayNode {
                     self.animationView()?.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
                 }
             }
+        }
+    }
+    
+    public func setColors(colors: [String: UIColor]) {
+        for (key, value) in colors {
+            self.animationView()?.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
         }
     }
     

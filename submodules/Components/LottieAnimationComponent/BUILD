@@ -15,6 +15,7 @@ swift_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/Display:Display",
         "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
+        "//submodules/GZip:GZip",
     ],
     visibility = [
         "//visibility:public",

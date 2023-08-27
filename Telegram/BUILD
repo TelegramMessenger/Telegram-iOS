@@ -25,12 +25,24 @@ load("@build_bazel_rules_swift//swift:swift.bzl",
     "swift_library",
 )
 
+load(
+    "@rules_xcodeproj//xcodeproj:defs.bzl",
+    "top_level_target",
+    "top_level_targets",
+    "xcodeproj",
+    "xcode_provisioning_profile",
+)
+
+load("@build_bazel_rules_apple//apple:apple.bzl", "local_provisioning_profile")
+
 load("//build-system/bazel-utils:plist_fragment.bzl",
     "plist_fragment",
 )
 
 load(
     "@build_configuration//:variables.bzl",
+    "telegram_bazel_path",
+    "telegram_use_xcode_managed_codesigning",
     "telegram_bundle_id",
     "telegram_aps_environment",
     "telegram_team_id",
@@ -502,10 +514,11 @@ app_groups_fragment = """
     telegram_bundle_id=telegram_bundle_id
 )
 
-communication_notifications_fragment = """
+official_communication_notifications_fragment = """
 <key>com.apple.developer.usernotifications.communication</key>
 <true/>
 """
+communication_notifications_fragment = official_communication_notifications_fragment if telegram_bundle_id in official_bundle_ids else ""
 
 store_signin_fragment = """
 <key>com.apple.developer.applesignin</key>
@@ -1010,29 +1023,6 @@ plist_fragment(
     )
 )
 
-ios_framework(
-    name = "AsyncDisplayKitFramework",
-    bundle_id = "{telegram_bundle_id}.AsyncDisplayKit".format(
-        telegram_bundle_id = telegram_bundle_id,
-    ),
-    families = [
-        "iphone",
-        "ipad",
-    ],
-    infoplists = [
-        ":AsyncDisplayKitInfoPlist",
-        ":BuildNumberInfoPlist",
-        ":VersionInfoPlist",
-        ":RequiredDeviceCapabilitiesPlist",
-    ],
-    minimum_os_version = minimum_os_version,
-    extension_safe = True,
-    ipa_post_processor = strip_framework,
-    deps = [
-        "//submodules/AsyncDisplayKit:AsyncDisplayKit",
-    ],
-)
-
 plist_fragment(
     name = "DisplayInfoPlist",
     extension = "plist",
@@ -1094,33 +1084,6 @@ sh_binary(
     srcs = [":GenerateAddAlternateIcons"],
 )
 
-ios_framework(
-    name = "DisplayFramework",
-    bundle_id = "{telegram_bundle_id}.Display".format(
-        telegram_bundle_id = telegram_bundle_id,
-    ),
-    families = [
-        "iphone",
-        "ipad",
-    ],
-    infoplists = [
-        ":DisplayInfoPlist",
-        ":BuildNumberInfoPlist",
-        ":VersionInfoPlist",
-        ":RequiredDeviceCapabilitiesPlist",
-    ],
-    frameworks = [
-        ":SwiftSignalKitFramework",
-        ":AsyncDisplayKitFramework",
-    ],
-    minimum_os_version = minimum_os_version,
-    extension_safe = True,
-    ipa_post_processor = strip_framework,
-    deps = [
-        "//submodules/Display:Display",
-    ],
-)
-
 plist_fragment(
     name = "TelegramUIInfoPlist",
     extension = "plist",
@@ -1159,8 +1122,6 @@ ios_framework(
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
         ":TelegramCoreFramework",
-        ":AsyncDisplayKitFramework",
-        ":DisplayFramework",
     ],
     minimum_os_version = minimum_os_version,
     extension_safe = True,
@@ -1964,6 +1925,18 @@ plist_fragment(
     )
 )
 
+local_provisioning_profile(
+    name = "Telegram_local_profile",
+    profile_name = "iOS Team Provisioning Profile: {}".format(telegram_bundle_id),
+    team_id = telegram_team_id,
+)
+
+xcode_provisioning_profile(
+   name = "Telegram_xcode_profile",
+   managed_by_xcode = True,
+   provisioning_profile = ":Telegram_local_profile",
+)
+
 ios_application(
     name = "Telegram",
     bundle_id = "{telegram_bundle_id}".format(
@@ -1973,7 +1946,7 @@ ios_application(
     minimum_os_version = minimum_os_version,
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
-        "//conditions:default": "@build_configuration//provisioning:Telegram.mobileprovision",
+        "//conditions:default": ":Telegram_xcode_profile" if telegram_use_xcode_managed_codesigning else "@build_configuration//provisioning:Telegram.mobileprovision",
     }),
     entitlements = ":TelegramEntitlements.entitlements",
     infoplists = [
@@ -1997,8 +1970,6 @@ ios_application(
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
         ":TelegramCoreFramework",
-        ":AsyncDisplayKitFramework",
-        ":DisplayFramework",
         ":TelegramUIFramework",
     ],
     strings = [
@@ -2023,6 +1994,31 @@ ios_application(
         ":Main",
         ":Lib",
     ],
+    visibility = ["//visibility:public"],
+)
+
+xcodeproj(
+    name = "Telegram_xcodeproj",
+    build_mode = "bazel",
+    bazel_path = telegram_bazel_path,
+    project_name = "Telegram",
+    tags = ["manual"],
+    top_level_targets = top_level_targets(
+        labels = [
+            ":Telegram",
+        ],
+        target_environments = ["device", "simulator"],
+    ),
+    xcode_configurations = {
+        "Debug": {
+            "//command_line_option:compilation_mode": "dbg",
+        },
+        #"Release": {
+        #    "//command_line_option:compilation_mode": "opt",
+        #},
+    },
+    default_xcode_configuration = "Debug"
+
 )
 
 # Temporary targets used to simplify webrtc build tests

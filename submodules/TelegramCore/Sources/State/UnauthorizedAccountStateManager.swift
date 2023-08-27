@@ -26,7 +26,7 @@ private final class UnauthorizedUpdateMessageService: NSObject, MTMessageService
         self.pipe.putNext(updates)
     }
     
-    func mtProto(_ mtProto: MTProto!, receivedMessage message: MTIncomingMessage!, authInfoSelector: MTDatacenterAuthInfoSelector) {
+    func mtProto(_ mtProto: MTProto!, receivedMessage message: MTIncomingMessage!, authInfoSelector: MTDatacenterAuthInfoSelector, networkType: Int32) {
         if let updates = (message.body as? BoxedMessage)?.body as? Api.Updates {
             self.addUpdates(updates)
         }

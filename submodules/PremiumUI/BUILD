@@ -94,9 +94,13 @@ swift_library(
         "//submodules/Components/SheetComponent:SheetComponent",
         "//submodules/Components/BundleIconComponent:BundleIconComponent",
         "//submodules/Components/SolidRoundedButtonComponent:SolidRoundedButtonComponent",
+        "//submodules/Components/BlurredBackgroundComponent:BlurredBackgroundComponent",
         "//submodules/TelegramUI/Components/EmojiStatusComponent",
         "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
+        "//submodules/TelegramUI/Components/Stories/AvatarStoryIndicatorComponent",
+        "//submodules/AttachmentUI:AttachmentUI",
+        "//submodules/Components/BalancedTextComponent"
     ],
     visibility = [
         "//visibility:public",

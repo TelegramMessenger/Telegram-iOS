@@ -167,7 +167,7 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
                     itemLayer.layerTintColor = component.theme.list.itemAccentColor.cgColor
                 }
                 
-                itemLayer.isVisibleForAnimations = itemEnvironment.isContentInFocus
+                itemLayer.isVisibleForAnimations = itemEnvironment.isContentInFocus && component.context.sharedContext.energyUsageSettings.loopEmoji
             }
             
             if itemEnvironment.isExpanded {
@@ -1628,6 +1628,7 @@ public final class EntityKeyboardTopPanelComponent: Component {
             }
         }
         
+        private var didReorderItems = false
         private func beginReordering(itemView: ComponentHostView<EntityKeyboardTopPanelItemEnvironment>) {
             if let currentReorderingItemView = self.currentReorderingItemView {
                 if let componentView = currentReorderingItemView.componentView {
@@ -1702,7 +1703,9 @@ public final class EntityKeyboardTopPanelComponent: Component {
             self.currentReorderingItemId = nil
             self.temporaryReorderingOrderIndex = nil
             
-            self.component?.reorderItems(self.items)
+            if self.didReorderItems {
+                self.component?.reorderItems(self.items)
+            }
             //self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
         }
         
@@ -1721,14 +1724,14 @@ public final class EntityKeyboardTopPanelComponent: Component {
                 let containerFrame = itemLayout.containerFrame(at: i)
                 if containerFrame.intersects(localReorderingItemFrame) {
                     let temporaryReorderingOrderIndex: (id: AnyHashable, index: Int) = (currentReorderingItemId, i)
-                    let hadPrevous = self.temporaryReorderingOrderIndex != nil
+                    let hadPrevious = self.temporaryReorderingOrderIndex != nil
                     if self.temporaryReorderingOrderIndex?.id != temporaryReorderingOrderIndex.id || self.temporaryReorderingOrderIndex?.index != temporaryReorderingOrderIndex.index {
                         self.temporaryReorderingOrderIndex = temporaryReorderingOrderIndex
                         
-                        if hadPrevous {
+                        if hadPrevious {
                             self.reorderingHapticFeedback.tap()
                         }
-                        
+                        self.didReorderItems = true
                         self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
                     }
                     break

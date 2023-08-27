@@ -545,7 +545,7 @@ func _internal_downloadMessage(postbox: Postbox, network: Network, messageId: Me
     }
 }
 
-func fetchRemoteMessage(postbox: Postbox, source: FetchMessageHistoryHoleSource, message: MessageReference) -> Signal<Message?, NoError> {
+func fetchRemoteMessage(accountPeerId: PeerId, postbox: Postbox, source: FetchMessageHistoryHoleSource, message: MessageReference) -> Signal<Message?, NoError> {
     guard case let .message(peer, _, id, _, _, _) = message.content else {
         return .single(nil)
     }
@@ -597,28 +597,13 @@ func fetchRemoteMessage(postbox: Postbox, source: FetchMessageHistoryHoleSource,
         }
         
         return postbox.transaction { transaction -> Message? in
-            var peers: [PeerId: Peer] = [:]
-            
-            for user in users {
-                if let user = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
-                    peers[user.id] = user
-                }
-            }
-            
-            for chat in chats {
-                if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
-                    peers[groupOrChannel.id] = groupOrChannel
-                }
-            }
-            
-            updatePeers(transaction: transaction, peers: Array(peers.values), update: { _, updated in
-                return updated
-            })
+            let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
             
             var renderedMessages: [Message] = []
             for message in messages {
                 var peerIsForum = false
-                if let peerId = message.peerId, let peer = transaction.getPeer(peerId), peer.isForum {
+                if let peerId = message.peerId, let peer = transaction.getPeer(peerId) ?? parsedPeers.get(peerId), peer.isForum {
                     peerIsForum = true
                 }
                 if let message = StoreMessage(apiMessage: message, peerIsForum: peerIsForum, namespace: id.namespace), case let .Id(updatedId) = message.id {
@@ -633,6 +618,12 @@ func fetchRemoteMessage(postbox: Postbox, source: FetchMessageHistoryHoleSource,
                         }
                     }
                     
+                    var peers: [PeerId: Peer] = [:]
+                    for id in parsedPeers.allIds {
+                        if let peer = transaction.getPeer(id) {
+                            peers[peer.id] = peer
+                        }
+                    }
                     if !addedExisting, let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
                         renderedMessages.append(renderedMessage)
                     }
@@ -756,7 +747,7 @@ public enum UpdatedRemotePeerError {
     case generic
 }
 
-func _internal_updatedRemotePeer(postbox: Postbox, network: Network, peer: PeerReference) -> Signal<Peer, UpdatedRemotePeerError> {
+func _internal_updatedRemotePeer(accountPeerId: PeerId, postbox: Postbox, network: Network, peer: PeerReference) -> Signal<Peer, UpdatedRemotePeerError> {
     if let inputUser = peer.inputUser {
         return network.request(Api.functions.users.getUsers(id: [inputUser]))
         |> mapError { _ -> UpdatedRemotePeerError in
@@ -767,12 +758,10 @@ func _internal_updatedRemotePeer(postbox: Postbox, network: Network, peer: PeerR
                 return .fail(.generic)
             }
             return postbox.transaction { transaction -> Peer? in
-                guard let peer = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) else {
-                    return nil
-                }
-                updatePeers(transaction: transaction, peers: [peer], update: { _, updated in
-                    return updated
-                })
+                let parsedPeers = AccumulatedPeers(users: [apiUser])
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                
+                let peer = transaction.getPeer(apiUser.peerId)
                 return peer
             }
             |> castError(UpdatedRemotePeerError.self)
@@ -790,25 +779,30 @@ func _internal_updatedRemotePeer(postbox: Postbox, network: Network, peer: PeerR
             return .generic
         }
         |> mapToSignal { result -> Signal<Peer, UpdatedRemotePeerError> in
-            let chats: [Api.Chat]
-            switch result {
+            return postbox.transaction { transaction -> Signal<Peer, UpdatedRemotePeerError> in
+                let chats: [Api.Chat]
+                switch result {
                 case let .chats(c):
                     chats = c
                 case let .chatsSlice(_, c):
                     chats = c
-            }
-            if let updatedPeer = chats.first.flatMap(parseTelegramGroupOrChannel), updatedPeer.id == peer.id {
-                return postbox.transaction { transaction -> Peer in
-                    updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
-                        return updated
-                    })
-                    return updatedPeer
                 }
-                |> mapError { _ -> UpdatedRemotePeerError in
+                
+                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: [])
+                
+                if let firstId = chats.first?.peerId, let updatedPeer = parsedPeers.get(firstId), updatedPeer.id == peer.id {
+                    return postbox.transaction { transaction -> Peer in
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                        return updatedPeer
+                    }
+                    |> mapError { _ -> UpdatedRemotePeerError in
+                    }
+                } else {
+                    return .fail(.generic)
                 }
-            } else {
-                return .fail(.generic)
             }
+            |> castError(UpdatedRemotePeerError.self)
+            |> switchToLatest
         }
     } else if let inputChannel = peer.inputChannel {
         return network.request(Api.functions.channels.getChannels(id: [inputChannel]))
@@ -816,25 +810,30 @@ func _internal_updatedRemotePeer(postbox: Postbox, network: Network, peer: PeerR
             return .generic
         }
         |> mapToSignal { result -> Signal<Peer, UpdatedRemotePeerError> in
-            let chats: [Api.Chat]
-            switch result {
+            return postbox.transaction { transaction -> Signal<Peer, UpdatedRemotePeerError> in
+                let chats: [Api.Chat]
+                switch result {
                 case let .chats(c):
                     chats = c
                 case let .chatsSlice(_, c):
                     chats = c
-            }
-            if let updatedPeer = chats.first.flatMap(parseTelegramGroupOrChannel), updatedPeer.id == peer.id {
-                return postbox.transaction { transaction -> Peer in
-                    updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
-                        return updated
-                    })
-                    return updatedPeer
                 }
-                |> mapError { _ -> UpdatedRemotePeerError in
+                
+                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: [])
+                
+                if let firstId = chats.first?.peerId, let updatedPeer = parsedPeers.get(firstId), updatedPeer.id == peer.id {
+                    return postbox.transaction { transaction -> Peer in
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                        return updatedPeer
+                    }
+                    |> mapError { _ -> UpdatedRemotePeerError in
+                    }
+                } else {
+                    return .fail(.generic)
                 }
-            } else {
-                return .fail(.generic)
             }
+            |> castError(UpdatedRemotePeerError.self)
+            |> switchToLatest
         }
     } else {
         return .fail(.generic)

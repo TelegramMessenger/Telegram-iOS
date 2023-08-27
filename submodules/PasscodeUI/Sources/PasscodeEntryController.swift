@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -39,6 +38,7 @@ public final class PasscodeEntryController: ViewController {
     
     private let applicationBindings: TelegramApplicationBindings
     private let accountManager: AccountManager<TelegramAccountManagerTypes>
+    private var energyUsageSettings: EnergyUsageSettings?
     private let appLockContext: AppLockContext
     private let presentationDataSignal: Signal<PresentationData, NoError>
     

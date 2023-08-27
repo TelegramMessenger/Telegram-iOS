@@ -2,6 +2,7 @@
 
 #import <CommonCrypto/CommonDigest.h>
 #import <sys/stat.h>
+#import <VideoToolbox/VideoToolbox.h>
 
 #import "GPUImageContext.h"
 
@@ -112,6 +113,8 @@
         avAsset = [[AVURLAsset alloc] initWithURL:(NSURL *)avAsset options:nil];
     }
     SQueue *queue = [[SQueue alloc] init];
+
+    double start = CACurrentMediaTime();
     
     return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
     {
@@ -178,6 +181,10 @@
                         videoStartValue = adjustments.videoStartValue - adjustments.trimStartValue;
                     }
                     
+                    
+                    
+                    double end = CACurrentMediaTime();
+                                        
                     [resultContext.imageGenerator generateCGImagesAsynchronouslyForTimes:@[ [NSValue valueWithCMTime:CMTimeMakeWithSeconds(videoStartValue, NSEC_PER_SEC)] ] completionHandler:^(__unused CMTime requestedTime, CGImageRef  _Nullable image, __unused CMTime actualTime, AVAssetImageGeneratorResult result, __unused NSError * _Nullable error)
                     {
                         UIImage *coverImage = nil;
@@ -190,6 +197,9 @@
                             id liveUploadData = nil;
                             if (watcher != nil)
                                 liveUploadData = [watcher fileUpdated:true];
+                            
+                            NSLog(@"%lf seconds", end - start);
+                            NSLog(@"%lf speed", (end - start) / CMTimeGetSeconds(resultContext.timeRange.duration));
                             
                             NSUInteger fileSize = [[[NSFileManager defaultManager] attributesOfItemAtPath:outputUrl.path error:nil] fileSize];
                             contextResult = [TGMediaVideoConversionResult resultWithFileURL:outputUrl fileSize:fileSize duration:CMTimeGetSeconds(resultContext.timeRange.duration) dimensions:resultContext.dimensions coverImage:coverImage liveUploadData:liveUploadData];
@@ -368,18 +378,18 @@
     CMTime frameDuration30FPS = CMTimeMake(1, 30);
     CMTime frameDuration = frameDuration30FPS;
     if (videoTrack.nominalFrameRate > 0)
-        frameDuration = CMTimeMake(1, (int32_t)videoTrack.nominalFrameRate);
+        frameDuration = CMTimeMake(1, (int32_t)ceil(videoTrack.nominalFrameRate));
     else if (CMTimeCompare(videoTrack.minFrameDuration, kCMTimeZero) == 1)
         frameDuration = videoTrack.minFrameDuration;
     
     if (CMTimeCompare(frameDuration, kCMTimeZero) != 1 || !CMTIME_IS_VALID(frameDuration) || image != nil || entityRenderer != nil || adjustments.toolsApplied)
         frameDuration = frameDuration30FPS;
     
-    if (CMTimeCompare(frameDuration, frameDuration30FPS)) {
+    if (CMTimeCompare(frameDuration, frameDuration30FPS) && preset != TGMediaVideoConversionPresetCompressedVeryHigh) {
         frameDuration = frameDuration30FPS;
     }
     
-    NSInteger fps = (NSInteger)(1.0 / CMTimeGetSeconds(frameDuration));
+    NSInteger fps = (NSInteger)ceil(1.0 / CMTimeGetSeconds(frameDuration));
     
     UIImage *overlayImage = nil;
     if (adjustments.paintingData.imagePath != nil)
@@ -536,7 +546,7 @@
         videoComposition.animationTool = [AVVideoCompositionCoreAnimationTool videoCompositionCoreAnimationToolWithPostProcessingAsVideoLayer:videoLayer inLayer:parentLayer];
     }
     
-    NSDictionary *settings = [TGMediaVideoConversionPresetSettings videoSettingsForPreset:preset dimensions:outputDimensions];
+    NSDictionary *settings = [TGMediaVideoConversionPresetSettings videoSettingsForPreset:preset dimensions:outputDimensions frameRate:(int32_t)fps];
     *outputSettings = settings;
     *dimensions = outputDimensions;
 
@@ -1303,7 +1313,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
     };
 }
 
-+ (NSDictionary *)videoSettingsForPreset:(TGMediaVideoConversionPreset)preset dimensions:(CGSize)dimensions
++ (NSDictionary *)videoSettingsForPreset:(TGMediaVideoConversionPreset)preset dimensions:(CGSize)dimensions frameRate:(int32_t)frameRate
 {
     NSDictionary *videoCleanApertureSettings = @
     {
@@ -1319,13 +1329,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
     AVVideoPixelAspectRatioVerticalSpacingKey: @3
     };
     
-    NSDictionary *codecSettings = @
-    {
-    AVVideoAverageBitRateKey: @([self _videoBitrateKbpsForPreset:preset] * 1000),
-    AVVideoCleanApertureKey: videoCleanApertureSettings,
-    AVVideoPixelAspectRatioKey: videoAspectRatioSettings,
-    AVVideoExpectedSourceFrameRateKey: @30
-    };
+    NSInteger videoBitrate = [self _videoBitrateKbpsForPreset:preset] * 1000;
     
     NSDictionary *hdVideoProperties = @
     {
@@ -1334,23 +1338,59 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
     AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2,
     };
     
-#if TARGET_IPHONE_SIMULATOR
-    return @
-    {
-    AVVideoCodecKey: AVVideoCodecH264,
-    AVVideoCompressionPropertiesKey: codecSettings,
-    AVVideoWidthKey: @((NSInteger)dimensions.width),
-    AVVideoHeightKey: @((NSInteger)dimensions.height)
-    };
+    bool useH265 = false;
+#if DEBUG
+    //videoBitrate = 800 * 1000;
+    useH265 = false;
 #endif
-    return @
-    {
-    AVVideoCodecKey: AVVideoCodecH264,
-    AVVideoCompressionPropertiesKey: codecSettings,
-    AVVideoWidthKey: @((NSInteger)dimensions.width),
-    AVVideoHeightKey: @((NSInteger)dimensions.height),
-    AVVideoColorPropertiesKey: hdVideoProperties
-    };
+    
+    if (useH265) {
+        NSDictionary *codecSettings = @
+        {
+        AVVideoAverageBitRateKey: @(videoBitrate),
+        AVVideoCleanApertureKey: videoCleanApertureSettings,
+        AVVideoPixelAspectRatioKey: videoAspectRatioSettings,
+        AVVideoExpectedSourceFrameRateKey: @(frameRate),
+        AVVideoProfileLevelKey: (__bridge NSString *)kVTProfileLevel_HEVC_Main_AutoLevel
+        };
+        
+        return @
+        {
+        AVVideoCodecKey: AVVideoCodecTypeHEVC,
+        AVVideoCompressionPropertiesKey: codecSettings,
+        AVVideoWidthKey: @((NSInteger)dimensions.width),
+        AVVideoHeightKey: @((NSInteger)dimensions.height),
+        AVVideoColorPropertiesKey: hdVideoProperties
+        };
+    } else {
+        NSDictionary *codecSettings = @
+        {
+        AVVideoAverageBitRateKey: @(videoBitrate),
+        AVVideoCleanApertureKey: videoCleanApertureSettings,
+        AVVideoPixelAspectRatioKey: videoAspectRatioSettings,
+        AVVideoExpectedSourceFrameRateKey: @(frameRate),
+        AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
+        AVVideoH264EntropyModeKey: AVVideoH264EntropyModeCABAC
+        };
+        
+#if TARGET_IPHONE_SIMULATOR
+        return @
+        {
+        AVVideoCodecKey: AVVideoCodecTypeH264,
+        AVVideoCompressionPropertiesKey: codecSettings,
+        AVVideoWidthKey: @((NSInteger)dimensions.width),
+        AVVideoHeightKey: @((NSInteger)dimensions.height)
+        };
+#endif
+        return @
+        {
+        AVVideoCodecKey: AVVideoCodecTypeH264,
+        AVVideoCompressionPropertiesKey: codecSettings,
+        AVVideoWidthKey: @((NSInteger)dimensions.width),
+        AVVideoHeightKey: @((NSInteger)dimensions.height),
+        AVVideoColorPropertiesKey: hdVideoProperties
+        };
+    }
 }
 
 + (NSInteger)_videoBitrateKbpsForPreset:(TGMediaVideoConversionPreset)preset
@@ -1364,13 +1404,13 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             return 700;
             
         case TGMediaVideoConversionPresetCompressedMedium:
-            return 1100;
+            return 1600;
             
         case TGMediaVideoConversionPresetCompressedHigh:
-            return 2500;
+            return 3000;
             
         case TGMediaVideoConversionPresetCompressedVeryHigh:
-            return 4000;
+            return 6600;
             
         case TGMediaVideoConversionPresetVideoMessage:
             return 1000;

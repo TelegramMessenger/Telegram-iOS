@@ -48,18 +48,26 @@ final class HelloView: UIView, PhoneDemoDecorationView {
     private var activePhrases = Set<Int>()
     private var activePositions = Set<Int>()
     
+    private var containerView: UIView
+    
     override init(frame: CGRect) {
+        self.containerView = UIView()
+        
         super.init(frame: frame)
+        
+        self.addSubview(self.containerView)
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
+    private var didSetup = false
     func setupAnimations() {
-        guard self.activePhrases.isEmpty else {
+        guard self.activePhrases.isEmpty, self.visible else {
             return
         }
+        self.didSetup = true
         var ids: [Int] = []
         for i in 0 ..< phrases.count {
             ids.append(i)
@@ -131,7 +139,7 @@ final class HelloView: UIView, PhoneDemoDecorationView {
         })
         view.layer.animateScale(from: CGFloat.random(in: 0.4 ..< 0.6), to: CGFloat.random(in: 0.9 ..< 1.2), duration: duration, removeOnCompletion: false)
         
-        self.addSubview(view)
+        self.containerView.addSubview(view)
     }
     
     func positionForIndex(_ index: Int) -> CGPoint {
@@ -142,11 +150,36 @@ final class HelloView: UIView, PhoneDemoDecorationView {
         return position
     }
     
+    private var visible = false
     func setVisible(_ visible: Bool) {
-        self.setupAnimations()
+        guard self.visible != visible else {
+            return
+        }
+        self.visible = visible
+    
+        if visible {
+            self.setupAnimations()
+        } else {
+            self.didSetup = false
+        }
+        
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear)
+        transition.updateAlpha(layer: self.containerView.layer, alpha: visible ? 1.0 : 0.0, completion: { [weak self] finished in
+            if let strongSelf = self, finished && !visible && !strongSelf.visible {
+                for view in strongSelf.containerView.subviews {
+                    view.removeFromSuperview()
+                }
+            }
+        })
     }
     
     func resetAnimation() {
         
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        self.containerView.frame = CGRect(origin: .zero, size: self.frame.size)
     }
 }

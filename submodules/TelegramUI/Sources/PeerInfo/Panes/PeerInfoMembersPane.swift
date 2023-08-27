@@ -12,6 +12,7 @@ import ItemListPeerItem
 import ItemListPeerActionItem
 import MergeLists
 import ItemListUI
+import PeerInfoVisualMediaPaneNode
 
 private struct PeerMembersListTransaction {
     let deletions: [ListViewDeleteItem]
@@ -25,6 +26,7 @@ enum PeerMembersListAction {
     case promote
     case restrict
     case remove
+    case openStories(sourceView: UIView)
 }
 
 private enum PeerMembersListEntryStableId: Hashable {
@@ -34,7 +36,7 @@ private enum PeerMembersListEntryStableId: Hashable {
 
 private enum PeerMembersListEntry: Comparable, Identifiable {
     case addMember(PresentationTheme, String)
-    case member(PresentationTheme, Int, PeerInfoMember)
+    case member(theme: PresentationTheme, index: Int, member: PeerInfoMember)
         
     var stableId: PeerMembersListEntryStableId {
         switch self {
@@ -125,7 +127,9 @@ private enum PeerMembersListEntry: Comparable, Identifiable {
                     action(member, .open)
                 }, setPeerIdWithRevealedOptions: { _, _ in
                 }, removePeer: { _ in
-                }, contextAction: nil, hasTopStripe: false, noInsets: true, noCorners: true, disableInteractiveTransitionIfNecessary: true)
+                }, contextAction: nil, hasTopStripe: false, noInsets: true, noCorners: true, disableInteractiveTransitionIfNecessary: true, storyStats: member.storyStats, openStories: { sourceView in
+                    action(member, .openStories(sourceView: sourceView))
+                })
         }
     }
 }
@@ -264,7 +268,7 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
             entries.append(.addMember(presentationData.theme, presentationData.strings.GroupInfo_AddParticipant))
         }
         for member in state.members {
-            entries.append(.member(presentationData.theme, entries.count, member))
+            entries.append(.member(theme: presentationData.theme, index: entries.count, member: member))
         }
         
         let transaction = preparedTransition(from: self.currentEntries, to: entries, context: self.context, presentationData: presentationData, enclosingPeer: enclosingPeer, addMemberAction: { [weak self] in

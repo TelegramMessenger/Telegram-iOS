@@ -447,7 +447,7 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
                                 
                                 backgroundNode.frame = backgroundFrame
                                 backgroundNode.update(size: backgroundNode.bounds.size, cornerRadius: 0.0, transition: .immediate)
-                                backgroundNode.updateColor(color: selectDateFillStaticColor(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper), transition: .immediate)
+                                backgroundNode.updateColor(color: selectDateFillStaticColor(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper), enableBlur: arguments.controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper), transition: .immediate)
                             }
                         } else {
                             node.contentBackgroundNode.frame = CGRect(origin: CGPoint(x: -1.0, y: -3.0), size: image.size)

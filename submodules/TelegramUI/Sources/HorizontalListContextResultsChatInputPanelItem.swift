@@ -260,7 +260,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                     }
                     imageDimensions = externalReference.content?.dimensions?.cgSize
                     if externalReference.type == "gif", let thumbnailResource = externalReference.thumbnail?.resource, let content = externalReference.content, let dimensions = content.dimensions {
-                        videoFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: thumbnailResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
+                        videoFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: thumbnailResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [], preloadSize: nil)])
                         imageResource = nil
                     }
                 
@@ -499,7 +499,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                         placeholderNode.bounds = CGRect(origin: CGPoint(), size: CGSize(width: croppedImageDimensions.width, height: croppedImageDimensions.height))
                         placeholderNode.position = CGPoint(x: height / 2.0, y: (nodeLayout.contentSize.height - sideInset) / 2.0 + sideInset)
                         
-                        placeholderNode.update(backgroundColor: item.theme.list.plainBackgroundColor, foregroundColor: item.theme.list.mediaPlaceholderColor.mixedWith(item.theme.list.plainBackgroundColor, alpha: 0.4), shimmeringColor: item.theme.list.mediaPlaceholderColor.withAlphaComponent(0.3), data: immediateThumbnailData, size: CGSize(width: croppedImageDimensions.width, height: croppedImageDimensions.height))
+                        placeholderNode.update(backgroundColor: item.theme.list.plainBackgroundColor, foregroundColor: item.theme.list.mediaPlaceholderColor.mixedWith(item.theme.list.plainBackgroundColor, alpha: 0.4), shimmeringColor: item.theme.list.mediaPlaceholderColor.withAlphaComponent(0.3), data: immediateThumbnailData, size: CGSize(width: croppedImageDimensions.width, height: croppedImageDimensions.height), enableEffect: item.context.sharedContext.energyUsageSettings.fullTranslucency)
                     }
                 }
             })

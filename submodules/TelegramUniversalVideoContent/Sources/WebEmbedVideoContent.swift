@@ -18,7 +18,7 @@ public final class WebEmbedVideoContent: UniversalVideoContent {
     let webPage: TelegramMediaWebpage
     public let webpageContent: TelegramMediaWebpageLoadedContent
     public let dimensions: CGSize
-    public let duration: Int32
+    public let duration: Double
     let forcedTimestamp: Int?
     let openUrl: (URL) -> Void
     
@@ -31,7 +31,7 @@ public final class WebEmbedVideoContent: UniversalVideoContent {
         self.webPage = webPage
         self.webpageContent = webpageContent
         self.dimensions = webpageContent.embedSize?.cgSize ?? CGSize(width: 128.0, height: 128.0)
-        self.duration = Int32(webpageContent.duration ?? (0 as Int))
+        self.duration = webpageContent.duration.flatMap(Double.init) ?? 0.0
         self.forcedTimestamp = forcedTimestamp
         self.openUrl = openUrl
     }
@@ -162,6 +162,12 @@ final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
         } else {
             self.playerNode.play()
         }
+    }
+    
+    func setSoundMuted(soundMuted: Bool) {
+    }
+    
+    func continueWithOverridingAmbientMode(isAmbient: Bool) {
     }
     
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool) {

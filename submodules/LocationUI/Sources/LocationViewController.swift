@@ -3,7 +3,6 @@ import UIKit
 import Display
 import LegacyComponents
 import TelegramCore
-import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramStringFormatting
@@ -19,12 +18,12 @@ import MapKit
 
 public class LocationViewParams {
     let sendLiveLocation: (TelegramMediaMap) -> Void
-    let stopLiveLocation: (MessageId?) -> Void
+    let stopLiveLocation: (EngineMessage.Id?) -> Void
     let openUrl: (String) -> Void
-    let openPeer: (Peer) -> Void
+    let openPeer: (EnginePeer) -> Void
     let showAll: Bool
         
-    public init(sendLiveLocation: @escaping (TelegramMediaMap) -> Void, stopLiveLocation: @escaping (MessageId?) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer) -> Void, showAll: Bool = false) {
+    public init(sendLiveLocation: @escaping (TelegramMediaMap) -> Void, stopLiveLocation: @escaping (EngineMessage.Id?) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (EnginePeer) -> Void, showAll: Bool = false) {
         self.sendLiveLocation = sendLiveLocation
         self.stopLiveLocation = stopLiveLocation
         self.openUrl = openUrl
@@ -46,14 +45,14 @@ class LocationViewInteraction {
     let goToCoordinate: (CLLocationCoordinate2D) -> Void
     let requestDirections: (TelegramMediaMap, String?, OpenInLocationDirections) -> Void
     let share: () -> Void
-    let setupProximityNotification: (Bool, MessageId?) -> Void
+    let setupProximityNotification: (Bool, EngineMessage.Id?) -> Void
     let updateSendActionHighlight: (Bool) -> Void
     let sendLiveLocation: (Int32?) -> Void
     let stopLiveLocation: () -> Void
     let updateRightBarButton: (LocationViewRightBarButton) -> Void
     let present: (ViewController) -> Void
     
-    init(toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, toggleTrackingMode: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, requestDirections: @escaping (TelegramMediaMap, String?, OpenInLocationDirections) -> Void, share: @escaping () -> Void, setupProximityNotification: @escaping (Bool, MessageId?) -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, sendLiveLocation: @escaping (Int32?) -> Void, stopLiveLocation: @escaping () -> Void, updateRightBarButton: @escaping (LocationViewRightBarButton) -> Void, present: @escaping (ViewController) -> Void) {
+    init(toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, toggleTrackingMode: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, requestDirections: @escaping (TelegramMediaMap, String?, OpenInLocationDirections) -> Void, share: @escaping () -> Void, setupProximityNotification: @escaping (Bool, EngineMessage.Id?) -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, sendLiveLocation: @escaping (Int32?) -> Void, stopLiveLocation: @escaping () -> Void, updateRightBarButton: @escaping (LocationViewRightBarButton) -> Void, present: @escaping (ViewController) -> Void) {
         self.toggleMapModeSelection = toggleMapModeSelection
         self.updateMapMode = updateMapMode
         self.toggleTrackingMode = toggleTrackingMode
@@ -74,10 +73,11 @@ public final class LocationViewController: ViewController {
         return self.displayNode as! LocationViewControllerNode
     }
     private let context: AccountContext
-    public var subject: Message
+    public var subject: EngineMessage
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     private var showAll: Bool
+    private let isStoryLocation: Bool
     
     private let locationManager = LocationManager()
     private var permissionDisposable: Disposable?
@@ -85,11 +85,14 @@ public final class LocationViewController: ViewController {
     private var interaction: LocationViewInteraction?
     
     private var rightBarButtonAction: LocationViewRightBarButton = .none
+    
+    public var dismissed: () -> Void = {}
 
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, subject: Message, params: LocationViewParams) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, subject: EngineMessage, isStoryLocation: Bool = false, params: LocationViewParams) {
         self.context = context
         self.subject = subject
         self.showAll = params.showAll
+        self.isStoryLocation = isStoryLocation
         
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
                      
@@ -488,7 +491,7 @@ public final class LocationViewController: ViewController {
             return
         }
         
-        self.displayNode = LocationViewControllerNode(context: self.context, presentationData: self.presentationData, subject: self.subject, interaction: interaction, locationManager: self.locationManager)
+        self.displayNode = LocationViewControllerNode(context: self.context, presentationData: self.presentationData, subject: self.subject, interaction: interaction, locationManager: self.locationManager, isStoryLocation: self.isStoryLocation)
         self.displayNodeDidLoad()
         
         self.controllerNode.onAnnotationsReady = { [weak self] in
@@ -497,6 +500,8 @@ public final class LocationViewController: ViewController {
             }
             strongSelf.controllerNode.showAll()
         }
+        
+        self.controllerNode.headerNode.mapNode.disableHorizontalTransitionGesture = self.isStoryLocation
     }
     
     private func updateRightBarButton() {
@@ -527,6 +532,19 @@ public final class LocationViewController: ViewController {
     
     @objc private func showAllPressed() {
         self.controllerNode.showAll()
+    }
+    
+    private var didDismiss = false
+    public override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        if !self.didDismiss {
+            self.didDismiss = true
+            self.dismissed()
+        }
+    }
+    
+    public override func dismiss(completion: (() -> Void)? = nil) {
+        super.dismiss(completion: completion)
     }
 }
 

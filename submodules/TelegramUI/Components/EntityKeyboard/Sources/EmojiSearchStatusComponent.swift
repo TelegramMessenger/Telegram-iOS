@@ -28,6 +28,10 @@ private final class LottieDirectContent: LottieComponent.Content {
         self.path = path
     }
     
+    override var frameRange: Range<Double> {
+        return 0.0 ..< 1.0
+    }
+    
     override func isEqual(to other: LottieComponent.Content) -> Bool {
         guard let other = other as? LottieDirectContent else {
             return false

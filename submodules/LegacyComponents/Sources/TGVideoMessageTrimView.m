@@ -23,21 +23,23 @@
 
 @implementation TGVideoMessageTrimView
 
-- (instancetype)initWithFrame:(CGRect)frame
+- (instancetype)initWithFrame:(CGRect)frame forStory:(bool)forStory
 {
     self = [super initWithFrame:frame];
     if (self != nil)
     {
         self.hitTestEdgeInsets = UIEdgeInsetsMake(-5, -25, -5, -25);
         
-        _leftSegmentView = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 16, 33)];
+        CGFloat height = forStory ? 40.0 : 33.0;
+        
+        _leftSegmentView = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 16, height)];
         _leftSegmentView.exclusiveTouch = true;
         _leftSegmentView.adjustsImageWhenHighlighted = false;
         [_leftSegmentView setBackgroundImage:TGComponentsImageNamed(@"VideoMessageLeftHandle") forState:UIControlStateNormal];
         _leftSegmentView.hitTestEdgeInsets = UIEdgeInsetsMake(-5, -25, -5, -10);
         [self addSubview:_leftSegmentView];
         
-        _rightSegmentView = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 16, 33)];
+        _rightSegmentView = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 16, height)];
         _rightSegmentView.exclusiveTouch = true;
         _rightSegmentView.adjustsImageWhenHighlighted = false;
         [_rightSegmentView setBackgroundImage:TGComponentsImageNamed(@"VideoMessageRightHandle") forState:UIControlStateNormal];

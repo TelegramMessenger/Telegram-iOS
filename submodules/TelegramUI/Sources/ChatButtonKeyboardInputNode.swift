@@ -391,7 +391,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                     if let message = self.message {
                         self.controllerInteraction.requestMessageActionCallback(message.id, data, false, requiresPassword)
                     }
-                case let .switchInline(samePeer, query):
+                case let .switchInline(samePeer, query, _):
                     if let message = message {
                         var botPeer: Peer?
                         
@@ -433,7 +433,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                         self.controllerInteraction.openPeer(peer, .info, nil, .default)
                     })
                 case let .openWebView(url, simple):
-                    self.controllerInteraction.openWebView(markupButton.title, url, simple, false)
+                    self.controllerInteraction.openWebView(markupButton.title, url, simple, .generic)
                 case let .requestPeer(peerType, buttonId):
                     if let message = self.message {
                     self.controllerInteraction.openRequestedPeerSelection(message.id, peerType, buttonId)

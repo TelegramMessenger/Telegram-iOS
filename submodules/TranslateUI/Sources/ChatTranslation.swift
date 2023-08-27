@@ -2,7 +2,6 @@ import Foundation
 import NaturalLanguage
 import SwiftSignalKit
 import TelegramCore
-import Postbox
 import AccountContext
 import TelegramUIPreferences
 
@@ -69,7 +68,7 @@ public struct ChatTranslationState: Codable {
 }
 
 private func cachedChatTranslationState(engine: TelegramEngine, peerId: EnginePeer.Id) -> Signal<ChatTranslationState?, NoError> {
-    let key = ValueBoxKey(length: 8)
+    let key = EngineDataBuffer(length: 8)
     key.setInt64(0, value: peerId.id._internalGetInt64Value())
     
     return engine.data.subscribe(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: ApplicationSpecificItemCacheCollectionId.translationState, id: key))
@@ -79,7 +78,7 @@ private func cachedChatTranslationState(engine: TelegramEngine, peerId: EnginePe
 }
 
 private func updateChatTranslationState(engine: TelegramEngine, peerId: EnginePeer.Id, state: ChatTranslationState?) -> Signal<Never, NoError> {
-    let key = ValueBoxKey(length: 8)
+    let key = EngineDataBuffer(length: 8)
     key.setInt64(0, value: peerId.id._internalGetInt64Value())
     
     if let state {
@@ -90,7 +89,7 @@ private func updateChatTranslationState(engine: TelegramEngine, peerId: EnginePe
 }
 
 public func updateChatTranslationStateInteractively(engine: TelegramEngine, peerId: EnginePeer.Id, _ f: @escaping (ChatTranslationState?) -> ChatTranslationState?) -> Signal<Never, NoError> {
-    let key = ValueBoxKey(length: 8)
+    let key = EngineDataBuffer(length: 8)
     key.setInt64(0, value: peerId.id._internalGetInt64Value())
     
     return engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: ApplicationSpecificItemCacheCollectionId.translationState, id: key))
@@ -151,9 +150,12 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
 }
 
 public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id) -> Signal<ChatTranslationState?, NoError> {
-    if peerId.id == PeerId.Id._internalFromInt64Value(777000) {
+    if peerId.id == EnginePeer.Id.Id._internalFromInt64Value(777000) {
         return .single(nil)
     }
+    
+    let loggingEnabled = context.sharedContext.immediateExperimentalUISettings.logLanguageRecognition
+    
     if #available(iOS 12.0, *) {
         var baseLang = context.sharedContext.currentPresentationData.with { $0 }.strings.baseLanguageCode
         let rawSuffix = "-raw"
@@ -197,15 +199,15 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                         |> map { messageHistoryView, _, _ -> ChatTranslationState? in
                             let messages = messageHistoryView.entries.map(\.message)
                             
+                            if loggingEnabled {
+                                Logger.shared.log("ChatTranslation", "Start language recognizing for \(peerId)")
+                            }
                             var fromLangs: [String: Int] = [:]
                             var count = 0
                             for message in messages {
-                                if let _ = URL(string: message.text) {
-                                    continue
-                                }
-                                if message.text.count >= 10 {
+                                if message.effectivelyIncoming(context.account.peerId), message.text.count >= 10 {
                                     var text = String(message.text.prefix(256))
-                                    if var entities = message.textEntitiesAttribute?.entities.filter({ $0.type == .Pre || $0.type == .Code }) {
+                                    if var entities = message.textEntitiesAttribute?.entities.filter({ [.Pre, .Code, .Url, .Email, .Mention, .Hashtag, .BotCommand].contains($0.type) }) {
                                         entities = entities.sorted(by: { $0.range.lowerBound > $1.range.lowerBound })
                                         var ranges: [Range<String.Index>] = []
                                         for entity in entities {
@@ -240,6 +242,10 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                                     let filteredLanguages = hypotheses.filter { supportedTranslationLanguages.contains(normalize($0.key.rawValue)) }.sorted(by: { $0.value > $1.value })
                                     if let language = filteredLanguages.first {
                                         let fromLang = normalize(language.key.rawValue)
+                                        if loggingEnabled && !["en", "ru"].contains(fromLang) && !dontTranslateLanguages.contains(fromLang) {
+                                            Logger.shared.log("ChatTranslation", "\(text)")
+                                            Logger.shared.log("ChatTranslation", "Recognized as: \(fromLang), other hypotheses: \(hypotheses.map { $0.key.rawValue }.joined(separator: ",")) ")
+                                        }
                                         fromLangs[fromLang] = (fromLangs[fromLang] ?? 0) + message.text.count
                                         count += 1
                                     }
@@ -260,6 +266,9 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                                 }
                             }
                             let fromLang = mostFrequent?.0 ?? ""
+                            if loggingEnabled {
+                                Logger.shared.log("ChatTranslation", "Ended with: \(fromLang)")
+                            }
                             let state = ChatTranslationState(baseLang: baseLang, fromLang: fromLang, toLang: nil, isEnabled: false)
                             let _ = updateChatTranslationState(engine: context.engine, peerId: peerId, state: state).start()
                             if !dontTranslateLanguages.contains(fromLang) {

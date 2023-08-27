@@ -6,7 +6,7 @@ import TelegramApi
 func dimensionsForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> PixelDimensions? {
     for attribute in attributes {
         switch attribute {
-            case let .Video(_, size, _):
+            case let .Video(_, size, _, _):
                 return size
             case let .ImageSize(size):
                 return size
@@ -17,13 +17,13 @@ func dimensionsForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> 
     return nil
 }
 
-func durationForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> Int32? {
+func durationForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> Double? {
     for attribute in attributes {
         switch attribute {
-            case let .Video(duration, _, _):
-                return Int32(duration)
+            case let .Video(duration, _, _, _):
+                return duration
             case let .Audio(_, duration, _, _, _):
-                return Int32(duration)
+                return Double(duration)
             default:
                 break
         }
@@ -42,7 +42,7 @@ public extension TelegramMediaFile {
         }
     }
     
-    var duration: Int32? {
+    var duration: Double? {
         return durationForFileAttributes(self.attributes)
     }
 }
@@ -97,7 +97,7 @@ func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAtt
                 result.append(.ImageSize(size: PixelDimensions(width: w, height: h)))
             case .documentAttributeAnimated:
                 result.append(.Animated)
-            case let .documentAttributeVideo(flags, duration, w, h):
+            case let .documentAttributeVideo(flags, duration, w, h, preloadSize):
                 var videoFlags = TelegramMediaVideoFlags()
                 if (flags & (1 << 0)) != 0 {
                     videoFlags.insert(.instantRoundVideo)
@@ -105,7 +105,10 @@ func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAtt
                 if (flags & (1 << 1)) != 0 {
                     videoFlags.insert(.supportsStreaming)
                 }
-                result.append(.Video(duration: Int(duration), size: PixelDimensions(width: w, height: h), flags: videoFlags))
+                if (flags & (1 << 3)) != 0 {
+                    videoFlags.insert(.isSilent)
+                }
+                result.append(.Video(duration: Double(duration), size: PixelDimensions(width: w, height: h), flags: videoFlags, preloadSize: preloadSize))
             case let .documentAttributeAudio(flags, duration, title, performer, waveform):
                 let isVoice = (flags & (1 << 10)) != 0
                 let waveformBuffer: Data? = waveform?.makeData()
@@ -178,7 +181,7 @@ func telegramMediaFileFromApiDocument(_ document: Api.Document) -> TelegramMedia
                 }
             }
             
-            return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: size, fileReference: fileReference.makeData(), fileName: fileNameFromFileAttributes(parsedAttributes)), previewRepresentations: previewRepresentations, videoThumbnails: videoThumbnails, immediateThumbnailData: immediateThumbnail, mimeType: mimeType, size: size, attributes: parsedAttributes)
+        return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), partialReference: nil, resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: size, fileReference: fileReference.makeData(), fileName: fileNameFromFileAttributes(parsedAttributes)), previewRepresentations: previewRepresentations, videoThumbnails: videoThumbnails, immediateThumbnailData: immediateThumbnail, mimeType: mimeType, size: size, attributes: parsedAttributes)
         case .documentEmpty:
             return nil
     }

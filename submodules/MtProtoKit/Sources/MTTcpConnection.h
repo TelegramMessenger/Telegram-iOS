@@ -13,10 +13,11 @@
 
 - (void)tcpConnectionOpened:(MTTcpConnection *)connection;
 - (void)tcpConnectionClosed:(MTTcpConnection *)connection error:(bool)error;
-- (void)tcpConnectionReceivedData:(MTTcpConnection *)connection data:(NSData *)data;
+- (void)tcpConnectionReceivedData:(MTTcpConnection *)connection networkType:(int32_t)networkType data:(NSData *)data;
 - (void)tcpConnectionReceivedQuickAck:(MTTcpConnection *)connection quickAck:(int32_t)quickAck;
 - (void)tcpConnectionDecodePacketProgressToken:(MTTcpConnection *)connection data:(NSData *)data token:(int64_t)token completion:(void (^)(int64_t token, id packetProgressToken))completion;
 - (void)tcpConnectionProgressUpdated:(MTTcpConnection *)connection packetProgressToken:(id)packetProgressToken packetLength:(NSUInteger)packetLength progress:(float)progress;
+- (void)tcpConnectionDownloadActivityUpdated:(MTTcpConnection *)connection;
 
 @end
 

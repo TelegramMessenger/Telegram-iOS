@@ -31,8 +31,8 @@ private struct ArchivedStickersNoticeEntry: Comparable, Identifiable {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, presentationData: PresentationData) -> ListViewItem {
-        return ItemListStickerPackItem(presentationData: ItemListPresentationData(presentationData), account: account, packInfo: info, itemCount: self.count, topItem: topItem, unread: false, control: .none, editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false, selectable: false), enabled: true, playAnimatedStickers: true, sectionId: 0, action: {
+    func item(context: AccountContext, presentationData: PresentationData) -> ListViewItem {
+        return ItemListStickerPackItem(presentationData: ItemListPresentationData(presentationData), context: context, packInfo: info, itemCount: self.count, topItem: topItem, unread: false, control: .none, editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false, selectable: false), enabled: true, playAnimatedStickers: true, sectionId: 0, action: {
         }, setPackIdWithRevealedOptions: { current, previous in
         }, addPack: {
         }, removePack: {
@@ -47,12 +47,12 @@ private struct ArchivedStickersNoticeTransition {
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedTransition(from fromEntries: [ArchivedStickersNoticeEntry], to toEntries: [ArchivedStickersNoticeEntry], account: Account, presentationData: PresentationData) -> ArchivedStickersNoticeTransition {
+private func preparedTransition(from fromEntries: [ArchivedStickersNoticeEntry], to toEntries: [ArchivedStickersNoticeEntry], context: AccountContext, presentationData: PresentationData) -> ArchivedStickersNoticeTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData), directionHint: nil) }
     
     return ArchivedStickersNoticeTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -79,7 +79,7 @@ private final class ArchivedStickersNoticeAlertContentNode: AlertContentNode {
         return self.isUserInteractionEnabled
     }
     
-    init(theme: AlertControllerTheme, account: Account, presentationData: PresentationData, archivedStickerPacks: [(StickerPackCollectionInfo, StickerPackItem?)], actions: [TextAlertAction]) {
+    init(theme: AlertControllerTheme, context: AccountContext, presentationData: PresentationData, archivedStickerPacks: [(StickerPackCollectionInfo, StickerPackItem?)], actions: [TextAlertAction]) {
         self.presentationData = presentationData
         self.archivedStickerPacks = archivedStickerPacks
         
@@ -139,7 +139,7 @@ private final class ArchivedStickersNoticeAlertContentNode: AlertContentNode {
             index += 1
         }
         
-        let transition = preparedTransition(from: [], to: entries, account: account, presentationData: presentationData)
+        let transition = preparedTransition(from: [], to: entries, context: context, presentationData: presentationData)
         self.enqueueTransition(transition)
     }
     
@@ -304,7 +304,7 @@ public func archivedStickerPacksNoticeController(context: AccountContext, archiv
     
     let disposable = MetaDisposable()
     
-    let contentNode = ArchivedStickersNoticeAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), account: context.account, presentationData: presentationData, archivedStickerPacks: archivedStickerPacks, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+    let contentNode = ArchivedStickersNoticeAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), context: context, presentationData: presentationData, archivedStickerPacks: archivedStickerPacks, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
        dismissImpl?()
     })])
     

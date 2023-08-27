@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import AccountContext
 import TelegramUIPreferences
@@ -23,7 +22,7 @@ final class VoiceChatTileItem: Equatable {
     }
     
     let account: Account
-    let peer: Peer
+    let peer: EnginePeer
     let videoEndpointId: String
     let videoReady: Bool
     let videoTimeouted: Bool
@@ -48,7 +47,7 @@ final class VoiceChatTileItem: Equatable {
         return self.videoEndpointId
     }
     
-    init(account: Account, peer: Peer, videoEndpointId: String, videoReady: Bool, videoTimeouted: Bool, isVideoLimit: Bool, videoLimit: Int32, isPaused: Bool, isOwnScreencast: Bool, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, speaking: Bool, secondary: Bool, isTablet: Bool, icon: Icon, text: VoiceChatParticipantItem.ParticipantText, additionalText: VoiceChatParticipantItem.ParticipantText?, action:  @escaping () -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?, getVideo: @escaping (GroupVideoNode.Position) -> GroupVideoNode?, getAudioLevel: (() -> Signal<Float, NoError>)?) {
+    init(account: Account, peer: EnginePeer, videoEndpointId: String, videoReady: Bool, videoTimeouted: Bool, isVideoLimit: Bool, videoLimit: Int32, isPaused: Bool, isOwnScreencast: Bool, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, speaking: Bool, secondary: Bool, isTablet: Bool, icon: Icon, text: VoiceChatParticipantItem.ParticipantText, additionalText: VoiceChatParticipantItem.ParticipantText?, action:  @escaping () -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?, getVideo: @escaping (GroupVideoNode.Position) -> GroupVideoNode?, getAudioLevel: (() -> Signal<Float, NoError>)?) {
         self.account = account
         self.peer = peer
         self.videoEndpointId = videoEndpointId
@@ -73,7 +72,7 @@ final class VoiceChatTileItem: Equatable {
     }
     
     static func == (lhs: VoiceChatTileItem, rhs: VoiceChatTileItem) -> Bool {
-        if !arePeersEqual(lhs.peer, rhs.peer) {
+        if lhs.peer != rhs.peer {
             return false
         }
         if lhs.videoEndpointId != rhs.videoEndpointId {
@@ -451,7 +450,7 @@ final class VoiceChatTileItemNode: ASDisplayNode {
             var titleAttributedString: NSAttributedString?
             if item.isVideoLimit {
                 titleAttributedString = nil
-            } else if let user = item.peer as? TelegramUser {
+            } else if case let .user(user) = item.peer {
                 if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                         let string = NSMutableAttributedString()
                         switch item.nameDisplayOrder {
@@ -472,9 +471,9 @@ final class VoiceChatTileItemNode: ASDisplayNode {
                 } else {
                     titleAttributedString = NSAttributedString(string: item.strings.User_DeletedAccount, font: titleFont, textColor: titleColor)
                 }
-            } else if let group = item.peer as? TelegramGroup {
+            } else if case let .legacyGroup(group) = item.peer {
                 titleAttributedString = NSAttributedString(string: group.title, font: titleFont, textColor: titleColor)
-            } else if let channel = item.peer as? TelegramChannel {
+            } else if case let .channel(channel) = item.peer {
                 titleAttributedString = NSAttributedString(string: channel.title, font: titleFont, textColor: titleColor)
             }
             
@@ -910,7 +909,7 @@ private class VoiceChatTileShimmeringNode: ASDisplayNode {
     private var currentShimmering: Bool?
     private var currentSize: CGSize?
     
-    public init(account: Account, peer: Peer) {
+    public init(account: Account, peer: EnginePeer) {
         self.backgroundNode = ImageNode(enableHasImage: false, enableEmpty: false, enableAnimatedTransition: true)
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.contentMode = .scaleAspectFill
@@ -930,7 +929,7 @@ private class VoiceChatTileShimmeringNode: ASDisplayNode {
         self.addSubnode(self.borderNode)
         self.borderNode.addSubnode(self.borderEffectNode)
         
-        self.backgroundNode.setSignal(peerAvatarCompleteImage(account: account, peer: EnginePeer(peer), size: CGSize(width: 250.0, height: 250.0), round: false, font: Font.regular(16.0), drawLetters: false, fullSize: false, blurred: true))
+        self.backgroundNode.setSignal(peerAvatarCompleteImage(account: account, peer: peer, size: CGSize(width: 250.0, height: 250.0), round: false, font: Font.regular(16.0), drawLetters: false, fullSize: false, blurred: true))
     }
     
     public override func didLoad() {

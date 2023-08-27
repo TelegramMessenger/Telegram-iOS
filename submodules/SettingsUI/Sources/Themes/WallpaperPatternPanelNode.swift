@@ -221,7 +221,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         }
     }
     
-    private var validLayout: CGSize?
+    private var validLayout: (CGSize, CGFloat)?
     
     var patternChanged: ((TelegramWallpaper?, Int32?, Bool) -> Void)?
 
@@ -401,8 +401,8 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         self.titleNode.attributedText = NSAttributedString(string: self.labelNode.attributedText?.string ?? "", font: Font.bold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
         self.labelNode.attributedText = NSAttributedString(string: self.labelNode.attributedText?.string ?? "", font: Font.regular(14.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
         
-        if let size = self.validLayout {
-            self.updateLayout(size: size, transition: .immediate)
+        if let (size, bottomInset) = self.validLayout {
+            self.updateLayout(size: size, bottomInset: bottomInset, transition: .immediate)
         }
     }
     
@@ -419,12 +419,16 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     func didAppear(initialWallpaper: TelegramWallpaper? = nil, intensity: Int32? = nil) {
         let wallpaper: TelegramWallpaper?
 
-        switch initialWallpaper {
-        case var .file(file):
-            file.settings = self.wallpapers[0].settings ?? WallpaperSettings()
-            wallpaper = .file(file)
-        default:
-            wallpaper = self.wallpapers.first
+        if self.wallpapers.isEmpty {
+            wallpaper = nil
+        } else {
+            switch initialWallpaper {
+            case var .file(file):
+                file.settings = self.wallpapers[0].settings ?? WallpaperSettings()
+                wallpaper = .file(file)
+            default:
+                wallpaper = self.wallpapers.first
+            }
         }
         
         if let wallpaper = wallpaper {
@@ -478,11 +482,12 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        self.validLayout = size
+    func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, bottomInset)
         
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
-        self.backgroundNode.update(size: self.backgroundNode.bounds.size, transition: transition)
+        let backgroundFrame = CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height + bottomInset)
+        transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+        self.backgroundNode.update(size: backgroundFrame.size, transition: transition)
         transition.updateFrame(node: self.topSeparatorNode, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: UIScreenPixel))
         
         let titleSize = self.titleNode.updateLayout(self.bounds.size)

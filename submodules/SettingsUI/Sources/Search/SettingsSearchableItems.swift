@@ -20,6 +20,8 @@ import InstantPageCache
 import NotificationPeerExceptionController
 import QrCodeUI
 import PremiumUI
+import StorageUsageScreen
+import PeerInfoStoryGridScreen
 
 enum SettingsSearchableItemIcon {
     case profile
@@ -40,6 +42,7 @@ enum SettingsSearchableItemIcon {
     case deleteAccount
     case devices
     case premium
+    case stories
 }
 
 public enum SettingsSearchableItemId: Hashable {
@@ -61,6 +64,7 @@ public enum SettingsSearchableItemId: Hashable {
     case deleteAccount(Int32)
     case devices(Int32)
     case premium(Int32)
+    case stories(Int32)
     
     private var namespace: Int32 {
         switch self {
@@ -100,6 +104,8 @@ public enum SettingsSearchableItemId: Hashable {
             return 18
         case .premium:
             return 19
+        case .stories:
+            return 20
         }
     }
     
@@ -122,7 +128,8 @@ public enum SettingsSearchableItemId: Hashable {
                  let .chatFolders(id),
                  let .deleteAccount(id),
                  let .devices(id),
-                 let .premium(id):
+                 let .premium(id),
+                 let .stories(id):
                 return id
         }
     }
@@ -171,6 +178,8 @@ public enum SettingsSearchableItemId: Hashable {
             self = .devices(id)
         case 19:
             self = .premium(id)
+        case 20:
+            self = .stories(id)
         default:
             return nil
         }
@@ -339,6 +348,24 @@ private func premiumSearchableItems(context: AccountContext) -> [SettingsSearcha
     return result
 }
 
+private func storiesSearchableItems(context: AccountContext) -> [SettingsSearchableItem] {
+    let icon: SettingsSearchableItemIcon = .stories
+    let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
+    
+    var result: [SettingsSearchableItem] = []
+        
+    result.append(SettingsSearchableItem(id: .stories(0), title: strings.Settings_MyStories, alternate: synonyms(strings.SettingsSearch_Synonyms_Premium), icon: icon, breadcrumbs: [], present: { context, _, present in
+        present(.push, PeerInfoStoryGridScreen(context: context, peerId: context.account.peerId, scope: .saved))
+    }))
+    
+    result.append(SettingsSearchableItem(id: .stories(1), title: strings.Settings_StoriesArchive, alternate: synonyms(strings.SettingsSearch_Synonyms_Premium), icon: icon, breadcrumbs: [], present: { context, _, present in
+        present(.push, PeerInfoStoryGridScreen(context: context, peerId: context.account.peerId, scope: .archive))
+    }))
+   
+    return result
+}
+
+
 private func callSearchableItems(context: AccountContext) -> [SettingsSearchableItem] {
     let icon: SettingsSearchableItemIcon = .calls
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
@@ -373,9 +400,9 @@ private func stickerSearchableItems(context: AccountContext, archivedStickerPack
     items.append(SettingsSearchableItem(id: .stickers(1), title: strings.Stickers_SuggestStickers, alternate: synonyms(strings.SettingsSearch_Synonyms_Stickers_SuggestStickers), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, _, present in
         presentStickerSettings(context, present, .suggestOptions)
     }))
-    items.append(SettingsSearchableItem(id: .stickers(2), title: strings.StickerPacksSettings_AnimatedStickers, alternate: synonyms(strings.StickerPacksSettings_AnimatedStickers), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, _, present in
+    /*items.append(SettingsSearchableItem(id: .stickers(2), title: strings.StickerPacksSettings_AnimatedStickers, alternate: synonyms(strings.StickerPacksSettings_AnimatedStickers), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, _, present in
         presentStickerSettings(context, present, .loopAnimatedStickers)
-    }))
+    }))*/
     items.append(SettingsSearchableItem(id: .stickers(3), title: strings.StickerPacksSettings_FeaturedPacks, alternate: synonyms(strings.SettingsSearch_Synonyms_Stickers_FeaturedPacks), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, _, present in
         present(.push, featuredStickerPacksController(context: context))
     }))
@@ -413,24 +440,24 @@ private func notificationSearchableItems(context: AccountContext, settings: Glob
                                 default:
                                     switch key.namespace {
                                         case Namespaces.Peer.CloudUser:
-                                            users[key] = NotificationExceptionWrapper(settings: value, peer: peer)
+                                            users[key] = NotificationExceptionWrapper(settings: value, peer: EnginePeer(peer))
                                         default:
                                             if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                                                channels[key] = NotificationExceptionWrapper(settings: value, peer: peer)
+                                                channels[key] = NotificationExceptionWrapper(settings: value, peer: .channel(peer))
                                             } else {
-                                                groups[key] = NotificationExceptionWrapper(settings: value, peer: peer)
+                                                groups[key] = NotificationExceptionWrapper(settings: value, peer: EnginePeer(peer))
                                             }
                                     }
                             }
                         default:
                             switch key.namespace {
                                 case Namespaces.Peer.CloudUser:
-                                    users[key] = NotificationExceptionWrapper(settings: value, peer: peer)
+                                    users[key] = NotificationExceptionWrapper(settings: value, peer: EnginePeer(peer))
                                 default:
                                     if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                                        channels[key] = NotificationExceptionWrapper(settings: value, peer: peer)
+                                        channels[key] = NotificationExceptionWrapper(settings: value, peer: .channel(peer))
                                     } else {
-                                        groups[key] = NotificationExceptionWrapper(settings: value, peer: peer)
+                                        groups[key] = NotificationExceptionWrapper(settings: value, peer: EnginePeer(peer))
                                     }
                             }
                     }
@@ -565,6 +592,8 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
                     current = info.phoneNumber
                 case .voiceMessages:
                     current = info.voiceMessages
+                case .bio:
+                    current = info.bio
             }
 
             present(.push, selectivePrivacySettingsController(context: context, kind: kind, current: current, callSettings: callSettings != nil ? (info.voiceCallsP2P, callSettings!.0) : nil, voipConfiguration: callSettings?.1, callIntegrationAvailable: CallKitIntegration.isAvailable, updated: { updated, updatedCallSettings, _ in
@@ -602,7 +631,7 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
             presentPrivacySettings(context, present, nil)
         }),
         SettingsSearchableItem(id: .privacy(1), title: strings.Settings_BlockedUsers, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_BlockedUsers), icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
-            present(.push, blockedPeersController(context: context, blockedPeersContext: BlockedPeersContext(account: context.account)))
+            present(.push, blockedPeersController(context: context, blockedPeersContext: BlockedPeersContext(account: context.account, subject: .blocked)))
         }),
         SettingsSearchableItem(id: .privacy(2), title: strings.PrivacySettings_LastSeen, alternate: synonyms(strings.SettingsSearch_Synonyms_Privacy_LastSeen), icon: icon, breadcrumbs: [strings.Settings_PrivacySettings], present: { context, _, present in
             presentSelectivePrivacySettings(context, .presence, present)
@@ -681,16 +710,54 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
             presentDataSettings(context, present, nil)
         }),
         SettingsSearchableItem(id: .data(1), title: strings.ChatSettings_Cache, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_Storage_Title), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
-            present(.push, storageUsageController(context: context))
+            let controller = StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { category in
+                return storageUsageExceptionsScreen(context: context, category: category)
+            })
+            present(.push, controller)
         }),
         SettingsSearchableItem(id: .data(2), title: strings.Cache_KeepMedia, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_Storage_KeepMedia), icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_Cache], present: { context, _, present in
-            present(.push, storageUsageController(context: context))
+            let controller = StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { category in
+                return storageUsageExceptionsScreen(context: context, category: category)
+            })
+            present(.push, controller)
         }),
         SettingsSearchableItem(id: .data(3), title: strings.Cache_ClearCache, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_Storage_ClearCache), icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_Cache], present: { context, _, present in
-            present(.push, storageUsageController(context: context))
+            let controller = StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { category in
+                return storageUsageExceptionsScreen(context: context, category: category)
+            })
+            present(.push, controller)
         }),
         SettingsSearchableItem(id: .data(4), title: strings.NetworkUsageSettings_Title, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_NetworkUsage), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
-            present(.push, networkUsageStatsController(context: context))
+            let mediaAutoDownloadSettings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])
+            |> map { sharedData -> MediaAutoDownloadSettings in
+                var automaticMediaDownloadSettings: MediaAutoDownloadSettings
+                if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]?.get(MediaAutoDownloadSettings.self) {
+                    automaticMediaDownloadSettings = value
+                } else {
+                    automaticMediaDownloadSettings = .defaultSettings
+                }
+                return automaticMediaDownloadSettings
+            }
+            
+            let _ = (combineLatest(
+                accountNetworkUsageStats(account: context.account, reset: []),
+                mediaAutoDownloadSettings
+            )
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { stats, mediaAutoDownloadSettings in
+                var stats = stats
+                
+                if stats.resetWifiTimestamp == 0 {
+                    var value = stat()
+                    if stat(context.account.basePath, &value) == 0 {
+                        stats.resetWifiTimestamp = Int32(value.st_ctimespec.tv_sec)
+                    }
+                }
+                
+                present(.push, DataUsageScreen(context: context, stats: stats, mediaAutoDownloadSettings: mediaAutoDownloadSettings, makeAutodownloadSettingsController: { isCellular in
+                    return autodownloadMediaConnectionTypeController(context: context, connectionType: isCellular ? .cellular : .wifi)
+                }))
+            })
         }),
         SettingsSearchableItem(id: .data(5), title: strings.ChatSettings_AutoDownloadUsingCellular, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoDownloadUsingCellular), icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle], present: { context, _, present in
             present(.push, autodownloadMediaConnectionTypeController(context: context, connectionType: .cellular))
@@ -701,23 +768,11 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
         SettingsSearchableItem(id: .data(7), title: strings.ChatSettings_AutoDownloadReset, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoDownloadReset), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
             presentDataSettings(context, present, .automaticDownloadReset)
         }),
-        SettingsSearchableItem(id: .data(8), title: strings.ChatSettings_AutoPlayGifs, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoplayGifs), icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoPlayTitle], present: { context, _, present in
-            presentDataSettings(context, present, .autoplayGifs)
-        }),
-        SettingsSearchableItem(id: .data(9), title: strings.ChatSettings_AutoPlayVideos, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoplayVideos), icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoPlayTitle], present: { context, _, present in
-            presentDataSettings(context, present, .autoplayVideos)
-        }),
         SettingsSearchableItem(id: .data(10), title: strings.CallSettings_UseLessData, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_CallsUseLessData), icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.Settings_CallSettings], present: { context, _, present in
             present(.push, voiceCallDataSavingController(context: context))
         }),
-        /*SettingsSearchableItem(id: .data(11), title: strings.Settings_SaveIncomingPhotos, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_SaveIncomingPhotos), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
-            present(.push, saveIncomingMediaController(context: context))
-        }),*/
         SettingsSearchableItem(id: .data(12), title: strings.Settings_SaveEditedPhotos, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_SaveEditedPhotos), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
             presentDataSettings(context, present, .saveEditedPhotos)
-        }),
-        SettingsSearchableItem(id: .data(13), title: strings.ChatSettings_DownloadInBackground, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_DownloadInBackground), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
-            presentDataSettings(context, present, .downloadInBackground)
         }),
         SettingsSearchableItem(id: .data(14), title: strings.ChatSettings_OpenLinksIn, alternate: synonyms(strings.SettingsSearch_Synonyms_ChatSettings_OpenLinksIn), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
             present(.push, webBrowserSettingsController(context: context))
@@ -783,6 +838,8 @@ private func appearanceSearchableItems(context: AccountContext) -> [SettingsSear
         SettingsSearchableItem(id: .appearance(4), title: strings.Wallpaper_SetCustomBackground, alternate: synonyms(strings.SettingsSearch_Synonyms_Appearance_ChatBackground_Custom), icon: icon, breadcrumbs: [strings.Settings_Appearance, strings.Settings_ChatBackground], present: { context, _, present in
             presentCustomWallpaperPicker(context: context, present: { controller in
                 present(.immediate, controller)
+            }, push: { controller in
+                present(.push, controller)
             })
         }),
         SettingsSearchableItem(id: .appearance(5), title: strings.Appearance_AutoNightTheme, alternate: synonyms(strings.SettingsSearch_Synonyms_Appearance_AutoNightTheme), icon: icon, breadcrumbs: [strings.Settings_Appearance], present: { context, _, present in
@@ -790,12 +847,6 @@ private func appearanceSearchableItems(context: AccountContext) -> [SettingsSear
         }),
         SettingsSearchableItem(id: .appearance(6), title: strings.Appearance_ColorTheme, alternate: synonyms(strings.SettingsSearch_Synonyms_Appearance_ColorTheme), icon: icon, breadcrumbs: [strings.Settings_Appearance], present: { context, _, present in
             presentAppearanceSettings(context, present, .accentColor)
-        }),
-        SettingsSearchableItem(id: .appearance(7), title: strings.Appearance_LargeEmoji, alternate: synonyms(strings.SettingsSearch_Synonyms_Appearance_LargeEmoji), icon: icon, breadcrumbs: [strings.Settings_Appearance, strings.Appearance_Other], present: { context, _, present in
-            presentAppearanceSettings(context, present, .largeEmoji)
-        }),
-        SettingsSearchableItem(id: .appearance(8), title: strings.Appearance_ReduceMotion, alternate: synonyms(strings.SettingsSearch_Synonyms_Appearance_Animations), icon: icon, breadcrumbs: [strings.Settings_Appearance, strings.Appearance_Other], present: { context, _, present in
-            presentAppearanceSettings(context, present, .animations)
         })
     ]
 }
@@ -983,6 +1034,9 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         
         let premiumItems = premiumSearchableItems(context: context)
         allItems.append(contentsOf: premiumItems)
+
+        let storiesItems = storiesSearchableItems(context: context)
+        allItems.append(contentsOf: storiesItems)
         
         if watchAppInstalled {
             let watch = SettingsSearchableItem(id: .watch(0), title: strings.Settings_AppleWatch, alternate: synonyms(strings.SettingsSearch_Synonyms_Watch), icon: .watch, breadcrumbs: [], present: { context, _, present in

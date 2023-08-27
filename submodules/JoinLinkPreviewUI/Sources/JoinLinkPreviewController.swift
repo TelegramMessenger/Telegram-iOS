@@ -84,7 +84,7 @@ public final class JoinLinkPreviewController: ViewController {
                             strongSelf.isGroup = !invite.flags.isBroadcast
                             strongSelf.controllerNode.setRequestPeer(image: invite.photoRepresentation, title: invite.title, about: invite.about, memberCount: invite.participantsCount, isGroup: !invite.flags.isBroadcast)
                         } else {
-                            let data = JoinLinkPreviewData(isGroup: invite.participants != nil, isJoined: false)
+                            let data = JoinLinkPreviewData(isGroup: !invite.flags.isBroadcast, isJoined: false)
                             strongSelf.controllerNode.setInvitePeer(image: invite.photoRepresentation, title: invite.title, memberCount: invite.participantsCount, members: invite.participants?.map({ $0 }) ?? [], data: data)
                         }
                     case let .alreadyJoined(peer):

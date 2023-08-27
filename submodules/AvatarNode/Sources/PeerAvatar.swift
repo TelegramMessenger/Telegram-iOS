@@ -89,7 +89,7 @@ public func peerAvatarCompleteImage(account: Account, peer: EnginePeer, forcePro
     
     let clipStyle: AvatarNodeClipStyle
     if round {
-        if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+        if case let .channel(channel) = peer, channel.isForum {
             clipStyle = .roundedRect
         } else {
             clipStyle = .round
@@ -371,7 +371,7 @@ public enum AvatarBackgroundColor {
     case violet
 }
 
-public func generateAvatarImage(size: CGSize, icon: UIImage?, iconScale: CGFloat = 1.0, cornerRadius: CGFloat? = nil, circleCorners: Bool = false, color: AvatarBackgroundColor) -> UIImage? {
+public func generateAvatarImage(size: CGSize, icon: UIImage?, iconScale: CGFloat = 1.0, cornerRadius: CGFloat? = nil, circleCorners: Bool = false, color: AvatarBackgroundColor, customColors: [UIColor]? = nil) -> UIImage? {
     return generateImage(size, rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.beginPath()
@@ -405,10 +405,14 @@ public func generateAvatarImage(size: CGSize, icon: UIImage?, iconScale: CGFloat
         }
         
         let colorsArray: NSArray
-        if colorIndex == -1 {
-            colorsArray = AvatarNode.grayscaleColors.map(\.cgColor) as NSArray
+        if let customColors {
+            colorsArray = customColors.map(\.cgColor) as NSArray
         } else {
-            colorsArray = AvatarNode.gradientColors[colorIndex % AvatarNode.gradientColors.count].map(\.cgColor) as NSArray
+            if colorIndex == -1 {
+                colorsArray = AvatarNode.grayscaleColors.map(\.cgColor) as NSArray
+            } else {
+                colorsArray = AvatarNode.gradientColors[colorIndex % AvatarNode.gradientColors.count].map(\.cgColor) as NSArray
+            }
         }
         
         var locations: [CGFloat] = [1.0, 0.0]

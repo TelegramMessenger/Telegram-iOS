@@ -585,7 +585,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
                 let node = self.itemNodes[i]
                 transition.updateFrame(node: node, frame: CGRect(origin: CGPoint(x: CGFloat(i) * self.scrollView.bounds.size.width + self.pageGap, y: 0.0), size: CGSize(width: self.scrollView.bounds.size.width - self.pageGap * 2.0, height: self.scrollView.bounds.size.height)))
                 
-                let screenFrame = node.convert(node.bounds, to: self.supernode)
+                let screenFrame = node.view.convert(node.view.bounds, to: self.view.superview)
                 node.screenFrameUpdated(screenFrame)
             }
             

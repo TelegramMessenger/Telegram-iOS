@@ -317,11 +317,11 @@ public final class ChatListTitleView: UIView, NavigationBarTitleView, Navigation
         super.layoutSubviews()
         
         if !self.manualLayout, let (size, clearBounds) = self.validLayout {
-            self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)
+            let _ = self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)
         }
     }
     
-    public func updateLayout(size: CGSize, clearBounds: CGRect, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, clearBounds: CGRect, transition: ContainedViewLayoutTransition) -> CGRect {
         self.validLayout = (size, clearBounds)
         
         var indicatorPadding: CGFloat = 0.0
@@ -344,7 +344,10 @@ public final class ChatListTitleView: UIView, NavigationBarTitleView, Navigation
         
         let combinedHeight = titleSize.height
         
-        var titleContentRect = CGRect(origin: CGPoint(x: indicatorPadding + floor((size.width - titleSize.width - indicatorPadding) / 2.0), y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
+        let combinedWidth = titleSize.width
+        
+        var titleContentRect = CGRect(origin: CGPoint(x: indicatorPadding + floor((size.width - combinedWidth - indicatorPadding) / 2.0), y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
+        
         titleContentRect.origin.x = min(titleContentRect.origin.x, clearBounds.maxX - proxyPadding - titleContentRect.width)
         
         let titleFrame = titleContentRect
@@ -425,6 +428,16 @@ public final class ChatListTitleView: UIView, NavigationBarTitleView, Navigation
                 }
             }
         }
+        
+        var resultFrame = titleFrame
+        if !self.lockView.isHidden {
+            resultFrame = resultFrame.union(lockFrame)
+        }
+        if let titleCredibilityIconView = self.titleCredibilityIconView {
+            resultFrame = resultFrame.union(titleCredibilityIconView.frame)
+        }
+        
+        return resultFrame
     }
     
     @objc private func buttonPressed() {

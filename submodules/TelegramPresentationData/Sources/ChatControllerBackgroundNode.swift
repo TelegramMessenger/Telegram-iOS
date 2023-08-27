@@ -8,6 +8,7 @@ import Postbox
 import MediaResources
 import AppBundle
 import TinyThumbnail
+import FastBlur
 
 private var backgroundImageForWallpaper: (TelegramWallpaper, Bool, UIImage)?
 
@@ -200,8 +201,25 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                                     } else if !didOutputBlurred {
                                         didOutputBlurred = true
                                         if let immediateThumbnailData = file.file.immediateThumbnailData, let decodedData = decodeTinyThumbnail(data: immediateThumbnailData) {
-                                            if let image = UIImage(data: decodedData)?.precomposed() {
-                                                subscriber.putNext((image, false))
+                                            if let thumbnailImage = UIImage(data: decodedData)?.precomposed() {
+                                                let thumbnailContextSize = CGSize(width: thumbnailImage.size.width * 6.0, height: thumbnailImage.size.height * 6.0)
+                                                guard let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0) else {
+                                                    subscriber.putNext((thumbnailImage, false))
+                                                    return
+                                                }
+                                                thumbnailContext.withFlippedContext { c in
+                                                    if let image = thumbnailImage.cgImage {
+                                                        c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                                                    }
+                                                }
+                                                telegramFastBlurMore(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                                                telegramFastBlurMore(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                                                
+                                                if let blurredThumbnailImage = thumbnailContext.generateImage() {
+                                                    subscriber.putNext((blurredThumbnailImage, false))
+                                                } else {
+                                                    subscriber.putNext((thumbnailImage, false))
+                                                }
                                             }
                                         }
                                     }
@@ -238,8 +256,25 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
                                     } else if !didOutputBlurred {
                                         didOutputBlurred = true
                                         if let immediateThumbnailData = file.file.immediateThumbnailData, let decodedData = decodeTinyThumbnail(data: immediateThumbnailData) {
-                                            if let image = UIImage(data: decodedData)?.precomposed() {
-                                                subscriber.putNext((image, false))
+                                            if let thumbnailImage = UIImage(data: decodedData)?.precomposed() {
+                                                let thumbnailContextSize = CGSize(width: thumbnailImage.size.width * 6.0, height: thumbnailImage.size.height * 6.0)
+                                                guard let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0) else {
+                                                    subscriber.putNext((thumbnailImage, false))
+                                                    return
+                                                }
+                                                thumbnailContext.withFlippedContext { c in
+                                                    if let image = thumbnailImage.cgImage {
+                                                        c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                                                    }
+                                                }
+                                                telegramFastBlurMore(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                                                telegramFastBlurMore(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                                                
+                                                if let blurredThumbnailImage = thumbnailContext.generateImage() {
+                                                    subscriber.putNext((blurredThumbnailImage, false))
+                                                } else {
+                                                    subscriber.putNext((thumbnailImage, false))
+                                                }
                                             }
                                         }
                                     }

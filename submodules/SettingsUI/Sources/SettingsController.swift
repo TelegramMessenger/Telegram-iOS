@@ -21,7 +21,8 @@ public func makeSetupTwoFactorAuthController(context: AccountContext) -> ViewCon
         title: presentationData.strings.TwoFactorSetup_Intro_Title,
         text: presentationData.strings.TwoFactorSetup_Intro_Text,
         actionText: presentationData.strings.TwoFactorSetup_Intro_Action,
-        doneText: presentationData.strings.TwoFactorSetup_Done_Action
+        doneText: presentationData.strings.TwoFactorSetup_Done_Action,
+        phoneNumber: nil
     )))
     return controller
 }

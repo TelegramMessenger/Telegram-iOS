@@ -138,7 +138,6 @@ public final class PinchSourceContainerNode: ASDisplayNode, UIGestureRecognizerD
     private(set) var naturalContentFrame: CGRect?
 
     fileprivate let gesture: PinchSourceGesture
-    fileprivate var panGesture: UIPanGestureRecognizer?
 
     public var isPinchGestureEnabled: Bool = true {
         didSet {
@@ -207,9 +206,6 @@ public final class PinchSourceContainerNode: ASDisplayNode, UIGestureRecognizerD
             }
             return strongSelf.isActive
         }
-    }
-
-    @objc private func panGestureRecognized(_ recognizer: UIPanGestureRecognizer) {
     }
 
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {

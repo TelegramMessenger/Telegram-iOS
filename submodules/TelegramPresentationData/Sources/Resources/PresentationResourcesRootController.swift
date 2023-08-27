@@ -128,12 +128,6 @@ public struct PresentationResourcesRootController {
         })
     }
     
-    public static func navigationPlayerPlayIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.navigationPlayerPlayIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/MinimizedPlay"), color: theme.rootController.navigationBar.accentTextColor)
-        })
-    }
-    
     public static func navigationPlayerRateActiveIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.navigationPlayerRateActiveIcon.rawValue, { theme in
             return generatePlayerRateIcon(theme.rootController.navigationBar.accentTextColor)
@@ -158,12 +152,6 @@ public struct PresentationResourcesRootController {
         })
     }
     
-    public static func navigationPlayerPauseIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.navigationPlayerPauseIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/MinimizedPause"), color: theme.rootController.navigationBar.accentTextColor)
-        })
-    }
-    
     public static func navigationLiveLocationIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.navigationLiveLocationIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat List/LiveLocationPanelIcon"), color: theme.rootController.navigationBar.accentTextColor)
@@ -179,12 +167,6 @@ public struct PresentationResourcesRootController {
                 context.setFillColor(theme.inAppNotification.fillColor.cgColor)
                 context.fillEllipse(in: CGRect(origin: CGPoint(x: inset, y: 8.0 * 2.0), size: CGSize(width: 30.0, height: 30.0)))
             })?.stretchableImage(withLeftCapWidth: Int(inset) + 15, topCapHeight: 8 * 2 + 15)
-        })
-    }
-    
-    public static func inAppNotificationSecretChatIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.inAppNotificationSecretChatIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Notification/SecretLock"), color: theme.inAppNotification.primaryTextColor)
         })
     }
 }

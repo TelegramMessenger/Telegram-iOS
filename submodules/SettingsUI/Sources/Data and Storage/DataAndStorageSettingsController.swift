@@ -31,14 +31,12 @@ private final class DataAndStorageControllerArguments {
     let toggleSaveEditedPhotos: (Bool) -> Void
     let togglePauseMusicOnRecording: (Bool) -> Void
     let toggleRaiseToListen: (Bool) -> Void
-    let toggleAutoplayGifs: (Bool) -> Void
-    let toggleAutoplayVideos: (Bool) -> Void
     let toggleDownloadInBackground: (Bool) -> Void
     let openBrowserSelection: () -> Void
     let openIntents: () -> Void
     let toggleEnableSensitiveContent: (Bool) -> Void
 
-    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, toggleVoiceUseLessData: @escaping (Bool) -> Void, openSaveIncoming: @escaping (AutomaticSaveIncomingPeerType) -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, togglePauseMusicOnRecording: @escaping (Bool) -> Void, toggleRaiseToListen: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleAutoplayVideos: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void, openBrowserSelection: @escaping () -> Void, openIntents: @escaping () -> Void, toggleEnableSensitiveContent: @escaping (Bool) -> Void) {
+    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, toggleVoiceUseLessData: @escaping (Bool) -> Void, openSaveIncoming: @escaping (AutomaticSaveIncomingPeerType) -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, togglePauseMusicOnRecording: @escaping (Bool) -> Void, toggleRaiseToListen: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void, openBrowserSelection: @escaping () -> Void, openIntents: @escaping () -> Void, toggleEnableSensitiveContent: @escaping (Bool) -> Void) {
         self.openStorageUsage = openStorageUsage
         self.openNetworkUsage = openNetworkUsage
         self.openProxy = openProxy
@@ -49,8 +47,6 @@ private final class DataAndStorageControllerArguments {
         self.toggleSaveEditedPhotos = toggleSaveEditedPhotos
         self.togglePauseMusicOnRecording = togglePauseMusicOnRecording
         self.toggleRaiseToListen = toggleRaiseToListen
-        self.toggleAutoplayGifs = toggleAutoplayGifs
-        self.toggleAutoplayVideos = toggleAutoplayVideos
         self.toggleDownloadInBackground = toggleDownloadInBackground
         self.openBrowserSelection = openBrowserSelection
         self.openIntents = openIntents
@@ -63,7 +59,6 @@ private enum DataAndStorageSection: Int32 {
     case autoDownload
     case autoSave
     case backgroundDownload
-    case autoPlay
     case voiceCalls
     case other
     case connection
@@ -72,8 +67,6 @@ private enum DataAndStorageSection: Int32 {
 
 public enum DataAndStorageEntryTag: ItemListItemTag, Equatable {
     case automaticDownloadReset
-    case autoplayGifs
-    case autoplayVideos
     case saveEditedPhotos
     case downloadInBackground
     case pauseMusicOnRecording
@@ -104,9 +97,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     case downloadInBackground(PresentationTheme, String, Bool)
     case downloadInBackgroundInfo(PresentationTheme, String)
     
-    case autoplayHeader(PresentationTheme, String)
-    case autoplayGifs(PresentationTheme, String, Bool)
-    case autoplayVideos(PresentationTheme, String, Bool)
     case useLessVoiceData(PresentationTheme, String, Bool)
     case useLessVoiceDataInfo(PresentationTheme, String)
     case otherHeader(PresentationTheme, String)
@@ -133,8 +123,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return DataAndStorageSection.backgroundDownload.rawValue
             case .useLessVoiceData, .useLessVoiceDataInfo:
                 return DataAndStorageSection.voiceCalls.rawValue
-            case .autoplayHeader, .autoplayGifs, .autoplayVideos:
-                return DataAndStorageSection.autoPlay.rawValue
             case .otherHeader, .shareSheet, .saveEditedPhotos, .openLinksIn, .pauseMusicOnRecording, .raiseToListen, .raiseToListenInfo:
                 return DataAndStorageSection.other.rawValue
             case .connectionHeader, .connectionProxy:
@@ -172,16 +160,10 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return 23
             case .useLessVoiceDataInfo:
                 return 24
-            case .autoplayHeader:
-                return 25
-            case .autoplayGifs:
-                return 26
-            case .autoplayVideos:
-                return 27
             case .otherHeader:
-                return 28
-            case .shareSheet:
                 return 29
+            case .shareSheet:
+                return 30
             case .saveEditedPhotos:
                 return 31
             case .openLinksIn:
@@ -253,24 +235,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 }
             case let .autoSaveInfo(text):
                 if case .autoSaveInfo(text) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .autoplayHeader(lhsTheme, lhsText):
-                if case let .autoplayHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .autoplayGifs(lhsTheme, lhsText, lhsValue):
-                if case let .autoplayGifs(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .autoplayVideos(lhsTheme, lhsText, lhsValue):
-                if case let .autoplayVideos(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -414,20 +378,10 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 })
             case let .autoSaveInfo(text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
-            case let .autoplayHeader(_, text):
-                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .autoplayGifs(_, text, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.toggleAutoplayGifs(value)
-                }, tag: DataAndStorageEntryTag.autoplayGifs)
-            case let .autoplayVideos(_, text, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.toggleAutoplayVideos(value)
-                }, tag: DataAndStorageEntryTag.autoplayVideos)
             case let .useLessVoiceData(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleVoiceUseLessData(value)
-                }, tag: DataAndStorageEntryTag.autoplayVideos)
+                }, tag: nil)
             case let .useLessVoiceDataInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .otherHeader(_, text):
@@ -662,10 +616,6 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     let dataSaving = effectiveDataSaving(for: data.voiceCallSettings, autodownloadSettings: data.autodownloadSettings)
     entries.append(.useLessVoiceData(presentationData.theme, presentationData.strings.ChatSettings_UseLessDataForCalls, dataSaving != .never))
     entries.append(.useLessVoiceDataInfo(presentationData.theme, presentationData.strings.CallSettings_UseLessDataLongDescription))
-    
-    entries.append(.autoplayHeader(presentationData.theme, presentationData.strings.ChatSettings_AutoPlayTitle))
-    entries.append(.autoplayGifs(presentationData.theme, presentationData.strings.ChatSettings_AutoPlayGifs, data.automaticMediaDownloadSettings.autoplayGifs))
-    entries.append(.autoplayVideos(presentationData.theme, presentationData.strings.ChatSettings_AutoPlayVideos, data.automaticMediaDownloadSettings.autoplayVideos))
     
     entries.append(.otherHeader(presentationData.theme, presentationData.strings.ChatSettings_Other))
     if #available(iOSApplicationExtension 13.2, iOS 13.2, *) {
@@ -909,18 +859,6 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
     }, toggleRaiseToListen: { value in
         let _ = updateMediaInputSettingsInteractively(accountManager: context.sharedContext.accountManager, {
             $0.withUpdatedEnableRaiseToSpeak(value)
-        }).start()
-    }, toggleAutoplayGifs: { value in
-        let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
-            var settings = settings
-            settings.autoplayGifs = value
-            return settings
-        }).start()
-    }, toggleAutoplayVideos: { value in
-        let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
-            var settings = settings
-            settings.autoplayVideos = value
-            return settings
         }).start()
     }, toggleDownloadInBackground: { value in
         let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in

@@ -236,51 +236,85 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
                     }
                 }
             }
-                        
-            let legacySheetController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: nil)
-            let controller = TGMediaPickerSendActionSheetController(context: legacyController.context, isDark: true, sendButtonFrame: model.interfaceView.doneButtonFrame, canSendSilently: hasSilentPosting, canSchedule: effectiveHasSchedule, reminder: reminder, hasTimer: hasTimer)
-            let dismissImpl = { [weak model] in
-                model?.dismiss(true, false)
-            }
-            controller.send = {
-                completed(item.asset, false, nil, {
-                    dismissImpl()
-                })
-            }
-            controller.sendSilently = {
-                completed(item.asset, true, nil, {
-                    dismissImpl()
-                })
-            }
-            controller.schedule = {
-                presentSchedulePicker(true, { time in
-                    completed(item.asset, false, time, {
-                        dismissImpl()
-                    })
-                })
-            }
-            controller.sendWithTimer = {
-                presentTimerPicker { time in
-                    var items = selectionContext.selectedItems() ?? []
-                    items.append(item.asset as Any)
-                    
-                    for case let item as TGMediaEditableItem in items {
-                        editingContext?.setTimer(time as NSNumber, for: item)
+            
+            let sendWhenOnlineAvailable: Signal<Bool, NoError>
+            if let peer {
+                sendWhenOnlineAvailable = context.account.viewTracker.peerView(peer.id)
+                |> take(1)
+                |> map { peerView -> Bool in
+                    guard let peer = peerViewMainPeer(peerView) else {
+                        return false
                     }
-                    
+                    var sendWhenOnlineAvailable = false
+                    if let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence, case let .present(until) = presence.status {
+                        let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                        if currentTime > until {
+                            sendWhenOnlineAvailable = true
+                        }
+                    }
+                    if peer.id.namespace == Namespaces.Peer.CloudUser && peer.id.id._internalGetInt64Value() == 777000 {
+                        sendWhenOnlineAvailable = false
+                    }
+                    return sendWhenOnlineAvailable
+                }
+            } else {
+                sendWhenOnlineAvailable = .single(false)
+            }
+            
+            let _ = (sendWhenOnlineAvailable
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { sendWhenOnlineAvailable in
+                let legacySheetController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: nil)
+                let sheetController = TGMediaPickerSendActionSheetController(context: legacyController.context, isDark: true, sendButtonFrame: model.interfaceView.doneButtonFrame, canSendSilently: hasSilentPosting, canSendWhenOnline: sendWhenOnlineAvailable, canSchedule: effectiveHasSchedule, reminder: reminder, hasTimer: hasTimer)
+                let dismissImpl = { [weak model] in
+                    model?.dismiss(true, false)
+                    dismissAll()
+                }
+                sheetController.send = {
                     completed(item.asset, false, nil, {
                         dismissImpl()
                     })
                 }
-            }
-            controller.customDismissBlock = { [weak legacySheetController] in
-                legacySheetController?.dismiss()
-            }
-            legacySheetController.bind(controller: controller)
-            present(legacySheetController, nil)
-            
-            let hapticFeedback = HapticFeedback()
-            hapticFeedback.impact()
+                sheetController.sendSilently = {
+                    completed(item.asset, true, nil, {
+                        dismissImpl()
+                    })
+                }
+                sheetController.sendWhenOnline = {
+                    completed(item.asset, false, scheduleWhenOnlineTimestamp, {
+                        dismissImpl()
+                    })
+                }
+                sheetController.schedule = {
+                    presentSchedulePicker(true, { time in
+                        completed(item.asset, false, time, {
+                            dismissImpl()
+                        })
+                    })
+                }
+                sheetController.sendWithTimer = {
+                    presentTimerPicker { time in
+                        var items = selectionContext.selectedItems() ?? []
+                        items.append(item.asset as Any)
+                        
+                        for case let item as TGMediaEditableItem in items {
+                            editingContext?.setTimer(time as NSNumber, for: item)
+                        }
+                        
+                        completed(item.asset, false, nil, {
+                            dismissImpl()
+                        })
+                    }
+                }
+                sheetController.customDismissBlock = { [weak legacySheetController] in
+                    legacySheetController?.dismiss()
+                }
+                legacySheetController.bind(controller: sheetController)
+                present(legacySheetController, nil)
+                
+                let hapticFeedback = HapticFeedback()
+                hapticFeedback.impact()
+            })
         }
     }
     model.interfaceView.setThumbnailSignalForItem { item in

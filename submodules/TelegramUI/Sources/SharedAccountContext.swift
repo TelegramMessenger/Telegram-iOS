@@ -30,6 +30,15 @@ import StickerPackPreviewUI
 import ChatControllerInteraction
 import ChatPresentationInterfaceState
 import StorageUsageScreen
+import DebugSettingsUI
+import MediaPickerUI
+import Photos
+import TextFormat
+import ChatTextLinkEditUI
+import AttachmentTextInputPanelNode
+import ChatEntityKeyboardInputNode
+import HashtagSearchUI
+import PeerInfoStoryGridScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -130,6 +139,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     private var hasOngoingCallDisposable: Disposable?
     
+    public let enablePreloads = Promise<Bool>()
+    public let hasPreloadBlockingContent = Promise<Bool>(false)
+    
     private var accountUserInterfaceInUseContexts: [AccountRecordId: AccountUserInterfaceInUseContext] = [:]
     
     var switchingData: (settingsController: (SettingsController & ViewController)?, chatListController: ChatListController?, chatListBadge: String?) = (nil, nil, nil)
@@ -147,11 +159,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public let currentInAppNotificationSettings: Atomic<InAppNotificationSettings>
     private var inAppNotificationSettingsDisposable: Disposable?
     
-    public let currentAutomaticMediaDownloadSettings: Atomic<MediaAutoDownloadSettings>
+    public var currentAutomaticMediaDownloadSettings: MediaAutoDownloadSettings
     private let _automaticMediaDownloadSettings = Promise<MediaAutoDownloadSettings>()
     public var automaticMediaDownloadSettings: Signal<MediaAutoDownloadSettings, NoError> {
         return self._automaticMediaDownloadSettings.get()
     }
+    
+    public private(set) var energyUsageSettings: EnergyUsageSettings
     
     public let currentAutodownloadSettings: Atomic<AutodownloadSettings>
     private let _autodownloadSettings = Promise<AutodownloadSettings>()
@@ -159,6 +173,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public let currentMediaInputSettings: Atomic<MediaInputSettings>
     private var mediaInputSettingsDisposable: Disposable?
+    
+    public let currentMediaDisplaySettings: Atomic<MediaDisplaySettings>
+    private var mediaDisplaySettingsDisposable: Disposable?
+    
+    public let currentStickerSettings: Atomic<StickerSettings>
+    private var stickerSettingsDisposable: Disposable?
     
     private let automaticMediaDownloadSettingsDisposable = MetaDisposable()
     
@@ -179,6 +199,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private weak var appDelegate: AppDelegate?
     
     private var invalidatedApsToken: Data?
+    
+    private let energyUsageAutomaticDisposable = MetaDisposable()
     
     init(mainWindow: Window1?, sharedContainerPath: String, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, hasInAppPurchases: Bool, rootPath: String, legacyBasePath: String?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, firebaseSecretStream: Signal<[String: String], NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }, appDelegate: AppDelegate?) {
         assert(Queue.mainQueue().isCurrent())
@@ -231,10 +253,18 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         
         self._currentPresentationData = Atomic(value: initialPresentationDataAndSettings.presentationData)
-        self.currentAutomaticMediaDownloadSettings = Atomic(value: initialPresentationDataAndSettings.automaticMediaDownloadSettings)
+        self.currentAutomaticMediaDownloadSettings = initialPresentationDataAndSettings.automaticMediaDownloadSettings
         self.currentAutodownloadSettings = Atomic(value: initialPresentationDataAndSettings.autodownloadSettings)
         self.currentMediaInputSettings = Atomic(value: initialPresentationDataAndSettings.mediaInputSettings)
+        self.currentMediaDisplaySettings = Atomic(value: initialPresentationDataAndSettings.mediaDisplaySettings)
+        self.currentStickerSettings = Atomic(value: initialPresentationDataAndSettings.stickerSettings)
         self.currentInAppNotificationSettings = Atomic(value: initialPresentationDataAndSettings.inAppNotificationSettings)
+        
+        if automaticEnergyUsageShouldBeOnNow(settings: self.currentAutomaticMediaDownloadSettings) {
+            self.energyUsageSettings = EnergyUsageSettings.powerSavingDefault
+        } else {
+            self.energyUsageSettings = self.currentAutomaticMediaDownloadSettings.energyUsageSettings
+        }
         
         let presentationData: Signal<PresentationData, NoError> = .single(initialPresentationDataAndSettings.presentationData)
         |> then(
@@ -345,6 +375,24 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
         })
         
+        self.mediaDisplaySettingsDisposable = (self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.mediaDisplaySettings])
+        |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+            if let strongSelf = self {
+                if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.mediaDisplaySettings]?.get(MediaDisplaySettings.self) {
+                    let _ = strongSelf.currentMediaDisplaySettings.swap(settings)
+                }
+            }
+        })
+        
+        self.stickerSettingsDisposable = (self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings])
+        |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+            if let strongSelf = self {
+                if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings]?.get(StickerSettings.self) {
+                    let _ = strongSelf.currentStickerSettings.swap(settings)
+                }
+            }
+        })
+        
         let immediateExperimentalUISettingsValue = self.immediateExperimentalUISettingsValue
         let _ = immediateExperimentalUISettingsValue.swap(initialPresentationDataAndSettings.experimentalUISettings)
         self.experimentalUISettingsDisposable = (self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.experimentalUISettings])
@@ -364,7 +412,23 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         self.automaticMediaDownloadSettingsDisposable.set(self._automaticMediaDownloadSettings.get().start(next: { [weak self] next in
             if let strongSelf = self {
-                let _ = strongSelf.currentAutomaticMediaDownloadSettings.swap(next)
+                strongSelf.currentAutomaticMediaDownloadSettings = next
+                
+                if automaticEnergyUsageShouldBeOnNow(settings: next) {
+                    strongSelf.energyUsageSettings = EnergyUsageSettings.powerSavingDefault
+                } else {
+                    strongSelf.energyUsageSettings = next.energyUsageSettings
+                }
+                strongSelf.energyUsageAutomaticDisposable.set((automaticEnergyUsageShouldBeOn(settings: next)
+                |> deliverOnMainQueue).start(next: { value in
+                    if let strongSelf = self {
+                        if value {
+                            strongSelf.energyUsageSettings = EnergyUsageSettings.powerSavingDefault
+                        } else {
+                            strongSelf.energyUsageSettings = next.energyUsageSettings
+                        }
+                    }
+                }))
             }
         }))
         
@@ -599,6 +663,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 if hadUpdates {
                     self.activeAccountsValue!.accounts.sort(by: { $0.2 < $1.2 })
                     self.activeAccountsPromise.set(.single(self.activeAccountsValue!))
+                    
+                    self.performAccountSettingsImportIfNecessary()
                 }
                 
                 if self.activeAccountsValue!.primary == nil && self.activeAccountsValue!.currentAuth == nil {
@@ -842,6 +908,20 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             let _ = immediateHasOngoingCallValue.swap(value)
         })
         
+        self.enablePreloads.set(combineLatest(
+            self.hasOngoingCall.get(),
+            self.hasPreloadBlockingContent.get()
+        )
+        |> map { hasOngoingCall, hasPreloadBlockingContent -> Bool in
+            if hasOngoingCall {
+                return false
+            }
+            if hasPreloadBlockingContent {
+                return false
+            }
+            return true
+        })
+        
         let _ = managedCleanupAccounts(networkArguments: networkArguments, accountManager: self.accountManager, rootPath: rootPath, auxiliaryMethods: makeTelegramAccountAuxiliaryMethods(appDelegate: appDelegate), encryptionParameters: encryptionParameters).start()
         
         self.updateNotificationTokensRegistration()
@@ -881,9 +961,41 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.currentAutodownloadSettingsDisposable.dispose()
         self.inAppNotificationSettingsDisposable?.dispose()
         self.mediaInputSettingsDisposable?.dispose()
+        self.mediaDisplaySettingsDisposable?.dispose()
         self.callDisposable?.dispose()
         self.groupCallDisposable?.dispose()
         self.callStateDisposable?.dispose()
+    }
+    
+    private var didPerformAccountSettingsImport = false
+    private func performAccountSettingsImportIfNecessary() {
+        if self.didPerformAccountSettingsImport {
+            return
+        }
+        if let _ = UserDefaults.standard.value(forKey: "didPerformAccountSettingsImport") {
+            self.didPerformAccountSettingsImport = true
+            return
+        }
+        UserDefaults.standard.set(true as NSNumber, forKey: "didPerformAccountSettingsImport")
+        UserDefaults.standard.synchronize()
+        
+        if let primary = self.activeAccountsValue?.primary {
+            let _ = (primary.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: primary.account.peerId))
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                guard let self, case let .user(user) = peer else {
+                    return
+                }
+                if user.isPremium {
+                    let _ = updateMediaDownloadSettingsInteractively(accountManager: self.accountManager, { settings in
+                        var settings = settings
+                        settings.energyUsageSettings.loopEmoji = true
+                        return settings
+                    }).start()
+                }
+            })
+        }
+        
+        self.didPerformAccountSettingsImport = true
     }
     
     private func updateAccountBackupData(account: Account) -> Signal<Never, NoError> {
@@ -1236,6 +1348,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return controller
     }
     
+    public func makeDebugSettingsController(context: AccountContext?) -> ViewController? {
+        let controller = debugController(sharedContext: self, context: context)
+        return controller
+    }
+    
     public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {
         openExternalUrlImpl(context: context, urlContext: urlContext, url: url, forceExternal: forceExternal, presentationData: presentationData, navigationController: navigationController, dismissInput: dismissInput)
     }
@@ -1268,8 +1385,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         guard let navigationController = self.mainWindow?.viewController as? NavigationController else {
             return
         }
-        
-        let controller = storageUsageController(context: context, isModal: true)
+        let controller = StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { category in
+            return storageUsageExceptionsScreen(context: context, category: category)
+        })
         navigationController.pushViewController(controller)
     }
     
@@ -1285,7 +1403,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         if !found {
             let controllerParams = LocationViewParams(sendLiveLocation: { location in
-                //let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: location), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
+                //let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: location), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil)
 //                params.enqueueMessage(outMessage)
             }, stopLiveLocation: { messageId in
                 if let messageId = messageId {
@@ -1300,7 +1418,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 guard let message = message else {
                     return
                 }
-                let controller = LocationViewController(context: context, subject: message._asMessage(), params: controllerParams)
+                let controller = LocationViewController(context: context, subject: message, params: controllerParams)
                 controller.navigationPresentation = .modal
                 navigationController.pushViewController(controller)
             })
@@ -1395,9 +1513,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 tapMessage?(message)
         }, clickThroughMessage: {
             clickThroughMessage?()
-        }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in
+        }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _, _ in
             return false
-        }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+        }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in
         }, presentControllerInCurrent: { _, _ in
         }, navigationController: {
@@ -1453,8 +1571,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
         }, scrollToMessageId: { _ in
+        }, navigateToStory: { _, _ in
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
-        pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false), presentationContext: ChatPresentationContext(context: context, backgroundNode: backgroundNode as? WallpaperBackgroundNode))
+        pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: backgroundNode as? WallpaperBackgroundNode))
         
         var entryAttributes = ChatMessageEntryAttributes()
         entryAttributes.isCentered = isCentered
@@ -1533,7 +1652,120 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         })
     }
     
-    public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController {
+    public func makeAttachmentFileController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, bannedSendMedia: (Int32, Bool)?, presentGallery: @escaping () -> Void, presentFiles: @escaping () -> Void, send: @escaping (AnyMediaReference) -> Void) -> AttachmentFileController {
+        return makeAttachmentFileControllerImpl(context: context, updatedPresentationData: updatedPresentationData, bannedSendMedia: bannedSendMedia, presentGallery: presentGallery, presentFiles: presentFiles, send: send)
+    }
+    
+    public func makeGalleryCaptionPanelView(context: AccountContext, chatLocation: ChatLocation, customEmojiAvailable: Bool, present: @escaping (ViewController) -> Void, presentInGlobalOverlay: @escaping (ViewController) -> Void) -> NSObject? {
+        var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+        
+        var presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: .builtin(WallpaperSettings()), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: presentationData.chatFontSize, bubbleCorners: presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: .standard(previewing: false), chatLocation: chatLocation, subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil)
+        
+        var updateChatPresentationInterfaceStateImpl: (((ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) -> Void)?
+        var ensureFocusedImpl: (() -> Void)?
+        
+        let interfaceInteraction = ChatPanelInterfaceInteraction(updateTextInputStateAndMode: { f in
+            updateChatPresentationInterfaceStateImpl?({
+                let (updatedState, updatedMode) = f($0.interfaceState.effectiveInputState, $0.inputMode)
+                return $0.updatedInterfaceState { interfaceState in
+                    return interfaceState.withUpdatedEffectiveInputState(updatedState)
+                }.updatedInputMode({ _ in updatedMode })
+            })
+        }, updateInputModeAndDismissedButtonKeyboardMessageId: { f in
+            updateChatPresentationInterfaceStateImpl?({
+                let (updatedInputMode, updatedClosedButtonKeyboardMessageId) = f($0)
+                return $0.updatedInputMode({ _ in return updatedInputMode }).updatedInterfaceState({
+                    $0.withUpdatedMessageActionsState({ value in
+                        var value = value
+                        value.closedButtonKeyboardMessageId = updatedClosedButtonKeyboardMessageId
+                        return value
+                    })
+                })
+            })
+        }, openLinkEditing: {
+            var selectionRange: Range<Int>?
+            var text: NSAttributedString?
+            var inputMode: ChatInputMode?
+            updateChatPresentationInterfaceStateImpl?({ state in
+                selectionRange = state.interfaceState.effectiveInputState.selectionRange
+                if let selectionRange = selectionRange {
+                    text = state.interfaceState.effectiveInputState.inputText.attributedSubstring(from: NSRange(location: selectionRange.startIndex, length: selectionRange.count))
+                }
+                inputMode = state.inputMode
+                return state
+            })
+            
+            var link: String?
+            if let text {
+                text.enumerateAttributes(in: NSMakeRange(0, text.length)) { attributes, _, _ in
+                    if let linkAttribute = attributes[ChatTextInputAttributes.textUrl] as? ChatTextInputTextUrlAttribute {
+                        link = linkAttribute.url
+                    }
+                }
+            }
+            
+            let controller = chatTextLinkEditController(sharedContext: context.sharedContext, updatedPresentationData: (presentationData, .never()), account: context.account, text: text?.string ?? "", link: link, apply: { link in
+                if let inputMode = inputMode, let selectionRange = selectionRange {
+                    if let link = link {
+                        updateChatPresentationInterfaceStateImpl?({
+                            return $0.updatedInterfaceState({
+                                $0.withUpdatedEffectiveInputState(chatTextInputAddLinkAttribute($0.effectiveInputState, selectionRange: selectionRange, url: link))
+                            })
+                        })
+                    }
+                    ensureFocusedImpl?()
+                    updateChatPresentationInterfaceStateImpl?({
+                        return $0.updatedInputMode({ _ in return inputMode }).updatedInterfaceState({
+                            $0.withUpdatedEffectiveInputState(ChatTextInputState(inputText: $0.effectiveInputState.inputText, selectionRange: selectionRange.endIndex ..< selectionRange.endIndex))
+                        })
+                    })
+                }
+            })
+            present(controller)
+        })
+        
+        let inputPanelNode = AttachmentTextInputPanelNode(context: context, presentationInterfaceState: presentationInterfaceState, isCaption: true, presentController: { c in
+            presentInGlobalOverlay(c)
+        }, makeEntityInputView: {
+            return EntityInputView(context: context, isDark: true, areCustomEmojiEnabled: customEmojiAvailable)
+        })
+        inputPanelNode.interfaceInteraction = interfaceInteraction
+        inputPanelNode.effectivePresentationInterfaceState = {
+            return presentationInterfaceState
+        }
+        
+        updateChatPresentationInterfaceStateImpl = { [weak inputPanelNode] f in
+            let updatedPresentationInterfaceState = f(presentationInterfaceState)
+            let updateInputTextState = presentationInterfaceState.interfaceState.effectiveInputState != updatedPresentationInterfaceState.interfaceState.effectiveInputState
+            
+            presentationInterfaceState = updatedPresentationInterfaceState
+            
+            if let inputPanelNode = inputPanelNode, updateInputTextState {
+                inputPanelNode.updateInputTextState(updatedPresentationInterfaceState.interfaceState.effectiveInputState, animated: true)
+            }
+        }
+        
+        ensureFocusedImpl =  { [weak inputPanelNode] in
+            inputPanelNode?.ensureFocused()
+        }
+        
+        return inputPanelNode
+    }
+    
+    public func makeHashtagSearchController(context: AccountContext, peer: EnginePeer?, query: String, all: Bool) -> ViewController {
+        return HashtagSearchController(context: context, peer: peer, query: query, all: all)
+    }
+    
+    public func makeMyStoriesController(context: AccountContext, isArchive: Bool) -> ViewController {
+        return PeerInfoStoryGridScreen(context: context, peerId: context.account.peerId, scope: isArchive ? .archive : .saved)
+    }
+    
+    public func makeArchiveSettingsController(context: AccountContext) -> ViewController {
+        return archiveSettingsController(context: context)
+    }
+    
+    public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool, dismissed: (() -> Void)?) -> ViewController {
         let mappedSource: PremiumSource
         switch source {
         case .settings:
@@ -1578,8 +1810,22 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .fasterDownload
         case .translation:
             mappedSource = .translation
+        case .stories:
+            mappedSource = .stories
+        case .storiesDownload:
+            mappedSource = .storiesDownload
+        case .storiesStealthMode:
+            mappedSource = .storiesStealthMode
+        case .storiesPermanentViews:
+            mappedSource = .storiesPermanentViews
+        case .storiesFormatting:
+            mappedSource = .storiesFormatting
+        case .storiesExpirationDurations:
+            mappedSource = .storiesExpirationDurations
         }
-        return PremiumIntroScreen(context: context, source: mappedSource)
+        let controller = PremiumIntroScreen(context: context, source: mappedSource, forceDark: forceDark)
+        controller.wasDismissed = dismissed
+        return controller
     }
     
     public func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, action: @escaping () -> Void) -> ViewController {
@@ -1613,20 +1859,59 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .emojiStatus
         case .translation:
             mappedSubject = .translation
+        case .stories:
+            mappedSubject = .stories
         }
         return PremiumDemoScreen(context: context, subject: mappedSubject, action: action)
     }
     
+    public func makePremiumLimitController(context: AccountContext, subject: PremiumLimitSubject, count: Int32, forceDark: Bool, cancel: @escaping () -> Void, action: @escaping () -> Void) -> ViewController {
+        let mappedSubject: PremiumLimitScreen.Subject
+        switch subject {
+        case .folders:
+            mappedSubject = .folders
+        case .chatsPerFolder:
+            mappedSubject = .chatsPerFolder
+        case .pins:
+            mappedSubject = .pins
+        case .files:
+            mappedSubject = .files
+        case .accounts:
+            mappedSubject = .accounts
+        case .linksPerSharedFolder:
+            mappedSubject = .linksPerSharedFolder
+        case .membershipInSharedFolders:
+            mappedSubject = .membershipInSharedFolders
+        case .channels:
+            mappedSubject = .channels
+        case .expiringStories:
+            mappedSubject = .expiringStories
+        case .storiesWeekly:
+            mappedSubject = .storiesWeekly
+        case .storiesMonthly:
+            mappedSubject = .storiesMonthly
+        }
+        return PremiumLimitScreen(context: context, subject: mappedSubject, count: count, forceDark: forceDark, cancel: cancel, action: action)
+    }
+    
     public func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController {
         return StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: mainStickerPack, stickerPacks: stickerPacks, loadedStickerPacks: loadedStickerPacks, parentNavigationController: parentNavigationController, sendSticker: sendSticker)
+    }
+    
+    public func makeMediaPickerScreen(context: AccountContext, hasSearch: Bool, completion: @escaping (Any) -> Void) -> ViewController {
+        return mediaPickerController(context: context, hasSearch: hasSearch, completion: completion)
+    }
+    
+    public func makeStoryMediaPickerScreen(context: AccountContext, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, dismissed: @escaping () -> Void, groupsPresented: @escaping () -> Void) -> ViewController {
+        return storyMediaPickerController(context: context, getSourceRect: getSourceRect, completion: completion, dismissed: dismissed, groupsPresented: groupsPresented)
     }
         
     public func makeProxySettingsController(sharedContext: SharedAccountContext, account: UnauthorizedAccount) -> ViewController {
         return proxySettingsController(accountManager: sharedContext.accountManager, postbox: account.postbox, network: account.network, mode: .modal, presentationData: sharedContext.currentPresentationData.with { $0 }, updatedPresentationData: sharedContext.presentationData)
     }
     
-    public func makeInstalledStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode) -> ViewController {
-        return installedStickerPacksController(context: context, mode: mode)
+    public func makeInstalledStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode, forceTheme: PresentationTheme?) -> ViewController {
+        return installedStickerPacksController(context: context, mode: mode, forceTheme: forceTheme)
     }
 }
 

@@ -9,182 +9,7 @@ import ChatInterfaceState
 import ChatPresentationInterfaceState
 import SwiftSignalKit
 import TextFormat
-
-struct PossibleContextQueryTypes: OptionSet {
-    var rawValue: Int32
-    
-    init() {
-        self.rawValue = 0
-    }
-    
-    init(rawValue: Int32) {
-        self.rawValue = rawValue
-    }
-    
-    static let emoji = PossibleContextQueryTypes(rawValue: (1 << 0))
-    static let hashtag = PossibleContextQueryTypes(rawValue: (1 << 1))
-    static let mention = PossibleContextQueryTypes(rawValue: (1 << 2))
-    static let command = PossibleContextQueryTypes(rawValue: (1 << 3))
-    static let contextRequest = PossibleContextQueryTypes(rawValue: (1 << 4))
-    static let emojiSearch = PossibleContextQueryTypes(rawValue: (1 << 5))
-}
-
-private func makeScalar(_ c: Character) -> Character {
-    return c
-}
-
-private let spaceScalar = " " as UnicodeScalar
-private let newlineScalar = "\n" as UnicodeScalar
-private let hashScalar = "#" as UnicodeScalar
-private let atScalar = "@" as UnicodeScalar
-private let slashScalar = "/" as UnicodeScalar
-private let colonScalar = ":" as UnicodeScalar
-private let alphanumerics = CharacterSet.alphanumerics
-
-private func scalarCanPrependQueryControl(_ c: UnicodeScalar?) -> Bool {
-    if let c = c {
-        if c == " " || c == "\n" || c == "." || c == "," {
-            return true
-        }
-        return false
-    } else {
-        return true
-    }
-}
-
-func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) -> [(NSRange, PossibleContextQueryTypes, NSRange?)] {
-    if inputState.selectionRange.count != 0 {
-        return []
-    }
-    
-    let inputText = inputState.inputText
-    let inputString: NSString = inputText.string as NSString
-    var results: [(NSRange, PossibleContextQueryTypes, NSRange?)] = []
-    let inputLength = inputString.length
-    
-    if inputLength != 0 {
-        if inputString.hasPrefix("@") && inputLength != 1 {
-            let startIndex = 1
-            var index = startIndex
-            var contextAddressRange: NSRange?
-            
-            while true {
-                if index == inputLength {
-                    break
-                }
-                if let c = UnicodeScalar(inputString.character(at: index)) {
-                    if c == " " {
-                        if index != startIndex {
-                            contextAddressRange = NSRange(location: startIndex, length: index - startIndex)
-                            index += 1
-                        }
-                        break
-                    } else {
-                        if !((c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || (c >= "0" && c <= "9") || c == "_") {
-                            break
-                        }
-                    }
-                    
-                    if index == inputLength {
-                        break
-                    } else {
-                        index += 1
-                    }
-                } else {
-                    index += 1
-                }
-            }
-            
-            if let contextAddressRange = contextAddressRange {
-                results.append((contextAddressRange, [.contextRequest], NSRange(location: index, length: inputLength - index)))
-            }
-        }
-        
-        let maxIndex = min(inputState.selectionRange.lowerBound, inputLength)
-        if maxIndex == 0 {
-            return results
-        }
-        var index = maxIndex - 1
-        
-        var possibleQueryRange: NSRange?
-        
-        let string = (inputString as String)
-        let trimmedString = string.trimmingTrailingSpaces()
-        if string.count < 3, trimmedString.isSingleEmoji {
-            if inputText.attribute(ChatTextInputAttributes.customEmoji, at: 0, effectiveRange: nil) == nil {
-                return [(NSRange(location: 0, length: inputString.length - (string.count - trimmedString.count)), [.emoji], nil)]
-            }
-        } else {
-            /*let activeString = inputText.attributedSubstring(from: NSRange(location: 0, length: inputState.selectionRange.upperBound))
-            if let lastCharacter = activeString.string.last, String(lastCharacter).isSingleEmoji {
-                let matchLength = (String(lastCharacter) as NSString).length
-                
-                if activeString.attribute(ChatTextInputAttributes.customEmoji, at: activeString.length - matchLength, effectiveRange: nil) == nil {
-                    return [(NSRange(location: inputState.selectionRange.upperBound - matchLength, length: matchLength), [.emojiSearch], nil)]
-                }
-            }*/
-        }
-        
-        var possibleTypes = PossibleContextQueryTypes([.command, .mention, .hashtag, .emojiSearch])
-        var definedType = false
-        
-        while true {
-            var previousC: UnicodeScalar?
-            if index != 0 {
-                previousC = UnicodeScalar(inputString.character(at: index - 1))
-            }
-            if let c = UnicodeScalar(inputString.character(at: index)) {
-                if c == spaceScalar || c == newlineScalar {
-                    possibleTypes = []
-                } else if c == hashScalar {
-                    if scalarCanPrependQueryControl(previousC) {
-                        possibleTypes = possibleTypes.intersection([.hashtag])
-                        definedType = true
-                        index += 1
-                        possibleQueryRange = NSRange(location: index, length: maxIndex - index)
-                    }
-                    break
-                } else if c == atScalar {
-                    if scalarCanPrependQueryControl(previousC) {
-                        possibleTypes = possibleTypes.intersection([.mention])
-                        definedType = true
-                        index += 1
-                        possibleQueryRange = NSRange(location: index, length: maxIndex - index)
-                    }
-                    break
-                    } else if c == slashScalar {
-                        if scalarCanPrependQueryControl(previousC) {
-                        possibleTypes = possibleTypes.intersection([.command])
-                        definedType = true
-                        index += 1
-                        possibleQueryRange = NSRange(location: index, length: maxIndex - index)
-                    }
-                    break
-                } else if c == colonScalar {
-                    if scalarCanPrependQueryControl(previousC) {
-                        possibleTypes = possibleTypes.intersection([.emojiSearch])
-                        definedType = true
-                        index += 1
-                        possibleQueryRange = NSRange(location: index, length: maxIndex - index)
-                    }
-                    break
-                }
-            }
-            
-            if index == 0 {
-                break
-            } else {
-                index -= 1
-                possibleQueryRange = NSRange(location: index, length: maxIndex - index)
-            }
-        }
-        
-        if let possibleQueryRange = possibleQueryRange, definedType && !possibleTypes.isEmpty {
-            results.append((possibleQueryRange, possibleTypes, nil))
-        }
-    }
-    return results
-}
+import ChatContextQuery
 
 func serviceTasksForChatPresentationIntefaceState(context: AccountContext, chatPresentationInterfaceState: ChatPresentationInterfaceState, updateState: @escaping ((ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) -> Void) -> [AnyHashable: () -> Disposable] {
     var missingEmoji = Set<Int64>()
@@ -283,6 +108,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
     var canSendTextMessages = true
     
     var accessoryItems: [ChatTextInputAccessoryItem] = []
+    
     if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
         var extendedSearchLayout = false
         loop: for (_, result) in chatPresentationInterfaceState.inputQueryResults {
@@ -334,6 +160,19 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                 return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
             } else {
                 var accessoryItems: [ChatTextInputAccessoryItem] = []
+                let isTextEmpty = chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0
+                let hasForward = chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil
+                
+                
+                if case .scheduledMessages = chatPresentationInterfaceState.subject {
+                } else {
+                    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+                    let giftIsEnabled = !premiumConfiguration.isPremiumDisabled && premiumConfiguration.showPremiumGiftInAttachMenu && premiumConfiguration.showPremiumGiftInTextField
+                    if isTextEmpty, giftIsEnabled, let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, !peer.isDeleted && peer.botInfo == nil && !peer.flags.contains(.isSupport) && !peer.isPremium && !chatPresentationInterfaceState.premiumGiftOptions.isEmpty && chatPresentationInterfaceState.suggestPremiumGift {
+                        accessoryItems.append(.gift)
+                    }
+                }
+                
                 var extendedSearchLayout = false
                 loop: for (_, result) in chatPresentationInterfaceState.inputQueryResults {
                     if case let .contextRequestResult(peer, _) = result, peer != nil {
@@ -351,50 +190,47 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                         }
                     }
                 }
-                
-                let isTextEmpty = chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0
-                
-                if chatPresentationInterfaceState.interfaceState.forwardMessageIds == nil {
-                    if isTextEmpty && chatPresentationInterfaceState.hasScheduledMessages {
-                        accessoryItems.append(.scheduledMessages)
+                   
+                if isTextEmpty && chatPresentationInterfaceState.hasScheduledMessages && !hasForward {
+                    accessoryItems.append(.scheduledMessages)
+                }
+                    
+                var stickersEnabled = true
+                var stickersAreEmoji = !isTextEmpty
+                if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
+                    if isTextEmpty, case .broadcast = peer.info, canSendMessagesToPeer(peer) {
+                        accessoryItems.append(.silentPost(chatPresentationInterfaceState.interfaceState.silentPosting))
                     }
-                    
-                    var stickersEnabled = true
-                    
-                    let stickersAreEmoji = !isTextEmpty
-                    
-                    if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
-                        if isTextEmpty, case .broadcast = peer.info, canSendMessagesToPeer(peer) {
-                            accessoryItems.append(.silentPost(chatPresentationInterfaceState.interfaceState.silentPosting))
-                        }
-                        if peer.hasBannedPermission(.banSendStickers) != nil {
-                            stickersEnabled = false
-                        }
-                    } else if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramGroup {
-                        if peer.hasBannedPermission(.banSendStickers) {
-                            stickersEnabled = false
-                        }
+                    if peer.hasBannedPermission(.banSendStickers) != nil {
+                        stickersEnabled = false
                     }
-                    if isTextEmpty && chatPresentationInterfaceState.hasBots && chatPresentationInterfaceState.hasBotCommands {
-                        accessoryItems.append(.commands)
-                    }
-                    
-                    if !canSendTextMessages {
-                        if stickersEnabled && !stickersAreEmoji {
-                            accessoryItems.append(.input(isEnabled: true, inputMode: .stickers))
-                        }
-                    } else {
-                        if stickersEnabled {
-                            accessoryItems.append(.input(isEnabled: true, inputMode: stickersAreEmoji ? .emoji : .stickers))
-                        } else {
-                            accessoryItems.append(.input(isEnabled: true, inputMode: .emoji))
-                        }
-                    }
-                    
-                    if isTextEmpty, let message = chatPresentationInterfaceState.keyboardButtonsMessage, let _ = message.visibleButtonKeyboardMarkup, chatPresentationInterfaceState.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId != message.id {
-                        accessoryItems.append(.botInput(isEnabled: true, inputMode: .bot))
+                } else if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramGroup {
+                    if peer.hasBannedPermission(.banSendStickers) {
+                        stickersEnabled = false
                     }
                 }
+                
+                if isTextEmpty && chatPresentationInterfaceState.hasBots && chatPresentationInterfaceState.hasBotCommands && !hasForward {
+                    accessoryItems.append(.commands)
+                }
+                
+                if !canSendTextMessages {
+                    if stickersEnabled && !stickersAreEmoji && !hasForward {
+                        accessoryItems.append(.input(isEnabled: true, inputMode: .stickers))
+                    }
+                } else {
+                    stickersAreEmoji = stickersAreEmoji || hasForward
+                    if stickersEnabled {
+                        accessoryItems.append(.input(isEnabled: true, inputMode: stickersAreEmoji ? .emoji : .stickers))
+                    } else {
+                        accessoryItems.append(.input(isEnabled: true, inputMode: .emoji))
+                    }
+                }
+                
+                if isTextEmpty, let message = chatPresentationInterfaceState.keyboardButtonsMessage, let _ = message.visibleButtonKeyboardMarkup, chatPresentationInterfaceState.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId != message.id {
+                    accessoryItems.append(.botInput(isEnabled: true, inputMode: .bot))
+                }
+                
                 return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
             }
     }

@@ -27,10 +27,18 @@ class ChatUnreadItem: ListViewItem {
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ChatUnreadItemNode()
-            node.layoutForParams(params, item: self, previousItem: previousItem, nextItem: nextItem)
+            
+            let dateAtBottom = !chatItemsHaveCommonDateHeader(self, nextItem)
+            let (layout, apply) = node.asyncLayout()(self, params, dateAtBottom)
+            
+            node.contentSize = layout.contentSize
+            node.insets = layout.insets
+            
             Queue.mainQueue().async {
                 completion(node, {
-                    return (nil, { _ in })
+                    return (nil, { _ in
+                        apply()
+                    })
                 })
             }
         }

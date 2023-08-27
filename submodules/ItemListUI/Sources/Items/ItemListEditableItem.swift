@@ -64,6 +64,7 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerD
     private var leftRevealNode: ItemListRevealOptionsNode?
     private var rightRevealNode: ItemListRevealOptionsNode?
     private var revealOptions: (left: [ItemListRevealOption], right: [ItemListRevealOption]) = ([], [])
+    private var enableAnimations: Bool = true
     
     private var initialRevealOffset: CGFloat = 0.0
     public private(set) var revealOffset: CGFloat = 0.0
@@ -117,13 +118,14 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerD
         }
     }
     
-    open func setRevealOptions(_ options: (left: [ItemListRevealOption], right: [ItemListRevealOption])) {
+    open func setRevealOptions(_ options: (left: [ItemListRevealOption], right: [ItemListRevealOption]), enableAnimations: Bool = true) {
         if self.revealOptions == options {
             return
         }
         let previousOptions = self.revealOptions
         let wasEmpty = self.revealOptions.left.isEmpty && self.revealOptions.right.isEmpty
         self.revealOptions = options
+        self.enableAnimations = enableAnimations
         let isEmpty = options.left.isEmpty && options.right.isEmpty
         if options.left.isEmpty {
             if let _ = self.leftRevealNode {
@@ -329,7 +331,7 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerD
             }, tapticAction: { [weak self] in
                 self?.hapticImpact()
             })
-            revealNode.setOptions(self.revealOptions.left, isLeft: true)
+            revealNode.setOptions(self.revealOptions.left, isLeft: true, enableAnimations: self.enableAnimations)
             self.leftRevealNode = revealNode
             
             if let (size, leftInset, _) = self.validLayout {
@@ -351,7 +353,7 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerD
             }, tapticAction: { [weak self] in
                 self?.hapticImpact()
             })
-            revealNode.setOptions(self.revealOptions.right, isLeft: false)
+            revealNode.setOptions(self.revealOptions.right, isLeft: false, enableAnimations: self.enableAnimations)
             self.rightRevealNode = revealNode
             
             if let (size, _, rightInset) = self.validLayout {

@@ -66,8 +66,9 @@ public struct ShareRootControllerInitializationData {
     public let encryptionParameters: (Data, Data)
     public let appVersion: String
     public let bundleData: Data?
+    public let useBetaFeatures: Bool
     
-    public init(appBundleId: String, appBuildType: TelegramAppBuildType, appGroupPath: String, apiId: Int32, apiHash: String, languagesCategory: String, encryptionParameters: (Data, Data), appVersion: String, bundleData: Data?) {
+    public init(appBundleId: String, appBuildType: TelegramAppBuildType, appGroupPath: String, apiId: Int32, apiHash: String, languagesCategory: String, encryptionParameters: (Data, Data), appVersion: String, bundleData: Data?, useBetaFeatures: Bool) {
         self.appBundleId = appBundleId
         self.appBuildType = appBuildType
         self.appGroupPath = appGroupPath
@@ -77,6 +78,7 @@ public struct ShareRootControllerInitializationData {
         self.encryptionParameters = encryptionParameters
         self.appVersion = appVersion
         self.bundleData = bundleData
+        self.useBetaFeatures = useBetaFeatures
     }
 }
 
@@ -114,7 +116,6 @@ public class ShareRootControllerImpl {
     private var currentShareController: ShareController?
     private var currentPasscodeController: ViewController?
     
-    private var shouldBeMaster = Promise<Bool>()
     private let disposable = MetaDisposable()
     private var observer1: AnyObject?
     private var observer2: AnyObject?
@@ -128,7 +129,6 @@ public class ShareRootControllerImpl {
     
     deinit {
         self.disposable.dispose()
-        self.shouldBeMaster.set(.single(false))
         if let observer = self.observer1 {
             NotificationCenter.default.removeObserver(observer)
         }
@@ -239,7 +239,7 @@ public class ShareRootControllerImpl {
                     return nil
                 })
                 
-                let sharedContext = SharedAccountContextImpl(mainWindow: nil, sharedContainerPath: self.initializationData.appGroupPath, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil), hasInAppPurchases: false, rootPath: rootPath, legacyBasePath: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), firebaseSecretStream: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in }, appDelegate: nil)
+                let sharedContext = SharedAccountContextImpl(mainWindow: nil, sharedContainerPath: self.initializationData.appGroupPath, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), deviceModelName: nil, useBetaFeatures: self.initializationData.useBetaFeatures, isICloudEnabled: false), hasInAppPurchases: false, rootPath: rootPath, legacyBasePath: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), firebaseSecretStream: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in }, appDelegate: nil)
                 presentationDataPromise.set(sharedContext.presentationData)
                 internalContext = InternalContext(sharedContext: sharedContext)
                 globalInternalContext = internalContext
@@ -659,13 +659,13 @@ public class ShareRootControllerImpl {
                                             |> deliverOnMainQueue).start(next: { parseInfo in
                                                 switch parseInfo {
                                                 case let .group(groupTitle):
-                                                    var attemptSelectionImpl: ((Peer) -> Void)?
+                                                    var attemptSelectionImpl: ((EnginePeer) -> Void)?
                                                     var createNewGroupImpl: (() -> Void)?
                                                     let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyGroups, .onlyManageable, .excludeDisabled, .doNotSearchMessages], hasContactSelector: false, hasGlobalSearch: false, title: presentationData.strings.ChatImport_Title, attemptSelection: { peer, _ in
                                                         attemptSelectionImpl?(peer)
                                                     }, createNewGroup: {
                                                         createNewGroupImpl?()
-                                                    }, pretendPresentedInModal: true, selectForumThreads: true))
+                                                    }, pretendPresentedInModal: true, selectForumThreads: false))
                                                     
                                                     controller.customDismiss = {
                                                         self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
@@ -686,12 +686,12 @@ public class ShareRootControllerImpl {
                                                     
                                                     attemptSelectionImpl = { peer in
                                                         var errorText: String?
-                                                        if let channel = peer as? TelegramChannel {
+                                                        if case let .channel(channel) = peer {
                                                             if channel.hasPermission(.changeInfo), (channel.flags.contains(.isCreator) || channel.adminRights != nil) {
                                                             } else {
                                                                 errorText = presentationData.strings.ChatImport_SelectionErrorNotAdmin
                                                             }
-                                                        } else if let group = peer as? TelegramGroup {
+                                                        } else if case let .legacyGroup(group) = peer {
                                                             switch group.role {
                                                             case .creator:
                                                                 break
@@ -716,19 +716,19 @@ public class ShareRootControllerImpl {
                                                                 let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
                                                                 
                                                                 var errorText: String?
-                                                                if let channel = peer as? TelegramChannel {
+                                                                if case let .channel(channel) = peer {
                                                                     if channel.hasPermission(.changeInfo), (channel.flags.contains(.isCreator) || channel.adminRights != nil) {
                                                                     } else {
                                                                         errorText = presentationData.strings.ChatImport_SelectionErrorNotAdmin
                                                                     }
-                                                                } else if let group = peer as? TelegramGroup {
+                                                                } else if case let .legacyGroup(group) = peer {
                                                                     switch group.role {
                                                                     case .creator:
                                                                         break
                                                                     default:
                                                                         errorText = presentationData.strings.ChatImport_SelectionErrorNotAdmin
                                                                     }
-                                                                } else if let _ = peer as? TelegramUser {
+                                                                } else if case .user = peer {
                                                                 } else {
                                                                     errorText = presentationData.strings.ChatImport_SelectionErrorGroupGeneric
                                                                 }
@@ -836,7 +836,7 @@ public class ShareRootControllerImpl {
                                                 case let .privateChat(title):
                                                     let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
                                                     
-                                                    var attemptSelectionImpl: ((Peer) -> Void)?
+                                                    var attemptSelectionImpl: ((EnginePeer) -> Void)?
                                                     let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyPrivateChats, .excludeDisabled, .doNotSearchMessages, .excludeSecretChats], hasChatListSelector: false, hasContactSelector: true, hasGlobalSearch: false, title: presentationData.strings.ChatImport_Title, attemptSelection: { peer, _ in
                                                         attemptSelectionImpl?(peer)
                                                     }, pretendPresentedInModal: true, selectForumThreads: true))
@@ -869,9 +869,9 @@ public class ShareRootControllerImpl {
                                                             switch result {
                                                             case .allowed:
                                                                 if let title = title {
-                                                                    text = presentationData.strings.ChatImport_SelectionConfirmationUserWithTitle(title, EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                                                                    text = presentationData.strings.ChatImport_SelectionConfirmationUserWithTitle(title, peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                                                 } else {
-                                                                    text = presentationData.strings.ChatImport_SelectionConfirmationUserWithoutTitle(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                                                                    text = presentationData.strings.ChatImport_SelectionConfirmationUserWithoutTitle(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                                                 }
                                                             case let .alert(textValue):
                                                                 text = textValue
@@ -908,7 +908,7 @@ public class ShareRootControllerImpl {
                                                     
                                                     navigationController.viewControllers = [controller]
                                                 case let .unknown(peerTitle):
-                                                    var attemptSelectionImpl: ((Peer) -> Void)?
+                                                    var attemptSelectionImpl: ((EnginePeer) -> Void)?
                                                     var createNewGroupImpl: (() -> Void)?
                                                     let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.excludeDisabled, .doNotSearchMessages], hasContactSelector: true, hasGlobalSearch: false, title: presentationData.strings.ChatImport_Title, attemptSelection: { peer, _ in
                                                         attemptSelectionImpl?(peer)
@@ -926,7 +926,7 @@ public class ShareRootControllerImpl {
                                                     
                                                     controller.navigationPresentation = .default
                                                     
-                                                    let beginWithPeer: (PeerId) -> Void = { peerId in
+                                                    let beginWithPeer: (EnginePeer.Id) -> Void = { peerId in
                                                         navigationController.view.endEditing(true)
                                                         navigationController.pushViewController(ChatImportActivityScreen(context: context, cancel: {
                                                             self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
@@ -942,19 +942,19 @@ public class ShareRootControllerImpl {
                                                             let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
                                                             
                                                             var errorText: String?
-                                                            if let channel = peer as? TelegramChannel {
+                                                            if case let .channel(channel) = peer {
                                                                 if channel.hasPermission(.changeInfo), (channel.flags.contains(.isCreator) || channel.adminRights != nil) {
                                                                 } else {
                                                                     errorText = presentationData.strings.ChatImport_SelectionErrorNotAdmin
                                                                 }
-                                                            } else if let group = peer as? TelegramGroup {
+                                                            } else if case let .legacyGroup(group) = peer {
                                                                 switch group.role {
                                                                 case .creator:
                                                                     break
                                                                 default:
                                                                     errorText = presentationData.strings.ChatImport_SelectionErrorNotAdmin
                                                                 }
-                                                            } else if let _ = peer as? TelegramUser {
+                                                            } else if case .user = peer {
                                                             } else {
                                                                 errorText = presentationData.strings.ChatImport_SelectionErrorGroupGeneric
                                                             }
@@ -966,14 +966,14 @@ public class ShareRootControllerImpl {
                                                                 strongSelf.mainWindow?.present(controller, on: .root)
                                                             } else {
                                                                 let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
-                                                                if let _ = peer as? TelegramUser {
+                                                                if case .user = peer {
                                                                     let text: String
                                                                     switch result {
                                                                     case .allowed:
                                                                         if let title = peerTitle {
-                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationUserWithTitle(title, EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationUserWithTitle(title, peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                                                         } else {
-                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationUserWithoutTitle(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationUserWithoutTitle(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                                                         }
                                                                     case let .alert(textValue):
                                                                         text = textValue

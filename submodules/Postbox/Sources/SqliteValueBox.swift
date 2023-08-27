@@ -565,7 +565,7 @@ public final class SqliteValueBox: ValueBox {
         let allIsOk = Atomic<Bool>(value: false)
         let removeDatabaseOnError = self.removeDatabaseOnError
         let databasePath = self.databasePath
-        DispatchQueue.global().asyncAfter(deadline: .now() + 5.0, execute: {
+        DispatchQueue.global().asyncAfter(deadline: .now() + 15.0, execute: {
             if allIsOk.with({ $0 }) == false {
                 postboxLog("Timeout reached, discarding database")
                 if removeDatabaseOnError {

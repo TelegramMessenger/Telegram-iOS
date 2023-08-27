@@ -5,6 +5,20 @@ import TelegramCore
 
 private let phoneNumberUtil = NBPhoneNumberUtil()
 
+public func cleanPhoneNumber(_ text: String, removePlus: Bool = false) -> String {
+    var result = ""
+    for c in text {
+        if c == "+" && !removePlus {
+            if result.isEmpty {
+                result += String(c)
+            }
+        } else if c >= "0" && c <= "9" {
+            result += String(c)
+        }
+    }
+    return result
+}
+
 public func formatPhoneNumber(_ string: String) -> String {
     do {
         let number = try phoneNumberUtil.parse("+" + string, defaultRegion: nil)

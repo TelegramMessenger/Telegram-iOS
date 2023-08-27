@@ -219,6 +219,11 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             if let navigationController = navigationController {
                                 context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), attachBotStart: attachBotStart))
                             }
+                        case let .withBotApp(botAppStart):
+                            context.sharedContext.applicationBindings.dismissNativeController()
+                            if let navigationController = navigationController {
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), botAppStart: botAppStart))
+                            }
                         default:
                             break
                     }
@@ -687,6 +692,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         var startAttach: String?
                         var choose: String?
                         var threadId: Int64?
+                        var appName: String?
+                        var startApp: String?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
@@ -714,6 +721,10 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                         choose = value
                                     } else if queryItem.name == "thread" {
                                         threadId = Int64(value)
+                                    } else if queryItem.name == "appname" {
+                                        appName = value
+                                    } else if queryItem.name == "startapp" {
+                                        startApp = value
                                     }
                                 } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
                                     voiceChat = ""
@@ -731,13 +742,19 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             convertedUrl = "https://t.me/+\(phone)"
                         } else if let domain = domain {
                             var result = "https://t.me/\(domain)"
-                            if let threadId = threadId {
+                            if let appName {
+                                result += "/\(appName)"
+                            }
+                            if let startApp {
+                                result += "?startapp=\(startApp)"
+                            }
+                            if let threadId {
                                 result += "/\(threadId)"
-                                if let post = post, let postValue = Int(post) {
+                                if let post, let postValue = Int(post) {
                                     result += "/\(postValue)"
                                 }
                             } else {
-                                if let post = post, let postValue = Int(post) {
+                                if let post, let postValue = Int(post) {
                                     result += "/\(postValue)"
                                 }
                             }
@@ -825,6 +842,22 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         }
                     }
                     handleResolvedUrl(.premiumOffer(reference: reference))
+                } else if parsedUrl.host == "addlist" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var slug: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "slug" {
+                                        slug = value
+                                    }
+                                }
+                            }
+                        }
+                        if let slug = slug {
+                            convertedUrl = "https://t.me/addlist/\(slug)"
+                        }
+                    }
                 }
             } else {
                 if parsedUrl.host == "importStickers" {
@@ -839,6 +872,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             section = .devices
                         case "password":
                             section = .twoStepAuth
+                        case "enable_log":
+                            section = .enableLog
                         default:
                             break
                         }
@@ -884,37 +919,41 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                 |> take(1)
                 |> map { sharedData, accessChallengeData -> WebBrowserSettings in
                     let passcodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]?.get(PresentationPasscodeSettings.self) ?? PresentationPasscodeSettings.defaultSettings
+                    
+                    var settings: WebBrowserSettings
+                    if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings]?.get(WebBrowserSettings.self) {
+                        settings = current
+                    } else {
+                        settings = .defaultSettings
+                    }
                     if accessChallengeData.data.isLockable {
-                        if passcodeSettings.autolockTimeout != nil {
-                            return WebBrowserSettings(defaultWebBrowser: "Safari")
+                        if passcodeSettings.autolockTimeout != nil && settings.defaultWebBrowser == nil {
+                            settings = WebBrowserSettings(defaultWebBrowser: "safari")
                         }
                     }
-                    
-                    if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings]?.get(WebBrowserSettings.self) {
-                        return current   
-                    } else {
-                        return WebBrowserSettings.defaultSettings
-                    }
+                    return settings
                 }
 
+                var isCompact = false
+                if let metrics = navigationController?.validLayout?.metrics, case .compact = metrics.widthClass {
+                    isCompact = true
+                }
+                
                 let _ = (settings
                 |> deliverOnMainQueue).start(next: { settings in
                     if settings.defaultWebBrowser == nil {
-//                        let controller = BrowserScreen(context: context, subject: .webPage(parsedUrl.absoluteString))
-//                        navigationController?.pushViewController(controller)
-                        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
+                        if !"".isEmpty && isCompact {
+                            let controller = BrowserScreen(context: context, subject: .webPage(url: parsedUrl.absoluteString))
+                            navigationController?.pushViewController(controller)
+                        } else {
                             if let window = navigationController?.view.window {
                                 let controller = SFSafariViewController(url: parsedUrl)
-                                if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-                                    controller.preferredBarTintColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
-                                    controller.preferredControlTintColor = presentationData.theme.rootController.navigationBar.accentTextColor
-                                }
+                                controller.preferredBarTintColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
+                                controller.preferredControlTintColor = presentationData.theme.rootController.navigationBar.accentTextColor
                                 window.rootViewController?.present(controller, animated: true)
                             } else {
                                 context.sharedContext.applicationBindings.openUrl(parsedUrl.absoluteString)
                             }
-                        } else {
-                            context.sharedContext.applicationBindings.openUrl(url)
                         }
                     } else {
                         let openInOptions = availableOpenInOptions(context: context, item: .url(url: url))

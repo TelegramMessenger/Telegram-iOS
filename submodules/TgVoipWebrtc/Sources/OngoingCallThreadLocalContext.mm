@@ -134,7 +134,7 @@ private:
     self = [super init];
     if (self != nil) {
         _audioDeviceModule.reset(new tgcalls::ThreadLocalObject<tgcalls::SharedAudioDeviceModule>(tgcalls::StaticThreads::getThreads()->getWorkerThread(), [disableRecording]() mutable {
-            return (tgcalls::SharedAudioDeviceModule *)(new SharedAudioDeviceModuleImpl(disableRecording));
+            return std::static_pointer_cast<tgcalls::SharedAudioDeviceModule>(std::make_shared<SharedAudioDeviceModuleImpl>(disableRecording));
         }));
     }
     return self;
@@ -533,6 +533,37 @@ public:
 
 private:
     void (^_frameReceived)(webrtc::VideoFrame const &);
+};
+
+class DirectConnectionChannelImpl : public tgcalls::DirectConnectionChannel {
+public:
+    DirectConnectionChannelImpl(id<OngoingCallDirectConnection> _Nonnull impl) {
+        _impl = impl;
+    }
+    
+    virtual ~DirectConnectionChannelImpl() {
+    }
+    
+    virtual std::vector<uint8_t> addOnIncomingPacket(std::function<void(std::shared_ptr<std::vector<uint8_t>>)> &&handler) override {
+        __block auto localHandler = std::move(handler);
+        
+        NSData *token = [_impl addOnIncomingPacket:^(NSData * _Nonnull data) {
+            std::shared_ptr<std::vector<uint8_t>> mappedData = std::make_shared<std::vector<uint8_t>>((uint8_t const *)data.bytes, (uint8_t const *)data.bytes + data.length);
+            localHandler(mappedData);
+        }];
+        return std::vector<uint8_t>((uint8_t * const)token.bytes, (uint8_t * const)token.bytes + token.length);
+    }
+    
+    virtual void removeOnIncomingPacket(std::vector<uint8_t> &token) override {
+        [_impl removeOnIncomingPacket:[[NSData alloc] initWithBytes:token.data() length:token.size()]];
+    }
+    
+    virtual void sendPacket(std::unique_ptr<std::vector<uint8_t>> &&packet) override {
+        [_impl sendPacket:[[NSData alloc] initWithBytes:packet->data() length:packet->size()]];
+    }
+    
+private:
+    id<OngoingCallDirectConnection> _impl;
 };
 
 }
@@ -1024,7 +1055,8 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                        sendSignalingData:(void (^ _Nonnull)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer
                      preferredVideoCodec:(NSString * _Nullable)preferredVideoCodec
                       audioInputDeviceId:(NSString * _Nonnull)audioInputDeviceId
-                             audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice {
+                             audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice
+                        directConnection:(id<OngoingCallDirectConnection> _Nullable)directConnection {
     self = [super init];
     if (self != nil) {
         _version = version;
@@ -1147,6 +1179,11 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         std::shared_ptr<tgcalls::ThreadLocalObject<tgcalls::SharedAudioDeviceModule>> audioDeviceModule;
         if (_audioDevice) {
             audioDeviceModule = [_audioDevice getAudioDeviceModule];
+        }
+        
+        std::shared_ptr<tgcalls::DirectConnectionChannel> directConnectionChannel;
+        if (directConnection) {
+            directConnectionChannel = std::static_pointer_cast<tgcalls::DirectConnectionChannel>(std::make_shared<DirectConnectionChannelImpl>(directConnection));
         }
         
         __weak OngoingCallThreadLocalContextWebrtc *weakSelf = self;
@@ -1288,7 +1325,8 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                     }];
                     return resultModule;
                 }
-            }
+            },
+            .directConnectionChannel = directConnectionChannel
         });
         _state = OngoingCallStateInitializing;
         _signalBars = 4;

@@ -1,6 +1,5 @@
 import Foundation
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import AccountContext
 import WatchBridge
@@ -16,7 +15,7 @@ public final class WatchManagerImpl: WatchManager {
         return self.arguments?.appInstalled ?? .single(false)
     }
     
-    public var navigateToMessageRequested: Signal<MessageId, NoError> {
+    public var navigateToMessageRequested: Signal<EngineMessage.Id, NoError> {
         return self.arguments?.navigateToMessageRequested ?? .never()
     }
     

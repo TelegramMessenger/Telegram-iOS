@@ -466,14 +466,41 @@ public func channelBannedMemberController(context: AccountContext, updatedPresen
                 } else {
                     effectiveRightsFlags = defaultBannedRightsFlags
                 }
-                if value {
-                    effectiveRightsFlags.remove(rights)
-                    effectiveRightsFlags = effectiveRightsFlags.subtracting(groupPermissionDependencies(rights))
+                
+                
+                if rights == .banSendMedia {
+                    if value {
+                        effectiveRightsFlags.remove(rights)
+                        for item in banSendMediaSubList() {
+                            effectiveRightsFlags.remove(item.0)
+                        }
+                    } else {
+                        effectiveRightsFlags.insert(rights)
+                        for (right, _) in allGroupPermissionList(peer: EnginePeer(peer), expandMedia: false) {
+                            if groupPermissionDependencies(right).contains(rights) {
+                                effectiveRightsFlags.insert(right)
+                            }
+                        }
+                        
+                        for item in banSendMediaSubList() {
+                            effectiveRightsFlags.insert(item.0)
+                            for (right, _) in allGroupPermissionList(peer: EnginePeer(peer), expandMedia: false) {
+                                if groupPermissionDependencies(right).contains(item.0) {
+                                    effectiveRightsFlags.insert(right)
+                                }
+                            }
+                        }
+                    }
                 } else {
-                    effectiveRightsFlags.insert(rights)
-                    for (right, _) in allGroupPermissionList(peer: EnginePeer(peer), expandMedia: false) {
-                        if groupPermissionDependencies(right).contains(rights) {
-                            effectiveRightsFlags.insert(right)
+                    if value {
+                        effectiveRightsFlags.remove(rights)
+                        effectiveRightsFlags = effectiveRightsFlags.subtracting(groupPermissionDependencies(rights))
+                    } else {
+                        effectiveRightsFlags.insert(rights)
+                        for (right, _) in allGroupPermissionList(peer: EnginePeer(peer), expandMedia: false) {
+                            if groupPermissionDependencies(right).contains(rights) {
+                                effectiveRightsFlags.insert(right)
+                            }
                         }
                     }
                 }

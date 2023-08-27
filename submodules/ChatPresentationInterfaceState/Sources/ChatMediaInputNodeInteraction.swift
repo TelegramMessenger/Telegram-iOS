@@ -1,21 +1,17 @@
 import Foundation
 import Postbox
-import StickerPeekUI
+import TelegramCore
 import TelegramUIPreferences
 
 public struct ChatInterfaceStickerSettings: Equatable {
-    public let loopAnimatedStickers: Bool
-    
-    public init(loopAnimatedStickers: Bool) {
-        self.loopAnimatedStickers = loopAnimatedStickers
+    public init() {
     }
     
     public init(stickerSettings: StickerSettings) {
-        self.loopAnimatedStickers = stickerSettings.loopAnimatedStickers
     }
     
     public static func ==(lhs: ChatInterfaceStickerSettings, rhs: ChatInterfaceStickerSettings) -> Bool {
-        return lhs.loopAnimatedStickers == rhs.loopAnimatedStickers
+        return true
     }
 }
 
@@ -41,7 +37,7 @@ public final class ChatMediaInputNodeInteraction {
     public var highlightedStickerItemCollectionId: ItemCollectionId?
     public var highlightedItemCollectionId: ItemCollectionId?
     public var highlightedGifMode: ChatMediaInputGifMode = .recent
-    public var previewedStickerPackItem: StickerPreviewPeekItem?
+    public var previewedStickerPackItemFile: TelegramMediaFile?
     public var appearanceTransition: CGFloat = 1.0
     public var displayStickerPlaceholder = true
     public var displayStickerPackManageControls = true

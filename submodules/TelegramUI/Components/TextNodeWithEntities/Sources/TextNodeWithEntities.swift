@@ -8,6 +8,7 @@ import AccountContext
 import AnimationCache
 import MultiAnimationRenderer
 import TelegramCore
+import InvisibleInkDustNode
 
 private extension CGRect {
     var center: CGPoint {
@@ -93,6 +94,8 @@ public final class TextNodeWithEntities {
     public let textNode: TextNode
     private var inlineStickerItemLayers: [InlineStickerItemLayer.Key: InlineStickerItemLayer] = [:]
     
+    private var enableLooping: Bool = true
+    
     public var visibilityRect: CGRect? {
         didSet {
             if !self.inlineStickerItemLayers.isEmpty && oldValue != self.visibilityRect {
@@ -107,7 +110,7 @@ public final class TextNodeWithEntities {
                     } else {
                         isItemVisible = false
                     }
-                    itemLayer.isVisibleForAnimations = isItemVisible
+                    itemLayer.isVisibleForAnimations = self.enableLooping && isItemVisible
                 }
             }
         }
@@ -218,6 +221,8 @@ public final class TextNodeWithEntities {
     }
     
     private func updateInlineStickers(context: AccountContext, cache: AnimationCache, renderer: MultiAnimationRenderer, textLayout: TextNodeLayout?, placeholderColor: UIColor, attemptSynchronousLoad: Bool) {
+        self.enableLooping = context.sharedContext.energyUsageSettings.loopEmoji
+        
         var nextIndexById: [Int64: Int] = [:]
         var validIds: [InlineStickerItemLayer.Key] = []
         
@@ -234,7 +239,7 @@ public final class TextNodeWithEntities {
                     let id = InlineStickerItemLayer.Key(id: stickerItem.emoji.fileId, index: index)
                     validIds.append(id)
                     
-                    let itemSize = floor(stickerItem.fontSize * 24.0 / 17.0)
+                    let itemSize = floorToScreenPixels(stickerItem.fontSize * 24.0 / 17.0)
                     
                     var itemFrame = CGRect(origin: item.rect.offsetBy(dx: textLayout.insets.left, dy: textLayout.insets.top + 1.0).center, size: CGSize()).insetBy(dx: -itemSize / 2.0, dy: -itemSize / 2.0)
                     itemFrame.origin.x = floorToScreenPixels(itemFrame.origin.x)
@@ -250,7 +255,7 @@ public final class TextNodeWithEntities {
                         self.inlineStickerItemLayers[id] = itemLayer
                         self.textNode.layer.addSublayer(itemLayer)
                         
-                        itemLayer.isVisibleForAnimations = self.isItemVisible(itemRect: itemFrame)
+                        itemLayer.isVisibleForAnimations = self.enableLooping && self.isItemVisible(itemRect: itemFrame)
                     }
                     
                     itemLayer.frame = itemFrame
@@ -283,17 +288,22 @@ public class ImmediateTextNodeWithEntities: TextNode {
     public var textStroke: (UIColor, CGFloat)?
     public var cutout: TextNodeCutout?
     public var displaySpoilers = false
+    public var displaySpoilerEffect = true
+    public var spoilerColor: UIColor = .black
+    
+    private var enableLooping: Bool = true
     
     public var arguments: TextNodeWithEntities.Arguments?
     
     private var inlineStickerItemLayers: [InlineStickerItemLayer.Key: InlineStickerItemLayer] = [:]
+    private var dustNode: InvisibleInkDustNode?
     
     public var visibility: Bool = false {
         didSet {
             if !self.inlineStickerItemLayers.isEmpty && oldValue != self.visibility {
                 for (_, itemLayer) in self.inlineStickerItemLayers {
                     let isItemVisible: Bool = self.visibility
-                    itemLayer.isVisibleForAnimations = isItemVisible
+                    itemLayer.isVisibleForAnimations = self.enableLooping && isItemVisible
                 }
             }
         }
@@ -331,7 +341,7 @@ public class ImmediateTextNodeWithEntities: TextNode {
     public var linkHighlightColor: UIColor?
     
     public var trailingLineWidth: CGFloat?
-    
+
     var constrainedSize: CGSize?
     
     public var highlightAttributeAction: (([NSAttributedString.Key: Any]) -> NSAttributedString.Key?)? {
@@ -372,9 +382,12 @@ public class ImmediateTextNodeWithEntities: TextNode {
         
         let _ = apply()
         
+        var enableAnimations = true
         if let arguments = self.arguments {
             self.updateInlineStickers(context: arguments.context, cache: arguments.cache, renderer: arguments.renderer, textLayout: layout, placeholderColor: arguments.placeholderColor)
+            enableAnimations = arguments.context.sharedContext.energyUsageSettings.fullTranslucency
         }
+        self.updateSpoilers(enableAnimations: enableAnimations, textLayout: layout)
         
         if layout.numberOfLines > 1 {
             self.trailingLineWidth = layout.trailingLineWidth
@@ -385,6 +398,8 @@ public class ImmediateTextNodeWithEntities: TextNode {
     }
     
     private func updateInlineStickers(context: AccountContext, cache: AnimationCache, renderer: MultiAnimationRenderer, textLayout: TextNodeLayout?, placeholderColor: UIColor) {
+        self.enableLooping = context.sharedContext.energyUsageSettings.loopEmoji
+        
         var nextIndexById: [Int64: Int] = [:]
         var validIds: [InlineStickerItemLayer.Key] = []
         
@@ -415,7 +430,7 @@ public class ImmediateTextNodeWithEntities: TextNode {
                         self.inlineStickerItemLayers[id] = itemLayer
                         self.layer.addSublayer(itemLayer)
                         
-                        itemLayer.isVisibleForAnimations = self.visibility
+                        itemLayer.isVisibleForAnimations = self.enableLooping && self.visibility
                     }
                     
                     itemLayer.frame = itemFrame
@@ -432,6 +447,25 @@ public class ImmediateTextNodeWithEntities: TextNode {
         }
         for key in removeKeys {
             self.inlineStickerItemLayers.removeValue(forKey: key)
+        }
+    }
+    
+    private func updateSpoilers(enableAnimations: Bool, textLayout: TextNodeLayout) {
+        if !textLayout.spoilers.isEmpty && self.displaySpoilerEffect {
+            if self.dustNode == nil {
+                let dustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: enableAnimations)
+                self.dustNode = dustNode
+                self.addSubnode(dustNode)
+                
+            }
+            if let dustNode = self.dustNode {
+                let textFrame = CGRect(origin: .zero, size: textLayout.size)
+                dustNode.update(size: textFrame.size, color: self.spoilerColor, textColor: self.spoilerColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+                dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
+            }
+        } else if let dustNode = self.dustNode {
+            self.dustNode = nil
+            dustNode.removeFromSupernode()
         }
     }
     

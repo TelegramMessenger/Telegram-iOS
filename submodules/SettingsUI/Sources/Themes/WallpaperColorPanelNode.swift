@@ -401,7 +401,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
     var colorAdded: (() -> Void)?
     var colorRemoved: (() -> Void)?
     
-    private var validLayout: CGSize?
+    private var validLayout: (CGSize, CGFloat)?
 
     init(theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
@@ -438,6 +438,8 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         )
         
         super.init()
+        
+        self.backgroundColor = .white
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.topSeparatorNode)
@@ -537,8 +539,8 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             }
         }
     
-        if updateLayout, let size = self.validLayout {
-            self.updateLayout(size: size, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
+        if updateLayout, let (size, bottomInset) = self.validLayout {
+            self.updateLayout(size: size, bottomInset: bottomInset, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
         }
 
         if let index = self.state.selection {
@@ -558,8 +560,8 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        self.validLayout = size
+    func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, bottomInset)
         
         let condensedLayout = size.width < 375.0
         let separatorHeight = UIScreenPixel

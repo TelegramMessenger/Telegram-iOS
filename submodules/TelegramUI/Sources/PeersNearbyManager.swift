@@ -1,6 +1,5 @@
 import Foundation
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramApi
 import DeviceLocationManager
@@ -39,21 +38,6 @@ final class PeersNearbyManagerImpl: PeersNearbyManager {
         |> distinctUntilChanged).start(next: { [weak self] visibility in
             if let strongSelf = self {
                 strongSelf.visibilityUpdated(visible: visibility != nil)
-            }
-        })
-
-        self.accessDisposable = (DeviceAccess.authorizationStatus(applicationInForeground: nil, siriAuthorization: nil, subject: .location(.live))
-        |> deliverOnMainQueue).start(next: { [weak self] status in
-            guard let strongSelf = self else {
-                return
-            }
-            switch status {
-            case .denied:
-                let _ = strongSelf.engine.peersNearby.updatePeersNearbyVisibility(update: .invisible, background: false).start()
-                strongSelf.locationDisposable.set(nil)
-                strongSelf.updateDisposable.set(nil)
-            default:
-                break
             }
         })
     }

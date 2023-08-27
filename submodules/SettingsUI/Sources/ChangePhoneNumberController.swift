@@ -137,6 +137,7 @@ public func ChangePhoneNumberController(context: AccountContext) -> ViewControll
                 actions.append(TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {}))
             }
             
+            controller?.dismissConfirmation()
             controller?.present(textAlertController(context: context, title: nil, text: text, actions: actions), in: .window(.root))
         }))
     }

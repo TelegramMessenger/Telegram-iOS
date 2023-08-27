@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -18,16 +17,17 @@ import TelegramPermissionsUI
 import ItemListPeerActionItem
 import Markdown
 import UndoUI
+import Postbox
 
 private final class ChannelPermissionsControllerArguments {
     let context: AccountContext
     
     let updatePermission: (TelegramChatBannedRightsFlags, Bool) -> Void
-    let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
+    let setPeerIdWithRevealedOptions: (EnginePeer.Id?, EnginePeer.Id?) -> Void
     let addPeer: () -> Void
-    let removePeer: (PeerId) -> Void
+    let removePeer: (EnginePeer.Id) -> Void
     let openPeer: (ChannelParticipant) -> Void
-    let openPeerInfo: (Peer) -> Void
+    let openPeerInfo: (EnginePeer) -> Void
     let openKicked: () -> Void
     let presentRestrictedPermissionAlert: (TelegramChatBannedRightsFlags) -> Void
     let presentConversionToBroadcastGroup: () -> Void
@@ -35,7 +35,7 @@ private final class ChannelPermissionsControllerArguments {
     let updateSlowmode: (Int32) -> Void
     let toggleIsOptionExpanded: (TelegramChatBannedRightsFlags) -> Void
     
-    init(context: AccountContext, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (Peer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, presentConversionToBroadcastGroup: @escaping () -> Void, openChannelExample: @escaping () -> Void, updateSlowmode: @escaping (Int32) -> Void, toggleIsOptionExpanded: @escaping (TelegramChatBannedRightsFlags) -> Void) {
+    init(context: AccountContext, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (EnginePeer.Id) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (EnginePeer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, presentConversionToBroadcastGroup: @escaping () -> Void, openChannelExample: @escaping () -> Void, updateSlowmode: @escaping (Int32) -> Void, toggleIsOptionExpanded: @escaping (TelegramChatBannedRightsFlags) -> Void) {
         self.context = context
         self.updatePermission = updatePermission
         self.addPeer = addPeer
@@ -62,7 +62,7 @@ private enum ChannelPermissionsSection: Int32 {
 
 private enum ChannelPermissionsEntryStableId: Hashable {
     case index(Int)
-    case peer(PeerId)
+    case peer(EnginePeer.Id)
 }
 
 struct SubPermission: Equatable {
@@ -341,8 +341,12 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                     case let .member(_, _, _, banInfo, _):
                         var exceptionsString = ""
                         if let banInfo = banInfo {
+                            let sendMediaRights = banSendMediaSubList().map { $0.0 }
                             for (rights, _) in internal_allPossibleGroupPermissionList {
                                 if !defaultBannedRights.contains(rights) && banInfo.rights.flags.contains(rights) {
+                                    if banInfo.rights.flags.contains(.banSendMedia) && sendMediaRights.contains(rights) {
+                                        continue
+                                    }
                                     if !exceptionsString.isEmpty {
                                         exceptionsString.append(", ")
                                     }
@@ -359,7 +363,7 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: EnginePeer(participant.peer), presence: nil, text: text, label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: canOpen ? {
                     arguments.openPeer(participant.participant)
                 } : {
-                    arguments.openPeerInfo(participant.peer)
+                    arguments.openPeerInfo(EnginePeer(participant.peer))
                 }, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
@@ -370,8 +374,8 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
 }
 
 private struct ChannelPermissionsControllerState: Equatable {
-    var peerIdWithRevealedOptions: PeerId?
-    var removingPeerId: PeerId?
+    var peerIdWithRevealedOptions: EnginePeer.Id?
+    var removingPeerId: EnginePeer.Id?
     var searchingMembers: Bool = false
     var modifiedRightsFlags: TelegramChatBannedRightsFlags?
     var modifiedSlowmodeTimeout: Int32?
@@ -547,6 +551,11 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
     var entries: [ChannelPermissionsEntry] = []
     
     if let channel = view.peers[view.peerId] as? TelegramChannel, let participants = participants, let cachedData = view.cachedData as? CachedChannelData, let defaultBannedRights = channel.defaultBannedRights {
+        var isDiscussion = false
+        if case .group = channel.info, case let .known(peerId) = cachedData.linkedDiscussionPeerId, peerId != nil {
+            isDiscussion = true
+        }
+        
         let effectiveRightsFlags: TelegramChatBannedRightsFlags
         if let modifiedRightsFlags = state.modifiedRightsFlags {
             effectiveRightsFlags = modifiedRightsFlags
@@ -558,7 +567,7 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
         var rightIndex: Int = 0
         for (rights, correspondingAdminRight) in allGroupPermissionList(peer: .channel(channel), expandMedia: false) {
             var enabled = true
-            if channel.addressName != nil && publicGroupRestrictedPermissions.contains(rights) {
+            if (channel.addressName != nil || channel.flags.contains(.hasGeo) || isDiscussion) && publicGroupRestrictedPermissions.contains(rights) {
                 enabled = false
             }
             if !channel.hasPermission(.inviteMembers) {
@@ -647,7 +656,7 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
     return entries
 }
 
-public func channelPermissionsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId originalPeerId: PeerId, loadCompleted: @escaping () -> Void = {}) -> ViewController {
+public func channelPermissionsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId originalPeerId: EnginePeer.Id, loadCompleted: @escaping () -> Void = {}) -> ViewController {
     let statePromise = ValuePromise(ChannelPermissionsControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelPermissionsControllerState())
     let updateState: ((ChannelPermissionsControllerState) -> ChannelPermissionsControllerState) -> Void = { f in
@@ -656,7 +665,7 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
     
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
-    var navigateToChatControllerImpl: ((PeerId) -> Void)?
+    var navigateToChatControllerImpl: ((EnginePeer.Id) -> Void)?
     var dismissInputImpl: (() -> Void)?
     var dismissToChatController: (() -> Void)?
     var resetSlowmodeVisualValueImpl: (() -> Void)?
@@ -672,12 +681,12 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
     let removePeerDisposable = MetaDisposable()
     actionsDisposable.add(removePeerDisposable)
     
-    let sourcePeerId = Promise<(PeerId, Bool)>((originalPeerId, false))
+    let sourcePeerId = Promise<(EnginePeer.Id, Bool)>((originalPeerId, false))
     
     let peersDisposable = MetaDisposable()
     let loadMoreControl = Atomic<PeerChannelMemberCategoryControl?>(value: nil)
     
-    let peersPromise = Promise<(PeerId, [RenderedChannelParticipant]?)>()
+    let peersPromise = Promise<(EnginePeer.Id, [RenderedChannelParticipant]?)>()
     
     actionsDisposable.add((sourcePeerId.get()
     |> deliverOnMainQueue).start(next: { peerId, updated in
@@ -713,7 +722,7 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
     peerView.set(sourcePeerId.get()
     |> mapToSignal(context.account.viewTracker.peerView))
     
-    var upgradedToSupergroupImpl: ((PeerId, @escaping () -> Void) -> Void)?
+    var upgradedToSupergroupImpl: ((EnginePeer.Id, @escaping () -> Void) -> Void)?
     
     let arguments = ChannelPermissionsControllerArguments(context: context, updatePermission: { rights, value in
         let _ = (peerView.get()
@@ -913,7 +922,7 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
             }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         })
     }, openPeerInfo: { peer in
-        if let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+        if let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
             pushControllerImpl?(controller)
         }
     }, openKicked: {
@@ -938,7 +947,17 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
                     } else if right.contains(.banAddMembers) {
                         text = presentationData.strings.GroupPermission_AddMembersNotAvailable
                     } else {
-                        text = presentationData.strings.GroupPermission_NotAvailableInPublicGroups
+                        var isDiscussion = false
+                        if case .group = channel.info, let cachedData = view.cachedData as? CachedChannelData, case let .known(peerId) = cachedData.linkedDiscussionPeerId, peerId != nil {
+                            isDiscussion = true
+                        }
+                        if channel.flags.contains(.hasGeo) {
+                            text = presentationData.strings.GroupPermission_NotAvailableInGeoGroups
+                        } else if isDiscussion {
+                            text = presentationData.strings.GroupPermission_NotAvailableInDiscussionGroups
+                        } else {
+                            text = presentationData.strings.GroupPermission_NotAvailableInPublicGroups
+                        }
                     }
                     presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                     break
@@ -951,9 +970,9 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
         controller.navigationPresentation = .modal
         controller.setState(.custom(icon: .animation("BroadcastGroup"), title: presentationData.strings.BroadcastGroups_IntroTitle, subtitle: nil, text: presentationData.strings.BroadcastGroups_IntroText, buttonTitle: presentationData.strings.BroadcastGroups_Convert, secondaryButtonTitle: presentationData.strings.BroadcastGroups_Cancel, footerText: nil), animated: false)
         controller.proceed = { [weak controller] result in
-            let attributedTitle = NSAttributedString(string: presentationData.strings.BroadcastGroups_ConfirmationAlert_Title, font: Font.medium(17.0), textColor: presentationData.theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
-            let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
-            let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
+            let attributedTitle = NSAttributedString(string: presentationData.strings.BroadcastGroups_ConfirmationAlert_Title, font: Font.semibold(presentationData.listsFontSize.baseDisplaySize), textColor: presentationData.theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
+            let body = MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
+            let bold = MarkdownAttributeSet(font: Font.semibold(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
             let attributedText = parseMarkdownIntoAttributedString(presentationData.strings.BroadcastGroups_ConfirmationAlert_Text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
             
             let alertController = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.BroadcastGroups_ConfirmationAlert_Convert, action: { [weak controller] in
@@ -1023,9 +1042,9 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
                         return .generic
                     }
                 }
-                |> mapToSignal { upgradedPeerId -> Signal<PeerId?, UpdateChannelSlowModeError> in
+                |> mapToSignal { upgradedPeerId -> Signal<EnginePeer.Id?, UpdateChannelSlowModeError> in
                     return context.engine.peers.updateChannelSlowModeInteractively(peerId: upgradedPeerId, timeout: modifiedSlowmodeTimeout == 0 ? nil : value)
-                    |> mapToSignal { _ -> Signal<PeerId?, UpdateChannelSlowModeError> in
+                    |> mapToSignal { _ -> Signal<EnginePeer.Id?, UpdateChannelSlowModeError> in
                         return .complete()
                     }
                     |> then(.single(upgradedPeerId))

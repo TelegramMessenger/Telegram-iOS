@@ -20,6 +20,7 @@ public enum AttachmentButtonType: Equatable {
     case contact
     case poll
     case app(Peer, String, [AttachMenuBots.Bot.IconName: TelegramMediaFile])
+    case gift
     case standalone
     
     public static func ==(lhs: AttachmentButtonType, rhs: AttachmentButtonType) -> Bool {
@@ -60,6 +61,12 @@ public enum AttachmentButtonType: Equatable {
                 } else {
                     return false
                 }
+            case .gift:
+                if case .gift = rhs {
+                    return true
+                } else {
+                    return false
+                }
             case .standalone:
                 if case .standalone = rhs {
                     return true
@@ -77,6 +84,7 @@ public protocol AttachmentContainable: ViewController {
     var cancelPanGesture: () -> Void { get set }
     var isContainerPanning: () -> Bool { get set }
     var isContainerExpanded: () -> Bool { get set }
+    var mediaPickerContext: AttachmentMediaPickerContext? { get }
     
     func isContainerPanningUpdated(_ panning: Bool)
     
@@ -110,6 +118,12 @@ public extension AttachmentContainable {
 }
 
 public enum AttachmentMediaPickerSendMode {
+    case generic
+    case silently
+    case whenOnline
+}
+
+public enum AttachmentMediaPickerAttachmentMode {
     case media
     case files
 }
@@ -124,7 +138,7 @@ public protocol AttachmentMediaPickerContext {
     func mainButtonAction()
     
     func setCaption(_ caption: NSAttributedString)
-    func send(silently: Bool, mode: AttachmentMediaPickerSendMode)
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode)
     func schedule()
 }
 
@@ -164,12 +178,13 @@ private func generateMaskImage() -> UIImage? {
 public class AttachmentController: ViewController {
     private let context: AccountContext
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
-    private let chatLocation: ChatLocation
+    private let chatLocation: ChatLocation?
     private let buttons: [AttachmentButtonType]
     private let initialButton: AttachmentButtonType
     private let fromMenu: Bool
     private let hasTextInput: Bool
     private let makeEntityInputView: () -> AttachmentTextInputPanelInputView?
+    public var animateAppearance: Bool = false
     
     public var willDismiss: () -> Void = {}
     public var didDismiss: () -> Void = {}
@@ -192,7 +207,7 @@ public class AttachmentController: ViewController {
         private weak var controller: AttachmentController?
         private let dim: ASDisplayNode
         private let shadowNode: ASImageNode
-        private let container: AttachmentContainer
+        fileprivate let container: AttachmentContainer
         private let makeEntityInputView: () -> AttachmentTextInputPanelInputView?
         let panel: AttachmentPanel
         
@@ -201,7 +216,7 @@ public class AttachmentController: ViewController {
         
         private var validLayout: ContainerViewLayout?
         private var modalProgress: CGFloat = 0.0
-        private var isDismissing = false
+        fileprivate var isDismissing = false
                 
         private let captionDisposable = MetaDisposable()
         private let mediaSelectionCountDisposable = MetaDisposable()
@@ -298,6 +313,10 @@ public class AttachmentController: ViewController {
             
             self.container.updateModalProgress = { [weak self] progress, transition in
                 if let strongSelf = self, let layout = strongSelf.validLayout, !strongSelf.isDismissing {
+                    var transition = transition
+                    if strongSelf.container.supernode == nil {
+                        transition = .animated(duration: 0.4, curve: .spring)
+                    }
                     strongSelf.controller?.updateModalStyleOverlayTransitionFactor(progress, transition: transition)
                     
                     strongSelf.modalProgress = progress
@@ -373,12 +392,14 @@ public class AttachmentController: ViewController {
             self.panel.sendMessagePressed = { [weak self] mode in
                 if let strongSelf = self {
                     switch mode {
-                        case .generic:
-                            strongSelf.mediaPickerContext?.send(silently: false, mode: .media)
-                        case .silent:
-                            strongSelf.mediaPickerContext?.send(silently: true, mode: .media)
-                        case .schedule:
-                            strongSelf.mediaPickerContext?.schedule()
+                    case .generic:
+                        strongSelf.mediaPickerContext?.send(mode: .generic, attachmentMode: .media)
+                    case .silent:
+                        strongSelf.mediaPickerContext?.send(mode: .silently, attachmentMode: .media)
+                    case .schedule:
+                        strongSelf.mediaPickerContext?.schedule()
+                    case .whenOnline:
+                        strongSelf.mediaPickerContext?.send(mode: .whenOnline, attachmentMode: .media)
                     }
                 }
             }
@@ -427,6 +448,16 @@ public class AttachmentController: ViewController {
                 if case let .app(bot, _, _) = controller.initialButton {
                     if let index = controller.buttons.firstIndex(where: {
                         if case let .app(otherBot, _, _) = $0, otherBot.id == bot.id {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }) {
+                        self.panel.updateSelectedIndex(index)
+                    }
+                } else if controller.initialButton != .standalone {
+                    if let index = controller.buttons.firstIndex(where: {
+                        if $0 == controller.initialButton {
                             return true
                         } else {
                             return false
@@ -594,19 +625,31 @@ public class AttachmentController: ViewController {
         
         private var animating = false
         func animateIn() {
-            guard let layout = self.validLayout else {
+            guard let layout = self.validLayout, let controller = self.controller else {
                 return
             }
             
             self.animating = true
             if case .regular = layout.metrics.widthClass {
-                self.animating = false
-                
+                if controller.animateAppearance {
+                    let targetPosition = self.position
+                    let startPosition = targetPosition.offsetBy(dx: 0.0, dy: layout.size.height)
+                    
+                    self.position = startPosition
+                    let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+                    transition.animateView(allowUserInteraction: true, {
+                        self.position = targetPosition
+                    }, completion: { _ in
+                        self.animating = false
+                    })
+                } else {
+                    self.animating = false
+                }
                 ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 0.1)
             } else {
                 ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 1.0)
                 
-                let targetPosition = self.container.position
+                let targetPosition = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
                 let startPosition = targetPosition.offsetBy(dx: 0.0, dy: layout.size.height)
                 
                 self.container.position = startPosition
@@ -635,6 +678,7 @@ public class AttachmentController: ViewController {
                 self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
                     let _ = self?.container.dismiss(transition: .immediate, completion: completion)
                     self?.animating = false
+                    self?.layer.removeAllAnimations()
                 })
             } else {
                 let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
@@ -702,12 +746,12 @@ public class AttachmentController: ViewController {
                 let position: CGPoint
                 let positionY = layout.size.height - size.height - insets.bottom - 40.0
                 if let sourceRect = controller.getSourceRect?() {
-                    position = CGPoint(x: floor(sourceRect.midX - size.width / 2.0), y: min(positionY, sourceRect.minY - size.height))
+                    position = CGPoint(x: min(layout.size.width - size.width - 28.0, floor(sourceRect.midX - size.width / 2.0)), y: min(positionY, sourceRect.minY - size.height))
                 } else {
                     position = CGPoint(x: masterWidth - 174.0, y: positionY)
                 }
                 
-                if controller.isStandalone {
+                if controller.isStandalone && !controller.forceSourceRect {
                     var containerY = floorToScreenPixels((layout.size.height - size.height) / 2.0)
                     if let inputHeight = layout.inputHeight, inputHeight > 88.0 {
                         containerY = layout.size.height - inputHeight - size.height - 80.0
@@ -838,7 +882,7 @@ public class AttachmentController: ViewController {
                 
                 self.container.update(layout: containerLayout, controllers: controllers, coveredByModalTransition: 0.0, transition: self.switchingController ? .immediate : transition)
                                     
-                if self.container.supernode == nil, !controllers.isEmpty && self.container.isReady {
+                if self.container.supernode == nil, !controllers.isEmpty && self.container.isReady && !self.isDismissing {
                     self.wrapperNode.addSubnode(self.container)
                     
                     if fromMenu, let _ = controller.getInputContainerNode() {
@@ -863,7 +907,7 @@ public class AttachmentController: ViewController {
     
     public var getSourceRect: (() -> CGRect?)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery, fromMenu: Bool = false, hasTextInput: Bool = true, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView? = { return nil}) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation?, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery, fromMenu: Bool = false, hasTextInput: Bool = true, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView? = { return nil}) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.chatLocation = chatLocation
@@ -889,6 +933,8 @@ public class AttachmentController: ViewController {
     public required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+    
+    public var forceSourceRect = false
     
     fileprivate var isStandalone: Bool {
         return self.buttons.contains(.standalone)
@@ -926,12 +972,17 @@ public class AttachmentController: ViewController {
                     self?.didDismiss()
                     self?._dismiss()
                     completion?()
+                    self?.dismissedFlag = false
+                    self?.node.isDismissing = false
+                    self?.node.container.removeFromSupernode()
                 })
             }
         } else {
             self.didDismiss()
             self._dismiss()
             completion?()
+            self.node.isDismissing = false
+            self.node.container.removeFromSupernode()
         }
     }
     
@@ -942,9 +993,15 @@ public class AttachmentController: ViewController {
     private var validLayout: ContainerViewLayout?
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        let previousSize = self.validLayout?.size
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.validLayout = layout
+        if let previousSize, previousSize != layout.size {
+            Queue.mainQueue().after(0.1) {
+                self.node.containerLayoutUpdated(layout, transition: transition)
+            }
+        }
         self.node.containerLayoutUpdated(layout, transition: transition)
     }
     

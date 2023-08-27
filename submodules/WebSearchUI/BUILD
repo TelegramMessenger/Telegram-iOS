@@ -32,6 +32,7 @@ swift_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/AttachmentUI:AttachmentUI",
+        "//submodules/RadialStatusNode:RadialStatusNode",
     ],
     visibility = [
         "//visibility:public",

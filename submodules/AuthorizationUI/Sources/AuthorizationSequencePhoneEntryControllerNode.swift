@@ -128,8 +128,9 @@ private final class PhoneAndCountryNode: ASDisplayNode {
             if let strongSelf = self {
                 let _ = strongSelf.processNumberChange(number: strongSelf.phoneInputNode.number)
                                 
-                if strongSelf.hasCountry {
-                    strongSelf.hasNumberUpdated?(!strongSelf.phoneInputNode.codeAndNumber.2.isEmpty)
+                let isServiceNumber = strongSelf.phoneInputNode.number.hasPrefix("+999")
+                if strongSelf.hasCountry || isServiceNumber {
+                    strongSelf.hasNumberUpdated?(!strongSelf.phoneInputNode.codeAndNumber.2.isEmpty || isServiceNumber)
                 } else {
                     strongSelf.hasNumberUpdated?(false)
                 }
@@ -759,6 +760,7 @@ final class PhoneConfirmationController: ViewController {
         
         private let codeTargetNode: ImmediateTextNode
         private let phoneTargetNode: ImmediateTextNode
+        private let measureTargetNode: ImmediateTextNode
         
         private let textNode: ImmediateTextNode
         private let textActivateAreaNode: AccessibilityAreaNode
@@ -782,8 +784,8 @@ final class PhoneConfirmationController: ViewController {
             self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.4)
             
             self.backgroundNode = ASDisplayNode()
-            self.backgroundNode.backgroundColor = theme.list.plainBackgroundColor
-            self.backgroundNode.cornerRadius = 11.0
+            self.backgroundNode.backgroundColor = theme.list.itemBlocksBackgroundColor
+            self.backgroundNode.cornerRadius = 24.0
             
             self.textNode = ImmediateTextNode()
             self.textNode.displaysAsynchronously = false
@@ -823,6 +825,10 @@ final class PhoneConfirmationController: ViewController {
             
             self.phoneTargetNode = ImmediateTextNode()
             self.phoneTargetNode.displaysAsynchronously = false
+            
+            self.measureTargetNode = ImmediateTextNode()
+            self.measureTargetNode.displaysAsynchronously = false
+            self.measureTargetNode.maximumNumberOfLines = 1
             
             let targetString = NSMutableAttributedString(string: number, font: largeFont, textColor: theme.list.itemPrimaryTextColor)
             targetString.addAttribute(NSAttributedString.Key.kern, value: 1.6, range: NSRange(location: 0, length: sourceString.length))
@@ -1015,6 +1021,12 @@ final class PhoneConfirmationController: ViewController {
                     fontSize = 30.0
                 }
               
+                self.measureTargetNode.attributedText = NSAttributedString(string: self.code + " " + self.number, font: Font.with(size: fontSize, design: .regular, weight: .bold, traits: [.monospacedNumbers]), textColor: self.theme.list.itemPrimaryTextColor)
+                let measuredSize = self.measureTargetNode.updateLayout(CGSize(width: 1000.0, height: .greatestFiniteMagnitude))
+                if measuredSize.width > maxWidth {
+                    fontSize = floor(0.8 * fontSize)
+                }
+                
                 let largeFont = Font.with(size: fontSize, design: .regular, weight: .bold, traits: [.monospacedNumbers])
                 
                 self.codeTargetNode.attributedText = NSAttributedString(string: self.code, font: largeFont, textColor: self.theme.list.itemPrimaryTextColor)

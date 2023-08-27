@@ -39,6 +39,7 @@ public func blurredImage(_ image: UIImage, radius: CGFloat, iterations: Int = 3)
     let source = CFDataGetBytePtr(providerData)
     memcpy(inBuffer.data, source, bytes)
     
+    
     for _ in 0 ..< iterations {
         vImageBoxConvolve_ARGB8888(&inBuffer, &outBuffer, tempData, 0, 0, boxSize, boxSize, nil, vImage_Flags(kvImageEdgeExtend))
         

@@ -1,6 +1,5 @@
 import Foundation
 import UIKit
-import Postbox
 import TelegramCore
 import AsyncDisplayKit
 import TelegramPresentationData
@@ -8,7 +7,7 @@ import TelegramUIPreferences
 import AccountContext
 import ContextUI
 
-protocol InstantPageItem {
+public protocol InstantPageItem {
     var frame: CGRect { get set }
     var wantsNode: Bool { get }
     var medias: [InstantPageMedia] { get }

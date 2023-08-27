@@ -95,7 +95,7 @@ extension TelegramWallpaper {
         }
     }
     
-    var apiInputWallpaperAndSettings: (Api.InputWallPaper?, Api.WallPaperSettings)? {
+    var apiInputWallpaperAndSettings: (Api.InputWallPaper, Api.WallPaperSettings)? {
         switch self {
         case .builtin:
             return nil
