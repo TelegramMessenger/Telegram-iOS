@@ -2429,10 +2429,14 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             var overscrollSelectedId: EnginePeer.Id?
             var overscrollHiddenChatItemsAllowed = false
             var overscrollFraction: CGFloat?
+            var currentFraction: CGFloat?
+            var currentActivityFraction: CGFloat?
             if let controller = self.controller, let componentView = controller.chatListHeaderView(), let storyPeerListView = componentView.storyPeerListView() {
                 overscrollSelectedId = storyPeerListView.overscrollSelectedId
                 overscrollHiddenChatItemsAllowed = storyPeerListView.overscrollHiddenChatItemsAllowed
                 overscrollFraction = storyPeerListView.overscrollFraction
+                currentFraction = storyPeerListView.currentFraction
+                currentActivityFraction = storyPeerListView.currentActivityFraction
             }
             
             if let chatListNode = listView as? ChatListNode {
@@ -2511,15 +2515,41 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                     let scrollViewFraction = (listView.scroller.contentOffset.y - listView.tempTopInset) / 76
 //                    print("#1 overscrollFraction: \(overscrollFraction ?? .zero) scrollViewOffset: \(listView.scroller.contentOffset) topInset: \(listView.tempTopInset) scrollViewFraction: \(scrollViewFraction)")
                     print("###1 \noverscrollFraction: \(overscrollFraction ?? .zero) \nscrollViewOffset: \(listView.scroller.contentOffset) \ntopInset: \(listView.tempTopInset) \nscrollViewFraction: \(scrollViewFraction)")
+                    print("###2 currentFraction: \(currentFraction ?? .zero) \ncurrentActivityFraction: \(currentActivityFraction ?? .zero)")
+                    
+                    
+                    var archiveFraction: CGFloat = 0.0
+                    
+                    if let overscrollFraction, let currentFraction {
+                        archiveFraction = (overscrollFraction  / 0.5) * 0.8
+                        if currentFraction < 0 {
+                            let lastOverscrol = max(-1.0, min(1.0, (currentFraction / -0.2))) * 0.2
+                            print("###3\nlastOverscrol: \(archiveFraction)")
 
+                            archiveFraction += lastOverscrol
+                            print("###3\nopen archiveFraction before reastriction: \(archiveFraction)")
 
+                            archiveFraction = max(-1.0, archiveFraction)
+                            archiveFraction = min(1.0, archiveFraction)
+                            print("###3\nopen archiveFraction after: \(archiveFraction)")
+                        } else if currentFraction >= 1.0 {
+                            archiveFraction = -currentFraction
+                            print("###3\nhide archiveFraction: \(archiveFraction)")
+                        }
+                    }
                     if
-                        let overscrollFraction, overscrollFraction > 0,
+                        archiveFraction != 0,
 //                        self.allowOverscrollItemExpansion,
                         let node = self.mainContainerNode.currentItemNode.itemNodeAtIndex(2) as? ChatListItemNode, node.isNodeLoaded,
                         let itemHeight = node.currentItemHeight, itemHeight > 0 {
 
-                        let expandedHeight = (overscrollFraction * 2) * itemHeight //listView.tempTopInset - 40.0
+                        let expandedHeight: CGFloat
+                        if archiveFraction < 0 {
+                            expandedHeight = itemHeight - (-archiveFraction * itemHeight)
+                        } else {
+                            expandedHeight = archiveFraction * itemHeight
+                        }
+//listView.tempTopInset - 40.0
 //                        print("expandedHeight: \(expandedHeight) overscrollFraction: \(overscrollFraction) itemHeight: \(itemHeight)")
 
                         let timestamp = CACurrentMediaTime()
@@ -2532,30 +2562,30 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                         if case let .known(value) = offset {
                             scrollOffset = value
                         }
-                        
+
                         if let currentOverscrollItemExpansionTimestamp = self.currentOverscrollItemExpansionTimestamp, currentOverscrollItemExpansionTimestamp <= timestamp - 0.0 {
-                            if overscrollFraction >= 0.5 {
+                            if archiveFraction >= 0.8 {
                                 self.allowOverscrollItemExpansion = false
                             }
                             if isPrimary {
                                 self.mainContainerNode.currentItemNode.forEachItemNode { node in
                                     if let chatNode = node as? ChatListItemNode {
                                         if case let .groupReference(data) = chatNode.item?.content, data.groupId == .archive, expandedHeight != chatNode.item?.params.expandedHeight {
-                                            print("expandedHeight: \(expandedHeight) overscrollFraction: \(overscrollFraction) itemHeight: \(itemHeight)")
+                                            print("expandedHeight: \(expandedHeight) archiveFraction: \(archiveFraction) itemHeight: \(itemHeight)")
                                             self.mainContainerNode.currentItemNode.updateArchiveTopOffset(params: .init(
                                                 scrollOffset: scrollOffset,
-                                                storiesFraction: overscrollFraction,
+                                                storiesFraction: archiveFraction,
                                                 expandedHeight: expandedHeight
                                             ))
 
-                                            chatNode.updateExpandedHeight(
-                                                transition: .immediate,
-                                                params: .init(
-                                                    scrollOffset: scrollOffset,
-                                                    storiesFraction: overscrollFraction,
-                                                    expandedHeight: expandedHeight
-                                                )
-                                            )
+//                                            chatNode.updateExpandedHeight(
+//                                                transition: .immediate,
+//                                                params: .init(
+//                                                    scrollOffset: scrollOffset,
+//                                                    storiesFraction: archiveFraction,
+//                                                    expandedHeight: expandedHeight
+//                                                )
+//                                            )
 //                                            chatNode.animateFrameTransition(1.0, expandedHeight)
 //                                            chatNode.updateHeightOffsetValue(offset: expandedHeight, transition: self.tempNavigationScrollingTransition ?? .immediate)
                                         }
@@ -2565,23 +2595,21 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                                 self.inlineStackContainerNode?.currentItemNode.forEachItemNode { node in
                                     if let chatNode = node as? ChatListItemNode {
                                         if case let .groupReference(data) = chatNode.item?.content, data.groupId == .archive, expandedHeight != chatNode.item?.params.expandedHeight {
-                                            print("expandedHeight: \(expandedHeight) overscrollFraction: \(overscrollFraction) itemHeight: \(itemHeight)")
+                                            print("expandedHeight: \(expandedHeight) archiveFraction: \(archiveFraction) itemHeight: \(itemHeight)")
                                             self.inlineStackContainerNode?.currentItemNode.updateArchiveTopOffset(params: .init(
                                                 scrollOffset: scrollOffset,
-                                                storiesFraction: overscrollFraction,
+                                                storiesFraction: archiveFraction,
                                                 expandedHeight: expandedHeight
                                             ))
-                                            
-                                            chatNode.updateExpandedHeight(
-                                                transition: .immediate,
-                                                params: .init(
-                                                    scrollOffset: scrollOffset,
-                                                    storiesFraction: overscrollFraction,
-                                                    expandedHeight: expandedHeight
-                                                )
-                                            )
-//                                            chatNode.animateFrameTransition(1.0, expandedHeight)
-//                                            chatNode.updateHeightOffsetValue(offset: expandedHeight, transition: self.tempNavigationScrollingTransition ?? .immediate)
+
+//                                            chatNode.updateExpandedHeight(
+//                                                transition: .immediate,
+//                                                params: .init(
+//                                                    scrollOffset: scrollOffset,
+//                                                    storiesFraction: archiveFraction,
+//                                                    expandedHeight: expandedHeight
+//                                                )
+//                                            )
                                         }
                                     }
                                 }

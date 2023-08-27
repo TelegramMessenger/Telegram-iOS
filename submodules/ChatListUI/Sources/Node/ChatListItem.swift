@@ -2704,7 +2704,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var heightOffset: CGFloat = .zero
             if case let .groupReference(data) = item.content, data.groupId == .archive {
                 heightOffset = -(itemHeight-item.params.expandedHeight)
-                print("height offset: \(heightOffset) with params: \(item.params) itemHeight: \(itemHeight)")
+//                print("height offset: \(heightOffset) with params: \(item.params) itemHeight: \(itemHeight)")
             }
             let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: itemHeight + heightOffset), insets: insets)
             

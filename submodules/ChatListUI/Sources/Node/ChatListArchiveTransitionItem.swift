@@ -32,13 +32,15 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
             case transitionToArchive
             
             init(params: ArchiveAnimationParams, previousState: TransitionAnimation.State) {
-                let fraction = params.storiesFraction * 2
-                if fraction < 0.8 {
+                let fraction = params.storiesFraction
+                if params.storiesFraction <= 0.92 {
                     self = .swipeDownAppear
-                } else if fraction > 0.8 && fraction < 1.0 {
+                } else if fraction > 0.92 && fraction < 1.0 {
                     self = .releaseAppear
-                } else {
+                } else if fraction >= 1.0 {
                     self = .transitionToArchive
+                } else {
+                    self = .swipeDownInit
                 }
             }
         }
@@ -46,16 +48,18 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         var state: State
         var params: ArchiveAnimationParams
         var isAnimated = false
-        var gradientLayer: CAShapeLayer?
+        var gradientShapeLayer: CAShapeLayer?
+        var gradientMaskLayer: CAShapeLayer?
+        var gradientLayer: CALayer?
         var releaseTextNode: ASTextNode?
         lazy var gradientImage: UIImage? = {
-            guard let gradientLayer, gradientLayer.frame.size.height > 0, self.params.storiesFraction > 0 else { return nil }
-            var size = gradientLayer.frame.size
-            let fraction = (params.storiesFraction * 2)
+            guard let gradientShapeLayer, gradientShapeLayer.frame.size.height > 0, self.params.storiesFraction > 0 else { return nil }
+            var size = gradientShapeLayer.frame.size
+            let fraction = params.storiesFraction
             if fraction < 1.0  {
                 size.height = self.params.expandedHeight / fraction
             }
-            return generateGradientImage(size: gradientLayer.frame.size,
+            return generateGradientImage(size: gradientShapeLayer.frame.size,
                                          colors: [UIColor(hexString: "#0E7AF1")!, UIColor(hexString: "#69BEFE")!],
                                          locations: [0.0, 1.0], direction: .horizontal)
         }()
@@ -71,7 +75,7 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         
         
         mutating func animateLayers(gradientNode: ASDisplayNode, textNode: ASTextNode, arrowContainerNode: ASDisplayNode, completion: (() -> Void)?) {
-            print("animate layers with fraction: \(self.params.storiesFraction) state: \(self.state)")
+            print("animate layers with fraction: \(self.params.storiesFraction) state: \(self.state), offset: \(self.params.scrollOffset) height: \(self.params.expandedHeight)")
             CATransaction.begin()
             CATransaction.setCompletionBlock {
                 completion?()
@@ -86,7 +90,7 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                 updateReleaseTextNode(from: textNode)
                 updateGradientOverlay(from: gradientNode)
                 
-                let rotationAnimation = makeArrowRotationAnimation(arrowContainerNode: arrowContainerNode)
+                let rotationAnimation = makeArrowRotationAnimation(arrowContainerNode: arrowContainerNode, isRotated: true)
                 rotationAnimation.beginTime = .zero
                 
                 let textSwipeAnimation = makeTextSwipeAnimation(textNode: textNode, direction: .right)
@@ -97,14 +101,14 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                     releaseTextAppearAnimation.beginTime = .zero
                 }
                 
-                if let gradientLayer {
-                    let overlayGradientAnimation = makeGradientOverlay(gradientContainer: gradientNode, arrowContainer: arrowContainerNode, gradientLayer: gradientLayer)
+                if let gradientShapeLayer {
+                    let overlayGradientAnimation = makeGradientOverlay(gradientContainer: gradientNode, arrowContainer: arrowContainerNode, gradientLayer: gradientShapeLayer)
                     overlayGradientAnimation.beginTime = .zero
                 }
                 
                 
             case .swipeDownAppear:
-                let rotationAnimation = makeArrowRotationAnimation(arrowContainerNode: arrowContainerNode)
+                let rotationAnimation = makeArrowRotationAnimation(arrowContainerNode: arrowContainerNode, isRotated: false)
                 rotationAnimation.beginTime = .zero
                 
                 let textSwipeAnimation = makeTextSwipeAnimation(textNode: textNode, direction: .left)
@@ -115,19 +119,21 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                     releaseTextAppearAnimation.beginTime = .zero
                 }
 
-                if let gradientLayer {
-                    let overlayGradientAnimation = makeGradientOverlay(gradientContainer: gradientNode, arrowContainer: arrowContainerNode, gradientLayer: gradientLayer)
+                if let gradientShapeLayer {
+                    let overlayGradientAnimation = makeGradientOverlay(gradientContainer: gradientNode, arrowContainer: arrowContainerNode, gradientLayer: gradientShapeLayer)
                     overlayGradientAnimation.completion = {  finished in
                         guard finished else { return }
-                        gradientLayer.isHidden = true
-                        gradientLayer.removeFromSuperlayer()
+                        gradientShapeLayer.isHidden = true
+                        gradientShapeLayer.removeFromSuperlayer()
                     }
                     overlayGradientAnimation.beginTime = .zero
                 }
                 updateGradientOverlay(from: gradientNode)
 
             case .transitionToArchive:
-                break
+                let rotationAnimation = makeArrowRotationAnimation(arrowContainerNode: arrowContainerNode, isRotated: true)
+                rotationAnimation.beginTime = .zero
+
             }
             CATransaction.commit()
             self.isAnimated = true
@@ -136,23 +142,26 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         private mutating func updateGradientOverlay(from gradientNode: ASDisplayNode) {
             switch state {
             case .releaseAppear:
-                if (self.gradientLayer == nil) {
-                    self.gradientLayer = CAShapeLayer()
-                    self.gradientLayer?.masksToBounds = true
-                    self.gradientLayer?.cornerRadius = 10
-                    self.gradientLayer?.contentsGravity = .center
+                if (self.gradientShapeLayer == nil) {
+                    self.gradientShapeLayer = CAShapeLayer()
+                    self.gradientShapeLayer?.masksToBounds = true
+                    self.gradientShapeLayer?.cornerRadius = 10
+                    self.gradientShapeLayer?.contentsGravity = .center
                     
-                    self.gradientLayer?.fillColor = UIColor.clear.cgColor
-                    self.gradientLayer?.strokeColor = UIColor.red.cgColor
-                    self.gradientLayer?.lineWidth = 3.0
-                    self.gradientLayer?.fillRule = .evenOdd
+                    self.gradientShapeLayer?.fillColor = UIColor.clear.cgColor
+                    self.gradientShapeLayer?.strokeColor = UIColor.red.cgColor
+                    self.gradientShapeLayer?.lineWidth = 3.0
+                    self.gradientShapeLayer?.fillRule = .evenOdd
                     
-                    gradientNode.layer.addSublayer(self.gradientLayer!)
                 }
                 
-                if (self.gradientLayer?.frame != gradientNode.bounds || self.gradientLayer?.contents == nil) {
-                    self.gradientLayer?.frame = gradientNode.bounds
-                    self.gradientLayer?.contents = self.getGradientImageOrUpdate()?.cgImage
+                if let gradientShapeLayer, gradientShapeLayer.superlayer == nil {
+                    gradientNode.layer.addSublayer(gradientShapeLayer)
+                }
+                
+                if (self.gradientShapeLayer?.frame != gradientNode.bounds || self.gradientShapeLayer?.contents == nil) {
+                    self.gradientShapeLayer?.frame = gradientNode.bounds
+                    self.gradientShapeLayer?.contents = self.getGradientImageOrUpdate()?.cgImage
                 }
             case .swipeDownInit, .swipeDownAppear, .transitionToArchive:
                 break
@@ -162,9 +171,9 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         mutating func getGradientImageOrUpdate() -> UIImage? {
             if let gradientImage, gradientImage.size.height > 100 {
                 return gradientImage
-            } else if let gradientLayer, gradientLayer.frame.size.height > 0, self.params.storiesFraction > 0 {
+            } else if let gradientShapeLayer, gradientShapeLayer.frame.size.height > 0, self.params.storiesFraction > 0 {
                 self.gradientImage = generateGradientImage(
-                    size: gradientLayer.frame.size,
+                    size: gradientShapeLayer.frame.size,
                     colors: [UIColor(hexString: "#0E7AF1")!, UIColor(hexString: "#69BEFE")!],
                     locations: [0.0, 1.0],
                     direction: .horizontal
@@ -192,8 +201,8 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
             }
         }
         
-        private func makeArrowRotationAnimation(arrowContainerNode: ASDisplayNode) -> CAAnimation {
-            let rotatedDegree = TransitionAnimation.degreesToRadians(-180)
+        private func makeArrowRotationAnimation(arrowContainerNode: ASDisplayNode, isRotated: Bool) -> CAAnimation {
+            let rotatedDegree = TransitionAnimation.degreesToRadians(isRotated ? -180 : 0)
             let animation = arrowContainerNode.layer.makeAnimation(
                 from: 0.0 as NSNumber,
                 to: rotatedDegree as NSNumber,

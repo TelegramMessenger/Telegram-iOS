@@ -349,9 +349,9 @@ public final class StoryPeerListComponent: Component {
         private var animationState: AnimationState?
         private var animator: ConstantDisplayLinkAnimator?
         
-        private var currentFraction: CGFloat = 0.0
+        public private(set) var currentFraction: CGFloat = 0.0
         private var currentTitleWidth: CGFloat = 0.0
-        private var currentActivityFraction: CGFloat = 0.0
+        public private(set) var currentActivityFraction: CGFloat = 0.0
         
         public private(set) var overscrollSelectedId: EnginePeer.Id?
         public private(set) var overscrollHiddenChatItemsAllowed: Bool = false
