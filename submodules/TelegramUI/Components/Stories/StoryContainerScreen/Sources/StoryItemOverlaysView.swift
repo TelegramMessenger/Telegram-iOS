@@ -17,11 +17,16 @@ import EmojiTextAttachmentView
 import TextFormat
 
 final class StoryItemOverlaysView: UIView {
+    private static let shadowImage: UIImage = {
+        return UIImage(bundleImageName: "Stories/ReactionShadow")!
+    }()
+    
     private static let coverImage: UIImage = {
         return UIImage(bundleImageName: "Stories/ReactionOutline")!
     }()
     
     private final class ItemView: HighlightTrackingButton {
+        private let shadowView: UIImageView
         private let coverView: UIImageView
         private var stickerView: EmojiTextAttachmentView?
         private var file: TelegramMediaFile?
@@ -30,10 +35,12 @@ final class StoryItemOverlaysView: UIView {
         var activate: ((UIView, MessageReaction.Reaction) -> Void)?
         
         override init(frame: CGRect) {
+            self.shadowView = UIImageView(image: StoryItemOverlaysView.shadowImage)
             self.coverView = UIImageView(image: StoryItemOverlaysView.coverImage)
             
             super.init(frame: frame)
             
+            self.addSubview(self.shadowView)
             self.addSubview(self.coverView)
             
             self.highligthedChanged = { [weak self] highlighted in
@@ -75,6 +82,7 @@ final class StoryItemOverlaysView: UIView {
             
             let insets = UIEdgeInsets(top: -0.08, left: -0.05, bottom: -0.01, right: -0.02)
             self.coverView.frame = CGRect(origin: CGPoint(x: size.width * insets.left, y: size.height * insets.top), size: CGSize(width: size.width - size.width * insets.left - size.width * insets.right, height: size.height - size.height * insets.top - size.height * insets.bottom))
+            self.shadowView.frame = self.coverView.frame
             
             let minSide = floor(min(200.0, min(size.width, size.height)) * 0.65)
             let itemSize = CGSize(width: minSide, height: minSide)

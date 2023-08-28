@@ -383,31 +383,7 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
     }
     
     func getRenderSubEntities() -> [DrawingEntity] {
-//        let textSize = self.textView.bounds.size
-//        let textPosition = self.locationEntity.position
-//        let scale = self.locationEntity.scale
-//        let rotation = self.locationEntity.rotation
-//
-//        let itemSize: CGFloat = floor(24.0 * self.displayFontSize * 0.78 / 17.0)
-        
-        let entities: [DrawingEntity] = []
-//        for (emojiRect, emojiAttribute) in self.emojiRects {
-//            guard let file = emojiAttribute.file else {
-//                continue
-//            }
-//            let emojiTextPosition = emojiRect.center.offsetBy(dx: -textSize.width / 2.0, dy: -textSize.height / 2.0)
-//
-//            let entity = DrawingStickerEntity(content: .file(file))
-//            entity.referenceDrawingSize = CGSize(width: itemSize * 4.0, height: itemSize * 4.0)
-//            entity.scale = scale
-//            entity.position = textPosition.offsetBy(
-//                dx: (emojiTextPosition.x * cos(rotation) - emojiTextPosition.y * sin(rotation)) * scale,
-//                dy: (emojiTextPosition.y * cos(rotation) + emojiTextPosition.x * sin(rotation)) * scale
-//            )
-//            entity.rotation = rotation
-//            entities.append(entity)
-//        }
-        return entities
+        return []
     }
 }
 
