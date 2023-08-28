@@ -4554,7 +4554,7 @@ public final class StoryItemSetContainerComponent: Component {
                     context: context,
                     initialPrivacy: privacy,
                     stateContext: stateContext,
-                    completion: { [weak self] privacy, _, _, _, completed in
+                    completion: { [weak self] _, privacy, _, _, _, completed in
                         guard let self, let component = self.component, completed else {
                             return
                         }
@@ -4635,7 +4635,7 @@ public final class StoryItemSetContainerComponent: Component {
                     context: context,
                     initialPrivacy: privacy,
                     stateContext: stateContext,
-                    completion: { [weak self] result, _, _, peers, completed in
+                    completion: { [weak self] _, result, _, _, peers, completed in
                         guard completed else {
                             return
                         }

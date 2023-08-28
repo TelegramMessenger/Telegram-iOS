@@ -1743,6 +1743,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     
     struct State {
         var privacy: MediaEditorResultPrivacy = MediaEditorResultPrivacy(
+            sendAsPeerId: nil,
             privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []),
             timeout: 86400,
             isForwardingDisabled: false,
@@ -3612,6 +3613,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     public var dismissed: () -> Void = { }
     public var willDismiss: () -> Void = { }
     
+    private var adminedChannels = Promise<[EnginePeer]>()
     private var closeFriends = Promise<[EnginePeer]>()
     private let storiesBlockedPeers: BlockedPeersContext
     
@@ -3657,6 +3659,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         if isEditing {
             if let initialPrivacy {
                 self.state.privacy = MediaEditorResultPrivacy(
+                    sendAsPeerId: nil,
                     privacy: initialPrivacy,
                     timeout: 86400,
                     isForwardingDisabled: false,
@@ -3671,7 +3674,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             ).start(next: { [weak self] state, peer in
                 if let self, var privacy = state?.privacy {
                     if case let .user(user) = peer, !user.isPremium && privacy.timeout != 86400 {
-                        privacy = MediaEditorResultPrivacy(privacy: privacy.privacy, timeout: 86400, isForwardingDisabled: privacy.isForwardingDisabled, pin: privacy.pin)
+                        privacy = MediaEditorResultPrivacy(sendAsPeerId: nil, privacy: privacy.privacy, timeout: 86400, isForwardingDisabled: privacy.isForwardingDisabled, pin: privacy.pin)
+                    } else {
+                        privacy = MediaEditorResultPrivacy(sendAsPeerId: nil, privacy: privacy.privacy, timeout: privacy.timeout, isForwardingDisabled: privacy.isForwardingDisabled, pin: privacy.pin)
                     }
                     self.state.privacy = privacy
                 }
@@ -3699,10 +3704,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         self.displayNode.view.addInteraction(dropInteraction)
         
         Queue.mainQueue().after(1.0) {
+            self.adminedChannels.set(.single([]) |> then(self.context.engine.peers.adminedPublicChannels(scope: .all)))
             self.closeFriends.set(self.context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.CloseFriends()))
         }
     }
-            
+     
     func openPrivacySettings(_ privacy: MediaEditorResultPrivacy? = nil, completion: @escaping () -> Void = {}) {
         self.node.mediaEditor?.stop()
         
@@ -3719,12 +3725,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             editing: false,
             initialPeerIds: Set(privacy.privacy.additionallyIncludePeers),
             closeFriends: self.closeFriends.get(),
+            adminedChannels: self.adminedChannels.get(),
             blockedPeersContext: self.storiesBlockedPeers
         )
         let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
             guard let self else {
                 return
             }
+            let sendAsPeerId = privacy.sendAsPeerId
             let initialPrivacy = privacy.privacy
             let timeout = privacy.timeout
             
@@ -3736,11 +3744,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 timeout: privacy.timeout,
                 mentions: mentions,
                 stateContext: stateContext,
-                completion: { [weak self] privacy, allowScreenshots, pin, _, completed in
+                completion: { [weak self] sendAsPeerId, privacy, allowScreenshots, pin, _, completed in
                     guard let self else {
                         return
                     }
-                    self.state.privacy = MediaEditorResultPrivacy(privacy: privacy, timeout: timeout, isForwardingDisabled: !allowScreenshots, pin: pin)
+                    self.state.privacy = MediaEditorResultPrivacy(
+                        sendAsPeerId: sendAsPeerId,
+                        privacy: privacy,
+                        timeout: timeout,
+                        isForwardingDisabled: !allowScreenshots,
+                        pin: pin
+                    )
                     if completed {
                         completion()
                     }
@@ -3754,6 +3768,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             return
                         }
                         self.openPrivacySettings(MediaEditorResultPrivacy(
+                            sendAsPeerId: sendAsPeerId,
                             privacy: privacy,
                             timeout: timeout,
                             isForwardingDisabled: !allowScreenshots,
@@ -3770,6 +3785,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             return
                         }
                         self.openPrivacySettings(MediaEditorResultPrivacy(
+                            sendAsPeerId: sendAsPeerId,
                             privacy: privacy,
                             timeout: timeout,
                             isForwardingDisabled: !allowScreenshots,
@@ -3811,7 +3827,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 allowScreenshots: !isForwardingDisabled,
                 pin: pin,
                 stateContext: stateContext,
-                completion: { [weak self] result, isForwardingDisabled, pin, peers, completed in
+                completion: { [weak self] _, result, isForwardingDisabled, pin, peers, completed in
                     guard let self, completed else {
                         return
                     }
@@ -3845,7 +3861,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             guard let self else {
                 return
             }
-            self.state.privacy = MediaEditorResultPrivacy(privacy: self.state.privacy.privacy, timeout: timeout ?? 86400, isForwardingDisabled: self.state.privacy.isForwardingDisabled, pin: self.state.privacy.pin)
+            self.state.privacy = MediaEditorResultPrivacy(
+                sendAsPeerId: self.state.privacy.sendAsPeerId,
+                privacy: self.state.privacy.privacy,
+                timeout: timeout ?? 86400,
+                isForwardingDisabled: self.state.privacy.isForwardingDisabled,
+                pin: self.state.privacy.pin
+            )
         }
                 
         let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme)

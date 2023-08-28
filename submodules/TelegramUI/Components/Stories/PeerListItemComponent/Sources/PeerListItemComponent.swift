@@ -21,6 +21,8 @@ import TextFormat
 
 private let avatarFont = avatarPlaceholderFont(size: 15.0)
 private let readIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuReadIcon"), color: .white)?.withRenderingMode(.alwaysTemplate)
+private let checkImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)?.withRenderingMode(.alwaysTemplate)
+private let disclosureImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: .white)?.withRenderingMode(.alwaysTemplate)
 
 public final class PeerListItemComponent: Component {
     public final class TransitionHint {
@@ -44,6 +46,12 @@ public final class PeerListItemComponent: Component {
     public enum SubtitleAccessory: Equatable {
         case none
         case checks
+    }
+    
+    public enum RightAccessory: Equatable {
+        case none
+        case disclosure
+        case check
     }
     
     public final class Reaction: Equatable {
@@ -90,6 +98,7 @@ public final class PeerListItemComponent: Component {
     let subtitle: String?
     let subtitleAccessory: SubtitleAccessory
     let presence: EnginePeer.Presence?
+    let rightAccessory: RightAccessory
     let reaction: Reaction?
     let selectionState: SelectionState
     let hasNext: Bool
@@ -109,6 +118,7 @@ public final class PeerListItemComponent: Component {
         subtitle: String?,
         subtitleAccessory: SubtitleAccessory,
         presence: EnginePeer.Presence?,
+        rightAccessory: RightAccessory = .none,
         reaction: Reaction? = nil,
         selectionState: SelectionState,
         hasNext: Bool,
@@ -127,6 +137,7 @@ public final class PeerListItemComponent: Component {
         self.subtitle = subtitle
         self.subtitleAccessory = subtitleAccessory
         self.presence = presence
+        self.rightAccessory = rightAccessory
         self.reaction = reaction
         self.selectionState = selectionState
         self.hasNext = hasNext
@@ -167,6 +178,9 @@ public final class PeerListItemComponent: Component {
             return false
         }
         if lhs.presence != rhs.presence {
+            return false
+        }
+        if lhs.rightAccessory != rhs.rightAccessory {
             return false
         }
         if lhs.reaction != rhs.reaction {
@@ -482,7 +496,7 @@ public final class PeerListItemComponent: Component {
             
             let avatarSize: CGFloat = component.style == .compact ? 30.0 : 40.0
             
-            let avatarFrame = CGRect(origin: CGPoint(x: avatarLeftInset, y: floor((height - verticalInset * 2.0 - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
+            let avatarFrame = CGRect(origin: CGPoint(x: avatarLeftInset, y: floorToScreenPixels((height - verticalInset * 2.0 - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
             if self.avatarNode.bounds.isEmpty {
                 self.avatarNode.frame = avatarFrame
             } else {
@@ -570,11 +584,10 @@ public final class PeerListItemComponent: Component {
             )
             
             let titleSpacing: CGFloat = 2.0
-            var titleVerticalOffset: CGFloat = 0.0
+            let titleVerticalOffset: CGFloat = 0.0
             let centralContentHeight: CGFloat
             if labelSize.height > 0.0, case .generic = component.style {
                 centralContentHeight = titleSize.height + labelSize.height + titleSpacing
-                titleVerticalOffset = -1.0
             } else {
                 centralContentHeight = titleSize.height
             }
@@ -685,6 +698,38 @@ public final class PeerListItemComponent: Component {
             
             let imageSize = CGSize(width: 22.0, height: 22.0)
             self.iconFrame = CGRect(origin: CGPoint(x: availableSize.width - (contextInset * 2.0 + 14.0 + component.sideInset) - imageSize.width, y: floor((height - verticalInset * 2.0 - imageSize.height) * 0.5)), size: imageSize)
+            
+            if case .none = component.rightAccessory {
+                if let iconView = self.iconView {
+                    self.iconView = nil
+                    iconView.removeFromSuperview()
+                }
+            } else {
+                let iconView: UIImageView
+                if let current = self.iconView {
+                    iconView = current
+                } else {
+                    var image: UIImage?
+                    var color: UIColor = component.theme.list.itemSecondaryTextColor
+                    switch component.rightAccessory {
+                    case .check:
+                        image = checkImage
+                        color = component.theme.list.itemAccentColor
+                    case .disclosure:
+                        image = disclosureImage
+                    case .none:
+                        break
+                    }
+                    iconView = UIImageView(image: image)
+                    iconView.tintColor = color
+                    self.iconView = iconView
+                    self.containerButton.addSubview(iconView)
+                }
+                
+                if let image = iconView.image {
+                    transition.setFrame(view: iconView, frame: CGRect(origin: CGPoint(x: availableSize.width - image.size.width, y: floor((height - verticalInset * 2.0 - image.size.width) / 2.0)), size: image.size))
+                }
+            }
             
             var reactionIconTransition = transition
             if previousComponent?.reaction != component.reaction {
