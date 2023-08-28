@@ -1422,6 +1422,7 @@ public class CameraScreen: ViewController {
             self.authorizationStatusDisposables.dispose()
         }
         
+        private var panGestureRecognizer: UIPanGestureRecognizer?
         private var pipPanGestureRecognizer: UIPanGestureRecognizer?
         override func didLoad() {
             super.didLoad()
@@ -1435,6 +1436,7 @@ public class CameraScreen: ViewController {
             let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
             panGestureRecognizer.delegate = self
             panGestureRecognizer.maximumNumberOfTouches = 1
+            self.panGestureRecognizer = panGestureRecognizer
             self.previewContainerView.addGestureRecognizer(panGestureRecognizer)
             
             let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
@@ -1598,6 +1600,8 @@ public class CameraScreen: ViewController {
                     return false
                 }
                 return self.additionalPreviewContainerView.frame.contains(location)
+            } else if gestureRecognizer === self.panGestureRecognizer {
+                return true
             }
             return self.hasAppeared
         }
@@ -1628,7 +1632,7 @@ public class CameraScreen: ViewController {
             case .changed:
                 if case .none = self.cameraState.recording {
                     if case .compact = layout.metrics.widthClass {
-                        if translation.x < -10.0 || self.isDismissing {
+                        if (translation.x < -10.0 || self.isDismissing) && self.hasAppeared {
                             self.isDismissing = true
                             let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
                             controller.updateTransitionProgress(transitionFraction, transition: .immediate)
@@ -1640,11 +1644,13 @@ public class CameraScreen: ViewController {
                     }
                 }
             case .ended, .cancelled:
-                let velocity = gestureRecognizer.velocity(in: self.view)
-                let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
-                controller.completeWithTransitionProgress(transitionFraction, velocity: abs(velocity.x), dismissing: true)
-                
-                self.isDismissing = false
+                if self.isDismissing {
+                    let velocity = gestureRecognizer.velocity(in: self.view)
+                    let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
+                    controller.completeWithTransitionProgress(transitionFraction, velocity: abs(velocity.x), dismissing: true)
+                    
+                    self.isDismissing = false
+                }
             default:
                 break
             }
