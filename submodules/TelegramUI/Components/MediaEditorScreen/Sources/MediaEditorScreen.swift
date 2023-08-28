@@ -229,6 +229,7 @@ final class MediaEditorScreenComponent: Component {
         }
         
         var muteDidChange = false
+        var playbackDidChange = false
     }
     
     func makeState() -> State {
@@ -921,12 +922,18 @@ final class MediaEditorScreenComponent: Component {
             let previousAudioData = self.appliedAudioData
             var audioData: VideoScrubberComponent.AudioData?
             if let audioTrack = mediaEditor?.values.audioTrack {
+                let trimRange = mediaEditor?.values.audioTrackTrimRange
+                let offset = mediaEditor?.values.audioTrackStart
                 let audioSamples = mediaEditor?.values.audioTrackSamples
                 audioData = VideoScrubberComponent.AudioData(
                     artist: audioTrack.artist,
                     title: audioTrack.title,
                     samples: audioSamples?.samples,
-                    peak: audioSamples?.peak ?? 0
+                    peak: audioSamples?.peak ?? 0,
+                    duration: audioTrack.duration,
+                    start: trimRange?.lowerBound,
+                    end: trimRange?.upperBound,
+                    offset: offset ?? 0.0
                 )
             }
             self.appliedAudioData = audioData
@@ -1272,16 +1279,30 @@ final class MediaEditorScreenComponent: Component {
                 if (audioData == nil) != (previousAudioData == nil) {
                     bottomControlsTransition = .easeInOut(duration: 0.25)
                 }
+                
+                let minDuration: Double
+                let maxDuration: Double
+                if let mediaEditor, !mediaEditor.sourceIsVideo {
+                    minDuration = 5.0
+                    maxDuration = 15.0
+                } else {
+                    minDuration = 1.0
+                    maxDuration = storyMaxVideoDuration
+                }
+                
+                let isAudioOnly = mediaEditor?.sourceIsVideo == false
                 let scrubberSize = self.scrubber.update(
                     transition: transition,
                     component: AnyComponent(VideoScrubberComponent(
                         context: component.context,
                         generationTimestamp: playerState.generationTimestamp,
+                        audioOnly: isAudioOnly,
                         duration: playerState.duration,
                         startPosition: playerState.timeRange?.lowerBound ?? 0.0,
                         endPosition: playerState.timeRange?.upperBound ?? min(playerState.duration, storyMaxVideoDuration),
                         position: playerState.position,
-                        maxDuration: storyMaxVideoDuration,
+                        minDuration: minDuration,
+                        maxDuration: maxDuration,
                         isPlaying: playerState.isPlaying,
                         frames: playerState.frames,
                         framesUpdateTimestamp: playerState.framesUpdateTimestamp,
@@ -1304,8 +1325,8 @@ final class MediaEditorScreenComponent: Component {
                         audioTrimUpdated: { [weak mediaEditor] start, end, _, done in
                             if let mediaEditor {
                                 mediaEditor.setAudioTrackTrimRange(start..<end, apply: done)
-                                if done {
-                                    
+                                if done && isAudioOnly {
+                                    mediaEditor.seek(start, andPlay: true)
                                 }
                             }
                         },
@@ -1331,7 +1352,7 @@ final class MediaEditorScreenComponent: Component {
                         }
                     }
                     bottomControlsTransition.setFrame(view: scrubberView, frame: scrubberFrame)
-                    if !self.animatingButtons {
+                    if !self.animatingButtons && !isAudioOnly {
                         transition.setAlpha(view: scrubberView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities || isEditingCaption ? 0.0 : 1.0)
                     } else if animateIn {
                         scrubberView.layer.animatePosition(from: CGPoint(x: 0.0, y: 44.0), to: .zero, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
@@ -1340,7 +1361,16 @@ final class MediaEditorScreenComponent: Component {
                     }
                 }
             } else {
-                
+                if let scrubberView = self.scrubber.view, scrubberView.superview != nil {
+                    scrubberView.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: 44.0), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                    scrubberView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                        scrubberView.removeFromSuperview()
+                        Queue.mainQueue().after(0.1) {
+                            scrubberView.layer.removeAllAnimations()
+                        }
+                    })
+                    scrubberView.layer.animateScale(from: 1.0, to: 0.6, duration: 0.2)
+                }
             }
             
             let displayTopButtons = !(self.inputPanelExternalState.isEditing || isEditingTextEntity || component.isDisplayingTool)
@@ -1485,28 +1515,30 @@ final class MediaEditorScreenComponent: Component {
                 }
                 
                 topButtonOffsetX += 50.0
-            } else if let muteButtonView = self.muteButton.view, muteButtonView.superview != nil {
-                muteButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak muteButtonView] _ in
-                    muteButtonView?.removeFromSuperview()
-                })
-                muteButtonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+            } else {
+                if let muteButtonView = self.muteButton.view, muteButtonView.superview != nil {
+                    muteButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak muteButtonView] _ in
+                        muteButtonView?.removeFromSuperview()
+                    })
+                    muteButtonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                }
             }
             
             if let playerState = state.playerState {
                 let playbackContentComponent: AnyComponentWithIdentity<Empty>
-                if component.hasAppeared && !"".isEmpty {
+                if component.hasAppeared {
                     playbackContentComponent = AnyComponentWithIdentity(
                         id: "animatedIcon",
                         component: AnyComponent(
                             LottieAnimationComponent(
                                 animation: LottieAnimationComponent.AnimationItem(
-                                    name: "anim_storymute",
-                                    mode: state.muteDidChange ? .animating(loop: false) : .still(position: .begin),
-                                    range: "".isEmpty ? (0.0, 0.5) : (0.5, 1.0)
+                                    name: "anim_storyplayback",
+                                    mode: state.playbackDidChange ? .animating(loop: false) : .still(position: .end), // : .still(position: .begin),
+                                    range: playerState.isPlaying ? (0.5, 1.0) : (0.0, 0.5)
                                 ),
                                 colors: ["__allcolors__": .white],
                                 size: CGSize(width: 30.0, height: 30.0)
-                            ).tagged(muteButtonTag)
+                            ).tagged(playbackButtonTag)
                         )
                     )
                 } else {
@@ -1525,11 +1557,10 @@ final class MediaEditorScreenComponent: Component {
                     transition: transition,
                     component: AnyComponent(CameraButton(
                         content: playbackContentComponent,
-                        action: { [weak mediaEditor] in
+                        action: { [weak mediaEditor, weak state] in
                             if let mediaEditor {
-//                                state?.muteDidChange = true
+                                state?.playbackDidChange = true
                                 mediaEditor.togglePlayback()
-//                                state?.updated()
                             }
                         }
                     )),
@@ -1555,6 +1586,13 @@ final class MediaEditorScreenComponent: Component {
                     transition.setBounds(view: playbackButtonView, bounds: CGRect(origin: .zero, size: playbackButtonFrame.size))
                     transition.setScale(view: playbackButtonView, scale: displayTopButtons ? 1.0 : 0.01)
                     transition.setAlpha(view: playbackButtonView, alpha: displayTopButtons && !component.isDismissing && !component.isInteractingWithEntities ? 1.0 : 0.0)
+                }
+            } else {
+                if let playbackButtonView = self.playbackButton.view, playbackButtonView.superview != nil {
+                    playbackButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak playbackButtonView] _ in
+                        playbackButtonView?.removeFromSuperview()
+                    })
+                    playbackButtonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
                 }
             }
             
@@ -2989,7 +3027,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         func presentAudioPicker() {
             self.controller?.present(legacyICloudFilePicker(theme: self.presentationData.theme, mode: .import, documentTypes: ["public.mp3"], forceDarkTheme: true, completion: { [weak self] urls in
-                guard let self, !urls.isEmpty, let url = urls.first else {
+                guard let self, let mediaEditor = self.mediaEditor, !urls.isEmpty, let url = urls.first else {
                     return
                 }
                 
@@ -3005,7 +3043,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         title = data.stringValue
                     }
                 }
-                self.mediaEditor?.setAudioTrack(MediaAudioTrack(path: path, artist: artist, title: title))
+                
+                let duration = audioAsset.duration.seconds
+                mediaEditor.setAudioTrack(MediaAudioTrack(path: path, artist: artist, title: title, duration: duration))
+                if !mediaEditor.sourceIsVideo {
+                    mediaEditor.setAudioTrackTrimRange(0 ..< min(15, duration), apply: true)
+                }
+                
                 self.requestUpdate(transition: .easeInOut(duration: 0.2))
                 
                 Queue.mainQueue().after(0.1) {
@@ -3016,8 +3060,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         func presentAudioOptions(sourceView: UIView) {
             let items: [ContextMenuItem] = [
-                .custom(VolumeSliderContextItem(minValue: 0.0, value: 0.75, valueChanged: { _, _ in
-                    
+                .custom(VolumeSliderContextItem(minValue: 0.0, value: 0.75, valueChanged: { [weak self] value, _ in
+                    if let self {
+                        self.mediaEditor?.setAudioTrackVolume(value)
+                    }
                 }), false),
                 .action(
                     ContextMenuActionItem(
