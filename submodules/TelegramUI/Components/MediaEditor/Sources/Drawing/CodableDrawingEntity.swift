@@ -99,10 +99,18 @@ public enum CodableDrawingEntity: Equatable {
                 )
             )
         case let .sticker(entity):
-            if case let .file(_, type) = entity.content, case let .reaction(reaction, _) = type {
+            if case let .file(_, type) = entity.content, case let .reaction(reaction, style) = type {
+                var flags: MediaArea.ReactionFlags = []
+                if case .black = style {
+                    flags.insert(.isDark)
+                }
+                if entity.mirrored {
+                    flags.insert(.isFlipped)
+                }
                 return .reaction(
                     coordinates: coordinates,
-                    reaction: reaction
+                    reaction: reaction,
+                    flags: flags
                 )
             } else {
                 return nil

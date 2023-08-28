@@ -700,9 +700,11 @@ public final class PeerListItemComponent: Component {
             self.iconFrame = CGRect(origin: CGPoint(x: availableSize.width - (contextInset * 2.0 + 14.0 + component.sideInset) - imageSize.width, y: floor((height - verticalInset * 2.0 - imageSize.height) * 0.5)), size: imageSize)
             
             if case .none = component.rightAccessory {
-                if let iconView = self.iconView {
-                    self.iconView = nil
-                    iconView.removeFromSuperview()
+                if case .none = component.subtitleAccessory {
+                    if let iconView = self.iconView {
+                        self.iconView = nil
+                        iconView.removeFromSuperview()
+                    }
                 }
             } else {
                 let iconView: UIImageView
