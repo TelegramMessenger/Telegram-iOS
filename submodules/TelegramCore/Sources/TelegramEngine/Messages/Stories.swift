@@ -1626,53 +1626,66 @@ public final class StoryViewList {
     }
 }
 
-func _internal_getStoryViews(account: Account, ids: [Int32]) -> Signal<[Int32: Stories.Item.Views], NoError> {
-    let accountPeerId = account.peerId
-    return account.network.request(Api.functions.stories.getStoriesViews(id: ids))
-    |> map(Optional.init)
-    |> `catch` { _ -> Signal<Api.stories.StoryViews?, NoError> in
-        return .single(nil)
+func _internal_getStoryViews(account: Account, peerId: PeerId, ids: [Int32]) -> Signal<[Int32: Stories.Item.Views], NoError> {
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(peerId).flatMap(apiInputPeer)
     }
-    |> mapToSignal { result -> Signal<[Int32: Stories.Item.Views], NoError> in
-        guard let result = result else {
+    |> mapToSignal { inputPeer -> Signal<[Int32: Stories.Item.Views], NoError> in
+        guard let inputPeer = inputPeer else {
             return .single([:])
         }
-        return account.postbox.transaction { transaction -> [Int32: Stories.Item.Views] in
-            var parsedViews: [Int32: Stories.Item.Views] = [:]
-            switch result {
-            case let .storyViews(views, users):
-                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
-                
-                for i in 0 ..< views.count {
-                    if i < ids.count {
-                        parsedViews[ids[i]] = Stories.Item.Views(apiViews: views[i])
+        
+        let accountPeerId = account.peerId
+        return account.network.request(Api.functions.stories.getStoriesViews(peer: inputPeer, id: ids))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.stories.StoryViews?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { result -> Signal<[Int32: Stories.Item.Views], NoError> in
+            guard let result = result else {
+                return .single([:])
+            }
+            return account.postbox.transaction { transaction -> [Int32: Stories.Item.Views] in
+                var parsedViews: [Int32: Stories.Item.Views] = [:]
+                switch result {
+                case let .storyViews(views, users):
+                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
+                    
+                    for i in 0 ..< views.count {
+                        if i < ids.count {
+                            parsedViews[ids[i]] = Stories.Item.Views(apiViews: views[i])
+                        }
                     }
                 }
+                
+                return parsedViews
             }
-            
-            return parsedViews
         }
     }
 }
 
 func _internal_updatePeerStoriesHidden(account: Account, id: PeerId, isHidden: Bool) -> Signal<Never, NoError> {
-    return account.postbox.transaction { transaction -> Api.InputUser? in
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
         guard let peer = transaction.getPeer(id) else {
             return nil
         }
-        guard let user = peer as? TelegramUser else {
-            return nil
+        if let user = peer as? TelegramUser {
+            updatePeersCustom(transaction: transaction, peers: [user.withUpdatedStoriesHidden(isHidden)], update: { _, updated in
+                return updated
+            })
+        } else if let channel = peer as? TelegramChannel {
+            updatePeersCustom(transaction: transaction, peers: [channel.withUpdatedStoriesHidden(isHidden)], update: { _, updated in
+                return updated
+            })
         }
-        updatePeersCustom(transaction: transaction, peers: [user.withUpdatedStoriesHidden(isHidden)], update: { _, updated in
-            return updated
-        })
-        return apiInputUser(peer)
+        
+        return apiInputPeer(peer)
     }
-    |> mapToSignal { inputUser -> Signal<Never, NoError> in
-        guard let inputUser = inputUser else {
+    |> mapToSignal { inputPeer -> Signal<Never, NoError> in
+        guard let inputPeer = inputPeer else {
             return .complete()
         }
-        return account.network.request(Api.functions.contacts.toggleStoriesHidden(id: inputUser, hidden: isHidden ? .boolTrue : .boolFalse))
+        return account.network.request(Api.functions.stories.togglePeerStoriesHidden(peer: inputPeer, hidden: isHidden ? .boolTrue : .boolFalse))
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)
         }

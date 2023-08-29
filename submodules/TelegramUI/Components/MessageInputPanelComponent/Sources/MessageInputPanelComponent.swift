@@ -17,6 +17,7 @@ import EmojiSuggestionsComponent
 import AudioToolbox
 import AnimatedTextComponent
 import AnimatedCountLabelNode
+import MessageInputActionButtonComponent
 
 public final class MessageInputPanelComponent: Component {
     public struct ContextQueryTypes: OptionSet {

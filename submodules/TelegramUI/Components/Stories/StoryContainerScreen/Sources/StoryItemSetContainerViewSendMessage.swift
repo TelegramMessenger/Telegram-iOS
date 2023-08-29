@@ -3318,7 +3318,10 @@ final class StoryItemSetContainerSendMessage {
                     guard let view, let component = view.component else {
                         return
                     }
-                    let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: reaction).start()
+                    if case .channel = component.slice.peer {
+                    } else {
+                        let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: reaction).start()
+                    }
                     
                     let targetFrame = reactionView.convert(reactionView.bounds, to: view)
                     

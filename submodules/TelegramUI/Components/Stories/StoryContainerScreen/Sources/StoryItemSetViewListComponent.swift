@@ -702,7 +702,7 @@ final class StoryItemSetViewListComponent: Component {
                                 parentSource = nil
                             }
                             
-                            self.viewList = component.context.engine.messages.storyViewList(id: component.storyItem.id, views: views, listMode: mappedListMode, sortMode: mappedSortMode, searchQuery: query, parentSource: parentSource)
+                            self.viewList = component.context.engine.messages.storyViewList(peerId: component.peerId, id: component.storyItem.id, views: views, listMode: mappedListMode, sortMode: mappedSortMode, searchQuery: query, parentSource: parentSource)
                         }
                     }
                 } else {
@@ -711,7 +711,7 @@ final class StoryItemSetViewListComponent: Component {
                         if let current = component.sharedListsContext.viewLists[StoryId(peerId: component.peerId, id: component.storyItem.id)] {
                             viewList = current
                         } else {
-                            viewList = component.context.engine.messages.storyViewList(id: component.storyItem.id, views: views, listMode: .everyone, sortMode: .reactionsFirst)
+                            viewList = component.context.engine.messages.storyViewList(peerId: component.peerId, id: component.storyItem.id, views: views, listMode: .everyone, sortMode: .reactionsFirst)
                             component.sharedListsContext.viewLists[StoryId(peerId: component.peerId, id: component.storyItem.id)] = viewList
                         }
                         self.viewList = viewList
@@ -730,7 +730,7 @@ final class StoryItemSetViewListComponent: Component {
                         case .recentFirst:
                             mappedSortMode = .recentFirst
                         }
-                        self.viewList = component.context.engine.messages.storyViewList(id: component.storyItem.id, views: views, listMode: mappedListMode, sortMode: mappedSortMode, parentSource: component.sharedListsContext.viewLists[StoryId(peerId: component.peerId, id: component.storyItem.id)])
+                        self.viewList = component.context.engine.messages.storyViewList(peerId: component.peerId, id: component.storyItem.id, views: views, listMode: mappedListMode, sortMode: mappedSortMode, parentSource: component.sharedListsContext.viewLists[StoryId(peerId: component.peerId, id: component.storyItem.id)])
                     }
                 }
             }
@@ -1376,7 +1376,7 @@ final class StoryItemSetViewListComponent: Component {
                     if let current = component.sharedListsContext.viewLists[StoryId(peerId: component.peerId, id: component.storyItem.id)] {
                         viewList = current
                     } else {
-                        viewList = component.context.engine.messages.storyViewList(id: component.storyItem.id, views: views, listMode: .everyone, sortMode: .reactionsFirst)
+                        viewList = component.context.engine.messages.storyViewList(peerId: component.peerId, id: component.storyItem.id, views: views, listMode: .everyone, sortMode: .reactionsFirst)
                         component.sharedListsContext.viewLists[StoryId(peerId: component.peerId, id: component.storyItem.id)] = viewList
                     }
                     self.mainViewList = viewList

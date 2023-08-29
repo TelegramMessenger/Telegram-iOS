@@ -18,17 +18,20 @@ public final class StoryPreloadInfo {
     public let peer: PeerReference
     public let storyId: Int32
     public let media: EngineMedia
+    public let reactions: [MessageReaction.Reaction]
     public let priority: Priority
     
     public init(
         peer: PeerReference,
         storyId: Int32,
         media: EngineMedia,
+        reactions: [MessageReaction.Reaction],
         priority: Priority
     ) {
         self.peer = peer
         self.storyId = storyId
         self.media = media
+        self.reactions = reactions
         self.priority = priority
     }
 }
@@ -1063,11 +1066,20 @@ public extension TelegramEngine {
                         guard let media = itemAndPeer.item.media, let mediaId = media.id else {
                             continue
                         }
+                        var reactions: [MessageReaction.Reaction] = []
+                        for mediaArea in itemAndPeer.item.mediaAreas {
+                            if case let .reaction(_, reaction, _) = mediaArea {
+                                if !reactions.contains(reaction) {
+                                    reactions.append(reaction)
+                                }
+                            }
+                        }
                         
                         resultResources[mediaId] = StoryPreloadInfo(
                             peer: peerReference,
                             storyId: itemAndPeer.item.id,
                             media: EngineMedia(media),
+                            reactions: reactions,
                             priority: .top(position: nextPriority)
                         )
                         nextPriority += 1
@@ -1083,11 +1095,11 @@ public extension TelegramEngine {
         }
         
         public func refreshStoryViews(peerId: EnginePeer.Id, ids: [Int32]) -> Signal<Never, NoError> {
-            if peerId != self.account.peerId {
+            if peerId != self.account.peerId && peerId.namespace != Namespaces.Peer.CloudChannel {
                 return .complete()
             }
             
-            return _internal_getStoryViews(account: self.account, ids: ids)
+            return _internal_getStoryViews(account: self.account, peerId: peerId, ids: ids)
             |> mapToSignal { views -> Signal<Never, NoError> in
                 return self.account.postbox.transaction { transaction -> Void in
                     var currentItems = transaction.getStoryItems(peerId: peerId)
@@ -1183,8 +1195,8 @@ public extension TelegramEngine {
             return _internal_updateStoriesArePinned(account: self.account, peerId: peerId, ids: ids, isPinned: isPinned)
         }
         
-        public func storyViewList(id: Int32, views: EngineStoryItem.Views, listMode: EngineStoryViewListContext.ListMode, sortMode: EngineStoryViewListContext.SortMode, searchQuery: String? = nil, parentSource: EngineStoryViewListContext? = nil) -> EngineStoryViewListContext {
-            return EngineStoryViewListContext(account: self.account, storyId: id, views: views, listMode: listMode, sortMode: sortMode, searchQuery: searchQuery, parentSource: parentSource)
+        public func storyViewList(peerId: EnginePeer.Id, id: Int32, views: EngineStoryItem.Views, listMode: EngineStoryViewListContext.ListMode, sortMode: EngineStoryViewListContext.SortMode, searchQuery: String? = nil, parentSource: EngineStoryViewListContext? = nil) -> EngineStoryViewListContext {
+            return EngineStoryViewListContext(account: self.account, peerId: peerId, storyId: id, views: views, listMode: listMode, sortMode: sortMode, searchQuery: searchQuery, parentSource: parentSource)
         }
         
         public func exportStoryLink(peerId: EnginePeer.Id, id: Int32) -> Signal<String?, NoError> {

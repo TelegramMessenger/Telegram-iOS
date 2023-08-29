@@ -3613,22 +3613,6 @@ public extension Api.functions.contacts {
                 }
 }
 public extension Api.functions.contacts {
-                static func toggleStoriesHidden(id: Api.InputUser, hidden: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1967110245)
-                    id.serialize(buffer, true)
-                    hidden.serialize(buffer, true)
-                    return (FunctionDescription(name: "contacts.toggleStoriesHidden", parameters: [("id", String(describing: id)), ("hidden", String(describing: hidden))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-}
-public extension Api.functions.contacts {
                 static func toggleTopPeers(enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-2062238246)
@@ -8734,15 +8718,16 @@ public extension Api.functions.stories {
                 }
 }
 public extension Api.functions.stories {
-                static func getStoriesViews(id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.StoryViews>) {
+                static func getStoriesViews(peer: Api.InputPeer, id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.StoryViews>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1703553370)
+                    buffer.appendInt32(685862088)
+                    peer.serialize(buffer, true)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(id.count))
                     for item in id {
                         serializeInt32(item, buffer: buffer, boxed: false)
                     }
-                    return (FunctionDescription(name: "stories.getStoriesViews", parameters: [("id", String(describing: id))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stories.StoryViews? in
+                    return (FunctionDescription(name: "stories.getStoriesViews", parameters: [("peer", String(describing: peer)), ("id", String(describing: id))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stories.StoryViews? in
                         let reader = BufferReader(buffer)
                         var result: Api.stories.StoryViews?
                         if let signature = reader.readInt32() {
@@ -8753,15 +8738,16 @@ public extension Api.functions.stories {
                 }
 }
 public extension Api.functions.stories {
-                static func getStoryViewsList(flags: Int32, q: String?, id: Int32, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.StoryViewsList>) {
+                static func getStoryViewsList(flags: Int32, peer: Api.InputPeer, q: String?, id: Int32, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.StoryViewsList>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-111189596)
+                    buffer.appendInt32(2127707223)
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(q!, buffer: buffer, boxed: false)}
                     serializeInt32(id, buffer: buffer, boxed: false)
                     serializeString(offset, buffer: buffer, boxed: false)
                     serializeInt32(limit, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "stories.getStoryViewsList", parameters: [("flags", String(describing: flags)), ("q", String(describing: q)), ("id", String(describing: id)), ("offset", String(describing: offset)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stories.StoryViewsList? in
+                    return (FunctionDescription(name: "stories.getStoryViewsList", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("q", String(describing: q)), ("id", String(describing: id)), ("offset", String(describing: offset)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stories.StoryViewsList? in
                         let reader = BufferReader(buffer)
                         var result: Api.stories.StoryViewsList?
                         if let signature = reader.readInt32() {
@@ -8888,6 +8874,22 @@ public extension Api.functions.stories {
                     buffer.appendInt32(2082822084)
                     hidden.serialize(buffer, true)
                     return (FunctionDescription(name: "stories.toggleAllStoriesHidden", parameters: [("hidden", String(describing: hidden))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.stories {
+                static func togglePeerStoriesHidden(peer: Api.InputPeer, hidden: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1123805756)
+                    peer.serialize(buffer, true)
+                    hidden.serialize(buffer, true)
+                    return (FunctionDescription(name: "stories.togglePeerStoriesHidden", parameters: [("peer", String(describing: peer)), ("hidden", String(describing: hidden))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {

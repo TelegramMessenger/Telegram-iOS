@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "StoryFooterPanelComponent",
-    module_name = "StoryFooterPanelComponent",
+    name = "MessageInputActionButtonComponent",
+    module_name = "MessageInputActionButtonComponent",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -13,14 +13,14 @@ swift_library(
         "//submodules/Display",
         "//submodules/ComponentFlow",
         "//submodules/AppBundle",
-        "//submodules/Components/BundleIconComponent",
-        "//submodules/AnimatedAvatarSetNode",
+        "//submodules/TelegramUI/Components/ChatTextInputMediaRecordingButton",
         "//submodules/AccountContext",
-        "//submodules/TelegramCore",
+        "//submodules/TelegramPresentationData",
+        "//submodules/ChatPresentationInterfaceState",
         "//submodules/TelegramUI/Components/MoreHeaderButton",
-        "//submodules/SemanticStatusNode",
-        "//submodules/AnimatedCountLabelNode",
-        "//submodules/TelegramUI/Components/MessageInputActionButtonComponent",
+        "//submodules/ContextUI",
+        "//submodules/Components/ReactionButtonListComponent",
+        "//submodules/TelegramCore",
     ],
     visibility = [
         "//visibility:public",

@@ -1166,7 +1166,14 @@ public final class StoryItemSetContainerComponent: Component {
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
                             self.component?.controller()?.dismiss()
                         }  else if translation.y < -200.0 || (translation.y < -100.0 && velocity.y < -100.0) {
+                            var displayViewLists = false
                             if component.slice.peer.id == component.context.account.peerId {
+                                displayViewLists = true
+                            } else if case let .channel(channel) = component.slice.peer, channel.hasPermission(.sendSomething) {
+                                displayViewLists = true
+                            }
+                            
+                            if displayViewLists {
                                 self.viewListDisplayState = self.targetViewListDisplayStateIsFull ? .full : .half
                                 self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
                                 self.dismissAllTooltips()
@@ -1488,6 +1495,7 @@ public final class StoryItemSetContainerComponent: Component {
                             peer: component.slice.peer,
                             item: item.storyItem,
                             availableReactions: component.availableReactions,
+                            entityFiles: item.entityFiles,
                             audioMode: component.audioMode,
                             isVideoBuffering: visibleItem.isBuffering,
                             isCurrent: index == centralIndex,
@@ -1574,7 +1582,18 @@ public final class StoryItemSetContainerComponent: Component {
                             view.setProgressMode(itemProgressMode)
                         }
                         
-                        if component.slice.peer.id == component.context.account.peerId || component.slice.item.storyItem.isPending {
+                        var isChannel = false
+                        var displayFooter = false
+                        if case .channel = component.slice.peer {
+                            displayFooter = true
+                            isChannel = true
+                        } else if component.slice.peer.id == component.context.account.peerId {
+                            displayFooter = true
+                        } else if component.slice.item.storyItem.isPending {
+                            displayFooter = true
+                        }
+                        
+                        if displayFooter {
                             let contentViewsShadowView: UIImageView
                             if let current = visibleItem.contentViewsShadowView {
                                 contentViewsShadowView = current
@@ -1608,8 +1627,34 @@ public final class StoryItemSetContainerComponent: Component {
                                 transition: itemTransition,
                                 component: AnyComponent(StoryFooterPanelComponent(
                                     context: component.context,
+                                    theme: component.theme,
                                     strings: component.strings,
                                     storyItem: item.storyItem,
+                                    myReaction: item.storyItem.myReaction.flatMap { value -> StoryFooterPanelComponent.MyReaction? in
+                                        var centerAnimation: TelegramMediaFile?
+                                        var animationFileId: Int64?
+                                        
+                                        switch value {
+                                        case .builtin:
+                                            if let availableReactions = component.availableReactions {
+                                                for availableReaction in availableReactions.reactionItems {
+                                                    if availableReaction.reaction.rawValue == value {
+                                                        centerAnimation = availableReaction.listAnimation
+                                                        break
+                                                    }
+                                                }
+                                            }
+                                        case let .custom(fileId):
+                                            animationFileId = fileId
+                                        }
+                                        
+                                        if animationFileId == nil && centerAnimation == nil {
+                                            return nil
+                                        }
+                                        
+                                        return StoryFooterPanelComponent.MyReaction(reaction: value, file: centerAnimation, animationFileId: animationFileId)
+                                    },
+                                    isChannel: isChannel,
                                     externalViews: nil,
                                     expandFraction: footerExpandFraction,
                                     expandViewStats: { [weak self] in
@@ -1672,6 +1717,18 @@ public final class StoryItemSetContainerComponent: Component {
                                             return
                                         }
                                         self.performMoreAction(sourceView: sourceView, gesture: gesture)
+                                    },
+                                    likeAction: { [weak self] in
+                                        guard let self else {
+                                            return
+                                        }
+                                        self.performLikeAction()
+                                    },
+                                    forwardAction: { [weak self] in
+                                        guard let self else {
+                                            return
+                                        }
+                                        self.sendMessageContext.performShareAction(view: self)
                                     }
                                 )),
                                 environment: {},
@@ -1759,7 +1816,15 @@ public final class StoryItemSetContainerComponent: Component {
             guard let component = self.component else {
                 return false
             }
+            
+            var displayViewLists = false
             if component.slice.peer.id == component.context.account.peerId {
+                displayViewLists = true
+            } else if case let .channel(channel) = component.slice.peer, channel.hasPermission(.sendSomething) {
+                displayViewLists = true
+            }
+            
+            if displayViewLists {
                 self.viewListDisplayState = .half
                 self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                 
@@ -2579,7 +2644,12 @@ public final class StoryItemSetContainerComponent: Component {
             
             let startTime23 = CFAbsoluteTimeGetCurrent()
             
-            if component.slice.peer.id != component.context.account.peerId {
+            var isChannel = false
+            if case .channel = component.slice.peer {
+                isChannel = true
+            }
+            
+            if component.slice.peer.id != component.context.account.peerId && !isChannel {
                 var haveLikeOptions = false
                 if case .user = component.slice.peer {
                     haveLikeOptions = true
@@ -2587,11 +2657,6 @@ public final class StoryItemSetContainerComponent: Component {
                     if component.slice.peer.isService {
                         haveLikeOptions = false
                     }
-                }
-                
-                var isChannel = false
-                if case .channel = component.slice.peer {
-                    isChannel = true
                 }
                 
                 inputPanelSize = self.inputPanel.update(
@@ -2897,7 +2962,15 @@ public final class StoryItemSetContainerComponent: Component {
             let startTime4 = CFAbsoluteTimeGetCurrent()
             
             var validViewListIds: [Int32] = []
-            if component.slice.peer.id == component.context.account.peerId, let currentIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
+            
+            var displayViewLists = false
+            if component.slice.peer.id == component.context.account.peerId {
+                displayViewLists = true
+            } else if case let .channel(channel) = component.slice.peer, channel.hasPermission(.sendSomething) {
+                displayViewLists = true
+            }
+            
+            if displayViewLists, let currentIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
                 var visibleViewListIds: [Int32] = [component.slice.item.storyItem.id]
                 if self.viewListDisplayState != .hidden, let viewListPanState = self.viewListPanState {
                     if currentIndex != 0 {
@@ -2925,7 +2998,7 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 for (id, views) in preloadViewListIds {
                     if component.sharedViewListsContext.viewLists[StoryId(peerId: component.slice.peer.id, id: id)] == nil {
-                        let viewList = component.context.engine.messages.storyViewList(id: id, views: views, listMode: .everyone, sortMode: .reactionsFirst)
+                        let viewList = component.context.engine.messages.storyViewList(peerId: component.slice.peer.id, id: id, views: views, listMode: .everyone, sortMode: .reactionsFirst)
                         component.sharedViewListsContext.viewLists[StoryId(peerId: component.slice.peer.id, id: id)] = viewList
                     }
                 }
@@ -3594,14 +3667,18 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             let storyPrivacyIcon: StoryPrivacyIconComponent.Privacy?
-            if component.slice.item.storyItem.isCloseFriends {
-                storyPrivacyIcon = .closeFriends
-            } else if component.slice.item.storyItem.isContacts {
-                storyPrivacyIcon = .contacts
-            } else if component.slice.item.storyItem.isSelectedContacts {
-                storyPrivacyIcon = .selectedContacts
-            } else if component.slice.peer.id == component.context.account.peerId {
-                storyPrivacyIcon = .everyone
+            if case .user = component.slice.peer {
+                if component.slice.item.storyItem.isCloseFriends {
+                    storyPrivacyIcon = .closeFriends
+                } else if component.slice.item.storyItem.isContacts {
+                    storyPrivacyIcon = .contacts
+                } else if component.slice.item.storyItem.isSelectedContacts {
+                    storyPrivacyIcon = .selectedContacts
+                } else if component.slice.peer.id == component.context.account.peerId {
+                    storyPrivacyIcon = .everyone
+                } else {
+                    storyPrivacyIcon = nil
+                }
             } else {
                 storyPrivacyIcon = nil
             }
@@ -5174,10 +5251,19 @@ public final class StoryItemSetContainerComponent: Component {
                 guard let self, let component = self.component else {
                     return
                 }
-                guard let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View else {
-                    return
+                
+                var likeButtonView: UIView?
+                
+                if let visibleItem = self.visibleItems[component.slice.item.storyItem.id], let footerPanelView = visibleItem.footerPanel?.view as? StoryFooterPanelComponent.View {
+                    likeButtonView = footerPanelView.likeButtonView
+                } else {
+                    guard let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View else {
+                        return
+                    }
+                    likeButtonView = inputPanelView.likeButtonView
                 }
-                guard let likeButtonView = inputPanelView.likeButtonView else {
+                
+                guard let likeButtonView else {
                     return
                 }
                 
@@ -5703,6 +5789,49 @@ public final class StoryItemSetContainerComponent: Component {
                 })))
             }
             
+            items.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextDeleteStory, textColor: .destructive, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+            }, action: { [weak self] _, a in
+                a(.default)
+                
+                guard let self, let component = self.component else {
+                    return
+                }
+                
+                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                
+                actionSheet.setItemGroups([
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: component.strings.Story_ContextDeleteStory, color: .destructive, action: { [weak self, weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.delete()
+                        })
+                    ]),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])
+                ])
+                
+                actionSheet.dismissed = { [weak self] _ in
+                    guard let self else {
+                        return
+                    }
+                    self.sendMessageContext.actionSheet = nil
+                    self.updateIsProgressPaused()
+                }
+                self.sendMessageContext.actionSheet = actionSheet
+                self.updateIsProgressPaused()
+                
+                component.presentController(actionSheet, nil)
+            })))
+            
             let (tip, tipSignal) = self.getLinkedStickerPacks()
             
             let contextItems = ContextController.Items(content: .list(items), tip: tip, tipSignal: tipSignal)
@@ -5813,6 +5942,8 @@ public final class StoryItemSetContainerComponent: Component {
                     
                     var isHidden = false
                     if case let .user(user) = component.slice.peer, let storiesHidden = user.storiesHidden {
+                        isHidden = storiesHidden
+                    } else if case let .channel(channel) = component.slice.peer, let storiesHidden = channel.storiesHidden {
                         isHidden = storiesHidden
                     }
                     

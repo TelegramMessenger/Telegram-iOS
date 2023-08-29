@@ -457,25 +457,11 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                 return
             }
             
-            let _ = (self.context.engine.stickers.availableReactions()
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] availableReactions in
-                guard let self, let availableReactions else {
+            let continueWithAnimationFile: (TelegramMediaFile) -> Void = { [weak self] animation in
+                guard let self else {
                     return
                 }
                 
-                var animation: TelegramMediaFile?
-                for reaction in availableReactions.reactions {
-                    if reaction.value == updateReaction.reaction {
-                        animation = reaction.selectAnimation
-                        break
-                    }
-                }
-                
-                guard let animation else {
-                    return
-                }
-                                    
                 if case let .file(_, type) = self.stickerEntity.content, case let .reaction(_, style) = type {
                     self.stickerEntity.content = .file(animation, .reaction(updateReaction.reaction, style))
                 }
@@ -503,7 +489,39 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                 self.animationNode?.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
                 
                 let _ = self.dismissReactionSelection()
-            })
+            }
+            
+            switch updateReaction {
+            case .builtin:
+                let _ = (self.context.engine.stickers.availableReactions()
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { availableReactions in
+                    guard let availableReactions else {
+                        return
+                    }
+                    var animation: TelegramMediaFile?
+                    for reaction in availableReactions.reactions {
+                        if reaction.value == updateReaction.reaction {
+                            animation = reaction.selectAnimation
+                            break
+                        }
+                    }
+                    if let animation {
+                        continueWithAnimationFile(animation)
+                    }
+                })
+            case let .custom(fileId, file):
+                if let file {
+                    continueWithAnimationFile(file)
+                } else {
+                    let _ = (self.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
+                    |> deliverOnMainQueue).start(next: { files in
+                        if let itemFile = files[fileId] {
+                            continueWithAnimationFile(itemFile)
+                        }
+                    })
+                }
+            }
         }
         
         reactionContextNode.premiumReactionsSelected = { [weak self] file in

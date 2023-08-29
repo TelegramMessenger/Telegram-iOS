@@ -127,9 +127,7 @@ func _internal_updatePeerIsContact(transaction: Transaction, user: TelegramUser,
 }
 
 private func _internal_updateChannelMembership(transaction: Transaction, channel: TelegramChannel, isMember: Bool) {
-    if isMember {
-        let storiesHidden = !"".isEmpty
-        
+    if isMember, let storiesHidden = channel.storiesHidden {
         if storiesHidden {
             if transaction.storySubscriptionsContains(key: .filtered, peerId: channel.id) {
                 var (state, peerIds) = transaction.getAllStorySubscriptions(key: .filtered)
@@ -183,13 +181,15 @@ public func updatePeersCustom(transaction: Transaction, peers: [Peer], update: (
         
         if let updatedChannel = updated as? TelegramChannel {
             var wasMember = false
+            var wasHidden: Bool?
             if let previous = previous as? TelegramChannel {
                 wasMember = previous.participationStatus == .member
+                wasHidden = previous.storiesHidden
                 updated = mergeChannel(lhs: previous, rhs: updatedChannel)
             }
             
             let isMember = updatedChannel.participationStatus == .member
-            if isMember != wasMember {
+            if isMember != wasMember || updatedChannel.storiesHidden != wasHidden {
                 _internal_updateChannelMembership(transaction: transaction, channel: updatedChannel, isMember: isMember)
             }
         }

@@ -15,8 +15,15 @@ import MultilineTextComponent
 import AppBundle
 import EmojiTextAttachmentView
 import TextFormat
+import AnimatedCountLabelNode
+import LottieComponent
+import LottieComponentResourceContent
 
 final class StoryItemOverlaysView: UIView {
+    static let counterFont: UIFont = {
+        return Font.with(size: 17.0, design: .camera, weight: .semibold, traits: .monospacedNumbers)
+    }()
+    
     private static let shadowImage: UIImage = {
         return UIImage(bundleImageName: "Stories/ReactionShadow")!
     }()
@@ -28,11 +35,22 @@ final class StoryItemOverlaysView: UIView {
     private final class ItemView: HighlightTrackingButton {
         private let shadowView: UIImageView
         private let coverView: UIImageView
-        private var stickerView: EmojiTextAttachmentView?
+        
+        private var directStickerView: ComponentView<Empty>?
+        private var customEmojiView: EmojiTextAttachmentView?
         private var file: TelegramMediaFile?
+        private var counterText: AnimatedCountLabelView?
         
         private var reaction: MessageReaction.Reaction?
         var activate: ((UIView, MessageReaction.Reaction) -> Void)?
+        var requestUpdate: (() -> Void)?
+        
+        private var demoCounter: Bool = false
+        
+        private var requestStickerDisposable: Disposable?
+        private var resolvedFile: TelegramMediaFile?
+        
+        private var customEmojiLoadDisposable: Disposable?
         
         override init(frame: CGRect) {
             self.shadowView = UIImageView(image: StoryItemOverlaysView.shadowImage)
@@ -54,7 +72,12 @@ final class StoryItemOverlaysView: UIView {
                 } else {
                     let transition: Transition = .immediate
                     transition.setSublayerTransform(view: self, transform: CATransform3DIdentity)
-                    self.layer.animateSpring(from: 0.9 as NSNumber, to: 1.0 as NSNumber, keyPath: "sublayerTransform.scale", duration: 0.4)
+                    var fromScale: Double = 0.9
+                    if self.layer.animation(forKey: "sublayerTransform") != nil, let presentation = self.layer.presentation() {
+                        let t = presentation.sublayerTransform
+                        fromScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
+                    }
+                    self.layer.animateSpring(from: fromScale as NSNumber, to: 1.0 as NSNumber, keyPath: "sublayerTransform.scale", duration: 0.4)
                 }
             }
             self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
@@ -64,21 +87,41 @@ final class StoryItemOverlaysView: UIView {
             fatalError("init(coder:) has not been implemented")
         }
         
+        deinit {
+            self.requestStickerDisposable?.dispose()
+            self.customEmojiLoadDisposable?.dispose()
+        }
+        
         @objc private func pressed() {
             guard let activate = self.activate, let reaction = self.reaction else {
                 return
             }
             activate(self, reaction)
+            
+            self.demoCounter = !self.demoCounter
+            self.requestUpdate?()
         }
         
         func update(
             context: AccountContext,
             reaction: MessageReaction.Reaction,
             flags: MediaArea.ReactionFlags,
+            counter: Int,
             availableReactions: StoryAvailableReactions?,
+            entityFiles: [MediaId: TelegramMediaFile],
             synchronous: Bool,
             size: CGSize
         ) {
+            var counter = counter
+            if self.demoCounter {
+                counter += 1
+            }
+            
+            var transition = Transition(animation: .curve(duration: 0.18, curve: .easeInOut))
+            if self.reaction == nil {
+                transition = .immediate
+            }
+            
             self.reaction = reaction
             
             let insets = UIEdgeInsets(top: -0.08, left: -0.05, bottom: -0.01, right: -0.02)
@@ -107,43 +150,187 @@ final class StoryItemOverlaysView: UIView {
                         }
                     }
                 case let .custom(fileId):
-                    let _ = fileId
+                    if let resolvedFile = self.resolvedFile, resolvedFile.fileId.id == fileId {
+                        file = resolvedFile
+                    } else if let value = entityFiles[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] {
+                        file = value
+                    } else {
+                        if self.requestStickerDisposable == nil {
+                            self.requestStickerDisposable = (context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
+                            |> deliverOnMainQueue).start(next: { [weak self] result in
+                                guard let self else {
+                                    return
+                                }
+                                if let value = result[fileId] {
+                                    self.resolvedFile = value
+                                    self.requestUpdate?()
+                                }
+                            })
+                        }
+                    }
+                }
+            }
+            
+            if counter != 0 {
+                var conterTransition = transition
+                let counterText: AnimatedCountLabelView
+                if let current = self.counterText {
+                    counterText = current
+                } else {
+                    conterTransition = conterTransition.withAnimation(.none)
+                    counterText = AnimatedCountLabelView(frame: CGRect())
+                    counterText.isUserInteractionEnabled = false
+                    self.counterText = counterText
+                    self.addSubview(counterText)
+                }
+                
+                var segments: [AnimatedCountLabelView.Segment] = []
+                segments.append(.number(counter, NSAttributedString(string: "\(counter)", font: counterFont, textColor: flags.contains(.isDark) ? .white : .black)))
+                let counterTextLayout = counterText.update(size: CGSize(width: 200.0, height: 200.0), segments: segments, transition: conterTransition.containedViewLayoutTransition)
+                conterTransition.setPosition(view: counterText, position: CGPoint(x: size.width * 0.5, y: size.height * 0.765))
+                conterTransition.setBounds(view: counterText, bounds: CGRect(origin: CGPoint(), size: counterTextLayout.size))
+                
+                let counterScale = max(0.01, min(1.8, size.width / 140.0))
+                conterTransition.setScale(view: counterText, scale: counterScale)
+                
+                if !transition.animation.isImmediate && conterTransition.animation.isImmediate {
+                    transition.animateAlpha(view: counterText, from: 0.0, to: 1.0)
+                    transition.animateScale(view: counterText, from: 0.001, to: counterScale)
+                }
+            } else {
+                if let counterText = self.counterText {
+                    self.counterText = nil
+                    transition.setAlpha(view: counterText, alpha: 0.0, completion: { [weak counterText] _ in
+                        counterText?.removeFromSuperview()
+                    })
+                    transition.setScale(view: counterText, scale: 0.001)
                 }
             }
             
             if self.file?.fileId != file?.fileId, let file {
                 self.file = file
                 
-                let stickerView: EmojiTextAttachmentView
-                if let current = self.stickerView {
-                    stickerView = current
-                } else {
-                    stickerView = EmojiTextAttachmentView(
-                        context: context,
-                        userLocation: .other,
-                        emoji: ChatTextInputTextCustomEmojiAttribute(
-                            interactivelySelectedFromPackId: nil,
-                            fileId: file.fileId.id,
-                            file: file
-                        ),
-                        file: file,
-                        cache: context.animationCache,
-                        renderer: context.animationRenderer,
-                        placeholderColor: UIColor(white: 0.0, alpha: 0.1),
-                        pointSize: CGSize(width: itemSize.width, height: itemSize.height)
+                let isBuiltinSticker = file.isAnimatedSticker && !file.isVideoSticker && !file.isVideoEmoji
+                
+                if isBuiltinSticker {
+                    let directStickerView: ComponentView<Empty>
+                    if let current = self.directStickerView {
+                        directStickerView = current
+                    } else {
+                        directStickerView = ComponentView()
+                        self.directStickerView = directStickerView
+                        
+                        self.customEmojiLoadDisposable?.dispose()
+                        self.customEmojiLoadDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: .standalone(resource: file.resource)).start()
+                    }
+                    var color: UIColor?
+                    if file.isCustomTemplateEmoji {
+                        color = flags.contains(.isDark) ? .white : .black
+                    }
+                    let _ = directStickerView.update(
+                        transition: .immediate,
+                        component: AnyComponent(LottieComponent(
+                            content: LottieComponent.ResourceContent(context: context, file: file, attemptSynchronously: synchronous),
+                            color: color,
+                            renderingScale: 2.0,
+                            loop: true
+                        )),
+                        environment: {},
+                        containerSize: itemSize
                     )
-                    stickerView.isUserInteractionEnabled = false
-                    self.stickerView = stickerView
-                    self.addSubview(stickerView)
+                } else {
+                    if let directStickerView = self.directStickerView {
+                        self.directStickerView = nil
+                        directStickerView.view?.removeFromSuperview()
+                    }
                 }
                 
-                stickerView.frame = itemSize.centered(around: CGPoint(x: size.width * 0.5, y: size.height * 0.47))
+                if !isBuiltinSticker {
+                    let customEmojiView: EmojiTextAttachmentView
+                    if let current = self.customEmojiView {
+                        customEmojiView = current
+                    } else {
+                        customEmojiView = EmojiTextAttachmentView(
+                            context: context,
+                            userLocation: .other,
+                            emoji: ChatTextInputTextCustomEmojiAttribute(
+                                interactivelySelectedFromPackId: nil,
+                                fileId: file.fileId.id,
+                                file: file
+                            ),
+                            file: file,
+                            cache: context.animationCache,
+                            renderer: context.animationRenderer,
+                            placeholderColor: flags.contains(.isDark) ? UIColor(white: 1.0, alpha: 0.1) : UIColor(white: 0.0, alpha: 0.1),
+                            pointSize: CGSize(width: min(256, itemSize.width), height: min(256, itemSize.height))
+                        )
+                        customEmojiView.updateTextColor(flags.contains(.isDark) ? .white : .black)
+                        
+                        self.customEmojiLoadDisposable?.dispose()
+                        self.customEmojiLoadDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: .standalone(resource: file.resource)).start()
+                        
+                        customEmojiView.isUserInteractionEnabled = false
+                        self.customEmojiView = customEmojiView
+                        self.addSubview(customEmojiView)
+                    }
+                } else {
+                    if let customEmojiView = self.customEmojiView {
+                        self.customEmojiView = nil
+                        customEmojiView.removeFromSuperview()
+                    }
+                }
+            }
+            
+            if let customEmojiView = self.customEmojiView {
+                var stickerTransition = transition
+                if customEmojiView.bounds.isEmpty {
+                    stickerTransition = stickerTransition.withAnimation(.none)
+                }
+                
+                let counterFractionOffset: CGFloat
+                let stickerScale: CGFloat
+                if counter != 0 {
+                    counterFractionOffset = -0.05
+                    stickerScale = 0.8
+                } else {
+                    counterFractionOffset = 0.0
+                    stickerScale = 1.0
+                }
+                let stickerFrame = itemSize.centered(around: CGPoint(x: size.width * 0.5, y: size.height * (0.47 + counterFractionOffset)))
+                
+                stickerTransition.setPosition(view: customEmojiView, position: stickerFrame.center)
+                stickerTransition.setBounds(view: customEmojiView, bounds: CGRect(origin: CGPoint(), size: stickerFrame.size))
+                stickerTransition.setScale(view: customEmojiView, scale: stickerScale)
+            }
+            
+            if let directStickerView = self.directStickerView?.view {
+                var stickerTransition = transition
+                if directStickerView.superview == nil {
+                    self.addSubview(directStickerView)
+                    stickerTransition = stickerTransition.withAnimation(.none)
+                }
+                
+                let counterFractionOffset: CGFloat
+                let stickerScale: CGFloat
+                if counter != 0 {
+                    counterFractionOffset = -0.05
+                    stickerScale = 0.8
+                } else {
+                    counterFractionOffset = 0.0
+                    stickerScale = 1.0
+                }
+                let stickerFrame = itemSize.centered(around: CGPoint(x: size.width * 0.5, y: size.height * (0.47 + counterFractionOffset)))
+                
+                stickerTransition.setPosition(view: directStickerView, position: stickerFrame.center)
+                stickerTransition.setBounds(view: directStickerView, bounds: CGRect(origin: CGPoint(), size: stickerFrame.size))
+                stickerTransition.setScale(view: directStickerView, scale: stickerScale)
             }
         }
     }
     
     private var itemViews: [Int: ItemView] = [:]
     var activate: ((UIView, MessageReaction.Reaction) -> Void)?
+    var requestUpdate: (() -> Void)?
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -171,6 +358,7 @@ final class StoryItemOverlaysView: UIView {
         peer: EnginePeer,
         story: EngineStoryItem,
         availableReactions: StoryAvailableReactions?,
+        entityFiles: [MediaId: TelegramMediaFile],
         size: CGSize,
         isCaptureProtected: Bool,
         attemptSynchronous: Bool,
@@ -181,7 +369,9 @@ final class StoryItemOverlaysView: UIView {
             switch mediaArea {
             case let .reaction(coordinates, reaction, flags):
                 let referenceSize = size
-                let areaSize = CGSize(width: coordinates.width / 100.0 * referenceSize.width, height: coordinates.height / 100.0 * referenceSize.height)
+                var areaSize = CGSize(width: coordinates.width / 100.0 * referenceSize.width, height: coordinates.height / 100.0 * referenceSize.height)
+                areaSize.width *= 0.97
+                areaSize.height *= 0.97
                 let targetFrame = CGRect(x: coordinates.x / 100.0 * referenceSize.width - areaSize.width * 0.5, y: coordinates.y / 100.0 * referenceSize.height - areaSize.height * 0.5, width: areaSize.width, height: areaSize.height)
                 if targetFrame.width < 5.0 || targetFrame.height < 5.0 {
                     continue
@@ -196,6 +386,9 @@ final class StoryItemOverlaysView: UIView {
                     itemView.activate = { [weak self] view, reaction in
                         self?.activate?(view, reaction)
                     }
+                    itemView.requestUpdate = { [weak self] in
+                        self?.requestUpdate?()
+                    }
                     self.itemViews[itemId] = itemView
                     self.addSubview(itemView)
                 }
@@ -207,7 +400,9 @@ final class StoryItemOverlaysView: UIView {
                     context: context,
                     reaction: reaction,
                     flags: flags,
+                    counter: 0,
                     availableReactions: availableReactions,
+                    entityFiles: entityFiles,
                     synchronous: attemptSynchronous,
                     size: targetFrame.size
                 )

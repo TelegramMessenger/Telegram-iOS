@@ -1407,6 +1407,20 @@ public func _internal_pollPeerStories(postbox: Postbox, network: Network, accoun
                                 transaction.replaceAllStorySubscriptions(key: .filtered, state: state, peerIds: peerIds)
                             }
                         }
+                    } else if let channel = transaction.getPeer(peerId) as? TelegramChannel, let storiesHidden = channel.storiesHidden {
+                        if storiesHidden {
+                            if !transaction.storySubscriptionsContains(key: .hidden, peerId: peerId) {
+                                var (state, peerIds) = transaction.getAllStorySubscriptions(key: .hidden)
+                                peerIds.append(peerId)
+                                transaction.replaceAllStorySubscriptions(key: .hidden, state: state, peerIds: peerIds)
+                            }
+                        } else {
+                            if !transaction.storySubscriptionsContains(key: .filtered, peerId: peerId) {
+                                var (state, peerIds) = transaction.getAllStorySubscriptions(key: .filtered)
+                                peerIds.append(peerId)
+                                transaction.replaceAllStorySubscriptions(key: .filtered, state: state, peerIds: peerIds)
+                            }
+                        }
                     }
                 }
             }

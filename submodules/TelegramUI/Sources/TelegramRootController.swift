@@ -406,11 +406,11 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         }
                         
                         let target: Stories.PendingTarget
-                        #if DEBUG
-                        target = .peer(PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(2200678799)))
-                        #else
-                        target = .myStories
-                        #endif
+                        if let sendAsPeerId = options.sendAsPeerId {
+                            target = .peer(sendAsPeerId)
+                        } else {
+                            target = .myStories
+                        }
                         storyTarget = target
                         
                         if let _ = self.chatListController as? ChatListControllerImpl {
@@ -419,7 +419,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                 if let imageData = compressImageToJPEG(image, quality: 0.7) {
                                     let entities = generateChatInputTextEntities(caption)
                                     Logger.shared.log("MediaEditor", "Calling uploadStory for image, randomId \(randomId)")
-                                    let _ = (context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData, stickers: stickers), mediaAreas: mediaAreas, text: caption.string, entities: entities, pin: options.pin, privacy: options.privacy, isForwardingDisabled: options.isForwardingDisabled, period: options.timeout, randomId: randomId)
+                                    let _ = (context.engine.messages.uploadStory(target: target, media: .image(dimensions: dimensions, data: imageData, stickers: stickers), mediaAreas: mediaAreas, text: caption.string, entities: entities, pin: options.pin, privacy: options.privacy, isForwardingDisabled: options.isForwardingDisabled, period: options.timeout, randomId: randomId)
                                     |> deliverOnMainQueue).start(next: { stableId in
                                         moveStorySource(engine: context.engine, peerId: context.account.peerId, from: randomId, to: Int64(stableId))
                                     })
@@ -453,7 +453,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                     }
                                     Logger.shared.log("MediaEditor", "Calling uploadStory for video, randomId \(randomId)")
                                     let entities = generateChatInputTextEntities(caption)
-                                    let _ = (context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), mediaAreas: mediaAreas, text: caption.string, entities: entities, pin: options.pin, privacy: options.privacy, isForwardingDisabled: options.isForwardingDisabled, period: options.timeout, randomId: randomId)
+                                    let _ = (context.engine.messages.uploadStory(target: target, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), mediaAreas: mediaAreas, text: caption.string, entities: entities, pin: options.pin, privacy: options.privacy, isForwardingDisabled: options.isForwardingDisabled, period: options.timeout, randomId: randomId)
                                     |> deliverOnMainQueue).start(next: { stableId in
                                         moveStorySource(engine: context.engine, peerId: context.account.peerId, from: randomId, to: Int64(stableId))
                                     })
