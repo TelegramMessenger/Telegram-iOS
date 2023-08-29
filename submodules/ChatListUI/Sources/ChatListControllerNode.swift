@@ -2563,9 +2563,9 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                                 self.mainContainerNode.currentItemNode.forEachItemNode { node in
                                     if let chatNode = node as? ChatListItemNode {
                                         if case let .groupReference(data) = chatNode.item?.content, data.groupId == .archive, expandedHeight != chatNode.item?.params.expandedHeight {
-                                            print("expandedHeight: \(expandedHeight) archiveFraction: \(archiveFraction) itemHeight: \(itemHeight)")
+//                                            print("expandedHeight: \(expandedHeight) archiveFraction: \(archiveFraction) itemHeight: \(itemHeight)")
                                             self.mainContainerNode.currentItemNode.updateArchiveTopOffset(params: .init(
-                                                scrollOffset: scrollOffset,
+                                                scrollOffset: scrollOffset.rounded(),
                                                 storiesFraction: archiveFraction,
                                                 expandedHeight: expandedHeight
                                             ))
@@ -2587,9 +2587,9 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                                 self.inlineStackContainerNode?.currentItemNode.forEachItemNode { node in
                                     if let chatNode = node as? ChatListItemNode {
                                         if case let .groupReference(data) = chatNode.item?.content, data.groupId == .archive, expandedHeight != chatNode.item?.params.expandedHeight {
-                                            print("expandedHeight: \(expandedHeight) archiveFraction: \(archiveFraction) itemHeight: \(itemHeight)")
+//                                            print("expandedHeight: \(expandedHeight) archiveFraction: \(archiveFraction) itemHeight: \(itemHeight)")
                                             self.inlineStackContainerNode?.currentItemNode.updateArchiveTopOffset(params: .init(
-                                                scrollOffset: scrollOffset,
+                                                scrollOffset: scrollOffset.rounded(),
                                                 storiesFraction: archiveFraction,
                                                 expandedHeight: expandedHeight
                                             ))

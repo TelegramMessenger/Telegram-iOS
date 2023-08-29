@@ -2754,20 +2754,23 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         transition = .immediate
                     }
                     
-                    if case let .groupReference(data) = item.content, data.groupId == .archive {
-                        transition.updateAlpha(node: strongSelf.archiveTransitionNode, alpha: 1.0)
-                        strongSelf.archiveTransitionNode.updateLayout(transition: transition, size: layout.contentSize, params: item.params, presentationData: item.presentationData)
-//                        transition.updateAlpha(node: strongSelf.mainContentContainerNode, alpha: .zero)
-                    } else {
-                        transition.updateAlpha(node: strongSelf.archiveTransitionNode, alpha: .zero)
-//                        transition.updateAlpha(node: strongSelf.mainContentContainerNode, alpha: 1.0)
-                    }
-                    
                     let contextContainerFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: itemHeight))
 //                    strongSelf.contextContainer.position = contextContainerFrame.center
                     transition.updatePosition(node: strongSelf.contextContainer, position: contextContainerFrame.center)
                     transition.updateBounds(node: strongSelf.contextContainer, bounds: contextContainerFrame.offsetBy(dx: -strongSelf.revealOffset, dy: 0.0))
+                    transition.updatePosition(node: strongSelf.archiveTransitionNode, position: contextContainerFrame.center)
+                    transition.updateBounds(node: strongSelf.archiveTransitionNode, bounds: contextContainerFrame)
                     
+                    if case let .groupReference(data) = item.content, data.groupId == .archive {
+                        transition.updateAlpha(node: strongSelf.archiveTransitionNode, alpha: 1.0)
+                        strongSelf.archiveTransitionNode.updateLayout(transition: transition, size: layout.contentSize, params: item.params, presentationData: item.presentationData)
+                        transition.updateAlpha(node: strongSelf.mainContentContainerNode, alpha: .zero)
+                        transition.updateAlpha(node: strongSelf.contextContainer, alpha: .zero)
+                    } else {
+                        transition.updateAlpha(node: strongSelf.archiveTransitionNode, alpha: .zero)
+                        transition.updateAlpha(node: strongSelf.mainContentContainerNode, alpha: 1.0)
+                        transition.updateAlpha(node: strongSelf.contextContainer, alpha: 1.0)
+                    }
 //                    print("top offset: \(item.hiddenOffsetValue) hiddenOffset: \(item.hiddenOffset)")
 //                    let archiveTransitionFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: itemHeight))
 //                    transition.updatePosition(node: strongSelf.archiveTransitionNode, position: archiveTransitionFrame.center)

@@ -955,7 +955,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
 //                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListArchiveTransitionItem(theme: groupReferenceEntry.presentationData.theme),
 //                                          directionHint: entry.directionHint)
 //            } else {
-            print("update group entry which hiddenByDefault: \(groupReferenceEntry.hiddenByDefault) revealed: \(groupReferenceEntry.revealed) top offset: \(groupReferenceEntry.archiveParams)")
+//            print("update group entry which hiddenByDefault: \(groupReferenceEntry.hiddenByDefault) revealed: \(groupReferenceEntry.revealed) top offset: \(groupReferenceEntry.archiveParams)")
 
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(
                         presentationData: groupReferenceEntry.presentationData,
@@ -2993,7 +2993,7 @@ public final class ChatListNode: ListView {
 //        guard isHiddenItemVisible else { return }
 
         let toggleTemporaryRevealHiddenItems = !self.currentState.hiddenItemShouldBeTemporaryRevealed
-        print("toggle temporary reveal hidden items: \(toggleTemporaryRevealHiddenItems)")
+//        print("toggle temporary reveal hidden items: \(toggleTemporaryRevealHiddenItems)")
         self.updateState { state in
             var state = state
             state.archiveParams = params
