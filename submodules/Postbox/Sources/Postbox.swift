@@ -87,6 +87,11 @@ public final class Transaction {
         return self.postbox?.messageHistoryHoleIndexTable.closest(peerId: peerId, namespace: namespace, space: .everywhere, range: 1 ... (Int32.max - 1)) ?? IndexSet()
     }
     
+    public func getHoles(peerId: PeerId, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace) -> IndexSet {
+        assert(!self.disposed)
+        return self.postbox?.messageHistoryHoleIndexTable.closest(peerId: peerId, namespace: namespace, space: space, range: 1 ... (Int32.max - 1)) ?? IndexSet()
+    }
+
     public func getThreadIndexHoles(peerId: PeerId, threadId: Int64, namespace: MessageId.Namespace) -> IndexSet {
         assert(!self.disposed)
         return self.postbox!.messageHistoryThreadHoleIndexTable.closest(peerId: peerId, threadId: threadId, namespace: namespace, space: .everywhere, range: 1 ... (Int32.max - 1))
@@ -116,6 +121,30 @@ public final class Transaction {
             return nil
         }
     }
+    
+    #if DEBUG
+    public func getMessageCount(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags?, fromId: Int32, toId: Int32) -> Int? {
+        assert(!self.disposed)
+        let fromIndex: MessageIndex?
+        if let message = self.postbox?.getMessage(MessageId(peerId: peerId, namespace: namespace, id: fromId)) {
+            fromIndex = message.index
+        } else {
+            fromIndex = self.postbox!.messageHistoryIndexTable.closestIndex(id: MessageId(peerId: peerId, namespace: namespace, id: fromId))
+        }
+        
+        let toIndex: MessageIndex?
+        if let message = self.postbox?.getMessage(MessageId(peerId: peerId, namespace: namespace, id: toId)) {
+            toIndex = message.index
+        } else {
+            toIndex = self.postbox!.messageHistoryIndexTable.closestIndex(id: MessageId(peerId: peerId, namespace: namespace, id: toId))
+        }
+        
+        if let fromIndex, let toIndex {
+            return self.postbox!.messageHistoryTable.getMessageCountInRange(peerId: peerId, namespace: namespace, tag: tag, lowerBound: fromIndex, upperBound: toIndex)
+        }
+        return nil
+    }
+    #endif
     
     public func doesChatListGroupContainHoles(groupId: PeerGroupId) -> Bool {
         assert(!self.disposed)
@@ -950,6 +979,16 @@ public final class Transaction {
         }
     }
     
+    public func topMessageIndices(peerId: PeerId, namespace: MessageId.Namespace, limit: Int) -> [MessageIndex] {
+        assert(!self.disposed)
+        return self.postbox?.messageHistoryTable.topMessageIndices(peerId: peerId, namespace: namespace, limit: limit) ?? []
+    }
+    
+    public func allEarlierMessageIndices(index: MessageIndex) -> [MessageIndex] {
+        assert(!self.disposed)
+        return self.postbox?.messageHistoryTable.allEarlierMessageIndices(index: index) ?? []
+    }
+    
     public func enumerateMedia(lowerBound: MessageIndex?, upperBound: MessageIndex?, limit: Int) -> ([PeerId: Set<MediaId>], [MediaId: Media], MessageIndex?) {
         assert(!self.disposed)
         if let postbox = self.postbox {
@@ -1050,15 +1089,15 @@ public final class Transaction {
         return self.postbox?.pendingMessageActionsMetadataTable.getCount(.peerNamespaceAction(peerId, namespace, type))
     }
     
-    public func getMessageIndicesWithTag(peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace, tag: MessageTags) -> [MessageIndex] {
+    public func getMessageIndicesWithTag(peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace, tag: MessageTags, limit: Int = 1000) -> [MessageIndex] {
         assert(!self.disposed)
         guard let postbox = self.postbox else {
             return []
         }
         if let threadId = threadId {
-            return postbox.messageHistoryThreadTagsTable.earlierIndices(tag: tag, threadId: threadId, peerId: peerId, namespace: namespace, index: nil, includeFrom: false, count: 1000)
+            return postbox.messageHistoryThreadTagsTable.earlierIndices(tag: tag, threadId: threadId, peerId: peerId, namespace: namespace, index: nil, includeFrom: false, count: limit)
         } else {
-            return postbox.messageHistoryTagsTable.earlierIndices(tag: tag, peerId: peerId, namespace: namespace, index: nil, includeFrom: false, count: 1000)
+            return postbox.messageHistoryTagsTable.earlierIndices(tag: tag, peerId: peerId, namespace: namespace, index: nil, includeFrom: false, count: limit)
         }
     }
     
@@ -3925,13 +3964,29 @@ final class PostboxImpl {
         }).start()
     }
     
-    public func optimizeStorage() -> Signal<Never, NoError> {
+    public func optimizeStorage(minFreePagesFraction: Double) -> Signal<Never, NoError> {
         return Signal { subscriber in
-            self.valueBox.vacuum()
+            if self.valueBox.freePagesFraction() >= minFreePagesFraction {
+                self.valueBox.vacuum()
+            }
             subscriber.putCompletion()
             
             return EmptyDisposable
         }
+    }
+    
+    fileprivate func dbFilesSize() -> Signal<Int64, NoError> {
+        return self.valueBox.dbFilesSize()
+    }
+    
+    #if DEBUG
+    fileprivate func debugDumpDbStat() -> Signal<String, NoError> {
+        return self.valueBox.debugDumpStat()
+    }
+    #endif
+    
+    fileprivate func getPeerIdsOfMessageHistoryViews() -> Set<PeerId> {
+        return self.viewTracker.getPeerIdsOfMessageHistoryViews()
     }
     
     fileprivate func addHolesEverywhere(peerNamespaces: [PeerId.Namespace], holeNamespace: MessageId.Namespace) {
@@ -4626,18 +4681,54 @@ public class Postbox {
         }
     }
 
-    public func optimizeStorage() -> Signal<Never, NoError> {
+    public func optimizeStorage(minFreePagesFraction: Double) -> Signal<Never, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
 
             self.impl.with { impl in
-                disposable.set(impl.optimizeStorage().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+                disposable.set(impl.optimizeStorage(minFreePagesFraction: minFreePagesFraction).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
             }
 
             return disposable
         }
     }
-
+    
+    public func dbFilesSize() -> Signal<Int64, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.impl.with { impl in
+                disposable.set(impl.dbFilesSize().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+            
+            return disposable
+        }
+    }
+    
+    #if DEBUG
+    public func debugDumpDbStat() -> Signal<String, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.impl.with { impl in
+                disposable.set(impl.debugDumpDbStat().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+            
+            return disposable
+        }
+    }
+    #endif
+    
+    public func getPeerIdsOfMessageHistoryViews() -> Signal<Set<PeerId>, NoError> {
+        return Signal { subscriber in
+            self.impl.with { impl in
+                subscriber.putNext(impl.getPeerIdsOfMessageHistoryViews())
+                subscriber.putCompletion()
+            }
+            return EmptyDisposable
+        }
+    }
+    
     public func failedMessageIdsView(peerId: PeerId) -> Signal<FailedMessageIdsView, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()

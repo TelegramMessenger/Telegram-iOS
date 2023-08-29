@@ -779,7 +779,7 @@ public final class StorageBox {
             }
         }
         
-        func getAllStats(excludePeerIds: Set<PeerId>, completion: @escaping (AllStats) -> Void) {
+        func getAllStats(completion: @escaping (AllStats) -> Void) {
             self.beginInternalTransaction {
                 self.valueBox.begin()
                 
@@ -800,11 +800,6 @@ public final class StorageBox {
                     let peerId = key.getInt64(0)
                     let contentType = key.getUInt8(8)
                     
-                    if excludePeerIds.contains(PeerId(peerId)) {
-                        allStats.total.contentTypes[contentType]?.size -= size
-                        return true
-                    }
-                    
                     if allStats.peers[PeerId(peerId)] == nil {
                         allStats.peers[PeerId(peerId)] = StorageBox.Stats(contentTypes: [:])
                     }
@@ -820,10 +815,6 @@ public final class StorageBox {
                 self.valueBox.scan(self.peerIdToIdTable, keys: { key in
                     let peerId = key.getInt64(0)
                     if peerId == 0 {
-                        return true
-                    }
-                    
-                    if excludePeerIds.contains(PeerId(peerId)) {
                         return true
                     }
                     
@@ -991,6 +982,27 @@ public final class StorageBox {
             }
             afterTransactionIfRunning()
         }
+        
+        fileprivate func optimizeStorage(minFreePagesFraction: Double) -> Signal<Never, NoError> {
+            return Signal { subscriber in
+                if self.valueBox.freePagesFraction() >= minFreePagesFraction {
+                    self.valueBox.vacuum()
+                }
+                subscriber.putCompletion()
+                
+                return EmptyDisposable
+            }
+        }
+        
+        fileprivate func dbFilesSize() -> Signal<Int64, NoError> {
+            return self.valueBox.dbFilesSize()
+        }
+        
+        #if DEBUG
+        fileprivate func debugDumpDbStat() -> Signal<String, NoError> {
+            return self.valueBox.debugDumpStat()
+        }
+        #endif
     }
     
     private static let sharedQueue = Queue(name: "StorageBox-Shared")
@@ -1079,9 +1091,9 @@ public final class StorageBox {
         }
     }
     
-    public func getAllStats(excludePeerIds: Set<PeerId>) -> Signal<AllStats, NoError> {
+    public func getAllStats() -> Signal<AllStats, NoError> {
         return self.impl.signalWith { impl, subscriber in
-            impl.getAllStats(excludePeerIds: excludePeerIds, completion: { result in
+            impl.getAllStats(completion: { result in
                 subscriber.putNext(result)
                 subscriber.putCompletion()
             })
@@ -1136,4 +1148,42 @@ public final class StorageBox {
             impl.setCanBeginTransactions(value, afterTransactionIfRunning: afterTransactionIfRunning)
         }
     }
+    
+    public func optimizeStorage(minFreePagesFraction: Double) -> Signal<Never, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.impl.with { impl in
+                disposable.set(impl.optimizeStorage(minFreePagesFraction: minFreePagesFraction).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+            
+            return disposable
+        }
+    }
+    
+    public func dbFilesSize() -> Signal<Int64, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.impl.with { impl in
+                disposable.set(impl.dbFilesSize().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+            
+            return disposable
+        }
+    }
+    
+    #if DEBUG
+    public func debugDumpDbStat() -> Signal<String, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.impl.with { impl in
+                disposable.set(impl.debugDumpDbStat().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+            
+            return disposable
+        }
+    }
+    #endif
 }

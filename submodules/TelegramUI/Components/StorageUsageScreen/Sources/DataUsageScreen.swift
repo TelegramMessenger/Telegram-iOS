@@ -1,3 +1,4 @@
+/*
 import Foundation
 import UIKit
 import Display
@@ -1249,7 +1250,6 @@ final class DataUsageScreenComponent: Component {
     }
 }
 
-/*
 public final class DataUsageScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     
@@ -1276,7 +1276,6 @@ public final class DataUsageScreen: ViewControllerComponentContainer {
         super.viewDidLoad()
     }
 }
-*/
 
 public func autodownloadDataSizeString(_ size: Int64, decimalSeparator: String = ".") -> String {
     if size >= 1024 * 1024 * 1024 {
@@ -1345,3 +1344,4 @@ private func stringForAutoDownloadSetting(strings: PresentationStrings, decimalS
         return stringForAutoDownloadTypes(strings: strings, decimalSeparator: decimalSeparator, photo: photo, videoSize: video ? categories.video.sizeLimit : nil, fileSize: file ? categories.file.sizeLimit : nil)
     }
 }
+ */

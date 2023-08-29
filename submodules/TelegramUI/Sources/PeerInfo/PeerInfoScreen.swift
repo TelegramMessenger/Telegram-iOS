@@ -5457,6 +5457,45 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }
                 }
                 
+                #if DEBUG
+                if !items.isEmpty {
+                    items.append(.separator)
+                }
+                items.append(.action(ContextMenuActionItem(text: "Storage Usage", icon: { [weak self] theme in
+                    guard let strongSelf = self else {
+                        return nil
+                    }
+                    
+                    let mediaBox = strongSelf.context.account.postbox.mediaBox
+                    var peerResourceIds: [Data] = []
+                    
+                    let semaphore = DispatchSemaphore(value: 0)
+                    
+                    let _ = mediaBox.storageBox.all(peerId: strongSelf.peerId).start(next: { result in
+                        peerResourceIds = result
+                        semaphore.signal()
+                    })
+                    
+                    semaphore.wait()
+                    
+                    var totalSize: Int64 = 0
+                    for resourceId in peerResourceIds {
+                        let id = MediaResourceId(String(data: resourceId, encoding: .utf8)!)
+                        totalSize += mediaBox.fileSizeForId(id)
+                    }
+                    
+                    let text = NSAttributedString(string: dataSizeString(totalSize, formatting: DataSizeStringFormatting(presentationData: presentationData)), font: Font.regular(14.0), textColor: theme.contextMenu.secondaryColor)
+                    let bounds = text.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
+                    return generateImage(bounds.size.integralFloor, rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        UIGraphicsPushContext(context)
+                        text.draw(in: bounds)
+                        UIGraphicsPopContext()
+                    })
+                }, action: { _, _ in
+                })))
+                #endif
+                
                 return .single(items)
             }
             
@@ -8108,14 +8147,46 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             return false
                         }
                         
-                        if ptgSecretPasscodes.secretPasscodes.contains(where: { $0.passcode == passcode }) {
-                            let _ = updatePtgSecretPasscodes(strongSelf.context.sharedContext.accountManager, { current in
-                                var updated = current.secretPasscodes
-                                if let ind = current.secretPasscodes.firstIndex(where: { $0.passcode == passcode }) {
-                                    updated[ind] = current.secretPasscodes[ind].withUpdated(active: true)
+                        if let sp = ptgSecretPasscodes.secretPasscodes.first(where: { $0.passcode == passcode }) {
+                            let _ = (strongSelf.context.sharedContext.calculateCoveringAccount(excludingId: nil)
+                            |> mapToSignal { coveringAccount in
+                                return updatePtgSecretPasscodes(strongSelf.context.sharedContext.accountManager, { current in
+                                    var updated = current.secretPasscodes
+                                    if let ind = current.secretPasscodes.firstIndex(where: { $0.passcode == passcode }) {
+                                        updated[ind] = current.secretPasscodes[ind].withUpdated(active: true)
+                                    }
+                                    var dbCoveringAccounts = current.dbCoveringAccounts
+                                    var cacheCoveringAccounts = current.cacheCoveringAccounts
+                                    assert(coveringAccount != nil)
+                                    if let coveringAccount {
+                                        for accountId in sp.accountIds {
+                                            assert(accountId != coveringAccount.db)
+                                            dbCoveringAccounts[accountId] = coveringAccount.db
+                                            assert(accountId != coveringAccount.cache)
+                                            cacheCoveringAccounts[accountId] = coveringAccount.cache
+                                        }
+                                    }
+                                    return PtgSecretPasscodes(secretPasscodes: updated, dbCoveringAccounts: dbCoveringAccounts, cacheCoveringAccounts: cacheCoveringAccounts)
+                                })
+                                |> ignoreValues
+                            }
+                            |> then (
+                                strongSelf.context.sharedContext.activeAccountContexts
+                                |> take(1)
+                                |> mapToSignal { activeAccountContexts in
+                                    var signals: [Signal<Never, NoError>] = []
+                                    for (_, context, _) in (activeAccountContexts.accounts + activeAccountContexts.inactiveAccounts) {
+                                        if sp.accountIds.contains(context.account.id) {
+                                            signals.append(
+                                                context.account.cleanOldCloudMessages()
+                                                |> then (context.account.optimizeAllStorages(minFreePagesFraction: 0.2))
+                                            )
+                                        }
+                                    }
+                                    return combineLatest(signals)
+                                    |> ignoreValues
                                 }
-                                return PtgSecretPasscodes(secretPasscodes: updated)
-                            }).start()
+                            )).start()
                             
                             controller?.dismiss()
                             
@@ -8182,7 +8253,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                 
                                 let _ = (updatePtgSecretPasscodes(strongSelf.context.sharedContext.accountManager, { current in
                                     let newSecretPasscode = PtgSecretPasscode(passcode: newPasscode, active: true)
-                                    return PtgSecretPasscodes(secretPasscodes: current.secretPasscodes + [newSecretPasscode])
+                                    return PtgSecretPasscodes(secretPasscodes: current.secretPasscodes + [newSecretPasscode], dbCoveringAccounts: current.dbCoveringAccounts, cacheCoveringAccounts: current.cacheCoveringAccounts)
                                 })
                                 |> deliverOnMainQueue).start(completed: { [weak self] in
                                     guard let strongSelf = self else {
@@ -8251,7 +8322,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             return
                         }
                         
-                        hideAllSecrets(accountManager: strongSelf.context.sharedContext.accountManager)
+                        let _ = hideAllSecrets(accountManager: strongSelf.context.sharedContext.accountManager).start()
                         
                         strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: strongSelf.presentationData.strings.SecretPasscodeStatus_AllHidden), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                     })

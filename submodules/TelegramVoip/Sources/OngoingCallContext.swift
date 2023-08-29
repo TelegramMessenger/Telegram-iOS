@@ -1163,6 +1163,7 @@ public final class OngoingCallContext {
         let queue = self.queue
         self.withContext { context in
             context.nativeStop { debugLog, bytesSentWifi, bytesReceivedWifi, bytesSentMobile, bytesReceivedMobile in
+                /*
                 let delta = NetworkUsageStatsConnectionsEntry(
                     cellular: NetworkUsageStatsDirectionsEntry(
                         incoming: bytesReceivedMobile,
@@ -1171,6 +1172,7 @@ public final class OngoingCallContext {
                         incoming: bytesReceivedWifi,
                         outgoing: bytesSentWifi))
                 updateAccountNetworkUsageStats(account: self.account, category: .call, delta: delta)
+                */
                 
                 if !statsLogPath.isEmpty {
                     let logsPath = callLogsPath(account: account)

@@ -52,8 +52,7 @@ public func _internal_deleteMessages(transaction: Transaction, mediaBox: MediaBo
             }
         }
     }
-    transaction.deleteMessages(ids, forEachMedia: { _ in
-    })
+    transaction.deleteMessages(ids, forEachMedia: nil)
 }
 
 func _internal_deleteAllMessagesWithAuthor(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace) {
@@ -87,8 +86,7 @@ func _internal_clearHistory(transaction: Transaction, mediaBox: MediaBox, peerId
             let _ = mediaBox.removeCachedResources(Array(Set(resourceIds)), force: true).start()
         }
     }
-    transaction.clearHistory(peerId, threadId: threadId, minTimestamp: nil, maxTimestamp: nil, namespaces: namespaces, forEachMedia: { _ in
-    })
+    transaction.clearHistory(peerId, threadId: threadId, minTimestamp: nil, maxTimestamp: nil, namespaces: namespaces, forEachMedia: nil)
 }
 
 func _internal_clearHistoryInRange(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, threadId: Int64?, minTimestamp: Int32, maxTimestamp: Int32, namespaces: MessageIdNamespaces) {
@@ -104,8 +102,7 @@ func _internal_clearHistoryInRange(transaction: Transaction, mediaBox: MediaBox,
             let _ = mediaBox.removeCachedResources(Array(Set(resourceIds)), force: true).start()
         }
     }
-    transaction.clearHistory(peerId, threadId: threadId, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, namespaces: namespaces, forEachMedia: { _ in
-    })
+    transaction.clearHistory(peerId, threadId: threadId, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, namespaces: namespaces, forEachMedia: nil)
 }
 
 public enum ClearCallHistoryError {

@@ -1,6 +1,10 @@
 import Foundation
 import Postbox
 
+public let maximumCacheSizeValues: [Int32] = {
+    return [1, 2, 4, Int32.max]
+}()
+
 public struct CacheStorageSettings: Codable, Equatable {
     public enum PeerStorageCategory: String, Codable, Hashable {
         case privateChats = "privateChats"
@@ -20,11 +24,11 @@ public struct CacheStorageSettings: Codable, Equatable {
 
     public static var defaultSettings: CacheStorageSettings {
         return CacheStorageSettings(
-            defaultCacheStorageTimeout: Int32.max,
-            defaultCacheStorageLimitGigabytes: Int32.max,
+            defaultCacheStorageTimeout: Int32(31 * 24 * 60 * 60),
+            defaultCacheStorageLimitGigabytes: maximumCacheSizeValues[0],
             categoryStorageTimeout: [
-                .privateChats: Int32.max,
-                .groups: Int32(31 * 24 * 60 * 60),
+                .privateChats: Int32(7 * 24 * 60 * 60),
+                .groups: Int32(7 * 24 * 60 * 60),
                 .channels: Int32(7 * 24 * 60 * 60)
             ]
         )
@@ -43,14 +47,14 @@ public struct CacheStorageSettings: Codable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
-        self.defaultCacheStorageTimeout = (try? container.decode(Int32.self, forKey: "dt")) ?? Int32.max
+        self.defaultCacheStorageTimeout = /*(try? container.decode(Int32.self, forKey: "dt")) ??*/ CacheStorageSettings.defaultSettings.defaultCacheStorageTimeout
         
         if let legacyValue = try container.decodeIfPresent(Int32.self, forKey: "dl") {
             self.defaultCacheStorageLimitGigabytes = legacyValue
         } else if let value = try container.decodeIfPresent(Int32.self, forKey: "sizeLimit") {
             self.defaultCacheStorageLimitGigabytes = value
         } else {
-            self.defaultCacheStorageLimitGigabytes = Int32.max
+            self.defaultCacheStorageLimitGigabytes = CacheStorageSettings.defaultSettings.defaultCacheStorageLimitGigabytes
         }
         
         if let data = try container.decodeIfPresent(Data.self, forKey: "categoryStorageTimeoutJson") {

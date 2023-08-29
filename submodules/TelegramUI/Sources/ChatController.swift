@@ -12338,7 +12338,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }))
                     } else {
                         if let _ = canClearForMyself ?? canClearForEveryone {
-                            items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: EnginePeer(mainPeer), chatPeer: EnginePeer(chatPeer), action: .clearHistory(canClearCache: canClearCache), strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
+                            items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: EnginePeer(mainPeer), chatPeer: EnginePeer(chatPeer), action: .clearHistory(canClearCache: canClearCache && false), strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
                             
                             if let canClearForEveryone = canClearForEveryone {
                                 let text: String
@@ -12392,6 +12392,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                         
+                        /*
                         if canClearCache {
                             items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ClearCache, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
@@ -12403,6 +12404,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 strongSelf.navigationButtonAction(.clearCache)
                             }))
                         }
+                        */
                         
                         if chatPeer.canSetupAutoremoveTimeout(accountPeerId: strongSelf.context.account.peerId) {
                             items.append(ActionSheetButtonItem(title: strongSelf.presentationInterfaceState.autoremoveTimeout == nil ? strongSelf.presentationData.strings.Conversation_AutoremoveActionEnable : strongSelf.presentationData.strings.Conversation_AutoremoveActionEdit, color: .accent, action: { [weak actionSheet] in
@@ -12471,6 +12473,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         case .dismiss:
             self.dismiss()
         case .clearCache:
+            assertionFailure()
+            /*
             let controller = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: nil))
             self.present(controller, in: .window(.root))
             
@@ -12677,6 +12681,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case .feed:
                 break
             }
+            */
         }
     }
     

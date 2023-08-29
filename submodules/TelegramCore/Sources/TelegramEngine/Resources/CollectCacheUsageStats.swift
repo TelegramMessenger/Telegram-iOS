@@ -54,7 +54,7 @@ private final class CacheUsageStatsState {
 }
 
 public final class StorageUsageStats {
-    public enum CategoryKey: Hashable {
+    public enum CategoryKey: Hashable, CaseIterable {
         case photos
         case videos
         case files
@@ -210,7 +210,8 @@ public func collectRawStorageUsageReport(containerPath: String) -> String {
     return log
 }
 
-func _internal_collectStorageUsageStats(account: Account, excludePeerIds: Signal<Set<PeerId>, NoError>) -> Signal<AllStorageUsageStats, NoError> {
+/*
+func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUsageStats, NoError> {
     /*let additionalStats = Signal<Int64, NoError> { subscriber in
         DispatchQueue.global().async {
             var totalSize: Int64 = 0
@@ -290,11 +291,7 @@ func _internal_collectStorageUsageStats(account: Account, excludePeerIds: Signal
     
     return combineLatest(
         additionalStats,
-        excludePeerIds
-        |> take(1)
-        |> mapToSignal { excludePeerIds in
-            return account.postbox.mediaBox.storageBox.getAllStats(excludePeerIds: excludePeerIds)
-        }
+        account.postbox.mediaBox.storageBox.getAllStats()
     )
     |> deliverOnMainQueue
     |> mapToSignal { additionalStats, allStats -> Signal<AllStorageUsageStats, NoError> in
@@ -382,6 +379,7 @@ func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageU
         return result
     }
 }
+*/
 
 func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories: [StorageUsageStats.CategoryKey], includeMessages: [Message], excludeMessages: [Message]) -> Signal<Float, NoError> {
     let mediaBox = account.postbox.mediaBox
@@ -475,6 +473,7 @@ func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories
     }
 }
 
+/*
 func _internal_clearStorage(account: Account, peerIds: Set<EnginePeer.Id>, includeMessages: [Message], excludeMessages: [Message]) -> Signal<Float, NoError> {
     let mediaBox = account.postbox.mediaBox
     return Signal { subscriber in
@@ -519,6 +518,7 @@ func _internal_clearStorage(account: Account, peerIds: Set<EnginePeer.Id>, inclu
         }
     }
 }
+*/
 
 private func extractMediaResourceIds(message: Message, resourceIds: inout Set<MediaResourceId>) {
     for media in message.media {
@@ -561,6 +561,7 @@ private func extractMediaResourceIds(message: Message, resourceIds: inout Set<Me
     }
 }
 
+/*
 func _internal_clearStorage(account: Account, messages: [Message]) -> Signal<Never, NoError> {
     let mediaBox = account.postbox.mediaBox
     
@@ -588,6 +589,7 @@ func _internal_clearStorage(account: Account, messages: [Message]) -> Signal<Nev
         }
     }
 }
+*/
 
 func _internal_reindexCacheInBackground(account: Account, lowImpact: Bool) -> Signal<Never, NoError> {
     let postbox = account.postbox
@@ -695,6 +697,7 @@ func _internal_reindexCacheInBackground(account: Account, lowImpact: Bool) -> Si
     |> runOn(queue)
 }
 
+/*
 func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, additionalCachePaths: [String] = [], logFilesPath: String? = nil) -> Signal<CacheUsageStatsResult, NoError> {
     return account.postbox.mediaBox.storageBox.all()
     |> mapToSignal { entries -> Signal<CacheUsageStatsResult, NoError> in
@@ -1188,3 +1191,4 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
 func _internal_clearCachedMediaResources(account: Account, mediaResourceIds: Set<MediaResourceId>) -> Signal<Float, NoError> {
     return account.postbox.mediaBox.removeCachedResources(Array(mediaResourceIds))
 }
+*/

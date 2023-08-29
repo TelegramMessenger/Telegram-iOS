@@ -2990,10 +2990,12 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
             self.entitiesView.layer.render(in: context)
         }, opaque: false, scale: 1.0)
         
+        /*
         if #available(iOS 16.0, *) {
             let path = NSTemporaryDirectory() + "img.jpg"
             try? finalImage?.jpegData(compressionQuality: 0.9)?.write(to: URL(filePath: path))
         }
+        */
         
         var image = paintingImage
         var stillImage: UIImage?

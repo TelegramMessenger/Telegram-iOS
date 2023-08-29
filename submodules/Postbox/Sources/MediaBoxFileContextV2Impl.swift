@@ -141,7 +141,9 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
             if !FileManager.default.fileExists(atPath: self.partialPath) {
                 let _ = try? FileManager.default.removeItem(atPath: self.metaPath)
                 self.fileMap = MediaBoxFileMap()
+                /* why create .meta file when there is no partial file yet?
                 self.fileMap.serialize(manager: self.manager, to: self.metaPath)
+                */
             } else {
                 do {
                     self.fileMap = try MediaBoxFileMap.read(manager: self.manager, path: self.metaPath)
@@ -156,6 +158,10 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
             if FileManager.default.fileExists(atPath: self.fullPath) {
                 self.isComplete = true
             }
+        }
+        
+        deinit {
+            self.pendingFetch?.disposable.dispose()
         }
         
         func request(
@@ -184,6 +190,14 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
                     let linkResult = link(self.partialPath, self.fullPath)
                     if linkResult != 0 {
                         postboxLog("MediaBoxFileContextV2Impl: error while linking \(self.partialPath): \(linkResult)")
+                    } else {
+                        let partialPath = self.partialPath
+                        let metaPath = self.metaPath
+                        // delay because partial file can be used until now
+                        Queue.concurrentBackgroundQueue().after(1.0) {
+                            unlink(partialPath)
+                            unlink(metaPath)
+                        }
                     }
                 }
                 
@@ -373,7 +387,9 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
             
             switch result {
             case let .dataPart(resourceOffset, data, dataRange, complete):
-                self.processWrite(resourceOffset: resourceOffset, data: data, dataRange: dataRange)
+                if !data.isEmpty {
+                    self.processWrite(resourceOffset: resourceOffset, data: data, dataRange: dataRange)
+                }
                 
                 if complete {
                     if let maxOffset = self.fileMap.ranges.ranges.reversed().first?.upperBound {
@@ -430,6 +446,14 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
                 let linkResult = link(self.partialPath, self.fullPath)
                 if linkResult != 0 {
                     postboxLog("MediaBoxFileContextV2Impl: error while linking \(self.partialPath): \(linkResult)")
+                } else {
+                    let partialPath = self.partialPath
+                    let metaPath = self.metaPath
+                    // delay because partial file can be used until now
+                    Queue.concurrentBackgroundQueue().after(1.0) {
+                        unlink(partialPath)
+                        unlink(metaPath)
+                    }
                 }
             }
             

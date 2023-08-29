@@ -272,6 +272,8 @@ extension UserDefaults {
     private var _notificationTokenPromise: Promise<Data>?
     private let voipTokenPromise = Promise<Data>()
     
+    private var reindexCacheDisposable: Disposable?
+    
     private var firebaseSecrets: [String: String] = [:] {
         didSet {
             if self.firebaseSecrets != oldValue {
@@ -896,7 +898,7 @@ extension UserDefaults {
             checkTimeoutInPtgSecretPasscodes = updatePtgSecretPasscodes(accountManager, { current in
                 return PtgSecretPasscodes(secretPasscodes: current.secretPasscodes.map { sp in
                     return sp.withUpdated(active: sp.active && (sp.timeout == nil || !isSecretPasscodeTimedout(timeout: sp.timeout!, state: state)))
-                })
+                }, dbCoveringAccounts: current.dbCoveringAccounts, cacheCoveringAccounts: current.cacheCoveringAccounts)
             })
         } else {
             checkTimeoutInPtgSecretPasscodes = .complete()
@@ -1479,49 +1481,94 @@ extension UserDefaults {
         if #available(iOS 13.0, *) {
             let taskId = "\(baseAppBundleId).cleanup"
             
+            var scheduleCleanupTask: (() -> Void)?
+            
             BGTaskScheduler.shared.register(forTaskWithIdentifier: taskId, using: DispatchQueue.main) { task in
                 Logger.shared.log("App \(self.episodeId)", "Executing cleanup task")
                 
-                let disposable = self.runCacheReindexTasks(lowImpact: true, completion: {
-                    Logger.shared.log("App \(self.episodeId)", "Completed cleanup task")
+                let disposable = MetaDisposable()
+                
+                let _ = (self.sharedContextPromise.get()
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+                    // ensure wakeupManager does not suspend postbox transactions by calling postbox.setCanBeginTransactions(false)
+                    sharedApplicationContext.wakeupManager.bgTaskSchedulerTaskBegan(taskId)
                     
-                    task.setTaskCompleted(success: true)
+                    disposable.set(self.runCacheReindexTasks(lowImpact: false, completion: {
+                        Logger.shared.log("App \(self.episodeId)", "Completed cleanup task")
+                        sharedApplicationContext.wakeupManager.bgTaskSchedulerTaskEnded(taskId)
+                        task.setTaskCompleted(success: true)
+                        scheduleCleanupTask?()
+                    }))
                 })
                 
                 task.expirationHandler = {
+                    Logger.shared.log("App \(self.episodeId)", "Cleanup task expired")
                     disposable.dispose()
-                    task.setTaskCompleted(success: false)
+                    
+                    let _ = (self.sharedContextPromise.get()
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+                        sharedApplicationContext.wakeupManager.bgTaskSchedulerTaskEnded(taskId)
+                        task.setTaskCompleted(success: false)
+                        scheduleCleanupTask?()
+                    })
                 }
             }
             
-            BGTaskScheduler.shared.getPendingTaskRequests(completionHandler: { tasks in
-                if tasks.contains(where: { $0.identifier == taskId }) {
-                    Logger.shared.log("App \(self.episodeId)", "Already have a cleanup task pending")
-                    return
-                }
-                let request = BGProcessingTaskRequest(identifier: taskId)
-                request.requiresExternalPower = true
-                request.requiresNetworkConnectivity = false
-                
-                do {
-                    try BGTaskScheduler.shared.submit(request)
-                } catch let e {
-                    Logger.shared.log("App \(self.episodeId)", "Error submitting background task request: \(e)")
-                }
-            })
+            scheduleCleanupTask = {
+                BGTaskScheduler.shared.getPendingTaskRequests(completionHandler: { tasks in
+                    if tasks.contains(where: { $0.identifier == taskId }) {
+                        Logger.shared.log("App \(self.episodeId)", "Already have a cleanup task pending")
+                        return
+                    }
+                    let request = BGProcessingTaskRequest(identifier: taskId)
+                    request.requiresExternalPower = true
+                    request.requiresNetworkConnectivity = false
+                    
+                    let timestamp = Int(CFAbsoluteTimeGetCurrent())
+                    let minInterval = 18 * 60 * 60
+                    if let indexTimestamp = UserDefaults.standard.object(forKey: "TelegramCacheIndexTimestamp") as? NSNumber, indexTimestamp.intValue >= timestamp - minInterval {
+                        request.earliestBeginDate = Date(timeIntervalSinceNow: Double(min(minInterval, indexTimestamp.intValue - (timestamp - minInterval))))
+                    }
+                    
+                    do {
+                        try BGTaskScheduler.shared.submit(request)
+                    } catch let e {
+                        Logger.shared.log("App \(self.episodeId)", "Error submitting background task request: \(e)")
+                    }
+                })
+            }
+            
+            scheduleCleanupTask?()
         }
         
-        let timestamp = Int(CFAbsoluteTimeGetCurrent())
-        let minReindexTimestamp = timestamp - 2 * 24 * 60 * 60
-        if let indexTimestamp = UserDefaults.standard.object(forKey: "TelegramCacheIndexTimestamp") as? NSNumber, indexTimestamp.intValue >= minReindexTimestamp {
-        } else {
-            UserDefaults.standard.set(timestamp as NSNumber, forKey: "TelegramCacheIndexTimestamp")
-            
-            Logger.shared.log("App \(self.episodeId)", "Executing low-impact cache reindex in foreground")
-            let _ = self.runCacheReindexTasks(lowImpact: true, completion: {
-                Logger.shared.log("App \(self.episodeId)", "Executing low-impact cache reindex in foreground — done")
-            })
+        let reindexCacheOnce = Signal<Never, NoError> { subscriber in
+            let timestamp = Int(CFAbsoluteTimeGetCurrent())
+            let minReindexTimestamp = timestamp - 3 * 24 * 60 * 60
+            if let indexTimestamp = UserDefaults.standard.object(forKey: "TelegramCacheIndexTimestamp") as? NSNumber, indexTimestamp.intValue >= minReindexTimestamp, indexTimestamp.intValue < timestamp + 24 * 60 * 60 {
+                subscriber.putCompletion()
+                return EmptyDisposable
+            } else {
+                Logger.shared.log("App \(self.episodeId)", "Executing low-impact cache reindex in foreground")
+                return self.runCacheReindexTasks(lowImpact: true, completion: {
+                    Logger.shared.log("App \(self.episodeId)", "Executing low-impact cache reindex in foreground — done")
+                    subscriber.putCompletion()
+                })
+            }
         }
+        
+        let reindexCacheFirstTime = reindexCacheOnce
+        |> delay(20.0, queue: Queue.concurrentDefaultQueue())
+        let reindexCacheRepeatedly = (
+            reindexCacheOnce
+            |> suspendAwareDelay(24.0 * 60.0 * 60.0, granularity: 10.0, queue: Queue.concurrentDefaultQueue())
+        )
+        |> restart
+        let reindexCache = reindexCacheFirstTime
+        |> then(reindexCacheRepeatedly)
+        
+        self.reindexCacheDisposable = reindexCache.start()
         
         if #available(iOS 12.0, *) {
             UIApplication.shared.registerForRemoteNotifications()
@@ -1589,7 +1636,42 @@ extension UserDefaults {
         excludePathFromBackup(libraryPath + "/Cookies")
         excludePathFromBackup(libraryPath + "/WebKit")
         
+        Queue.concurrentBackgroundQueue().async { [weak self] in
+            let _ = self?.cleanTmpFolderRecursively(path: NSTemporaryDirectory())
+        }
+        
         return true
+    }
+    
+    private func cleanTmpFolderRecursively(path: String) -> Bool {
+        var folderIsEmpty = true
+        
+        if let contents = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: path), includingPropertiesForKeys: [.isDirectoryKey, .creationDateKey], options: []) {
+            for url in contents {
+                var createdRecently = true
+                if let creationDate = (try? url.resourceValues(forKeys: Set([.creationDateKey])))?.creationDate {
+                    if creationDate < Date(timeIntervalSinceNow: -24.0 * 60.0 * 60.0) {
+                        createdRecently = false
+                    }
+                }
+                
+                if (try? url.resourceValues(forKeys: Set([.isDirectoryKey])))?.isDirectory ?? false {
+                    if cleanTmpFolderRecursively(path: url.path) && !createdRecently {
+                        try? FileManager.default.removeItem(at: url)
+                    } else {
+                        folderIsEmpty = false
+                    }
+                } else {
+                    if !createdRecently {
+                        try? FileManager.default.removeItem(at: url)
+                    } else {
+                        folderIsEmpty = false
+                    }
+                }
+            }
+        }
+        
+        return folderIsEmpty
     }
     
     private var backgroundSessionSourceDataDisposables: [String: Disposable] = [:]
@@ -1752,7 +1834,22 @@ extension UserDefaults {
                     signals = signals |> then(context.account.cleanupTasks(lowImpact: lowImpact))
                 }
                 
+                signals = signals |> then (
+                    sharedApplicationContext.sharedContext.accountManager.optimizeAllStorages(minFreePagesFraction: 0.2)
+                    |> (lowImpact ? runOn(.concurrentBackgroundQueue()) : identity)
+                )
+                
+                // not touching inactive accounts
+                for (_, context, _) in activeAccounts.accounts {
+                    signals = signals |> then (
+                        context.account.optimizeAllStorages(minFreePagesFraction: 0.2)
+                        |> (lowImpact ? runOn(.concurrentBackgroundQueue()) : identity)
+                    )
+                }
+                
                 disposable.set(signals.start(completed: {
+                    let timestamp = Int(CFAbsoluteTimeGetCurrent())
+                    UserDefaults.standard.set(timestamp as NSNumber, forKey: "TelegramCacheIndexTimestamp")
                     completion()
                 }))
             })
@@ -2515,7 +2612,7 @@ extension UserDefaults {
                                 case .account:
                                     context.switchAccount()
                                 case .hideAllSecrets:
-                                    hideAllSecrets(accountManager: context.context.sharedContext.accountManager)
+                                let _ = hideAllSecrets(accountManager: context.context.sharedContext.accountManager).start()
                             }
                         }
                     }

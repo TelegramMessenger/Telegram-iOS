@@ -71,6 +71,8 @@ public final class SharedWakeupManager {
     
     private var accountsAndTasks: [(Account, Bool, AccountTasks)] = []
     
+    private var activeBGTaskSchedulerTasks: Set<String> = []
+    
     public init(beginBackgroundTask: @escaping (String, @escaping () -> Void) -> UIBackgroundTaskIdentifier?, endBackgroundTask: @escaping (UIBackgroundTaskIdentifier) -> Void, backgroundTimeRemaining: @escaping () -> Double, acquireIdleExtension: @escaping () -> Disposable?, activeAccounts: Signal<(primary: Account?, accounts: [(AccountRecordId, Account)]), NoError>, liveLocationPolling: Signal<AccountRecordId?, NoError>, watchTasks: Signal<AccountRecordId?, NoError>, inForeground: Signal<Bool, NoError>, hasActiveAudioSession: Signal<Bool, NoError>, notificationManager: SharedNotificationManager?, mediaManager: MediaManager, callManager: PresentationCallManager?, accountUserInterfaceInUse: @escaping (AccountRecordId) -> Signal<Bool, NoError>) {
         assert(Queue.mainQueue().isCurrent())
         
@@ -414,7 +416,7 @@ public final class SharedWakeupManager {
     }
     
     private func updateAccounts(hasTasks: Bool, endTaskAfterTransactionsComplete: UIBackgroundTaskIdentifier?) {
-        if self.inForeground || self.hasActiveAudioSession || self.isInBackgroundExtension || (hasTasks && self.currentExternalCompletion != nil) || self.activeExplicitExtensionTimer != nil {
+        if self.inForeground || self.hasActiveAudioSession || self.isInBackgroundExtension || (hasTasks && self.currentExternalCompletion != nil) || self.activeExplicitExtensionTimer != nil || !self.activeBGTaskSchedulerTasks.isEmpty {
             Logger.shared.log("Wakeup", "enableBeginTransactions: true (active)")
             
             for (account, primary, tasks) in self.accountsAndTasks {
@@ -478,6 +480,20 @@ public final class SharedWakeupManager {
             }
             
             checkCompletionState(nil)
+        }
+    }
+    
+    func bgTaskSchedulerTaskBegan(_ taskId: String) {
+        Queue.mainQueue().async {
+            self.activeBGTaskSchedulerTasks.insert(taskId)
+            self.checkTasks()
+        }
+    }
+    
+    func bgTaskSchedulerTaskEnded(_ taskId: String) {
+        Queue.mainQueue().async {
+            self.activeBGTaskSchedulerTasks.remove(taskId)
+            self.checkTasks()
         }
     }
 }

@@ -86,7 +86,7 @@ final class AutomaticCacheEvictionContext {
             let _ = processingQueue
             let _ = mediaBox
             
-            self.processDisposable = (self.postbox.mediaBox.storageBox.allPeerIds()
+            let scanOnce = self.postbox.mediaBox.storageBox.allPeerIds()
             |> mapToSignal { peerIds -> Signal<Never, NoError> in
                 return postbox.transaction { transaction -> [PeerId: CacheStorageSettings.PeerStorageCategory] in
                     var channelCategoryMapping: [PeerId: CacheStorageSettings.PeerStorageCategory] = [:]
@@ -196,7 +196,20 @@ final class AutomaticCacheEvictionContext {
                     
                     return signals
                 }
-            }).start()
+            }
+            
+            // using the same timing as in TimeBasedCleanup, to harden tracing cache deletion
+            let scanFirstTime = scanOnce
+            |> delay(10.0, queue: Queue.concurrentDefaultQueue())
+            let scanRepeatedly = (
+                scanOnce
+                |> suspendAwareDelay(3.0 * 60.0 * 60.0, granularity: 10.0, queue: Queue.concurrentDefaultQueue())
+            )
+            |> SwiftSignalKit.restart
+            let scan = scanFirstTime
+            |> then(scanRepeatedly)
+            
+            self.processDisposable = scan.start()
         }
     }
     

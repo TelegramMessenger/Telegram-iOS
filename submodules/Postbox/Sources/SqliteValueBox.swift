@@ -453,6 +453,10 @@ public final class SqliteValueBox: ValueBox {
         resultCode = database.execute("PRAGMA cipher_memory_security = OFF")
         assert(resultCode)
 
+        // limit .wal file size to 1000 pages, so db size does not grow too much
+        resultCode = database.execute("PRAGMA journal_size_limit=4096000")
+        assert(resultCode)
+
         postboxLog("Did set up pragmas")
 
         //resultCode = database.execute("PRAGMA wal_autocheckpoint=500")
@@ -2345,6 +2349,116 @@ public final class SqliteValueBox: ValueBox {
         resultCode = self.database.execute("PRAGMA wal_checkpoint(TRUNCATE)")
         precondition(resultCode)
     }
+    
+    public func freePagesFraction() -> Double {
+        let freelist_count = self.runPragma(self.database, "freelist_count")
+        let page_count = self.runPragma(self.database, "page_count")
+        if let freelist_count = Int(freelist_count), let page_count = Int(page_count), page_count != 0 {
+            return Double(freelist_count) / Double(page_count)
+        } else {
+            return 0.0
+        }
+    }
+    
+    public func dbFilesSize() -> Signal<Int64, NoError> {
+        let basePath = self.basePath
+        let queue = self.queue
+        
+        return combineLatest(dabaseFileNames.map { fileName in
+            let fullpath = basePath + "/\(fileName)"
+            
+            return Signal { subscriber in
+                queue.async {
+                    subscriber.putNext(fileSize(fullpath, useTotalFileAllocatedSize: true) ?? 0)
+                    subscriber.putCompletion()
+                }
+                return EmptyDisposable
+            }
+            |> then (
+                fileSizeChangeNotifier(path: fullpath, queue: queue)
+                |> map { _ in
+                    return fileSize(fullpath, useTotalFileAllocatedSize: true) ?? 0
+                }
+            )
+            |> distinctUntilChanged
+        })
+        |> map { sizes in
+            return sizes.reduce(0, +)
+        }
+    }
+    
+    #if DEBUG
+    // note: requires SQLITE_ENABLE_DBSTAT_VTAB in sqlite3.c
+    public func debugDumpStat() -> Signal<String, NoError> {
+        return Signal { subscriber in
+            self.queue.async {
+                var str = "=========== Database statistics ===========\n"
+                str.append("Path: \(self.databasePath)\n")
+                
+                let formatter = NumberFormatter()
+                formatter.numberStyle = .decimal
+                formatter.groupingSeparator = ","
+                formatter.locale = Locale(identifier: "en_US")
+                
+                if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: self.basePath), includingPropertiesForKeys: [.totalFileAllocatedSizeKey], options: [], errorHandler: nil) {
+                    for case let url as URL in enumerator {
+                        if let size = (try? url.resourceValues(forKeys: Set([.totalFileAllocatedSizeKey])))?.totalFileAllocatedSize {
+                            str.append("\(url.lastPathComponent): \(formatter.string(for: size)!) bytes\n")
+                        }
+                    }
+                }
+                
+                var stat: [String : (size: Int, count: Int)] = [:]
+                
+                var statement: OpaquePointer? = nil
+                let status = sqlite3_prepare_v2(self.database.handle, "SELECT name, SUM(pgsize) FROM dbstat GROUP BY name", -1, &statement, nil)
+                precondition(status == SQLITE_OK)
+                let preparedStatement = SqlitePreparedStatement(statement: statement)
+                
+                while preparedStatement.step(handle: self.database.handle, true, pathToRemoveOnError: nil) {
+                    guard let name = preparedStatement.stringAt(0) else {
+                        assertionFailure()
+                        continue
+                    }
+                    let size = preparedStatement.int64At(1)
+                    
+                    stat[name] = (size: Int(size), count: 0)
+                }
+                
+                preparedStatement.destroy()
+                
+                for name in stat.keys {
+                    var statement: OpaquePointer? = nil
+                    let status = sqlite3_prepare_v2(self.database.handle, "SELECT COUNT(*) FROM \(name)", -1, &statement, nil)
+                    if status == SQLITE_OK {
+                        let preparedStatement = SqlitePreparedStatement(statement: statement)
+                        
+                        while preparedStatement.step(handle: self.database.handle, true, pathToRemoveOnError: nil) {
+                            let count = preparedStatement.int64At(0)
+                            
+                            stat[name]?.count = Int(count)
+                        }
+                        
+                        preparedStatement.destroy()
+                    }
+                }
+                
+                let totalSize = stat.reduce(0) { $0 + $1.value.size }
+                str.append("*** Total size (dbstat): \(formatter.string(for: totalSize)!) bytes ***\n")
+                str.append("*** Free pages fraction: \(self.freePagesFraction()) ***\n")
+                
+                for (name, (size, count)) in stat.sorted(by: { $0.value.size > $1.value.size }) {
+                    str.append("\(name): \(formatter.string(for: size)!) bytes / \(formatter.string(for: count)!) rows\n")
+                }
+                
+                subscriber.putNext(str + "\n")
+                subscriber.putCompletion()
+            }
+            
+            return EmptyDisposable
+        }
+    }
+    #endif
 }
 
 private func hexString(_ data: Data) -> String {

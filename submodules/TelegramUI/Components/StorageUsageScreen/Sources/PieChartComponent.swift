@@ -1,3 +1,4 @@
+/*
 import Foundation
 import UIKit
 import Display
@@ -1410,3 +1411,4 @@ final class PieChartComponent: Component {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
+*/

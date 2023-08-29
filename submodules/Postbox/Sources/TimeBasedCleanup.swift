@@ -96,6 +96,7 @@ private final class TempScanDatabase {
         endKey.setInt32(0, value: Int32.max)
         
         while true {
+            var hadStop = false
             var lastKey: ValueBoxKey?
             self.valueBox.range(self.accessTimeTable, start: startKey, end: endKey, values: { key, value in
                 var result = true
@@ -112,6 +113,9 @@ private final class TempScanDatabase {
                     
                     if let path = String(data: pathData, encoding: .utf8) {
                         result = f(size, path)
+                        if !result {
+                            hadStop = true
+                        }
                     }
                 })
                 
@@ -125,11 +129,14 @@ private final class TempScanDatabase {
             } else {
                 break
             }
+            if hadStop {
+                break
+            }
         }
     }
 }
 
-private func scanFiles(at path: String, olderThan minTimestamp: Int32, includeSubdirectories: Bool, performSizeMapping: Bool, tempDatabase: TempScanDatabase) -> ScanFilesResult {
+private func scanFiles(at path: String, olderThan minTimestamp: Int32, includeSubdirectories: Bool, performSizeMapping: Bool, tempDatabase: TempScanDatabase, unlinked: ((String) -> Void)?) -> ScanFilesResult {
     var result = ScanFilesResult()
     
     var subdirectories: [String] = []
@@ -166,6 +173,9 @@ private func scanFiles(at path: String, olderThan minTimestamp: Int32, includeSu
                 } else {
                     if value.st_mtimespec.tv_sec < minTimestamp {
                         unlink(pathBuffer)
+                        if let unlinked, let path = String(data: Data(bytes: pathBuffer, count: strnlen(pathBuffer, 1024)), encoding: .utf8) {
+                            unlinked(path)
+                        }
                         result.unlinkedCount += 1
                     } else {
                         result.totalSize += UInt64(value.st_size)
@@ -181,7 +191,7 @@ private func scanFiles(at path: String, olderThan minTimestamp: Int32, includeSu
     
     if includeSubdirectories {
         for subPath in subdirectories {
-            let subResult = scanFiles(at: subPath, olderThan: minTimestamp, includeSubdirectories: true, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase)
+            let subResult = scanFiles(at: subPath, olderThan: minTimestamp, includeSubdirectories: true, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase, unlinked: unlinked)
             result.totalSize += subResult.totalSize
             result.unlinkedCount += subResult.unlinkedCount
         }
@@ -298,37 +308,44 @@ private func statForDirectory(path: String) -> Int64 {
     }
 }
 
+public struct AccountCleanupPaths {
+    let storageBox: StorageBox
+    let cacheStorageBox: StorageBox
+    let generalPaths: [String]
+    let totalSizeBasedPath: String
+    let shortLivedPaths: [String]
+    
+    public init(storageBox: StorageBox, cacheStorageBox: StorageBox, generalPaths: [String], totalSizeBasedPath: String, shortLivedPaths: [String]) {
+        self.storageBox = storageBox
+        self.cacheStorageBox = cacheStorageBox
+        self.generalPaths = generalPaths
+        self.totalSizeBasedPath = totalSizeBasedPath
+        self.shortLivedPaths = shortLivedPaths
+    }
+}
+
 private final class TimeBasedCleanupImpl {
     private let queue: Queue
-    private let storageBox: StorageBox
-    private let generalPaths: [String]
-    private let totalSizeBasedPath: String
-    private let shortLivedPaths: [String]
     
-    private var scheduledTouches: [String] = []
-    private var scheduledTouchesTimer: SignalKitTimer?
+    private var cleanedAccounts: [Int64: AccountCleanupPaths] = [:]
     
     private var generalMaxStoreTime: Int32?
     private var shortLivedMaxStoreTime: Int32?
     private var gigabytesLimit: Int32?
     private let scheduledScanDisposable = MetaDisposable()
     
-    init(queue: Queue, storageBox: StorageBox, generalPaths: [String], totalSizeBasedPath: String, shortLivedPaths: [String]) {
+    init(queue: Queue) {
         self.queue = queue
-        self.storageBox = storageBox
-        self.generalPaths = generalPaths
-        self.totalSizeBasedPath = totalSizeBasedPath
-        self.shortLivedPaths = shortLivedPaths
     }
     
     deinit {
         assert(self.queue.isCurrent())
-        self.scheduledTouchesTimer?.invalidate()
         self.scheduledScanDisposable.dispose()
     }
     
-    func setMaxStoreTimes(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
-        if self.generalMaxStoreTime != general || self.shortLivedMaxStoreTime != shortLived || self.gigabytesLimit != gigabytesLimit {
+    func setup(cleanedAccounts: [Int64: AccountCleanupPaths], general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
+        if Set(self.cleanedAccounts.keys) != Set(cleanedAccounts.keys) || self.generalMaxStoreTime != general || self.shortLivedMaxStoreTime != shortLived || self.gigabytesLimit != gigabytesLimit {
+            self.cleanedAccounts = cleanedAccounts
             self.generalMaxStoreTime = general
             self.gigabytesLimit = gigabytesLimit
             self.shortLivedMaxStoreTime = shortLived
@@ -337,10 +354,11 @@ private final class TimeBasedCleanupImpl {
     }
     
     private func resetScan(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
-        let generalPaths = self.generalPaths
-        let totalSizeBasedPath = self.totalSizeBasedPath
-        let shortLivedPaths = self.shortLivedPaths
-        let storageBox = self.storageBox
+        let cleanedAccounts = self.cleanedAccounts
+        let generalPaths = cleanedAccounts.reduce(into: [], { $0.append(contentsOf: $1.value.generalPaths) })
+        let totalSizeBasedPaths = cleanedAccounts.reduce(into: [], { $0.append($1.value.totalSizeBasedPath) })
+        let shortLivedPaths = cleanedAccounts.reduce(into: [], { $0.append(contentsOf: $1.value.shortLivedPaths) })
+        
         let scanOnce = Signal<Never, NoError> { subscriber in
             let queue = Queue(name: "TimeBasedCleanupScan", qos: .background)
             queue.async {
@@ -357,8 +375,6 @@ private final class TimeBasedCleanupImpl {
                 let removedGeneralLimitCount: Int = 0
                 
                 let startTime = CFAbsoluteTimeGetCurrent()
-                
-                var paths: [String] = []
                 
                 let timestamp = Int32(Date().timeIntervalSince1970)
                 
@@ -378,20 +394,22 @@ private final class TimeBasedCleanupImpl {
                     }
                     
                     
-                    if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: totalSizeBasedPath), includingPropertiesForKeys: [.fileSizeKey, .fileResourceIdentifierKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
-                        var fileIds = Set<Data>()
-                        loop: for url in enumerator {
-                            guard let url = url as? URL else {
-                                continue
-                            }
-                            if let fileId = (try? url.resourceValues(forKeys: Set([.fileResourceIdentifierKey])))?.fileResourceIdentifier as? Data {
-                                if fileIds.contains(fileId) {
-                                    continue loop
+                    for totalSizeBasedPath in totalSizeBasedPaths {
+                        if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: totalSizeBasedPath), includingPropertiesForKeys: [.fileSizeKey, .fileResourceIdentifierKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
+                            var fileIds = Set<Data>()
+                            loop: for url in enumerator {
+                                guard let url = url as? URL else {
+                                    continue
                                 }
-                                
-                                if let value = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize, value != 0 {
-                                    fileIds.insert(fileId)
-                                    totalApproximateSize += Int64(value)
+                                if let fileId = (try? url.resourceValues(forKeys: Set([.fileResourceIdentifierKey])))?.fileResourceIdentifier as? Data {
+                                    if fileIds.contains(fileId) {
+                                        continue loop
+                                    }
+                                    
+                                    if let value = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize, value != 0 {
+                                        fileIds.insert(fileId)
+                                        totalApproximateSize += Int64(value)
+                                    }
                                 }
                             }
                         }
@@ -403,41 +421,49 @@ private final class TimeBasedCleanupImpl {
                     performSizeMapping = false
                 }
                 
-                let oldestShortLivedTimestamp = timestamp - shortLived
-                let oldestGeneralTimestamp = timestamp - general
-                for path in shortLivedPaths {
-                    let scanResult = scanFiles(at: path, olderThan: oldestShortLivedTimestamp, includeSubdirectories: true, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase)
-                    if !paths.contains(path) {
-                        paths.append(path)
-                    }
-                    removedShortLivedCount += scanResult.unlinkedCount
-                }
+                let oldestShortLivedTimestamp = shortLived < Int32.max ? timestamp - shortLived : 0
+                let oldestGeneralTimestamp = general < Int32.max ? timestamp - general : 0
                 
                 var totalLimitSize: UInt64 = 0
+                var unlinkedCacheResourceIds: [Int64:[Data]] = [:]
                 
-                if general < Int32.max {
+                if shortLived < Int32.max || performSizeMapping {
+                    for path in shortLivedPaths {
+                        let accountId = accountIdForFileName(path)
+                        let scanResult = scanFiles(at: path, olderThan: oldestShortLivedTimestamp, includeSubdirectories: true, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase, unlinked: { path in
+                            if let accountId, let idData = path.replacingOccurrences(of: "_partial:", with: ":").data(using: .utf8) {
+                                unlinkedCacheResourceIds[accountId, default: []].append(idData)
+                            }
+                        })
+                        removedShortLivedCount += scanResult.unlinkedCount
+                        totalLimitSize += scanResult.totalSize
+                    }
+                }
+                
+                if general < Int32.max || performSizeMapping {
                     for path in generalPaths {
-                        let scanResult = scanFiles(at: path, olderThan: oldestGeneralTimestamp, includeSubdirectories: true, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase)
-                        if !paths.contains(path) {
-                            paths.append(path)
-                        }
+                        let accountId = accountIdForFileName(path)
+                        let scanResult = scanFiles(at: path, olderThan: oldestGeneralTimestamp, includeSubdirectories: true, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase, unlinked: { path in
+                            if let accountId, let idData = path.replacingOccurrences(of: "_partial:", with: ":").data(using: .utf8) {
+                                unlinkedCacheResourceIds[accountId, default: []].append(idData)
+                            }
+                        })
                         removedGeneralCount += scanResult.unlinkedCount
                         totalLimitSize += scanResult.totalSize
                     }
                 }
                 
-                if gigabytesLimit < Int32.max {
-                    let scanResult = scanFiles(at: totalSizeBasedPath, olderThan: 0, includeSubdirectories: false, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase)
-                    if !paths.contains(totalSizeBasedPath) {
-                        paths.append(totalSizeBasedPath)
+                if performSizeMapping {
+                    for totalSizeBasedPath in totalSizeBasedPaths {
+                        let scanResult = scanFiles(at: totalSizeBasedPath, olderThan: 0, includeSubdirectories: false, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase, unlinked: nil)
+                        removedGeneralCount += scanResult.unlinkedCount
+                        totalLimitSize += scanResult.totalSize
                     }
-                    removedGeneralCount += scanResult.unlinkedCount
-                    totalLimitSize += scanResult.totalSize
                 }
                 
                 tempDatabase.commit()
                 
-                var unlinkedResourceIds: [Data] = []
+                var unlinkedResourceIds: [Int64:[Data]] = [:]
                 
                 if totalLimitSize > bytesLimit {
                     var remainingSize = Int64(totalLimitSize)
@@ -446,15 +472,34 @@ private final class TimeBasedCleanupImpl {
                         
                         unlink(filePath)
                         
-                        if (filePath as NSString).deletingLastPathComponent == totalSizeBasedPath {
+                        if totalSizeBasedPaths.contains((filePath as NSString).deletingLastPathComponent) {
                             let fileName = (filePath as NSString).lastPathComponent
-                            if let idData = MediaBox.idForFileName(name: fileName).data(using: .utf8) {
-                                unlinkedResourceIds.append(idData)
+                            
+                            let shouldRemoveFromStorageBox: Bool
+                            if fileName.hasSuffix("_partial.meta") {
+                                shouldRemoveFromStorageBox = false
+                            } else if fileName.hasSuffix("_partial") {
+                                unlink(filePath + ".meta")
+                                shouldRemoveFromStorageBox = true
+                            } else {
+                                shouldRemoveFromStorageBox = true
+                            }
+                            
+                            if shouldRemoveFromStorageBox, let idData = MediaBox.idForFileName(name: fileName).data(using: .utf8) {
+                                if let accountId = accountIdForFileName(filePath) {
+                                    unlinkedResourceIds[accountId, default: []].append(idData)
+                                }
+                            }
+                        } else {
+                            if let idData = filePath.replacingOccurrences(of: "_partial:", with: ":").data(using: .utf8) {
+                                if let accountId = accountIdForFileName(filePath) {
+                                    unlinkedCacheResourceIds[accountId, default: []].append(idData)
+                                }
                             }
                         }
                         //let fileName = filePath.lastPathComponent
                         
-                        if remainingSize >= bytesLimit {
+                        if remainingSize <= bytesLimit {
                             return false
                         }
                         
@@ -462,8 +507,24 @@ private final class TimeBasedCleanupImpl {
                     }
                 }
                 
-                if !unlinkedResourceIds.isEmpty {
-                    storageBox.remove(ids: unlinkedResourceIds)
+                func accountIdForFileName(_ name: String) -> Int64? {
+                    if let range1 = name.range(of: "/account-") {
+                        if let range2 = name.range(of: "/", range: range1.upperBound..<name.endIndex) {
+                            if let uint64 = UInt64(name[range1.upperBound..<range2.lowerBound]) {
+                                return Int64(bitPattern: uint64)
+                            }
+                        }
+                    }
+                    assertionFailure()
+                    return nil
+                }
+                
+                for (accountId, unlinkedResourceIds) in unlinkedResourceIds {
+                    cleanedAccounts[accountId]!.storageBox.remove(ids: unlinkedResourceIds)
+                }
+                
+                for (accountId, unlinkedCacheResourceIds) in unlinkedCacheResourceIds {
+                    cleanedAccounts[accountId]!.cacheStorageBox.remove(ids: unlinkedCacheResourceIds)
                 }
                 
                 tempDatabase.dispose()
@@ -476,17 +537,38 @@ private final class TimeBasedCleanupImpl {
             }
             return EmptyDisposable
         }
+        
+        // using the same timing as in AutomaticCacheEviction, to harden tracing cache deletion
         let scanFirstTime = scanOnce
         |> delay(10.0, queue: Queue.concurrentDefaultQueue())
         let scanRepeatedly = (
             scanOnce
-            |> suspendAwareDelay(60.0 * 60.0, granularity: 10.0, queue: Queue.concurrentDefaultQueue())
+            |> suspendAwareDelay(3.0 * 60.0 * 60.0, granularity: 10.0, queue: Queue.concurrentDefaultQueue())
         )
         |> restart
         let scan = scanFirstTime
         |> then(scanRepeatedly)
         self.scheduledScanDisposable.set((scan
         |> deliverOn(self.queue)).start())
+    }
+}
+
+private final class TimeBasedCleanupTouchesImpl {
+    private let queue: Queue
+    
+    private var scheduledTouches: [String] = []
+    private var scheduledTouchesTimer: SignalKitTimer?
+    
+    init(queue: Queue) {
+        self.queue = queue
+    }
+    
+    deinit {
+        assert(self.queue.isCurrent())
+        self.scheduledTouchesTimer?.invalidate()
+        if !self.scheduledTouches.isEmpty {
+            self.processScheduledTouches()
+        }
     }
     
     func touch(paths: [String]) {
@@ -519,26 +601,38 @@ private final class TimeBasedCleanupImpl {
     }
 }
 
-final class TimeBasedCleanup {
+public final class TimeBasedCleanup {
     private let queue = Queue()
     private let impl: QueueLocalObject<TimeBasedCleanupImpl>
     
-    init(storageBox: StorageBox, generalPaths: [String], totalSizeBasedPath: String, shortLivedPaths: [String]) {
+    public init() {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: self.queue, generate: {
-            return TimeBasedCleanupImpl(queue: queue, storageBox: storageBox, generalPaths: generalPaths, totalSizeBasedPath: totalSizeBasedPath, shortLivedPaths: shortLivedPaths)
+            return TimeBasedCleanupImpl(queue: queue)
+        })
+    }
+    
+    public func setup(cleanedAccounts: [Int64: AccountCleanupPaths], general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
+        self.impl.with { impl in
+            impl.setup(cleanedAccounts: cleanedAccounts, general: general, shortLived: shortLived, gigabytesLimit: gigabytesLimit)
+        }
+    }
+}
+
+final class TimeBasedCleanupTouches {
+    private let queue = Queue()
+    private let impl: QueueLocalObject<TimeBasedCleanupTouchesImpl>
+    
+    init() {
+        let queue = self.queue
+        self.impl = QueueLocalObject(queue: self.queue, generate: {
+            return TimeBasedCleanupTouchesImpl(queue: queue)
         })
     }
     
     func touch(paths: [String]) {
         self.impl.with { impl in
             impl.touch(paths: paths)
-        }
-    }
-    
-    func setMaxStoreTimes(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
-        self.impl.with { impl in
-            impl.setMaxStoreTimes(general: general, shortLived: shortLived, gigabytesLimit: gigabytesLimit)
         }
     }
 }

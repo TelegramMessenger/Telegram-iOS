@@ -89,6 +89,29 @@ final class ViewTracker {
         self.updateTrackedHoles()
     }
     
+    func getPeerIdsOfMessageHistoryViews() -> Set<PeerId> {
+        var peerIds: Set<PeerId> = []
+        for (view, _) in self.messageHistoryViews.copyItems() {
+            switch view.peerIds {
+            case let .single(peerId, _):
+                peerIds.insert(peerId)
+            case let .associated(peerId, messageId):
+                peerIds.insert(peerId)
+                if let messageId {
+                    peerIds.insert(messageId.peerId)
+                }
+            case let .external(input):
+                switch input.content {
+                case let .thread(peerId, _, _):
+                    peerIds.insert(peerId)
+                case .messages:
+                    break
+                }
+            }
+        }
+        return peerIds
+    }
+    
     func addChatListView(_ view: MutableChatListView) -> (Bag<(MutableChatListView, ValuePipe<(ChatListView, ViewUpdateType)>)>.Index, Signal<(ChatListView, ViewUpdateType), NoError>) {
         let record = (view, ValuePipe<(ChatListView, ViewUpdateType)>())
         let index = self.chatListViews.add(record)

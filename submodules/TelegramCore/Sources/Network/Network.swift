@@ -272,6 +272,7 @@ private func interfaceForConnection(_ connection: UsageCalculationConnection) ->
     return MTNetworkUsageManagerInterface(rawValue: UInt32(connection.rawValue))
 }
 
+/*
 func updateNetworkUsageStats(basePath: String, category: MediaResourceStatsCategory, delta: NetworkUsageStatsConnectionsEntry) {
     let info = usageCalculationInfo(basePath: basePath, category: category)
     let manager = MTNetworkUsageManager(info: info)!
@@ -423,6 +424,7 @@ func networkUsageStats(basePath: String, reset: ResetNetworkUsageStats) -> Signa
         }
     }) |> then(Signal<NetworkUsageStats, NoError>.complete() |> delay(5.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
+*/
 
 public struct NetworkInitializationArguments {
     public let apiId: Int32

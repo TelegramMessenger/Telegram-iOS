@@ -72,25 +72,33 @@ public struct PtgSecretPasscode: Codable, Equatable {
 
 public struct PtgSecretPasscodes: Codable, Equatable {
     public let secretPasscodes: [PtgSecretPasscode]
+    public let dbCoveringAccounts: [AccountRecordId : AccountRecordId]
+    public let cacheCoveringAccounts: [AccountRecordId : AccountRecordId]
     
     public static var defaultSettings: PtgSecretPasscodes {
-        return PtgSecretPasscodes(secretPasscodes: [])
+        return PtgSecretPasscodes(secretPasscodes: [], dbCoveringAccounts: [:], cacheCoveringAccounts: [:])
     }
     
-    public init(secretPasscodes: [PtgSecretPasscode]) {
+    public init(secretPasscodes: [PtgSecretPasscode], dbCoveringAccounts: [AccountRecordId : AccountRecordId], cacheCoveringAccounts: [AccountRecordId : AccountRecordId]) {
         self.secretPasscodes = secretPasscodes
+        self.dbCoveringAccounts = dbCoveringAccounts
+        self.cacheCoveringAccounts = cacheCoveringAccounts
     }
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
         
         self.secretPasscodes = try container.decode([PtgSecretPasscode].self, forKey: "spc")
+        self.dbCoveringAccounts = try container.decodeIfPresent([AccountRecordId : AccountRecordId].self, forKey: "dca") ?? [:]
+        self.cacheCoveringAccounts = try container.decodeIfPresent([AccountRecordId : AccountRecordId].self, forKey: "cca") ?? [:]
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
         
         try container.encode(self.secretPasscodes, forKey: "spc")
+        try container.encode(self.dbCoveringAccounts, forKey: "dca")
+        try container.encode(self.cacheCoveringAccounts, forKey: "cca")
     }
     
     public init(_ entry: PreferencesEntry?) {
@@ -158,7 +166,7 @@ public struct PtgSecretPasscodes: Codable, Equatable {
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data) {
             return PtgSecretPasscodes(secretPasscodes: self.secretPasscodes.map { sp in
                 return sp.withUpdated(active: sp.active && (sp.timeout == nil || !isSecretPasscodeTimedout(timeout: sp.timeout!, state: state)))
-            })
+            }, dbCoveringAccounts: self.dbCoveringAccounts, cacheCoveringAccounts: self.cacheCoveringAccounts)
         } else {
             assertionFailure()
             return self

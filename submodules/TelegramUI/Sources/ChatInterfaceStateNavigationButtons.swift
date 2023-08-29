@@ -68,8 +68,10 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
             if canClear {
                 return ChatNavigationButton(action: .clearHistory, buttonItem: UIBarButtonItem(title: title, style: .plain, target: target, action: selector))
             } else {
+                /*
                 title = strings.Conversation_ClearCache
                 return ChatNavigationButton(action: .clearCache, buttonItem: UIBarButtonItem(title: title, style: .plain, target: target, action: selector))
+                */
             }
         }
     }
