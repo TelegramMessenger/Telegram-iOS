@@ -20,16 +20,18 @@ public final class ContextMenuContainerNode: ASDisplayNode {
     
     public var relativeArrowPosition: (CGFloat, Bool)?
     
-    //private let effectView: UIVisualEffectView
+    private var effectView: UIVisualEffectView?
     
-    override public init() {
-        //self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
-        
+    public init(blurred: Bool) {
         super.init()
         
-        self.backgroundColor = UIColor(rgb: 0x8c8e8e)
-        //self.view.addSubview(self.effectView)
-        //self.effectView.mask = self.maskView
+        if blurred {
+            let effectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
+            self.view.addSubview(effectView)
+            self.effectView = effectView
+        } else {
+            self.backgroundColor = UIColor(rgb: 0x8c8e8e)
+        }
         self.view.mask = self.maskView
     }
     
@@ -46,7 +48,7 @@ public final class ContextMenuContainerNode: ASDisplayNode {
     }
     
     public func updateLayout(transition: ContainedViewLayoutTransition) {
-        //self.effectView.frame = self.bounds
+        self.effectView?.frame = self.bounds
         
         let maskParams = CachedMaskParams(size: self.bounds.size, relativeArrowPosition: self.relativeArrowPosition?.0 ?? self.bounds.size.width / 2.0, arrowOnBottom: self.relativeArrowPosition?.1 ?? true)
         if self.cachedMaskParams != maskParams {

@@ -9,9 +9,9 @@ import ComponentDisplayAdapters
 import TelegramPresentationData
 import AccountContext
 import TelegramCore
+import Postbox
 import MultilineTextComponent
 import EmojiStatusComponent
-import Postbox
 import Markdown
 import ContextUI
 import AnimatedAvatarSetNode
@@ -23,6 +23,7 @@ import TelegramAnimatedStickerNode
 import TelegramStringFormatting
 import GalleryData
 import AnimatedTextComponent
+import BottomButtonPanelComponent
 
 #if DEBUG
 import os.signpost
@@ -105,6 +106,8 @@ private extension StorageUsageScreenComponent.Category {
             self = .avatars
         case .misc:
             self = .misc
+        case .stories:
+            self = .stories
         }
     }
 }
@@ -267,6 +270,7 @@ final class StorageUsageScreenComponent: Component {
         case stickers
         case avatars
         case misc
+        case stories
         
         var color: UIColor {
             switch self {
@@ -286,6 +290,8 @@ final class StorageUsageScreenComponent: Component {
                 return UIColor(rgb: 0xAF52DE)
             case .misc:
                 return UIColor(rgb: 0xFF9500)
+            case .stories:
+                return UIColor(rgb: 0xFF2D55)
             }
         }
         
@@ -307,6 +313,8 @@ final class StorageUsageScreenComponent: Component {
                 return strings.StorageManagement_SectionAvatars
             case .misc:
                 return strings.StorageManagement_SectionMiscellaneous
+            case .stories:
+                return strings.StorageManagement_SectionStories
             }
         }
         
@@ -327,6 +335,8 @@ final class StorageUsageScreenComponent: Component {
             case .avatars:
                 return "Settings/Storage/ParticleAvatars"
             case .misc:
+                return "Settings/Storage/ParticleOther"
+            case .stories:
                 return "Settings/Storage/ParticleOther"
             }
         }
@@ -586,7 +596,7 @@ final class StorageUsageScreenComponent: Component {
                         for item in imageItems.items {
                             if deselectedPhotos.contains(item.message.id) {
                                 selectedSize -= item.size
-                                clearExcludeMessages.append(item.message)
+                                clearExcludeMessages.append(item.message._asMessage())
                             }
                         }
                     }
@@ -596,7 +606,7 @@ final class StorageUsageScreenComponent: Component {
                         for item in imageItems.items {
                             if selectedPhotos.contains(item.message.id) {
                                 selectedSize += item.size
-                                clearIncludeMessages.append(item.message)
+                                clearIncludeMessages.append(item.message._asMessage())
                             }
                         }
                     }
@@ -608,7 +618,7 @@ final class StorageUsageScreenComponent: Component {
                         for item in imageItems.items {
                             if deselectedVideos.contains(item.message.id) {
                                 selectedSize -= item.size
-                                clearExcludeMessages.append(item.message)
+                                clearExcludeMessages.append(item.message._asMessage())
                             }
                         }
                     }
@@ -618,7 +628,7 @@ final class StorageUsageScreenComponent: Component {
                         for item in imageItems.items {
                             if selectedVideos.contains(item.message.id) {
                                 selectedSize += item.size
-                                clearIncludeMessages.append(item.message)
+                                clearIncludeMessages.append(item.message._asMessage())
                             }
                         }
                     }
@@ -1246,7 +1256,7 @@ final class StorageUsageScreenComponent: Component {
                 
                 let selectionPanelSize = selectionPanel.update(
                     transition: selectionPanelTransition,
-                    component: AnyComponent(StorageUsageScreenSelectionPanelComponent(
+                    component: AnyComponent(BottomButtonPanelComponent(
                         theme: environment.theme,
                         title: bottomPanelSelectionData.isComplete ? environment.strings.StorageManagement_ClearCache : environment.strings.StorageManagement_ClearSelected,
                         label: bottomPanelSelectionData.size == 0 ? nil : dataSizeString(Int(bottomPanelSelectionData.size), formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: ".")),
@@ -1293,7 +1303,8 @@ final class StorageUsageScreenComponent: Component {
                 .music,
                 .stickers,
                 .avatars,
-                .misc
+                .misc,
+                .stories
             ]
             
             var listCategories: [StorageCategoriesComponent.CategoryData] = []
@@ -1325,6 +1336,8 @@ final class StorageUsageScreenComponent: Component {
                         mappedCategory = .avatars
                     case .misc:
                         mappedCategory = .misc
+                    case .stories:
+                        mappedCategory = .stories
                     case .other:
                         continue
                     }
@@ -1843,6 +1856,10 @@ final class StorageUsageScreenComponent: Component {
                         iconName = "Settings/Menu/GroupChats"
                         title = environment.strings.Notifications_GroupChats
                         mappedCategory = .groups
+                    case 3:
+                        iconName = "Settings/Menu/Stories"
+                        title = environment.strings.Notifications_Stories
+                        mappedCategory = .stories
                     default:
                         iconName = "Settings/Menu/Channels"
                         title = environment.strings.Notifications_Channels
@@ -1858,8 +1875,10 @@ final class StorageUsageScreenComponent: Component {
                     }
                     
                     var subtitle: String?
-                    if let cacheSettingsExceptionCount = self.cacheSettingsExceptionCount, let categoryCount = cacheSettingsExceptionCount[mappedCategory] {
-                        subtitle = environment.strings.CacheEvictionMenu_CategoryExceptions(Int32(categoryCount))
+                    if mappedCategory != .stories {
+                        if let cacheSettingsExceptionCount = self.cacheSettingsExceptionCount, let categoryCount = cacheSettingsExceptionCount[mappedCategory] {
+                            subtitle = environment.strings.CacheEvictionMenu_CategoryExceptions(Int32(categoryCount))
+                        }
                     }
                     
                     let itemSize = item.update(
@@ -2410,7 +2429,7 @@ final class StorageUsageScreenComponent: Component {
                                 
                                 if matches {
                                     result.imageItems.append(StorageMediaGridPanelComponent.Item(
-                                        message: message,
+                                        message: EngineMessage(message),
                                         size: messageSize
                                     ))
                                 }
@@ -2835,14 +2854,14 @@ final class StorageUsageScreenComponent: Component {
                     }
                     self.controller?()?.present(c, in: .window(.root), with: a, blockInteraction: true)
                 },
-                transitionNode: { [weak self] messageId, media in
+                transitionNode: { [weak self] messageId, media, _ in
                     guard let self else {
                         return nil
                     }
                     
                     if let panelContainerView = self.panelContainer.view as? StorageUsagePanelContainerComponent.View {
                         if let currentPanelView = panelContainerView.currentPanelView as? StorageMediaGridPanelComponent.View {
-                            return currentPanelView.transitionNodeForGallery(messageId: messageId, media: media)
+                            return currentPanelView.transitionNodeForGallery(messageId: messageId, media: EngineMedia(media))
                         }
                     }
                     
@@ -2984,6 +3003,8 @@ final class StorageUsageScreenComponent: Component {
                         mappedCategories.append(.avatars)
                     case .misc:
                         mappedCategories.append(.misc)
+                    case .stories:
+                        mappedCategories.append(.stories)
                     }
                 }
                 
@@ -3034,6 +3055,8 @@ final class StorageUsageScreenComponent: Component {
                             mappedCategories.append(.avatars)
                         case .misc:
                             mappedCategories.append(.misc)
+                        case .stories:
+                            mappedCategories.append(.stories)
                         }
                     }
                     
@@ -3063,6 +3086,8 @@ final class StorageUsageScreenComponent: Component {
                             mappedCategory = .avatars
                         case .misc:
                             mappedCategory = .misc
+                        case .stories:
+                            mappedCategory = .stories
                         }
                         
                         if let value = contextStats.categories[mappedCategory] {
@@ -3276,7 +3301,7 @@ final class StorageUsageScreenComponent: Component {
                 let applyValue: (Int32) -> Void = { value in
                     let _ = updateCacheStorageSettingsInteractively(accountManager: context.sharedContext.accountManager, { cacheSettings in
                         var cacheSettings = cacheSettings
-                        for key in cacheSettings.categoryStorageTimeout.keys {
+                        for key in CacheStorageSettings.PeerStorageCategory.allCases {
                             cacheSettings.categoryStorageTimeout[key] = value
                         }
                         return cacheSettings
@@ -3286,12 +3311,23 @@ final class StorageUsageScreenComponent: Component {
                 var subItems: [ContextMenuItem] = []
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 
-                var presetValues: [Int32] = [
-                    Int32.max,
-                    31 * 24 * 60 * 60,
-                    7 * 24 * 60 * 60,
-                    1 * 24 * 60 * 60
-                ]
+                var presetValues: [Int32]
+                
+                if case .stories = mappedCategory {
+                    presetValues = [
+                        7 * 24 * 60 * 60,
+                        2 * 24 * 60 * 60,
+                        1 * 24 * 60 * 60
+                    ]
+                } else {
+                    presetValues = [
+                        Int32.max,
+                        31 * 24 * 60 * 60,
+                        7 * 24 * 60 * 60,
+                        1 * 24 * 60 * 60
+                    ]
+                }
+                
                 if currentValue != 0 && !presetValues.contains(currentValue) {
                     presetValues.append(currentValue)
                     presetValues.sort(by: >)
@@ -3319,30 +3355,32 @@ final class StorageUsageScreenComponent: Component {
                 /*
                 subItems.append(.separator)
                 
-                if peerExceptions.isEmpty {
-                    let exceptionsText = presentationData.strings.GroupInfo_Permissions_AddException
-                    subItems.append(.action(ContextMenuActionItem(text: exceptionsText, icon: { theme in
-                        if case .privateChats = mappedCategory {
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
-                        } else {
-                            return generateTintedImage(image: UIImage(bundleImageName: "Location/CreateGroupIcon"), color: theme.contextMenu.primaryColor)
-                        }
-                    }, action: { _, f in
-                        f(.default)
-                        
-                        if let exceptionsController = makeStorageUsageExceptionsScreen(mappedCategory) {
-                            pushControllerImpl?(exceptionsController)
-                        }
-                    })))
-                } else {
-                    subItems.append(.custom(MultiplePeerAvatarsContextItem(context: context, peers: peerExceptions.prefix(3).map { EnginePeer($0.peer.peer) }, totalCount: peerExceptions.count, action: { c, _ in
-                        c.dismiss(completion: {
+                if mappedCategory != .stories {
+                    if peerExceptions.isEmpty {
+                        let exceptionsText = presentationData.strings.GroupInfo_Permissions_AddException
+                        subItems.append(.action(ContextMenuActionItem(text: exceptionsText, icon: { theme in
+                            if case .privateChats = mappedCategory {
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
+                            } else {
+                                return generateTintedImage(image: UIImage(bundleImageName: "Location/CreateGroupIcon"), color: theme.contextMenu.primaryColor)
+                            }
+                        }, action: { _, f in
+                            f(.default)
                             
-                        })
-                        if let exceptionsController = makeStorageUsageExceptionsScreen(mappedCategory) {
-                            pushControllerImpl?(exceptionsController)
-                        }
-                    }), false))
+                            if let exceptionsController = makeStorageUsageExceptionsScreen(mappedCategory) {
+                                pushControllerImpl?(exceptionsController)
+                            }
+                        })))
+                    } else {
+                        subItems.append(.custom(MultiplePeerAvatarsContextItem(context: context, peers: peerExceptions.prefix(3).map { EnginePeer($0.peer.peer) }, totalCount: peerExceptions.count, action: { c, _ in
+                            c.dismiss(completion: {
+                                
+                            })
+                            if let exceptionsController = makeStorageUsageExceptionsScreen(mappedCategory) {
+                                pushControllerImpl?(exceptionsController)
+                            }
+                        }), false))
+                    }
                 }
                 */
                 

@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 
@@ -48,7 +47,7 @@ public func updateGeneratedMediaStoreSettingsInteractively(accountManager: Accou
             } else {
                 currentSettings = GeneratedMediaStoreSettings.defaultSettings
             }
-            return PreferencesEntry(f(currentSettings))
+            return SharedPreferencesEntry(f(currentSettings))
         })
     }
 }

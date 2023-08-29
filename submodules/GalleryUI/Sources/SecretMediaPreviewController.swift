@@ -255,7 +255,7 @@ public final class SecretMediaPreviewController: ViewController {
                 if let _ = index {
                     if let message = strongSelf.messageView?.message, let media = mediaForMessage(message: message) {
                         var beginTimeAndTimeout: (Double, Double)?
-                        var videoDuration: Int32?
+                        var videoDuration: Double?
                         for media in message.media {
                             if let file = media as? TelegramMediaFile {
                                 videoDuration = file.duration
@@ -265,7 +265,7 @@ public final class SecretMediaPreviewController: ViewController {
                         if let attribute = message.autoclearAttribute {
                             if let countdownBeginTime = attribute.countdownBeginTime {
                                 if let videoDuration = videoDuration {
-                                    beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, Double(videoDuration))
+                                    beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, videoDuration)
                                 } else {
                                     beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
                                 }
@@ -273,7 +273,7 @@ public final class SecretMediaPreviewController: ViewController {
                         } else if let attribute = message.autoremoveAttribute {
                             if let countdownBeginTime = attribute.countdownBeginTime {
                                 if let videoDuration = videoDuration {
-                                    beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, Double(videoDuration))
+                                    beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, videoDuration)
                                 } else {
                                     beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
                                 }
@@ -340,7 +340,7 @@ public final class SecretMediaPreviewController: ViewController {
             |> deliverOnMainQueue).start(next: { [weak self] _ in
                 if let strongSelf = self, strongSelf.traceVisibility() {
                     if strongSelf.messageId.peerId.namespace == Namespaces.Peer.CloudUser {
-                        let _ = enqueueMessages(account: strongSelf.context.account, peerId: strongSelf.messageId.peerId, messages: [.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaAction(action: TelegramMediaActionType.historyScreenshot)), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
+                        let _ = enqueueMessages(account: strongSelf.context.account, peerId: strongSelf.messageId.peerId, messages: [.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaAction(action: TelegramMediaActionType.historyScreenshot)), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
                     } else if strongSelf.messageId.peerId.namespace == Namespaces.Peer.SecretChat {
                         let _ = strongSelf.context.engine.messages.addSecretChatMessageScreenshot(peerId: strongSelf.messageId.peerId).start()
                     }
@@ -444,7 +444,7 @@ public final class SecretMediaPreviewController: ViewController {
                 self.markMessageAsConsumedDisposable.set(self.context.engine.messages.markMessageContentAsConsumedInteractively(messageId: message.id).start())
             } else {
                 var beginTimeAndTimeout: (Double, Double)?
-                var videoDuration: Int32?
+                var videoDuration: Double?
                 for media in message.media {
                     if let file = media as? TelegramMediaFile {
                         videoDuration = file.duration
@@ -453,7 +453,7 @@ public final class SecretMediaPreviewController: ViewController {
                 if let attribute = message.autoclearAttribute {
                     if let countdownBeginTime = attribute.countdownBeginTime {
                         if let videoDuration = videoDuration {
-                            beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, Double(videoDuration))
+                            beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, videoDuration)
                         } else {
                             beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
                         }
@@ -461,7 +461,7 @@ public final class SecretMediaPreviewController: ViewController {
                 } else if let attribute = message.autoremoveAttribute {
                     if let countdownBeginTime = attribute.countdownBeginTime {
                         if let videoDuration = videoDuration {
-                            beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, Double(videoDuration))
+                            beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, videoDuration)
                         } else {
                             beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
                         }

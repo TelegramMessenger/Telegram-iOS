@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 
@@ -31,7 +30,7 @@ public func updateExperimentalSettingsInteractively(accountManager: AccountManag
             } else {
                 currentSettings = ExperimentalSettings.defaultSettings
             }
-            return PreferencesEntry(f(currentSettings))
+            return SharedPreferencesEntry(f(currentSettings))
         })
     }
 }

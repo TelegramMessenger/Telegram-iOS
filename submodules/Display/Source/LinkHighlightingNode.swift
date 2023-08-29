@@ -79,7 +79,7 @@ public func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat, 
         
         if useModernPathCalculation {
             if rects.count == 1 {
-                let path = UIBezierPath(roundedRect: rects[0], cornerRadius: outerRadius).cgPath
+                let path = UIBezierPath(roundedRect: rects[0].offsetBy(dx: -topLeft.x, dy: -topLeft.y), cornerRadius: outerRadius).cgPath
                 context.addPath(path)
                 
                 if stroke {

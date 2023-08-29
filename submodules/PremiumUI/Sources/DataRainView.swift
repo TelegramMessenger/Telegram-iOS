@@ -11,13 +11,13 @@ public final class MatrixView: MTKView, MTKViewDelegate, PhoneDemoDecorationView
     
     private let commandQueue: MTLCommandQueue
     private let drawPassthroughPipelineState: MTLRenderPipelineState
-    
-    private var displayLink: CADisplayLink?
 
     private let symbolTexture: MTLTexture
     private let randomTexture: MTLTexture
     
     private var viewportDimensions = CGSize(width: 1, height: 1)
+    
+    private var displayLink: SharedDisplayLinkDriver.Link?
     
     private var startTimestamp = CACurrentMediaTime()
     
@@ -86,24 +86,11 @@ public final class MatrixView: MTKView, MTKViewDelegate, PhoneDemoDecorationView
         self.backgroundColor = .clear
 
         self.framebufferOnly = true
-
-        class DisplayLinkProxy: NSObject {
-            weak var target: MatrixView?
-            init(target: MatrixView) {
-                self.target = target
-            }
-
-            @objc func displayLinkEvent() {
-                self.target?.displayLinkEvent()
-            }
+        
+        self.displayLink = SharedDisplayLinkDriver.shared.add { [weak self] in
+            self?.tick()
         }
-
-        self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
-        if #available(iOS 15.0, *) {
-            self.displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 60.0, preferred: 60.0)
-        }
-        self.displayLink?.add(to: .main, forMode: .common)
-        self.displayLink?.isPaused = false
+        self.displayLink?.isPaused = true
         
         self.isPaused = true
     }
@@ -137,7 +124,7 @@ public final class MatrixView: MTKView, MTKViewDelegate, PhoneDemoDecorationView
         
     }
 
-    @objc private func displayLinkEvent() {
+    private func tick() {
         self.draw()
     }
 
@@ -145,7 +132,6 @@ public final class MatrixView: MTKView, MTKViewDelegate, PhoneDemoDecorationView
         self.redraw(drawable: self.currentDrawable!)
     }
 
-    
     private func redraw(drawable: MTLDrawable) {
         guard let commandBuffer = self.commandQueue.makeCommandBuffer() else {
             return
@@ -189,6 +175,5 @@ public final class MatrixView: MTKView, MTKViewDelegate, PhoneDemoDecorationView
 
         commandBuffer.present(drawable)
         commandBuffer.commit()
-
     }
 }

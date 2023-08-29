@@ -78,11 +78,11 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     
     var requestActivateSearch: (() -> Void)?
     var requestDeactivateSearch: (() -> Void)?
-    var requestOpenPeer: ((Peer, Int64?) -> Void)?
-    var requestOpenDisabledPeer: ((Peer, Int64?) -> Void)?
-    var requestOpenPeerFromSearch: ((Peer, Int64?) -> Void)?
-    var requestOpenMessageFromSearch: ((Peer, Int64?, MessageId) -> Void)?
-    var requestSend: (([Peer], [PeerId: Peer], NSAttributedString, AttachmentTextInputPanelSendMode, ChatInterfaceForwardOptionsState?) -> Void)?
+    var requestOpenPeer: ((EnginePeer, Int64?) -> Void)?
+    var requestOpenDisabledPeer: ((EnginePeer, Int64?) -> Void)?
+    var requestOpenPeerFromSearch: ((EnginePeer, Int64?) -> Void)?
+    var requestOpenMessageFromSearch: ((EnginePeer, Int64?, EngineMessage.Id) -> Void)?
+    var requestSend: (([EnginePeer], [EnginePeer.Id: EnginePeer], NSAttributedString, AttachmentTextInputPanelSendMode, ChatInterfaceForwardOptionsState?) -> Void)?
     
     private var presentationData: PresentationData {
         didSet {
@@ -201,18 +201,19 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         if let requestPeerType = self.requestPeerType {
             chatListMode = .peerType(type: requestPeerType, hasCreate: hasCreation)
         } else {
-            chatListMode = .peers(filter: filter, isSelecting: false, additionalCategories: chatListCategories, chatListFilters: nil, displayAutoremoveTimeout: false)
+            chatListMode = .peers(filter: filter, isSelecting: false, additionalCategories: chatListCategories, chatListFilters: nil, displayAutoremoveTimeout: false, displayPresence: false)
         }
        
         if hasFilters {
-            self.mainContainerNode = ChatListContainerNode(context: context, location: chatListLocation, chatListMode: chatListMode, previewing: false, controlsHistoryPreload: false, isInlineMode: false, presentationData: presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filterBecameEmpty: { _ in
+            self.mainContainerNode = ChatListContainerNode(context: context, controller: nil, location: chatListLocation, chatListMode: chatListMode, previewing: false, controlsHistoryPreload: false, isInlineMode: false, presentationData: presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filterBecameEmpty: { _ in
             }, filterEmptyAction: { _ in
             }, secondaryEmptyAction: {
+            }, openArchiveSettings: {
             })
             self.chatListNode = nil
         } else {
             self.mainContainerNode = nil
-            self.chatListNode = ChatListNode(context: context, location: chatListLocation, previewing: false, fillPreloadItems: false, mode: chatListMode, theme: self.presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, isInlineMode: false)
+            self.chatListNode = ChatListNode(context: context, location: chatListLocation, previewing: false, fillPreloadItems: false, mode: chatListMode, theme: self.presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, isInlineMode: false, autoSetReady: true)
         }
     
         super.init()
@@ -243,15 +244,15 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         
         self.chatListNode?.peerSelected = { [weak self] peer, threadId, _, _, _ in
             self?.chatListNode?.clearHighlightAnimated(true)
-            self?.requestOpenPeer?(peer._asPeer(), threadId)
+            self?.requestOpenPeer?(peer, threadId)
         }
         self.mainContainerNode?.peerSelected = { [weak self] peer, threadId, _, _, _ in
             self?.chatListNode?.clearHighlightAnimated(true)
-            self?.requestOpenPeer?(peer._asPeer(), threadId)
+            self?.requestOpenPeer?(peer, threadId)
         }
         
         self.chatListNode?.disabledPeerSelected = { [weak self] peer, threadId in
-            self?.requestOpenDisabledPeer?(peer._asPeer(), threadId)
+            self?.requestOpenDisabledPeer?(peer, threadId)
         }
         
         self.chatListNode?.contentOffsetChanged = { [weak self] offset in
@@ -263,7 +264,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             }
         }
            
-        self.mainContainerNode?.contentOffsetChanged = { [weak self] offset in
+        self.mainContainerNode?.contentOffsetChanged = { [weak self] offset, _ in
             guard let strongSelf = self else {
                 return
             }
@@ -293,8 +294,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     return
                 }
                 var replaceImpl: ((ViewController) -> Void)?
-                let controller = context.sharedContext.makePremiumLimitController(context: context, subject: .folders, count: strongSelf.controller?.tabContainerNode?.filtersCount ?? 0, action: {
-                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .folders)
+                let controller = context.sharedContext.makePremiumLimitController(context: context, subject: .folders, count: strongSelf.controller?.tabContainerNode?.filtersCount ?? 0, forceDark: false, cancel: {}, action: {
+                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .folders, forceDark: false, dismissed: nil)
                     replaceImpl?(controller)
                 })
                 replaceImpl = { [weak controller] c in
@@ -756,37 +757,37 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
     }
     
-    private var selectedPeers: ([Peer], [PeerId: Peer]) {
+    private var selectedPeers: ([EnginePeer], [EnginePeer.Id: EnginePeer]) {
         if self.contactListActive {
             let selectedContactPeers = self.contactListNode?.selectedPeers ?? []
 
-            var selectedPeers: [Peer] = []
-            var selectedPeerMap: [PeerId: Peer] = [:]
+            var selectedPeers: [EnginePeer] = []
+            var selectedPeerMap: [EnginePeer.Id: EnginePeer] = [:]
             for contactPeer in selectedContactPeers {
                 if case let .peer(peer, _, _) = contactPeer {
-                    selectedPeers.append(peer)
-                    selectedPeerMap[peer.id] = peer
+                    selectedPeers.append(EnginePeer(peer))
+                    selectedPeerMap[peer.id] = EnginePeer(peer)
                 }
             }
             return (selectedPeers, selectedPeerMap)
         } else {
-            var selectedPeerIds: [PeerId] = []
-            var selectedPeerMap: [PeerId: Peer] = [:]
+            var selectedPeerIds: [EnginePeer.Id] = []
+            var selectedPeerMap: [EnginePeer.Id: EnginePeer] = [:]
             if let mainContainerNode = self.mainContainerNode {
                 mainContainerNode.currentItemNode.updateState { state in
                     selectedPeerIds = Array(state.selectedPeerIds)
-                    selectedPeerMap = state.selectedPeerMap.mapValues({ $0._asPeer() })
+                    selectedPeerMap = state.selectedPeerMap
                     return state
                 }
             }
             if let chatListNode = self.chatListNode {
                 chatListNode.updateState { state in
                     selectedPeerIds = Array(state.selectedPeerIds)
-                    selectedPeerMap = state.selectedPeerMap.mapValues({ $0._asPeer() })
+                    selectedPeerMap = state.selectedPeerMap
                     return state
                 }
             }
-            var selectedPeers: [Peer] = []
+            var selectedPeers: [EnginePeer] = []
             for peerId in selectedPeerIds {
                 if let peer = selectedPeerMap[peerId] {
                     selectedPeers.append(peer)
@@ -956,7 +957,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         
         if let mainContainerNode = self.mainContainerNode {
             transition.updateFrame(node: mainContainerNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-            mainContainerNode.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: actualNavigationBarHeight, originalNavigationHeight: navigationBarHeight, cleanNavigationBarHeight: navigationBarHeight, insets: insets, isReorderingFilters: false, isEditing: false, inlineNavigationLocation: nil, inlineNavigationTransitionFraction: 0.0, transition: transition)
+            mainContainerNode.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: actualNavigationBarHeight, originalNavigationHeight: navigationBarHeight, cleanNavigationBarHeight: navigationBarHeight, insets: insets, isReorderingFilters: false, isEditing: false, inlineNavigationLocation: nil, inlineNavigationTransitionFraction: 0.0, storiesInset: 0.0, transition: transition)
         }
         
         if let requestPeerTypes = self.requestPeerType, let requestPeerType = requestPeerTypes.first {
@@ -1070,14 +1071,14 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, headerInsets: headerInsets, duration: duration, curve: curve)
         
         if let chatListNode = self.chatListNode {
-            chatListNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, visibleTopInset: updateSizeAndInsets.insets.top, originalTopInset: updateSizeAndInsets.insets.top, inlineNavigationLocation: nil, inlineNavigationTransitionFraction: 0.0)
+            chatListNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, visibleTopInset: updateSizeAndInsets.insets.top, originalTopInset: updateSizeAndInsets.insets.top, storiesInset: 0.0, inlineNavigationLocation: nil, inlineNavigationTransitionFraction: 0.0)
         }
         
         if let contactListNode = self.contactListNode {
             contactListNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
             contactListNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
             
-            contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), headerInsets: headerInsets, transition: transition)
+            contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), headerInsets: headerInsets, storiesInset: 0.0, transition: transition)
         }
         
         if let searchDisplayController = self.searchDisplayController {
@@ -1166,17 +1167,17 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                             strongSelf.textInputPanelNode?.updateSendButtonEnabled(count > 0, animated: true)
                             strongSelf.requestDeactivateSearch?()
                         } else if let requestOpenPeerFromSearch = strongSelf.requestOpenPeerFromSearch {
-                            requestOpenPeerFromSearch(peer._asPeer(), threadId)
+                            requestOpenPeerFromSearch(peer, threadId)
                         }
                     },
                     openDisabledPeer: { [weak self] peer, threadId in
-                        self?.requestOpenDisabledPeer?(peer._asPeer(), threadId)
+                        self?.requestOpenDisabledPeer?(peer, threadId)
                     },
                     openRecentPeerOptions: { _ in
                     },
                     openMessage: { [weak self] peer, threadId, messageId, _ in
                         if let requestOpenMessageFromSearch = self?.requestOpenMessageFromSearch {
-                            requestOpenMessageFromSearch(peer._asPeer(), threadId, messageId)
+                            requestOpenMessageFromSearch(peer, threadId, messageId)
                         }
                     },
                     addContact: nil,
@@ -1186,7 +1187,10 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     },
                     presentInGlobalOverlay: { _, _ in
                     },
-                    navigationController: nil
+                    navigationController: nil,
+                    parentController: { [weak self] in
+                        return self?.controller
+                    }
                 ), cancel: { [weak self] in
                     if let requestDeactivateSearch = self?.requestDeactivateSearch {
                         requestDeactivateSearch()
@@ -1249,7 +1253,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                                 let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peer.id))
                                 |> deliverOnMainQueue).start(next: { peer in
                                     if let strongSelf = self, let peer = peer {
-                                        strongSelf.requestOpenPeerFromSearch?(peer._asPeer(), nil)
+                                        strongSelf.requestOpenPeerFromSearch?(peer, nil)
                                     }
                                 })
                             case .deviceContact:
@@ -1299,9 +1303,9 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     
     func scrollToTop() {
         if self.mainContainerNode?.supernode != nil {
-            self.mainContainerNode?.scrollToTop()
+            self.mainContainerNode?.scrollToTop(animated: true, adjustForTempInset: false)
         } else if self.chatListNode?.supernode != nil {
-            self.chatListNode?.scrollToPosition(.top)
+            self.chatListNode?.scrollToPosition(.top(adjustForTempInset: false))
         } else if let contactListNode = self.contactListNode, contactListNode.supernode != nil {
             //contactListNode.scrollToTop()
         }
@@ -1342,7 +1346,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     contactListNode.openPeer = { [weak self] peer, _ in
                         if case let .peer(peer, _, _) = peer {
                             self?.contactListNode?.listNode.clearHighlightAnimated(true)
-                            self?.requestOpenPeer?(peer, nil)
+                            self?.requestOpenPeer?(EnginePeer(peer), nil)
                         }
                     }
                     contactListNode.suppressPermissionWarning = { [weak self] in

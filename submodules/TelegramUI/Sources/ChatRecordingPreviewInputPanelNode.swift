@@ -12,6 +12,7 @@ import ContextUI
 import AnimationUI
 import ManagedAnimationNode
 import ChatPresentationInterfaceState
+import ChatSendButtonRadialStatusNode
 
 extension AudioWaveformNode: CustomMediaPlayerScrubbingForegroundNode {
     

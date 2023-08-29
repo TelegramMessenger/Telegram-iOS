@@ -72,7 +72,7 @@ public final class PromoChatListItem: AdditionalChatListItem {
     }
 }
 
-func managedPromoInfoUpdates(postbox: Postbox, network: Network, viewTracker: AccountViewTracker) -> Signal<Void, NoError> {
+func managedPromoInfoUpdates(accountPeerId: PeerId, postbox: Postbox, network: Network, viewTracker: AccountViewTracker) -> Signal<Void, NoError> {
     return Signal { subscriber in
         let queue = Queue()
         let update = network.contextProxyId
@@ -89,24 +89,9 @@ func managedPromoInfoUpdates(postbox: Postbox, network: Network, viewTracker: Ac
                     case .promoDataEmpty:
                         transaction.replaceAdditionalChatListItems([])
                     case let .promoData(_, _, peer, chats, users, psaType, psaMessage):
-                        var peers: [Peer] = []
-                        var peerPresences: [PeerId: PeerPresence] = [:]
-                        for chat in chats {
-                            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                peers.append(groupOrChannel)
-                            }
-                        }
-                        for user in users {
-                            let telegramUser = TelegramUser(user: user)
-                            peers.append(telegramUser)
-                            if let presence = TelegramUserPresence(apiUser: user) {
-                                peerPresences[telegramUser.id] = presence
-                            }
-                        }
+                        let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                         
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                            return updated
-                        })
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                         
                         let kind: PromoChatListItem.Kind
                         if let psaType = psaType {

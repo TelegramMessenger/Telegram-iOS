@@ -18,7 +18,6 @@ import TelegramCallsUI
 import TelegramBaseController
 import AsyncDisplayKit
 import PresentationDataUtils
-import MeshAnimationCache
 import FetchManagerImpl
 import InAppPurchaseManager
 import AnimationCache
@@ -170,7 +169,6 @@ public final class AccountContextImpl: AccountContext {
     private var experimentalUISettingsDisposable: Disposable?
     
     public let cachedGroupCallContexts: AccountGroupCallContextCache
-    public let meshAnimationCache: MeshAnimationCache
     
     public let animationCache: AnimationCache
     public let animationRenderer: MultiAnimationRenderer
@@ -311,7 +309,6 @@ public final class AccountContextImpl: AccountContext {
         }
         
         self.cachedGroupCallContexts = AccountGroupCallContextCacheImpl()
-        self.meshAnimationCache = MeshAnimationCache(mediaBox: account.postbox.mediaBox)
         
         let cacheStorageBox = self.account.postbox.mediaBox.cacheStorageBox
         self.animationCache = AnimationCacheImpl(basePath: self.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
@@ -364,11 +361,13 @@ public final class AccountContextImpl: AccountContext {
         })
         
         self.currentCountriesConfiguration = Atomic(value: CountriesConfiguration(countries: loadCountryCodes()))
-        let currentCountriesConfiguration = self.currentCountriesConfiguration
-        self.countriesConfigurationDisposable = (self.engine.localization.getCountriesList(accountManager: sharedContext.accountManager, langCode: nil)
-        |> deliverOnMainQueue).start(next: { value in
-            let _ = currentCountriesConfiguration.swap(CountriesConfiguration(countries: value))
-        })
+        if !temp {
+            let currentCountriesConfiguration = self.currentCountriesConfiguration
+            self.countriesConfigurationDisposable = (self.engine.localization.getCountriesList(accountManager: sharedContext.accountManager, langCode: nil)
+                                                     |> deliverOnMainQueue).start(next: { value in
+                let _ = currentCountriesConfiguration.swap(CountriesConfiguration(countries: value))
+            })
+        }
         
         let queue = Queue()
         self.deviceSpecificContactImportContexts = QueueLocalObject(queue: queue, generate: {
@@ -435,13 +434,9 @@ public final class AccountContextImpl: AccountContext {
             })
         }
         
-        self.userLimitsConfigurationDisposable = (self.account.postbox.peerView(id: self.account.peerId)
-        |> mapToSignal { [weak self] peerView -> Signal<EngineConfiguration.UserLimits, NoError> in
-            if let peer = peerView.peers[peerView.peerId], let strongSelf = self {
-                return strongSelf.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: peer.isPremium))
-            } else {
-                return .complete()
-            }
+        self.userLimitsConfigurationDisposable = (self.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: account.peerId))
+        |> mapToSignal { [weak self] peer -> Signal<EngineConfiguration.UserLimits, NoError> in
+            return self?.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: peer?.isPremium ?? false)) ?? .complete()
         }
         |> deliverOnMainQueue).start(next: { [weak self] value in
             guard let strongSelf = self else {

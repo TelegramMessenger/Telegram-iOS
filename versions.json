@@ -2,6 +2,6 @@
     "app": "1.0",
     "bazel": "6.1.1",
     "xcode": "14.2",
-    "original": "9.6.3",
-    "original_build": "25780"
+    "original": "10.0.1",
+    "original_build": "26733"
 }

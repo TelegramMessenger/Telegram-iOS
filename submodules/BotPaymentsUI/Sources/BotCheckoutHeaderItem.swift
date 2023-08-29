@@ -8,7 +8,6 @@ import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
 import PhotoResources
-import Postbox
 
 class BotCheckoutHeaderItem: ListViewItem, ItemListItem {
     let account: Account
@@ -168,7 +167,7 @@ class BotCheckoutHeaderItemNode: ListViewItemNode {
             
             var imageApply: (() -> Void)?
             var updatedImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
-            var updatedFetchSignal: Signal<FetchResourceSourceType, FetchResourceError>?
+            var updatedFetchSignal: Signal<Never, NoError>?
             if let photo = item.invoice.photo, let dimensions = photo.dimensions {
                 let arguments = TransformImageArguments(corners: ImageCorners(radius: 4.0), imageSize: dimensions.cgSize.aspectFilled(imageSize), boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.theme.list.mediaPlaceholderColor)
                 imageApply = makeImageLayout(arguments)
@@ -184,6 +183,10 @@ class BotCheckoutHeaderItemNode: ListViewItemNode {
                         break
                     }
                     updatedFetchSignal = fetchedMediaResource(mediaBox: item.account.postbox.mediaBox, userLocation: userLocation, userContentType: .image, reference: .standalone(resource: photo.resource))
+                    |> ignoreValues
+                    |> `catch` { _ -> Signal<Never, NoError> in
+                        return .complete()
+                    }
                 }
             }
             
@@ -191,7 +194,9 @@ class BotCheckoutHeaderItemNode: ListViewItemNode {
             
             let (botNameLayout, botNameApply) = makeBotNameLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.botName, font: textFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.invoice.description, font: textFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: maxTextHeight - titleLayout.size.height - titleTextSpacing - botNameLayout.size.height - textBotNameSpacing), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let textLayoutMaxHeight: CGFloat = maxTextHeight - titleLayout.size.height - titleTextSpacing - botNameLayout.size.height - textBotNameSpacing
+            let textArguments = TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.invoice.description, font: textFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: textLayoutMaxHeight), alignment: .natural, cutout: nil, insets: UIEdgeInsets())
+            let (textLayout, textApply) = makeTextLayout(textArguments)
             
             let contentHeight: CGFloat
             if let _ = imageApply {

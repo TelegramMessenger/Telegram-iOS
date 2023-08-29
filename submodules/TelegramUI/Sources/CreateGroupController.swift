@@ -622,7 +622,24 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
         }
         
         venuesPromise.set(nearbyVenues(context: context, latitude: latitude, longitude: longitude)
-        |> map(Optional.init))
+        |> map { contextResult -> [TelegramMediaMap]? in
+            if let contextResult {
+                var resultVenues: [TelegramMediaMap] = []
+                for result in contextResult.results {
+                    switch result.message {
+                        case let .mapLocation(mapMedia, _):
+                            if let _ = mapMedia.venue {
+                                resultVenues.append(mapMedia)
+                            }
+                        default:
+                            break
+                    }
+                }
+                return resultVenues
+            } else {
+                return nil
+            }
+        })
     }
     
     let arguments = CreateGroupArguments(context: context, updateEditingName: { editingName in
@@ -1102,7 +1119,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
     }, changeLocation: {
         endEditingImpl?()
                  
-         let controller = LocationPickerController(context: context, mode: .pick, completion: { location, address in
+         let controller = LocationPickerController(context: context, mode: .pick, completion: { location, _, _, address, _ in
              let addressSignal: Signal<String, NoError>
              if let address = address {
                  addressSignal = .single(address)

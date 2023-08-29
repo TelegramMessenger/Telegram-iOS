@@ -257,7 +257,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                         })
                         
                         if let duration = file.duration {
-                            let durationString = stringForDuration(duration)
+                            let durationString = stringForDuration(Int32(duration))
                             
                             var badgeContent: ChatMessageInteractiveMediaBadgeContent?
                             var mediaDownloadState: ChatMessageInteractiveMediaDownloadState?
@@ -702,7 +702,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
             var index: UInt32 = 0
             if let entries = entries {   
                 for entry in entries {
-                    if case let .message(message, _, _, _, _, _, _, _, _, _, _, _) = entry {
+                    if case let .message(message, _, _, _, _, _, _, _, _, _, _, _, _) = entry {
                         self.mediaItems.append(VisualMediaItem(message: message._asMessage(), index: nil))
                     }
                     index += 1

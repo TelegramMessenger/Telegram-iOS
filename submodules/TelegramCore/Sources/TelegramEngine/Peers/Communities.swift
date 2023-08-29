@@ -153,6 +153,7 @@ func _internal_exportChatFolder(account: Account, filterId: Int32, title: String
 }
 
 func _internal_getExportedChatFolderLinks(account: Account, id: Int32) -> Signal<[ExportedChatFolderLink]?, NoError> {
+    let accountPeerId = account.peerId
     return account.network.request(Api.functions.chatlists.getExportedInvites(chatlist: .inputChatlistDialogFilter(filterId: id)))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.chatlists.ExportedInvites?, NoError> in
@@ -165,24 +166,8 @@ func _internal_getExportedChatFolderLinks(account: Account, id: Int32) -> Signal
         return account.postbox.transaction { transaction -> [ExportedChatFolderLink]? in
             switch result {
             case let .exportedInvites(invites, chats, users):
-                var peers: [Peer] = []
-                var peerPresences: [PeerId: Api.User] = [:]
-                
-                for user in users {
-                    let telegramUser = TelegramUser(user: user)
-                    peers.append(telegramUser)
-                    peerPresences[telegramUser.id] = user
-                }
-                for chat in chats {
-                    if let peer = parseTelegramGroupOrChannel(chat: chat) {
-                        peers.append(peer)
-                    }
-                }
-                
-                updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                    return updated
-                })
-                updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                 
                 var result: [ExportedChatFolderLink] = []
                 for invite in invites {
@@ -280,6 +265,7 @@ public final class ChatFolderLinkContents {
 }
 
 func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<ChatFolderLinkContents, CheckChatFolderLinkError> {
+    let accountPeerId = account.peerId
     return account.network.request(Api.functions.chatlists.checkChatlistInvite(slug: slug))
     |> mapError { _ -> CheckChatFolderLinkError in
         return .generic
@@ -290,19 +276,10 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
             case let .chatlistInvite(_, title, emoticon, peers, chats, users):
                 let _ = emoticon
                 
-                var allPeers: [Peer] = []
-                var peerPresences: [PeerId: Api.User] = [:]
+                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                 var memberCounts: [PeerId: Int] = [:]
                 
-                for user in users {
-                    let telegramUser = TelegramUser(user: user)
-                    allPeers.append(telegramUser)
-                    peerPresences[telegramUser.id] = user
-                }
                 for chat in chats {
-                    if let peer = parseTelegramGroupOrChannel(chat: chat) {
-                        allPeers.append(peer)
-                    }
                     if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _) = chat {
                         if let participantsCount = participantsCount {
                             memberCounts[chat.peerId] = Int(participantsCount)
@@ -310,10 +287,7 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                     }
                 }
                 
-                updatePeers(transaction: transaction, peers: allPeers, update: { _, updated -> Peer in
-                    return updated
-                })
-                updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                 
                 var resultPeers: [EnginePeer] = []
                 var alreadyMemberPeerIds = Set<EnginePeer.Id>()
@@ -329,19 +303,10 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                 
                 return ChatFolderLinkContents(localFilterId: nil, title: title, peers: resultPeers, alreadyMemberPeerIds: alreadyMemberPeerIds, memberCounts: memberCounts)
             case let .chatlistInviteAlready(filterId, missingPeers, alreadyPeers, chats, users):
-                var allPeers: [Peer] = []
-                var peerPresences: [PeerId: Api.User] = [:]
+                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                 var memberCounts: [PeerId: Int] = [:]
                 
-                for user in users {
-                    let telegramUser = TelegramUser(user: user)
-                    allPeers.append(telegramUser)
-                    peerPresences[telegramUser.id] = user
-                }
                 for chat in chats {
-                    if let peer = parseTelegramGroupOrChannel(chat: chat) {
-                        allPeers.append(peer)
-                    }
                     if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _) = chat {
                         if let participantsCount = participantsCount {
                             memberCounts[chat.peerId] = Int(participantsCount)
@@ -349,10 +314,7 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                     }
                 }
                 
-                updatePeers(transaction: transaction, peers: allPeers, update: { _, updated -> Peer in
-                    return updated
-                })
-                updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                 
                 let currentFilters = _internal_currentChatListFilters(transaction: transaction)
                 var currentFilterTitle: String?
@@ -602,6 +564,7 @@ private struct FirstTimeFolderUpdatesKey: Hashable {
 private var firstTimeFolderUpdates = Set<FirstTimeFolderUpdatesKey>()
 
 func _internal_pollChatFolderUpdatesOnce(account: Account, folderId: Int32) -> Signal<Never, NoError> {
+    let accountPeerId = account.peerId
     return account.postbox.transaction { transaction -> (ChatListFiltersState, AppConfiguration) in
         return (_internal_currentChatListFiltersState(transaction: transaction), currentAppConfiguration(transaction: transaction))
     }
@@ -654,19 +617,10 @@ func _internal_pollChatFolderUpdatesOnce(account: Account, folderId: Int32) -> S
             switch result {
             case let .chatlistUpdates(missingPeers, chats, users):
                 return account.postbox.transaction { transaction -> Void in
-                    var peers: [Peer] = []
-                    var peerPresences: [PeerId: Api.User] = [:]
+                    let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                     var memberCounts: [ChatListFiltersState.ChatListFilterUpdates.MemberCount] = []
                     
-                    for user in users {
-                        let telegramUser = TelegramUser(user: user)
-                        peers.append(telegramUser)
-                        peerPresences[telegramUser.id] = user
-                    }
                     for chat in chats {
-                        if let peer = parseTelegramGroupOrChannel(chat: chat) {
-                            peers.append(peer)
-                        }
                         if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _) = chat {
                             if let participantsCount = participantsCount {
                                 memberCounts.append(ChatListFiltersState.ChatListFilterUpdates.MemberCount(id: chat.peerId, count: participantsCount))
@@ -674,10 +628,7 @@ func _internal_pollChatFolderUpdatesOnce(account: Account, folderId: Int32) -> S
                         }
                     }
                     
-                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                        return updated
-                    })
-                    updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                     
                     let _ = updateChatListFiltersState(transaction: transaction, { state in
                         var state = state

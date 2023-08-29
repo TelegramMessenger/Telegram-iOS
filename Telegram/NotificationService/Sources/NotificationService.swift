@@ -305,15 +305,43 @@ private func testAvatarImage(size: CGSize) -> UIImage? {
     return image
 }
 
-private func avatarRoundImage(size: CGSize, source: UIImage) -> UIImage? {
+private func avatarRoundImage(size: CGSize, source: UIImage, isStory: Bool) -> UIImage? {
     UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
     let context = UIGraphicsGetCurrentContext()
 
-    context?.beginPath()
-    context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
-    context?.clip()
-
-    source.draw(in: CGRect(origin: CGPoint(), size: size))
+    if isStory {
+        let lineWidth: CGFloat = 2.0
+        context?.beginPath()
+        context?.addEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)).insetBy(dx: lineWidth * 0.5, dy: lineWidth * 0.5))
+        context?.clip()
+        
+        let colors: [CGColor] = [
+            UIColor(rgb: 0x34C76F).cgColor,
+            UIColor(rgb: 0x3DA1FD).cgColor
+        ]
+        var locations: [CGFloat] = [0.0, 1.0]
+        
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+        
+        context?.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+        
+        context?.setBlendMode(.copy)
+        context?.fillEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: 2.0, dy: 2.0))
+        
+        context?.setBlendMode(.normal)
+        context?.beginPath()
+        context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height).insetBy(dx: 4.0, dy: 4.0))
+        context?.clip()
+        
+        source.draw(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: 4.0, dy: 4.0))
+    } else {
+        context?.beginPath()
+        context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+        context?.clip()
+        
+        source.draw(in: CGRect(origin: CGPoint(), size: size))
+    }
 
     let image = UIGraphicsGetImageFromCurrentImageContext()
     UIGraphicsEndImageContext()
@@ -336,12 +364,16 @@ private let gradientColors: [NSArray] = [
     [UIColor(rgb: 0xd669ed).cgColor, UIColor(rgb: 0xe0a2f3).cgColor],
 ]
 
-private func avatarViewLettersImage(size: CGSize, peerId: PeerId, letters: [String]) -> UIImage? {
+private func avatarViewLettersImage(size: CGSize, peerId: PeerId, letters: [String], isStory: Bool) -> UIImage? {
     UIGraphicsBeginImageContextWithOptions(size, false, 2.0)
     let context = UIGraphicsGetCurrentContext()
 
     context?.beginPath()
-    context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+    if isStory {
+        context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height).insetBy(dx: 4.0, dy: 4.0))
+    } else {
+        context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+    }
     context?.clip()
 
     let colorIndex: Int
@@ -377,17 +409,38 @@ private func avatarViewLettersImage(size: CGSize, peerId: PeerId, letters: [Stri
         CTLineDraw(line, context)
     }
     context?.translateBy(x: -lineOrigin.x, y: -lineOrigin.y)
+    
+    if isStory {
+        context?.resetClip()
+        
+        let lineWidth: CGFloat = 2.0
+        context?.setLineWidth(lineWidth)
+        context?.addEllipse(in: CGRect(origin: CGPoint(x: size.width * 0.5, y: size.height * 0.5), size: CGSize(width: size.width, height: size.height)).insetBy(dx: lineWidth * 0.5, dy: lineWidth * 0.5))
+        context?.replacePathWithStrokedPath()
+        context?.clip()
+        
+        let colors: [CGColor] = [
+            UIColor(rgb: 0x34C76F).cgColor,
+            UIColor(rgb: 0x3DA1FD).cgColor
+        ]
+        var locations: [CGFloat] = [0.0, 1.0]
+        
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+        
+        context?.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+    }
 
     let image = UIGraphicsGetImageFromCurrentImageContext()
     UIGraphicsEndImageContext()
     return image
 }
 
-private func avatarImage(path: String?, peerId: PeerId, letters: [String], size: CGSize) -> UIImage {
-    if let path = path, let image = UIImage(contentsOfFile: path), let roundImage = avatarRoundImage(size: size, source: image) {
+private func avatarImage(path: String?, peerId: PeerId, letters: [String], size: CGSize, isStory: Bool) -> UIImage {
+    if let path = path, let image = UIImage(contentsOfFile: path), let roundImage = avatarRoundImage(size: size, source: image, isStory: isStory) {
         return roundImage
     } else {
-        return avatarViewLettersImage(size: size, peerId: peerId, letters: letters)!
+        return avatarViewLettersImage(size: size, peerId: peerId, letters: letters, isStory: isStory)!
     }
 }
 
@@ -406,14 +459,15 @@ private func storeTemporaryImage(path: String) -> String {
 }
 
 @available(iOS 15.0, *)
-private func peerAvatar(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer) -> INImage? {
+private func peerAvatar(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer, isStory: Bool) -> INImage? {
     if let resource = smallestImageRepresentation(peer.profileImageRepresentations)?.resource, let path = mediaBox.completedResourcePath(resource) {
-        let cachedPath = mediaBox.cachedRepresentationPathForId(resource.id.stringRepresentation, representationId: "intents.png", keepDuration: .shortLived)
-        if let _ = fileSize(cachedPath) {
+        let cachedPath = mediaBox.cachedRepresentationPathForId(resource.id.stringRepresentation, representationId: "intents\(isStory ? "-story2" : "").png", keepDuration: .shortLived)
+        if let _ = fileSize(cachedPath), !"".isEmpty {
             return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
         } else {
-            let image = avatarImage(path: path, peerId: peer.id, letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
+            let image = avatarImage(path: path, peerId: peer.id, letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0), isStory: isStory)
             if let data = image.pngData() {
+                let _ = try? FileManager.default.removeItem(atPath: cachedPath)
                 let _ = try? data.write(to: URL(fileURLWithPath: cachedPath), options: .atomic)
             }
 
@@ -421,11 +475,11 @@ private func peerAvatar(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer) -
         }
     }
 
-    let cachedPath = mediaBox.cachedRepresentationPathForId("lettersAvatar2-\(peer.displayLetters.joined(separator: ","))", representationId: "intents.png", keepDuration: .shortLived)
+    let cachedPath = mediaBox.cachedRepresentationPathForId("lettersAvatar2-\(peer.displayLetters.joined(separator: ","))\(isStory ? "-story" : "")", representationId: "intents.png", keepDuration: .shortLived)
     if let _ = fileSize(cachedPath) {
         return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
     } else {
-        let image = avatarImage(path: nil, peerId: peer.id, letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
+        let image = avatarImage(path: nil, peerId: peer.id, letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0), isStory: isStory)
         if let data = image.pngData() {
             let _ = try? data.write(to: URL(fileURLWithPath: cachedPath), options: .atomic)
         }
@@ -475,9 +529,9 @@ private struct NotificationContent: CustomStringConvertible {
         return string
     }
 
-    mutating func addSenderInfo(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer, topicTitle: String?, contactIdentifier: String?) {
+    mutating func addSenderInfo(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer, topicTitle: String?, contactIdentifier: String?, isStory: Bool) {
         if #available(iOS 15.0, *) {
-            let image = peerAvatar(mediaBox: mediaBox, accountPeerId: accountPeerId, peer: peer)
+            let image = peerAvatar(mediaBox: mediaBox, accountPeerId: accountPeerId, peer: peer, isStory: isStory)
 
             self.senderImage = image
 
@@ -909,6 +963,7 @@ private final class NotificationServiceHandler {
 
                     var peerId: PeerId?
                     var messageId: MessageId.Id?
+                    var storyId: Int32?
                     var mediaAttachment: Media?
                     var downloadNotificationSound: (file: TelegramMediaFile, path: String, fileName: String)?
 
@@ -929,6 +984,9 @@ private final class NotificationServiceHandler {
 
                     if let messageIdString = payloadJson["msg_id"] as? String {
                         messageId = Int32(messageIdString)
+                    }
+                    if let storyIdString = payloadJson["story_id"] as? String {
+                        storyId = Int32(storyIdString)
                     }
 
                     if let fromIdString = payloadJson["from_id"] as? String {
@@ -979,8 +1037,11 @@ private final class NotificationServiceHandler {
                     enum Action {
                         case logout
                         case poll(peerId: PeerId, content: NotificationContent, messageId: MessageId?)
+                        case pollStories(peerId: PeerId, content: NotificationContent, storyId: Int32)
                         case deleteMessage([MessageId])
+                        case readReactions([MessageId])
                         case readMessage(MessageId)
+                        case readStories(peerId: PeerId, maxId: Int32)
                         case call(CallData)
                     }
 
@@ -1010,11 +1071,33 @@ private final class NotificationServiceHandler {
                                     action = .deleteMessage(messagesDeleted)
                                 }
                             }
+                        case "READ_REACTION":
+                            if let peerId {
+                                if let messageId = messageId {
+                                    action = .readReactions([MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: messageId)])
+                                } else if let messageIds = payloadJson["messages"] as? String {
+                                    var messages: [MessageId] = []
+                                    for messageId in messageIds.split(separator: ",") {
+                                        if let messageIdValue = Int32(messageId) {
+                                            messages.append(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: messageIdValue))
+                                        }
+                                    }
+                                    action = .readReactions(messages)
+                                }
+                            }
                         case "READ_HISTORY":
                             if let peerId = peerId {
                                 if let messageIdString = payloadJson["max_id"] as? String {
                                     if let maxId = Int32(messageIdString) {
                                         action = .readMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: maxId))
+                                    }
+                                }
+                            }
+                        case "READ_STORIES":
+                            if let peerId = peerId {
+                                if let storyIdString = payloadJson["max_id"] as? String {
+                                    if let maxId = Int32(storyIdString) {
+                                        action = .readStories(peerId: peerId, maxId: maxId)
                                     }
                                 }
                             }
@@ -1059,6 +1142,10 @@ private final class NotificationServiceHandler {
                                 interactionAuthorId = peerId
                                 
                                 messageIdValue = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: messageId)
+                            }
+                            if let storyId = storyId {
+                                interactionAuthorId = peerId
+                                content.userInfo["story_id"] = "\(storyId)"
                             }
 
                             if peerId.namespace == Namespaces.Peer.CloudUser {
@@ -1131,7 +1218,12 @@ private final class NotificationServiceHandler {
                                 } else {
                                     content.category = category
                                 }
-
+                                
+                                if aps["r"] != nil || aps["react_emoji"] != nil {
+                                    content.category = "t"
+                                } else if payloadJson["r"] != nil || payloadJson["react_emoji"] != nil {
+                                    content.category = "t"
+                                }
 
                                 let _ = messageId
 
@@ -1158,7 +1250,12 @@ private final class NotificationServiceHandler {
                                 }
                             }*/
 
-                            action = .poll(peerId: peerId, content: content, messageId: messageIdValue)
+                            if let storyId {
+                                content.category = "st"
+                                action = .pollStories(peerId: peerId, content: content, storyId: storyId)
+                            } else {
+                                action = .poll(peerId: peerId, content: content, messageId: messageIdValue)
+                            }
 
                             updateCurrentContent(content)
                         }
@@ -1269,6 +1366,7 @@ private final class NotificationServiceHandler {
                                                         let collectedData = Atomic<DataValue>(value: DataValue())
                                                         
                                                         return standaloneMultipartFetch(
+                                                            accountPeerId: stateManager.accountPeerId,
                                                             postbox: stateManager.postbox,
                                                             network: stateManager.network,
                                                             resource: resource,
@@ -1359,6 +1457,7 @@ private final class NotificationServiceHandler {
                                                     fetchNotificationSoundSignal = Signal { subscriber in
                                                         let collectedData = Atomic<Data>(value: Data())
                                                         return standaloneMultipartFetch(
+                                                            accountPeerId: stateManager.accountPeerId,
                                                             postbox: stateManager.postbox,
                                                             network: stateManager.network,
                                                             resource: resource,
@@ -1587,7 +1686,7 @@ private final class NotificationServiceHandler {
                                                     return true
                                                 })
                                                 
-                                                content.addSenderInfo(mediaBox: stateManager.postbox.mediaBox, accountPeerId: stateManager.accountPeerId, peer: peer, topicTitle: topicTitle, contactIdentifier: foundLocalId)
+                                                content.addSenderInfo(mediaBox: stateManager.postbox.mediaBox, accountPeerId: stateManager.accountPeerId, peer: peer, topicTitle: topicTitle, contactIdentifier: foundLocalId, isStory: false)
                                             }
                                         }
                                         
@@ -1608,6 +1707,267 @@ private final class NotificationServiceHandler {
                                                         }
                                                     }
                                                 }
+                                            }
+                                        }
+
+                                        return content
+                                    }
+                                    |> then(
+                                        pollSignal
+                                        |> map { _ -> NotificationContent in }
+                                    )
+                                } else {
+                                    pollWithUpdatedContent = pollSignal
+                                    |> map { _ -> NotificationContent in }
+                                }
+
+                                var updatedContent = initialContent
+                                strongSelf.pollDisposable.set(pollWithUpdatedContent.start(next: { content in
+                                    updatedContent = content
+                                }, completed: {
+                                    pollCompletion(updatedContent)
+                                }))
+                            } else {
+                                completed()
+                            }
+                        case let .pollStories(peerId, initialContent, storyId):
+                            Logger.shared.log("NotificationService \(episode)", "Will poll stories for \(peerId)")
+                            if let stateManager = strongSelf.stateManager {
+                                let pollCompletion: (NotificationContent) -> Void = { content in
+                                    let content = content
+
+                                    queue.async {
+                                        guard let strongSelf = self, let stateManager = strongSelf.stateManager else {
+                                            let content = NotificationContent(isLockedMessage: isLockedMessage)
+                                            updateCurrentContent(content)
+                                            completed()
+                                            return
+                                        }
+                                        
+                                        var fetchStoriesSignal: Signal<Void, NoError> = .single(Void())
+                                        fetchStoriesSignal = _internal_pollPeerStories(postbox: stateManager.postbox, network: stateManager.network, accountPeerId: stateManager.accountPeerId, peerId: peerId)
+                                        |> map { _ -> Void in
+                                        }
+                                        |> then(
+                                            stateManager.postbox.transaction { transaction -> (MediaResourceReference, Int64?)? in
+                                                guard let state = transaction.getPeerStoryState(peerId: peerId)?.entry.get(Stories.PeerState.self) else {
+                                                    return nil
+                                                }
+                                                let firstUnseenItem = transaction.getStoryItems(peerId: peerId).first(where: { entry in
+                                                    return entry.id > state.maxReadId
+                                                })
+                                                guard let firstUnseenItem, firstUnseenItem.id == storyId else {
+                                                    return nil
+                                                }
+                                                guard let peer = transaction.getPeer(peerId).flatMap(PeerReference.init) else {
+                                                    return nil
+                                                }
+                                                
+                                                if let storyItem = transaction.getStory(id: StoryId(peerId: peerId, id: storyId))?.get(Stories.StoredItem.self), case let .item(item) = storyItem, let media = item.media {
+                                                    var resource: MediaResource?
+                                                    var fetchSize: Int64?
+                                                    if let image = media as? TelegramMediaImage {
+                                                        resource = largestImageRepresentation(image.representations)?.resource
+                                                    } else if let file = media as? TelegramMediaFile {
+                                                        resource = file.resource
+                                                        for attribute in file.attributes {
+                                                            if case let .Video(_, _, _, preloadSize) = attribute {
+                                                                fetchSize = preloadSize.flatMap(Int64.init)
+                                                            }
+                                                        }
+                                                    }
+                                                    
+                                                    guard let resource else {
+                                                        return nil
+                                                    }
+                                                    return (MediaResourceReference.media(media: .story(peer: peer, id: storyId, media: media), resource: resource), fetchSize)
+                                                }
+                                                
+                                                return nil
+                                            }
+                                            |> mapToSignal { resourceData -> Signal<Void, NoError> in
+                                                guard let (resource, _) = resourceData, let resourceValue = resource.resource as? TelegramMultipartFetchableResource else {
+                                                    return .single(Void())
+                                                }
+                                                
+                                                let intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError> = .single([(0 ..< Int64.max, MediaBoxFetchPriority.maximum)])
+                                                return Signal<Void, NoError> { subscriber in
+                                                    let collectedData = Atomic<Data>(value: Data())
+                                                    return standaloneMultipartFetch(
+                                                        accountPeerId: stateManager.accountPeerId,
+                                                        postbox: stateManager.postbox,
+                                                        network: stateManager.network,
+                                                        resource: resourceValue,
+                                                        datacenterId: resourceValue.datacenterId,
+                                                        size: nil,
+                                                        intervals: intervals,
+                                                        parameters: MediaResourceFetchParameters(
+                                                            tag: nil,
+                                                            info: resourceFetchInfo(reference: resource),
+                                                            location: .init(peerId: peerId, messageId: nil),
+                                                            contentType: .other,
+                                                            isRandomAccessAllowed: true
+                                                        ),
+                                                        encryptionKey: nil,
+                                                        decryptedSize: nil,
+                                                        continueInBackground: false,
+                                                        useMainConnection: true
+                                                    ).start(next: { result in
+                                                        switch result {
+                                                        case let .dataPart(_, data, _, _):
+                                                            let _ = collectedData.modify { current in
+                                                                var current = current
+                                                                current.append(data)
+                                                                return current
+                                                            }
+                                                        default:
+                                                            break
+                                                        }
+                                                    }, error: { _ in
+                                                        subscriber.putNext(Void())
+                                                        subscriber.putCompletion()
+                                                    }, completed: {
+                                                        stateManager.postbox.mediaBox.storeResourceData(resource.resource.id, data: collectedData.with({ $0 }))
+                                                        subscriber.putNext(Void())
+                                                        subscriber.putCompletion()
+                                                    })
+                                                }
+                                            }
+                                        )
+
+                                        let fetchMediaSignal: Signal<Data?, NoError> = .single(nil)
+                                        
+                                        var fetchNotificationSoundSignal: Signal<Data?, NoError> = .single(nil)
+                                        if let (downloadNotificationSound, _, _) = downloadNotificationSound {
+                                            var fetchResource: TelegramMultipartFetchableResource?
+                                            fetchResource = downloadNotificationSound.resource as? TelegramMultipartFetchableResource
+
+                                            if let resource = fetchResource {
+                                                if let path = strongSelf.stateManager?.postbox.mediaBox.completedResourcePath(resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                                                    fetchNotificationSoundSignal = .single(data)
+                                                } else {
+                                                    let intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError> = .single([(0 ..< Int64.max, MediaBoxFetchPriority.maximum)])
+                                                    fetchNotificationSoundSignal = Signal { subscriber in
+                                                        let collectedData = Atomic<Data>(value: Data())
+                                                        return standaloneMultipartFetch(
+                                                            accountPeerId: stateManager.accountPeerId,
+                                                            postbox: stateManager.postbox,
+                                                            network: stateManager.network,
+                                                            resource: resource,
+                                                            datacenterId: resource.datacenterId,
+                                                            size: nil,
+                                                            intervals: intervals,
+                                                            parameters: MediaResourceFetchParameters(
+                                                                tag: nil,
+                                                                info: resourceFetchInfo(resource: resource),
+                                                                location: nil,
+                                                                contentType: .other,
+                                                                isRandomAccessAllowed: true
+                                                            ),
+                                                            encryptionKey: nil,
+                                                            decryptedSize: nil,
+                                                            continueInBackground: false,
+                                                            useMainConnection: true
+                                                        ).start(next: { result in
+                                                            switch result {
+                                                            case let .dataPart(_, data, _, _):
+                                                                let _ = collectedData.modify { current in
+                                                                    var current = current
+                                                                    current.append(data)
+                                                                    return current
+                                                                }
+                                                            default:
+                                                                break
+                                                            }
+                                                        }, error: { _ in
+                                                            subscriber.putNext(nil)
+                                                            subscriber.putCompletion()
+                                                        }, completed: {
+                                                            subscriber.putNext(collectedData.with({ $0 }))
+                                                            subscriber.putCompletion()
+                                                        })
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        
+                                        let wasDisplayed = stateManager.postbox.transaction { transaction -> Bool in
+                                            return _internal_getStoryNotificationWasDisplayed(transaction: transaction, id: StoryId(peerId: peerId, id: storyId))
+                                        }
+
+                                        Logger.shared.log("NotificationService \(episode)", "Will fetch media")
+                                        let _ = (combineLatest(queue: queue,
+                                            fetchMediaSignal
+                                            |> timeout(10.0, queue: queue, alternate: .single(nil)),
+                                            fetchNotificationSoundSignal
+                                            |> timeout(10.0, queue: queue, alternate: .single(nil)),
+                                            fetchStoriesSignal
+                                            |> timeout(10.0, queue: queue, alternate: .single(Void())),
+                                            wasDisplayed
+                                        )
+                                        |> deliverOn(queue)).start(next: { mediaData, notificationSoundData, _, wasDisplayed in
+                                            guard let strongSelf = self, let stateManager = strongSelf.stateManager else {
+                                                completed()
+                                                return
+                                            }
+
+                                            Logger.shared.log("NotificationService \(episode)", "Did fetch media \(mediaData == nil ? "Non-empty" : "Empty")")
+                                            
+                                            if let notificationSoundData = notificationSoundData {
+                                                Logger.shared.log("NotificationService \(episode)", "Did fetch notificationSoundData")
+                                                
+                                                if let (_, filePath, _) = downloadNotificationSound {
+                                                    let _ = try? notificationSoundData.write(to: URL(fileURLWithPath: filePath))
+                                                }
+                                            }
+                                            
+                                            var content = content
+                                            if wasDisplayed {
+                                                content = NotificationContent(isLockedMessage: nil)
+                                            } else {
+                                                let _ = (stateManager.postbox.transaction { transaction -> Void in
+                                                    _internal_setStoryNotificationWasDisplayed(transaction: transaction, id: StoryId(peerId: peerId, id: storyId))
+                                                }).start()
+                                            }
+
+                                            Logger.shared.log("NotificationService \(episode)", "Updating content to \(content)")
+
+                                            updateCurrentContent(content)
+
+                                            completed()
+                                        })
+                                    }
+                                }
+
+                                let pollSignal: Signal<Never, NoError>
+                                pollSignal = .complete()
+                                
+                                stateManager.network.shouldKeepConnection.set(.single(true))
+
+                                let pollWithUpdatedContent: Signal<NotificationContent, NoError>
+                                if interactionAuthorId != nil || messageId != nil {
+                                    pollWithUpdatedContent = stateManager.postbox.transaction { transaction -> NotificationContent in
+                                        var content = initialContent
+                                        
+                                        if let interactionAuthorId = interactionAuthorId {
+                                            if inAppNotificationSettings.displayNameOnLockscreen, let peer = transaction.getPeer(interactionAuthorId) {
+                                                var foundLocalId: String?
+                                                transaction.enumerateDeviceContactImportInfoItems({ _, value in
+                                                    if let value = value as? TelegramDeviceContactImportedData {
+                                                        switch value {
+                                                        case let .imported(data, _, peerId):
+                                                            if peerId == interactionAuthorId {
+                                                                foundLocalId = data.localIdentifiers.first
+                                                                return false
+                                                            }
+                                                        default:
+                                                            break
+                                                        }
+                                                    }
+                                                    return true
+                                                })
+                                                
+                                                content.addSenderInfo(mediaBox: stateManager.postbox.mediaBox, accountPeerId: stateManager.accountPeerId, peer: peer, topicTitle: topicTitle, contactIdentifier: foundLocalId, isStory: false)
                                             }
                                         }
 
@@ -1683,6 +2043,45 @@ private final class NotificationServiceHandler {
                                     }
                                 })
                             })
+                        case let .readReactions(ids):
+                            Logger.shared.log("NotificationService \(episode)", "Will read reactions \(ids)")
+                            UNUserNotificationCenter.current().getDeliveredNotifications(completionHandler: { notifications in
+                                var removeIdentifiers: [String] = []
+                                for notification in notifications {
+                                    if notification.request.content.categoryIdentifier != "t" {
+                                        continue
+                                    }
+                                    if let peerIdString = notification.request.content.userInfo["peerId"] as? String, let peerIdValue = Int64(peerIdString), let messageIdString = notification.request.content.userInfo["msg_id"] as? String, let messageIdValue = Int32(messageIdString) {
+                                        for id in ids {
+                                            if PeerId(peerIdValue) == id.peerId && messageIdValue == id.id {
+                                                removeIdentifiers.append(notification.request.identifier)
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                let completeRemoval: () -> Void = {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    var content = NotificationContent(isLockedMessage: nil)
+                                    Logger.shared.log("NotificationService \(episode)", "Updating content to \(content)")
+                                    
+                                    updateCurrentContent(content)
+                                    
+                                    completed()
+                                }
+                                
+                                if !removeIdentifiers.isEmpty {
+                                    Logger.shared.log("NotificationService \(episode)", "Will try to remove \(removeIdentifiers.count) notifications")
+                                    UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: removeIdentifiers)
+                                    queue.after(1.0, {
+                                        completeRemoval()
+                                    })
+                                } else {
+                                    completeRemoval()
+                                }
+                            })
                         case let .readMessage(id):
                             Logger.shared.log("NotificationService \(episode)", "Will read message \(id)")
                             let _ = (stateManager.postbox.transaction { transaction -> Void in
@@ -1720,6 +2119,39 @@ private final class NotificationServiceHandler {
 
                                             completed()
                                         })
+                                    }
+
+                                    if !removeIdentifiers.isEmpty {
+                                        Logger.shared.log("NotificationService \(episode)", "Will try to remove \(removeIdentifiers.count) notifications")
+                                        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: removeIdentifiers)
+                                        queue.after(1.0, {
+                                            completeRemoval()
+                                        })
+                                    } else {
+                                        completeRemoval()
+                                    }
+                                })
+                            })
+                        case let .readStories(peerId, maxId):
+                            Logger.shared.log("NotificationService \(episode)", "Will read stories peerId: \(peerId) maxId: \(maxId)")
+                            let _ = (stateManager.postbox.transaction { transaction -> Void in
+                            }
+                            |> deliverOn(strongSelf.queue)).start(completed: {
+                                UNUserNotificationCenter.current().getDeliveredNotifications(completionHandler: { notifications in
+                                    var removeIdentifiers: [String] = []
+                                    for notification in notifications {
+                                        if let peerIdString = notification.request.content.userInfo["peerId"] as? String, let peerIdValue = Int64(peerIdString), let messageIdString = notification.request.content.userInfo["story_id"] as? String, let messageIdValue = Int32(messageIdString) {
+                                            if PeerId(peerIdValue) == peerId && messageIdValue <= maxId {
+                                                removeIdentifiers.append(notification.request.identifier)
+                                            }
+                                        }
+                                    }
+
+                                    let completeRemoval: () -> Void = {
+                                        let content = NotificationContent(isLockedMessage: nil)
+                                        updateCurrentContent(content)
+                                        
+                                        completed()
                                     }
 
                                     if !removeIdentifiers.isEmpty {

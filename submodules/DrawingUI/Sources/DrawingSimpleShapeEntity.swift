@@ -2,121 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AccountContext
-
-public final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
-    private enum CodingKeys: String, CodingKey {
-        case uuid
-        case shapeType
-        case drawType
-        case color
-        case lineWidth
-        case referenceDrawingSize
-        case position
-        case size
-        case rotation
-        case renderImage
-    }
-    
-    public enum ShapeType: Codable {
-        case rectangle
-        case ellipse
-        case star
-    }
-    
-    public enum DrawType: Codable {
-        case fill
-        case stroke
-    }
-    
-    public let uuid: UUID
-    public let isAnimated: Bool
-    
-    var shapeType: ShapeType
-    var drawType: DrawType
-    public var color: DrawingColor
-    public var lineWidth: CGFloat
-    
-    var referenceDrawingSize: CGSize
-    public var position: CGPoint
-    public var size: CGSize
-    public var rotation: CGFloat
-    
-    public var center: CGPoint {
-        return self.position
-    }
-    
-    public var scale: CGFloat = 1.0
-    
-    public var renderImage: UIImage?
-    
-    init(shapeType: ShapeType, drawType: DrawType, color: DrawingColor, lineWidth: CGFloat) {
-        self.uuid = UUID()
-        self.isAnimated = false
-        
-        self.shapeType = shapeType
-        self.drawType = drawType
-        self.color = color
-        self.lineWidth = lineWidth
-        
-        self.referenceDrawingSize = .zero
-        self.position = .zero
-        self.size = CGSize(width: 1.0, height: 1.0)
-        self.rotation = 0.0
-    }
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.uuid = try container.decode(UUID.self, forKey: .uuid)
-        self.isAnimated = false
-        self.shapeType = try container.decode(ShapeType.self, forKey: .shapeType)
-        self.drawType = try container.decode(DrawType.self, forKey: .drawType)
-        self.color = try container.decode(DrawingColor.self, forKey: .color)
-        self.lineWidth = try container.decode(CGFloat.self, forKey: .lineWidth)
-        self.referenceDrawingSize = try container.decode(CGSize.self, forKey: .referenceDrawingSize)
-        self.position = try container.decode(CGPoint.self, forKey: .position)
-        self.size = try container.decode(CGSize.self, forKey: .size)
-        self.rotation = try container.decode(CGFloat.self, forKey: .rotation)
-        if let renderImageData = try? container.decodeIfPresent(Data.self, forKey: .renderImage) {
-            self.renderImage = UIImage(data: renderImageData)
-        }
-    }
-    
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(self.uuid, forKey: .uuid)
-        try container.encode(self.shapeType, forKey: .shapeType)
-        try container.encode(self.drawType, forKey: .drawType)
-        try container.encode(self.color, forKey: .color)
-        try container.encode(self.lineWidth, forKey: .lineWidth)
-        try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)
-        try container.encode(self.position, forKey: .position)
-        try container.encode(self.size, forKey: .size)
-        try container.encode(self.rotation, forKey: .rotation)
-        if let renderImage, let data = renderImage.pngData() {
-            try container.encode(data, forKey: .renderImage)
-        }
-    }
-        
-    public func duplicate() -> DrawingEntity {
-        let newEntity = DrawingSimpleShapeEntity(shapeType: self.shapeType, drawType: self.drawType, color: self.color, lineWidth: self.lineWidth)
-        newEntity.referenceDrawingSize = self.referenceDrawingSize
-        newEntity.position = self.position
-        newEntity.size = self.size
-        newEntity.rotation = self.rotation
-        return newEntity
-    }
-    
-    public weak var currentEntityView: DrawingEntityView?
-    public func makeView(context: AccountContext) -> DrawingEntityView {
-        let entityView = DrawingSimpleShapeEntityView(context: context, entity: self)
-        self.currentEntityView = entityView
-        return entityView
-    }
-    
-    public func prepareForRender() {
-        self.renderImage = (self.currentEntityView as? DrawingSimpleShapeEntityView)?.getRenderImage()
-    }
-}
+import MediaEditor
 
 final class DrawingSimpleShapeEntityView: DrawingEntityView {
     private var shapeEntity: DrawingSimpleShapeEntity {
@@ -227,7 +113,7 @@ final class DrawingSimpleShapeEntityView: DrawingEntityView {
         selectionView.transform = CGAffineTransformMakeRotation(self.shapeEntity.rotation)
     }
         
-    override func makeSelectionView() -> DrawingEntitySelectionView {
+    override func makeSelectionView() -> DrawingEntitySelectionView? {
         if let selectionView = self.selectionView {
             return selectionView
         }
@@ -250,11 +136,7 @@ final class DrawingSimpleShapeEntityView: DrawingEntityView {
     }
 }
 
-func gestureIsTracking(_ gestureRecognizer: UIPanGestureRecognizer) -> Bool {
-    return [.began, .changed].contains(gestureRecognizer.state)
-}
-
-final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView, UIGestureRecognizerDelegate {
+final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView {
     private let leftHandle = SimpleShapeLayer()
     private let topLeftHandle = SimpleShapeLayer()
     private let topHandle = SimpleShapeLayer()
@@ -264,8 +146,7 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
     private let bottomHandle = SimpleShapeLayer()
     private let bottomRightHandle = SimpleShapeLayer()
     
-    private var panGestureRecognizer: UIPanGestureRecognizer!
-  
+
     override init(frame: CGRect) {
         let handleBounds = CGRect(origin: .zero, size: entitySelectionViewHandleSize)
         let handles = [
@@ -293,27 +174,10 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
             
             self.layer.addSublayer(handle)
         }
-                        
-        let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
-        panGestureRecognizer.delegate = self
-        self.addGestureRecognizer(panGestureRecognizer)
-        self.panGestureRecognizer = panGestureRecognizer
         
-        self.snapTool.onSnapXUpdated = { [weak self] snapped in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToXAxis(snapped)
-            }
-        }
-        
-        self.snapTool.onSnapYUpdated = { [weak self] snapped in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToYAxis(snapped)
-            }
-        }
-        
-        self.snapTool.onSnapRotationUpdated = { [weak self] snappedAngle in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToAngle(snappedAngle)
+        self.snapTool.onSnapUpdated = { [weak self] type, snapped in
+            if let self, let entityView = self.entityView {
+                entityView.onSnapUpdated(type, snapped)
             }
         }
     }
@@ -332,14 +196,10 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
         return 5.5
     }
         
-    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        return true
-    }
-
     private let snapTool = DrawingEntitySnapTool()
     
     private var currentHandle: CALayer?
-    @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+    override func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
         guard let entityView = self.entityView as? DrawingSimpleShapeEntityView, let entity = entityView.entity as? DrawingSimpleShapeEntity else {
             return
         }
@@ -354,12 +214,18 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
                 for layer in sublayers {
                     if layer.frame.contains(location) {
                         self.currentHandle = layer
+                        entityView.onInteractionUpdated(true)
                         return
                     }
                 }
             }
             self.currentHandle = self.layer
+            entityView.onInteractionUpdated(true)
         case .changed:
+            if self.currentHandle == nil {
+                self.currentHandle = self.layer
+            }
+            
             let delta = gestureRecognizer.translation(in: entityView.superview)
             let velocity = gestureRecognizer.velocity(in: entityView.superview)
             
@@ -367,6 +233,12 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
             var updatedPosition = entity.position
             
             let minimumSize = entityView.minimumSize
+            
+            if self.currentHandle != nil && self.currentHandle !== self.layer {
+                if gestureRecognizer.numberOfTouches > 1 {
+                    return
+                }
+            }
             
             if self.currentHandle === self.leftHandle {
                 let deltaX = delta.x * cos(entity.rotation)
@@ -451,7 +323,7 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
                 updatedPosition.x += delta.x
                 updatedPosition.y += delta.y
                 
-                updatedPosition = self.snapTool.update(entityView: entityView, velocity: velocity, delta: delta, updatedPosition: updatedPosition)
+                updatedPosition = self.snapTool.update(entityView: entityView, velocity: velocity, delta: delta, updatedPosition: updatedPosition, size: entityView.frame.size)
             }
             
             entity.size = updatedSize
@@ -459,10 +331,9 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
             entityView.update(animated: false)
             
             gestureRecognizer.setTranslation(.zero, in: entityView)
-        case .ended:
+        case .ended, .cancelled:
             self.snapTool.reset()
-        case .cancelled:
-            self.snapTool.reset()
+            entityView.onInteractionUpdated(false)
         default:
             break
         }
@@ -477,11 +348,16 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
         
         switch gestureRecognizer.state {
         case .began, .changed:
+            if case .began = gestureRecognizer.state {
+                entityView.onInteractionUpdated(true)
+            }
             let scale = gestureRecognizer.scale
             entity.size = CGSize(width: entity.size.width * scale, height: entity.size.height * scale)
             entityView.update()
             
             gestureRecognizer.scale = 1.0
+        case .ended, .cancelled:
+            entityView.onInteractionUpdated(false)
         default:
             break
         }
@@ -499,21 +375,23 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
         switch gestureRecognizer.state {
         case .began:
             self.snapTool.maybeSkipFromStart(entityView: entityView, rotation: entity.rotation)
+            entityView.onInteractionUpdated(true)
         case .changed:
             rotation = gestureRecognizer.rotation
             updatedRotation += rotation
+        
+            updatedRotation = self.snapTool.update(entityView: entityView, velocity: velocity, delta: rotation, updatedRotation: updatedRotation)
+            entity.rotation = updatedRotation
+            entityView.update()
             
             gestureRecognizer.rotation = 0.0
         case .ended, .cancelled:
             self.snapTool.rotationReset()
+            entityView.onInteractionUpdated(false)
         default:
             break
         }
-        
-        updatedRotation = self.snapTool.update(entityView: entityView, velocity: velocity, delta: rotation, updatedRotation: updatedRotation)
-        entity.rotation = updatedRotation
-        entityView.update()
-        
+                
         entityView.onPositionUpdated(entity.position)
     }
 
@@ -554,9 +432,5 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
         self.bottomLeftHandle.position = CGPoint(x: inset, y: self.bounds.maxY - inset)
         self.bottomHandle.position = CGPoint(x: self.bounds.midX, y: self.bounds.maxY - inset)
         self.bottomRightHandle.position = CGPoint(x: self.bounds.maxX - inset, y: self.bounds.maxY - inset)
-    }
-    
-    var isTracking: Bool {
-        return gestureIsTracking(self.panGestureRecognizer)
     }
 }

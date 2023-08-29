@@ -11,16 +11,15 @@ import ChatListSearchItemHeader
 final class HashtagSearchControllerNode: ASDisplayNode {
     private let context: AccountContext
     private weak var controller: HashtagSearchController?
+    private let query: String
     
     private let navigationBar: NavigationBar?
 
     private let segmentedControlNode: SegmentedControlNode
     let listNode: ListView
+    let shimmerNode: ChatListSearchShimmerNode
     
     let chatController: ChatController?
-    
-    
-    private let query: String
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     private var enqueuedTransitions: [(ChatListSearchContainerTransition, Bool)] = []
@@ -33,6 +32,10 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         self.navigationBar = navigationBar
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
+        self.shimmerNode = ChatListSearchShimmerNode(key: .chats)
+        self.shimmerNode.isUserInteractionEnabled = false
+        self.shimmerNode.allowsGroupOpacity = true
         
         self.listNode = ListView()
         self.listNode.accessibilityPageScrolledString = { row, count in
@@ -48,7 +51,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
             items.append(peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) ?? "")
         }
         items.append(presentationData.strings.HashtagSearch_AllChats)
-        self.segmentedControlNode = SegmentedControlNode(theme: SegmentedControlTheme(theme: presentationData.theme), items: items.map { SegmentedControlItem(title: $0) }, selectedIndex: 0)
+        self.segmentedControlNode = SegmentedControlNode(theme: SegmentedControlTheme(theme: presentationData.theme), items: items.map { SegmentedControlItem(title: $0) }, selectedIndex: controller.all ? 1 : 0)
         
         if let peer = peer {
             self.chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .inline(navigationController))
@@ -65,7 +68,15 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         self.backgroundColor = presentationData.theme.chatList.backgroundColor
         
         self.addSubnode(self.listNode)
-        self.listNode.isHidden = true
+//        self.addSubnode(self.shimmerNode)
+        
+        if controller.all {
+            self.chatController?.displayNode.isHidden = true
+            self.listNode.isHidden = false
+        } else {
+            self.chatController?.displayNode.isHidden = false
+            self.listNode.isHidden = true
+        }
         
         self.segmentedControlNode.selectedIndexChanged = { [weak self] index in
             if let strongSelf = self {
@@ -163,6 +174,11 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
+        
+        let overflowInset: CGFloat = 0.0
+        let topInset = navigationBarHeight
+        self.shimmerNode.frame = CGRect(origin: CGPoint(x: overflowInset, y: topInset), size: CGSize(width: layout.size.width - overflowInset * 2.0, height: layout.size.height))
+        self.shimmerNode.update(context: self.context, size: CGSize(width: layout.size.width - overflowInset * 2.0, height: layout.size.height), presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, animationCache: self.context.animationCache, animationRenderer: self.context.animationRenderer, key: .chats, hasSelection: false, transition: transition)
         
         insets.top += 4.0
         

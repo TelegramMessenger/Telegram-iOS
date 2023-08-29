@@ -3,10 +3,10 @@ import Contacts
 import CoreLocation
 import SwiftSignalKit
 
-public func geocodeLocation(address: String) -> Signal<[CLPlacemark]?, NoError> {
+public func geocodeLocation(address: String, locale: Locale? = nil) -> Signal<[CLPlacemark]?, NoError> {
     return Signal { subscriber in
         let geocoder = CLGeocoder()
-        geocoder.geocodeAddressString(address) { (placemarks, _) in
+        geocoder.geocodeAddressString(address, in: nil, preferredLocale: locale) { placemarks, _ in
             subscriber.putNext(placemarks)
             subscriber.putCompletion()
         }
@@ -16,17 +16,17 @@ public func geocodeLocation(address: String) -> Signal<[CLPlacemark]?, NoError> 
     }
 }
 
-public func geocodeLocation(address: CNPostalAddress) -> Signal<(Double, Double)?, NoError> {
+public func geocodeLocation(address: CNPostalAddress, locale: Locale? = nil) -> Signal<(Double, Double)?, NoError> {
     return Signal { subscriber in
         let geocoder = CLGeocoder()
-        geocoder.geocodePostalAddress(address, completionHandler: { placemarks, _ in
+        geocoder.geocodePostalAddress(address, preferredLocale: locale) { placemarks, _ in
             if let location = placemarks?.first?.location {
                 subscriber.putNext((location.coordinate.latitude, location.coordinate.longitude))
             } else {
                 subscriber.putNext(nil)
             }
             subscriber.putCompletion()
-        })
+        }
         return ActionDisposable {
             geocoder.cancelGeocode()
         }
@@ -34,9 +34,11 @@ public func geocodeLocation(address: CNPostalAddress) -> Signal<(Double, Double)
 }
 
 public struct ReverseGeocodedPlacemark {
+    public let name: String?
     public let street: String?
     public let city: String?
     public let country: String?
+    public let countryCode: String?
     
     public var compactDisplayAddress: String? {
         if let street = self.street {
@@ -67,16 +69,20 @@ public struct ReverseGeocodedPlacemark {
     }
 }
 
-public func reverseGeocodeLocation(latitude: Double, longitude: Double) -> Signal<ReverseGeocodedPlacemark?, NoError> {
+public func reverseGeocodeLocation(latitude: Double, longitude: Double, locale: Locale? = nil) -> Signal<ReverseGeocodedPlacemark?, NoError> {
     return Signal { subscriber in
         let geocoder = CLGeocoder()
-        geocoder.reverseGeocodeLocation(CLLocation(latitude: latitude, longitude: longitude), completionHandler: { placemarks, _ in
+        geocoder.reverseGeocodeLocation(CLLocation(latitude: latitude, longitude: longitude), preferredLocale: locale, completionHandler: { placemarks, _ in
             if let placemarks = placemarks, let placemark = placemarks.first {
                 let result: ReverseGeocodedPlacemark
                 if placemark.thoroughfare == nil && placemark.locality == nil && placemark.country == nil {
-                    result = ReverseGeocodedPlacemark(street: placemark.name, city: nil, country: nil)
+                    result = ReverseGeocodedPlacemark(name: placemark.name, street: placemark.name, city: nil, country: nil, countryCode: nil)
                 } else {
-                    result = ReverseGeocodedPlacemark(street: placemark.thoroughfare, city: placemark.locality, country: placemark.country)
+                    if placemark.thoroughfare == nil && placemark.locality == nil, let ocean = placemark.ocean {
+                        result = ReverseGeocodedPlacemark(name: ocean, street: nil, city: nil, country: placemark.country, countryCode: placemark.isoCountryCode)
+                    } else {
+                        result = ReverseGeocodedPlacemark(name: nil, street: placemark.thoroughfare, city: placemark.locality, country: placemark.country, countryCode: placemark.isoCountryCode)
+                    }
                 }
                 subscriber.putNext(result)
                 subscriber.putCompletion()
@@ -88,5 +94,15 @@ public func reverseGeocodeLocation(latitude: Double, longitude: Double) -> Signa
         return ActionDisposable {
             geocoder.cancelGeocode()
         }
+    }
+}
+
+let customAbbreviations = ["AE": "UAE", "GB": "UK", "US": "USA"]
+public func displayCountryName(_ countryCode: String, locale: Locale?) -> String {
+    let locale = locale ?? Locale.current
+    if locale.identifier.lowercased().contains("en"), let shortName = customAbbreviations[countryCode] {
+        return shortName
+    } else {
+        return locale.localizedString(forRegionCode: countryCode) ?? countryCode
     }
 }

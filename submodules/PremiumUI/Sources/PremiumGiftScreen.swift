@@ -3,8 +3,8 @@ import UIKit
 import Display
 import ComponentFlow
 import SwiftSignalKit
-import Postbox
 import TelegramCore
+import Postbox
 import TelegramPresentationData
 import PresentationDataUtils
 import ViewControllerComponent
@@ -201,6 +201,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
             let titleColor = theme.list.itemPrimaryTextColor
             let subtitleColor = theme.list.itemSecondaryTextColor
             let arrowColor = theme.list.disclosureArrowColor
+            let accentColor = theme.list.itemAccentColor
             
             let textFont = Font.regular(15.0)
             let boldTextFont = Font.semibold(15.0)
@@ -341,7 +342,8 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0x548DFF),
                 UIColor(rgb: 0x54A3FF),
                 UIColor(rgb: 0x54bdff),
-                UIColor(rgb: 0x71c8ff)
+                UIColor(rgb: 0x71c8ff),
+                UIColor(rgb: 0xa0daff)
             ]
             
             i = 0
@@ -361,7 +363,8 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                                 titleColor: titleColor,
                                 subtitle: perk.subtitle(strings: strings),
                                 subtitleColor: subtitleColor,
-                                arrowColor: arrowColor
+                                arrowColor: arrowColor,
+                                accentColor: accentColor
                             )
                         )
                     ),
@@ -397,6 +400,8 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                             demoSubject = .emojiStatus
                         case .translation:
                             demoSubject = .translation
+                        case .stories:
+                            demoSubject = .stories
                         }
                         
                         let buttonText: String

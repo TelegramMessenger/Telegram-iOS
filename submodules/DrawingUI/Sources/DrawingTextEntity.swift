@@ -5,236 +5,24 @@ import SwiftSignalKit
 import AccountContext
 import TextFormat
 import EmojiTextAttachmentView
+import MediaEditor
+import MobileCoreServices
+import ImageTransparency
 
-public final class DrawingTextEntity: DrawingEntity, Codable {
-    final class CustomEmojiAttribute: Codable {
-        private enum CodingKeys: String, CodingKey {
-            case attribute
-            case rangeOrigin
-            case rangeLength
+extension DrawingTextEntity.Alignment {
+    var alignment: NSTextAlignment {
+        switch self {
+        case .left:
+            return .left
+        case .center:
+            return .center
+        case .right:
+            return .right
         }
-        let attribute: ChatTextInputTextCustomEmojiAttribute
-        let range: NSRange
-        
-        init(attribute: ChatTextInputTextCustomEmojiAttribute, range: NSRange) {
-            self.attribute = attribute
-            self.range = range
-        }
-        
-        init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.attribute = try container.decode(ChatTextInputTextCustomEmojiAttribute.self, forKey: .attribute)
-            
-            let rangeOrigin = try container.decode(Int.self, forKey: .rangeOrigin)
-            let rangeLength = try container.decode(Int.self, forKey: .rangeLength)
-            self.range = NSMakeRange(rangeOrigin, rangeLength)
-        }
-        
-        func encode(to encoder: Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(self.attribute, forKey: .attribute)
-            try container.encode(self.range.location, forKey: .rangeOrigin)
-            try container.encode(self.range.length, forKey: .rangeLength)
-        }
-    }
-    
-    private enum CodingKeys: String, CodingKey {
-        case uuid
-        case text
-        case textAttributes
-        case style
-        case animation
-        case font
-        case alignment
-        case fontSize
-        case color
-        case referenceDrawingSize
-        case position
-        case width
-        case scale
-        case rotation
-        case renderImage
-        case renderSubEntities
-    }
-    
-    enum Style: Codable {
-        case regular
-        case filled
-        case semi
-        case stroke
-    }
-    
-    enum Animation: Codable {
-        case none
-        case typing
-        case wiggle
-        case zoomIn
-    }
-    
-    enum Font: Codable {
-        case sanFrancisco
-        case other(String, String)
-    }
-    
-    enum Alignment: Codable {
-        case left
-        case center
-        case right
-        
-        var alignment: NSTextAlignment {
-            switch self {
-            case .left:
-                return .left
-            case .center:
-                return .center
-            case .right:
-                return .right
-            }
-        }
-    }
-    
-    public var uuid: UUID
-    public var isAnimated: Bool {
-        if self.animation != .none {
-            return true
-        }
-        var isAnimated = false
-        self.text.enumerateAttributes(in: NSMakeRange(0, self.text.length), options: [], using: { attributes, range, _ in
-            if let _ = attributes[ChatTextInputAttributes.customEmoji] as? ChatTextInputTextCustomEmojiAttribute {
-                isAnimated = true
-            }
-        })
-        return isAnimated
-    }
-    
-    var text: NSAttributedString
-    var style: Style
-    var animation: Animation
-    var font: Font
-    var alignment: Alignment
-    var fontSize: CGFloat
-    public var color: DrawingColor
-    public var lineWidth: CGFloat = 0.0
-    
-    var referenceDrawingSize: CGSize
-    public var position: CGPoint
-    var width: CGFloat
-    public var scale: CGFloat
-    public var rotation: CGFloat
-    
-    public var center: CGPoint {
-        return self.position
-    }
-    
-    public var renderImage: UIImage?
-    public var renderSubEntities: [DrawingStickerEntity]?
-    
-    init(text: NSAttributedString, style: Style, animation: Animation, font: Font, alignment: Alignment, fontSize: CGFloat, color: DrawingColor) {
-        self.uuid = UUID()
-        
-        self.text = text
-        self.style = style
-        self.animation = animation
-        self.font = font
-        self.alignment = alignment
-        self.fontSize = fontSize
-        self.color = color
-        
-        self.referenceDrawingSize = .zero
-        self.position = .zero
-        self.width = 100.0
-        self.scale = 1.0
-        self.rotation = 0.0
-    }
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.uuid = try container.decode(UUID.self, forKey: .uuid)
-        let text = try container.decode(String.self, forKey: .text)
-        
-        let attributedString = NSMutableAttributedString(string: text)
-        let textAttributes = try container.decode([CustomEmojiAttribute].self, forKey: .textAttributes)
-        for attribute in textAttributes {
-            attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: attribute.attribute, range: attribute.range)
-        }
-        self.text = attributedString
-
-        self.style = try container.decode(Style.self, forKey: .style)
-        self.animation = try container.decode(Animation.self, forKey: .animation)
-        self.font = try container.decode(Font.self, forKey: .font)
-        self.alignment = try container.decode(Alignment.self, forKey: .alignment)
-        self.fontSize = try container.decode(CGFloat.self, forKey: .fontSize)
-        self.color = try container.decode(DrawingColor.self, forKey: .color)
-        self.referenceDrawingSize = try container.decode(CGSize.self, forKey: .referenceDrawingSize)
-        self.position = try container.decode(CGPoint.self, forKey: .position)
-        self.width = try container.decode(CGFloat.self, forKey: .width)
-        self.scale = try container.decode(CGFloat.self, forKey: .scale)
-        self.rotation = try container.decode(CGFloat.self, forKey: .rotation)
-        if let renderImageData = try? container.decodeIfPresent(Data.self, forKey: .renderImage) {
-            self.renderImage = UIImage(data: renderImageData)
-        }
-        if let renderSubEntities = try? container.decodeIfPresent([CodableDrawingEntity].self, forKey: .renderSubEntities) {
-            self.renderSubEntities = renderSubEntities.compactMap { $0.entity as? DrawingStickerEntity }
-        }
-    }
-    
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(self.uuid, forKey: .uuid)
-        try container.encode(self.text.string, forKey: .text)
-        
-        var textAttributes: [CustomEmojiAttribute] = []
-        self.text.enumerateAttributes(in: NSMakeRange(0, self.text.length), options: [], using: { attributes, range, _ in
-            if let value = attributes[ChatTextInputAttributes.customEmoji] as? ChatTextInputTextCustomEmojiAttribute {
-                textAttributes.append(CustomEmojiAttribute(attribute: value, range: range))
-            }
-        })
-        try container.encode(textAttributes, forKey: .textAttributes)
-        
-        try container.encode(self.style, forKey: .style)
-        try container.encode(self.animation, forKey: .animation)
-        try container.encode(self.font, forKey: .font)
-        try container.encode(self.alignment, forKey: .alignment)
-        try container.encode(self.fontSize, forKey: .fontSize)
-        try container.encode(self.color, forKey: .color)
-        try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)
-        try container.encode(self.position, forKey: .position)
-        try container.encode(self.width, forKey: .width)
-        try container.encode(self.scale, forKey: .scale)
-        try container.encode(self.rotation, forKey: .rotation)
-        if let renderImage, let data = renderImage.pngData() {
-            try container.encode(data, forKey: .renderImage)
-        }
-        if let renderSubEntities = self.renderSubEntities {
-            let codableEntities: [CodableDrawingEntity] = renderSubEntities.map { .sticker($0) }
-            try container.encode(codableEntities, forKey: .renderSubEntities)
-        }
-    }
-
-    public func duplicate() -> DrawingEntity {
-        let newEntity = DrawingTextEntity(text: self.text, style: self.style, animation: self.animation, font: self.font, alignment: self.alignment, fontSize: self.fontSize, color: self.color)
-        newEntity.referenceDrawingSize = self.referenceDrawingSize
-        newEntity.position = self.position
-        newEntity.width = self.width
-        newEntity.scale = self.scale
-        newEntity.rotation = self.rotation
-        return newEntity
-    }
-    
-    public weak var currentEntityView: DrawingEntityView?
-    public func makeView(context: AccountContext) -> DrawingEntityView {
-        let entityView = DrawingTextEntityView(context: context, entity: self)
-        self.currentEntityView = entityView
-        return entityView
-    }
-    
-    public func prepareForRender() {
-        self.renderImage = (self.currentEntityView as? DrawingTextEntityView)?.getRenderImage()
-        self.renderSubEntities = (self.currentEntityView as? DrawingTextEntityView)?.getRenderSubEntities()
     }
 }
 
-final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
+public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
     private var textEntity: DrawingTextEntity {
         return self.entity as! DrawingTextEntity
     }
@@ -244,6 +32,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
     var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
     
     var textChanged: () -> Void = {}
+    var replaceWithImage: (UIImage, Bool) -> Void = { _, _ in }
     
     init(context: AccountContext, entity: DrawingTextEntity) {
         self.textView = DrawingTextView(frame: .zero)
@@ -261,7 +50,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         self.textView.minimumZoomScale = 1.0
         self.textView.maximumZoomScale = 1.0
         self.textView.keyboardAppearance = .dark
-        self.textView.autocorrectionType = .no
+        self.textView.autocorrectionType = .default
         self.textView.spellCheckingType = .no
         
         super.init(context: context, entity: entity)
@@ -269,13 +58,13 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         self.textView.delegate = self
         self.addSubview(self.textView)
         
-        self.emojiViewProvider = { [weak self] emoji in
-            guard let strongSelf = self else {
-                return UIView()
-            }
-                        
+        self.emojiViewProvider = { emoji in
             let pointSize: CGFloat = 128.0
-            return EmojiTextAttachmentView(context: context, userLocation: .other, emoji: emoji, file: emoji.file, cache: strongSelf.context.animationCache, renderer: strongSelf.context.animationRenderer, placeholderColor: UIColor.white.withAlphaComponent(0.12), pointSize: CGSize(width: pointSize, height: pointSize))
+            return EmojiTextAttachmentView(context: context, userLocation: .other, emoji: emoji, file: emoji.file, cache: context.animationCache, renderer: context.animationRenderer, placeholderColor: UIColor.white.withAlphaComponent(0.12), pointSize: CGSize(width: pointSize, height: pointSize))
+        }
+        
+        self.textView.onPaste = { [weak self] in
+            return self?.onPaste() ?? false
         }
         
         self.update(animated: false)
@@ -285,9 +74,17 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        self.displayLink?.invalidate()
+    }
+    
+    override func animateInsertion() {
+        
+    }
+    
     private var isSuspended = false
     private var _isEditing = false
-    var isEditing: Bool {
+    public var isEditing: Bool {
         return self._isEditing || self.isSuspended
     }
     
@@ -296,6 +93,52 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
     
     @objc private func fadePressed() {
         self.endEditing()
+    }
+    
+    private func onPaste() -> Bool {
+        let pasteboard = UIPasteboard.general
+
+        var images: [UIImage] = []
+        var isPNG = false
+        var isMemoji = false
+        for item in pasteboard.items {
+            if let image = item["com.apple.png-sticker"] as? UIImage {
+                images.append(image)
+                isPNG = true
+                isMemoji = true
+            } else if let image = item[kUTTypePNG as String] as? UIImage {
+                images.append(image)
+                isPNG = true
+            } else if let image = item["com.apple.uikit.image"] as? UIImage {
+                images.append(image)
+                isPNG = true
+            } else if let image = item[kUTTypeJPEG as String] as? UIImage {
+                images.append(image)
+            } else if let image = item[kUTTypeGIF as String] as? UIImage {
+                images.append(image)
+            }
+        }
+        
+        if isPNG && images.count == 1, let image = images.first, let cgImage = image.cgImage {
+            let maxSide = max(image.size.width, image.size.height)
+            if maxSide.isZero {
+                return false
+            }
+            let aspectRatio = min(image.size.width, image.size.height) / maxSide
+            if isMemoji || (imageHasTransparency(cgImage) && aspectRatio > 0.2) {
+                self.endEditing(reset: true)
+                self.replaceWithImage(image, true)
+                return false
+            }
+        }
+        
+        if !images.isEmpty, let image = images.first {
+            self.endEditing(reset: true)
+            self.replaceWithImage(image, false)
+            return false
+        }
+        
+        return true
     }
     
     private var emojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)] = []
@@ -372,7 +215,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
             self.previousEntity = previousEntity
         }
         
-        self.update(animated: false)
+        self.update(animated: false, updateEditingPosition: false)
         
         if let superview = self.superview {
             let fadeView = UIButton(frame: CGRect(origin: .zero, size: superview.frame.size))
@@ -391,15 +234,8 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         self.textView.window?.makeKey()
         self.textView.becomeFirstResponder()
         
-        UIView.animate(withDuration: 0.4, delay: 0.0, usingSpringWithDamping: 0.65, initialSpringVelocity: 0.0) {
-            if let parentView = self.superview as? DrawingEntitiesView {
-                let scale = parentView.getEntityAdditionalScale() / (parentView.drawingView?.zoomScale ?? 1.0)
-                self.transform = CGAffineTransformMakeRotation(parentView.getEntityInitialRotation()).scaledBy(x: scale, y: scale)
-                
-                self.center = parentView.getEntityCenterPosition()
-            }
-        }
-
+        self.updateEditingPosition(animated: true)
+        
         if let selectionView = self.selectionView as? DrawingTextEntititySelectionView {
             selectionView.alpha = 0.0
             if !self.textEntity.text.string.isEmpty {
@@ -408,11 +244,47 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         }
     }
     
+    func updateEditingPosition(animated: Bool) {
+        guard let parentView = self.superview as? DrawingEntitiesView else {
+            return
+        }
+        
+        var position = parentView.getEntityCenterPosition()
+        if parentView.frame.width == 1080 && parentView.frame.height == 1920 {
+            let width = self.bounds.width
+            switch self.textEntity.alignment {
+            case .left:
+                position = CGPoint(x: 80.0 + width / 2.0, y: position.y)
+            case .right:
+                position = CGPoint(x: parentView.bounds.width - 80.0 - width / 2.0, y: position.y)
+            default:
+                break
+            }
+        }
+        
+        let scale = parentView.getEntityAdditionalScale() / (parentView.drawingView?.zoomScale ?? 1.0)
+        let rotation = parentView.getEntityInitialRotation()
+        if animated {
+            UIView.animate(withDuration: 0.4, delay: 0.0, usingSpringWithDamping: 0.65, initialSpringVelocity: 0.0) {
+                self.transform = CGAffineTransformMakeRotation(rotation).scaledBy(x: scale, y: scale)
+                self.center = position
+            }
+        } else {
+            self.transform = CGAffineTransformMakeRotation(rotation).scaledBy(x: scale, y: scale)
+            self.center = position
+        }
+    }
+    
     func endEditing(reset: Bool = false) {
+        guard let parentView = self.superview as? DrawingEntitiesView else {
+            return
+        }
+        
         self._isEditing = false
-        self.textView.resignFirstResponder()
         self.textView.inputView = nil
         self.textView.inputAccessoryView = nil
+        self.textView.reloadInputViews()
+        self.textView.resignFirstResponder()
         
         self.textView.isEditable = false
         self.textView.isSelectable = false
@@ -430,7 +302,6 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
                 self.containerView?.remove(uuid: self.textEntity.uuid)
             }
         } else {
-//            self.textEntity.text = self.textView.text.trimmingCharacters(in: .whitespacesAndNewlines)
             if self.textEntity.text.string.isEmpty {
                 self.containerView?.remove(uuid: self.textEntity.uuid)
             }
@@ -441,6 +312,18 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
             fadeView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak fadeView] _ in
                 fadeView?.removeFromSuperview()
             })
+        }
+        
+        if self.previousEntity == nil && self.textEntity.alignment != .center, parentView.frame.width == 1080 && parentView.frame.height == 1920 {
+            let width = self.bounds.width
+            switch self.textEntity.alignment {
+            case .left:
+                self.textEntity.position = CGPoint(x: 80.0 + width / 2.0, y: self.textEntity.position.y)
+            case .right:
+                self.textEntity.position = CGPoint(x: parentView.bounds.width - 80.0 - width / 2.0, y: self.textEntity.position.y)
+            default:
+                break
+            }
         }
         
         UIView.animate(withDuration: 0.4, delay: 0.0, usingSpringWithDamping: 0.65, initialSpringVelocity: 0.0) {
@@ -475,7 +358,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         }
     }
     
-    func textViewDidChange(_ textView: UITextView) {
+    public func textViewDidChange(_ textView: UITextView) {
         guard let updatedText = self.textView.attributedText.mutableCopy() as? NSMutableAttributedString else {
             return
         }
@@ -511,14 +394,15 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         self.textView.selectedRange = NSMakeRange(previousSelectedRange.location + previousSelectedRange.length + text.length, 0)
     }
     
-    override func sizeThatFits(_ size: CGSize) -> CGSize {
+    public override func sizeThatFits(_ size: CGSize) -> CGSize {
+        self.textView.setNeedsLayersUpdate()
         var result = self.textView.sizeThatFits(CGSize(width: self.textEntity.width, height: .greatestFiniteMagnitude))
         result.width = max(224.0, ceil(result.width) + 20.0)
-        result.height = ceil(result.height) //+ 20.0 + (self.textView.font?.pointSize ?? 0.0) // * _font.sizeCorrection;
+        result.height = ceil(result.height);
         return result;
     }
     
-    override func sizeToFit() {
+    public override func sizeToFit() {
         let center = self.center
         let transform = self.transform
         self.transform = .identity
@@ -529,7 +413,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         //entity changed
     }
     
-    override func layoutSubviews() {
+    public override func layoutSubviews() {
         super.layoutSubviews()
         
         self.textView.frame = self.bounds
@@ -549,6 +433,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         let range = NSMakeRange(0, text.length)
         let fontSize = self.displayFontSize
     
+        self.textView.hasTextLayers = [.typing, .wiggle].contains(self.textEntity.animation)
         self.textView.drawingLayoutManager.textContainers.first?.lineFragmentPadding = floor(fontSize * 0.24)
     
         if let (font, name) = availableFonts[text.string.lowercased()] {
@@ -558,13 +443,17 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         var font: UIFont
         switch self.textEntity.font {
         case .sanFrancisco:
-            font = Font.with(size: fontSize, design: .round, weight: .semibold)
+            font = Font.with(size: fontSize, design: .regular, weight: .semibold)
         case let .other(fontName, _):
-            font = UIFont(name: fontName, size: fontSize) ?? Font.with(size: fontSize, design: .round, weight: .semibold)
+            font = UIFont(name: fontName, size: fontSize) ?? Font.with(size: fontSize, design: .regular, weight: .semibold)
         }
         
         text.addAttribute(.font, value: font, range: range)
         self.textView.font = font
+        
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = self.textEntity.alignment.alignment
+        text.addAttribute(.paragraphStyle, value: paragraphStyle, range: range)
         
         let color = self.textEntity.color.toUIColor()
         let textColor: UIColor
@@ -578,35 +467,149 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         case .stroke:
             textColor = color.lightness > 0.99 ? UIColor.black : UIColor.white
         }
-        text.addAttribute(.foregroundColor, value: textColor, range: range)
+        
+        guard let visualText = text.mutableCopy() as? NSMutableAttributedString else {
+            return
+        }
+        if self.textView.hasTextLayers {
+            text.addAttribute(.foregroundColor, value: UIColor.clear, range: range)
+        } else {
+            text.addAttribute(.foregroundColor, value: textColor, range: range)
+        }
+        visualText.addAttribute(.foregroundColor, value: textColor, range: range)
         
         text.enumerateAttributes(in: range) { attributes, subrange, _ in
             if let _ = attributes[ChatTextInputAttributes.customEmoji] {
                 text.addAttribute(.foregroundColor, value: UIColor.clear, range: subrange)
+                visualText.addAttribute(.foregroundColor, value: UIColor.clear, range: subrange)
             }
         }
-
-        let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.alignment = self.textEntity.alignment.alignment
-        text.addAttribute(.paragraphStyle, value: paragraphStyle, range: range)
         
         let previousRange = self.textView.selectedRange
         self.textView.attributedText = text
+        self.textView.visualText = visualText
+        
         if keepSelectedRange {
             self.textView.selectedRange = previousRange
         }
+        
+        if self.textView.hasTextLayers {
+            self.textView.onLayersUpdate = { [weak self] in
+                self?.updateTextAnimations()
+            }
+        } else {
+            self.updateTextAnimations()
+        }
     }
     
-    override func update(animated: Bool = false) {
-        self.update(animated: animated, afterAppendingEmoji: false)
+    private var previousDisplayLinkTime: Double?
+    
+    private var displayLinkStart: Double?
+    private var displayLink: SharedDisplayLinkDriver.Link?
+    
+    private var pendingImage: (Double, UIImage)?
+    private var cachedFrames: [DrawingTextEntity.AnimationFrame] = []
+    
+    private func setupRecorder(delta: Double, duration: Double) {
+        self.cachedFrames.removeAll()
+        
+        self.displayLink?.invalidate()
+        self.displayLink = nil
+        
+        self.previousDisplayLinkTime = nil
+        let displayLinkStart = CACurrentMediaTime()
+        self.displayLinkStart = displayLinkStart
+        
+        self.displayLink = SharedDisplayLinkDriver.shared.add { [weak self] in
+            if let strongSelf = self {
+                let currentTime = CACurrentMediaTime()
+                if let previousDisplayLinkTime = strongSelf.previousDisplayLinkTime, currentTime < previousDisplayLinkTime + delta {
+                    return
+                }
+                if currentTime >= displayLinkStart + duration {
+                    strongSelf.displayLink?.invalidate()
+                    strongSelf.displayLink = nil
+                }
+                if let (timestamp, image) = strongSelf.pendingImage, let previousDisplayLinkTime = strongSelf.previousDisplayLinkTime {
+                    strongSelf.cachedFrames.append(DrawingTextEntity.AnimationFrame(timestamp: timestamp - displayLinkStart, duration: currentTime - previousDisplayLinkTime, image: image))
+                }
+                if let image = strongSelf.getPresentationRenderImage() {
+                    strongSelf.pendingImage = (currentTime, image)
+                }
+                if strongSelf.previousDisplayLinkTime == nil {
+                    strongSelf.previousDisplayLinkTime = displayLinkStart
+                } else {
+                    strongSelf.previousDisplayLinkTime = currentTime
+                }
+            }
+        }
+        self.displayLink?.isPaused = false
+    }
+
+    func updateTextAnimations() {
+        for layer in self.textView.characterLayers {
+            layer.removeAllAnimations()
+        }
+        self.textView.layer.removeAllAnimations()
+        
+        guard self.textView.characterLayers.count > 0 || self.textEntity.animation == .zoomIn else {
+            return
+        }
+        
+        switch self.textEntity.animation {
+        case .typing:
+            let delta: CGFloat = 1.0 / CGFloat(self.textView.characterLayers.count + 3)
+            let duration = Double(self.textView.characterLayers.count + 3) * 0.28
+            var offset = delta
+            for layer in self.textView.characterLayers {
+                let animation = CAKeyframeAnimation(keyPath: "opacity")
+                animation.calculationMode = .discrete
+                animation.values = [0.0, 1.0]
+                animation.keyTimes = [0.0, offset as NSNumber, 1.0]
+                animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                animation.duration = duration
+                animation.repeatCount = .infinity
+                layer.add(animation, forKey: "opacity")
+                offset += delta
+            }
+            self.setupRecorder(delta: delta, duration: duration)
+        case .wiggle:
+            for layer in self.textView.characterLayers {
+                let animation = CABasicAnimation(keyPath: "transform.rotation.z")
+                animation.fromValue = (-.pi / 10.0) as NSNumber
+                animation.toValue = (.pi / 10.0) as NSNumber
+                animation.autoreverses = true
+                animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                animation.duration = 0.6
+                animation.repeatCount = .infinity
+                layer.add(animation, forKey: "transform.rotation.z")
+            }
+            self.setupRecorder(delta: 0.033, duration: 1.2)
+        case .zoomIn:
+            let animation = CABasicAnimation(keyPath: "transform.scale")
+            animation.fromValue = 0.001 as NSNumber
+            animation.toValue = 1.0 as NSNumber
+            animation.autoreverses = true
+            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            animation.duration = 0.8
+            animation.repeatCount = .infinity
+            self.textView.layer.add(animation, forKey: "transform.scale")
+        default:
+            break
+        }
     }
     
-    func update(animated: Bool = false, afterAppendingEmoji: Bool = false) {
+    public override func update(animated: Bool = false) {
+        self.update(animated: animated, afterAppendingEmoji: false, updateEditingPosition: true)
+    }
+    
+    func update(animated: Bool = false, afterAppendingEmoji: Bool = false, updateEditingPosition: Bool = true) {
         if !self.isEditing {
             self.center = self.textEntity.position
             self.transform = CGAffineTransformScale(CGAffineTransformMakeRotation(self.textEntity.rotation), self.textEntity.scale, self.textEntity.scale)
         }
         
+        var cursorColor = UIColor.white
         let color = self.textEntity.color.toUIColor()
         switch self.textEntity.style {
         case .regular:
@@ -615,6 +618,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
             self.textView.frameColor = nil
         case .filled:
             self.textView.textColor = color.lightness > 0.99 ? UIColor.black : UIColor.white
+            cursorColor = color.lightness > 0.99 ? UIColor(rgb: 0x007aff) : UIColor.white
             self.textView.strokeColor = nil
             self.textView.frameColor = color
         case .semi:
@@ -626,6 +630,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
             self.textView.strokeColor = color
             self.textView.frameColor = nil
         }
+        self.textView.tintColor = self.textView.text.isEmpty ? .white : cursorColor
         
         if case .regular = self.textEntity.style {
             self.textView.layer.shadowColor = UIColor.black.cgColor
@@ -638,13 +643,18 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
             self.textView.layer.shadowOpacity = 0.0
             self.textView.layer.shadowRadius = 0.0
         }
+        self.textView.textAlignment = self.textEntity.alignment.alignment
         
         self.updateText(keepSelectedRange: afterAppendingEmoji)
         
         self.sizeToFit()
         
-        Queue.mainQueue().after(afterAppendingEmoji ? 0.01 : 0.001) {
-            self.updateEntities()
+        if updateEditingPosition && self.isEditing {
+            self.updateEditingPosition(animated: animated)
+        }
+        
+        self.textView.onLayoutUpdate = { [weak self] in
+            self?.updateEntities()
         }
         
         super.update(animated: animated)
@@ -669,7 +679,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         self.popIdentityTransformForMeasurement()
     }
         
-    override func makeSelectionView() -> DrawingEntitySelectionView {
+    override func makeSelectionView() -> DrawingEntitySelectionView? {
         if let selectionView = self.selectionView {
             return selectionView
         }
@@ -680,14 +690,38 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
     
     func getRenderImage() -> UIImage? {
         let rect = self.bounds
-        UIGraphicsBeginImageContextWithOptions(rect.size, false, 1.0)
+        UIGraphicsBeginImageContextWithOptions(rect.size, false, 2.0)
         self.textView.drawHierarchy(in: rect, afterScreenUpdates: true)
         let image = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
         return image
     }
     
-    func getRenderSubEntities() -> [DrawingStickerEntity] {
+    func getPresentationRenderImage() -> UIImage? {
+        let rect = self.bounds
+        UIGraphicsBeginImageContextWithOptions(rect.size, false, 1.0)
+        if let context = UIGraphicsGetCurrentContext() {
+            for layer in self.textView.characterLayers {
+                if let presentation = layer.presentation() {
+                    context.saveGState()
+                    context.translateBy(x: presentation.position.x - presentation.bounds.width / 2.0, y: 0.0)
+                    if let rotation = (presentation.value(forKeyPath: "transform.rotation.z") as? NSNumber)?.floatValue {
+                        context.translateBy(x: presentation.bounds.width / 2.0, y: presentation.bounds.height)
+                        context.rotate(by: CGFloat(rotation))
+                        context.translateBy(x: -presentation.bounds.width / 2.0, y: -presentation.bounds.height)
+                    }
+                    presentation.render(in: context)
+                    context.restoreGState()
+                }
+            }
+        }
+        //self.textView.drawHierarchy(in: rect, afterScreenUpdates: true)
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return image
+    }
+    
+    func getRenderSubEntities() -> [DrawingEntity] {
         let textSize = self.textView.bounds.size
         let textPosition = self.textEntity.position
         let scale = self.textEntity.scale
@@ -695,7 +729,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         
         let itemSize: CGFloat = floor(24.0 * self.displayFontSize * 0.78 / 17.0)
         
-        var entities: [DrawingStickerEntity] = []
+        var entities: [DrawingEntity] = []
         for (emojiRect, emojiAttribute) in self.emojiRects {
             guard let file = emojiAttribute.file else {
                 continue
@@ -703,10 +737,10 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
             let emojiTextPosition = emojiRect.center.offsetBy(dx: -textSize.width / 2.0, dy: -textSize.height / 2.0)
                         
             let entity = DrawingStickerEntity(content: .file(file))
-            entity.referenceDrawingSize = CGSize(width: itemSize * 2.5, height: itemSize * 2.5)
+            entity.referenceDrawingSize = CGSize(width: itemSize * 4.0, height: itemSize * 4.0)
             entity.scale = scale
             entity.position = textPosition.offsetBy(
-                dx: (emojiTextPosition.x * cos(rotation) + emojiTextPosition.y * sin(rotation)) * scale,
+                dx: (emojiTextPosition.x * cos(rotation) - emojiTextPosition.y * sin(rotation)) * scale,
                 dy: (emojiTextPosition.y * cos(rotation) + emojiTextPosition.x * sin(rotation)) * scale
             )
             entity.rotation = rotation
@@ -714,14 +748,16 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         }
         return entities
     }
+    
+    func getRenderAnimationFrames() -> [DrawingTextEntity.AnimationFrame]? {
+        return self.cachedFrames
+    }
 }
 
-final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGestureRecognizerDelegate {
+final class DrawingTextEntititySelectionView: DrawingEntitySelectionView {
     private let border = SimpleShapeLayer()
     private let leftHandle = SimpleShapeLayer()
     private let rightHandle = SimpleShapeLayer()
-    
-    private var panGestureRecognizer: UIPanGestureRecognizer!
     
     override init(frame: CGRect) {
         let handleBounds = CGRect(origin: .zero, size: entitySelectionViewHandleSize)
@@ -749,27 +785,10 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
             
             self.layer.addSublayer(handle)
         }
-        
-        let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
-        panGestureRecognizer.delegate = self
-        self.addGestureRecognizer(panGestureRecognizer)
-        self.panGestureRecognizer = panGestureRecognizer
-        
-        self.snapTool.onSnapXUpdated = { [weak self] snapped in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToXAxis(snapped)
-            }
-        }
-        
-        self.snapTool.onSnapYUpdated = { [weak self] snapped in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToYAxis(snapped)
-            }
-        }
-        
-        self.snapTool.onSnapRotationUpdated = { [weak self] snappedAngle in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToAngle(snappedAngle)
+                
+        self.snapTool.onSnapUpdated = { [weak self] type, snapped in
+            if let self, let entityView = self.entityView {
+                entityView.onSnapUpdated(type, snapped)
             }
         }
     }
@@ -798,7 +817,7 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
     private let snapTool = DrawingEntitySnapTool()
     
     private var currentHandle: CALayer?
-    @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+    override func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
         guard let entityView = self.entityView, let entity = entityView.entity as? DrawingTextEntity else {
             return
         }
@@ -813,12 +832,18 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
                     if layer.frame.contains(location) {
                         self.currentHandle = layer
                         self.snapTool.maybeSkipFromStart(entityView: entityView, rotation: entity.rotation)
+                        entityView.onInteractionUpdated(true)
                         return
                     }
                 }
             }
             self.currentHandle = self.layer
+            entityView.onInteractionUpdated(true)
         case .changed:
+            if self.currentHandle == nil {
+                self.currentHandle = self.layer
+            }
+            
             let delta = gestureRecognizer.translation(in: entityView.superview)
             let parentLocation = gestureRecognizer.location(in: self.superview)
             let velocity = gestureRecognizer.velocity(in: entityView.superview)
@@ -828,6 +853,9 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
             var updatedRotation = entity.rotation
             
             if self.currentHandle === self.leftHandle || self.currentHandle === self.rightHandle {
+                if gestureRecognizer.numberOfTouches > 1 {
+                    return
+                }
                 var deltaX = gestureRecognizer.translation(in: self).x
                 if self.currentHandle === self.leftHandle {
                     deltaX *= -1.0
@@ -841,14 +869,17 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
                 } else {
                     newAngle = atan2(parentLocation.y - self.center.y, parentLocation.x - self.center.x)
                 }
-                
-                //let delta = newAngle - updatedRotation
-                updatedRotation = newAngle //" self.snapTool.update(entityView: entityView, velocity: 0.0, delta: delta, updatedRotation: newAngle)
+                var delta = newAngle - updatedRotation
+                if delta < -.pi {
+                    delta = 2.0 * .pi + delta
+                }
+                let velocityValue = sqrt(velocity.x * velocity.x + velocity.y * velocity.y) / 1000.0
+                updatedRotation = self.snapTool.update(entityView: entityView, velocity: velocityValue, delta: delta, updatedRotation: newAngle, skipMultiplier: 1.0)
             } else if self.currentHandle === self.layer {
                 updatedPosition.x += delta.x
                 updatedPosition.y += delta.y
                 
-                updatedPosition = self.snapTool.update(entityView: entityView, velocity: velocity, delta: delta, updatedPosition: updatedPosition)
+                updatedPosition = self.snapTool.update(entityView: entityView, velocity: velocity, delta: delta, updatedPosition: updatedPosition, size: entityView.frame.size)
             }
             
             entity.scale = updatedScale
@@ -862,6 +893,7 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
             if self.currentHandle != nil {
                 self.snapTool.rotationReset()
             }
+            entityView.onInteractionUpdated(false)
         default:
             break
         }
@@ -876,11 +908,16 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
         
         switch gestureRecognizer.state {
         case .began, .changed:
+            if case .began = gestureRecognizer.state {
+                entityView.onInteractionUpdated(true)
+            }
             let scale = gestureRecognizer.scale
             entity.scale = max(0.1, entity.scale * scale)
             entityView.update()
 
             gestureRecognizer.scale = 1.0
+        case .ended, .cancelled:
+            entityView.onInteractionUpdated(false)
         default:
             break
         }
@@ -898,20 +935,22 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
         switch gestureRecognizer.state {
         case .began:
             self.snapTool.maybeSkipFromStart(entityView: entityView, rotation: entity.rotation)
+            entityView.onInteractionUpdated(true)
         case .changed:
             rotation = gestureRecognizer.rotation
             updatedRotation += rotation
             
+            updatedRotation = self.snapTool.update(entityView: entityView, velocity: velocity, delta: rotation, updatedRotation: updatedRotation)
+            entity.rotation = updatedRotation
+            entityView.update()
+            
             gestureRecognizer.rotation = 0.0
         case .ended, .cancelled:
             self.snapTool.rotationReset()
+            entityView.onInteractionUpdated(false)
         default:
             break
         }
-        
-        updatedRotation = self.snapTool.update(entityView: entityView, velocity: velocity, delta: rotation, updatedRotation: updatedRotation)
-        entity.rotation = updatedRotation
-        entityView.update()
         
         entityView.onPositionUpdated(entity.position)
     }
@@ -957,7 +996,7 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
     }
 }
 
-private class DrawingTextLayoutManager: NSLayoutManager {
+final class DrawingTextLayoutManager: NSLayoutManager {
     var radius: CGFloat
     var maxIndex: Int = 0
     
@@ -969,7 +1008,9 @@ private class DrawingTextLayoutManager: NSLayoutManager {
     var strokeOffset: CGPoint = .zero
     
     var frameColor: UIColor?
-    var frameWidthInset: CGFloat = 0.0
+    var frameInsets = UIEdgeInsets()
+    
+    var textAlignment: NSTextAlignment = .natural
     
     override init() {
         self.radius = 8.0
@@ -984,17 +1025,22 @@ private class DrawingTextLayoutManager: NSLayoutManager {
     private func prepare() {
         self.path = nil
         self.rectArray.removeAll()
-        
+                
         self.enumerateLineFragments(forGlyphRange: NSRange(location: 0, length: ((self.textStorage?.string ?? "") as NSString).length)) { rect, usedRect, textContainer, glyphRange, _ in
             var ignoreRange = false
-            let charecterRange = self.characterRange(forGlyphRange: glyphRange, actualGlyphRange: nil)
-            let substring = ((self.textStorage?.string ?? "") as NSString).substring(with: charecterRange)
+            let characterRange = self.characterRange(forGlyphRange: glyphRange, actualGlyphRange: nil)
+            let substring = ((self.textStorage?.string ?? "") as NSString).substring(with: characterRange)
             if substring.trimmingCharacters(in: .newlines).isEmpty {
                 ignoreRange = true
             }
             
+            var usedRect = usedRect
+            if substring.hasSuffix(" ") && self.textAlignment != .right {
+                usedRect.size.width -= floorToScreenPixels(usedRect.height * 0.145)
+            }
+            
             if !ignoreRange {
-                let newRect = CGRect(origin: CGPoint(x: usedRect.minX - self.frameWidthInset, y: usedRect.minY), size: CGSize(width: usedRect.width + self.frameWidthInset * 2.0, height: usedRect.height))
+                let newRect = CGRect(origin: CGPoint(x: usedRect.minX - floorToScreenPixels(self.frameInsets.left * usedRect.height), y: usedRect.minY - floorToScreenPixels(self.frameInsets.top * usedRect.height)), size: CGSize(width: usedRect.width + floorToScreenPixels((self.frameInsets.left + self.frameInsets.right) * usedRect.height), height: usedRect.height + floorToScreenPixels((self.frameInsets.top + self.frameInsets.bottom) * usedRect.height)))
                 self.rectArray.append(newRect)
             }
         }
@@ -1018,19 +1064,27 @@ private class DrawingTextLayoutManager: NSLayoutManager {
             return
         }
         
-        let last = self.rectArray[index - 1]
-        let cur = self.rectArray[index]
+        var last = self.rectArray[index - 1]
+        var cur = self.rectArray[index]
         
-        self.radius = cur.height * 0.18
+        self.radius = cur.height * 0.2
         
-        let t1 = ((cur.minX - last.minX < 2.0 * self.radius) && (cur.minX > last.minX)) || ((cur.maxX - last.maxX > -2.0 * self.radius) && (cur.maxX < last.maxX))
-        let t2 = ((last.minX - cur.minX < 2.0 * self.radius) && (last.minX > cur.minX)) || ((last.maxX - cur.maxX > -2.0 * self.radius) && (last.maxX < cur.maxX))
+        let doubleRadius = self.radius * 2.5
+        
+        var t1 = ((cur.minX - last.minX < doubleRadius) && (cur.minX > last.minX)) || ((cur.maxX - last.maxX > -doubleRadius) && (cur.maxX < last.maxX))
+        let t2 = ((last.minX - cur.minX < doubleRadius) && (last.minX > cur.minX)) || ((last.maxX - cur.maxX > -doubleRadius) && (last.maxX < cur.maxX))
         
         if t2 {
             let newRect = CGRect(origin: CGPoint(x: cur.minX, y: last.minY), size: CGSize(width: cur.width, height: last.height))
             self.rectArray[index - 1] = newRect
             self.processRectIndex(index - 1)
         }
+        
+        last = self.rectArray[index - 1]
+        cur = self.rectArray[index]
+        
+        t1 = ((cur.minX - last.minX < doubleRadius) && (cur.minX > last.minX)) || ((cur.maxX - last.maxX > -doubleRadius) && (cur.maxX < last.maxX))
+        
         if t1 {
             let newRect = CGRect(origin: CGPoint(x: last.minX, y: cur.minY), size: CGSize(width: last.width, height: cur.height))
             self.rectArray[index] = newRect
@@ -1080,12 +1134,12 @@ private class DrawingTextLayoutManager: NSLayoutManager {
             var last: CGRect = .null
             for i in 0 ..< self.rectArray.count {
                 let cur = self.rectArray[i]
-                self.radius = cur.height * 0.18
+                self.radius = cur.height * 0.2
                 
                 path.append(UIBezierPath(roundedRect: cur, cornerRadius: self.radius))
                 if i == 0 {
                     last = cur
-                } else if i > 0 && abs(last.maxY -  cur.minY) < 10.0 {
+                } else if i > 0 && abs(last.maxY -  cur.minY) < 15.0 {
                     let a = cur.origin
                     let b = CGPoint(x: cur.maxX, y: cur.minY)
                     let c = CGPoint(x: last.minX, y: last.maxY)
@@ -1135,7 +1189,8 @@ private class DrawingTextLayoutManager: NSLayoutManager {
                         addPath.addLine(to: CGPoint(x: d.x + self.radius, y: d.y))
                         path.append(addPath)
                     }
-
+                    last = cur
+                } else {
                     last = cur
                 }
             }
@@ -1185,8 +1240,16 @@ private class DrawingTextStorage: NSTextStorage {
     }
 }
 
-class DrawingTextView: UITextView {
-    fileprivate var drawingLayoutManager: DrawingTextLayoutManager {
+final class SimpleTextLayer: CATextLayer {
+    override func action(forKey event: String) -> CAAction? {
+        return nullAction
+    }
+}
+
+final class DrawingTextView: UITextView, NSLayoutManagerDelegate {
+    var characterLayers: [CALayer] = []
+    
+    var drawingLayoutManager: DrawingTextLayoutManager {
         return self.layoutManager as! DrawingTextLayoutManager
     }
     
@@ -1214,23 +1277,50 @@ class DrawingTextView: UITextView {
             self.setNeedsDisplay()
         }
     }
-    var frameWidthInset: CGFloat = 0.0 {
+    var frameInsets: UIEdgeInsets = .zero {
         didSet {
-            self.drawingLayoutManager.frameWidthInset = self.frameWidthInset
+            self.drawingLayoutManager.frameInsets = self.frameInsets
             self.setNeedsDisplay()
         }
     }
         
+    override var textAlignment: NSTextAlignment {
+        get {
+            return super.textAlignment
+        }
+        set {
+            self.drawingLayoutManager.textAlignment = newValue
+            super.textAlignment = newValue
+        }
+    }
+    
+    override var font: UIFont? {
+        get {
+            return super.font
+        }
+        set {
+            if self.font != newValue {
+                super.font = newValue
+                self.fixTypingAttributes()
+            }
+        }
+    }
+    
     override var textColor: UIColor? {
         get {
             return super.textColor
         }
         set {
-            super.textColor = newValue
-            self.fixTypingAttributes()
+            if self.textColor != newValue {
+                super.textColor = newValue
+                self.fixTypingAttributes()
+            }
         }
     }
     
+    var hasTextLayers = false
+    var visualText: NSAttributedString?
+        
     init(frame: CGRect) {
         let textStorage = DrawingTextStorage()
         let layoutManager = DrawingTextLayoutManager()
@@ -1243,6 +1333,8 @@ class DrawingTextView: UITextView {
         super.init(frame: frame, textContainer: textContainer)
         
         self.tintColor = UIColor.white
+        
+        layoutManager.delegate = self
     }
     
     required init?(coder: NSCoder) {
@@ -1261,12 +1353,6 @@ class DrawingTextView: UITextView {
         self.fixTypingAttributes()
     }
         
-    override func paste(_ sender: Any?) {
-        self.fixTypingAttributes()
-        super.paste(sender)
-        self.fixTypingAttributes()
-    }
-    
     fileprivate func fixTypingAttributes() {
         var attributes: [NSAttributedString.Key: Any] = [:]
         if let font = self.font {
@@ -1279,6 +1365,83 @@ class DrawingTextView: UITextView {
         paragraphStyle.alignment = self.textAlignment
         attributes[NSAttributedString.Key.paragraphStyle] = paragraphStyle
         self.typingAttributes = attributes
+    }
+
+    var onLayoutUpdate: (() -> Void)?
+    var onLayersUpdate: (() -> Void)?
+    
+    private var needsLayersUpdate = false
+    func setNeedsLayersUpdate() {
+        self.needsLayersUpdate = true
+    }
+    
+    func layoutManager(_ layoutManager: NSLayoutManager, didCompleteLayoutFor textContainer: NSTextContainer?, atEnd layoutFinishedFlag: Bool) {
+        self.updateCharLayers()
+        if layoutFinishedFlag {
+            if let onLayoutUpdate = self.onLayoutUpdate {
+                self.onLayoutUpdate = nil
+                onLayoutUpdate()
+            }
+        }
+    }
+    
+    func updateCharLayers() {
+        for layer in self.characterLayers {
+            layer.removeFromSuperlayer()
+        }
+        self.characterLayers = []
+        
+        guard let attributedString = self.visualText, self.hasTextLayers else {
+            return
+        }
+        
+        let wordRange = NSMakeRange(0, attributedString.length)
+        
+        var index = wordRange.location
+        while index < wordRange.location + wordRange.length {
+            let glyphRange = NSMakeRange(index, 1)
+            let characterRange = self.layoutManager.characterRange(forGlyphRange: glyphRange, actualGlyphRange:nil)
+            var glyphRect = self.layoutManager.boundingRect(forGlyphRange: glyphRange, in: self.textContainer)
+            //let location = self.layoutManager.location(forGlyphAt: index)
+            
+            glyphRect.origin.y += glyphRect.height / 2.0 //location.y - (glyphRect.height / 2.0);
+            let textLayer = SimpleTextLayer()
+            textLayer.contentsScale = 1.0
+            textLayer.frame = glyphRect
+            textLayer.string = attributedString.attributedSubstring(from: characterRange)
+            textLayer.anchorPoint = CGPoint(x: 0.5, y: 1.0)
+            
+            self.layer.addSublayer(textLayer)
+            self.characterLayers.append(textLayer)
+            
+            let stepGlyphRange = self.layoutManager.glyphRange(forCharacterRange: characterRange, actualCharacterRange:nil)
+            index += stepGlyphRange.length
+        }
+        
+        self.onLayersUpdate?()
+    }
+    
+    var onPaste: () -> Bool = { return true }
+    override func paste(_ sender: Any?) {
+        if !self.text.isEmpty || self.onPaste() {
+            self.fixTypingAttributes()
+            super.paste(sender)
+            self.fixTypingAttributes()
+        }
+    }
+    
+    override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
+        if action == #selector(self.paste(_:)) {
+            if UIPasteboard.general.hasImages && self.text.isEmpty {
+                return true
+            }
+        }
+        if #available(iOS 15.0, *) {
+            if action == #selector(captureTextFromCamera(_:)) {
+                return false
+            }
+        }
+        return super.canPerformAction(action, withSender: sender)
     }
 }
 

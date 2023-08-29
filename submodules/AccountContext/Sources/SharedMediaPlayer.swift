@@ -1,6 +1,5 @@
 import Foundation
 import TelegramCore
-import Postbox
 import TelegramUIPreferences
 import SwiftSignalKit
 import UniversalMediaPlayer
@@ -59,8 +58,8 @@ public struct SharedMediaPlaybackAlbumArt: Equatable {
 
 public enum SharedMediaPlaybackDisplayData: Equatable {
     case music(title: String?, performer: String?, albumArt: SharedMediaPlaybackAlbumArt?, long: Bool, caption: NSAttributedString?)
-    case voice(author: Peer?, peer: Peer?)
-    case instantVideo(author: Peer?, peer: Peer?, timestamp: Int32)
+    case voice(author: EnginePeer?, peer: EnginePeer?)
+    case instantVideo(author: EnginePeer?, peer: EnginePeer?, timestamp: Int32)
     
     public static func ==(lhs: SharedMediaPlaybackDisplayData, rhs: SharedMediaPlaybackDisplayData) -> Bool {
         switch lhs {
@@ -71,13 +70,13 @@ public enum SharedMediaPlaybackDisplayData: Equatable {
                 return false
             }
         case let .voice(lhsAuthor, lhsPeer):
-            if case let .voice(rhsAuthor, rhsPeer) = rhs, arePeersEqual(lhsAuthor, rhsAuthor), arePeersEqual(lhsPeer, rhsPeer) {
+            if case let .voice(rhsAuthor, rhsPeer) = rhs, lhsAuthor == rhsAuthor, lhsPeer == rhsPeer {
                 return true
             } else {
                 return false
             }
         case let .instantVideo(lhsAuthor, lhsPeer, lhsTimestamp):
-            if case let .instantVideo(rhsAuthor, rhsPeer, rhsTimestamp) = rhs, arePeersEqual(lhsAuthor, rhsAuthor), arePeersEqual(lhsPeer, rhsPeer), lhsTimestamp == rhsTimestamp {
+            if case let .instantVideo(rhsAuthor, rhsPeer, rhsTimestamp) = rhs, lhsAuthor == rhsAuthor, lhsPeer == rhsPeer, lhsTimestamp == rhsTimestamp {
                 return true
             } else {
                 return false
@@ -125,10 +124,10 @@ public func areSharedMediaPlaylistItemIdsEqual(_ lhs: SharedMediaPlaylistItemId?
 }
 
 public struct PeerMessagesMediaPlaylistItemId: SharedMediaPlaylistItemId {
-    public let messageId: MessageId
-    public let messageIndex: MessageIndex
+    public let messageId: EngineMessage.Id
+    public let messageIndex: EngineMessage.Index
     
-    public init(messageId: MessageId, messageIndex: MessageIndex) {
+    public init(messageId: EngineMessage.Id, messageIndex: EngineMessage.Index) {
         self.messageId = messageId
         self.messageIndex = messageIndex
     }

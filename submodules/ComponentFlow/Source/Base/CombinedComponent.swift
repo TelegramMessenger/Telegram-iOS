@@ -180,7 +180,8 @@ public final class _UpdatedChildComponent {
     var _opacity: CGFloat?
     var _cornerRadius: CGFloat?
     var _clipsToBounds: Bool?
-
+    var _shadow: Shadow?
+    
     fileprivate var transitionAppear: Transition.Appear?
     fileprivate var transitionAppearWithGuide: (Transition.AppearWithGuide, _AnyChildComponent.Id)?
     fileprivate var transitionDisappear: Transition.Disappear?
@@ -240,7 +241,7 @@ public final class _UpdatedChildComponent {
         self._position = position
         return self
     }
-
+    
     @discardableResult public func scale(_ scale: CGFloat) -> _UpdatedChildComponent {
         self._scale = scale
         return self
@@ -258,6 +259,11 @@ public final class _UpdatedChildComponent {
 
     @discardableResult public func clipsToBounds(_ clipsToBounds: Bool) -> _UpdatedChildComponent {
         self._clipsToBounds = clipsToBounds
+        return self
+    }
+    
+    @discardableResult public func shadow(_ shadow: Shadow?) -> _UpdatedChildComponent {
+        self._shadow = shadow
         return self
     }
 
@@ -702,9 +708,20 @@ public extension CombinedComponent {
                         } else {
                             updatedChild.view.frame = updatedChild.size.centered(around: updatedChild._position ?? CGPoint())
                         }
+                        
                         updatedChild.view.alpha = updatedChild._opacity ?? 1.0
                         updatedChild.view.clipsToBounds = updatedChild._clipsToBounds ?? false
                         updatedChild.view.layer.cornerRadius = updatedChild._cornerRadius ?? 0.0
+                        if let shadow = updatedChild._shadow {
+                            updatedChild.view.layer.shadowColor = shadow.color.withAlphaComponent(1.0).cgColor
+                            updatedChild.view.layer.shadowRadius = shadow.radius
+                            updatedChild.view.layer.shadowOpacity = Float(shadow.color.alpha)
+                            updatedChild.view.layer.shadowOffset = shadow.offset
+                        } else {
+                            updatedChild.view.layer.shadowColor = nil
+                            updatedChild.view.layer.shadowRadius = 0.0
+                            updatedChild.view.layer.shadowOpacity = 0.0
+                        }
                         updatedChild.view.context(typeErasedComponent: updatedChild.component).erasedState._updated = { [weak viewContext] transition in
                             guard let viewContext = viewContext else {
                                 return
@@ -831,5 +848,21 @@ public extension CombinedComponent {
     
     static func StoredActionSlot<Arguments>(_ argumentsType: Arguments.Type) -> ActionSlot<Arguments> {
         return ActionSlot<Arguments>()
+    }
+}
+
+public struct Shadow {
+    public let color: UIColor
+    public let radius: CGFloat
+    public let offset: CGSize
+    
+    public init(
+        color: UIColor,
+        radius: CGFloat,
+        offset: CGSize
+    ) {
+        self.color = color
+        self.radius = radius
+        self.offset = offset
     }
 }

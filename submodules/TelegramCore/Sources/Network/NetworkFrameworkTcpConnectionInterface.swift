@@ -122,7 +122,7 @@ final class NetworkFrameworkTcpConnectionInterface: NSObject, MTTcpConnectionInt
                 }
             }
             
-            connection.betterPathUpdateHandler = { [weak self] hasBetterPath in
+            /*connection.betterPathUpdateHandler = { [weak self] hasBetterPath in
                 queue.async {
                     guard let self = self else {
                         return
@@ -131,7 +131,7 @@ final class NetworkFrameworkTcpConnectionInterface: NSObject, MTTcpConnectionInt
                         self.cancelWithError(error: nil)
                     }
                 }
-            }
+            }*/
             
             self.connectTimeoutTimer = SwiftSignalKit.Timer(timeout: timeout, repeat: false, completion: { [weak self] in
                 guard let self = self else {
@@ -178,7 +178,7 @@ final class NetworkFrameworkTcpConnectionInterface: NSObject, MTTcpConnectionInt
         
         func write(data: Data) {
             guard let connection = self.connection else {
-                assertionFailure("Connection not ready")
+                Logger.shared.log("NetworkFrameworkTcpConnectionInterface", "write called while connection == nil")
                 return
             }
             

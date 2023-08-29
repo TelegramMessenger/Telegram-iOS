@@ -179,6 +179,8 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     let arrowAction: (() -> Void)?
     let animationCache: AnimationCache?
     let animationRenderer: MultiAnimationRenderer?
+    let storyStats: (total: Int, unseen: Int, hasUnseenCloseFriends: Bool)?
+    let openStories: ((ContactsPeerItemPeer, ASDisplayNode) -> Void)?
     
     let useBottomGroupedInset: Bool
     
@@ -216,7 +218,9 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? = nil, arrowAction: (() -> Void)? = nil,
         animationCache: AnimationCache? = nil,
         animationRenderer: MultiAnimationRenderer? = nil,
-        useBottomGroupedInset: Bool = false
+        useBottomGroupedInset: Bool = false,
+        storyStats: (total: Int, unseen: Int, hasUnseenCloseFriends: Bool)? = nil,
+        openStories: ((ContactsPeerItemPeer, ASDisplayNode) -> Void)? = nil
     ) {
         self.presentationData = presentationData
         self.style = style
@@ -246,6 +250,8 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         self.arrowAction = arrowAction
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
+        self.storyStats = storyStats
+        self.openStories = openStories
         
         self.useBottomGroupedInset = useBottomGroupedInset
         
@@ -400,8 +406,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private var nonExtractedRect: CGRect?
     
     private let offsetContainerNode: ASDisplayNode
-    
-    private let avatarNode: AvatarNode
+    private let avatarNodeContainer: ASDisplayNode
+    public let avatarNode: AvatarNode
     private var avatarIconView: ComponentHostView<Empty>?
     private var avatarIconComponent: EmojiStatusComponent?
     private let titleNode: TextNode
@@ -414,6 +420,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private var selectionNode: CheckNode?
     private var actionButtonNodes: [HighlightableButtonNode]?
     private var arrowButtonNode: HighlightableButtonNode?
+    
+    private var avatarTapRecognizer: UITapGestureRecognizer?
     
     private var isHighlighted: Bool = false
 
@@ -502,8 +510,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         
         self.offsetContainerNode = ASDisplayNode()
         
+        self.avatarNodeContainer = ASDisplayNode()
         self.avatarNode = AvatarNode(font: avatarFont)
-        self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
+        self.avatarNode.isLayerBacked = false
         
         self.titleNode = TextNode()
         self.statusNode = TextNode()
@@ -524,7 +533,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         self.contextSourceNode.contentNode.addSubnode(self.extractedBackgroundImageNode)
         self.contextSourceNode.contentNode.addSubnode(self.offsetContainerNode)
         
-        self.offsetContainerNode.addSubnode(self.avatarNode)
+        self.avatarNodeContainer.addSubnode(self.avatarNode)
+        self.offsetContainerNode.addSubnode(self.avatarNodeContainer)
         self.offsetContainerNode.addSubnode(self.titleNode)
         self.offsetContainerNode.addSubnode(self.statusNode)
         
@@ -1034,6 +1044,29 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     break
                             }
                             
+                            strongSelf.avatarNode.setStoryStats(
+                                storyStats: item.storyStats.flatMap { stats in
+                                    return AvatarNode.StoryStats(
+                                        totalCount: stats.total,
+                                        unseenCount: stats.unseen,
+                                        hasUnseenCloseFriendsItems: stats.hasUnseenCloseFriends
+                                    )
+                                },
+                                presentationParams: AvatarNode.StoryPresentationParams(
+                                    colors: AvatarNode.Colors(theme: item.presentationData.theme),
+                                    lineWidth: 1.33,
+                                    inactiveLineWidth: 1.33
+                                ),
+                                transition: animated ? Transition(animation: .curve(duration: 0.25, curve: .easeInOut)) : .immediate
+                            )
+                            
+                            if strongSelf.avatarTapRecognizer == nil {
+                                let avatarTapRecognizer = UITapGestureRecognizer(target: strongSelf, action: #selector(strongSelf.avatarStoryTapGesture(_:)))
+                                strongSelf.avatarTapRecognizer = avatarTapRecognizer
+                                strongSelf.avatarNode.view.addGestureRecognizer(avatarTapRecognizer)
+                            }
+                            strongSelf.avatarNode.isUserInteractionEnabled = item.storyStats != nil
+                            
                             let transition: ContainedViewLayoutTransition
                             if animated {
                                 transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
@@ -1080,7 +1113,16 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 }
                             }
                             
-                            transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 50.0, y: floor((nodeLayout.contentSize.height - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter)))
+                            let avatarFrame = CGRect(origin: CGPoint(x: revealOffset + leftInset - 50.0, y: floor((nodeLayout.contentSize.height - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter))
+                            
+                            strongSelf.avatarNode.frame = CGRect(origin: CGPoint(), size: avatarFrame.size)
+                            
+                            transition.updatePosition(node: strongSelf.avatarNodeContainer, position: avatarFrame.center)
+                            transition.updateBounds(node: strongSelf.avatarNodeContainer, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
+                            
+                            let avatarScale: CGFloat = 1.0
+                            
+                            transition.updateTransformScale(node: strongSelf.avatarNodeContainer, scale: CGPoint(x: avatarScale, y: avatarScale))
                             
                             if case let .thread(_, title, icon, color) = item.peer {
                                 let animationCache = item.context.animationCache
@@ -1120,12 +1162,12 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 )
                                 transition.updateFrame(view: avatarIconView, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 43.0, y: floor((nodeLayout.contentSize.height - iconSize.height) / 2.0)), size: iconSize))
 
-                                strongSelf.avatarNode.isHidden = true
+                                strongSelf.avatarNodeContainer.isHidden = true
                             } else if let avatarIconView = strongSelf.avatarIconView {
                                 strongSelf.avatarIconView = nil
                                 avatarIconView.removeFromSuperview()
 
-                                strongSelf.avatarNode.isHidden = false
+                                strongSelf.avatarNodeContainer.isHidden = false
                             }
                             
                             let _ = titleApply()
@@ -1485,6 +1527,14 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false)
     }
     
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let result = self.avatarNode.view.hitTest(self.view.convert(point, to: self.avatarNode.view), with: event) {
+            return result
+        }
+        
+        return super.hitTest(point, with: event)
+    }
+    
     override public func headers() -> [ListViewItemHeader]? {
         if let (item, _, _, _, _, _) = self.layoutParams {
             return item.header.flatMap { [$0] }
@@ -1496,6 +1546,14 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     @objc func arrowButtonPressed() {
         if let (item, _, _, _, _, _) = self.layoutParams {
             item.arrowAction?()
+        }
+    }
+    
+    @objc private func avatarStoryTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            if let (item, _, _, _, _, _) = self.layoutParams {
+                item.openStories?(item.peer, self)
+            }
         }
     }
 }

@@ -1377,7 +1377,7 @@ public extension Api {
         case documentAttributeHasStickers
         case documentAttributeImageSize(w: Int32, h: Int32)
         case documentAttributeSticker(flags: Int32, alt: String, stickerset: Api.InputStickerSet, maskCoords: Api.MaskCoords?)
-        case documentAttributeVideo(flags: Int32, duration: Int32, w: Int32, h: Int32)
+        case documentAttributeVideo(flags: Int32, duration: Double, w: Int32, h: Int32, preloadPrefixSize: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -1433,14 +1433,15 @@ public extension Api {
                     stickerset.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {maskCoords!.serialize(buffer, true)}
                     break
-                case .documentAttributeVideo(let flags, let duration, let w, let h):
+                case .documentAttributeVideo(let flags, let duration, let w, let h, let preloadPrefixSize):
                     if boxed {
-                        buffer.appendInt32(250621158)
+                        buffer.appendInt32(-745541182)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(duration, buffer: buffer, boxed: false)
+                    serializeDouble(duration, buffer: buffer, boxed: false)
                     serializeInt32(w, buffer: buffer, boxed: false)
                     serializeInt32(h, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(preloadPrefixSize!, buffer: buffer, boxed: false)}
                     break
     }
     }
@@ -1461,8 +1462,8 @@ public extension Api {
                 return ("documentAttributeImageSize", [("w", w as Any), ("h", h as Any)])
                 case .documentAttributeSticker(let flags, let alt, let stickerset, let maskCoords):
                 return ("documentAttributeSticker", [("flags", flags as Any), ("alt", alt as Any), ("stickerset", stickerset as Any), ("maskCoords", maskCoords as Any)])
-                case .documentAttributeVideo(let flags, let duration, let w, let h):
-                return ("documentAttributeVideo", [("flags", flags as Any), ("duration", duration as Any), ("w", w as Any), ("h", h as Any)])
+                case .documentAttributeVideo(let flags, let duration, let w, let h, let preloadPrefixSize):
+                return ("documentAttributeVideo", [("flags", flags as Any), ("duration", duration as Any), ("w", w as Any), ("h", h as Any), ("preloadPrefixSize", preloadPrefixSize as Any)])
     }
     }
     
@@ -1566,18 +1567,21 @@ public extension Api {
         public static func parse_documentAttributeVideo(_ reader: BufferReader) -> DocumentAttribute? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
+            var _2: Double?
+            _2 = reader.readDouble()
             var _3: Int32?
             _3 = reader.readInt32()
             var _4: Int32?
             _4 = reader.readInt32()
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_5 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.DocumentAttribute.documentAttributeVideo(flags: _1!, duration: _2!, w: _3!, h: _4!)
+            let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.DocumentAttribute.documentAttributeVideo(flags: _1!, duration: _2!, w: _3!, h: _4!, preloadPrefixSize: _5)
             }
             else {
                 return nil

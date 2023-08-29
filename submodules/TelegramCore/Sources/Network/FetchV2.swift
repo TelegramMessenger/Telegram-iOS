@@ -191,6 +191,7 @@ private final class FetchImpl {
     private final class Impl {
         private let queue: Queue
         
+        private let accountPeerId: PeerId
         private let postbox: Postbox
         private let network: Network
         private let mediaReferenceRevalidationContext: MediaReferenceRevalidationContext?
@@ -214,12 +215,14 @@ private final class FetchImpl {
         private var requiredRangesDisposable: Disposable?
         private var requiredRanges: [RequiredRange] = []
         
+        private let defaultPartSize: Int64
         private var state: State?
         
         private let loggingIdentifier: String
         
         init(
             queue: Queue,
+            accountPeerId: PeerId,
             postbox: Postbox,
             network: Network,
             mediaReferenceRevalidationContext: MediaReferenceRevalidationContext?,
@@ -237,6 +240,7 @@ private final class FetchImpl {
         ) {
             self.queue = queue
             
+            self.accountPeerId = accountPeerId
             self.postbox = postbox
             self.network = network
             self.mediaReferenceRevalidationContext = mediaReferenceRevalidationContext
@@ -259,6 +263,24 @@ private final class FetchImpl {
             /*#if DEBUG
             self.updatedFileReference = Data()
             #endif*/
+            
+            var isStory = false
+            if let info = parameters?.info as? TelegramCloudMediaResourceFetchInfo {
+                switch info.reference {
+                case let .media(media, _):
+                    if case .story = media {
+                        isStory = true
+                    }
+                default:
+                    break
+                }
+            }
+            
+            if isStory {
+                self.defaultPartSize = 512 * 1024
+            } else {
+                self.defaultPartSize = 128 * 1024
+            }
             
             if let resource = resource as? TelegramCloudMediaResource {
                 if let apiInputLocation = resource.apiInputLocation(fileReference: Data()) {
@@ -294,7 +316,7 @@ private final class FetchImpl {
                 
                 self.state = .fetching(FetchingState(
                     fetchLocation: .datacenter(self.datacenterId),
-                    partSize: 128 * 1024,
+                    partSize: self.defaultPartSize,
                     minPartSize: 4 * 1024,
                     maxPartSize: 1 * 1024 * 1024,
                     partAlignment: 4 * 1024,
@@ -431,12 +453,14 @@ private final class FetchImpl {
                     let reuploadSignal = self.network.multiplexedRequestManager.request(
                         to: .main(state.cdnData.sourceDatacenterId),
                         consumerId: self.consumerId,
+                        resourceId: self.resource.id.stringRepresentation,
                         data: Api.functions.upload.reuploadCdnFile(
                             fileToken: Buffer(data: state.cdnData.fileToken),
                             requestToken: Buffer(data: state.refreshToken)
                         ),
                         tag: nil,
-                        continueInBackground: self.continueInBackground
+                        continueInBackground: self.continueInBackground,
+                        expectedResponseSize: nil
                     )
                     
                     let cdnData = state.cdnData
@@ -448,9 +472,9 @@ private final class FetchImpl {
                         }
                         self.state = .fetching(FetchImpl.FetchingState(
                             fetchLocation: .cdn(cdnData),
-                            partSize: 128 * 1024,
+                            partSize: self.defaultPartSize,
                             minPartSize: 4 * 1024,
-                            maxPartSize: 128 * 1024,
+                            maxPartSize: self.defaultPartSize,
                             partAlignment: 4 * 1024,
                             partDivision: 1 * 1024 * 1024,
                             maxPendingParts: 6
@@ -471,6 +495,7 @@ private final class FetchImpl {
                         let fetchLocation = state.fetchLocation
                         
                         state.disposable = (revalidateMediaResourceReference(
+                            accountPeerId: self.accountPeerId,
                             postbox: self.postbox,
                             network: self.network,
                             revalidationContext: mediaReferenceRevalidationContext,
@@ -495,9 +520,9 @@ private final class FetchImpl {
                             
                             self.state = .fetching(FetchingState(
                                 fetchLocation: fetchLocation,
-                                partSize: 128 * 1024,
+                                partSize: self.defaultPartSize,
                                 minPartSize: 4 * 1024,
-                                maxPartSize: 128 * 1024,
+                                maxPartSize: self.defaultPartSize,
                                 partAlignment: 4 * 1024,
                                 partDivision: 1 * 1024 * 1024,
                                 maxPendingParts: 6
@@ -542,13 +567,15 @@ private final class FetchImpl {
                 filePartRequest = self.network.multiplexedRequestManager.request(
                     to: .cdn(cdnData.id),
                     consumerId: self.consumerId,
+                    resourceId: self.resource.id.stringRepresentation,
                     data: Api.functions.upload.getCdnFile(
                         fileToken: Buffer(data: cdnData.fileToken),
                         offset: requestedOffset,
                         limit: Int32(requestedLength)
                     ),
                     tag: self.parameters?.tag,
-                    continueInBackground: self.continueInBackground
+                    continueInBackground: self.continueInBackground,
+                    expectedResponseSize: Int32(requestedLength)
                 )
                 |> map { result -> FilePartResult in
                     switch result {
@@ -585,13 +612,15 @@ private final class FetchImpl {
                         filePartRequest = self.network.multiplexedRequestManager.request(
                             to: .main(sourceDatacenterId),
                             consumerId: self.consumerId,
+                            resourceId: self.resource.id.stringRepresentation,
                             data: Api.functions.upload.getFile(
                                 flags: 0,
                                 location: inputLocation,
                                 offset: part.fetchRange.lowerBound,
                                 limit: Int32(requestedLength)),
                             tag: self.parameters?.tag,
-                            continueInBackground: self.continueInBackground
+                            continueInBackground: self.continueInBackground,
+                            expectedResponseSize: Int32(requestedLength)
                         )
                         |> map { result -> FilePartResult in
                             switch result {
@@ -636,9 +665,7 @@ private final class FetchImpl {
                     case let .data(data):
                         let actualLength = Int64(data.count)
                         
-                        var isComplete = false
                         if actualLength < requestedLength {
-                            isComplete = true
                             let resultingSize = fetchRange.lowerBound + actualLength
                             if let currentKnownSize = self.knownSize {
                                 Logger.shared.log("FetchV2", "\(self.loggingIdentifier): setting known size to min(\(currentKnownSize), \(resultingSize)) = \(min(currentKnownSize, resultingSize))")
@@ -670,13 +697,13 @@ private final class FetchImpl {
                         }
                         
                         if !actualData.isEmpty {
-                            Logger.shared.log("FetchV2", "\(self.loggingIdentifier): emitting data part \(partRange) (aligned as \(fetchRange)): \(actualData.count), isComplete: \(isComplete)")
+                            Logger.shared.log("FetchV2", "\(self.loggingIdentifier): emitting data part \(partRange) (aligned as \(fetchRange)): \(actualData.count)")
                             
                             self.onNext(.dataPart(
                                 resourceOffset: partRange.lowerBound,
                                 data: actualData,
                                 range: 0 ..< Int64(actualData.count),
-                                complete: isComplete
+                                complete: false
                             ))
                         } else {
                             Logger.shared.log("FetchV2", "\(self.loggingIdentifier): not emitting data part \(partRange) (aligned as \(fetchRange))")
@@ -684,9 +711,9 @@ private final class FetchImpl {
                     case let .cdnRedirect(cdnData):
                         self.state = .fetching(FetchImpl.FetchingState(
                             fetchLocation: .cdn(cdnData),
-                            partSize: 128 * 1024,
+                            partSize: self.defaultPartSize,
                             minPartSize: 4 * 1024,
-                            maxPartSize: 128 * 1024,
+                            maxPartSize: self.defaultPartSize,
                             partAlignment: 4 * 1024,
                             partDivision: 1 * 1024 * 1024,
                             maxPendingParts: 6
@@ -718,6 +745,7 @@ private final class FetchImpl {
     
     
     init(
+        accountPeerId: PeerId,
         postbox: Postbox,
         network: Network,
         mediaReferenceRevalidationContext: MediaReferenceRevalidationContext?,
@@ -738,6 +766,7 @@ private final class FetchImpl {
         self.impl = QueueLocalObject(queue: queue, generate: {
             return Impl(
                 queue: queue,
+                accountPeerId: accountPeerId,
                 postbox: postbox,
                 network: network,
                 mediaReferenceRevalidationContext: mediaReferenceRevalidationContext,
@@ -758,6 +787,7 @@ private final class FetchImpl {
 }
 
 func multipartFetchV2(
+    accountPeerId: PeerId,
     postbox: Postbox,
     network: Network,
     mediaReferenceRevalidationContext: MediaReferenceRevalidationContext?,
@@ -773,6 +803,7 @@ func multipartFetchV2(
 ) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return Signal { subscriber in
         let impl = FetchImpl(
+            accountPeerId: accountPeerId,
             postbox: postbox,
             network: network,
             mediaReferenceRevalidationContext: mediaReferenceRevalidationContext,

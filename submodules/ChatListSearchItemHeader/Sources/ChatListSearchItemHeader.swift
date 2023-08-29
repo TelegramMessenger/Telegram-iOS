@@ -30,6 +30,7 @@ public enum ChatListSearchItemHeaderType {
     case downloading
     case recentDownloads
     case topics
+    case text(String, AnyHashable)
     
     fileprivate func title(strings: PresentationStrings) -> String {
         switch self {
@@ -87,6 +88,8 @@ public enum ChatListSearchItemHeaderType {
                 return strings.DownloadList_DownloadedHeader
             case .topics:
                 return strings.DialogList_SearchSectionTopics
+            case let .text(text, _):
+                return text
         }
     }
     
@@ -146,11 +149,13 @@ public enum ChatListSearchItemHeaderType {
                 return .recentDownloads
             case .topics:
                 return .topics
+            case let .text(_, id):
+                return .text(id)
         }
     }
 }
 
-private enum ChatListSearchItemHeaderId: Int32 {
+private enum ChatListSearchItemHeaderId: Hashable {
     case localPeers
     case members
     case contacts
@@ -181,6 +186,7 @@ private enum ChatListSearchItemHeaderId: Int32 {
     case downloading
     case recentDownloads
     case topics
+    case text(AnyHashable)
 }
 
 public final class ChatListSearchItemHeader: ListViewItemHeader {
@@ -197,7 +203,7 @@ public final class ChatListSearchItemHeader: ListViewItemHeader {
     
     public init(type: ChatListSearchItemHeaderType, theme: PresentationTheme, strings: PresentationStrings, actionTitle: String? = nil, action: (() -> Void)? = nil) {
         self.type = type
-        self.id = ListViewItemNode.HeaderId(space: 0, id: Int64(self.type.id.rawValue))
+        self.id = ListViewItemNode.HeaderId(space: 0, id: Int64(self.type.id.hashValue))
         self.theme = theme
         self.strings = strings
         self.actionTitle = actionTitle

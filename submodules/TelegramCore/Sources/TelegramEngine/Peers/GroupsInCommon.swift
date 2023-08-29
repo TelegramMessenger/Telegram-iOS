@@ -61,6 +61,7 @@ private final class GroupsInCommonContextImpl {
             
             let maxId = self.peers.last?.peerId.id
             let peerId = self.peerId
+            let accountPeerId = self.account.peerId
             let network = self.account.network
             let postbox = self.account.postbox
             let signal: Signal<([Peer], Int), NoError> = self.account.postbox.transaction { transaction -> Api.InputUser? in
@@ -94,16 +95,15 @@ private final class GroupsInCommonContextImpl {
                     
                     
                     return postbox.transaction { transaction -> ([Peer], Int) in
+                        let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: [])
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                        
                         var peers: [Peer] = []
                         for chat in chats {
-                            if let peer = parseTelegramGroupOrChannel(chat: chat) {
+                            if let peer = transaction.getPeer(chat.peerId) {
                                 peers.append(peer)
                             }
                         }
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer? in
-                            return updated
-                        })
-                        
                         return (peers, count ?? 0)
                     }
                 }

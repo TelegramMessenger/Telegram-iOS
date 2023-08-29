@@ -88,12 +88,14 @@ public struct MediaAutoDownloadCategories: Codable, Equatable, Comparable {
     public var photo: MediaAutoDownloadCategory
     public var video: MediaAutoDownloadCategory
     public var file: MediaAutoDownloadCategory
+    public var stories: MediaAutoDownloadCategory
     
-    public init(basePreset: MediaAutoDownloadPreset, photo: MediaAutoDownloadCategory, video: MediaAutoDownloadCategory, file: MediaAutoDownloadCategory) {
+    public init(basePreset: MediaAutoDownloadPreset, photo: MediaAutoDownloadCategory, video: MediaAutoDownloadCategory, file: MediaAutoDownloadCategory, stories: MediaAutoDownloadCategory) {
         self.basePreset = basePreset
         self.photo = photo
         self.video = video
         self.file = file
+        self.stories = stories
     }
     
     public init(from decoder: Decoder) throws {
@@ -103,6 +105,7 @@ public struct MediaAutoDownloadCategories: Codable, Equatable, Comparable {
         self.photo = try container.decode(MediaAutoDownloadCategory.self, forKey: "photo")
         self.video = try container.decode(MediaAutoDownloadCategory.self, forKey: "video")
         self.file = try container.decode(MediaAutoDownloadCategory.self, forKey: "file")
+        self.stories = try container.decodeIfPresent(MediaAutoDownloadCategory.self, forKey: "stories") ?? MediaAutoDownloadSettings.defaultSettings.presets.high.stories
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -112,6 +115,7 @@ public struct MediaAutoDownloadCategories: Codable, Equatable, Comparable {
         try container.encode(self.photo, forKey: "photo")
         try container.encode(self.video, forKey: "video")
         try container.encode(self.file, forKey: "file")
+        try container.encode(self.stories, forKey: "stories")
     }
     
     public static func < (lhs: MediaAutoDownloadCategories, rhs: MediaAutoDownloadCategories) -> Bool {
@@ -370,15 +374,29 @@ public struct MediaAutoDownloadSettings: Codable, Equatable {
     
     public static var defaultSettings: MediaAutoDownloadSettings {
         let mb: Int64 = 1024 * 1024
-        let presets = MediaAutoDownloadPresets(low: MediaAutoDownloadCategories(basePreset: .low, photo: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
-            video: MediaAutoDownloadCategory(contacts: false, otherPrivate: false, groups: false, channels: false, sizeLimit: 1 * mb, predownload: false),
-            file: MediaAutoDownloadCategory(contacts: false, otherPrivate: false, groups: false, channels: false, sizeLimit: 1 * mb, predownload: false)),
-            medium: MediaAutoDownloadCategories(basePreset: .medium, photo: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
-            video: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: Int64(2.5 * CGFloat(mb)), predownload: false),
-            file: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false)),
-            high: MediaAutoDownloadCategories(basePreset: .high, photo: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
-            video: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 10 * mb, predownload: true),
-            file: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 3 * mb, predownload: false)))
+        let presets = MediaAutoDownloadPresets(low:
+            MediaAutoDownloadCategories(
+                basePreset: .low,
+                photo: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
+                video: MediaAutoDownloadCategory(contacts: false, otherPrivate: false, groups: false, channels: false, sizeLimit: 1 * mb, predownload: false),
+                file: MediaAutoDownloadCategory(contacts: false, otherPrivate: false, groups: false, channels: false, sizeLimit: 1 * mb, predownload: false),
+                stories: MediaAutoDownloadCategory(contacts: false, otherPrivate: false, groups: false, channels: false, sizeLimit: 20 * mb, predownload: false)
+            ),
+            medium: MediaAutoDownloadCategories(
+                basePreset: .medium,
+                photo: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
+                video: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: Int64(2.5 * CGFloat(mb)), predownload: false),
+                file: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
+                stories: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 20 * mb, predownload: false)
+            ),
+            high: MediaAutoDownloadCategories(
+                basePreset: .high,
+                photo: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
+                video: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 10 * mb, predownload: true),
+                file: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 3 * mb, predownload: false),
+                stories: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 20 * mb, predownload: false)
+            )
+        )
         return MediaAutoDownloadSettings(presets: presets, cellular: MediaAutoDownloadConnection(enabled: true, preset: .medium, custom: nil), wifi: MediaAutoDownloadConnection(enabled: true, preset: .high, custom: nil), downloadInBackground: true, energyUsageSettings: EnergyUsageSettings.default)
     }
     
@@ -436,7 +454,13 @@ private func categoriesWithAutodownloadPreset(_ autodownloadPreset: Autodownload
     let fileEnabled = autodownloadPreset.fileSizeMax > 0
     let fileSizeMax = autodownloadPreset.fileSizeMax > 0 ? autodownloadPreset.fileSizeMax : 1 * 1024 * 1024
     
-    return MediaAutoDownloadCategories(basePreset: preset, photo: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: autodownloadPreset.photoSizeMax, predownload: false), video: MediaAutoDownloadCategory(contacts: videoEnabled, otherPrivate: videoEnabled, groups: videoEnabled, channels: videoEnabled, sizeLimit: videoSizeMax, predownload: autodownloadPreset.preloadLargeVideo), file: MediaAutoDownloadCategory(contacts: fileEnabled, otherPrivate: fileEnabled, groups: fileEnabled, channels: fileEnabled, sizeLimit: fileSizeMax, predownload: false))
+    return MediaAutoDownloadCategories(
+        basePreset: preset,
+        photo: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: autodownloadPreset.photoSizeMax, predownload: false),
+        video: MediaAutoDownloadCategory(contacts: videoEnabled, otherPrivate: videoEnabled, groups: videoEnabled, channels: videoEnabled, sizeLimit: videoSizeMax, predownload: autodownloadPreset.preloadLargeVideo),
+        file: MediaAutoDownloadCategory(contacts: fileEnabled, otherPrivate: fileEnabled, groups: fileEnabled, channels: fileEnabled, sizeLimit: fileSizeMax, predownload: false),
+        stories: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: autodownloadPreset.photoSizeMax, predownload: false)
+    )
 }
 
 private func presetsWithAutodownloadSettings(_ autodownloadSettings: AutodownloadSettings) -> MediaAutoDownloadPresets {
@@ -479,7 +503,15 @@ public func effectiveAutodownloadCategories(settings: MediaAutoDownloadSettings,
     }
 }
 
-private func categoryAndSizeForMedia(_ media: Media, categories: MediaAutoDownloadCategories) -> (MediaAutoDownloadCategory, Int32?)? {
+private func categoryAndSizeForMedia(_ media: Media?, isStory: Bool, categories: MediaAutoDownloadCategories) -> (MediaAutoDownloadCategory, Int32?)? {
+    if isStory {
+        return (categories.stories, 0)
+    }
+    
+    guard let media = media else {
+        return (categories.photo, 0)
+    }
+    
     if media is TelegramMediaImage || media is TelegramMediaWebFile {
         return (categories.photo, 0)
     } else if let file = media as? TelegramMediaFile {
@@ -520,7 +552,7 @@ public func isAutodownloadEnabledForAnyPeerType(category: MediaAutoDownloadCateg
     return category.contacts || category.otherPrivate || category.groups || category.channels
 }
 
-public func shouldDownloadMediaAutomatically(settings: MediaAutoDownloadSettings, peerType: MediaAutoDownloadPeerType, networkType: MediaAutoDownloadNetworkType, authorPeerId: PeerId? = nil, contactsPeerIds: Set<PeerId> = Set(), media: Media) -> Bool {
+public func shouldDownloadMediaAutomatically(settings: MediaAutoDownloadSettings, peerType: MediaAutoDownloadPeerType, networkType: MediaAutoDownloadNetworkType, authorPeerId: PeerId? = nil, contactsPeerIds: Set<PeerId> = Set(), media: Media?, isStory: Bool = false) -> Bool {
     if (networkType == .cellular && !settings.cellular.enabled) || (networkType == .wifi && !settings.wifi.enabled) {
         return false
     }
@@ -533,7 +565,7 @@ public func shouldDownloadMediaAutomatically(settings: MediaAutoDownloadSettings
         peerType = .contact
     }
     
-    if let (category, size) = categoryAndSizeForMedia(media, categories: effectiveAutodownloadCategories(settings: settings, networkType: networkType)) {
+    if let (category, size) = categoryAndSizeForMedia(media, isStory: isStory, categories: effectiveAutodownloadCategories(settings: settings, networkType: networkType)) {
         if let size = size {
             var sizeLimit = category.sizeLimit
             if let file = media as? TelegramMediaFile, file.isVoice {
@@ -542,7 +574,7 @@ public func shouldDownloadMediaAutomatically(settings: MediaAutoDownloadSettings
                 return false
             }
             return size <= sizeLimit
-        } else if media.id?.namespace == Namespaces.Media.LocalFile {
+        } else if media?.id?.namespace == Namespaces.Media.LocalFile {
             return true
         } else if category.sizeLimit == Int32.max {
             return true
@@ -560,7 +592,7 @@ public func shouldPredownloadMedia(settings: MediaAutoDownloadSettings, peerType
             return false
         }
         
-        if let (category, _) = categoryAndSizeForMedia(media, categories: effectiveAutodownloadCategories(settings: settings, networkType: networkType)) {
+        if let (category, _) = categoryAndSizeForMedia(media, isStory: false, categories: effectiveAutodownloadCategories(settings: settings, networkType: networkType)) {
             guard isAutodownloadEnabledForPeerType(peerType, category: category) else {
                 return false
             }

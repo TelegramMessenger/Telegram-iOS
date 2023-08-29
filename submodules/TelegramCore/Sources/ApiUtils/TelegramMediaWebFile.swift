@@ -5,7 +5,7 @@ public extension TelegramMediaWebFile {
         return dimensionsForFileAttributes(self.attributes)
     }
     
-    var duration: Int32? {
+    var duration: Double? {
         return durationForFileAttributes(self.attributes)
     }
 }

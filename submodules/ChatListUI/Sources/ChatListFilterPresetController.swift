@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import PresentationDataUtils
@@ -30,8 +29,8 @@ private final class ChatListFilterPresetControllerArguments {
     let updateState: ((ChatListFilterPresetControllerState) -> ChatListFilterPresetControllerState) -> Void
     let openAddIncludePeer: () -> Void
     let openAddExcludePeer: () -> Void
-    let deleteIncludePeer: (PeerId) -> Void
-    let deleteExcludePeer: (PeerId) -> Void
+    let deleteIncludePeer: (EnginePeer.Id) -> Void
+    let deleteExcludePeer: (EnginePeer.Id) -> Void
     let setItemIdWithRevealedOptions: (ChatListFilterRevealedItemId?, ChatListFilterRevealedItemId?) -> Void
     let deleteIncludeCategory: (ChatListFilterIncludeCategory) -> Void
     let deleteExcludeCategory: (ChatListFilterExcludeCategory) -> Void
@@ -49,8 +48,8 @@ private final class ChatListFilterPresetControllerArguments {
         updateState: @escaping ((ChatListFilterPresetControllerState) -> ChatListFilterPresetControllerState) -> Void,
         openAddIncludePeer: @escaping () -> Void,
         openAddExcludePeer: @escaping () -> Void,
-        deleteIncludePeer: @escaping (PeerId) -> Void,
-        deleteExcludePeer: @escaping (PeerId) -> Void,
+        deleteIncludePeer: @escaping (EnginePeer.Id) -> Void,
+        deleteExcludePeer: @escaping (EnginePeer.Id) -> Void,
         setItemIdWithRevealedOptions: @escaping (ChatListFilterRevealedItemId?, ChatListFilterRevealedItemId?) -> Void,
         deleteIncludeCategory: @escaping (ChatListFilterIncludeCategory) -> Void,
         deleteExcludeCategory: @escaping (ChatListFilterExcludeCategory) -> Void,
@@ -93,7 +92,7 @@ private enum ChatListFilterPresetControllerSection: Int32 {
 
 private enum ChatListFilterPresetEntryStableId: Hashable {
     case index(Int)
-    case peer(PeerId)
+    case peer(EnginePeer.Id)
     case includePeerInfo
     case excludePeerInfo
     case includeCategory(ChatListFilterIncludeCategory)
@@ -311,7 +310,7 @@ private extension ChatListFilterCategoryIcon {
 }
 
 private enum ChatListFilterRevealedItemId: Equatable {
-    case peer(PeerId)
+    case peer(EnginePeer.Id)
     case includeCategory(ChatListFilterIncludeCategory)
     case excludeCategory(ChatListFilterExcludeCategory)
 }
@@ -573,8 +572,8 @@ private struct ChatListFilterPresetControllerState: Equatable {
     var excludeMuted: Bool
     var excludeRead: Bool
     var excludeArchived: Bool
-    var additionallyIncludePeers: [PeerId]
-    var additionallyExcludePeers: [PeerId]
+    var additionallyIncludePeers: [EnginePeer.Id]
+    var additionallyExcludePeers: [EnginePeer.Id]
     
     var revealedItemId: ChatListFilterRevealedItemId?
     var expandedSections: Set<FilterSection>
@@ -825,7 +824,7 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
             return
         }
                 
-        var includePeers: [PeerId] = []
+        var includePeers: [EnginePeer.Id] = []
         for peerId in peerIds {
             switch peerId {
             case let .peer(id):
@@ -838,7 +837,7 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
         
         if filter.id > 1, case let .filter(_, _, _, data) = filter, data.hasSharedLinks {
             let newPeers = includePeers.filter({ !(filter.data?.includePeers.peers.contains($0) ?? false) })
-            var removedPeers: [PeerId] = []
+            var removedPeers: [EnginePeer.Id] = []
             if let data = filter.data {
                 removedPeers = data.includePeers.peers.filter({ !includePeers.contains($0) })
             }
@@ -951,7 +950,7 @@ private func internalChatListFilterExcludeChatsController(context: AccountContex
             return
         }
         
-        var excludePeers: [PeerId] = []
+        var excludePeers: [EnginePeer.Id] = []
         for peerId in peerIds {
             switch peerId {
             case let .peer(id):
@@ -1144,7 +1143,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
         sharedLinks.set(Signal<[ExportedChatFolderLink]?, NoError>.single(nil) |> then(context.engine.peers.getExportedChatFolderLinks(id: initialPreset.id)))
     }
     
-    let currentPeers = Atomic<[PeerId: EngineRenderedPeer]>(value: [:])
+    let currentPeers = Atomic<[EnginePeer.Id: EngineRenderedPeer]>(value: [:])
     let stateWithPeers = statePromise.get()
     |> mapToSignal { state -> Signal<(ChatListFilterPresetControllerState, [EngineRenderedPeer], [EngineRenderedPeer]), NoError> in
         let currentPeersValue = currentPeers.with { $0 }
@@ -1913,28 +1912,28 @@ func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, chec
                     case .generic:
                         text = presentationData.strings.ChatListFilter_CreateLinkUnknownError
                     case let .sharedFolderLimitExceeded(limit, _):
-                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .membershipInSharedFolders, count: limit, action: {
+                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .membershipInSharedFolders, count: limit, forceDark: false, cancel: {}, action: {
                             pushPremiumController(PremiumIntroScreen(context: context, source: .membershipInSharedFolders))
                         })
                         pushController(limitController)
                         
                         return
                     case let .limitExceeded(limit, _):
-                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .linksPerSharedFolder, count: limit, action: {
+                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .linksPerSharedFolder, count: limit, forceDark: false, cancel: {}, action: {
                             pushPremiumController(PremiumIntroScreen(context: context, source: .linksPerSharedFolder))
                         })
                         pushController(limitController)
                         
                         return
                     case let .tooManyChannels(limit, _):
-                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .linksPerSharedFolder, count: limit, action: {
+                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .linksPerSharedFolder, count: limit, forceDark: false, cancel: {}, action: {
                             pushPremiumController(PremiumIntroScreen(context: context, source: .groupsAndChannels))
                         })
                         pushController(limitController)
                         
                         return
                     case let .tooManyChannelsInAccount(limit, _):
-                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .channels, count: limit, action: {
+                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .channels, count: limit, forceDark: false, cancel: {}, action: {
                             pushPremiumController(PremiumIntroScreen(context: context, source: .groupsAndChannels))
                         })
                         pushController(limitController)

@@ -18,14 +18,16 @@ public struct ChatMessageEntryAttributes: Equatable {
     var updatingMedia: ChatUpdatingMessageMedia?
     var isPlaying: Bool
     var isCentered: Bool
+    var authorStoryStats: PeerStoryStats?
     
-    init(rank: CachedChannelAdminRank?, isContact: Bool, contentTypeHint: ChatMessageEntryContentType, updatingMedia: ChatUpdatingMessageMedia?, isPlaying: Bool, isCentered: Bool) {
+    init(rank: CachedChannelAdminRank?, isContact: Bool, contentTypeHint: ChatMessageEntryContentType, updatingMedia: ChatUpdatingMessageMedia?, isPlaying: Bool, isCentered: Bool, authorStoryStats: PeerStoryStats?) {
         self.rank = rank
         self.isContact = isContact
         self.contentTypeHint = contentTypeHint
         self.updatingMedia = updatingMedia
         self.isPlaying = isPlaying
         self.isCentered = isCentered
+        self.authorStoryStats = authorStoryStats
     }
     
     public init() {
@@ -35,6 +37,7 @@ public struct ChatMessageEntryAttributes: Equatable {
         self.updatingMedia = nil
         self.isPlaying = false
         self.isCentered = false
+        self.authorStoryStats = nil
     }
 }
 
@@ -137,6 +140,20 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                                 }
                             }
                         }
+                        if lhsMessage.associatedStories.count != rhsMessage.associatedStories.count {
+                            return false
+                        }
+                        if !lhsMessage.associatedStories.isEmpty {
+                            for (id, story) in lhsMessage.associatedStories {
+                                if let otherStory = rhsMessage.associatedStories[id] {
+                                    if story != otherStory {
+                                        return false
+                                    }
+                                } else {
+                                    return false
+                                }
+                            }
+                        }
                         if lhsSelection != rhsSelection {
                             return false
                         }
@@ -191,6 +208,20 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                                     if otherMessage.stableVersion != message.stableVersion {
                                         return false
                                     }
+                                }
+                            }
+                        }
+                        if lhsMessage.associatedStories.count != rhsMessage.associatedStories.count {
+                            return false
+                        }
+                        if !lhsMessage.associatedStories.isEmpty {
+                            for (id, story) in lhsMessage.associatedStories {
+                                if let otherStory = rhsMessage.associatedStories[id] {
+                                    if story != otherStory {
+                                        return false
+                                    }
+                                } else {
+                                    return false
                                 }
                             }
                         }

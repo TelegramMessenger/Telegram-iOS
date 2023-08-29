@@ -115,7 +115,9 @@ public final class MediaPlayerNode: ASDisplayNode {
                     if abs(rotationAngle).remainder(dividingBy: Double.pi) > 0.1 {
                         transform = transform.scaledBy(x: CGFloat(aspect), y: CGFloat(1.0 / aspect))
                     }
-                    videoLayer.setAffineTransform(transform)
+                    if videoLayer.affineTransform() != transform {
+                        videoLayer.setAffineTransform(transform)
+                    }
                 }
                 
                 if self.videoInHierarchy || self.canPlaybackWithoutHierarchy {
@@ -435,6 +437,9 @@ public final class MediaPlayerNode: ASDisplayNode {
     
     private func updateLayout() {
         let bounds = self.bounds
+        if bounds.isEmpty {
+            return
+        }
         
         let fittedRect: CGRect
         if let arguments = self.transformArguments {

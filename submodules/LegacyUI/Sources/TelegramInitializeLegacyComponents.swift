@@ -188,7 +188,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                         convertedType = .recordWithOthers
                     }
                 default:
-                    convertedType = .play
+                    convertedType = .play(mixWithOthers: false)
             }
             let disposable = legacyContext.sharedContext.mediaManager.audioSession.push(audioSessionType: convertedType, once: true, activate: { _ in
                 activated?()

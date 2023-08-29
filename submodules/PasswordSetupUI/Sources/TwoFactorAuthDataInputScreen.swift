@@ -100,7 +100,7 @@ public final class TwoFactorDataInputScreen: ViewController {
         super.viewWillAppear(animated)
         
         switch self.mode {
-        case .rememberPassword, .password:
+        case .rememberPassword, .password, .passwordHint, .emailAddress:
             (self.displayNode as? TwoFactorDataInputScreenNode)?.focus()
         default:
             break
@@ -210,6 +210,7 @@ public final class TwoFactorDataInputScreen: ViewController {
                 navigationController.replaceController(strongSelf, with: TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .passwordHint(recovery: recovery, password: values[0], doneText: doneText), stateUpdated: strongSelf.stateUpdated, presentation: strongSelf.navigationPresentation), animated: true)
             case let .emailAddress(password, hint, doneText):
                 guard let text = (strongSelf.displayNode as! TwoFactorDataInputScreenNode).inputText.first, !text.isEmpty else {
+                    (strongSelf.displayNode as? TwoFactorDataInputScreenNode)?.onAction(success: false)
                     return
                 }
                 let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: nil))
@@ -1303,6 +1304,8 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
         }
     }
     
+    private var skipIsHiddenUntilError = false
+    
     init(sharedContext: SharedAccountContext, presentationData: PresentationData, mode: TwoFactorDataInputMode, action: @escaping () -> Void, skipAction: @escaping () -> Void, changeEmailAction: @escaping () -> Void, resendCodeAction: @escaping () -> Void) {
         self.presentationData = presentationData
         self.mode = mode
@@ -1413,6 +1416,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
             text = NSAttributedString(string: presentationData.strings.TwoFactorSetup_Email_Text, font: Font.regular(16.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
             buttonText = presentationData.strings.TwoFactorSetup_Email_Action
             skipActionText = presentationData.strings.TwoFactorSetup_Email_SkipAction
+            self.skipIsHiddenUntilError = true
             changeEmailActionText = ""
             resendCodeActionText = ""
             inputNodes = [
@@ -1538,8 +1542,8 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
         self.skipActionTitleNode.displaysAsynchronously = false
         self.skipActionTitleNode.attributedText = NSAttributedString(string: skipActionText, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemAccentColor)
         self.skipActionButtonNode = HighlightTrackingButtonNode()
-        self.skipActionTitleNode.isHidden = skipActionText.isEmpty
-        self.skipActionButtonNode.isHidden = skipActionText.isEmpty
+        self.skipActionTitleNode.isHidden = skipActionText.isEmpty || self.skipIsHiddenUntilError
+        self.skipActionButtonNode.isHidden = skipActionText.isEmpty || self.skipIsHiddenUntilError
         
         self.changeEmailActionTitleNode = ImmediateTextNode()
         self.changeEmailActionTitleNode.isUserInteractionEnabled = false
@@ -1707,8 +1711,8 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
             case .emailAddress, .updateEmailAddress, .passwordRecovery:
                 let hasText = strongSelf.inputNodes.contains(where: { !$0.text.isEmpty })
                 strongSelf.buttonNode.isHidden = !hasText
-                strongSelf.skipActionTitleNode.isHidden = hasText
-                strongSelf.skipActionButtonNode.isHidden = hasText
+                strongSelf.skipActionTitleNode.isHidden = hasText || strongSelf.skipIsHiddenUntilError
+                strongSelf.skipActionButtonNode.isHidden = hasText || strongSelf.skipIsHiddenUntilError
             case let .emailConfirmation(_, _, codeLength, _):
                 let text = strongSelf.inputNodes[0].text
                 let hasText = !text.isEmpty
@@ -1822,35 +1826,48 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
     
     func onAction(success: Bool) {
         switch self.mode {
-            case .rememberPassword:
-                if !success {
+        case .emailAddress:
+            if !success {
+                self.inputNodes.first?.layer.addShakeAnimation()
+                HapticFeedback().error()
+                
+                if self.skipIsHiddenUntilError {
+                    self.skipIsHiddenUntilError = false
+                    self.skipActionTitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.skipActionTitleNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
                     self.skipActionTitleNode.isHidden = false
                     self.skipActionButtonNode.isHidden = false
-                    
-                    let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
-                    transition.updateAlpha(node: self.buttonNode, alpha: 0.0)
-                    transition.updateAlpha(node: self.skipActionTitleNode, alpha: 1.0)
-                    
-                    if let snapshotView = self.textNode.view.snapshotContentTree() {
-                        snapshotView.frame = self.textNode.view.frame
-                        self.textNode.view.superview?.addSubview(snapshotView)
-                        
-                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion:  { [weak snapshotView] _ in
-                            snapshotView?.removeFromSuperview()
-                        })
-                        
-                        self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                    }
-                    
-                    self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.TwoFactorRemember_WrongPassword, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemDestructiveColor)
-                    self.inputNodes.first?.isFailed = true
-                    
-                    if let (layout, navigationHeight) = self.validLayout {
-                        self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
-                    }
                 }
-            default:
-                break
+            }
+        case .rememberPassword:
+            if !success {
+                self.skipActionTitleNode.isHidden = false
+                self.skipActionButtonNode.isHidden = false
+                
+                let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+                transition.updateAlpha(node: self.buttonNode, alpha: 0.0)
+                transition.updateAlpha(node: self.skipActionTitleNode, alpha: 1.0)
+                
+                if let snapshotView = self.textNode.view.snapshotContentTree() {
+                    snapshotView.frame = self.textNode.view.frame
+                    self.textNode.view.superview?.addSubview(snapshotView)
+                    
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion:  { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                    
+                    self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
+                
+                self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.TwoFactorRemember_WrongPassword, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemDestructiveColor)
+                self.inputNodes.first?.isFailed = true
+                
+                if let (layout, navigationHeight) = self.validLayout {
+                    self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
+                }
+            }
+        default:
+            break
         }
     }
     

@@ -2,13 +2,12 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 
 public struct ChatListNodeAdditionalCategory {
-    public enum Appearance {
-        case option
+    public enum Appearance: Equatable {
+        case option(sectionTitle: String?)
         case action
     }
     
@@ -18,7 +17,7 @@ public struct ChatListNodeAdditionalCategory {
     public var title: String
     public var appearance: Appearance
     
-    public init(id: Int, icon: UIImage?, smallIcon: UIImage?, title: String, appearance: Appearance = .option) {
+    public init(id: Int, icon: UIImage?, smallIcon: UIImage?, title: String, appearance: Appearance = .option(sectionTitle: nil)) {
         self.id = id
         self.icon = icon
         self.smallIcon = smallIcon
@@ -41,26 +40,28 @@ public enum ContactMultiselectionControllerMode {
     public struct ChatSelection {
         public var title: String
         public var searchPlaceholder: String
-        public var selectedChats: Set<PeerId>
+        public var selectedChats: Set<EnginePeer.Id>
         public var additionalCategories: ContactMultiselectionControllerAdditionalCategories?
         public var chatListFilters: [ChatListFilter]?
         public var displayAutoremoveTimeout: Bool
         public var chatListNodeFilter: ChatListFilter?
         public var chatListNodePeersFilter: ChatListNodePeersFilter?
         public var omitTokenList: Bool
-        public var inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>?
+        public var inactiveSecretChatPeerIds: Signal<Set<EnginePeer.Id>, NoError>?
+        public var displayPresence: Bool
         
         public init(
             title: String,
             searchPlaceholder: String,
-            selectedChats: Set<PeerId>,
+            selectedChats: Set<EnginePeer.Id>,
             additionalCategories: ContactMultiselectionControllerAdditionalCategories?,
             chatListFilters: [ChatListFilter]?,
             displayAutoremoveTimeout: Bool = false,
             chatListNodeFilter: ChatListFilter? = nil,
             chatListNodePeersFilter: ChatListNodePeersFilter? = nil,
             omitTokenList: Bool = false,
-            inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>? = nil
+            inactiveSecretChatPeerIds: Signal<Set<EnginePeer.Id>, NoError>? = nil,
+            displayPresence: Bool = false
         ) {
             self.title = title
             self.searchPlaceholder = searchPlaceholder
@@ -72,6 +73,7 @@ public enum ContactMultiselectionControllerMode {
             self.chatListNodePeersFilter = chatListNodePeersFilter
             self.omitTokenList = omitTokenList
             self.inactiveSecretChatPeerIds = inactiveSecretChatPeerIds
+            self.displayPresence = displayPresence
         }
     }
     
@@ -83,8 +85,8 @@ public enum ContactMultiselectionControllerMode {
 
 public enum ContactListFilter {
     case excludeSelf
-    case exclude([PeerId])
-    case disable([PeerId])
+    case exclude([EnginePeer.Id])
+    case disable([EnginePeer.Id])
 }
 
 public final class ContactMultiselectionControllerParams {

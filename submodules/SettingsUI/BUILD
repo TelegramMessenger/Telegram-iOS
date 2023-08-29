@@ -113,6 +113,7 @@ swift_library(
         "//submodules/MediaPickerUI:MediaPickerUI",
         "//submodules/ImageBlur:ImageBlur",
         "//submodules/AttachmentUI:AttachmentUI",
+        "//submodules/TelegramUI/Components/PeerInfo/PeerInfoStoryGridScreen",
     ],
     visibility = [
         "//visibility:public",

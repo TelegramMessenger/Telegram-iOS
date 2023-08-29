@@ -10,7 +10,6 @@ import TelegramPresentationData
 import AccountContext
 import TelegramCore
 import MultilineTextComponent
-import Postbox
 import SolidRoundedButtonComponent
 import PresentationDataUtils
 import Markdown
@@ -511,7 +510,7 @@ private final class SendInviteLinkScreenComponent: Component {
                         } else if let link = component.link {
                             let selectedPeers = component.peers.filter { self.selectedItems.contains($0.id) }
                             
-                            let _ = enqueueMessagesToMultiplePeers(account: component.context.account, peerIds: Array(self.selectedItems), threadIds: [:], messages: [.message(text: link, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
+                            let _ = enqueueMessagesToMultiplePeers(account: component.context.account, peerIds: Array(self.selectedItems), threadIds: [:], messages: [.message(text: link, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
                             let text: String
                             if selectedPeers.count == 1 {
                                 text = environment.strings.Conversation_ShareLinkTooltip_Chat_One(selectedPeers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string

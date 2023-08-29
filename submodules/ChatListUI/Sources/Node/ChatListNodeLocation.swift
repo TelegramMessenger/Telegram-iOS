@@ -289,7 +289,8 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                     topForumTopicItems: [],
                     hasFailed: false,
                     isContact: false,
-                    autoremoveTimeout: nil
+                    autoremoveTimeout: nil,
+                    storyStats: nil
                 ))
             }
             

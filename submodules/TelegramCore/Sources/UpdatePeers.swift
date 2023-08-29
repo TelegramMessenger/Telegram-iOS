@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 
-
 func updatePeerChatInclusionWithMinTimestamp(transaction: Transaction, id: PeerId, minTimestamp: Int32, forceRootGroupIfNotExists: Bool) {
     let currentInclusion = transaction.getPeerChatListInclusion(id)
     var updatedInclusion: PeerChatListInclusion?
@@ -39,7 +38,95 @@ func minTimestampForPeerInclusion(_ peer: Peer) -> Int32? {
     }
 }
 
-public func updatePeers(transaction: Transaction, peers: [Peer], update: (Peer?, Peer) -> Peer?) {
+func shouldKeepUserStoriesInFeed(peerId: PeerId, isContact: Bool) -> Bool {
+    if peerId.namespace == Namespaces.Peer.CloudUser && (peerId.id._internalGetInt64Value() == 777000 || peerId.id._internalGetInt64Value() == 333000) {
+        return true
+    }
+    return isContact
+}
+
+func updatePeers(transaction: Transaction, accountPeerId: PeerId, peers: AccumulatedPeers) {
+    var parsedPeers: [Peer] = []
+    for (_, user) in peers.users {
+        if let telegramUser = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
+            parsedPeers.append(telegramUser)
+            switch user {
+            case let .user(flags, flags2, _, _, _, _, _, _, _, _, _, _, _, _, _, _, storiesMaxId):
+                let isMin = (flags & (1 << 20)) != 0
+                let storiesUnavailable = (flags2 & (1 << 4)) != 0
+                
+                if let storiesMaxId = storiesMaxId {
+                    transaction.setStoryItemsInexactMaxId(peerId: user.peerId, id: storiesMaxId)
+                } else if !isMin && storiesUnavailable {
+                    transaction.clearStoryItemsInexactMaxId(peerId: user.peerId)
+                }
+                
+                if !isMin {
+                    let isContact = (flags & (1 << 11)) != 0
+                    _internal_updatePeerIsContact(transaction: transaction, user: telegramUser, isContact: isContact)
+                }
+            case .userEmpty:
+                break
+            }
+        }
+    }
+    for (_, peer) in peers.peers {
+        parsedPeers.append(peer)
+    }
+    updatePeersCustom(transaction: transaction, peers: parsedPeers, update: { _, updated in updated })
+    
+    updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peers.users)
+}
+
+func _internal_updatePeerIsContact(transaction: Transaction, user: TelegramUser, isContact: Bool) {
+    let previousValue = shouldKeepUserStoriesInFeed(peerId: user.id, isContact: transaction.isPeerContact(peerId: user.id))
+    let updatedValue = shouldKeepUserStoriesInFeed(peerId: user.id, isContact: isContact)
+    
+    if previousValue != updatedValue, let storiesHidden = user.storiesHidden {
+        if updatedValue {
+            if storiesHidden {
+                if transaction.storySubscriptionsContains(key: .filtered, peerId: user.id) {
+                    var (state, peerIds) = transaction.getAllStorySubscriptions(key: .filtered)
+                    peerIds.removeAll(where: { $0 == user.id })
+                    transaction.replaceAllStorySubscriptions(key: .filtered, state: state, peerIds: peerIds)
+                }
+                if !transaction.storySubscriptionsContains(key: .hidden, peerId: user.id) {
+                    var (state, peerIds) = transaction.getAllStorySubscriptions(key: .hidden)
+                    if !peerIds.contains(user.id) {
+                        peerIds.append(user.id)
+                        transaction.replaceAllStorySubscriptions(key: .hidden, state: state, peerIds: peerIds)
+                    }
+                }
+            } else {
+                if transaction.storySubscriptionsContains(key: .hidden, peerId: user.id) {
+                    var (state, peerIds) = transaction.getAllStorySubscriptions(key: .hidden)
+                    peerIds.removeAll(where: { $0 == user.id })
+                    transaction.replaceAllStorySubscriptions(key: .hidden, state: state, peerIds: peerIds)
+                }
+                if !transaction.storySubscriptionsContains(key: .filtered, peerId: user.id) {
+                    var (state, peerIds) = transaction.getAllStorySubscriptions(key: .filtered)
+                    if !peerIds.contains(user.id) {
+                        peerIds.append(user.id)
+                        transaction.replaceAllStorySubscriptions(key: .filtered, state: state, peerIds: peerIds)
+                    }
+                }
+            }
+        } else {
+            if transaction.storySubscriptionsContains(key: .filtered, peerId: user.id) {
+                var (state, peerIds) = transaction.getAllStorySubscriptions(key: .filtered)
+                peerIds.removeAll(where: { $0 == user.id })
+                transaction.replaceAllStorySubscriptions(key: .filtered, state: state, peerIds: peerIds)
+            }
+            if transaction.storySubscriptionsContains(key: .hidden, peerId: user.id) {
+                var (state, peerIds) = transaction.getAllStorySubscriptions(key: .hidden)
+                peerIds.removeAll(where: { $0 == user.id })
+                transaction.replaceAllStorySubscriptions(key: .hidden, state: state, peerIds: peerIds)
+            }
+        }
+    }
+}
+
+public func updatePeersCustom(transaction: Transaction, peers: [Peer], update: (Peer?, Peer) -> Peer?) {
     transaction.updatePeersInternal(peers, update: { previous, updated in
         let peerId = updated.id
         
@@ -53,7 +140,39 @@ public func updatePeers(transaction: Transaction, peers: [Peer], update: (Peer?,
         
         switch peerId.namespace {
             case Namespaces.Peer.CloudUser:
-                break
+                if let updated = updated as? TelegramUser, let previous = previous as? TelegramUser {
+                    if let storiesHidden = updated.storiesHidden, storiesHidden != previous.storiesHidden {
+                        if storiesHidden {
+                            if transaction.storySubscriptionsContains(key: .filtered, peerId: updated.id) {
+                                var (state, peerIds) = transaction.getAllStorySubscriptions(key: .filtered)
+                                peerIds.removeAll(where: { $0 == updated.id })
+                                transaction.replaceAllStorySubscriptions(key: .filtered, state: state, peerIds: peerIds)
+                                
+                                if !transaction.storySubscriptionsContains(key: .hidden, peerId: updated.id) {
+                                    var (state, peerIds) = transaction.getAllStorySubscriptions(key: .hidden)
+                                    if !peerIds.contains(updated.id) {
+                                        peerIds.append(updated.id)
+                                        transaction.replaceAllStorySubscriptions(key: .hidden, state: state, peerIds: peerIds)
+                                    }
+                                }
+                            }
+                        } else {
+                            if transaction.storySubscriptionsContains(key: .hidden, peerId: updated.id) {
+                                var (state, peerIds) = transaction.getAllStorySubscriptions(key: .hidden)
+                                peerIds.removeAll(where: { $0 == updated.id })
+                                transaction.replaceAllStorySubscriptions(key: .hidden, state: state, peerIds: peerIds)
+                                
+                                if !transaction.storySubscriptionsContains(key: .filtered, peerId: updated.id) {
+                                    var (state, peerIds) = transaction.getAllStorySubscriptions(key: .filtered)
+                                    if !peerIds.contains(updated.id) {
+                                        peerIds.append(updated.id)
+                                        transaction.replaceAllStorySubscriptions(key: .filtered, state: state, peerIds: peerIds)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             case Namespaces.Peer.CloudGroup:
                 if let group = updated as? TelegramGroup {
                     if group.flags.contains(.deactivated) {
@@ -119,7 +238,7 @@ func updatePeerPresences(transaction: Transaction, accountPeerId: PeerId, peerPr
             parsedPresences[peerId] = presence
         default:
             switch user {
-            case let .user(flags, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+            case let .user(flags, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
                 let isMin = (flags & (1 << 20)) != 0
                 if isMin, let _ = transaction.getPeerPresence(peerId: peerId) {
                 } else {
@@ -187,7 +306,7 @@ func updateContacts(transaction: Transaction, apiUsers: [Api.User]) {
     for user in apiUsers {
         var isContact: Bool?
         switch user {
-        case let .user(flags, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+        case let .user(flags, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
             if (flags & (1 << 20)) == 0 {
                 isContact = (flags & (1 << 11)) != 0
             }

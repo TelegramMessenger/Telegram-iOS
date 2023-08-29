@@ -65,7 +65,7 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tag: PeerOpera
         } |> switchToLatest
 }
 
-func managedSynchronizeSavedStickersOperations(postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext) -> Signal<Void, NoError> {
+func managedSynchronizeSavedStickersOperations(accountPeerId: PeerId, postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext) -> Signal<Void, NoError> {
     return Signal { _ in
         let tag: PeerOperationLogTag = OperationLogTags.SynchronizeSavedStickers
         
@@ -84,7 +84,7 @@ func managedSynchronizeSavedStickersOperations(postbox: Postbox, network: Networ
                 let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizeSavedStickersOperation {
-                            return synchronizeSavedStickers(transaction: transaction, postbox: postbox, network: network, revalidationContext: revalidationContext, operation: operation)
+                            return synchronizeSavedStickers(transaction: transaction, accountPeerId: accountPeerId, postbox: postbox, network: network, revalidationContext: revalidationContext, operation: operation)
                         } else {
                             assertionFailure()
                         }
@@ -116,7 +116,7 @@ private enum SaveStickerError {
     case invalidReference
 }
 
-private func synchronizeSavedStickers(transaction: Transaction, postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext, operation: SynchronizeSavedStickersOperation) -> Signal<Void, NoError> {
+private func synchronizeSavedStickers(transaction: Transaction, accountPeerId: PeerId, postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext, operation: SynchronizeSavedStickersOperation) -> Signal<Void, NoError> {
     switch operation.content {
         case let .add(id, accessHash, fileReference):
             guard let fileReference = fileReference else {
@@ -146,7 +146,7 @@ private func synchronizeSavedStickers(transaction: Transaction, postbox: Postbox
                     case .generic:
                         return .fail(.generic)
                     case .invalidReference:
-                        return revalidateMediaResourceReference(postbox: postbox, network: network, revalidationContext: revalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: fileReference.resourceReference(fileReference.media.resource), preferBackgroundReferenceRevalidation: false, continueInBackground: false), resource: fileReference.media.resource)
+                        return revalidateMediaResourceReference(accountPeerId: accountPeerId, postbox: postbox, network: network, revalidationContext: revalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: fileReference.resourceReference(fileReference.media.resource), preferBackgroundReferenceRevalidation: false, continueInBackground: false), resource: fileReference.media.resource)
                         |> mapError { _ -> SaveStickerError in
                             return .generic
                         }

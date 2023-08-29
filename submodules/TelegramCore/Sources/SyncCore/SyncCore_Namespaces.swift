@@ -106,6 +106,8 @@ public struct Namespaces {
         public static let featuredStickersConfiguration: Int8 = 24
         public static let emojiSearchCategories: Int8 = 25
         public static let cachedEmojiQueryResults: Int8 = 26
+        public static let cachedPeerStoryListHeads: Int8 = 27
+        public static let displayedStoryNotifications: Int8 = 28
         
         // 64 - ...: ApplicationSpecificItemCacheCollectionIdValues
         // 100: CachedChannelAdminRanks
@@ -189,6 +191,8 @@ public struct OperationLogTags {
     public static let SynchronizeMarkAllUnseenReactions = PeerOperationLogTag(value: 21)
     public static let SynchronizeInstalledEmoji = PeerOperationLogTag(value: 22)
     public static let SynchronizeAutosaveItems = PeerOperationLogTag(value: 23)
+    public static let SynchronizeViewStories = PeerOperationLogTag(value: 24)
+    public static let SynchronizePeerStories = PeerOperationLogTag(value: 25)
 }
 
 public struct LegacyPeerSummaryCounterTags: OptionSet, Sequence, Hashable {
@@ -262,6 +266,8 @@ private enum PreferencesKeyValues: Int32 {
     case accountSpecificCacheStorageSettings = 28
     case linksConfiguration = 29
     case chatListFilterUpdates = 30
+    case globalPrivacySettings = 31
+    case storiesConfiguration = 32
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -412,6 +418,18 @@ public struct PreferencesKeys {
     public static let chatListFilterUpdates: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.chatListFilterUpdates.rawValue)
+        return key
+    }()
+    
+    public static let globalPrivacySettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.globalPrivacySettings.rawValue)
+        return key
+    }()
+    
+    public static let storiesConfiguration: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.storiesConfiguration.rawValue)
         return key
     }()
 }

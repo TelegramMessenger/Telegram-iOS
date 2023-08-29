@@ -458,7 +458,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             if let url = navigationAction.request.url?.absoluteString {
                 if isTelegramMeLink(url) || isTelegraPhLink(url) {
                     decisionHandler(.cancel)
-                    self.controller?.openUrl(url)
+                    self.controller?.openUrl(url, true, {})
                 } else {
                     decisionHandler(.allow)
                 }
@@ -469,7 +469,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
             if navigationAction.targetFrame == nil, let url = navigationAction.request.url {
-                self.controller?.openUrl(url.absoluteString)
+                self.controller?.openUrl(url.absoluteString, true, {})
             }
             return nil
         }
@@ -714,8 +714,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     controller.dismiss()
                 case "web_app_open_tg_link":
                     if let json = json, let path = json["path_full"] as? String {
-                        controller.openUrl("https://t.me\(path)")
-                        controller.dismiss()
+                        controller.openUrl("https://t.me\(path)", false, { [weak controller] in
+                            controller?.dismiss()
+                        })
                     }
                 case "web_app_open_invoice":
                     if let json = json, let slug = json["slug"] as? String {
@@ -1095,7 +1096,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     fileprivate let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private var presentationDataDisposable: Disposable?
     
-    public var openUrl: (String) -> Void = { _ in }
+    public var openUrl: (String, Bool, @escaping () -> Void) -> Void = { _, _, _ in }
     public var getNavigationController: () -> NavigationController? = { return nil }
     public var completion: () -> Void = {}
     public var requestSwitchInline: (String, [ReplyMarkupButtonRequestPeerType]?, @escaping () -> Void) -> Void = { _, _, _ in }
@@ -1394,7 +1395,19 @@ private final class WebAppContextReferenceContentSource: ContextReferenceContent
     }
 }
 
-public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, threadId: Int64?, openUrl: @escaping (String) -> Void, requestSwitchInline: @escaping (String, [ReplyMarkupButtonRequestPeerType]?, @escaping () -> Void) -> Void = { _, _, _ in }, getInputContainerNode: @escaping () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil }, completion: @escaping () -> Void = {}, willDismiss: @escaping () -> Void = {}, didDismiss: @escaping () -> Void = {}, getNavigationController: @escaping () -> NavigationController? = { return nil }, getSourceRect: (() -> CGRect?)? = nil) -> ViewController {
+public func standaloneWebAppController(
+    context: AccountContext,
+    updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+    params: WebAppParameters,
+    threadId: Int64?,
+    openUrl: @escaping (String, Bool, @escaping () -> Void) -> Void,
+    requestSwitchInline: @escaping (String, [ReplyMarkupButtonRequestPeerType]?, @escaping () -> Void) -> Void = { _, _, _ in },
+    getInputContainerNode: @escaping () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil },
+    completion: @escaping () -> Void = {},
+    willDismiss: @escaping () -> Void = {},
+    didDismiss: @escaping () -> Void = {},
+    getNavigationController: @escaping () -> NavigationController? = { return nil },
+    getSourceRect: (() -> CGRect?)? = nil) -> ViewController {
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: params.peerId), buttons: [.standalone], initialButton: .standalone, fromMenu: params.fromMenu, hasTextInput: false, makeEntityInputView: {
         return nil
     })

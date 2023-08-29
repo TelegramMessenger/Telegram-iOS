@@ -364,7 +364,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    override func transitionNode(messageId: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         return nil
     }
     
@@ -427,6 +427,10 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
             return self.interactiveVideoNode.dateAndStatusNode.reactionView(value: value)
         }
         return nil
+    }
+    
+    override func targetForStoryTransition(id: StoryId) -> UIView? {
+        return self.interactiveVideoNode.targetForStoryTransition(id: id)
     }
     
     override var disablesClipping: Bool {

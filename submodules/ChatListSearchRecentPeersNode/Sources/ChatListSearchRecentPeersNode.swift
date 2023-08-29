@@ -10,7 +10,6 @@ import HorizontalPeerItem
 import ListSectionHeaderNode
 import ContextUI
 import AccountContext
-import Postbox
 
 private func calculateItemCustomWidth(width: CGFloat) -> CGFloat {
     let itemInsets = UIEdgeInsets(top: 0.0, left: 6.0, bottom: 0.0, right: 6.0)
@@ -160,17 +159,19 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
                 return .single(([], [:], [:]))
             case let .peers(peers):
                 return combineLatest(queue: .mainQueue(),
-                                     peers.filter {
-                    !$0.isDeleted
-                }.map {
-                    context.account.postbox.peerView(id: $0.id)
-                }
+                    peers.filter {
+                        !$0.isDeleted
+                    }.map {
+                        context.account.postbox.peerView(id: $0.id)
+                    }
                 )
                 |> mapToSignal { peerViews -> Signal<([EnginePeer], [EnginePeer.Id: (Int32, Bool)], [EnginePeer.Id: EnginePeer.Presence]), NoError> in
-                    return context.account.postbox.unreadMessageCountsView(items: peerViews.map { item -> UnreadMessageCountsItem in
-                        return UnreadMessageCountsItem.peer(id: item.peerId, handleThreads: true)
-                    })
-                    |> map { values in
+                    return context.engine.data.subscribe(
+                        EngineDataMap(peerViews.map { item in
+                            return TelegramEngine.EngineData.Item.Messages.PeerUnreadCount(id: item.peerId)
+                        })
+                    )
+                    |> map { unreadCounts in
                         var peers: [EnginePeer] = []
                         var unread: [EnginePeer.Id: (Int32, Bool)] = [:]
                         var presences: [EnginePeer.Id: EnginePeer.Presence] = [:]
@@ -186,9 +187,9 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
                                     }
                                 }
                                 
-                                let unreadCount = values.count(for: .peer(id: peerView.peerId, handleThreads: true))
-                                if let unreadCount = unreadCount, unreadCount > 0 {
-                                    unread[peerView.peerId] = (unreadCount, isMuted)
+                                let unreadCount = unreadCounts[peerView.peerId]
+                                if let unreadCount, unreadCount > 0 {
+                                    unread[peerView.peerId] = (Int32(unreadCount), isMuted)
                                 }
                                 
                                 if let presence = peerView.peerPresences[peer.id] {

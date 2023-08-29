@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import AccountContext
@@ -44,7 +43,7 @@ private func closeButtonImage(theme: PresentationTheme) -> UIImage? {
 final class RecentSessionScreen: ViewController {
     enum Subject {
         case session(RecentAccountSession)
-        case website(WebAuthorization, Peer?)
+        case website(WebAuthorization, EnginePeer?)
     }
     private var controllerNode: RecentSessionScreenNode {
         return self.displayNode as! RecentSessionScreenNode
@@ -361,7 +360,7 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
                 self.terminateButton.title = self.presentationData.strings.AuthSessions_View_Logout
             
                 if let peer = peer {
-                    title = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                    title = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                 } else {
                     title = ""
                 }
@@ -388,7 +387,7 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
                 let avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 12.0))
                 avatarNode.clipsToBounds = true
                 avatarNode.cornerRadius = 17.0
-                if let peer = peer.flatMap({ EnginePeer($0) }) {
+                if let peer {
                     avatarNode.setPeer(context: context, theme: presentationData.theme, peer: peer, authorOfMessage: nil, overrideImage: nil, emptyColor: nil, clipStyle: .none, synchronousLoad: false, displayDimensions: CGSize(width: 72.0, height: 72.0), storeUnrounded: false)
                 }
                 self.avatarNode = avatarNode

@@ -1,12 +1,11 @@
 import Foundation
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 
 public struct IntentsSettings: Codable, Equatable {
     public let initiallyReset: Bool
     
-    public let account: PeerId?
+    public let account: EnginePeer.Id?
     public let contacts: Bool
     public let privateChats: Bool
     public let savedMessages: Bool
@@ -17,7 +16,7 @@ public struct IntentsSettings: Codable, Equatable {
         return IntentsSettings(initiallyReset: false, account: nil, contacts: true, privateChats: false, savedMessages: true, groups: false, onlyShared: false)
     }
     
-    public init(initiallyReset: Bool, account: PeerId?, contacts: Bool, privateChats: Bool, savedMessages: Bool, groups: Bool, onlyShared: Bool) {
+    public init(initiallyReset: Bool, account: EnginePeer.Id?, contacts: Bool, privateChats: Bool, savedMessages: Bool, groups: Bool, onlyShared: Bool) {
         self.initiallyReset = initiallyReset
         self.account = account
         self.contacts = contacts
@@ -31,7 +30,7 @@ public struct IntentsSettings: Codable, Equatable {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
         self.initiallyReset = try container.decodeIfPresent(Bool.self, forKey: "initiallyReset_v2") ?? false
-        self.account = (try container.decodeIfPresent(Int64.self, forKey: "account")).flatMap { PeerId($0) }
+        self.account = (try container.decodeIfPresent(Int64.self, forKey: "account")).flatMap { EnginePeer.Id($0) }
         self.contacts = try container.decodeIfPresent(Bool.self, forKey: "contacts") ?? true
         self.privateChats = try container.decodeIfPresent(Bool.self, forKey: "privateChats") ?? false
         self.savedMessages = try container.decodeIfPresent(Bool.self, forKey: "savedMessages") ?? true
@@ -55,7 +54,7 @@ public struct IntentsSettings: Codable, Equatable {
         return lhs.initiallyReset == rhs.initiallyReset && lhs.account == rhs.account && lhs.contacts == rhs.contacts && lhs.privateChats == rhs.privateChats && lhs.savedMessages == rhs.savedMessages && lhs.groups == rhs.groups && lhs.onlyShared == rhs.onlyShared
     }
     
-    public func withUpdatedAccount(_ account: PeerId?) -> IntentsSettings {
+    public func withUpdatedAccount(_ account: EnginePeer.Id?) -> IntentsSettings {
         return IntentsSettings(initiallyReset: self.initiallyReset, account: account, contacts: self.contacts, privateChats: self.privateChats, savedMessages: self.savedMessages, groups: self.groups, onlyShared: self.onlyShared)
     }
     
@@ -94,7 +93,7 @@ public func updateIntentsSettingsInteractively(accountManager: AccountManager<Te
             }
             previousSettings = currentSettings
             updatedSettings = f(currentSettings)
-            return PreferencesEntry(updatedSettings)
+            return SharedPreferencesEntry(updatedSettings)
         })
         return (previousSettings, updatedSettings)
     }

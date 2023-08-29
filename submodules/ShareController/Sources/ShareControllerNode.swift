@@ -1042,7 +1042,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             |> take(1)
             |> deliverOnMainQueue).start(next: { peers in
                 if let strongSelf = self {
-                    let searchContentNode = ShareSearchContainerNode(sharedContext: strongSelf.sharedContext, context: context, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, controllerInteraction: strongSelf.controllerInteraction!, recentPeers: peers.filter({ $0.peer.peerId.namespace != Namespaces.Peer.SecretChat }).map({ $0.peer }))
+                    let searchContentNode = ShareSearchContainerNode(sharedContext: strongSelf.sharedContext, context: context, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, controllerInteraction: strongSelf.controllerInteraction!, recentPeers: peers.filter({ $0.peer.peerId.namespace != Namespaces.Peer.SecretChat }).map({ EngineRenderedPeer($0.peer) }))
                     searchContentNode.cancel = {
                         if let strongSelf = self, let peersContentNode = strongSelf.peersContentNode {
                             strongSelf.transitionToContentNode(peersContentNode)
@@ -1363,7 +1363,8 @@ private func threadList(context: AccountContext, peerId: EnginePeer.Id) -> Signa
                 topForumTopicItems: [],
                 hasFailed: false,
                 isContact: false,
-                autoremoveTimeout: nil
+                autoremoveTimeout: nil,
+                storyStats: nil
             ))
         }
         

@@ -30,6 +30,7 @@ import BotPaymentsUI
 import PremiumUI
 import AuthorizationUI
 import ChatFolderLinkPreviewScreen
+import StoryContainerScreen
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -84,10 +85,10 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                   
                     var isGroup: Bool = false
                     var peerTitle: String = ""
-                    if let peer = peer as? TelegramGroup {
+                    if case let .legacyGroup(peer) = peer {
                         isGroup = true
                         peerTitle = peer.title
-                    } else if let peer = peer as? TelegramChannel {
+                    } else if case let .channel(peer) = peer {
                         if case .group = peer.info {
                             isGroup = true
                         }
@@ -141,7 +142,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     present(controller, nil)
                 }
                 
-                if let peer = peer as? TelegramChannel {
+                if case let .channel(peer) = peer {
                     if peer.flags.contains(.isCreator) || peer.adminRights?.rights.contains(.canAddAdmins) == true {
                         let controller = channelAdminController(context: context, peerId: peerId, adminId: botPeerId, initialParticipant: nil, invite: true, initialAdminRights: adminRights?.chatAdminRights, updated: { _ in
                             controller?.dismiss()
@@ -150,7 +151,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     } else {
                         addMemberImpl()
                     }
-                } else if let peer = peer as? TelegramGroup {
+                } else if case let .legacyGroup(peer) = peer {
                     if case .member = peer.role {
                         addMemberImpl()
                     } else {
@@ -171,10 +172,10 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 let _ = game
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let text: String
-                if let peer = peer as? TelegramUser {
-                    text = presentationData.strings.Target_ShareGameConfirmationPrivate(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                if case .user = peer {
+                    text = presentationData.strings.Target_ShareGameConfirmationPrivate(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                 } else {
-                    text = presentationData.strings.Target_ShareGameConfirmationGroup(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                    text = presentationData.strings.Target_ShareGameConfirmationGroup(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                 }
                 
                 let alertController = textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.RequestPeer_SelectionConfirmationSend, action: {
@@ -656,7 +657,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                                 guard let navigationController else {
                                     return
                                 }
-                                let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(EnginePeer(peer)), attachBotStart: ChatControllerInitialAttachBotStart(botId: bot.peer.id, payload: payload, justInstalled: false), keepStack: .never, useExisting: true))
+                                let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), attachBotStart: ChatControllerInitialAttachBotStart(botId: bot.peer.id, payload: payload, justInstalled: false), keepStack: .never, useExisting: true))
                             }
                             navigationController.pushViewController(controller)
                         }
@@ -708,7 +709,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                                             guard let navigationController else {
                                                 return
                                             }
-                                            let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(EnginePeer(peer)), attachBotStart: ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload, justInstalled: true), useExisting: true))
+                                            let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), attachBotStart: ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload, justInstalled: true), useExisting: true))
                                         }
                                         navigationController.pushViewController(controller)
                                     }
@@ -807,5 +808,43 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 }))
                 dismissInput()
             }
+        case let .story(peerId, id):
+            let _ = (context.account.postbox.transaction { transaction -> Bool in
+                if let value = transaction.getStory(id: StoryId(peerId: peerId, id: id)), !value.data.isEmpty {
+                    return true
+                } else {
+                    return false
+                }
+            }
+            |> deliverOnMainQueue).start(next: { exists in
+                if exists {
+                    let storyContent = SingleStoryContentContextImpl(context: context, storyId: StoryId(peerId: peerId, id: id), readGlobally: true)
+                    let _ = (storyContent.state
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak navigationController] _ in
+                        let transitionIn: StoryContainerScreen.TransitionIn? = nil
+                        
+                        let storyContainerScreen = StoryContainerScreen(
+                            context: context,
+                            content: storyContent,
+                            transitionIn: transitionIn,
+                            transitionOut: { _, _ in
+                                let transitionOut: StoryContainerScreen.TransitionOut? = nil
+                                
+                                return transitionOut
+                            }
+                        )
+                        navigationController?.pushViewController(storyContainerScreen)
+                    })
+                } else {
+                    var elevatedLayout = true
+                    if case .chat = urlContext {
+                        elevatedLayout = false
+                    }
+                    present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "story_expired", scale: 0.066, colors: [:], title: nil, text: presentationData.strings.Story_TooltipExpired, customUndoText: nil, timeout: nil), elevatedLayout: elevatedLayout, animateInAsReplacement: false, action: { _ in
+                        return true
+                    }), nil)
+                }
+            })
     }
 }

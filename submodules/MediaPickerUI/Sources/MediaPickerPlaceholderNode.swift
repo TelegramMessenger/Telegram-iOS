@@ -10,7 +10,7 @@ import PresentationDataUtils
 
 final class MediaPickerPlaceholderNode: ASDisplayNode {
     enum Content {
-        case intro
+        case intro(story: Bool)
         case bannedSendMedia(String)
     }
     
@@ -144,9 +144,9 @@ final class MediaPickerPlaceholderNode: ASDisplayNode {
         let title: String
         let text: String
         switch self.content {
-            case .intro:
+            case let .intro(story):
                 title = strings.Attachment_MediaAccessTitle
-                text = strings.Attachment_MediaAccessText
+                text = story ? strings.Attachment_MediaAccessStoryText : strings.Attachment_MediaAccessText
             case let .bannedSendMedia(banDescription):
                 title = ""
                 text = banDescription

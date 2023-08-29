@@ -5,6 +5,7 @@ import MetalKit
 import Display
 import SwiftSignalKit
 import AppBundle
+import MediaEditor
 
 final class DrawingMetalView: MTKView {
     let size: CGSize

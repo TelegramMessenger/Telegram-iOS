@@ -12,16 +12,7 @@ import SearchPeerMembers
 import DeviceLocationManager
 import TelegramNotices
 import ChatPresentationInterfaceState
-
-enum ChatContextQueryError {
-    case generic
-    case inlineBotLocationRequest(PeerId)
-}
-
-enum ChatContextQueryUpdate {
-    case remove
-    case update(ChatPresentationInputQuery, Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError>)
-}
+import ChatContextQuery
 
 func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentQueryStates: inout [ChatPresentationInputQueryKind: (ChatPresentationInputQuery, Disposable)], requestBotLocationStatus: @escaping (PeerId) -> Void) -> [ChatPresentationInputQueryKind: ChatContextQueryUpdate] {
     guard let peer = chatPresentationInterfaceState.renderedPeer?.peer else {
@@ -64,26 +55,6 @@ func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentation
     }
     
     return updates
-}
-
-struct StickersSearchConfiguration {
-    static var defaultValue: StickersSearchConfiguration {
-        return StickersSearchConfiguration(disableLocalSuggestions: false)
-    }
-    
-    public let disableLocalSuggestions: Bool
-    
-    fileprivate init(disableLocalSuggestions: Bool) {
-        self.disableLocalSuggestions = disableLocalSuggestions
-    }
-    
-    static func with(appConfiguration: AppConfiguration) -> StickersSearchConfiguration {
-        if let data = appConfiguration.data, let suggestOnlyApi = data["stickers_emoji_suggest_only_api"] as? Bool {
-            return StickersSearchConfiguration(disableLocalSuggestions: suggestOnlyApi)
-        } else {
-            return .defaultValue
-        }
-    }
 }
 
 private func updatedContextQueryResultStateForQuery(context: AccountContext, peer: Peer, chatLocation: ChatLocation, inputQuery: ChatPresentationInputQuery, previousQuery: ChatPresentationInputQuery?, requestBotLocationStatus: @escaping (PeerId) -> Void) -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> {
@@ -331,16 +302,16 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             
             return signal |> then(contextBot)
         case let .emojiSearch(query, languageCode, range):
-            if query.isSingleEmoji {
-                let hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
-                |> map { peer -> Bool in
-                    guard case let .user(user) = peer else {
-                        return false
-                    }
-                    return user.isPremium
+            let hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+            |> map { peer -> Bool in
+                guard case let .user(user) = peer else {
+                    return false
                 }
-                |> distinctUntilChanged
-                
+                return user.isPremium
+            }
+            |> distinctUntilChanged
+        
+            if query.isSingleEmoji {
                 return combineLatest(
                     context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
                     hasPremium
@@ -385,15 +356,6 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                         )
                     }
                 }
-            
-                let hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
-                |> map { peer -> Bool in
-                    guard case let .user(user) = peer else {
-                        return false
-                    }
-                    return user.isPremium
-                }
-                |> distinctUntilChanged
                 
                 return signal
                 |> castError(ChatContextQueryError.self)

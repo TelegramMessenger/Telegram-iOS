@@ -114,6 +114,7 @@ public func textAttributedStringForStateText(_ stateText: NSAttributedString, fo
                 }
             } else if key == ChatTextInputAttributes.customEmoji {
                 result.addAttribute(key, value: value, range: range)
+                result.addAttribute(NSAttributedString.Key.foregroundColor, value: UIColor.clear, range: range)
             }
         }
             
@@ -506,7 +507,11 @@ private func refreshTextUrls(text: NSString, initialAttributedText: NSAttributed
 }
 
 public func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme: PresentationTheme, baseFontSize: CGFloat, spoilersRevealed: Bool, availableEmojis: Set<String>, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?) {
-    guard let initialAttributedText = textNode.attributedText, initialAttributedText.length != 0 else {
+    refreshChatTextInputAttributes(textView: textNode.textView, primaryTextColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, baseFontSize: baseFontSize, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider)
+}
+
+public func refreshChatTextInputAttributes(textView: UITextView, primaryTextColor: UIColor, accentTextColor: UIColor, baseFontSize: CGFloat, spoilersRevealed: Bool, availableEmojis: Set<String>, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?) {
+    guard let initialAttributedText = textView.attributedText, initialAttributedText.length != 0 else {
         return
     }
     
@@ -520,29 +525,30 @@ public func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme
     var attributedText = NSMutableAttributedString(attributedString: stateAttributedStringForText(initialAttributedText))
     refreshTextMentions(text: text, initialAttributedText: initialAttributedText, attributedText: attributedText, fullRange: fullRange)
     
-    var resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider)
+    var resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: primaryTextColor, accentTextColor: accentTextColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider)
     
     text = resultAttributedText.string as NSString
     fullRange = NSRange(location: 0, length: text.length)
     attributedText = NSMutableAttributedString(attributedString: stateAttributedStringForText(resultAttributedText))
     refreshTextUrls(text: text, initialAttributedText: resultAttributedText, attributedText: attributedText, fullRange: fullRange)
     
-    resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: theme.chat.inputPanel.primaryTextColor, accentTextColor: theme.chat.inputPanel.panelControlAccentColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider)
+    resultAttributedText = textAttributedStringForStateText(attributedText, fontSize: baseFontSize, textColor: primaryTextColor, accentTextColor: accentTextColor, writingDirection: writingDirection, spoilersRevealed: spoilersRevealed, availableEmojis: availableEmojis, emojiViewProvider: emojiViewProvider)
     
     if !resultAttributedText.isEqual(to: initialAttributedText) {
-        fullRange = NSRange(location: 0, length: textNode.textView.textStorage.length)
+        fullRange = NSRange(location: 0, length: textView.textStorage.length)
         
-        textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.font, range: fullRange)
-        textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.foregroundColor, range: fullRange)
-        textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.underlineStyle, range: fullRange)
-        textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.strikethroughStyle, range: fullRange)
-        textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.textMention, range: fullRange)
-        textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.textUrl, range: fullRange)
-        textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.spoiler, range: fullRange)
-        textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.customEmoji, range: fullRange)
+        textView.textStorage.removeAttribute(NSAttributedString.Key.font, range: fullRange)
+        textView.textStorage.removeAttribute(NSAttributedString.Key.foregroundColor, range: fullRange)
+        textView.textStorage.removeAttribute(NSAttributedString.Key.backgroundColor, range: fullRange)
+        textView.textStorage.removeAttribute(NSAttributedString.Key.underlineStyle, range: fullRange)
+        textView.textStorage.removeAttribute(NSAttributedString.Key.strikethroughStyle, range: fullRange)
+        textView.textStorage.removeAttribute(ChatTextInputAttributes.textMention, range: fullRange)
+        textView.textStorage.removeAttribute(ChatTextInputAttributes.textUrl, range: fullRange)
+        textView.textStorage.removeAttribute(ChatTextInputAttributes.spoiler, range: fullRange)
+        textView.textStorage.removeAttribute(ChatTextInputAttributes.customEmoji, range: fullRange)
         
-        textNode.textView.textStorage.addAttribute(NSAttributedString.Key.font, value: Font.regular(baseFontSize), range: fullRange)
-        textNode.textView.textStorage.addAttribute(NSAttributedString.Key.foregroundColor, value: theme.chat.inputPanel.primaryTextColor, range: fullRange)
+        textView.textStorage.addAttribute(NSAttributedString.Key.font, value: Font.regular(baseFontSize), range: fullRange)
+        textView.textStorage.addAttribute(NSAttributedString.Key.foregroundColor, value: primaryTextColor, range: fullRange)
         
         let replaceRanges: [(NSRange, EmojiTextAttachment)] = []
         
@@ -552,36 +558,37 @@ public func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme
             
             for (key, value) in attributes {
                 if key == ChatTextInputAttributes.textMention || key == ChatTextInputAttributes.textUrl {
-                    textNode.textView.textStorage.addAttribute(key, value: value, range: range)
-                    textNode.textView.textStorage.addAttribute(NSAttributedString.Key.foregroundColor, value: theme.chat.inputPanel.panelControlAccentColor, range: range)
+                    textView.textStorage.addAttribute(key, value: value, range: range)
+                    textView.textStorage.addAttribute(NSAttributedString.Key.foregroundColor, value: accentTextColor, range: range)
                     
-                    if theme.chat.inputPanel.panelControlAccentColor.isEqual(theme.chat.inputPanel.primaryTextColor) {
-                        textNode.textView.textStorage.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: range)
+                    if accentTextColor.isEqual(primaryTextColor) {
+                        textView.textStorage.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: range)
                     }
                 } else if key == ChatTextInputAttributes.bold {
-                    textNode.textView.textStorage.addAttribute(key, value: value, range: range)
+                    textView.textStorage.addAttribute(key, value: value, range: range)
                     fontAttributes.insert(.bold)
                 } else if key == ChatTextInputAttributes.italic {
-                    textNode.textView.textStorage.addAttribute(key, value: value, range: range)
+                    textView.textStorage.addAttribute(key, value: value, range: range)
                     fontAttributes.insert(.italic)
                 } else if key == ChatTextInputAttributes.monospace {
-                    textNode.textView.textStorage.addAttribute(key, value: value, range: range)
+                    textView.textStorage.addAttribute(key, value: value, range: range)
                     fontAttributes.insert(.monospace)
                 } else if key == ChatTextInputAttributes.strikethrough {
-                    textNode.textView.textStorage.addAttribute(key, value: value, range: range)
-                    textNode.textView.textStorage.addAttribute(NSAttributedString.Key.strikethroughStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: range)
+                    textView.textStorage.addAttribute(key, value: value, range: range)
+                    textView.textStorage.addAttribute(NSAttributedString.Key.strikethroughStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: range)
                 } else if key == ChatTextInputAttributes.underline {
-                    textNode.textView.textStorage.addAttribute(key, value: value, range: range)
-                    textNode.textView.textStorage.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: range)
+                    textView.textStorage.addAttribute(key, value: value, range: range)
+                    textView.textStorage.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: range)
                 } else if key == ChatTextInputAttributes.spoiler {
-                    textNode.textView.textStorage.addAttribute(key, value: value, range: range)
+                    textView.textStorage.addAttribute(key, value: value, range: range)
                     if spoilersRevealed {
-                        textNode.textView.textStorage.addAttribute(NSAttributedString.Key.backgroundColor, value: theme.chat.inputPanel.primaryTextColor.withAlphaComponent(0.15), range: range)
+                        textView.textStorage.addAttribute(NSAttributedString.Key.backgroundColor, value: primaryTextColor.withAlphaComponent(0.15), range: range)
                     } else {
-                        textNode.textView.textStorage.addAttribute(NSAttributedString.Key.foregroundColor, value: UIColor.clear, range: range)
+                        textView.textStorage.addAttribute(NSAttributedString.Key.foregroundColor, value: UIColor.clear, range: range)
                     }
                 } else if key == ChatTextInputAttributes.customEmoji, let value = value as? ChatTextInputTextCustomEmojiAttribute {
-                    textNode.textView.textStorage.addAttribute(key, value: value, range: range)
+                    textView.textStorage.addAttribute(key, value: value, range: range)
+                    textView.textStorage.addAttribute(NSAttributedString.Key.foregroundColor, value: UIColor.clear, range: range)
                 }
             }
                 
@@ -604,13 +611,13 @@ public func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme
                 }
                 
                 if let font = font {
-                    textNode.textView.textStorage.addAttribute(NSAttributedString.Key.font, value: font, range: range)
+                    textView.textStorage.addAttribute(NSAttributedString.Key.font, value: font, range: range)
                 }
             }
         })
         
         for (range, attachment) in replaceRanges.sorted(by: { $0.0.location > $1.0.location }) {
-            textNode.textView.textStorage.replaceCharacters(in: range, with: NSAttributedString(attachment: attachment))
+            textView.textStorage.replaceCharacters(in: range, with: NSAttributedString(attachment: attachment))
         }
     }
 }
@@ -640,6 +647,7 @@ public func refreshGenericTextInputAttributes(_ textNode: ASEditableTextNode, th
     if !resultAttributedText.isEqual(to: initialAttributedText) {
         textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.font, range: fullRange)
         textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.foregroundColor, range: fullRange)
+        textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.backgroundColor, range: fullRange)
         textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.underlineStyle, range: fullRange)
         textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.strikethroughStyle, range: fullRange)
         textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.textMention, range: fullRange)
@@ -709,6 +717,31 @@ public func refreshGenericTextInputAttributes(_ textNode: ASEditableTextNode, th
             }
         })
     }
+}
+
+public func refreshChatTextInputTypingAttributes(_ textView: UITextView, textColor: UIColor, baseFontSize: CGFloat) {
+    var filteredAttributes: [NSAttributedString.Key: Any] = [
+        NSAttributedString.Key.font: Font.regular(baseFontSize),
+        NSAttributedString.Key.foregroundColor: textColor
+    ]
+    let style = NSMutableParagraphStyle()
+    style.baseWritingDirection = .natural
+    filteredAttributes[NSAttributedString.Key.paragraphStyle] = style
+    if let attributedText = textView.attributedText, attributedText.length != 0 {
+        let attributes = attributedText.attributes(at: max(0, min(textView.selectedRange.location - 1, attributedText.length - 1)), effectiveRange: nil)
+        for (key, value) in attributes {
+            if key == ChatTextInputAttributes.bold {
+                filteredAttributes[key] = value
+            } else if key == ChatTextInputAttributes.italic {
+                filteredAttributes[key] = value
+            } else if key == ChatTextInputAttributes.monospace {
+                filteredAttributes[key] = value
+            } else if key == NSAttributedString.Key.font {
+                filteredAttributes[key] = value
+            }
+        }
+    }
+    textView.typingAttributes = filteredAttributes
 }
 
 public func refreshChatTextInputTypingAttributes(_ textNode: ASEditableTextNode, theme: PresentationTheme, baseFontSize: CGFloat) {

@@ -240,7 +240,7 @@ public struct EncryptedSecureIdForm {
     let errors: [Api.SecureValueError]
 }
 
-public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: PeerId, scope: String, publicKey: String) -> Signal<EncryptedSecureIdForm, RequestSecureIdFormError> {
+public func requestSecureIdForm(accountPeerId: PeerId, postbox: Postbox, network: Network, peerId: PeerId, scope: String, publicKey: String) -> Signal<EncryptedSecureIdForm, RequestSecureIdFormError> {
     if peerId.namespace != Namespaces.Peer.CloudUser {
         return .fail(.serverError("BOT_INVALID"))
     }
@@ -263,14 +263,7 @@ public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: Peer
         return postbox.transaction { transaction -> EncryptedSecureIdForm in
             switch result {
                 case let .authorizationForm(_, requiredTypes, values, errors, users, termsUrl):
-                    var peers: [Peer] = []
-                    for user in users {
-                        let parsed = TelegramUser(user: user)
-                        peers.append(parsed)
-                    }
-                    updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                        return updated
-                    })
+                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
                     
                     return EncryptedSecureIdForm(peerId: peerId, requestedFields: requiredTypes.map { requiredType in
                         switch requiredType {

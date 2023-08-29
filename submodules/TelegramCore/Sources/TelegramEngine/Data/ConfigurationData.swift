@@ -51,6 +51,10 @@ public enum EngineConfiguration {
         public let maxReactionsPerMessage: Int32
         public let maxSharedFolderInviteLinks: Int32
         public let maxSharedFolderJoin: Int32
+        public let maxStoryCaptionLength: Int32
+        public let maxExpiringStoriesCount: Int32
+        public let maxStoriesWeeklyCount: Int32
+        public let maxStoriesMonthlyCount: Int32
         
         public static var defaultValue: UserLimits {
             return UserLimits(UserLimitsConfiguration.defaultValue)
@@ -71,7 +75,11 @@ public enum EngineConfiguration {
             maxAnimatedEmojisInText: Int32,
             maxReactionsPerMessage: Int32,
             maxSharedFolderInviteLinks: Int32,
-            maxSharedFolderJoin: Int32
+            maxSharedFolderJoin: Int32,
+            maxStoryCaptionLength: Int32,
+            maxExpiringStoriesCount: Int32,
+            maxStoriesWeeklyCount: Int32,
+            maxStoriesMonthlyCount: Int32
         ) {
             self.maxPinnedChatCount = maxPinnedChatCount
             self.maxArchivedPinnedChatCount = maxArchivedPinnedChatCount
@@ -88,6 +96,10 @@ public enum EngineConfiguration {
             self.maxReactionsPerMessage = maxReactionsPerMessage
             self.maxSharedFolderInviteLinks = maxSharedFolderInviteLinks
             self.maxSharedFolderJoin = maxSharedFolderJoin
+            self.maxStoryCaptionLength = maxStoryCaptionLength
+            self.maxExpiringStoriesCount = maxExpiringStoriesCount
+            self.maxStoriesWeeklyCount = maxStoriesWeeklyCount
+            self.maxStoriesMonthlyCount = maxStoriesMonthlyCount
         }
     }
 }
@@ -139,7 +151,11 @@ public extension EngineConfiguration.UserLimits {
             maxAnimatedEmojisInText: userLimitsConfiguration.maxAnimatedEmojisInText,
             maxReactionsPerMessage: userLimitsConfiguration.maxReactionsPerMessage,
             maxSharedFolderInviteLinks: userLimitsConfiguration.maxSharedFolderInviteLinks,
-            maxSharedFolderJoin: userLimitsConfiguration.maxSharedFolderJoin
+            maxSharedFolderJoin: userLimitsConfiguration.maxSharedFolderJoin,
+            maxStoryCaptionLength: userLimitsConfiguration.maxStoryCaptionLength,
+            maxExpiringStoriesCount: userLimitsConfiguration.maxExpiringStoriesCount,
+            maxStoriesWeeklyCount: userLimitsConfiguration.maxStoriesWeeklyCount,
+            maxStoriesMonthlyCount: userLimitsConfiguration.maxStoriesMonthlyCount
         )
     }
 }
@@ -426,6 +442,48 @@ public extension TelegramEngine.EngineData.Item {
                     return EngineConfiguration.Links(LinksConfiguration.defaultValue)
                 }
                 return EngineConfiguration.Links(value)
+            }
+        }
+        
+        public struct GlobalPrivacy: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = GlobalPrivacySettings
+            
+            public init() {
+            }
+            
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.globalPrivacySettings]))
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let value = view.values[PreferencesKeys.globalPrivacySettings]?.get(GlobalPrivacySettings.self) else {
+                    return GlobalPrivacySettings.default
+                }
+                return value
+            }
+        }
+        
+        public struct StoryConfigurationState: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = Stories.ConfigurationState
+            
+            public init() {
+            }
+            
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.storiesConfiguration]))
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let value = view.values[PreferencesKeys.storiesConfiguration]?.get(Stories.ConfigurationState.self) else {
+                    return Stories.ConfigurationState.default
+                }
+                return value
             }
         }
     }

@@ -224,6 +224,11 @@ public final class AccountStateManager {
             return self.deletedMessagesPipe.signal()
         }
         
+        fileprivate let storyUpdatesPipe = ValuePipe<[InternalStoryUpdate]>()
+        public var storyUpdates: Signal<[InternalStoryUpdate], NoError> {
+            return self.storyUpdatesPipe.signal()
+        }
+        
         private var updatedWebpageContexts: [MediaId: UpdatedWebpageSubscriberContext] = [:]
         private var updatedPeersNearbyContext = UpdatedPeersNearbySubscriberContext()
         
@@ -521,7 +526,8 @@ public final class AccountStateManager {
                             referencedReplyMessageIds: ReferencedReplyMessageIds(),
                             referencedGeneralMessageIds: Set(),
                             peerIdsRequiringLocalChatState: Set(),
-                            locallyGeneratedMessageTimestamps: [:]
+                            locallyGeneratedMessageTimestamps: [:],
+                            storedStories: [:]
                         )
                     }
                     |> mapToSignal { state -> Signal<AccountMutableState, NoError> in
@@ -691,7 +697,7 @@ public final class AccountStateManager {
                             }
                         }
                         
-                        let request = network.request(Api.functions.updates.getDifference(flags: flags, pts: authorizedState.pts, ptsTotalLimit: ptsTotalLimit, date: authorizedState.date, qts: authorizedState.qts))
+                        let request = network.request(Api.functions.updates.getDifference(flags: flags, pts: authorizedState.pts, ptsLimit: nil, ptsTotalLimit: ptsTotalLimit, date: authorizedState.date, qts: authorizedState.qts, qtsLimit: nil))
                         |> map(Optional.init)
                         |> `catch` { error -> Signal<Api.updates.Difference?, MTRpcError> in
                             if error.errorCode == 406 && error.errorDescription == "AUTH_KEY_DUPLICATED" {
@@ -960,6 +966,9 @@ public final class AccountStateManager {
                             if !events.updatedGroupCallParticipants.isEmpty {
                                 strongSelf.groupCallParticipantUpdatesPipe.putNext(events.updatedGroupCallParticipants)
                             }
+                            if !events.storyUpdates.isEmpty {
+                                strongSelf.storyUpdatesPipe.putNext(events.storyUpdates)
+                            }
                             if !events.updatedIncomingThreadReadStates.isEmpty || !events.updatedOutgoingThreadReadStates.isEmpty {
                                 strongSelf.threadReadStateUpdatesPipe.putNext((events.updatedIncomingThreadReadStates, events.updatedOutgoingThreadReadStates))
                             }
@@ -1204,7 +1213,7 @@ public final class AccountStateManager {
                     let flags: Int32 = 0
                     let ptsTotalLimit: Int32? = nil
                     
-                    let request = network.request(Api.functions.updates.getDifference(flags: flags, pts: authorizedState.pts, ptsTotalLimit: ptsTotalLimit, date: Int32.max, qts: authorizedState.qts))
+                    let request = network.request(Api.functions.updates.getDifference(flags: flags, pts: authorizedState.pts, ptsLimit: nil, ptsTotalLimit: ptsTotalLimit, date: Int32.max, qts: authorizedState.qts, qtsLimit: nil))
                     |> map(Optional.init)
                     |> `catch` { error -> Signal<Api.updates.Difference?, MTRpcError> in
                         if error.errorCode == 406 && error.errorDescription == "AUTH_KEY_DUPLICATED" {
@@ -1622,6 +1631,18 @@ public final class AccountStateManager {
     public var deletedMessages: Signal<[DeletedMessageId], NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.deletedMessages.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+    
+    var storyUpdates: Signal<[InternalStoryUpdate], NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.storyUpdates.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+    
+    func injectStoryUpdates(updates: [InternalStoryUpdate]) {
+        self.impl.with { impl in
+            impl.storyUpdatesPipe.putNext(updates)
         }
     }
     

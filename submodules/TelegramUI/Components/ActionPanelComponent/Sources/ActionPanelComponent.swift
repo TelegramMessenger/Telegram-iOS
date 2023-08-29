@@ -7,19 +7,27 @@ import ComponentDisplayAdapters
 import AppBundle
 
 public final class ActionPanelComponent: Component {
+    public enum Color {
+        case accent
+        case destructive
+    }
+    
     public let theme: PresentationTheme
     public let title: String
+    public let color: Color
     public let action: () -> Void
     public let dismissAction: () -> Void
     
     public init(
         theme: PresentationTheme,
         title: String,
+        color: Color,
         action: @escaping () -> Void,
         dismissAction: @escaping () -> Void
     ) {
         self.theme = theme
         self.title = title
+        self.color = color
         self.action = action
         self.dismissAction = dismissAction
     }
@@ -29,6 +37,9 @@ public final class ActionPanelComponent: Component {
             return false
         }
         if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.color != rhs.color {
             return false
         }
         return true
@@ -136,9 +147,17 @@ public final class ActionPanelComponent: Component {
             
             let rightInset: CGFloat = 44.0
             
+            let resolvedColor: UIColor
+            switch component.color {
+            case .accent:
+                resolvedColor = component.theme.rootController.navigationBar.accentTextColor
+            case .destructive:
+                resolvedColor = component.theme.list.itemDestructiveColor
+            }
+            
             let titleSize = self.title.update(
                 transition: .immediate,
-                component: AnyComponent(Text(text: component.title, font: Font.regular(17.0), color: component.theme.rootController.navigationBar.accentTextColor)),
+                component: AnyComponent(Text(text: component.title, font: Font.regular(17.0), color: resolvedColor)),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - rightInset, height: availableSize.height)
             )

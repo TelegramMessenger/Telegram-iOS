@@ -7,6 +7,8 @@ import LegacyComponents
 import FFMpegBinding
 import LocalMediaResources
 import LegacyMediaPickerUI
+import MediaEditor
+import Photos
 
 private final class AVURLAssetCopyItem: MediaResourceDataFetchCopyLocalItem {
     private let url: URL
@@ -214,22 +216,100 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
         let disposable = MetaDisposable()
         if fetchResult.count != 0 {
             let asset = fetchResult.object(at: 0)
-            let option = PHVideoRequestOptions()
-            option.isNetworkAccessAllowed = true
-            option.deliveryMode = .highQualityFormat
             
             let alreadyReceivedAsset = Atomic<Bool>(value: false)
-            requestId = PHImageManager.default().requestAVAsset(forVideo: asset, options: option, resultHandler: { avAsset, _, _ in
-                if avAsset == nil {
-                    return
-                }
+            if asset.mediaType == .image {
+                Logger.shared.log("FetchVideoResource", "Getting asset image \(asset.localIdentifier)")
                 
-                if alreadyReceivedAsset.swap(true) {
-                    return
-                }
-                
-                var adjustments: TGVideoEditAdjustments?
-                switch resource.conversion {
+                let options = PHImageRequestOptions()
+                options.isNetworkAccessAllowed = true
+                options.deliveryMode = .highQualityFormat
+                requestId = PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options, resultHandler: { image, _ in
+                    if alreadyReceivedAsset.swap(true) {
+                        return
+                    }
+                    guard let image else {
+                        return
+                    }
+                    
+                    Logger.shared.log("FetchVideoResource", "Got asset image \(asset.localIdentifier)")
+                    
+                    var mediaEditorValues: MediaEditorValues?
+                    if case let .compress(adjustmentsValue) = resource.conversion, let adjustmentsValue, adjustmentsValue.isStory {
+                        if let values = try? JSONDecoder().decode(MediaEditorValues.self, from: adjustmentsValue.data.makeData()) {
+                            mediaEditorValues = values
+                        }
+                    } else {
+                        fatalError()
+                    }
+                    let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
+                    let updatedSize = Atomic<Int64>(value: 0)
+                    if let mediaEditorValues {
+                        Logger.shared.log("FetchVideoResource", "Requesting video export")
+                        
+                        let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, duration: 5.0, image: true, frameRate: 30.0)
+                        let videoExport = MediaEditorVideoExport(account: account, subject: .image(image), configuration: configuration, outputPath: tempFile.path)
+                        videoExport.start()
+                                                
+                        let statusDisposable = videoExport.status.start(next: { status in
+                            switch status {
+                            case .completed:
+                                var value = stat()
+                                if stat(tempFile.path, &value) == 0 {
+                                    let remuxedTempFile = TempBox.shared.tempFile(fileName: "video.mp4")
+                                    if !"".isEmpty, let size = fileSize(tempFile.path), size <= 32 * 1024 * 1024, FFMpegRemuxer.remux(tempFile.path, to: remuxedTempFile.path) {
+                                        TempBox.shared.dispose(tempFile)
+                                        subscriber.putNext(.moveTempFile(file: remuxedTempFile))
+                                    } else {
+                                        TempBox.shared.dispose(remuxedTempFile)
+                                        if let data = try? Data(contentsOf: URL(fileURLWithPath: tempFile.path), options: [.mappedRead]) {
+                                            var range: Range<Int64>?
+                                            let _ = updatedSize.modify { updatedSize in
+                                                range = updatedSize ..< value.st_size
+                                                return value.st_size
+                                            }
+                                            //print("finish size = \(Int(value.st_size)), range: \(range!)")
+                                            subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
+                                            subscriber.putNext(.replaceHeader(data: data, range: 0 ..< 1024))
+                                            subscriber.putNext(.dataPart(resourceOffset: Int64(data.count), data: Data(), range: 0 ..< 0, complete: true))
+                                        }
+                                    }
+                                } else {
+                                    subscriber.putError(.generic)
+                                }
+                                subscriber.putCompletion()
+                                
+                                EngineTempBox.shared.dispose(tempFile)
+                            case .failed:
+                                subscriber.putError(.generic)
+                            case let .progress(progress):
+                                subscriber.putNext(.progressUpdated(progress))
+                            default:
+                                break
+                            }
+                        })
+                        
+                        disposable.set(ActionDisposable {
+                            statusDisposable.dispose()
+                            videoExport.cancel()
+                        })
+                    }
+                })
+            } else {
+                let options = PHVideoRequestOptions()
+                options.isNetworkAccessAllowed = true
+                options.deliveryMode = .highQualityFormat
+                requestId = PHImageManager.default().requestAVAsset(forVideo: asset, options: options, resultHandler: { avAsset, _, _ in
+                    if alreadyReceivedAsset.swap(true) {
+                        return
+                    }
+                    guard let avAsset else {
+                        return
+                    }
+                    
+                    var adjustments: TGVideoEditAdjustments?
+                    var mediaEditorValues: MediaEditorValues?
+                    switch resource.conversion {
                     case .passthrough:
                         if let asset = avAsset as? AVURLAsset {
                             var value = stat()
@@ -245,63 +325,133 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                         }
                     case let .compress(adjustmentsValue):
                         if let adjustmentsValue = adjustmentsValue {
-                            if let dict = NSKeyedUnarchiver.unarchiveObject(with: adjustmentsValue.data.makeData()) as? [AnyHashable : Any] {
+                            if adjustmentsValue.isStory {
+                                if let values = try? JSONDecoder().decode(MediaEditorValues.self, from: adjustmentsValue.data.makeData()) {
+                                    mediaEditorValues = values
+                                }
+                            } else if let dict = NSKeyedUnarchiver.unarchiveObject(with: adjustmentsValue.data.makeData()) as? [AnyHashable : Any] {
                                 adjustments = TGVideoEditAdjustments(dictionary: dict)
                             }
                         }
-                }
-                let updatedSize = Atomic<Int64>(value: 0)
-                let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
-                    if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
-                        return LegacyPaintEntityRenderer(account: account, adjustments: adjustments)
-                    } else {
-                        return nil
                     }
-                }
-                let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
-                let signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, path: tempFile.path, watcher: VideoConversionWatcher(update: { path, size in
-                    var value = stat()
-                    if stat(path, &value) == 0 {
-                        if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
-                            var range: Range<Int64>?
-                            let _ = updatedSize.modify { updatedSize in
-                                range = updatedSize ..< value.st_size
-                                return value.st_size
-                            }
-                            //print("size = \(Int(value.st_size)), range: \(range!)")
-                            subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
-                        }
-                    }
-                }), entityRenderer: entityRenderer)!
-                let signalDisposable = signal.start(next: { next in
-                    if let result = next as? TGMediaVideoConversionResult {
-                        var value = stat()
-                        if stat(result.fileURL.path, &value) == 0 {
-                            if let data = try? Data(contentsOf: result.fileURL, options: [.mappedRead]) {
-                                var range: Range<Int64>?
-                                let _ = updatedSize.modify { updatedSize in
-                                    range = updatedSize ..< value.st_size
-                                    return value.st_size
-                                }
-                                //print("finish size = \(Int(value.st_size)), range: \(range!)")
-                                subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
-                                subscriber.putNext(.replaceHeader(data: data, range: 0 ..< 1024))
-                                subscriber.putNext(.dataPart(resourceOffset: Int64(data.count), data: Data(), range: 0 ..< 0, complete: true))
-                            }
-                        } else {
-                            subscriber.putError(.generic)
-                        }
-                        subscriber.putCompletion()
+                    let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
+                    let updatedSize = Atomic<Int64>(value: 0)
+                    if let mediaEditorValues {
+                        let duration: Double = avAsset.duration.seconds
+                        let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, duration: duration, frameRate: 30.0)
+                        let videoExport = MediaEditorVideoExport(account: account, subject: .video(avAsset), configuration: configuration, outputPath: tempFile.path)
+                        videoExport.start()
                         
-                        EngineTempBox.shared.dispose(tempFile)
+                        let statusDisposable = videoExport.status.start(next: { status in
+                            switch status {
+                            case .completed:
+                                var value = stat()
+                                if stat(tempFile.path, &value) == 0 {
+                                    let remuxedTempFile = TempBox.shared.tempFile(fileName: "video.mp4")
+                                    if !"".isEmpty, let size = fileSize(tempFile.path), size <= 32 * 1024 * 1024, FFMpegRemuxer.remux(tempFile.path, to: remuxedTempFile.path) {
+                                        TempBox.shared.dispose(tempFile)
+                                        subscriber.putNext(.moveTempFile(file: remuxedTempFile))
+                                    } else {
+                                        TempBox.shared.dispose(remuxedTempFile)
+                                        if let data = try? Data(contentsOf: URL(fileURLWithPath: tempFile.path), options: [.mappedRead]) {
+                                            var range: Range<Int64>?
+                                            let _ = updatedSize.modify { updatedSize in
+                                                range = updatedSize ..< value.st_size
+                                                return value.st_size
+                                            }
+                                            //print("finish size = \(Int(value.st_size)), range: \(range!)")
+                                            subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
+                                            subscriber.putNext(.replaceHeader(data: data, range: 0 ..< 1024))
+                                            subscriber.putNext(.dataPart(resourceOffset: Int64(data.count), data: Data(), range: 0 ..< 0, complete: true))
+                                        }
+                                    }
+                                } else {
+                                    subscriber.putError(.generic)
+                                }
+                                subscriber.putCompletion()
+                                
+                                EngineTempBox.shared.dispose(tempFile)
+                            case .failed:
+                                subscriber.putError(.generic)
+                            case let .progress(progress):
+                                subscriber.putNext(.progressUpdated(progress))
+                            default:
+                                break
+                            }
+                        })
+                        
+                        disposable.set(ActionDisposable {
+                            statusDisposable.dispose()
+                            videoExport.cancel()
+                        })
+                    } else {
+                        let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
+                            if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
+                                return LegacyPaintEntityRenderer(account: account, adjustments: adjustments)
+                            } else {
+                                return nil
+                            }
+                        }
+                        
+                        let signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, path: tempFile.path, watcher: VideoConversionWatcher(update: { path, size in
+                            /*var value = stat()
+                             if stat(path, &value) == 0 {
+                             let remuxedTempFile = TempBox.shared.tempFile(fileName: "video.mp4")
+                             if FFMpegRemuxer.remux(path, to: remuxedTempFile.path) {
+                             TempBox.shared.dispose(tempFile)
+                             subscriber.putNext(.moveTempFile(file: remuxedTempFile))
+                             } else {
+                             TempBox.shared.dispose(remuxedTempFile)
+                             if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+                             var range: Range<Int64>?
+                             let _ = updatedSize.modify { updatedSize in
+                             range = updatedSize ..< value.st_size
+                             return value.st_size
+                             }
+                             //print("size = \(Int(value.st_size)), range: \(range!)")
+                             subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
+                             }
+                             }
+                             }*/
+                        }), entityRenderer: entityRenderer)!
+                        let signalDisposable = signal.start(next: { next in
+                            if let result = next as? TGMediaVideoConversionResult {
+                                var value = stat()
+                                if stat(result.fileURL.path, &value) == 0 {
+                                    let remuxedTempFile = TempBox.shared.tempFile(fileName: "video.mp4")
+                                    if !"".isEmpty, let size = fileSize(result.fileURL.path), size <= 32 * 1024 * 1024, FFMpegRemuxer.remux(result.fileURL.path, to: remuxedTempFile.path) {
+                                        TempBox.shared.dispose(tempFile)
+                                        subscriber.putNext(.moveTempFile(file: remuxedTempFile))
+                                    } else {
+                                        TempBox.shared.dispose(remuxedTempFile)
+                                        if let data = try? Data(contentsOf: result.fileURL, options: [.mappedRead]) {
+                                            var range: Range<Int64>?
+                                            let _ = updatedSize.modify { updatedSize in
+                                                range = updatedSize ..< value.st_size
+                                                return value.st_size
+                                            }
+                                            //print("finish size = \(Int(value.st_size)), range: \(range!)")
+                                            subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
+                                            subscriber.putNext(.replaceHeader(data: data, range: 0 ..< 1024))
+                                            subscriber.putNext(.dataPart(resourceOffset: Int64(data.count), data: Data(), range: 0 ..< 0, complete: true))
+                                        }
+                                    }
+                                } else {
+                                    subscriber.putError(.generic)
+                                }
+                                subscriber.putCompletion()
+                                
+                                EngineTempBox.shared.dispose(tempFile)
+                            }
+                        }, error: { _ in
+                            subscriber.putError(.generic)
+                        }, completed: nil)
+                        disposable.set(ActionDisposable {
+                            signalDisposable?.dispose()
+                        })
                     }
-                }, error: { _ in
-                    subscriber.putError(.generic)
-                }, completed: nil)
-                disposable.set(ActionDisposable {
-                    signalDisposable?.dispose()
                 })
-            })
+            }
         }
         
         return ActionDisposable {
@@ -325,78 +475,144 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
         
         let avAsset = AVURLAsset(url: URL(fileURLWithPath: filteredPath))
         var adjustments: TGVideoEditAdjustments?
+        var mediaEditorValues: MediaEditorValues?
         if let videoAdjustments = resource.adjustments {
-            if let dict = NSKeyedUnarchiver.unarchiveObject(with: videoAdjustments.data.makeData()) as? [AnyHashable : Any] {
+            if videoAdjustments.isStory {
+                if let values = try? JSONDecoder().decode(MediaEditorValues.self, from: videoAdjustments.data.makeData()) {
+                    mediaEditorValues = values
+                }
+            } else if let dict = NSKeyedUnarchiver.unarchiveObject(with: videoAdjustments.data.makeData()) as? [AnyHashable : Any] {
                 adjustments = TGVideoEditAdjustments(dictionary: dict)
             }
         }
         let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
         let updatedSize = Atomic<Int64>(value: 0)
-        let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
-            if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
-                return LegacyPaintEntityRenderer(account: account, adjustments: adjustments)
+        if let mediaEditorValues {
+            let duration: Double = avAsset.duration.seconds
+            let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, duration: duration, frameRate: 30.0)
+            let subject: MediaEditorVideoExport.Subject
+            if filteredPath.contains(".jpg"), let data = try? Data(contentsOf: URL(fileURLWithPath: filteredPath), options: [.mappedRead]), let image = UIImage(data: data) {
+                subject = .image(image)
             } else {
-                return nil
+                subject = .video(avAsset)
             }
-        }
-        let signal: SSignal
-        if filteredPath.contains(".jpg"), let entityRenderer = entityRenderer {
-            if let data = try? Data(contentsOf: URL(fileURLWithPath: filteredPath), options: [.mappedRead]), let image = UIImage(data: data) {
-                let durationSignal: SSignal = SSignal(generator: { subscriber in
-                    let disposable = (entityRenderer.duration()).start(next: { duration in
-                        subscriber.putNext(duration)
-                        subscriber.putCompletion()
-                    })
-                    
-                    return SBlockDisposable(block: {
-                        disposable.dispose()
-                    })
-                })
-                
-                signal = durationSignal.map(toSignal: { duration -> SSignal in
-                    if let duration = duration as? Double {
-                        return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, path: tempFile.path, watcher: VideoConversionWatcher(update: { path, size in
-                            var value = stat()
-                            if stat(path, &value) == 0 {
-                                if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
-                                    var range: Range<Int64>?
-                                    let _ = updatedSize.modify { updatedSize in
-                                        range = updatedSize ..< value.st_size
-                                        return value.st_size
-                                    }
-                                    //print("size = \(Int(value.st_size)), range: \(range!)")
-                                    subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
+            
+            let videoExport = MediaEditorVideoExport(account: account, subject: subject, configuration: configuration, outputPath: tempFile.path)
+            videoExport.start()
+            
+            let statusDisposable = videoExport.status.start(next: { status in
+                switch status {
+                case .completed:
+                    var value = stat()
+                    if stat(tempFile.path, &value) == 0 {
+                        let remuxedTempFile = TempBox.shared.tempFile(fileName: "video.mp4")
+                        if !"".isEmpty, let size = fileSize(tempFile.path), size <= 32 * 1024 * 1024, FFMpegRemuxer.remux(tempFile.path, to: remuxedTempFile.path) {
+                            TempBox.shared.dispose(tempFile)
+                            subscriber.putNext(.moveTempFile(file: remuxedTempFile))
+                        } else {
+                            TempBox.shared.dispose(remuxedTempFile)
+                            if let data = try? Data(contentsOf: URL(fileURLWithPath: tempFile.path), options: [.mappedRead]) {
+                                var range: Range<Int64>?
+                                let _ = updatedSize.modify { updatedSize in
+                                    range = updatedSize ..< value.st_size
+                                    return value.st_size
                                 }
+                                //print("finish size = \(Int(value.st_size)), range: \(range!)")
+                                subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
+                                subscriber.putNext(.replaceHeader(data: data, range: 0 ..< 1024))
+                                subscriber.putNext(.dataPart(resourceOffset: Int64(data.count), data: Data(), range: 0 ..< 0, complete: true))
                             }
-                        }), entityRenderer: entityRenderer)!
+                        }
                     } else {
-                        return SSignal.single(nil)
+                        subscriber.putError(.generic)
                     }
-                })
-            } else {
-                signal = SSignal.single(nil)
+                    subscriber.putCompletion()
+                    
+                    EngineTempBox.shared.dispose(tempFile)
+                case .failed:
+                    subscriber.putError(.generic)
+                case let .progress(progress):
+                    subscriber.putNext(.progressUpdated(progress))
+                default:
+                    break
+                }
+            })
+            
+            let disposable = MetaDisposable()
+            disposable.set(ActionDisposable {
+                statusDisposable.dispose()
+                videoExport.cancel()
+            })
+            
+            return ActionDisposable {
+                disposable.dispose()
             }
         } else {
-            signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, path: tempFile.path, watcher: VideoConversionWatcher(update: { path, size in
-                var value = stat()
-                if stat(path, &value) == 0 {
-                    if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
-                        var range: Range<Int64>?
-                        let _ = updatedSize.modify { updatedSize in
-                            range = updatedSize ..< Int64(value.st_size)
-                            return value.st_size
-                        }
-                        //print("size = \(Int(value.st_size)), range: \(range!)")
-                        subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
-                    }
+            let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
+                if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
+                    return LegacyPaintEntityRenderer(account: account, adjustments: adjustments)
+                } else {
+                    return nil
                 }
-            }), entityRenderer: entityRenderer)!
-        }
+            }
+            let signal: SSignal
+            if filteredPath.contains(".jpg"), let entityRenderer = entityRenderer {
+                if let data = try? Data(contentsOf: URL(fileURLWithPath: filteredPath), options: [.mappedRead]), let image = UIImage(data: data) {
+                    let durationSignal: SSignal = SSignal(generator: { subscriber in
+                        let disposable = (entityRenderer.duration()).start(next: { duration in
+                            subscriber.putNext(duration)
+                            subscriber.putCompletion()
+                        })
+                        
+                        return SBlockDisposable(block: {
+                            disposable.dispose()
+                        })
+                    })
+                    
+                    signal = durationSignal.map(toSignal: { duration -> SSignal in
+                        if let duration = duration as? Double {
+                            return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, path: tempFile.path, watcher: VideoConversionWatcher(update: { path, size in
+                                var value = stat()
+                                if stat(path, &value) == 0 {
+                                    if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+                                        var range: Range<Int64>?
+                                        let _ = updatedSize.modify { updatedSize in
+                                            range = updatedSize ..< value.st_size
+                                            return value.st_size
+                                        }
+                                        //print("size = \(Int(value.st_size)), range: \(range!)")
+                                        subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
+                                    }
+                                }
+                            }), entityRenderer: entityRenderer)!
+                        } else {
+                            return SSignal.single(nil)
+                        }
+                    })
+                } else {
+                    signal = SSignal.single(nil)
+                }
+            } else {
+                signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, path: tempFile.path, watcher: VideoConversionWatcher(update: { path, size in
+                    var value = stat()
+                    if stat(path, &value) == 0 {
+                        if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+                            var range: Range<Int64>?
+                            let _ = updatedSize.modify { updatedSize in
+                                range = updatedSize ..< Int64(value.st_size)
+                                return value.st_size
+                            }
+                            //print("size = \(Int(value.st_size)), range: \(range!)")
+                            subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
+                        }
+                    }
+                }), entityRenderer: entityRenderer)!
+            }
             
-        let signalDisposable = signal.start(next: { next in
-            if let result = next as? TGMediaVideoConversionResult {
-                var value = stat()
-                if stat(result.fileURL.path, &value) == 0 {
+            let signalDisposable = signal.start(next: { next in
+                if let result = next as? TGMediaVideoConversionResult {
+                    var value = stat()
+                    if stat(result.fileURL.path, &value) == 0 {
 //                        if config.remuxToFMp4 {
 //                            let tempFile = TempBox.shared.tempFile(fileName: "video.mp4")
 //                            if FFMpegRemuxer.remux(result.fileURL.path, to: tempFile.path) {
@@ -409,31 +625,32 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
 //                        } else {
 //                            subscriber.putNext(.moveLocalFile(path: result.fileURL.path))
 //                        }
-                    if let data = try? Data(contentsOf: result.fileURL, options: [.mappedRead]) {
-                        var range: Range<Int64>?
-                        let _ = updatedSize.modify { updatedSize in
-                            range = updatedSize ..< value.st_size
-                            return value.st_size
+                        if let data = try? Data(contentsOf: result.fileURL, options: [.mappedRead]) {
+                            var range: Range<Int64>?
+                            let _ = updatedSize.modify { updatedSize in
+                                range = updatedSize ..< value.st_size
+                                return value.st_size
+                            }
+                            //print("finish size = \(Int(value.st_size)), range: \(range!)")
+                            subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
+                            subscriber.putNext(.replaceHeader(data: data, range: 0 ..< 1024))
+                            subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
+                            
+                            EngineTempBox.shared.dispose(tempFile)
                         }
-                        //print("finish size = \(Int(value.st_size)), range: \(range!)")
-                        subscriber.putNext(.dataPart(resourceOffset: range!.lowerBound, data: data, range: range!, complete: false))
-                        subscriber.putNext(.replaceHeader(data: data, range: 0 ..< 1024))
-                        subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
-                        
-                        EngineTempBox.shared.dispose(tempFile)
                     }
+                    subscriber.putCompletion()
                 }
-                subscriber.putCompletion()
+            }, error: { _ in
+            }, completed: nil)
+            
+            let disposable = ActionDisposable {
+                signalDisposable?.dispose()
             }
-        }, error: { _ in
-        }, completed: nil)
-        
-        let disposable = ActionDisposable {
-            signalDisposable?.dispose()
-        }
-        
-        return ActionDisposable {
-            disposable.dispose()
+            
+            return ActionDisposable {
+                disposable.dispose()
+            }
         }
     }
     return throttlingContext.wrap(priority: .default, signal: signal)
@@ -482,6 +699,11 @@ public func fetchVideoLibraryMediaResourceHash(resource: VideoLibraryMediaResour
                         if isPassthrough {
                             updatedData.reverse()
                         }
+                        #if DEBUG
+                        if "".isEmpty {
+                            subscriber.putNext(nil)
+                        }
+                        #endif
                         subscriber.putNext(updatedData)
                     } else {
                         subscriber.putNext(nil)

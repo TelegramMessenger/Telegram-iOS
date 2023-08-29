@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -43,7 +42,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     
     private var currentSize: CGSize?
     
-    private var fetchStatus: MediaResourceStatus?
+    private var fetchStatus: EngineMediaResource.FetchStatus?
     private var fetchedDisposable = MetaDisposable()
     private var statusDisposable = MetaDisposable()
     
@@ -72,7 +71,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         self.pinchContainerNode.contentNode.addSubnode(self.imageNode)
         self.addSubnode(self.pinchContainerNode)
         
-        if let image = media.media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
+        if case let .image(image) = media.media, let largest = largestImageRepresentation(image.representations) {
             let imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
             self.imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, userLocation: sourceLocation.userLocation, photoReference: imageReference))
             
@@ -92,7 +91,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
                 self.statusDisposable.set((context.account.postbox.mediaBox.resourceStatus(largest.resource) |> deliverOnMainQueue).start(next: { [weak self] status in
                     displayLinkDispatcher.dispatch {
                         if let strongSelf = self {
-                            strongSelf.fetchStatus = status
+                            strongSelf.fetchStatus = EngineMediaResource.FetchStatus(status)
                             strongSelf.updateFetchStatus()
                         }
                     }
@@ -105,7 +104,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
 
                 self.pinchContainerNode.contentNode.addSubnode(self.statusNode)
             }
-        } else if let file = media.media as? TelegramMediaFile {
+        } else if case let .file(file) = media.media {
             let fileReference = FileMediaReference.webPage(webPage: WebpageReference(webPage), media: file)
             if file.mimeType.hasPrefix("image/") {
                 if !interactive || shouldDownloadMediaAutomatically(settings: context.sharedContext.currentAutomaticMediaDownloadSettings, peerType: sourceLocation.peerType, networkType: MediaAutoDownloadNetworkType(context.account.immediateNetworkType), authorPeerId: nil, contactsPeerIds: Set(), media: file) {
@@ -119,7 +118,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
                 self.statusNode.transitionToState(.play(.white), animated: false, completion: {})
                 self.pinchContainerNode.contentNode.addSubnode(self.statusNode)
             }
-        } else if let map = media.media as? TelegramMediaMap {
+        } else if case let .geo(map) = media.media {
             self.addSubnode(self.pinNode)
 
             var dimensions = CGSize(width: 200.0, height: 100.0)
@@ -131,7 +130,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             }
             let resource = MapSnapshotMediaResource(latitude: map.latitude, longitude: map.longitude, width: Int32(dimensions.width), height: Int32(dimensions.height))
             self.imageNode.setSignal(chatMapSnapshotImage(engine: context.engine, resource: resource))
-        } else if let webPage = media.media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content, let image = content.image {
+        } else if case let .webpage(webPage) = media.media, case let .Loaded(content) = webPage.content, let image = content.image {
             let imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
             self.imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, userLocation: sourceLocation.userLocation, photoReference: imageReference))
             self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, userLocation: sourceLocation.userLocation, photoReference: imageReference, displayAtSize: nil, storeToDownloadsPeerId: nil).start())
@@ -211,7 +210,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         if self.currentSize != size || self.themeUpdated {
             self.currentSize = size
             self.themeUpdated = false
-
+            
             self.pinchContainerNode.frame = CGRect(origin: CGPoint(), size: size)
             self.pinchContainerNode.update(size: size, transition: .immediate)
             self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
@@ -219,7 +218,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             let radialStatusSize: CGFloat = 50.0
             self.statusNode.frame = CGRect(x: floorToScreenPixels((size.width - radialStatusSize) / 2.0), y: floorToScreenPixels((size.height - radialStatusSize) / 2.0), width: radialStatusSize, height: radialStatusSize)
             
-            if let image = self.media.media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
+            if case let .image(image) = self.media.media, let largest = largestImageRepresentation(image.representations) {
                 let imageSize = largest.dimensions.cgSize.aspectFilled(size)
                 let boundingSize = size
                 let radius: CGFloat = self.roundCorners ? floor(min(imageSize.width, imageSize.height) / 2.0) : 0.0
@@ -228,15 +227,15 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
                 apply()
                 
                 self.linkIconNode.frame = CGRect(x: size.width - 38.0, y: 14.0, width: 24.0, height: 24.0)
-            } else if let file = self.media.media as? TelegramMediaFile, let dimensions = file.dimensions {
+            } else if case let .file(file) = self.media.media, let dimensions = file.dimensions {
                 let emptyColor = file.mimeType.hasPrefix("image/") ? self.theme.imageTintColor : nil
-
+                
                 let imageSize = dimensions.cgSize.aspectFilled(size)
                 let boundingSize = size
                 let makeLayout = self.imageNode.asyncLayout()
                 let apply = makeLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), emptyColor: emptyColor))
                 apply()
-            } else if self.media.media is TelegramMediaMap {
+            } else if case .geo = self.media.media {
                 for attribute in self.attributes {
                     if let mapAttribute = attribute as? InstantPageMapAttribute {
                         let imageSize = mapAttribute.dimensions.aspectFilled(size)
@@ -254,7 +253,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
                 let (pinSize, pinApply) = makePinLayout(self.context, theme, .location(nil))
                 self.pinNode.frame = CGRect(origin: CGPoint(x: floor((size.width - pinSize.width) / 2.0), y: floor(size.height * 0.5 - 10.0 - pinSize.height / 2.0)), size: pinSize)
                 pinApply()
-            } else if let webPage = media.media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content, let image = content.image, let largest = largestImageRepresentation(image.representations) {
+            } else if case let .webpage(webPage) = media.media, case let .Loaded(content) = webPage.content, let image = content.image, let largest = largestImageRepresentation(image.representations) {
                 let imageSize = largest.dimensions.cgSize.aspectFilled(size)
                 let boundingSize = size
                 let radius: CGFloat = self.roundCorners ? floor(min(imageSize.width, imageSize.height) / 2.0) : 0.0
@@ -290,7 +289,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
                             case .Local:
                                 switch gesture {
                                     case .tap:
-                                        if self.media.media is TelegramMediaImage && self.media.index == -1 {
+                                    if case .image = self.media.media, self.media.index == -1 {
                                             return
                                         }
                                         self.openMedia(self.media)
@@ -311,7 +310,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
                     } else {
                         switch gesture {
                             case .tap:
-                                if self.media.media is TelegramMediaImage && self.media.index == -1 {
+                                if case .image = self.media.media, self.media.index == -1 {
                                     return
                                 }
                                 self.openMedia(self.media)

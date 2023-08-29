@@ -417,8 +417,8 @@ public final class SharedNotificationManager {
         }
     }
     
-    private var currentNotificationCall: (peer: Peer?, internalId: CallSessionInternalId)?
-    private func updateNotificationCall(call: (peer: Peer?, internalId: CallSessionInternalId)?, strings: PresentationStrings, nameOrder: PresentationPersonNameOrder, mayAddNotification: Bool) {
+    private var currentNotificationCall: (peer: EnginePeer?, internalId: CallSessionInternalId)?
+    private func updateNotificationCall(call: (peer: EnginePeer?, internalId: CallSessionInternalId)?, strings: PresentationStrings, nameOrder: PresentationPersonNameOrder, mayAddNotification: Bool) {
         if let previousCall = currentNotificationCall {
             if #available(iOS 10.0, *) {
                 let center = UNUserNotificationCenter.current()
@@ -442,7 +442,7 @@ public final class SharedNotificationManager {
         self.currentNotificationCall = call
         
         if let notificationCall = call {
-            let rawText = strings.PUSH_PHONE_CALL_REQUEST(notificationCall.peer.flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameOrder) ?? "").string
+            let rawText = strings.PUSH_PHONE_CALL_REQUEST(notificationCall.peer?.displayTitle(strings: strings, displayOrder: nameOrder) ?? "").string
             let title: String?
             let body: String
             if let index = rawText.firstIndex(of: "|") {
@@ -498,7 +498,7 @@ public final class SharedNotificationManager {
                 let internalId = notificationCall.internalId
                 let isIntegratedWithCallKit = notificationCall.isIntegratedWithCallKit
                 self.notificationCallStateDisposable.set(combineLatest(notificationCall.state
-                    |> map { state -> (Peer?, CallSessionInternalId)? in
+                    |> map { state -> (EnginePeer?, CallSessionInternalId)? in
                         if isIntegratedWithCallKit {
                             return nil
                         }

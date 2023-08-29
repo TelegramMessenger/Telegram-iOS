@@ -41,7 +41,10 @@ swift_library(
         "//submodules/SparseItemGrid:SparseItemGrid",
         "//submodules/UndoUI:UndoUI",
         "//submodules/MoreButtonNode:MoreButtonNode",
-        "//submodules/InvisibleInkDustNode:InvisibleInkDustNode", 
+        "//submodules/InvisibleInkDustNode:InvisibleInkDustNode",
+        "//submodules/TelegramUI/Components/CameraScreen",
+        "//submodules/TelegramUI/Components/MediaEditor",
+        "//submodules/RadialStatusNode",
     ],
     visibility = [
         "//visibility:public",

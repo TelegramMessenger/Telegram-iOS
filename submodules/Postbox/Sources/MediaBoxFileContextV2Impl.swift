@@ -406,7 +406,8 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
                     self.fileMap.serialize(manager: self.manager, to: self.metaPath)
                 }
             case let .progressUpdated(progress):
-                let _ = progress
+                self.fileMap.progressUpdated(progress)
+                self.updateStatusRequests()
             case let .replaceHeader(data, range):
                 self.processWrite(resourceOffset: 0, data: data, dataRange: range)
             case let .moveLocalFile(path):
@@ -601,7 +602,11 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
                     updatedStatus = .Remote(progress: progress)
                 }
             } else if self.pendingFetch != nil {
-                updatedStatus = .Fetching(isActive: true, progress: 0.0)
+                if let progress = self.fileMap.progress {
+                    updatedStatus = .Fetching(isActive: true, progress: progress)
+                } else {
+                    updatedStatus = .Fetching(isActive: true, progress: 0.0)
+                }
             } else {
                 updatedStatus = .Remote(progress: 0.0)
             }

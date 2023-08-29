@@ -39,6 +39,42 @@ public extension Api {
     }
 }
 public extension Api {
+    enum ExportedStoryLink: TypeConstructorDescription {
+        case exportedStoryLink(link: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .exportedStoryLink(let link):
+                    if boxed {
+                        buffer.appendInt32(1070138683)
+                    }
+                    serializeString(link, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .exportedStoryLink(let link):
+                return ("exportedStoryLink", [("link", link as Any)])
+    }
+    }
+    
+        public static func parse_exportedStoryLink(_ reader: BufferReader) -> ExportedStoryLink? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ExportedStoryLink.exportedStoryLink(link: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum FileHash: TypeConstructorDescription {
         case fileHash(offset: Int64, limit: Int32, hash: Buffer)
     
@@ -426,38 +462,32 @@ public extension Api {
 }
 public extension Api {
     enum GlobalPrivacySettings: TypeConstructorDescription {
-        case globalPrivacySettings(flags: Int32, archiveAndMuteNewNoncontactPeers: Api.Bool?)
+        case globalPrivacySettings(flags: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .globalPrivacySettings(let flags, let archiveAndMuteNewNoncontactPeers):
+                case .globalPrivacySettings(let flags):
                     if boxed {
-                        buffer.appendInt32(-1096616924)
+                        buffer.appendInt32(1934380235)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {archiveAndMuteNewNoncontactPeers!.serialize(buffer, true)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .globalPrivacySettings(let flags, let archiveAndMuteNewNoncontactPeers):
-                return ("globalPrivacySettings", [("flags", flags as Any), ("archiveAndMuteNewNoncontactPeers", archiveAndMuteNewNoncontactPeers as Any)])
+                case .globalPrivacySettings(let flags):
+                return ("globalPrivacySettings", [("flags", flags as Any)])
     }
     }
     
         public static func parse_globalPrivacySettings(_ reader: BufferReader) -> GlobalPrivacySettings? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Api.Bool?
-            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.Bool
-            } }
             let _c1 = _1 != nil
-            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            if _c1 && _c2 {
-                return Api.GlobalPrivacySettings.globalPrivacySettings(flags: _1!, archiveAndMuteNewNoncontactPeers: _2)
+            if _c1 {
+                return Api.GlobalPrivacySettings.globalPrivacySettings(flags: _1!)
             }
             else {
                 return nil

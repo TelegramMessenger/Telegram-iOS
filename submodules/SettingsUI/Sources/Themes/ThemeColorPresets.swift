@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramUIPreferences
 import TelegramPresentationData
 import TelegramCore

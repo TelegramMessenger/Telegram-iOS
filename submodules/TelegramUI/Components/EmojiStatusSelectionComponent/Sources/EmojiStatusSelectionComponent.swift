@@ -11,7 +11,6 @@ import ComponentDisplayAdapters
 import TelegramPresentationData
 import AccountContext
 import PagerComponent
-import Postbox
 import TelegramCore
 import Lottie
 import EmojiTextAttachmentView
@@ -19,6 +18,7 @@ import TextFormat
 import AppBundle
 import GZip
 import EmojiStatusComponent
+import Postbox
 
 private func randomGenericReactionEffect(context: AccountContext) -> Signal<String?, NoError> {
     return context.engine.stickers.loadedStickerPack(reference: .emojiGenericAnimations, forceActualized: false)
@@ -174,6 +174,7 @@ public final class EmojiStatusSelectionComponent: Component {
                     externalBottomPanelContainer: nil,
                     displayTopPanelBackground: .blur,
                     topPanelExtensionUpdated: { _, _ in },
+                    topPanelScrollingOffset: { _, _ in },
                     hideInputUpdated: { _, _, _ in },
                     hideTopPanelUpdated: { [weak self] hideTopPanel, transition in
                         guard let strongSelf = self else {
@@ -191,7 +192,8 @@ public final class EmojiStatusSelectionComponent: Component {
                     inputHeight: 0.0,
                     displayBottomPanel: false,
                     isExpanded: false,
-                    clipContentToTopPanel: false
+                    clipContentToTopPanel: false,
+                    useExternalSearchContainer: false
                 )),
                 environment: {},
                 containerSize: availableSize
@@ -344,16 +346,16 @@ public final class EmojiStatusSelectionController: ViewController {
             self.layer.addSublayer(self.cloudLayer0)
             self.layer.addSublayer(self.cloudLayer1)
             
-            let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)
-            self.stableEmptyResultEmojiDisposable.set((self.context.account.postbox.combinedView(keys: [viewKey])
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] views in
-                guard let strongSelf = self, let view = views.views[viewKey] as? OrderedItemListView else {
+            self.stableEmptyResultEmojiDisposable.set((self.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Collections.FeaturedEmojiPacks()
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] featuredEmojiPacks in
+                guard let strongSelf = self else {
                     return
                 }
                 var filteredFiles: [TelegramMediaFile] = []
                 let filterList: [String] = ["😖", "😫", "🫠", "😨", "❓"]
-                for featuredEmojiPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                for featuredEmojiPack in featuredEmojiPacks {
                     for item in featuredEmojiPack.topItems {
                         for attribute in item.file.attributes {
                             switch attribute {
@@ -423,14 +425,14 @@ public final class EmojiStatusSelectionController: ViewController {
                             return
                         }
                         
-                        let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)
-                        let _ = (strongSelf.context.account.postbox.combinedView(keys: [viewKey])
-                        |> take(1)
-                        |> deliverOnMainQueue).start(next: { views in
-                            guard let strongSelf = self, let view = views.views[viewKey] as? OrderedItemListView else {
+                        let _ = (strongSelf.context.engine.data.get(
+                            TelegramEngine.EngineData.Item.Collections.FeaturedEmojiPacks()
+                        )
+                        |> deliverOnMainQueue).start(next: { featuredEmojiPacks in
+                            guard let strongSelf = self else {
                                 return
                             }
-                            for featuredEmojiPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                            for featuredEmojiPack in featuredEmojiPacks {
                                 if featuredEmojiPack.info.id == collectionId {
                                     if let strongSelf = self {
                                         strongSelf.scheduledEmojiContentAnimationHint = EmojiPagerContentComponent.ContentAnimation(type: .groupInstalled(id: collectionId, scrollToGroup: true))
@@ -592,7 +594,7 @@ public final class EmojiStatusSelectionController: ViewController {
                             |> mapToSignal { files, isFinalResult -> Signal<(items: [EmojiPagerContentComponent.ItemGroup], isFinalResult: Bool), NoError> in
                                 var items: [EmojiPagerContentComponent.Item] = []
                                 
-                                var existingIds = Set<MediaId>()
+                                var existingIds = Set<EngineMedia.Id>()
                                 for itemFile in files {
                                     if existingIds.contains(itemFile.fileId) {
                                         continue
@@ -673,8 +675,11 @@ public final class EmojiStatusSelectionController: ViewController {
                     customLayout: nil,
                     externalBackground: nil,
                     externalExpansionView: nil,
+                    customContentView: nil,
                     useOpaqueTheme: true,
-                    hideBackground: false
+                    hideBackground: false,
+                    stateContext: nil,
+                    addImage: nil
                 )
                 
                 strongSelf.refreshLayout(transition: .immediate)

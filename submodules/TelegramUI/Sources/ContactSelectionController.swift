@@ -356,7 +356,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         self.deactivateSearch()
     }
     
-    public var mediaPickerContext: AttachmentMediaPickerContext {
+    public var mediaPickerContext: AttachmentMediaPickerContext? {
         return ContactsPickerContext(controller: self)
     }
     

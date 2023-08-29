@@ -4,7 +4,6 @@ import Display
 import ComponentFlow
 import LegacyComponents
 import TelegramCore
-import Postbox
 import SegmentedControlNode
 
 private func generateMaskPath(size: CGSize, leftRadius: CGFloat, rightRadius: CGFloat) -> UIBezierPath {

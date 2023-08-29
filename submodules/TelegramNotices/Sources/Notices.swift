@@ -173,6 +173,12 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case chatWallpaperLightPreviewTip = 39
     case chatWallpaperDarkPreviewTip = 40
     case displayChatListContacts = 41
+    case displayChatListStoriesTooltip = 42
+    case storiesCameraTooltip = 43
+    case storiesDualCameraTooltip = 44
+    case displayChatListArchiveTooltip = 45
+    case displayStoryReactionTooltip = 46
+    case storyStealthModeReplyCount = 47
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -393,6 +399,30 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func displayChatListContacts() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.displayChatListContacts.key)
+    }
+    
+    static func displayChatListStoriesTooltip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.displayChatListStoriesTooltip.key)
+    }
+    
+    static func storiesCameraTooltip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.storiesCameraTooltip.key)
+    }
+    
+    static func storiesDualCameraTooltip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.storiesDualCameraTooltip.key)
+    }
+    
+    static func displayChatListArchiveTooltip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.displayChatListArchiveTooltip.key)
+    }
+    
+    static func displayStoryReactionTooltip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.displayStoryReactionTooltip.key)
+    }
+    
+    static func storyStealthModeReplyCount() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.storyStealthModeReplyCount.key)
     }
 }
 
@@ -1445,8 +1475,140 @@ public struct ApplicationSpecificNotice {
         |> ignoreValues
     }
     
+    public static func displayChatListStoriesTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Bool, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.displayChatListStoriesTooltip())
+        |> map { view -> Bool in
+            if let _ = view.value?.get(ApplicationSpecificBoolNotice.self) {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
+    public static func setDisplayChatListStoriesTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Never, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificBoolNotice()) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.displayChatListStoriesTooltip(), entry)
+            }
+        }
+        |> ignoreValues
+    }
+    
+    public static func incrementStoriesCameraTip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.storiesCameraTooltip())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.storiesCameraTooltip(), entry)
+            }
+            
+            return Int(previousValue)
+        }
+    }
+    
+    public static func getStoriesDualCameraTip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.storiesDualCameraTooltip())?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementStoriesDualCameraTip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.storiesDualCameraTooltip())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.storiesDualCameraTooltip(), entry)
+            }
+            
+            return Int(previousValue)
+        }
+    }
+    
     public static func reset(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Void, NoError> {
         return accountManager.transaction { transaction -> Void in
         }
+    }
+    
+    public static func displayChatListArchiveTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Bool, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.displayChatListArchiveTooltip())
+        |> map { view -> Bool in
+            if let _ = view.value?.get(ApplicationSpecificBoolNotice.self) {
+                return true
+            } else {
+                return false
+            }
+        }
+        |> take(1)
+    }
+    
+    public static func setDisplayStoryReactionTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Never, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificBoolNotice()) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.displayStoryReactionTooltip(), entry)
+            }
+        }
+        |> ignoreValues
+    }
+    
+    public static func displayStoryReactionTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Bool, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.displayStoryReactionTooltip())
+        |> map { view -> Bool in
+            if let _ = view.value?.get(ApplicationSpecificBoolNotice.self) {
+                return true
+            } else {
+                return false
+            }
+        }
+        |> take(1)
+    }
+    
+    public static func setDisplayChatListArchiveTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Never, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificBoolNotice()) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.displayChatListArchiveTooltip(), entry)
+            }
+        }
+        |> ignoreValues
+    }
+    
+    public static func storyStealthModeReplyCount(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.storyStealthModeReplyCount())
+        |> map { view -> Int in
+            if let value = view.value?.get(ApplicationSpecificCounterNotice.self) {
+                return Int(value.value)
+            } else {
+                return 0
+            }
+        }
+        |> take(1)
+    }
+    
+    public static func incrementStoryStealthModeReplyCount(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Never, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            var value: Int32 = 0
+            if let item = transaction.getNotice(ApplicationSpecificNoticeKeys.storyStealthModeReplyCount())?.get(ApplicationSpecificCounterNotice.self) {
+                value = item.value
+            }
+            
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: value + 1)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.storyStealthModeReplyCount(), entry)
+            }
+        }
+        |> ignoreValues
     }
 }

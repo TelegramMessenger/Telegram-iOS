@@ -308,7 +308,7 @@ final class ChatMessageAccessibilityData {
                                         text = item.presentationData.strings.VoiceOver_Chat_MusicTitle(title, performer).string
                                         text.append(item.presentationData.strings.VoiceOver_Chat_Duration(durationString).string)
                                     }
-                                case let .Video(duration, _, flags):
+                                case let .Video(duration, _, flags, _):
                                     isSpecialFile = true
                                     if isSelected == nil {
                                         hint = item.presentationData.strings.VoiceOver_Chat_PlayHint
@@ -794,7 +794,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
         }
     }
     
-    func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    func transitionNode(id: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         return nil
     }
     
@@ -931,6 +931,10 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
     }
     
     public func targetReactionView(value: MessageReaction.Reaction) -> UIView? {
+        return nil
+    }
+    
+    public func targetForStoryTransition(id: StoryId) -> UIView? {
         return nil
     }
     

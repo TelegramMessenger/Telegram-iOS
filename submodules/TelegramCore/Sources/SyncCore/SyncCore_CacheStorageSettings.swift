@@ -6,10 +6,11 @@ public let maximumCacheSizeValues: [Int32] = {
 }()
 
 public struct CacheStorageSettings: Codable, Equatable {
-    public enum PeerStorageCategory: String, Codable, Hashable {
+    public enum PeerStorageCategory: String, Codable, Hashable, CaseIterable {
         case privateChats = "privateChats"
         case groups = "groups"
         case channels = "channels"
+        case stories = "stories"
     }
     
     private struct CategoryStorageTimeoutRepresentation: Codable {
@@ -29,7 +30,8 @@ public struct CacheStorageSettings: Codable, Equatable {
             categoryStorageTimeout: [
                 .privateChats: Int32(7 * 24 * 60 * 60),
                 .groups: Int32(7 * 24 * 60 * 60),
-                .channels: Int32(7 * 24 * 60 * 60)
+                .channels: Int32(7 * 24 * 60 * 60),
+                .stories: Int32(7 * 24 * 60 * 60)
             ]
         )
     }
@@ -62,6 +64,11 @@ public struct CacheStorageSettings: Codable, Equatable {
                 var categoryStorageTimeout: [PeerStorageCategory: Int32] = [:]
                 for item in items {
                     categoryStorageTimeout[item.key] = item.value
+                }
+                for key in PeerStorageCategory.allCases {
+                    if categoryStorageTimeout[key] == nil, let value = CacheStorageSettings.defaultSettings.categoryStorageTimeout[key] {
+                        categoryStorageTimeout[key] = value
+                    }
                 }
                 self.categoryStorageTimeout = categoryStorageTimeout
             } else {

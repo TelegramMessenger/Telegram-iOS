@@ -138,22 +138,23 @@ final class ContextMenuNode: ASDisplayNode {
     var sourceRect: CGRect?
     var containerRect: CGRect?
     var arrowOnBottom: Bool = true
+    var centerHorizontally: Bool = false
     
     private var dismissedByTouchOutside = false
     private let catchTapsOutside: Bool
     
     private let feedback: HapticFeedback?
     
-    init(actions: [ContextMenuAction], dismiss: @escaping () -> Void, catchTapsOutside: Bool, hasHapticFeedback: Bool = false) {
+    init(actions: [ContextMenuAction], dismiss: @escaping () -> Void, catchTapsOutside: Bool, hasHapticFeedback: Bool = false, blurred: Bool = false) {
         self.actions = actions
         self.dismiss = dismiss
         self.catchTapsOutside = catchTapsOutside
         
-        self.containerNode = ContextMenuContainerNode()
+        self.containerNode = ContextMenuContainerNode(blurred: blurred)
         self.scrollNode = ContextMenuContentScrollNode()
         
         self.actionNodes = actions.map { action in
-            return ContextMenuActionNode(action: action)
+            return ContextMenuActionNode(action: action, blurred: blurred)
         }
         
         if hasHapticFeedback {
@@ -206,8 +207,8 @@ final class ContextMenuNode: ASDisplayNode {
             arrowOnBottom = false
         }
         self.arrowOnBottom = arrowOnBottom
-        
-        let horizontalOrigin: CGFloat = floor(max(8.0, min(max(sourceRect.minX + 8.0, sourceRect.midX - actionsWidth / 2.0), layout.size.width - actionsWidth - 8.0)))
+                
+        let horizontalOrigin: CGFloat = floor(max(8.0, min(self.centerHorizontally ? sourceRect.midX - actionsWidth / 2.0 : max(sourceRect.minX + 8.0, sourceRect.midX - actionsWidth / 2.0), layout.size.width - actionsWidth - 8.0)))
         
         self.containerNode.frame = CGRect(origin: CGPoint(x: horizontalOrigin, y: verticalOrigin), size: CGSize(width: actionsWidth, height: 54.0))
         self.containerNode.relativeArrowPosition = (sourceRect.midX - horizontalOrigin, arrowOnBottom)

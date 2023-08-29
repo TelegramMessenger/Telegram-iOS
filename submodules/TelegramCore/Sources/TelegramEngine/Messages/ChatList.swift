@@ -7,6 +7,7 @@ public final class EngineChatList: Equatable {
     }
 
     public typealias MessageTagSummaryInfo = ChatListMessageTagSummaryInfo
+    public typealias StoryStats = PeerStoryStats
 
     public enum PinnedItem {
         public typealias Id = PinnedItemId
@@ -127,6 +128,7 @@ public final class EngineChatList: Equatable {
         public let hasFailed: Bool
         public let isContact: Bool
         public let autoremoveTimeout: Int32?
+        public let storyStats: StoryStats?
 
         public init(
             id: Id,
@@ -144,7 +146,8 @@ public final class EngineChatList: Equatable {
             topForumTopicItems: [EngineChatList.ForumTopicData],
             hasFailed: Bool,
             isContact: Bool,
-            autoremoveTimeout: Int32?
+            autoremoveTimeout: Int32?,
+            storyStats: StoryStats?
         ) {
             self.id = id
             self.index = index
@@ -162,6 +165,7 @@ public final class EngineChatList: Equatable {
             self.hasFailed = hasFailed
             self.isContact = isContact
             self.autoremoveTimeout = autoremoveTimeout
+            self.storyStats = storyStats
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -211,6 +215,9 @@ public final class EngineChatList: Equatable {
                 return false
             }
             if lhs.autoremoveTimeout != rhs.autoremoveTimeout {
+                return false
+            }
+            if lhs.storyStats != rhs.storyStats {
                 return false
             }
             return true
@@ -414,7 +421,21 @@ public extension EngineChatList.RelativePosition {
 extension EngineChatList.Item {
     convenience init?(_ entry: ChatListEntry) {
         switch entry {
-        case let .MessageEntry(index, messages, readState, isRemovedFromTotalUnreadCount, embeddedState, renderedPeer, presence, tagSummaryInfo, forumTopicData, topForumTopics, hasFailed, isContact, autoremoveTimeout):
+        case let .MessageEntry(entryData):
+            let index = entryData.index
+            let messages = entryData.messages
+            let readState = entryData.readState
+            let isRemovedFromTotalUnreadCount = entryData.isRemovedFromTotalUnreadCount
+            let embeddedState = entryData.embeddedInterfaceState
+            let renderedPeer = entryData.renderedPeer
+            let presence = entryData.presence
+            let tagSummaryInfo = entryData.summaryInfo
+            let forumTopicData = entryData.forumTopicData
+            let topForumTopics = entryData.topForumTopics
+            let hasFailed = entryData.hasFailed
+            let isContact = entryData.isContact
+            let autoremoveTimeout = entryData.autoremoveTimeout
+            
             var draft: EngineChatList.Draft?
             if let embeddedState = embeddedState, let _ = embeddedState.overrideChatTimestamp {
                 if let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
@@ -482,7 +503,8 @@ extension EngineChatList.Item {
                 topForumTopicItems: topForumTopicItems,
                 hasFailed: hasFailed,
                 isContact: isContact,
-                autoremoveTimeout: autoremoveTimeout
+                autoremoveTimeout: autoremoveTimeout,
+                storyStats: entryData.storyStats
             )
         case .HoleEntry:
             return nil

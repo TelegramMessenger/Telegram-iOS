@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ItemListUI
@@ -12,6 +11,7 @@ import ShareController
 import UndoUI
 import InviteLinksUI
 import TextFormat
+import Postbox
 
 private final class UsernameSetupControllerArguments {
     let account: Account
@@ -404,7 +404,7 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
 
 public enum UsernameSetupMode: Equatable {
     case account
-    case bot(PeerId)
+    case bot(EnginePeer.Id)
 }
 
 public func usernameSetupController(context: AccountContext, mode: UsernameSetupMode = .account) -> ViewController {
@@ -426,7 +426,7 @@ public func usernameSetupController(context: AccountContext, mode: UsernameSetup
     let updateAddressNameDisposable = MetaDisposable()
     actionsDisposable.add(updateAddressNameDisposable)
     
-    let peerId: PeerId
+    let peerId: EnginePeer.Id
     let domain: AddressNameDomain
     switch mode {
     case .account:

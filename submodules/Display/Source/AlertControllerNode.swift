@@ -5,6 +5,7 @@ import AsyncDisplayKit
 final class AlertControllerNode: ASDisplayNode {
     var existingAlertControllerNode: AlertControllerNode?
     
+    private let dimContainerView: UIView
     private let centerDimView: UIImageView
     private let topDimView: UIView
     private let bottomDimView: UIView
@@ -25,6 +26,8 @@ final class AlertControllerNode: ASDisplayNode {
         self.allowInputInset = allowInputInset
         
         let dimColor = UIColor(white: 0.0, alpha: 0.5)
+        
+        self.dimContainerView = UIView()
         
         self.centerDimView = UIImageView()
         self.centerDimView.backgroundColor = dimColor
@@ -56,11 +59,12 @@ final class AlertControllerNode: ASDisplayNode {
         
         super.init()
         
-        self.view.addSubview(self.centerDimView)
-        self.view.addSubview(self.topDimView)
-        self.view.addSubview(self.bottomDimView)
-        self.view.addSubview(self.leftDimView)
-        self.view.addSubview(self.rightDimView)
+        self.view.addSubview(self.dimContainerView)
+        self.dimContainerView.addSubview(self.centerDimView)
+        self.dimContainerView.addSubview(self.topDimView)
+        self.dimContainerView.addSubview(self.bottomDimView)
+        self.dimContainerView.addSubview(self.leftDimView)
+        self.dimContainerView.addSubview(self.rightDimView)
         
         self.containerNode.addSubnode(self.effectNode)
         self.containerNode.addSubnode(self.backgroundNode)
@@ -135,6 +139,7 @@ final class AlertControllerNode: ASDisplayNode {
                 }
             })*/
             self.containerNode.layer.animateSpring(from: 0.8 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5, initialVelocity: 0.0, removeOnCompletion: true, additive: false, completion: nil)
+            self.dimContainerView.layer.animateSpring(from: 0.8 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5, initialVelocity: 0.0, removeOnCompletion: true, additive: false, completion: nil)
         }
     }
     
@@ -152,6 +157,7 @@ final class AlertControllerNode: ASDisplayNode {
         self.containerNode.layer.animateScale(from: 1.0, to: 0.8, duration: 0.4, removeOnCompletion: false, completion: { _ in
             completion()
         })
+        self.dimContainerView.layer.animateScale(from: 1.0, to: 0.8, duration: 0.4, removeOnCompletion: false)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -170,11 +176,14 @@ final class AlertControllerNode: ASDisplayNode {
         let containerSize = CGSize(width: contentSize.width, height: contentSize.height)
         let containerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - containerSize.width) / 2.0), y: contentAvailableFrame.minY + floor((contentAvailableFrame.size.height - containerSize.height) / 2.0)), size: containerSize)
         
+        let outerEdge: CGFloat = 100.0
+        
+        transition.updateFrame(view: self.dimContainerView, frame: CGRect(origin: .zero, size: layout.size))
         transition.updateFrame(view: self.centerDimView, frame: containerFrame)
-        transition.updateFrame(view: self.topDimView, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: containerFrame.minY)))
-        transition.updateFrame(view: self.bottomDimView, frame: CGRect(origin: CGPoint(x: 0.0, y: containerFrame.maxY), size: CGSize(width: layout.size.width, height: layout.size.height - containerFrame.maxY)))
-        transition.updateFrame(view: self.leftDimView, frame: CGRect(origin: CGPoint(x: 0.0, y: containerFrame.minY), size: CGSize(width: containerFrame.minX, height: containerFrame.height)))
-        transition.updateFrame(view: self.rightDimView, frame: CGRect(origin: CGPoint(x: containerFrame.maxX, y: containerFrame.minY), size: CGSize(width: layout.size.width - containerFrame.maxX, height: containerFrame.height)))
+        transition.updateFrame(view: self.topDimView, frame: CGRect(origin: CGPoint(x: -outerEdge, y: -outerEdge), size: CGSize(width: layout.size.width + outerEdge * 2.0, height: containerFrame.minY + outerEdge)))
+        transition.updateFrame(view: self.bottomDimView, frame: CGRect(origin: CGPoint(x: -outerEdge, y: containerFrame.maxY), size: CGSize(width: layout.size.width + outerEdge * 2.0, height: layout.size.height - containerFrame.maxY + outerEdge)))
+        transition.updateFrame(view: self.leftDimView, frame: CGRect(origin: CGPoint(x: -outerEdge, y: containerFrame.minY), size: CGSize(width: containerFrame.minX + outerEdge, height: containerFrame.height)))
+        transition.updateFrame(view: self.rightDimView, frame: CGRect(origin: CGPoint(x: containerFrame.maxX, y: containerFrame.minY), size: CGSize(width: layout.size.width - containerFrame.maxX + outerEdge, height: containerFrame.height)))
         
         transition.updateFrame(node: self.containerNode, frame: containerFrame)
         transition.updateFrame(node: self.effectNode, frame: CGRect(origin: CGPoint(), size: containerFrame.size))

@@ -170,6 +170,22 @@ func _internal_reportPeerMessages(account: Account, messageIds: [MessageId], rea
     } |> switchToLatest
 }
 
+func _internal_reportPeerStory(account: Account, peerId: PeerId, storyId: Int32, reason: ReportReason, message: String) -> Signal<Void, NoError> {
+    return account.postbox.transaction { transaction -> Signal<Void, NoError> in
+        if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
+            return account.network.request(Api.functions.stories.report(userId: inputUser, id: [storyId], reason: reason.apiReason, message: message))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> mapToSignal { _ -> Signal<Void, NoError> in
+                return .complete()
+            }
+        } else {
+            return .complete()
+        }
+    } |> switchToLatest
+}
+
 func _internal_reportPeerReaction(account: Account, authorId: PeerId, messageId: MessageId) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> (Api.InputPeer, Api.InputPeer)? in
         guard let peer = transaction.getPeer(messageId.peerId).flatMap(apiInputPeer) else {

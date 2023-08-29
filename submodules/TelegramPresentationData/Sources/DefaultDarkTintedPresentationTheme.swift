@@ -228,7 +228,8 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
                     bottomColor: accentColor?.withMultiplied(hue: 0.98, saturation: 0.268, brightness: 0.39)
                 ),
                 foregroundColor: additionalBackgroundColor
-            )
+            ),
+            storySeenColors: mainForegroundColor.flatMap { mainForegroundColor in PresentationThemeGradientColors(topColor: mainForegroundColor, bottomColor: mainForegroundColor) }
         )
         actionSheet = actionSheet.withUpdated(
             opaqueItemBackgroundColor: mainBackgroundColor,
@@ -720,7 +721,10 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         secretIconColor: UIColor(rgb: 0x89df9e),
         pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors(backgroundColors: PresentationThemeGradientColors(topColor: UIColor(rgb: 0x72d5fd), bottomColor: UIColor(rgb: 0x2a9ef1)), foregroundColor: .white),
         unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors(backgroundColors: PresentationThemeGradientColors(topColor: accentColor.withMultiplied(hue: 0.985, saturation: 0.268, brightness: 0.47), bottomColor: accentColor.withMultiplied(hue: 0.98, saturation: 0.268, brightness: 0.39)), foregroundColor: additionalBackgroundColor),
-        onlineDotColor: UIColor(rgb: 0x4cc91f)
+        onlineDotColor: UIColor(rgb: 0x4cc91f),
+        storyUnseenColors: PresentationThemeGradientColors(topColor: UIColor(rgb: 0x34C76F), bottomColor: UIColor(rgb: 0x3DA1FD)),
+        storyUnseenPrivateColors: PresentationThemeGradientColors(topColor: UIColor(rgb: 0x7CD636), bottomColor: UIColor(rgb: 0x26B470)),
+        storySeenColors: PresentationThemeGradientColors(topColor: mainForegroundColor, bottomColor: mainForegroundColor)
     )
     
     let buttonStrokeColor = accentColor.withMultiplied(hue: 1.014, saturation: 0.56, brightness: 0.64).withAlphaComponent(0.15)

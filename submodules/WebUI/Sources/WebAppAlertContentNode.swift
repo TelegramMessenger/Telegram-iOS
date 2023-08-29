@@ -20,7 +20,6 @@ private func formattedText(_ text: String, color: UIColor, textAlignment: NSText
     return parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: color), bold: MarkdownAttributeSet(font: boldTextFont, textColor: color), link: MarkdownAttributeSet(font: textFont, textColor: color), linkAttribute: { _ in return nil}), textAlignment: textAlignment)
 }
 
-
 private final class WebAppAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings
     private let peerName: String
@@ -312,22 +311,24 @@ public func addWebAppToAttachmentController(context: AccountContext, peerName: S
     let strings = presentationData.strings
     
     var dismissImpl: ((Bool) -> Void)?
-    var contentNode: WebAppAlertContentNode?
+    var getContentNodeImpl: (() -> WebAppAlertContentNode?)?
     let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?(true)
-    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.WebApp_AddToAttachmentAdd, action: { [weak contentNode] in
-        dismissImpl?(true)
-      
-        if requestWriteAccess, let allowWriteAccess = contentNode?.allowWriteAccess {
+    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.WebApp_AddToAttachmentAdd, action: {
+        if requestWriteAccess, let allowWriteAccess = getContentNodeImpl?()?.allowWriteAccess {
             completion(allowWriteAccess)
         } else {
             completion(false)
         }
+        dismissImpl?(true)
     })]
     
-    contentNode = WebAppAlertContentNode(account: context.account, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, peerName: peerName, icons: icons, requestWriteAccess: requestWriteAccess, actions: actions)
+    let contentNode = WebAppAlertContentNode(account: context.account, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, peerName: peerName, icons: icons, requestWriteAccess: requestWriteAccess, actions: actions)
+    getContentNodeImpl = { [weak contentNode] in
+        return contentNode
+    }
     
-    let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode!)
+    let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
     dismissImpl = { [weak controller] animated in
         if animated {
             controller?.dismissAnimated()

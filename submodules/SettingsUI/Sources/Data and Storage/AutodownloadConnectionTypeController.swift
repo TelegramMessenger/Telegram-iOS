@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -48,6 +47,7 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
     case dataUsageItem(PresentationTheme, PresentationStrings, AutomaticDownloadDataUsage, Int?, Bool)
     case typesHeader(PresentationTheme, String)
     case photos(PresentationTheme, String, String, Bool)
+    case stories(PresentationTheme, String, String, Bool)
     case videos(PresentationTheme, String, String, Bool)
     case files(PresentationTheme, String, String, Bool)
     case voiceMessagesInfo(PresentationTheme, String)
@@ -58,7 +58,7 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
                 return AutodownloadMediaCategorySection.master.rawValue
             case .dataUsageHeader, .dataUsageItem:
                 return AutodownloadMediaCategorySection.dataUsage.rawValue
-            case .typesHeader, .photos, .videos, .files, .voiceMessagesInfo:
+            case .typesHeader, .photos, .stories, .videos, .files, .voiceMessagesInfo:
                 return AutodownloadMediaCategorySection.types.rawValue
         }
     }
@@ -75,12 +75,14 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
                 return 3
             case .photos:
                 return 4
-            case .videos:
+            case .stories:
                 return 5
-            case .files:
+            case .videos:
                 return 6
-            case .voiceMessagesInfo:
+            case .files:
                 return 7
+            case .voiceMessagesInfo:
+                return 8
         }
     }
     
@@ -112,6 +114,12 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
                 }
             case let .photos(lhsTheme, lhsText, lhsValue, lhsEnabled):
                 if case let .photos(rhsTheme, rhsText, rhsValue, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsEnabled == rhsEnabled {
+                    return true
+                } else {
+                    return false
+                }
+            case let .stories(lhsTheme, lhsText, lhsValue, lhsEnabled):
+                if case let .stories(rhsTheme, rhsText, rhsValue, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsEnabled == rhsEnabled {
                     return true
                 } else {
                     return false
@@ -160,6 +168,10 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/Photos")?.precomposed(), title: text, enabled: enabled, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
                     arguments.customize(.photo)
                 })
+            case let .stories(_, text, value, enabled):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/Stories")?.precomposed(), title: text, enabled: enabled, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
+                    arguments.customize(.story)
+                })
             case let .videos(_, text, value, enabled):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/Videos")?.precomposed(), title: text, enabled: enabled, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
                     arguments.customize(.video)
@@ -191,6 +203,16 @@ private struct AutomaticDownloadPeers {
 }
 
 private func stringForAutomaticDownloadPeers(strings: PresentationStrings, decimalSeparator: String, peers: AutomaticDownloadPeers, category: AutomaticDownloadCategory) -> String {
+    if case .story = category {
+        if peers.contacts && peers.otherPrivate {
+            return strings.AutoDownloadSettings_OnForAll
+        } else if peers.contacts {
+            return strings.AutoDownloadSettings_OnForContacts
+        } else {
+            return strings.AutoDownloadSettings_OffForAll
+        }
+    }
+    
     var size: String?
     if var peersSize = peers.size, category == .video || category == .file {
         if peersSize == Int32.max {
@@ -254,6 +276,7 @@ private func autodownloadMediaConnectionTypeControllerEntries(presentationData: 
     let photo = AutomaticDownloadPeers(category: categories.photo)
     let video = AutomaticDownloadPeers(category: categories.video)
     let file = AutomaticDownloadPeers(category: categories.file)
+    let stories = AutomaticDownloadPeers(category: categories.stories)
     
     entries.append(.master(presentationData.theme, presentationData.strings.AutoDownloadSettings_AutoDownload, master))
     
@@ -269,6 +292,7 @@ private func autodownloadMediaConnectionTypeControllerEntries(presentationData: 
     
     entries.append(.typesHeader(presentationData.theme, presentationData.strings.AutoDownloadSettings_MediaTypes))
     entries.append(.photos(presentationData.theme, presentationData.strings.AutoDownloadSettings_Photos, stringForAutomaticDownloadPeers(strings: presentationData.strings, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, peers: photo, category: .photo), master))
+    entries.append(.stories(presentationData.theme, presentationData.strings.AutoDownloadSettings_Stories, stringForAutomaticDownloadPeers(strings: presentationData.strings, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, peers: stories, category: .story), master))
     entries.append(.videos(presentationData.theme, presentationData.strings.AutoDownloadSettings_Videos, stringForAutomaticDownloadPeers(strings: presentationData.strings, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, peers: video, category: .video), master))
     entries.append(.files(presentationData.theme, presentationData.strings.AutoDownloadSettings_Files, stringForAutomaticDownloadPeers(strings: presentationData.strings, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, peers: file, category: .file), master))
     entries.append(.voiceMessagesInfo(presentationData.theme, presentationData.strings.AutoDownloadSettings_VoiceMessagesInfo))

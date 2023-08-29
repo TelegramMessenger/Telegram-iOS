@@ -18,13 +18,13 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     
     private var customTitle: String?
     
-    public var peerSelected: ((Peer, Int64?) -> Void)?
-    public var multiplePeersSelected: (([Peer], [PeerId: Peer], NSAttributedString, AttachmentTextInputPanelSendMode, ChatInterfaceForwardOptionsState?) -> Void)?
+    public var peerSelected: ((EnginePeer, Int64?) -> Void)?
+    public var multiplePeersSelected: (([EnginePeer], [EnginePeer.Id: EnginePeer], NSAttributedString, AttachmentTextInputPanelSendMode, ChatInterfaceForwardOptionsState?) -> Void)?
     private let filter: ChatListNodePeersFilter
     private let forumPeerId: EnginePeer.Id?
     private let selectForumThreads: Bool
     
-    private let attemptSelection: ((Peer, Int64?) -> Void)?
+    private let attemptSelection: ((EnginePeer, Int64?) -> Void)?
     private let createNewGroup: (() -> Void)?
     
     public var inProgress: Bool = false {
@@ -200,8 +200,8 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
                 if isDisabled {
                     let context = strongSelf.context
                     var replaceImpl: ((ViewController) -> Void)?
-                    let controller = context.sharedContext.makePremiumLimitController(context: context, subject: .folders, count: strongSelf.tabContainerNode?.filtersCount ?? 0, action: {
-                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .folders)
+                    let controller = context.sharedContext.makePremiumLimitController(context: context, subject: .folders, count: strongSelf.tabContainerNode?.filtersCount ?? 0, forceDark: false, cancel: {}, action: {
+                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .folders, forceDark: false, dismissed: nil)
                         replaceImpl?(controller)
                     })
                     replaceImpl = { [weak controller] c in
@@ -259,7 +259,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         
         self.peerSelectionNode.requestOpenPeer = { [weak self] peer, threadId in
             if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
-                if let peer = peer as? TelegramChannel, peer.flags.contains(.isForum), threadId == nil, strongSelf.selectForumThreads {
+                if case let .channel(peer) = peer, peer.flags.contains(.isForum), threadId == nil, strongSelf.selectForumThreads {
                     let controller = PeerSelectionControllerImpl(
                         PeerSelectionControllerParams(
                             context: strongSelf.context,
@@ -296,10 +296,10 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         
         self.peerSelectionNode.requestOpenPeerFromSearch = { [weak self] peer, threadId in
             if let strongSelf = self {
-                strongSelf.openMessageFromSearchDisposable.set((strongSelf.context.engine.peers.ensurePeerIsLocallyAvailable(peer: EnginePeer(peer))
+                strongSelf.openMessageFromSearchDisposable.set((strongSelf.context.engine.peers.ensurePeerIsLocallyAvailable(peer: peer)
                 |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
                     if let strongSelf = strongSelf, let peerSelected = strongSelf.peerSelected {
-                        if let peer = peer as? TelegramChannel, peer.flags.contains(.isForum), threadId == nil, strongSelf.selectForumThreads {
+                        if case let .channel(peer) = peer, peer.flags.contains(.isForum), threadId == nil, strongSelf.selectForumThreads {
                             let controller = PeerSelectionControllerImpl(
                                 PeerSelectionControllerParams(
                                     context: strongSelf.context,
@@ -451,17 +451,8 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
             } else {
                 wasEmpty = true
             }
-            
-            let firstItem = countAndFilterItems.1.first?.0 ?? .allChats
-            let firstItemEntryId: ChatListFilterTabEntryId
-            switch firstItem {
-                case .allChats:
-                    firstItemEntryId = .all
-                case let .filter(id, _, _, _):
-                    firstItemEntryId = .filter(id)
-            }
-            
-            var selectedEntryId = !strongSelf.initializedFilters ? firstItemEntryId : (strongSelf.peerSelectionNode.mainContainerNode?.currentItemFilter ?? .all)
+   
+            var selectedEntryId = !strongSelf.initializedFilters ? .all : (strongSelf.peerSelectionNode.mainContainerNode?.currentItemFilter ?? .all)
             var resetCurrentEntry = false
             if !resolvedItems.contains(where: { $0.id == selectedEntryId }) {
                 resetCurrentEntry = true
