@@ -4616,6 +4616,8 @@ func replayFinalState(
                     ))
                     if let entry = CodableEntry(updatedItem) {
                         transaction.setStory(id: StoryId(peerId: peerId, id: id), value: entry)
+                        
+                        storyUpdates.append(InternalStoryUpdate.added(peerId: peerId, item: updatedItem))
                     }
                 }
         }
@@ -5075,7 +5077,20 @@ func replayFinalState(
     for update in storyUpdates {
         switch update {
         case let .added(peerId, _):
-            if shouldKeepUserStoriesInFeed(peerId: peerId, isContact: transaction.isPeerContact(peerId: peerId)) {
+            var isContactOrMember = false
+            if transaction.isPeerContact(peerId: peerId) {
+                isContactOrMember = true
+            } else if let peer = transaction.getPeer(peerId) as? TelegramChannel {
+                if peer.participationStatus == .member {
+                    isContactOrMember = true
+                }
+            } else if let peer = transaction.getPeer(peerId) as? TelegramGroup {
+                if case .Member = peer.membership {
+                    isContactOrMember = true
+                }
+            }
+            
+            if shouldKeepUserStoriesInFeed(peerId: peerId, isContactOrMember: isContactOrMember) {
                 if !transaction.storySubscriptionsContains(key: .hidden, peerId: peerId) && !transaction.storySubscriptionsContains(key: .filtered, peerId: peerId) {
                     _internal_addSynchronizePeerStoriesOperation(peerId: peerId, transaction: transaction)
                 }

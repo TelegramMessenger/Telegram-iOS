@@ -618,7 +618,7 @@ public final class PeerStoryListContext {
                 
                 let signal: Signal<Api.stories.Stories, MTRpcError>
                 if isArchived {
-                    signal = account.network.request(Api.functions.stories.getStoriesArchive(offsetId: Int32(loadMoreToken), limit: Int32(limit)))
+                    signal = account.network.request(Api.functions.stories.getStoriesArchive(peer: inputPeer, offsetId: Int32(loadMoreToken), limit: Int32(limit)))
                 } else {
                     signal = account.network.request(Api.functions.stories.getPinnedStories(peer: inputPeer, offsetId: Int32(loadMoreToken), limit: Int32(limit)))
                 }
@@ -1379,7 +1379,20 @@ public func _internal_pollPeerStories(postbox: Postbox, network: Network, accoun
                 
                 transaction.setStoryItems(peerId: peerId, items: updatedPeerEntries)
                 
-                if !updatedPeerEntries.isEmpty, shouldKeepUserStoriesInFeed(peerId: peerId, isContact: transaction.isPeerContact(peerId: peerId)) {
+                var isContactOrMember = false
+                if transaction.isPeerContact(peerId: peerId) {
+                    isContactOrMember = true
+                } else if let peer = transaction.getPeer(peerId) as? TelegramChannel {
+                    if peer.participationStatus == .member {
+                        isContactOrMember = true
+                    }
+                } else if let peer = transaction.getPeer(peerId) as? TelegramGroup {
+                    if case .Member = peer.membership {
+                        isContactOrMember = true
+                    }
+                }
+                
+                if !updatedPeerEntries.isEmpty, shouldKeepUserStoriesInFeed(peerId: peerId, isContactOrMember: isContactOrMember) {
                     if let user = transaction.getPeer(peerId) as? TelegramUser, let storiesHidden = user.storiesHidden {
                         if storiesHidden {
                             if !transaction.storySubscriptionsContains(key: .hidden, peerId: peerId) {

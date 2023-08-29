@@ -1271,7 +1271,7 @@ func _internal_deleteStories(account: Account, peerId: PeerId, ids: [Int32]) -> 
             transaction.setStoryItems(peerId: account.peerId, items: items)
         }
         account.stateManager.injectStoryUpdates(updates: ids.map { id in
-            return .deleted(peerId: account.peerId, id: id)
+            return .deleted(peerId: peerId, id: id)
         })
         
         return inputPeer
@@ -1400,7 +1400,7 @@ func _internal_updateStoriesArePinned(account: Account, peerId: PeerId, ids: [In
         if !updatedItems.isEmpty {
             DispatchQueue.main.async {
                 account.stateManager.injectStoryUpdates(updates: updatedItems.map { updatedItem in
-                    return .added(peerId: account.peerId, item: Stories.StoredItem.item(updatedItem))
+                    return .added(peerId: peerId, item: Stories.StoredItem.item(updatedItem))
                 })
             }
         }
@@ -1884,13 +1884,15 @@ public func _internal_setStoryNotificationWasDisplayed(transaction: Transaction,
 }
 
 func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int32, reaction: MessageReaction.Reaction?) -> Signal<Never, NoError> {
-    return account.postbox.transaction { transaction -> Api.InputPeer? in
+    return account.postbox.transaction { transaction -> (Stories.StoredItem?, Api.InputPeer?) in
         guard let peer = transaction.getPeer(peerId) else {
-            return nil
+            return (nil, nil)
         }
         guard let inputPeer = apiInputPeer(peer) else {
-            return nil
+            return (nil, nil)
         }
+        
+        var updatedItemValue: Stories.StoredItem?
         
         var currentItems = transaction.getStoryItems(peerId: peerId)
         for i in 0 ..< currentItems.count {
@@ -1916,6 +1918,7 @@ func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int
                         isEdited: item.isEdited,
                         myReaction: reaction
                     ))
+                    updatedItemValue = updatedItem
                     if let entry = CodableEntry(updatedItem) {
                         currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
                     }
@@ -1945,17 +1948,21 @@ func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int
                 isEdited: item.isEdited,
                 myReaction: reaction
             ))
+            updatedItemValue = updatedItem
             if let entry = CodableEntry(updatedItem) {
                 transaction.setStory(id: StoryId(peerId: peerId, id: id), value: entry)
             }
         }
         
-        return inputPeer
+        return (updatedItemValue, inputPeer)
     }
-    |> mapToSignal { inputPeer -> Signal<Never, NoError> in
-        guard let inputPeer = inputPeer else {
+    |> mapToSignal { storyItem, inputPeer -> Signal<Never, NoError> in
+        guard let storyItem, let inputPeer = inputPeer else {
             return .complete()
         }
+        
+        account.stateManager.injectStoryUpdates(updates: [InternalStoryUpdate.added(peerId: peerId, item: storyItem)])
+        
         return account.network.request(Api.functions.stories.sendReaction(flags: 0, peer: inputPeer, storyId: id, reaction: reaction?.apiReaction ?? .reactionEmpty))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in

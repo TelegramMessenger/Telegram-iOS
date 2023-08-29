@@ -423,7 +423,7 @@ func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
             longitude = 0.0
         }
         return .venue(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), venue: MediaArea.Venue(latitude: latitude, longitude: longitude, venue: MapVenue(title: title, address: address, provider: provider, id: venueId, type: venueType), queryId: nil, resultId: nil))
-    case let .mediaAreaSuggestedReaction(coordinates, reaction):
+    case let .mediaAreaSuggestedReaction(_, coordinates, reaction):
         if let reaction = MessageReaction.Reaction(apiReaction: reaction) {
             return .reaction(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), reaction: reaction)
         } else {
@@ -447,7 +447,7 @@ func apiMediaAreasFromMediaAreas(_ mediaAreas: [MediaArea]) -> [Api.MediaArea] {
                 apiMediaAreas.append(.mediaAreaGeoPoint(coordinates: inputCoordinates, geo: .geoPoint(flags: 0, long: venue.longitude, lat: venue.latitude, accessHash: 0, accuracyRadius: nil)))
             }
         case let .reaction(_, reaction):
-            apiMediaAreas.append(.mediaAreaSuggestedReaction(coordinates: inputCoordinates, reaction: reaction.apiReaction))
+            apiMediaAreas.append(.mediaAreaSuggestedReaction(flags: 0, coordinates: inputCoordinates, reaction: reaction.apiReaction))
         }
     }
     return apiMediaAreas

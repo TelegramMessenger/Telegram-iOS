@@ -786,6 +786,16 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             let requestsContextPromise = Promise<PeerInvitationImportersContext?>(nil)
             let requestsStatePromise = Promise<PeerInvitationImportersState?>(nil)
             
+            let storyListContext = PeerStoryListContext(account: context.account, peerId: peerId, isArchived: false)
+            let hasStories: Signal<Bool?, NoError> = storyListContext.state
+            |> map { state -> Bool? in
+                if !state.hasCache {
+                    return nil
+                }
+                return !state.items.isEmpty
+            }
+            |> distinctUntilChanged
+            
             return combineLatest(
                 context.account.viewTracker.peerView(peerId, updateData: true),
                 peerInfoAvailableMediaPanes(context: context, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder),
@@ -794,9 +804,19 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 invitationsContextPromise.get(),
                 invitationsStatePromise.get(),
                 requestsContextPromise.get(),
-                requestsStatePromise.get()
+                requestsStatePromise.get(),
+                hasStories
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, status, currentInvitationsContext, invitations, currentRequestsContext, requests -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, status, currentInvitationsContext, invitations, currentRequestsContext, requests, hasStories -> PeerInfoScreenData in
+                var availablePanes = availablePanes
+                if let hasStories {
+                    if hasStories {
+                        availablePanes?.insert(.stories, at: 0)
+                    }
+                } else {
+                    availablePanes = nil
+                }
+                
                 var discussionPeer: Peer?
                 if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer
@@ -835,7 +855,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     groupsInCommon: nil,
                     linkedDiscussionPeer: discussionPeer,
                     members: nil,
-                    storyListContext: nil,
+                    storyListContext: storyListContext,
                     encryptionKeyFingerprint: nil,
                     globalSettings: nil,
                     invitations: invitations,
