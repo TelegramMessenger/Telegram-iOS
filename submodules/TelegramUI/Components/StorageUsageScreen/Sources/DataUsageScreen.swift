@@ -1249,6 +1249,7 @@ final class DataUsageScreenComponent: Component {
     }
 }
 
+/*
 public final class DataUsageScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     
@@ -1275,6 +1276,7 @@ public final class DataUsageScreen: ViewControllerComponentContainer {
         super.viewDidLoad()
     }
 }
+*/
 
 public func autodownloadDataSizeString(_ size: Int64, decimalSeparator: String = ".") -> String {
     if size >= 1024 * 1024 * 1024 {

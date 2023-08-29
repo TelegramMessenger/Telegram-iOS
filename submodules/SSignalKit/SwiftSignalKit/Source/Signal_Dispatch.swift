@@ -63,15 +63,15 @@ public func runOn<T, E>(_ queue: Queue) -> (Signal<T, E>) -> Signal<T, E> {
                     subscriber.putCompletion()
                 })
             } else {
-                var cancelled = false
+                let cancelled = Atomic<Bool>(value: false)
                 let disposable = MetaDisposable()
                 
                 disposable.set(ActionDisposable {
-                    cancelled = true
+                    let _ = cancelled.swap(true)
                 })
                 
                 queue.async {
-                    if cancelled {
+                    if cancelled.with({ $0 }) {
                         return
                     }
                     

@@ -55,6 +55,31 @@
     }
 }
 
+- (void)contextDatacenterAuthInfoUpdated:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId authInfo:(MTDatacenterAuthInfo * _Nonnull)authInfo selector:(MTDatacenterAuthInfoSelector)selector {
+    if (_contextDatacenterAuthInfoUpdated)
+        _contextDatacenterAuthInfoUpdated(context, datacenterId, authInfo, selector);
+}
+
+- (void)contextDatacenterAuthTokenUpdated:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId authToken:(id _Nullable)authToken {
+    if (_contextDatacenterAuthTokenUpdated)
+        _contextDatacenterAuthTokenUpdated(context, datacenterId, authToken);
+}
+
+- (void)contextDatacenterTransportSchemesUpdated:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId shouldReset:(bool)shouldReset {
+    if (_contextDatacenterTransportSchemesUpdated)
+        _contextDatacenterTransportSchemesUpdated(context, datacenterId, shouldReset);
+}
+
+- (void)contextDatacenterPublicKeysUpdated:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId publicKeys:(NSArray<NSDictionary *> * _Nonnull)publicKeys {
+    if (_contextDatacenterPublicKeysUpdated)
+        _contextDatacenterPublicKeysUpdated(context, datacenterId, publicKeys);
+}
+
+- (void)contextApiEnvironmentUpdated:(MTContext * _Nonnull)context apiEnvironment:(MTApiEnvironment * _Nonnull)apiEnvironment {
+    if (_contextApiEnvironmentUpdated)
+        _contextApiEnvironmentUpdated(context, apiEnvironment);
+}
+
 @end
 
 @interface MTTransportSchemeKey : NSObject<NSCoding, NSCopying>

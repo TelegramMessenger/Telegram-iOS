@@ -2,5 +2,6 @@
     "app": "8.7.1",
     "bazel": "6.1.1",
     "xcode": "14.2",
-    "partisan": "0.0.4"
+    "original": "9.6.3",
+    "original_build": "25780"
 }

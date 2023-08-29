@@ -625,8 +625,10 @@ plist_fragment(
     extension = "plist",
     template =
     """
-    <key>PTelegramVersion</key>
-    <string>{partisanVersion}</string>
+    <key>TelegramOriginalVersion</key>
+    <string>{originalVersion}</string>
+    <key>TelegramOriginalBuild</key>
+    <string>{originalBuild}</string>
     """
 )
 

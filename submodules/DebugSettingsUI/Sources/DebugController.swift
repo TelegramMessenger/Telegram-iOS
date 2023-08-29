@@ -1397,7 +1397,9 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         }
 //        entries.append(.restorePurchases(presentationData.theme))
         
-        entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
+        if sharedContext.currentPtgSettings.with({ $0.isTestingEnvironment == true }) {
+            entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
+        }
         entries.append(.resetTranslationStates)
         
         entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
@@ -1426,7 +1428,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     if let backupHostOverride = networkSettings?.backupHostOverride {
         entries.append(.hostInfo(presentationData.theme, "Host: \(backupHostOverride)"))
     }
-    entries.append(.versionInfo(presentationData.theme))
+//    entries.append(.versionInfo(presentationData.theme))
     
     if sharedContext.currentPtgSettings.with({ $0.isTestingEnvironment == true }) {
         entries.append(.ptgResetPasscodeAttempts)

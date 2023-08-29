@@ -317,6 +317,12 @@ public func initializeLegacyComponents(application: UIApplication?, currentSizeC
     legacyOpenUrl = openUrl
     legacyDocumentsStorePath = documentsPath
     
+    // exclude from backup since it may contain sensitive data after image/video editing
+    if !documentsPath.isEmpty {
+        let _ = try? FileManager.default.createDirectory(atPath: documentsPath, withIntermediateDirectories: true)
+        excludePathFromBackup(documentsPath)
+    }
+    
     freedomInit()
     
     LegacyComponentsGlobals.setProvider(LegacyComponentsGlobalsProviderImpl())

@@ -197,7 +197,8 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
                 
                 let queue = self.queue
                 return ActionDisposable { [weak self] in
-                    queue.async {
+                    // async() sometimes causes stack overflow?
+                    queue.justDispatch {
                         guard let `self` = self else {
                             return
                         }

@@ -1,5 +1,3 @@
-import FakePasscode
-
 import Foundation
 import UIKit
 import Display
@@ -17,7 +15,7 @@ public enum PasscodeSetupControllerMode {
     case secretEntry(modal: Bool, PasscodeEntryFieldType)
 }
 
-public final class PasscodeSetupController: ViewController, ReactiveToPasscodeSwitch, ReactivatableInput {
+public final class PasscodeSetupController: ViewController, ReactivatableInput {
     private var controllerNode: PasscodeSetupControllerNode {
         return self.displayNode as! PasscodeSetupControllerNode
     }

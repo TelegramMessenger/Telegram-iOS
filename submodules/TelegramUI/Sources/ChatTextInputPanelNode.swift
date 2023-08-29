@@ -1020,6 +1020,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     deinit {
         self.statusDisposable.dispose()
+        self.startingBotDisposable.dispose()
         self.tooltipController?.dismiss()
     }
     

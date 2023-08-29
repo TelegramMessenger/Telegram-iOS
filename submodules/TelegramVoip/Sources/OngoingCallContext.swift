@@ -151,7 +151,7 @@ private func cleanupCallLogs(account: Account) {
             }
         }
     }
-    let callLogsLimit = 40
+    let callLogsLimit = 10
     if count > callLogsLimit {
         oldest.sort(by: { $0.1 > $1.1 })
         while oldest.count > callLogsLimit {

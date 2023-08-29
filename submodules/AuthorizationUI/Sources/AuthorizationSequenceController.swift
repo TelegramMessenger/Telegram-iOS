@@ -551,6 +551,8 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         controller.requestNextOption = { [weak self, weak controller] in
             if let strongSelf = self {
                 if nextType == nil {
+                    controller?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Login_HaveNotReceivedCodeInThirdPartyApp, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    /*
                     if MFMailComposeViewController.canSendMail(), let controller = controller {
                         let formattedNumber = formatPhoneNumber(number)
                         
@@ -572,6 +574,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     } else {
                         controller?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }
+                    */
                 } else {
                     controller?.inProgress = true
                     strongSelf.actionDisposable.set((resendAuthorizationCode(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, apiId: strongSelf.apiId, apiHash: strongSelf.apiHash, firebaseSecretStream: strongSelf.sharedContext.firebaseSecretStream)

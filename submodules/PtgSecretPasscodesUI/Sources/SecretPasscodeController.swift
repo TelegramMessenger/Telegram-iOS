@@ -17,6 +17,8 @@ import AccountUtils
 import UndoUI
 import TelegramIntents
 import WidgetKit
+import GeneratedSources
+import PresentationDataUtils
 import PtgSecretPasscodes
 
 private final class SecretPasscodeControllerArguments {
@@ -40,6 +42,7 @@ private final class SecretPasscodeControllerArguments {
 }
 
 private enum SecretPasscodeControllerSection: Int32 {
+    case intro
     case state
     case timeout
     case accounts
@@ -49,6 +52,7 @@ private enum SecretPasscodeControllerSection: Int32 {
 }
 
 private enum SecretPasscodeControllerEntry: ItemListNodeEntry {
+    case intro(String)
     case state(String)
     case timeout(String, String)
     case accountsHeader(String)
@@ -62,6 +66,8 @@ private enum SecretPasscodeControllerEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
+        case .intro:
+            return SecretPasscodeControllerSection.intro.rawValue
         case .state:
             return SecretPasscodeControllerSection.state.rawValue
         case .timeout:
@@ -78,6 +84,7 @@ private enum SecretPasscodeControllerEntry: ItemListNodeEntry {
     }
     
     enum StableId: Hashable {
+        case intro
         case state
         case timeout
         case accountsHeader
@@ -92,6 +99,8 @@ private enum SecretPasscodeControllerEntry: ItemListNodeEntry {
     
     var stableId: StableId {
         switch self {
+        case .intro:
+            return .intro
         case .state:
             return .state
         case .timeout:
@@ -149,6 +158,8 @@ private enum SecretPasscodeControllerEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! SecretPasscodeControllerArguments
         switch self {
+        case let .intro(text):
+            return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
         case let .state(text):
             return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
         case let .timeout(title, value):
@@ -195,6 +206,8 @@ private struct SecretPasscodeControllerState: Equatable {
 
 private func secretPasscodeControllerEntries(presentationData: PresentationData, state: SecretPasscodeControllerState, accountEntries: [AccountEntry], secretChatEntries: [SecretChatEntry]) -> [SecretPasscodeControllerEntry] {
     var entries: [SecretPasscodeControllerEntry] = []
+    
+    entries.append(.intro(presentationData.strings.SecretPasscodeSettings_Intro))
     
     entries.append(.state(state.settings.active ? presentationData.strings.SecretPasscodeStatus_Revealed : presentationData.strings.SecretPasscodeStatus_Hidden))
     
@@ -319,7 +332,7 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
     statePromise.set(context.sharedContext.ptgSecretPasscodes
     |> take(1)
     |> map { ptgSecretPasscodes in
-        let secretPasscode = ptgSecretPasscodes.secretPasscodes.first { $0.passcode == passcode } ?? PtgSecretPasscode(passcode: passcode)
+        let secretPasscode = ptgSecretPasscodes.secretPasscodes.first(where: { $0.passcode == passcode })!
         return SecretPasscodeControllerState(settings: secretPasscode)
     })
     
@@ -335,6 +348,8 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments) -> Void)?
     var presentControllerInCurrentImpl: ((ViewController) -> Void)?
     var popToControllerImpl: (() -> Void)?
+    
+    let hapticFeedback = HapticFeedback()
     
     let arguments = SecretPasscodeControllerArguments(changePasscode: {
         let _ = (combineLatest(context.sharedContext.ptgSecretPasscodes, statePromise.get())
@@ -448,25 +463,36 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
         
         presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, addAccount: {
-        let _ = (combineLatest(activeAccountsAndPeers(context: context, includePrimary: true), context.sharedContext.allHidableAccountIds)
+        let _ = (combineLatest(activeAccountsAndPeers(context: context, includePrimary: true), context.sharedContext.allHidableAccountIds, statePromise.get())
         |> take(1)
-        |> deliverOnMainQueue).start(next: { accountsAndPeers, allHidableAccountIds in
+        |> deliverOnMainQueue).start(next: { accountsAndPeers, allHidableAccountIds, state in
             // don't need hidden accounts here
             let notIncludedAccounts = accountsAndPeers.1.filter({ (context, _, _) in
                 return !allHidableAccountIds.contains(context.account.id)
             })
-            if notIncludedAccounts.count > 1 {
+            let notIncludedAccountsInThisSecretPasscode = accountsAndPeers.1.filter({ (context, _, _) in
+                return !state.settings.accountIds.contains(context.account.id)
+            })
+            if notIncludedAccountsInThisSecretPasscode.count > 1 {
                 var accountSelectionCompleted: ((AccountContext) -> Void)?
                 
-                let accountsController = accountSelectionController(context: context, areItemsDisclosable: false, accountSelected: { selectedContext in
+                let accountsController = accountSelectionController(context: context, areItemsDisclosable: false, excludeAccountIds: state.settings.accountIds, accountSelected: { selectedContext in
                     accountSelectionCompleted?(selectedContext)
                 })
                 
                 accountSelectionCompleted = { [weak accountsController] selectedContext in
+                    if notIncludedAccounts.count == 1 && selectedContext.account.id == notIncludedAccounts.first?.0.account.id {
+                        accountsController?.dismiss()
+                        presentWarningAtLeastOneAccountMustRemainUnhidden()
+                        return
+                    }
+                    
                     updateState { state in
                         let _ = updatePtgSecretPasscodes(context.sharedContext.accountManager, { current in
                             return current.withUpdatedItem(passcode: state.settings.passcode) { sp in
-                                return sp.withUpdated(accountIds: sp.accountIds.union([selectedContext.account.id]))
+                                return sp
+                                    .withUpdated(accountIds: sp.accountIds.union([selectedContext.account.id]))
+                                    .withUpdated(secretChats: sp.secretChats.filter({ $0.accountId != selectedContext.account.id }))
                             }
                         }).start(completed: {
                             if #available(iOSApplicationExtension 14.0, iOS 14.0, *) {
@@ -474,7 +500,10 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
                             }
                         })
                         
-                        return state.withUpdated(settings: state.settings.withUpdated(accountIds: state.settings.accountIds.union([selectedContext.account.id])))
+                        return state.withUpdated(settings: state.settings
+                            .withUpdated(accountIds: state.settings.accountIds.union([selectedContext.account.id]))
+                            .withUpdated(secretChats: state.settings.secretChats.filter({ $0.accountId != selectedContext.account.id }))
+                        )
                     }
                     
                     let _ = (updateIntentsSettingsInteractively(accountManager: context.sharedContext.accountManager) { current in
@@ -492,13 +521,27 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
                     // reset imported contacts that are not in contact list, it does not delete existing contacts
                     let _ = selectedContext.engine.contacts.resetSavedContacts().start()
                     
+                    let _ = (areThereAnyWidgetsContainingChatsFromAccount(id: selectedContext.account.id)
+                    |> deliverOnMainQueue).start(next: { result in
+                        if result {
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            let alert = textAlertController(context: context, title: nil, text: presentationData.strings.SecretPasscode_SomeWidgetContainsChatsFromJustAddedAccount, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                            presentControllerImpl?(alert, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                        }
+                    })
+                    
                     accountsController?.dismiss()
                 }
                 
                 presentControllerImpl?(accountsController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             } else {
+                presentWarningAtLeastOneAccountMustRemainUnhidden()
+            }
+            
+            func presentWarningAtLeastOneAccountMustRemainUnhidden() {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 presentControllerInCurrentImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.SecretPasscodeSettings_AtLeastOneAccountMustRemainUnhidden, timeout: nil), elevatedLayout: false, action: { _ in return false }))
+                hapticFeedback.warning()
             }
         })
     }, removeAccount: { accountId in
@@ -576,15 +619,15 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
             })
         }
         
-        let _ = (activeAccountsAndPeers(context: context, includePrimary: true)
+        let _ = (combineLatest(activeAccountsAndPeers(context: context, includePrimary: true), statePromise.get(), _getAccountsIncludingHiddenOnes(sharedContext: context.sharedContext))
         |> take(1)
-        |> deliverOnMainQueue).start(next: { accountsAndPeers in
-            // don't need hidden accounts here
-            let haveMultipleAccounts = accountsAndPeers.1.count > 1
-            if haveMultipleAccounts {
+        |> deliverOnMainQueue).start(next: { accountsAndPeers, state, _accountsIncludingHiddenOnes in
+            let existingKnownAccountIds = state.settings.accountIds.intersection(_accountsIncludingHiddenOnes.map({ $0.0.account.id })).union(accountsAndPeers.1.map({ $0.0.account.id }))
+            
+            if existingKnownAccountIds.count > 1 {
                 var accountSelectionCompleted: ((AccountContext) -> Void)?
                 
-                let accountsController = accountSelectionController(context: context, areItemsDisclosable: true, accountSelected: { selectedContext in
+                let accountsController = accountSelectionController(context: context, areItemsDisclosable: true, excludeAccountIds: state.settings.accountIds, accountSelected: { selectedContext in
                     accountSelectionCompleted?(selectedContext)
                 })
                 
@@ -664,8 +707,8 @@ extension ItemListController {
 }
 
 extension PtgSecretPasscode {
-    public init(passcode: String) {
-        self.init(passcode: passcode, active: false, timeout: 5 * 60, accountIds: [], secretChats: [])
+    public init(passcode: String, active: Bool) {
+        self.init(passcode: passcode, active: active, timeout: 5 * 60, accountIds: [], secretChats: [])
     }
     
     public func withUpdated(passcode: String) -> PtgSecretPasscode {
@@ -745,4 +788,58 @@ public func hideAllSecrets(accountManager: AccountManager<TelegramAccountManager
         let updated = current.secretPasscodes.map { $0.withUpdated(active: false) }
         return PtgSecretPasscodes(secretPasscodes: updated)
     }).start()
+}
+
+private func areThereAnyWidgetsContainingChatsFromAccount(id accountId: AccountRecordId) -> Signal<Bool, NoError> {
+    if #available(iOSApplicationExtension 14.0, iOS 14.0, *) {
+        return Signal { subscriber in
+            WidgetCenter.shared.getCurrentConfigurations { result in
+                func friendAccountId(_ item: Friend) -> AccountRecordId? {
+                    guard let identifier = item.identifier else {
+                        return nil
+                    }
+                    guard let index = identifier.firstIndex(of: ":") else {
+                        return nil
+                    }
+                    guard let accountIdValue = Int64(identifier[identifier.startIndex ..< index]) else {
+                        return nil
+                    }
+                    return AccountRecordId(rawValue: accountIdValue)
+                }
+                
+                var found = false
+                
+                if case let .success(infos) = result {
+                    outer: for info in infos {
+                        if let configuration = info.configuration as? SelectFriendsIntent {
+                            if let items = configuration.friends {
+                                for item in items {
+                                    if friendAccountId(item) == accountId {
+                                        found = true
+                                        break outer
+                                    }
+                                }
+                            }
+                        } else if let configuration = info.configuration as? SelectAvatarFriendsIntent {
+                            if let items = configuration.friends {
+                                for item in items {
+                                    if friendAccountId(item) == accountId {
+                                        found = true
+                                        break outer
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                subscriber.putNext(found)
+                subscriber.putCompletion()
+            }
+            
+            return EmptyDisposable
+        }
+    } else {
+        return .single(false)
+    }
 }

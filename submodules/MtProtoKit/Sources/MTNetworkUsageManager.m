@@ -214,15 +214,19 @@ static int offsetForInterface(MTNetworkUsageCalculationInfo *info, MTNetworkUsag
 }
 
 - (void)addIncomingBytes:(NSUInteger)incomingBytes interface:(MTNetworkUsageManagerInterface)interface {
+    /*
     [self with:^(MTNetworkUsageManagerImpl *impl) {
         [impl addIncomingBytes:incomingBytes interface:interface];
     }];
+    */
 }
 
 - (void)addOutgoingBytes:(NSUInteger)outgoingBytes interface:(MTNetworkUsageManagerInterface)interface {
+    /*
     [self with:^(MTNetworkUsageManagerImpl *impl) {
         [impl addOutgoingBytes:outgoingBytes interface:interface];
     }];
+    */
 }
 
 - (void)resetKeys:(NSArray<NSNumber *> *)keys setKeys:(NSDictionary<NSNumber *, NSNumber *> *)setKeys completion:(void (^)())completion {

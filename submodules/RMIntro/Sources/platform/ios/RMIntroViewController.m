@@ -141,26 +141,12 @@ typedef enum {
             @"Tour.StartButton"
         ];
         
-        NSString *appTitle = [[[NSBundle mainBundle] localizedInfoDictionary] objectForKey:@"CFBundleDisplayName"];
-        if (appTitle == nil) {
-            appTitle = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleDisplayName"];
-        }
-        if (appTitle == nil) {
-            appTitle = @"Telegram";
-        }
-        NSString *originalTitle = @"Telegram";
-        
         NSMutableDictionary *englishStrings = [[NSMutableDictionary alloc] init];
         NSBundle *bundle = [NSBundle bundleWithPath:[[NSBundle mainBundle] pathForResource:@"en" ofType:@"lproj"]];
         for (NSString *key in stringKeys) {
             if (bundle != nil) {
                 NSString *value = [bundle localizedStringForKey:key value:key table:nil];
                 if (value != nil) {
-                    if (![appTitle isEqualToString:originalTitle]) {
-                        if ([value rangeOfString:originalTitle].location != NSNotFound) {
-                            value = [value stringByReplacingOccurrencesOfString:originalTitle withString:appTitle];
-                        }
-                    }
                     englishStrings[key] = value;
                 } else {
                     englishStrings[key] = key;
@@ -171,8 +157,17 @@ typedef enum {
         }
         _englishStrings = englishStrings;
         
+        /*
         _headlines = @[ _englishStrings[@"Tour.Title1"], _englishStrings[@"Tour.Title2"],  _englishStrings[@"Tour.Title6"], _englishStrings[@"Tour.Title3"], _englishStrings[@"Tour.Title4"], _englishStrings[@"Tour.Title5"]];
         _descriptions = @[_englishStrings[@"Tour.Text1"], _englishStrings[@"Tour.Text2"],  _englishStrings[@"Tour.Text6"], _englishStrings[@"Tour.Text3"], _englishStrings[@"Tour.Text4"], _englishStrings[@"Tour.Text5"]];
+        */
+        
+        NSString *appTitle = [[[NSBundle mainBundle] localizedInfoDictionary] objectForKey:@"CFBundleDisplayName"];
+        if (appTitle == nil) {
+            appTitle = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleDisplayName"];
+        }
+        _headlines = @[appTitle];
+        _descriptions = @[@""];
         
         __weak RMIntroViewController *weakSelf = self;
         _didEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification object:nil queue:nil usingBlock:^(__unused NSNotification *notification)
@@ -398,7 +393,7 @@ typedef enum {
     [_pageControl setNumberOfPages:6];
     _pageControl.pageIndicatorTintColor = _regularDotColor;
     _pageControl.currentPageIndicatorTintColor = _highlightedDotColor;
-    [_wrapperView addSubview:_pageControl];
+//    [_wrapperView addSubview:_pageControl];
 }
 
 - (UIView *)createAnimationSnapshot {

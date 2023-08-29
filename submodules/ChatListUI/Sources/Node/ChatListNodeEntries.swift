@@ -18,6 +18,7 @@ enum ChatListNodeEntryId: Hashable {
     case SectionHeader
     case Notice
     case additionalCategory(Int)
+    case EmptyChatSelectionList
 }
 
 enum ChatListNodeEntrySortIndex: Comparable {
@@ -307,6 +308,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
     case SectionHeader(presentationData: ChatListPresentationData, displayHide: Bool)
     case Notice(presentationData: ChatListPresentationData, notice: ChatListNotice)
     case AdditionalCategory(index: Int, id: Int, title: String, image: UIImage?, appearance: ChatListNodeAdditionalCategory.Appearance, selected: Bool, presentationData: ChatListPresentationData)
+    case EmptyChatSelectionList(presentationData: ChatListPresentationData)
     
     var sortIndex: ChatListNodeEntrySortIndex {
         switch self {
@@ -330,6 +332,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             return .index(.chatList(EngineChatList.Item.Index.ChatList.absoluteUpperBound.successor.successor))
         case let .AdditionalCategory(index, _, _, _, _, _, _):
             return .additionalCategory(index)
+        case .EmptyChatSelectionList:
+            return .index(.chatList(EngineChatList.Item.Index.ChatList.absoluteUpperBound.successor))
         }
     }
     
@@ -360,6 +364,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             return .Notice
         case let .AdditionalCategory(_, id, _, _, _, _, _):
             return .additionalCategory(id)
+        case .EmptyChatSelectionList:
+            return .EmptyChatSelectionList
         }
     }
     
@@ -496,6 +502,15 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
+            case let .EmptyChatSelectionList(lhsPresentationData):
+                if case let .EmptyChatSelectionList(rhsPresentationData) = rhs {
+                    if lhsPresentationData !== rhsPresentationData {
+                        return false
+                    }
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
@@ -518,7 +533,7 @@ struct ChatListContactPeer {
     }
 }
 
-func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, notice: ChatListNotice?, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation, contacts: [ChatListContactPeer], hiddenPeerIds: Set<EnginePeer.Id>) -> (entries: [ChatListNodeEntry], loading: Bool) {
+func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, notice: ChatListNotice?, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation, contacts: [ChatListContactPeer]) -> (entries: [ChatListNodeEntry], loading: Bool) {
     var result: [ChatListNodeEntry] = []
     
     if !view.hasEarlier {
@@ -576,9 +591,6 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             continue loop
         }
         if let peerId = peerId, state.pendingRemovalItemIds.contains(ChatListNodeState.ItemId(peerId: peerId, threadId: threadId)) {
-            continue loop
-        }
-        if case let .chatList(chatListIndex) = entry.index, hiddenPeerIds.contains(chatListIndex.messageIndex.id.peerId) {
             continue loop
         }
         var updatedMessages = entry.messages

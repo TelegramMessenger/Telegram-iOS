@@ -1,6 +1,5 @@
-import FakePasscode
-import FakePasscodeUI
 import PasscodeUI
+import PtgSettingsUI
 import PtgSecretPasscodes
 import PtgSecretPasscodesUI
 
@@ -2199,9 +2198,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.versionLabelNode = ImmediateTextNode()
         self.versionLabelNode.maximumNumberOfLines = 2
         
-        let versionText = self.presentationData.strings.Settings_Version(Bundle.main.appVersion, Bundle.main.appBuildNumber, Bundle.main.ptgVersion).string
-        self.versionLabelNode.attributedText = NSAttributedString(string: versionText, font: Font.regular(14.0), textColor: presentationData.theme.list.freeTextColor, paragraphAlignment: .center)
-        
         super.init()
         
         self.paneContainerNode.parentController = controller
@@ -2410,7 +2406,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                     c.dismiss(completion: {
-                        if let strongSelf = self, let currentPeer = strongSelf.data?.peer, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
+                        if let strongSelf = self, let currentPeer = strongSelf.data?.chatPeer, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                             if let channel = currentPeer as? TelegramChannel, channel.flags.contains(.isForum), let threadId = message.threadId {
                                 let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: currentPeer.id, threadId: threadId, messageId: message.id, navigationController: navigationController, activateInput: nil, keepStack: .default).start()
                             } else {
@@ -2572,7 +2568,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         
                         items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, f in
                             c.dismiss(completion: {
-                                if let strongSelf = self, let currentPeer = strongSelf.data?.peer, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
+                                if let strongSelf = self, let currentPeer = strongSelf.data?.chatPeer, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                                     if let channel = currentPeer as? TelegramChannel, channel.flags.contains(.isForum), let threadId = message.threadId {
                                         let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: currentPeer.id, threadId: threadId, messageId: message.id, navigationController: navigationController, activateInput: nil, keepStack: .default).start()
                                     } else {
@@ -4958,6 +4954,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         })))
                     }
                     
+                    /*
                     if strongSelf.peerId.namespace == Namespaces.Peer.CloudUser, !user.isDeleted && user.botInfo == nil && !user.flags.contains(.isSupport), let cachedData = data.cachedData as? CachedUserData, !cachedData.premiumGiftOptions.isEmpty {
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.PeerInfo_GiftPremium, icon: { theme in
                             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Gift"), color: theme.contextMenu.primaryColor)
@@ -4995,6 +4992,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             }
                         })))
                     }
+                    */
                     
                     if let cachedData = data.cachedData as? CachedUserData, cachedData.flags.contains(.translationHidden) {
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuTranslate, icon: { theme in
@@ -8183,7 +8181,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                 }
                                 
                                 let _ = (updatePtgSecretPasscodes(strongSelf.context.sharedContext.accountManager, { current in
-                                    let newSecretPasscode = PtgSecretPasscode(passcode: newPasscode)
+                                    let newSecretPasscode = PtgSecretPasscode(passcode: newPasscode, active: true)
                                     return PtgSecretPasscodes(secretPasscodes: current.secretPasscodes + [newSecretPasscode])
                                 })
                                 |> deliverOnMainQueue).start(completed: { [weak self] in
@@ -8983,7 +8981,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     f(.dismissWithoutContent)
                     dismissCalendarScreen?()
 
-                    guard let strongSelf = self, let peer = strongSelf.data?.peer, let controller = strongSelf.controller, let navigationController = controller.navigationController as? NavigationController else {
+                    guard let strongSelf = self, let peer = strongSelf.data?.chatPeer, let controller = strongSelf.controller, let navigationController = controller.navigationController as? NavigationController else {
                         return
                     }
 
@@ -9433,6 +9431,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             contentHeight = max(contentHeight, layout.size.height + 140.0 - layout.intrinsicInsets.bottom)
 
             if !self.state.isEditing {
+                let versionText = self.presentationData.strings.Settings_Version(Bundle.main.appVersion, Bundle.main.appBuildNumber, Bundle.main.originalVersion).string
+                self.versionLabelNode.attributedText = NSAttributedString(string: versionText, font: Font.regular(self.presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: presentationData.theme.list.freeTextColor, paragraphAlignment: .center)
+                
                 let horizontalPadding = 20.0
                 var frame = CGRect(origin: CGPoint(x: horizontalPadding, y: contentHeight), size: CGSize(width: layout.size.width - 2 * horizontalPadding, height: 100))
                 let size = self.versionLabelNode.updateLayout(frame.size)
@@ -9898,12 +9899,9 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             let activeSessionsContextAndCountSignal = deferred { () -> Signal<(ActiveSessionsContext, Int, WebSessionsContext)?, NoError> in
                 let activeSessionsContext = context.engine.privacy.activeSessions()
                 let webSessionsContext = context.engine.privacy.webSessions()
-                let sharedDataPromise = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
-                let otherSessionCount = combineLatest(activeSessionsContext.state, sharedDataPromise)
-                |> map { state, sharedData -> Int in
-                    let fakePasscodeHolder = FakePasscodeSettingsHolder(sharedData.entries[ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
-
-                    return state.sessions.filter({ !$0.isCurrent }).filter(fakePasscodeHolder.sessionFilter(account: context.account)).count
+                let otherSessionCount = activeSessionsContext.state
+                |> map { state -> Int in
+                    return state.sessions.filter({ !$0.isCurrent }).count
                 }
                 |> distinctUntilChanged
                 return otherSessionCount

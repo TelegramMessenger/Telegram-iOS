@@ -390,7 +390,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 var nonAuthorStrings: [String] = []
                 var nonAuthorTextLength = 0
                 
-                transaction.scanMessages(peerId: messageId.peerId, namespace: messageId.namespace, fromId: messageId, includeFrom: true, limit: 50) { message in
+                transaction.scanMessages(peerId: messageId.peerId, namespace: messageId.namespace, fromId: messageId, includeFrom: true, limit: 100) { message in
                     var messageText = message.text
                     if let textEntities = message.textEntitiesAttribute?.entities, !textEntities.isEmpty {
                         var lowerBound = messageText.count
@@ -413,9 +413,11 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             if authorProcessedTextLength < 200 {
                                 recognizer.processString(messageText)
                                 authorProcessedTextLength += messageText.count
-                                let hypotheses = recognizer.languageHypotheses(withMaximum: 1)
-                                if let dominant = hypotheses.first, dominant.value >= 0.9 {
-                                    return false
+                                if authorProcessedTextLength >= 50 {
+                                    let hypotheses = recognizer.languageHypotheses(withMaximum: 1)
+                                    if let dominant = hypotheses.first, dominant.value >= 0.95 {
+                                        return false
+                                    }
                                 }
                             }
                         } else if message.forwardInfo == nil { // ignore forwarded messages
@@ -432,21 +434,17 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 }
                 
                 var hypotheses = recognizer.languageHypotheses(withMaximum: 1)
-                if let dominant = hypotheses.first, dominant.value >= 0.6 {
+                if let dominant = hypotheses.first, dominant.value >= 0.8 {
                     return dominant.key.rawValue
                 }
                 
                 recognizer.reset()
                 for string in nonAuthorStrings {
                     recognizer.processString(string)
-                    let hypotheses = recognizer.languageHypotheses(withMaximum: 1)
-                    if let dominant = hypotheses.first, dominant.value >= 0.9 {
-                        return dominant.key.rawValue
-                    }
                 }
                 
                 hypotheses = recognizer.languageHypotheses(withMaximum: 1)
-                if let dominant = hypotheses.first, dominant.value >= 0.6 {
+                if let dominant = hypotheses.first, dominant.value >= 0.8 {
                     return dominant.key.rawValue
                 }
             }

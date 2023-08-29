@@ -326,7 +326,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     
     var syncContacts: Bool {
         get {
-            if self.hasOtherAccounts {
+            if self.hasOtherAccounts || true { // always allow to disable contact sync
                 return self.contactSyncNode.switchNode.isOn
             } else {
                 return true
@@ -400,6 +400,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.noticeNode.attributedText = NSAttributedString(string: account == nil ? strings.ChangePhoneNumberNumber_Help : strings.Login_PhoneAndCountryHelp, font: Font.regular(17.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
         
         self.contactSyncNode = ContactSyncNode(theme: theme, strings: strings)
+        self.contactSyncNode.switchNode.isOn = !hasOtherAccounts // on by default only for the first account
         
         self.phoneAndCountryNode = PhoneAndCountryNode(strings: strings, theme: theme)
         
@@ -582,7 +583,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         }
         
         let contactSyncSize = self.contactSyncNode.updateLayout(width: maximumWidth)
-        if self.hasOtherAccounts {
+        if self.hasOtherAccounts || true { // always allow to disable contact sync
             self.contactSyncNode.isHidden = false
             items.append(AuthorizationLayoutItem(node: self.contactSyncNode, size: contactSyncSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 14.0, maxValue: 14.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         } else {

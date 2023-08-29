@@ -37,6 +37,8 @@
     
     MTTimer *_requestsServiceTimer;
     MTTimer *_requestsTimeoutTimer;
+    
+    MTContextBlockChangeListener *_changeListener;
 }
 
 @end
@@ -51,14 +53,14 @@
         _context = context;
         
         __weak MTRequestMessageService *weakSelf = self;
-        MTContextBlockChangeListener *changeListener = [[MTContextBlockChangeListener alloc] init];
-        changeListener.contextIsPasswordRequiredUpdated = ^(MTContext *context, NSInteger datacenterId)
+        _changeListener = [[MTContextBlockChangeListener alloc] init];
+        _changeListener.contextIsPasswordRequiredUpdated = ^(MTContext *context, NSInteger datacenterId)
         {
             __strong MTRequestMessageService *strongSelf = weakSelf;
             [strongSelf _contextIsPasswordRequiredUpdated:context datacenterId:datacenterId];
         };
         
-        [_context addChangeListener:changeListener];
+        [_context addChangeListener:_changeListener];
         
         _requests = [[NSMutableArray alloc] init];
         _dropReponseContexts = [[NSMutableArray alloc] init];
@@ -77,6 +79,7 @@
         [_requestsTimeoutTimer invalidate];
         _requestsTimeoutTimer = nil;
     }
+    [_context removeChangeListener:_changeListener];
 }
 
 - (void)addRequest:(MTRequest *)request

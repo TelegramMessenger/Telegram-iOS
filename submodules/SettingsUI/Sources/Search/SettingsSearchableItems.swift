@@ -699,6 +699,7 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
             })
             present(.push, controller)
         }),
+        /*
         SettingsSearchableItem(id: .data(4), title: strings.NetworkUsageSettings_Title, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_NetworkUsage), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
             let mediaAutoDownloadSettings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])
             |> map { sharedData -> MediaAutoDownloadSettings in
@@ -731,6 +732,7 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
                 }))
             })
         }),
+        */
         SettingsSearchableItem(id: .data(5), title: strings.ChatSettings_AutoDownloadUsingCellular, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoDownloadUsingCellular), icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoDownloadTitle], present: { context, _, present in
             present(.push, autodownloadMediaConnectionTypeController(context: context, connectionType: .cellular))
         }),
