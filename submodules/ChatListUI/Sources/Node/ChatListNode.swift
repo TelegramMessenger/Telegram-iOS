@@ -1168,8 +1168,6 @@ public final class ChatListNode: ListView {
     public var selectionLimit: Int32 = 100
     public var reachedSelectionLimit: ((Int32) -> Void)?
     
-    private var ptgSettingsDisposable: Disposable?
-    
     private let inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>
     
     private var visibleTopInset: CGFloat?
@@ -1201,7 +1199,7 @@ public final class ChatListNode: ListView {
             isSelecting = true
         }
         
-        self.currentState = ChatListNodeState(presentationData: ChatListPresentationData(theme: theme, fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations, suppressForeignAgentNotice: context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice }), editing: isSelecting, peerIdWithRevealedOptions: nil, selectedPeerIds: Set(), foundPeers: [], selectedPeerMap: [:], selectedAdditionalCategoryIds: Set(), peerInputActivities: nil, pendingRemovalItemIds: Set(), pendingClearHistoryPeerIds: Set(), hiddenItemShouldBeTemporaryRevealed: false, hiddenPsaPeerId: nil, selectedThreadIds: Set())
+        self.currentState = ChatListNodeState(presentationData: ChatListPresentationData(theme: theme, fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations), editing: isSelecting, peerIdWithRevealedOptions: nil, selectedPeerIds: Set(), foundPeers: [], selectedPeerMap: [:], selectedAdditionalCategoryIds: Set(), peerInputActivities: nil, pendingRemovalItemIds: Set(), pendingClearHistoryPeerIds: Set(), hiddenItemShouldBeTemporaryRevealed: false, hiddenPsaPeerId: nil, selectedThreadIds: Set())
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
         
         self.theme = theme
@@ -2834,21 +2832,12 @@ public final class ChatListNode: ListView {
             return strongSelf.isSelectionGestureEnabled
         }
         self.view.addGestureRecognizer(selectionRecognizer)
-        
-        self.ptgSettingsDisposable = context.sharedContext.ptgSettings.start(next: { [weak self] next in
-            self?.updateState { state in
-                var state = state
-                state.presentationData = ChatListPresentationData(theme: state.presentationData.theme, fontSize: state.presentationData.fontSize, strings: state.presentationData.strings, dateTimeFormat: state.presentationData.dateTimeFormat, nameSortOrder: state.presentationData.nameSortOrder, nameDisplayOrder: state.presentationData.nameDisplayOrder, disableAnimations: state.presentationData.disableAnimations, suppressForeignAgentNotice: next.suppressForeignAgentNotice)
-                return state
-            }
-        })
     }
     
     deinit {
         self.chatListDisposable.dispose()
         self.activityStatusesDisposable?.dispose()
         self.updatedFilterDisposable.dispose()
-        self.ptgSettingsDisposable?.dispose()
         self.pollFilterUpdatesDisposable?.dispose()
         self.chatFilterUpdatesDisposable?.dispose()
     }
@@ -2911,7 +2900,7 @@ public final class ChatListNode: ListView {
             
             self.updateState { state in
                 var state = state
-                state.presentationData = ChatListPresentationData(theme: theme, fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations, suppressForeignAgentNotice: state.presentationData.suppressForeignAgentNotice)
+                state.presentationData = ChatListPresentationData(theme: theme, fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations)
                 return state
             }
         }

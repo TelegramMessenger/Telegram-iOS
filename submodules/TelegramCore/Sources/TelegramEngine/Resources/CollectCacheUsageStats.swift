@@ -105,6 +105,7 @@ public final class AllStorageUsageStats {
     }
 }
 
+/*
 private extension StorageUsageStats {
     convenience init(_ stats: StorageBox.Stats) {
         var mappedCategories: [StorageUsageStats.CategoryKey: StorageUsageStats.CategoryData] = [:]
@@ -141,7 +142,9 @@ private extension StorageUsageStats {
         self.init(categories: mappedCategories)
     }
 }
+*/
 
+#if TEST_BUILD
 private func statForDirectory(path: String) -> Int64 {
     if #available(macOS 10.13, *) {
         var s = darwin_dirstat()
@@ -209,6 +212,7 @@ public func collectRawStorageUsageReport(containerPath: String) -> String {
     
     return log
 }
+#endif
 
 /*
 func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUsageStats, NoError> {

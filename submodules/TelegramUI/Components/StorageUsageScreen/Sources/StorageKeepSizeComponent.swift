@@ -87,7 +87,7 @@ final class StorageKeepSizeComponent: Component {
         private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
-            self.titles = (0 ..< 4).map { _ in ComponentView<Empty>() }
+            self.titles = (0 ..< maximumCacheSizeValues.count).map { _ in ComponentView<Empty>() }
             
             super.init(frame: frame)
             
@@ -149,13 +149,13 @@ final class StorageKeepSizeComponent: Component {
                 sliderView = TGPhotoEditorSliderView()
                 sliderView.enablePanHandling = true
                 sliderView.trackCornerRadius = 2.0
-                sliderView.lineSize = 4.0
+                sliderView.lineSize = CGFloat(self.titles.count)
                 sliderView.dotSize = 5.0
                 sliderView.minimumValue = 0.0
-                sliderView.maximumValue = 3.0
+                sliderView.maximumValue = CGFloat(self.titles.count - 1)
                 sliderView.startValue = 0.0
                 sliderView.disablesInteractiveTransitionGestureRecognizer = true
-                sliderView.positionsCount = 4
+                sliderView.positionsCount = self.titles.count
                 sliderView.useLinesForPositions = true
                 sliderView.addTarget(self, action: #selector(self.sliderValueChanged), for: .valueChanged)
                 self.sliderView = sliderView
@@ -182,8 +182,8 @@ final class StorageKeepSizeComponent: Component {
             guard let sliderView = self.sliderView, let component = self.component else {
                 return
             }
-            sliderView.maximumValue = 3.0
-            sliderView.positionsCount = 4
+            sliderView.maximumValue = CGFloat(self.titles.count - 1)
+            sliderView.positionsCount = self.titles.count
             
             let value = maximumCacheSizeValues.firstIndex(where: { $0 == component.value }) ?? 0
             sliderView.value = CGFloat(value)

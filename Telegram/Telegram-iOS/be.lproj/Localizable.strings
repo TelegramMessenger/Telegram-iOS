@@ -4,7 +4,7 @@
 "PasscodeSettings.FakePasscode" = "Несапраўдны код доступу %1$d";
 "PasscodeSettings.AddFakePasscode" = "Дадаць несапраўдны код доступу";
 "PasscodeSettings.FakePasscodeHelp" = "Пры ўводзе несапраўднага кода доступу выконваюцца выбранныя дзеянні.";
-"PasscodeSettings.PasscodeInUse" = "Гэты код доступу ужо выкарыстоўваецца";
+"PasscodeSettings.PasscodeInUse" = "Гэты код ужо выкарыстоўваецца";
 "PasscodeSettings.ConfirmDeletion" = "Пацвердзіце выдаленне";
 "PasscodeSettings.AllFakePasscodesWillBeDeleted" = "Усе несапраўдныя кады доступу будць выдалены. Жадаеце працягнуць?";
 
@@ -23,7 +23,7 @@
 "PasscodeSettings.BadPasscodeTriesToActivateHelp" = "Дзеянні з несапраўдным кодам блакіроўкі будуць выкананы пасля адзначанай колькасці няўдалых спроб уводу кода блакіроўкі.";
 "PasscodeSettings.FakePasscodeActionsTitle" = "Дзеянні";
 "PasscodeSettings.FakePasscodeSmsActionTitle" = "СМС";
-"PasscodeSettings.ClearTelegramCache" = "Ачышчаць кэш Telegram";
+"PasscodeSettings.ClearTelegramCache" = "Ачышчаць кэш Vartagram";
 "PasscodeSettings.ClearProxiesOnFakeLogin" = "Ачышчаць спіс проксі";
 "PasscodeSettings.FakePasscodeActionsHelp" = "Пры ўводзе несапраўднага кода блакіроўкі выконваюцца выбраныя дзеянні.";
 "PasscodeSettings.FakePasscodeAccountsTitle" = "Дзеянні для акаўнтаў";
@@ -34,7 +34,7 @@
 "PasscodeSettings.FakePasscodeDeleteTitle" = "Выдаліць несапраўдны код блакіроўкі";
 "PasscodeSettings.FakePasscodeDeleteMessage" = "Вы дакладна хочаце выдаліць гэты несапраўдны код блакіроўкі?";
 
-"Settings.Version" = "Cloudballon %1$@ (%2$@)\nНа аснове арыгінальнага Telegram %3$@";
+"Settings.Version" = "Vartagram %1$@ (%2$@)\nНа аснове арыгінальнага Telegram %3$@";
 
 "FakePasscodes.Common.DoNotShowAgain" = "Больш не паказваць";
 
@@ -69,41 +69,61 @@
 
 "AccountActions.SessionsToTerminate.24hWarningMessage" = "Гэта функцыя не будзе працавать, калі пасля увахода ў аккаўнт на гэтым дэвайсе прайшло менш за 24 гадзіны.";
 
-"PtgSettings.Title" = "Cloudballon";
-"PtgSettings.ShowPeerId" = "Паказваць ID";
-"PtgSettings.ShowPeerIdHelp" = "Паказваць ID у профілях карыстальнікаў, суполак, каналаў, ботаў.";
-"PtgSettings.ForeignAgentNoticeHeader" = "Маркіроўка замежных агентаў";
-"PtgSettings.SuppressForeignAgentNotice" = "Хаваць у паведамленнях";
-"PtgSettings.EnableForeignAgentNoticeSearchFiltering" = "Фільтраваць вынікі пошуку";
-"PtgSettings.EnableForeignAgentNoticeSearchFilteringHelp" = "Адфільтроўваць з вынікаў пошуку паведамлення, якія былі ўключаны толькі з-за тэксту маркіроўкі замежных агентаў.";
+"PtgSettings.Title" = "Vartagram";
+"PtgSettings.ShowPeerId" = "Паказваць ID профіляў";
+"PtgSettings.ShowChannelCreationDate" = "Паказваць дату стварэння каналаў";
+"PtgSettings.SuppressForeignAgentNotice" = "Хаваць меткі іншаагентаў РФ";
+"PtgSettings.EnableQuickReaction" = "Хуткія рэакцыі";
+"PtgSettings.EnableQuickReactionHelp" = "Уключыце, каб хутка адпраўляць рэакцыі, двойчы націскаючы на паведамленні ці націскаючы на існуючыя рэакцыі. Выключыце, каб пазбегнуць выпадковых рэакцый.";
+"PtgSettings.ChannelAppearanceHeader" = "Прадстаўленне каналаў";
+"PtgSettings.HideReactions" = "Хаваць рэакцыі";
+"PtgSettings.HideComments" = "Хаваць каментары";
+"PtgSettings.HideShareButton" = "Хаваць кнопку перасылання";
+"PtgSettings.UseFullWidth" = "На ўсю шырыню экрана";
 "PtgSettings.EnableLiveText" = "Распазнанне тэксту";
 "PtgSettings.EnableLiveTextHelp" = "Аўтаматычна выконваць распазнанне тэксту і штрых-кодаў (напрыклад, QR-кода) на кожнай выяве, якую вы праглядаеце ў поўнаэкранным рэжыме. Выключыце, каб зэканоміць зарад батарэі.";
 "PtgSettings.PreferAppleVoiceToText" = "Пераклад голасу ў тэкст ад Apple";
 "PtgSettings.PreferAppleVoiceToTextHelp" = "Гэта налада ўплывае толькі на Premium-акаўнты. Яна вызначае, якія сэрвісы выкарыстоўваюцца для перакладу голасу ў тэкст. Калі выключана (па змаўчанні), выкарыстоўваюцца серверы Telegram. Калі ўключана, выкарыстоўваюцца сэрвісы Apple. **Для не Premium-акаўнтаў заўсёды выкарыстоўваюцца сэрвісы Apple.**";
+"PtgSettings.DefaultCameraForVideos" = "Камера па змаўчанні для відэа";
+"PtgSettings.DefaultCameraForVideos.Front" = "Франтальная";
+"PtgSettings.DefaultCameraForVideos.Rear" = "Задняя";
+"PtgSettings.AddContextMenuHeader" = "Кантэкстнае меню паведамленняў";
+"PtgSettings.AddContextMenuSaveMessage" = "Дадаць «Захаваць паведамленне»";
+"PtgSettings.AddContextMenuShare" = "Дадаць «Абагуліць»";
+"PtgSettings.JumpToNextUnreadChannel" = "Пераход да наступнага канала";
+"PtgSettings.JumpToNextUnreadChannel.Disabled" = "Адключаны";
+"PtgSettings.JumpToNextUnreadChannel.TopFirst" = "Верхнія спачатку";
+"PtgSettings.JumpToNextUnreadChannel.BottomFirst" = "Ніжнія спачатку";
+"PtgSettings.HideSignatures" = "Хаваць подпісы";
+
+"Conversation.ContextMenuSaveMessage" = "Захаваць паведамленне";
 
 "Profile.Id" = "ID";
 "Conversation.IdCopied" = "ID скапіяваны ў буфер абмену.";
 "Settings.CopyId" = "Капіяваць ID";
+"Profile.CreationDate" = "Створаны";
 
 "SiriAndDictationAreDisabledAlert" = "Каб перакладаць ў тэкст галасавыя паведамленні, неабходна ўключыць дыктоўку (Налады сістэмы > Агульныя > Клавіятура) або Siri (Налады сістэмы > Siri і пошук).";
 
-"SecretPasscodeSettings.Title" = "Сакрэтны код доступу";
-"SecretPasscodeSettings.EnterPasscode" = "Увядзіце сакрэтны код доступу";
-"SecretPasscodeSettings.EnterNewPasscode" = "Увядзіце новы сакрэтны код доступу";
-"SecretPasscodeSettings.RepeatNewPasscode" = "Увядзіце новы сакрэтны код доступу яшчэ раз";
+"SecretPasscodeSettings.Title" = "Сакрэтны код";
+"SecretPasscodeSettings.EnterPasscode" = "Увядзіце сакрэтны код";
+"SecretPasscodeSettings.EnterNewPasscode" = "Увядзіце новы сакрэтны код";
+"SecretPasscodeSettings.RepeatNewPasscode" = "Увядзіце новы сакрэтны код яшчэ раз";
 "SecretPasscodeSettings.AutoHide" = "Аўта-схаванне";
+"SecretPasscodeSettings.AutoHideDesc" = "Калі праграма неактыўна на працягу ўказанага перыяду часу, сакрэты аўтаматычна хаваюцца.";
 "SecretPasscodeSettings.AccountsHeader" = "Акаўнты якія хаваюцца";
 "SecretPasscodeSettings.AddAccount" = "Дадаць акаўнт";
 "SecretPasscodeSettings.SecretChatsHeader" = "Сакрэтныя чаты якія хаваюцца";
 "SecretPasscodeSettings.AddSecretChats" = "Дадаць сакрэтныя чаты";
-"SecretPasscodeSettings.DeleteSecretPasscode" = "Выдаліць сакрэтны код доступу";
-"SecretPasscodeSettings.DeleteSecretPasscodeNotice" = "⚠️ Усе ўказаныя тут акаўнты і сакрэтныя чаты стануць бачнымі ўвесь час.";
+"SecretPasscodeSettings.ChangePasscode" = "Змяніць код";
+"SecretPasscodeSettings.DeleteSecretPasscode" = "Выдаліць сакрэтны код";
+"SecretPasscodeSettings.DeleteSecretPasscodeNotice" = "Усе ўказаныя тут акаўнты і сакрэтныя чаты стануць бачнымі ўвесь час.";
 "SecretPasscodeSettings.AtLeastOneAccountMustRemainUnhidden" = "Прынамсі адзін акаўнт павінен заставацца бачным увесь час.";
-"SecretPasscodeSettings.Intro" = "Укажыце **сакрэты**: акаўнты і сакрэтныя чаты, якія будуць схаваны, пакуль вы не ўвядзеце гэты сакрэтны код доступу.";
-"Settings.EnterSecretPasscode" = "Увесці сакрэтны код доступу";
-"Settings.ManageSecretPasscodes" = "Кіраваць сакрэтнымі кадамі доступу";
-"SecretPasscodeMenu.Add" = "Дадаць сакрэтны код доступу";
-"SecretPasscodeMenu.Edit" = "Рэдагаваць сакрэтны код доступу";
+"SecretPasscodeSettings.Intro" = "Укажыце сакрэты: акаўнты і сакрэтныя чаты, якія будуць схаваны, пакуль вы не ўвядзеце гэты сакрэтны код.";
+"Settings.EnterSecretPasscode" = "Увесці сакрэтны код";
+"Settings.ManageSecretPasscodes" = "Кіраваць сакрэтнымі кадамі";
+"SecretPasscodeMenu.Add" = "Дадаць сакрэтны код";
+"SecretPasscodeMenu.Edit" = "Рэдагаваць сакрэтны код";
 "SecretPasscodeMenu.HideAllSecrets" = "Схаваць усе сакрэты";
 "SecretPasscodeStatus.SomeRevealed" = "Некаторыя сакрэты адкрыты.";
 "SecretPasscodeStatus.AllHidden" = "Усе сакрэты схаваны.";
@@ -120,13 +140,18 @@
 
 "PasscodeAttempts.TryAgainIn" = "Абарона ад атак грубай сілай. Паспрабуйце зноў праз %@.";
 
-"Share.LockedTitle" = "Разблакіруйце Telegram";
-"Share.LockedDescription" = "Адкрыйце і разблакіруйце Telegram, каб абагуліць.";
+"Share.LockedTitle" = "Разблакіруйце Vartagram";
+"Share.LockedDescription" = "Адкрыйце і разблакіруйце Vartagram, каб абагуліць.";
 
 "ChatList.EmptyChatSelectionList" = "Няма чатаў для выбару.";
 
-"Login.HaveNotReceivedCodeInThirdPartyApp" = "Паколькі староннія кліенты Telegram не могуць запытваць SMS, пераканайцеся, што вы ўжо ўвайшлі ў сістэму з гэтым нумарам у іншым дадатку ці на іншай прыладзе.\n\nКалі гэта не так, спачатку ўвайдзіце ў афіцыйным дадатку Telegram. Пазней вы можаце выйсці там з гэтага акаўнта.";
+"Login.HaveNotReceivedCodeInThirdPartyApp" = "Паколькі староннія кліенты Telegram не могуць запытваць SMS, пераканайцеся, што вы ўжо ўвайшлі з гэтым нумарам у іншым дадатку ці на іншай прыладзе.\n\nКалі гэта не так, спачатку ўвайдзіце ў афіцыйным дадатку Telegram. Пазней вы можаце выйсці там з гэтага акаўнта.";
 
 "StorageKeepMedia.AllChatTypes" = "Усе тыпы чатаў";
 
 "StorageManagement.DescriptionAppUsageAllAccounts" = "Кэш усіх акаўнтаў займае %1$@% свабоднай памяці вашай прылады.";
+
+"Appearance.AppIcon.Primary" = "Асноўны";
+"Appearance.AppIcon.Yellow" = "Жоўты";
+"Appearance.AppIcon.Orange" = "Аранжавы";
+"Appearance.AppIcon.Red" = "Чырвоны";

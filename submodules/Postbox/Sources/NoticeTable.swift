@@ -86,6 +86,7 @@ public final class NoticeTable: Table {
     
     override public func clearMemoryCache() {
         assert(self.updatedEntryKeys.isEmpty)
+        self.cachedEntries.removeAll()
     }
     
     override public func beforeCommit() {

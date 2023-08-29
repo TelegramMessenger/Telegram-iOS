@@ -11,10 +11,13 @@ private func drawBorder(context: CGContext, rect: CGRect) {
     context.strokePath()
 }
 
-private func renderIcon(name: String) -> UIImage? {
+public func renderIcon(name: String, mask: CGImage? = nil) -> UIImage? {
     return generateImage(CGSize(width: 29.0, height: 29.0), contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
+        if let mask {
+            context.clip(to: bounds, mask: mask)
+        }
         if let image = UIImage(bundleImageName: name)?.cgImage {
             context.draw(image, in: bounds)
         }
@@ -86,6 +89,4 @@ public struct PresentationResourcesSettings {
     public static let clearSynced = renderIcon(name: "Settings/Menu/ClearSynced")
     
     public static let websites = renderIcon(name: "Settings/Menu/Websites")
-    
-    public static let cloudballon = renderIcon(name: "Cloudballon")
 }

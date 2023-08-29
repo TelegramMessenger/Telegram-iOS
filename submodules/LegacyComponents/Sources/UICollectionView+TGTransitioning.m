@@ -62,7 +62,7 @@
         
         dispatch_async(dispatch_get_main_queue(), ^
         {
-            [self tg_transitionPipe].sink(@true);            
+            [strongSelf tg_transitionPipe].sink(@true);            
         });
     }];
     data[@"transitionLayout"] = transitionLayout;

@@ -106,6 +106,11 @@ public struct Namespaces {
         public static let featuredStickersConfiguration: Int8 = 24
         public static let emojiSearchCategories: Int8 = 25
         public static let cachedEmojiQueryResults: Int8 = 26
+        
+        // 64 - ...: ApplicationSpecificItemCacheCollectionIdValues
+        // 100: CachedChannelAdminRanks
+        // 101: CachedRecentPeers
+        public static let cachedOrderedItemListHashes: Int8 = 97
     }
     
     public struct UnorderedItemList {
@@ -485,4 +490,10 @@ public func applicationSpecificItemCacheCollectionId(_ value: Int8) -> Int8 {
 
 public func applicationSpecificOrderedItemListCollectionId(_ value: Int32) -> Int32 {
     return 1000 + value
+}
+
+public struct ApplicationSpecificPreferencesKeys {
+}
+
+public struct ApplicationSpecificSharedDataKeys {
 }

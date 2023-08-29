@@ -575,22 +575,22 @@ const NSInteger PGCameraFrameRate = 30;
                     } else if (zoomLevel < 2.0) {
                         backingLevel = firstMark + ((level - 1.0) / 1.0) * (secondMark - firstMark);
                     } else {
-                        backingLevel = secondMark + ((level - 2.0) / 6.0) * (self.maxZoomLevel - secondMark);
+                        backingLevel = secondMark + ((level - 2.0) / 6.0) * (strongSelf.maxZoomLevel - secondMark);
                     }
                 } else if (marks.count == 1) {
                     CGFloat mark = [marks.firstObject floatValue];
-                    if ([self hasTelephotoCamera]) {
+                    if ([strongSelf hasTelephotoCamera]) {
                         if (zoomLevel < 2.0) {
                             backingLevel = 1.0 + ((level - 1.0) / 1.0) * (mark - 1.0);
                         } else {
-                            backingLevel = mark + ((level - 2.0) / 6.0) * (self.maxZoomLevel - mark);
+                            backingLevel = mark + ((level - 2.0) / 6.0) * (strongSelf.maxZoomLevel - mark);
                         }
-                    } else if ([self hasUltrawideCamera]) {
+                    } else if ([strongSelf hasUltrawideCamera]) {
                         if (level < 1.0) {
                             level = MAX(0.5, level);
                             backingLevel = 1.0 + ((level - 0.5) / 0.5) * (mark - 1.0);
                         } else {
-                            backingLevel = mark + ((level - 1.0) / 7.0) * (self.maxZoomLevel - mark);
+                            backingLevel = mark + ((level - 1.0) / 7.0) * (strongSelf.maxZoomLevel - mark);
                         }
                     }
                 }
@@ -598,7 +598,7 @@ const NSInteger PGCameraFrameRate = 30;
         }
         CGFloat finalLevel =  MAX(1.0, MIN([strongSelf maxZoomLevel], backingLevel));
         if (animated) {
-            bool zoomingIn = finalLevel > self.videoDevice.videoZoomFactor;
+            bool zoomingIn = finalLevel > strongSelf.videoDevice.videoZoomFactor;
             bool needsCrossfade = level >= 1.0;
             POPSpringAnimation *animation = [POPSpringAnimation new];
             animation.property = [POPAnimatableProperty propertyWithName:@"zoom" initializer:^(POPMutableAnimatableProperty *prop)
@@ -625,11 +625,11 @@ const NSInteger PGCameraFrameRate = 30;
                 
                 prop.threshold = 0.03f;
             }];
-            animation.fromValue = @(self.videoDevice.videoZoomFactor);
+            animation.fromValue = @(strongSelf.videoDevice.videoZoomFactor);
             animation.toValue = @(finalLevel);
             animation.springSpeed = 14;
             animation.springBounciness = 1;
-            [self pop_addAnimation:animation forKey:@"zoom"];
+            [strongSelf pop_addAnimation:animation forKey:@"zoom"];
         } else {
             device.videoZoomFactor = finalLevel;
         }

@@ -312,7 +312,7 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
     return entries
 }
 
-public func pollResultsController(context: AccountContext, messageId: MessageId, poll: TelegramMediaPoll, focusOnOptionWithOpaqueIdentifier: Data? = nil) -> ViewController {
+public func pollResultsController(context: AccountContext, messageId: MessageId, poll: TelegramMediaPoll, focusOnOptionWithOpaqueIdentifier: Data? = nil, suppressForeignAgentNotice: Bool) -> ViewController {
     let statePromise = ValuePromise(PollResultsControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: PollResultsControllerState())
     let updateState: ((PollResultsControllerState) -> PollResultsControllerState) -> Void = { f in
@@ -386,7 +386,7 @@ public func pollResultsController(context: AccountContext, messageId: MessageId,
             totalVoters = totalVotersValue
         }
         
-        let entries = pollResultsControllerEntries(presentationData: presentationData, poll: poll, state: state, resultsState: resultsState, suppressForeignAgentNotice: context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice })
+        let entries = pollResultsControllerEntries(presentationData: presentationData, poll: poll, state: state, resultsState: resultsState, suppressForeignAgentNotice: suppressForeignAgentNotice)
         
         var initialScrollToItem: ListViewScrollToItem?
         if let focusOnOptionWithOpaqueIdentifier = focusOnOptionWithOpaqueIdentifier, previousWasEmptyValue == nil {

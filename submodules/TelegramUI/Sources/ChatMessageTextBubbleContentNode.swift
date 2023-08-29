@@ -154,13 +154,15 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 let horizontalInset = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                 let textConstrainedSize = CGSize(width: min(maxTextWidth, constrainedSize.width - horizontalInset), height: constrainedSize.height)
                 
+                let hideReactions = item.topMessage.isPeerBroadcastChannel && item.context.sharedContext.currentPtgSettings.with { $0.hideReactionsInChannels }
+                
                 var edited = false
                 if item.attributes.updatingMedia != nil {
                     edited = true
                 }
                 var viewCount: Int?
                 var dateReplies = 0
-                var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: item.topMessage)
+                var dateReactionsAndPeers = !hideReactions ? mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: item.topMessage) : (reactions: [], peers: [])
                 if item.message.isRestricted(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) {
                     dateReactionsAndPeers = ([], [])
                 }
@@ -236,7 +238,11 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     rawText = item.presentationData.strings.Conversation_UnsupportedMediaPlaceholder
                     messageEntities = [MessageTextEntity(range: 0..<rawText.count, type: .Italic)]
                 } else {
-                    let message_ = item.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: item.message) : item.message
+                    var message_ = item.context.shouldSuppressForeignAgentNotice(in: item.message) ? removeForeignAgentNotice(message: item.message) : item.message
+                    
+                    if item.context.shouldHideChannelSignature(in: item.message) {
+                        message_ = removeChannelSignature(message: message_)
+                    }
 
                     if let updatingMedia = item.attributes.updatingMedia {
                         rawText = updatingMedia.text

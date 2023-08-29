@@ -161,7 +161,11 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
             let backgroundImage = PresentationResourcesChat.chatActionPhotoBackgroundImage(item.presentationData.theme.theme, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
             
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
-                let message_ = item.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: item.message, inAssociatedPinnedMessageToo: true) : item.message
+                var message_ = item.context.shouldSuppressForeignAgentNotice(in: item.message) ? removeForeignAgentNotice(message: item.message, inAssociatedPinnedMessageToo: true) : item.message
+                
+                if item.context.shouldHideChannelSignature(in: item.message) {
+                    message_ = removeChannelSignature(message: message_, inAssociatedPinnedMessageToo: true)
+                }
                 
                 var forForumOverview = false
                 if item.chatLocation.threadId == nil {

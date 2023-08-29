@@ -1049,13 +1049,15 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 let horizontalInset = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                 let textConstrainedSize = CGSize(width: constrainedSize.width - horizontalInset - additionalTextRightInset, height: constrainedSize.height)
                 
+                let hideReactions = item.message.isPeerBroadcastChannel && item.context.sharedContext.currentPtgSettings.with { $0.hideReactionsInChannels }
+                
                 var edited = false
                 if item.attributes.updatingMedia != nil {
                     edited = true
                 }
                 var viewCount: Int?
                 var dateReplies = 0
-                var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: item.message)
+                var dateReactionsAndPeers = !hideReactions ? mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: item.message) : (reactions: [], peers: [])
                 if item.message.isRestricted(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) {
                     dateReactionsAndPeers = ([], [])
                 }
@@ -1132,7 +1134,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 let messageTheme = incoming ? item.presentationData.theme.theme.chat.message.incoming : item.presentationData.theme.theme.chat.message.outgoing
                 
                 let pollText: String
-                if let poll = poll, item.context.sharedContext.currentPtgSettings.with({ $0.suppressForeignAgentNotice }) {
+                if let poll = poll, item.context.shouldSuppressForeignAgentNotice(in: item.message) {
                     pollText = removeForeignAgentNotice(text: poll.text, mayRemoveWholeText: false)
                 } else {
                     pollText = poll?.text ?? ""

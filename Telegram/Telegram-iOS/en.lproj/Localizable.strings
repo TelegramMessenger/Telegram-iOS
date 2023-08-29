@@ -1,6 +1,40 @@
 "PasscodeSettings.AutoLock.IfAwayFor_10seconds" = "Immediately";
 
-"Settings.Version" = "Cloudballon %1$@ (%2$@)\nBased on original Telegram %3$@";
+"PasscodeSettings.FakePasscodes" = "Fake Passcodes";
+"PasscodeSettings.FakePasscode" = "Fake Passcode %1$d";
+"PasscodeSettings.AddFakePasscode" = "Add Fake Passcode";
+"PasscodeSettings.FakePasscodeHelp" = "When a fake passcode is entered, selected actions are performed.";
+"PasscodeSettings.PasscodeInUse" = "This code is already in use";
+"PasscodeSettings.ConfirmDeletion" = "Confirm deletion";
+"PasscodeSettings.AllFakePasscodesWillBeDeleted" = "All fake passcodes will be deleted. Are you sure you want to continue?";
+
+"PasscodeSettings.FakePasscodeChangeName" = "Change Name";
+"PasscodeSettings.FakePasscodeChange" = "Change Fake Passcode";
+"PasscodeSettings.FakePasscodeChangeHelp" = "You can change the fake passcode without deleting it.";
+"PasscodeSettings.FakePasscodeAllowLogin" = "Allow login using Fake Passcode";
+"PasscodeSettings.FakePasscodeAllowLoginHelp" = "You can deny login with this fake passcode. In this case, the attacker will not gain access to the accounts, but the actions will be performed.";
+"PasscodeSettings.FakePasscodeClearAfterActivation" = "Clear Passcode Settings After Activation";
+"PasscodeSettings.FakePasscodeClearAfterActivationHelp" = "All fake passcode settings will be cleared after activation and an attacker will not be able to access them.";
+"PasscodeSettings.DeleteOtherPasscodesAfterActivation" = "Delete Other Passcodes After Activation";
+"PasscodeSettings.DeleteOtherPasscodesAfterActivationHelp" = "All other fake passwords will be deleted after activation and an attacker will not be able to access them.";
+"PasscodeSettings.FakePasscodeActivationMessage" = "Activation Message";
+"PasscodeSettings.FakePasscodeActivationMessageHelp" = "Fake passcode actions will be executed upon receipt of the activation message in any chat.";
+"PasscodeSettings.BadPasscodeTriesToActivate" = "Bad Login Tries for Activation";
+"PasscodeSettings.BadPasscodeTriesToActivateHelp" = "After this number of bad attempts to enter the password code, the fake passcode actions will be executed.";
+"PasscodeSettings.FakePasscodeActionsTitle" = "Actions";
+"PasscodeSettings.FakePasscodeSmsActionTitle" = "SMS";
+"PasscodeSettings.ClearTelegramCache" = "Clear Vartagram Cache";
+"PasscodeSettings.ClearProxiesOnFakeLogin" = "Clear Proxies";
+"PasscodeSettings.FakePasscodeActionsHelp" = "When a fake passcode is entered, selected actions are performed.";
+"PasscodeSettings.FakePasscodeAccountsTitle" = "Account-specific Actions";
+"PasscodeSettings.FakePasscodeAccountsHelp" = "Configure actions for accounts.";
+"PasscodeSettings.FakePasscodeDelete" = "Delete Fake Passcode";
+"PasscodeSettings.FakePasscodeDeleteHelp" = "If you delete the fake passcode, all actions will be cleared. You can change the passcode if you don't want to delete it.";
+
+"PasscodeSettings.FakePasscodeDeleteTitle" = "Delete Fake Passcode";
+"PasscodeSettings.FakePasscodeDeleteMessage" = "Are you sure you want to delete this fake passcode?";
+
+"Settings.Version" = "Vartagram %1$@ (%2$@)\nBased on original Telegram %3$@";
 
 "FakePasscodes.Common.DoNotShowAgain" = "Do not show again";
 
@@ -35,41 +69,61 @@
 
 "AccountActions.SessionsToTerminate.24hWarningMessage" = "This feature will not work if less than 24 hours have passed since you signed in to your account on this device.";
 
-"PtgSettings.Title" = "Cloudballon";
-"PtgSettings.ShowPeerId" = "Show ID";
-"PtgSettings.ShowPeerIdHelp" = "Show ID in user, group, channel, bot profiles.";
-"PtgSettings.ForeignAgentNoticeHeader" = "Foreign agent notice";
-"PtgSettings.SuppressForeignAgentNotice" = "Suppress in Messages";
-"PtgSettings.EnableForeignAgentNoticeSearchFiltering" = "Filter Search Results";
-"PtgSettings.EnableForeignAgentNoticeSearchFilteringHelp" = "Filter out search result messages that were included only because of the foreign agent notice.";
+"PtgSettings.Title" = "Vartagram";
+"PtgSettings.ShowPeerId" = "Show Profile ID";
+"PtgSettings.ShowChannelCreationDate" = "Show Channel Creation Date";
+"PtgSettings.SuppressForeignAgentNotice" = "Hide Russian \"Foreign Agent\" Labels";
+"PtgSettings.EnableQuickReaction" = "Quick Reactions";
+"PtgSettings.EnableQuickReactionHelp" = "Turn on to quickly send reactions by double-tapping on a message or tapping on existing reactions. Turn off to prevent accidental reactions.";
+"PtgSettings.ChannelAppearanceHeader" = "Channel Presentation";
+"PtgSettings.HideReactions" = "Hide Reactions";
+"PtgSettings.HideComments" = "Hide Comments";
+"PtgSettings.HideShareButton" = "Hide Forward Button";
+"PtgSettings.UseFullWidth" = "Use Full Screen Width";
 "PtgSettings.EnableLiveText" = "Live Text";
 "PtgSettings.EnableLiveTextHelp" = "Automatically perform text recognition and bar code detection (e.g. QR-code) on each image you preview in fullscreen. Turn it off to save battery life.";
 "PtgSettings.PreferAppleVoiceToText" = "Voice-to-Text Conversion by Apple";
 "PtgSettings.PreferAppleVoiceToTextHelp" = "This setting affects only Premium accounts. It determines which services are used for voice-to-text conversion. If turned off (default), Telegram servers are used. If turned on, Apple services are used. **For non-Premium accounts, Apple services are always used.**";
+"PtgSettings.DefaultCameraForVideos" = "Default Camera for Videos";
+"PtgSettings.DefaultCameraForVideos.Front" = "Front";
+"PtgSettings.DefaultCameraForVideos.Rear" = "Rear";
+"PtgSettings.AddContextMenuHeader" = "Message context menu";
+"PtgSettings.AddContextMenuSaveMessage" = "Add \"Save Message\"";
+"PtgSettings.AddContextMenuShare" = "Add \"Share\"";
+"PtgSettings.JumpToNextUnreadChannel" = "Jump to Next Channel";
+"PtgSettings.JumpToNextUnreadChannel.Disabled" = "Disabled";
+"PtgSettings.JumpToNextUnreadChannel.TopFirst" = "Top First";
+"PtgSettings.JumpToNextUnreadChannel.BottomFirst" = "Bottom First";
+"PtgSettings.HideSignatures" = "Hide Signatures";
+
+"Conversation.ContextMenuSaveMessage" = "Save Message";
 
 "Profile.Id" = "ID";
 "Conversation.IdCopied" = "ID copied to clipboard.";
 "Settings.CopyId" = "Copy ID";
+"Profile.CreationDate" = "Created";
 
 "SiriAndDictationAreDisabledAlert" = "To convert voice messages to text, either Dictation (System Settings > General > Keyboard) or Siri (System Settings > Siri & Search) needs to be enabled.";
 
-"SecretPasscodeSettings.Title" = "Secret Passcode";
-"SecretPasscodeSettings.EnterPasscode" = "Enter secret passcode";
-"SecretPasscodeSettings.EnterNewPasscode" = "Enter new secret passcode";
-"SecretPasscodeSettings.RepeatNewPasscode" = "Re-enter new secret passcode";
+"SecretPasscodeSettings.Title" = "Secret Code";
+"SecretPasscodeSettings.EnterPasscode" = "Enter secret code";
+"SecretPasscodeSettings.EnterNewPasscode" = "Enter new secret code";
+"SecretPasscodeSettings.RepeatNewPasscode" = "Re-enter new secret code";
 "SecretPasscodeSettings.AutoHide" = "Auto-Hide";
+"SecretPasscodeSettings.AutoHideDesc" = "If the application is inactive for a specified period of time, the secrets are automatically hidden.";
 "SecretPasscodeSettings.AccountsHeader" = "Hiding Accounts";
 "SecretPasscodeSettings.AddAccount" = "Add Account";
 "SecretPasscodeSettings.SecretChatsHeader" = "Hiding Secret Chats";
 "SecretPasscodeSettings.AddSecretChats" = "Add Secret Chats";
-"SecretPasscodeSettings.DeleteSecretPasscode" = "Delete Secret Passcode";
-"SecretPasscodeSettings.DeleteSecretPasscodeNotice" = "⚠️ All accounts and secret chats specified here will become visible at all times.";
+"SecretPasscodeSettings.ChangePasscode" = "Change Code";
+"SecretPasscodeSettings.DeleteSecretPasscode" = "Delete Secret Code";
+"SecretPasscodeSettings.DeleteSecretPasscodeNotice" = "All accounts and secret chats specified here will become visible at all times.";
 "SecretPasscodeSettings.AtLeastOneAccountMustRemainUnhidden" = "At least one account must remain visible at all times.";
-"SecretPasscodeSettings.Intro" = "Specify **secrets**: accounts and secret chats that will be hidden until you enter this secret passcode.";
-"Settings.EnterSecretPasscode" = "Enter Secret Passcode";
-"Settings.ManageSecretPasscodes" = "Manage Secret Passcodes";
-"SecretPasscodeMenu.Add" = "Add Secret Passcode";
-"SecretPasscodeMenu.Edit" = "Edit Secret Passcode";
+"SecretPasscodeSettings.Intro" = "Specify secrets: accounts and secret chats that will be hidden until you enter this secret code.";
+"Settings.EnterSecretPasscode" = "Enter Secret Code";
+"Settings.ManageSecretPasscodes" = "Manage Secret Codes";
+"SecretPasscodeMenu.Add" = "Add Secret Code";
+"SecretPasscodeMenu.Edit" = "Edit Secret Code";
 "SecretPasscodeMenu.HideAllSecrets" = "Hide All Secrets";
 "SecretPasscodeStatus.SomeRevealed" = "Some secrets are revealed.";
 "SecretPasscodeStatus.AllHidden" = "All secrets are hidden.";
@@ -86,8 +140,8 @@
 
 "PasscodeAttempts.TryAgainIn" = "Protection against brute force attacks. Try again in %@.";
 
-"Share.LockedTitle" = "Unlock Telegram";
-"Share.LockedDescription" = "Open and unlock Telegram to share.";
+"Share.LockedTitle" = "Unlock Vartagram";
+"Share.LockedDescription" = "Open and unlock Vartagram to share.";
 
 "ChatList.EmptyChatSelectionList" = "No chats to select.";
 
@@ -96,6 +150,11 @@
 "StorageKeepMedia.AllChatTypes" = "All Chat Types";
 
 "StorageManagement.DescriptionAppUsageAllAccounts" = "Cache of all accounts use %1$@% of your free disk space.";
+
+"Appearance.AppIcon.Primary" = "Primary";
+"Appearance.AppIcon.Yellow" = "Yellow";
+"Appearance.AppIcon.Orange" = "Orange";
+"Appearance.AppIcon.Red" = "Red";
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1324,39 +1383,6 @@
 "PasscodeSettings.SimplePasscodeHelp" = "A simple passcode is a 4 digit number.";
 "PasscodeSettings.EncryptData" = "Encrypt Local Database";
 "PasscodeSettings.EncryptDataHelp" = "Experimental feature, use with caution. Encrypt your local Telegram data, using a derivative of your passcode as the key.";
-
-"PasscodeSettings.FakePasscodes" = "Fake Passcodes";
-"PasscodeSettings.FakePasscode" = "Fake Passcode %1$d";
-"PasscodeSettings.AddFakePasscode" = "Add Fake Passcode";
-"PasscodeSettings.FakePasscodeHelp" = "When a fake passcode is entered, selected actions are performed.";
-"PasscodeSettings.PasscodeInUse" = "This passcode is already in use";
-"PasscodeSettings.ConfirmDeletion" = "Confirm deletion";
-"PasscodeSettings.AllFakePasscodesWillBeDeleted" = "All fake passcodes will be deleted. Are you sure you want to continue?";
-
-"PasscodeSettings.FakePasscodeChangeName" = "Change Name";
-"PasscodeSettings.FakePasscodeChange" = "Change Fake Passcode";
-"PasscodeSettings.FakePasscodeChangeHelp" = "You can change the fake passcode without deleting it.";
-"PasscodeSettings.FakePasscodeAllowLogin" = "Allow login using Fake Passcode";
-"PasscodeSettings.FakePasscodeAllowLoginHelp" = "You can deny login with this fake passcode. In this case, the attacker will not gain access to the accounts, but the actions will be performed.";
-"PasscodeSettings.FakePasscodeClearAfterActivation" = "Clear Passcode Settings After Activation";
-"PasscodeSettings.FakePasscodeClearAfterActivationHelp" = "All fake passcode settings will be cleared after activation and an attacker will not be able to access them.";
-"PasscodeSettings.DeleteOtherPasscodesAfterActivation" = "Delete Other Passcodes After Activation";
-"PasscodeSettings.DeleteOtherPasscodesAfterActivationHelp" = "All other fake passwords will be deleted after activation and an attacker will not be able to access them.";
-"PasscodeSettings.FakePasscodeActivationMessage" = "Activation Message";
-"PasscodeSettings.FakePasscodeActivationMessageHelp" = "Fake passcode actions will be executed upon receipt of the activation message in any chat.";
-"PasscodeSettings.BadPasscodeTriesToActivate" = "Bad Login Tries for Activation";
-"PasscodeSettings.BadPasscodeTriesToActivateHelp" = "After this number of bad attempts to enter the password code, the fake passcode actions will be executed.";
-"PasscodeSettings.FakePasscodeActionsTitle" = "Actions";
-"PasscodeSettings.FakePasscodeSmsActionTitle" = "SMS";
-"PasscodeSettings.ClearTelegramCache" = "Clear Telegram Cache";
-"PasscodeSettings.ClearProxiesOnFakeLogin" = "Clear Proxies";
-"PasscodeSettings.FakePasscodeActionsHelp" = "When a fake passcode is entered, selected actions are performed.";
-"PasscodeSettings.FakePasscodeAccountsTitle" = "Account-specific Actions";
-"PasscodeSettings.FakePasscodeAccountsHelp" = "Configure actions for accounts.";
-"PasscodeSettings.FakePasscodeDelete" = "Delete Fake Passcode";
-"PasscodeSettings.FakePasscodeDeleteHelp" = "If you delete the fake passcode, all actions will be cleared. You can change the passcode if you don't want to delete it.";
-"PasscodeSettings.FakePasscodeDeleteTitle" = "Delete Fake Passcode";
-"PasscodeSettings.FakePasscodeDeleteMessage" = "Are you sure you want to delete this fake passcode?";
 
 "EnterPasscode.EnterTitle" = "Enter your Telegram Passcode";
 "EnterPasscode.ChangeTitle" = "Change Passcode";
@@ -4671,7 +4697,6 @@ Sorry for the inconvenience.";
 "Appearance.AppIconFilledX" = "Filled X";
 "Appearance.AppIconNew1" = "Sunset";
 "Appearance.AppIconNew2" = "Aqua";
-"Appearance.AppIconCloudballon" = "Cloudballon";
 
 "Appearance.ThemeCarouselClassic" = "Classic";
 "Appearance.ThemeCarouselDay" = "Day";

@@ -1385,7 +1385,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             
             if itemContainer.node.wantsFullWidth {
                 itemContainerConstrainedSize = CGSize(width: constrainedSize.width, height: itemConstrainedHeight)
-                standardMaxWidth = 240.0
+                standardMaxWidth = 250.0
                 standardMinWidth = standardMaxWidth
                 
                 if let (tipNode, tipHeight) = itemContainer.updateTip(presentationData: presentationData, presentation: presentation, width: standardMaxWidth, transition: itemContainerTransition) {
@@ -1397,7 +1397,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             } else {
                 itemContainerConstrainedSize = CGSize(width: constrainedSize.width, height: itemConstrainedHeight)
                 standardMinWidth = 220.0
-                standardMaxWidth = 240.0
+                standardMaxWidth = 250.0 // increased to accommodate "Save Message" localized strings
                 additionalBottomInset = 0.0
             }
             

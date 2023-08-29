@@ -2,6 +2,10 @@ import Foundation
 import Postbox
 import TelegramCore
 
+extension ApplicationSpecificPreferencesKeys {
+    public static let ptgAccountSettings = applicationSpecificPreferencesKey(100)
+}
+
 public struct PtgAccountSettings: Codable, Equatable {
     public let ignoreAllContentRestrictions: Bool
     

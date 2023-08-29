@@ -1,3 +1,4 @@
+#if TEST_BUILD
 import Foundation
 import UIKit
 import Display
@@ -152,3 +153,4 @@ public func debugAccountsController(context: AccountContext, accountManager: Acc
     }
     return controller
 }
+#endif

@@ -1,10 +1,13 @@
 import Foundation
 import Postbox
 import TelegramCore
-import TelegramUIPreferences
 import SwiftSignalKit
 import AppLockState
 import MonotonicTime
+
+extension ApplicationSpecificSharedDataKeys {
+    public static let ptgSecretPasscodes = applicationSpecificPreferencesKey(103)
+}
 
 public struct PtgSecretChatId: Codable, Hashable {
     public let accountId: AccountRecordId

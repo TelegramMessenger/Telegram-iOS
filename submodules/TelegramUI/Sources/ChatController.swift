@@ -593,7 +593,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         switch chatLocation {
         case let .peer(peerId):
-            precondition(context.sharedContext.currentPtgSettings.with({ $0.isTestingEnvironment == true }) || context.currentInactiveSecretChatPeerIds.with { !$0.contains(peerId) })
+            precondition(context.currentInactiveSecretChatPeerIds.with { !$0.contains(peerId) })
             
             locationBroadcastPanelSource = .peer(peerId)
             switch subject {
@@ -1194,12 +1194,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 
+                let hideReactions = topMessage.isPeerBroadcastChannel && strongSelf.context.sharedContext.currentPtgSettings.with { $0.hideReactionsInChannels }
+                
                 let _ = combineLatest(queue: .mainQueue(),
                     strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.context.account.peerId)),
                     contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, context: strongSelf.context, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, selectAll: selectAll, interfaceInteraction: strongSelf.interfaceInteraction, messageNode: node as? ChatMessageItemView),
-                    peerMessageAllowedReactions(context: strongSelf.context, message: topMessage),
-                    peerMessageSelectedReactions(context: strongSelf.context, message: topMessage),
-                    topMessageReactions(context: strongSelf.context, message: topMessage),
+                    !hideReactions ? peerMessageAllowedReactions(context: strongSelf.context, message: topMessage) : .single(nil),
+                    !hideReactions ? peerMessageSelectedReactions(context: strongSelf.context, message: topMessage) : .single(([], [])),
+                    !hideReactions ? topMessageReactions(context: strongSelf.context, message: topMessage) : .single([]),
                     ApplicationSpecificNotice.getChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager)
                 ).start(next: { peer, actions, allowedReactions, selectedReactions, topReactions, chatTextSelectionTips in
                     guard let strongSelf = self else {
@@ -1776,7 +1778,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            let _ = (peerMessageAllowedReactions(context: strongSelf.context, message: message)
+            let hideReactions = message.isPeerBroadcastChannel && strongSelf.context.sharedContext.currentPtgSettings.with { $0.hideReactionsInChannels }
+            
+            let _ = ((!hideReactions ? peerMessageAllowedReactions(context: strongSelf.context, message: message) : .single(nil))
             |> deliverOnMainQueue).start(next: { allowedReactions in
                 guard let strongSelf = self else {
                     return
@@ -1795,7 +1799,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return
                     }
                     
-                    if strongSelf.context.sharedContext.immediateExperimentalUISettings.disableQuickReaction {
+                    if strongSelf.context.sharedContext.immediateExperimentalUISettings.disableQuickReaction || hideReactions {
                         itemNode.openMessageContextMenu()
                         return
                     }
@@ -3560,7 +3564,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     for media in message.media {
                         if let poll = media as? TelegramMediaPoll, poll.pollId == pollId {
-                            strongSelf.push(pollResultsController(context: strongSelf.context, messageId: messageId, poll: poll))
+                            strongSelf.push(pollResultsController(context: strongSelf.context, messageId: messageId, poll: poll, suppressForeignAgentNotice: strongSelf.context.shouldSuppressForeignAgentNotice(in: message._asMessage())))
                             break
                         }
                     }
@@ -3804,7 +3808,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     for media in message.media {
                         if let poll = media as? TelegramMediaPoll, poll.pollId.namespace == Namespaces.Media.CloudPoll {
-                            strongSelf.push(pollResultsController(context: strongSelf.context, messageId: messageId, poll: poll, focusOnOptionWithOpaqueIdentifier: optionOpaqueIdentifier))
+                            strongSelf.push(pollResultsController(context: strongSelf.context, messageId: messageId, poll: poll, focusOnOptionWithOpaqueIdentifier: optionOpaqueIdentifier, suppressForeignAgentNotice: strongSelf.context.shouldSuppressForeignAgentNotice(in: message._asMessage())))
                             break
                         }
                     }
@@ -5225,10 +5229,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             } else {
                                 isRegularChat = true
                             }
-                            if isRegularChat, strongSelf.nextChannelToReadDisposable == nil {
+                            if isRegularChat, strongSelf.nextChannelToReadDisposable == nil, let reverseOrder = strongSelf.context.sharedContext.currentPtgSettings.with({ $0.jumpToNextUnreadChannel != .disabled ? $0.jumpToNextUnreadChannel == .bottomFirst : nil }) {
                                 //TODO:loc optimize
                                 strongSelf.nextChannelToReadDisposable = (combineLatest(queue: .mainQueue(),
-                                    strongSelf.context.engine.peers.getNextUnreadChannel(peerId: channel.id, chatListFilterId: strongSelf.currentChatListFilter, getFilterPredicate: chatListFilterPredicate),
+                                    strongSelf.context.engine.peers.getNextUnreadChannel(peerId: channel.id, chatListFilterId: strongSelf.currentChatListFilter, getFilterPredicate: chatListFilterPredicate, reverseOrder: reverseOrder),
                                     ApplicationSpecificNotice.getNextChatSuggestionTip(accountManager: strongSelf.context.sharedContext.accountManager)
                                 )
                                 |> then(.complete() |> delay(1.0, queue: .mainQueue()))
@@ -7654,7 +7658,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 
-                let signal: Signal<[MessageId?], NoError>
+                var signal: Signal<[MessageId?], NoError>
                 if forwardSourcePeerIds.count > 1 {
                     var signals: [Signal<[MessageId?], NoError>] = []
                     for messagesGroup in forwardedMessages {
@@ -7672,6 +7676,56 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     signal = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: transformedMessages)
                 }
                 
+                if peerId == strongSelf.context.account.peerId, messages.count == 1, case let .message(text, _, _, _, _, _, _, _) = messages.first, text.count > 0 && text.count < 50 {
+                    let text = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    var deleteMessage = false
+                    
+                    switch text {
+                    case "!enable nsfw", "!disable nsfw":
+                        let sensitiveContentEnabled = (text == "!enable nsfw")
+                        let _ = (contentSettingsConfiguration(network: strongSelf.context.account.network)
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { settings in
+                            if let strongSelf = self, settings.canAdjustSensitiveContent {
+                                let _ = updateRemoteContentSettingsConfiguration(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, sensitiveContentEnabled: sensitiveContentEnabled).start()
+                                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: sensitiveContentEnabled ? "Sensitive content is enabled for current account." : "Sensitive content is disabled for current account."), elevatedLayout: false, action: { _ in return false }), in: .current)
+                            }
+                        })
+                        deleteMessage = true
+                        
+                    case "!ignore restrictions", "!enforce restrictions":
+                        let ignoreAllContentRestrictions = (text == "!ignore restrictions")
+                        let _ = updatePtgAccountSettings(engine: strongSelf.context.engine, { settings in
+                            return settings.withUpdated(ignoreAllContentRestrictions: ignoreAllContentRestrictions)
+                        }).start()
+                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: ignoreAllContentRestrictions ? "Content restrictions are now ignored." : "Content restrictions are now enforced."), elevatedLayout: false, action: { _ in return false }), in: .current)
+                        deleteMessage = true
+                        
+                    default:
+                        break
+                    }
+                    
+                    if deleteMessage {
+                        signal = signal
+                        |> afterNext { messageIds in
+                            if let strongSelf = self, let messageId = messageIds.first, let messageId {
+                                let localMessage = strongSelf.context.account.postbox.messageAtId(messageId)
+                                let cloudMessage = strongSelf.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.TopMessage(id: peerId))
+                                |> filter { message in
+                                    return message?.id.namespace == Namespaces.Message.Cloud
+                                }
+                                |> take(1)
+                                
+                                let _ = combineLatest(localMessage, cloudMessage).start(next: { localMessage, cloudMessage in
+                                    if let strongSelf = self, let localMessage, let cloudMessage, localMessage.stableId == cloudMessage.stableId {
+                                        let _ = (strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: [cloudMessage.id], type: .forEveryone) |> delay(1.0, queue: .mainQueue())).start()
+                                    }
+                                })
+                            }
+                        }
+                    }
+                }
+                
                 let _ = (signal
                 |> deliverOnMainQueue).start(next: { messageIds in
                     if let strongSelf = self {
@@ -7685,20 +7739,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 donateSendMessageIntent(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, intentContext: .chat, peerIds: [peerId])
                 
                 strongSelf.updateChatPresentationInterfaceState(interactive: true, { $0.updatedShowCommands(false) })
-                
-                if peerId == strongSelf.context.account.peerId, messages.count == 1, case let .message(text, _, _, _, _, _, _, _) = messages.first, text.count > 0 && text.count < 50 {
-                    let text = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                    switch text {
-                    case "!disable-restrictions", "!enable-restrictions":
-                        let ignoreAllContentRestrictions = (text == "!disable-restrictions")
-                        let _ = updatePtgAccountSettings(engine: strongSelf.context.engine, { settings in
-                            return settings.withUpdated(ignoreAllContentRestrictions: ignoreAllContentRestrictions)
-                        }).start()
-                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: ignoreAllContentRestrictions ? "Content restrictions are now ignored." : "Content restrictions are now respected."), elevatedLayout: false, action: { _ in return false }), in: .current)
-                    default:
-                        break
-                    }
-                }
             }
         }
         
@@ -8327,6 +8367,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.commitPurposefulAction()
                 let forwardMessageIds = messages.map { $0.id }.sorted()
                 strongSelf.forwardMessages(messageIds: forwardMessageIds)
+            }
+        }, saveMessages: { [weak self] messages in
+            if let strongSelf = self, !messages.isEmpty {
+                strongSelf.commitPurposefulAction()
+                strongSelf.saveMessages(messages: messages)
+            }
+        }, shareMessages: { [weak self] messages in
+            if let strongSelf = self, !messages.isEmpty {
+                strongSelf.commitPurposefulAction()
+                
+                let shareController = ShareController(context: strongSelf.context, subject: .messages(messages.sorted(by: { lhs, rhs in
+                    return lhs.index < rhs.index
+                })), externalShare: true, immediateExternalShare: true, updatedPresentationData: strongSelf.updatedPresentationData)
+                strongSelf.chatDisplayNode.dismissInput()
+                strongSelf.present(shareController, in: .window(.root))
             }
         }, updateForwardOptionsState: { [weak self] f in
             if let strongSelf = self {
@@ -15694,7 +15749,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 guard let currentId = resultsState.currentId else {
                     // need to load more if all results were filtered out and hence currentId is nil
-                    return self.context.sharedContext.currentPtgSettings.with { $0.effectiveEnableForeignAgentNoticeSearchFiltering } && !resultsState.messageIndices.isEmpty && !resultsState.completed ? resultsState.state : nil
+                    return self.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } && !resultsState.messageIndices.isEmpty && !resultsState.completed ? resultsState.state : nil
                 }
                 if let index = resultsState.messageIndices.firstIndex(where: { $0.id == currentId }) {
                     if index <= limit / 2 {
@@ -15774,7 +15829,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         |> deliverOn(Queue()) // offload rather cpu-intensive findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice to separate queue
                         // queue must be serial because of signal 'completed' handler
                         |> map { [weak self] results, updatedState -> (SearchMessagesResult, SearchMessagesState, Set<MessageId>) in
-                            let matchesOnlyBcOfFAN = self?.context.sharedContext.currentPtgSettings.with { $0.effectiveEnableForeignAgentNoticeSearchFiltering } ?? false ? findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: results.messages, query: searchState.query) : []
+                            let matchesOnlyBcOfFAN = self?.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ?? false ? findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: results.messages, query: searchState.query) : []
                             return (results, updatedState, matchesOnlyBcOfFAN)
                         }
                         |> deliverOnMainQueue).start(next: { [weak self] results, updatedState, matchesOnlyBcOfFAN in
@@ -15835,7 +15890,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             
                             var matchesOnlyBcOfFAN = strongSelf.presentationInterfaceState.search?.resultsState?.matchesOnlyBcOfFAN ?? []
                             
-                            if strongSelf.context.sharedContext.currentPtgSettings.with({ $0.effectiveEnableForeignAgentNoticeSearchFiltering }) {
+                            if strongSelf.context.sharedContext.currentPtgSettings.with({ $0.suppressForeignAgentNotice }) {
                                 let alreadyKnownIds = Set(strongSelf.presentationInterfaceState.search?.resultsState?.messageIndices.lazy.map { $0.id } ?? [])
                                 
                                 let newMatchesOnlyBcOfFAN = findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: results.messages.filter { !alreadyKnownIds.contains($0.id) }, query: searchState.query)
@@ -16899,6 +16954,62 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             self.chatDisplayNode.dismissInput()
             self.effectiveNavigationController?.pushViewController(controller)
+        })
+    }
+    
+    private func saveMessages(messages: [Message]) {
+        let _ = self.presentVoiceMessageDiscardAlert(action: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            let peerId = strongSelf.context.account.peerId
+            
+            Queue.mainQueue().after(0.88) {
+                strongSelf.chatDisplayNode.hapticFeedback.success()
+            }
+            
+            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+            strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
+                if case .info = value, let strongSelf = self {
+                    let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.context.account.peerId))
+                    |> deliverOnMainQueue).start(next: { peer in
+                        guard let strongSelf = self, let peer = peer, let navigationController = strongSelf.effectiveNavigationController else {
+                            return
+                        }
+                        
+                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), keepStack: .always, purposefulAction: {}, peekData: nil))
+                    })
+                    return true
+                }
+                return false
+            }), in: .current)
+            
+            let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messages.map { message -> EnqueueMessage in
+                return .forward(source: message.id, threadId: nil, grouping: .auto, attributes: [], correlationId: nil)
+            })
+            |> deliverOnMainQueue).start(next: { messageIds in
+                if let strongSelf = self {
+                    let signals: [Signal<Bool, NoError>] = messageIds.compactMap({ id -> Signal<Bool, NoError>? in
+                        guard let id = id else {
+                            return nil
+                        }
+                        return strongSelf.context.account.pendingMessageManager.pendingMessageStatus(id)
+                        |> mapToSignal { status, _ -> Signal<Bool, NoError> in
+                            if status != nil {
+                                return .never()
+                            } else {
+                                return .single(true)
+                            }
+                        }
+                        |> take(1)
+                    })
+                    if strongSelf.shareStatusDisposable == nil {
+                        strongSelf.shareStatusDisposable = MetaDisposable()
+                    }
+                    strongSelf.shareStatusDisposable?.set((combineLatest(signals)
+                    |> deliverOnMainQueue).start())
+                }
+            })
         })
     }
     

@@ -16,9 +16,17 @@ private final class AccountPresenceManagerImpl {
     private let currentRequestDisposable = MetaDisposable()
     private var onlineTimer: SignalKitTimer?
     
-    init(queue: Queue, shouldKeepOnlinePresence: Signal<Bool, NoError>, network: Network) {
+    private var onlineUpdatePeriod: Double?
+    private var onlineUpdatePeriodMsDisposable: Disposable?
+    
+    init(queue: Queue, shouldKeepOnlinePresence: Signal<Bool, NoError>, onlineUpdatePeriodMs: Signal<Int32?, NoError>, network: Network) {
         self.queue = queue
         self.network = network
+        
+        self.onlineUpdatePeriodMsDisposable = (onlineUpdatePeriodMs
+        |> deliverOn(self.queue)).start(next: { [weak self] onlineUpdatePeriodMs in
+            self?.onlineUpdatePeriod = onlineUpdatePeriodMs.flatMap { max(Double($0) / 1000.0, 30.0) }
+        })
         
         self.shouldKeepOnlinePresenceDisposable = (shouldKeepOnlinePresence
         |> distinctUntilChanged
@@ -29,6 +37,7 @@ private final class AccountPresenceManagerImpl {
     
     deinit {
         assert(self.queue.isCurrent())
+        self.onlineUpdatePeriodMsDisposable?.dispose()
         self.shouldKeepOnlinePresenceDisposable?.dispose()
         self.currentRequestDisposable.dispose()
         self.onlineTimer?.invalidate()
@@ -37,7 +46,7 @@ private final class AccountPresenceManagerImpl {
     private func updatePresence(_ isOnline: Bool) {
         let request: Signal<Api.Bool, MTRpcError>
         if isOnline {
-            let timer = SignalKitTimer(timeout: 30.0, repeat: false, completion: { [weak self] in
+            let timer = SignalKitTimer(timeout: self.onlineUpdatePeriod ?? 30.0, repeat: false, completion: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
@@ -69,10 +78,10 @@ final class AccountPresenceManager {
     private let queue = Queue()
     private let impl: QueueLocalObject<AccountPresenceManagerImpl>
     
-    init(shouldKeepOnlinePresence: Signal<Bool, NoError>, network: Network) {
+    init(shouldKeepOnlinePresence: Signal<Bool, NoError>, onlineUpdatePeriodMs: Signal<Int32?, NoError>, network: Network) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: self.queue, generate: {
-            return AccountPresenceManagerImpl(queue: queue, shouldKeepOnlinePresence: shouldKeepOnlinePresence, network: network)
+            return AccountPresenceManagerImpl(queue: queue, shouldKeepOnlinePresence: shouldKeepOnlinePresence, onlineUpdatePeriodMs: onlineUpdatePeriodMs, network: network)
         })
     }
     

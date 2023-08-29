@@ -150,7 +150,7 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
                 let node = ChatSendButtonRadialStatusView(color: theme.chat.inputPanel.panelControlAccentColor)
                 node.slowmodeState = slowmodeState
                 return node
-            }, canSendSilently: !isSecretChat, canSchedule: hasSchedule, reminder: peerId == context.account.peerId)!
+            }, canSendSilently: !isSecretChat, canSchedule: hasSchedule, reminder: peerId == context.account.peerId, useRearCameraByDefault: context.sharedContext.currentPtgSettings.with({ $0.useRearCameraByDefault }))!
             controller.presentScheduleController = { done in
                 presentSchedulePicker { time in
                     done?(time)

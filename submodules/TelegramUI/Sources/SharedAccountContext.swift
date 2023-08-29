@@ -496,14 +496,20 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         })
         
         // once installed via App Store, some debugging tools will no longer be available (for security)
-        if applicationBindings.isMainApp, initialPresentationDataAndSettings.ptgSettings.isTestingEnvironment != false {
+        if applicationBindings.isMainApp, initialPresentationDataAndSettings.ptgSettings.testToolsEnabled != false {
+            #if TEST_BUILD
+            let testToolsEnabled = Bundle.isTestFlightOrDevelopment
+            #else
+            let testToolsEnabled = false
+            #endif
+            
             let _ = accountManager.transaction({ transaction in
                 transaction.updateSharedData(ApplicationSpecificSharedDataKeys.ptgSettings, { entry in
-                    return PreferencesEntry(PtgSettings(entry).withUpdated(isTestingEnvironment: Bundle.isTestFlightOrDevelopment))
+                    return PreferencesEntry(PtgSettings(entry).withUpdated(testToolsEnabled: testToolsEnabled))
                 })
             }).start()
             
-            if !Bundle.isTestFlightOrDevelopment {
+            if !testToolsEnabled {
                 let _ = updateLoggingSettings(accountManager: accountManager, {
                     $0.withUpdatedLogToFile(false).withUpdatedLogToConsole(false).withUpdatedRedactSensitiveData(true)
                 }).start()
@@ -640,8 +646,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
             return true
         })
-        |> deliverOnMainQueue).start(next: { accountRecords in
-            let (primaryId, records, authRecord) = accountRecords
+        |> deliverOnMainQueue).start(next: { primaryId, records, authRecord in
             var addedSignals: [Signal<AddedAccountResult, NoError>] = []
             var addedAuthSignal: Signal<UnauthorizedAccount?, NoError> = .single(nil)
             for (id, attributes) in records {
@@ -1073,7 +1078,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             self.widgetDataContext = WidgetDataContext(basePath: self.basePath, inForeground: self.applicationBindings.applicationInForeground, activeAccounts: self.activeAccountContexts
             |> map { _, accounts, _, _ in
                 return accounts.map { $0.1.account }
-            }, presentationData: self.presentationData, appLockContext: self.appLockContext as! AppLockContextImpl, ptgSettings: self.ptgSettings)
+            }, presentationData: self.presentationData, appLockContext: self.appLockContext as! AppLockContextImpl)
             
             let enableSpotlight = accountManager.sharedData(keys: Set([ApplicationSpecificSharedDataKeys.intentsSettings]))
             |> map { sharedData -> Bool in
@@ -1114,8 +1119,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 self?.timeBasedCleanup.setup(cleanedAccounts: cleanedAccounts, general: settings.defaultCacheStorageTimeout, shortLived: 60 * 60, gigabytesLimit: settings.defaultCacheStorageLimitGigabytes)
             })
             
-            self.maintainFillerFileDisposable = self.maintainFillerFile().start()
-            
             self.trackLastNonHidingAccountDisposable = combineLatest(self.activeAccountContexts, self.allHidableAccountIds).start(next: { activeAccountContexts, allHidableAccountIds in
                 if Set(activeAccountContexts.accounts.map({ $0.0 })).subtracting(allHidableAccountIds).isEmpty {
                     // If logged out from last non-hiding account, deactivate all hidable accounts (if any is active) since their use is not secure any more. Otherwise cache size may grow and this can reveal them.
@@ -1123,6 +1126,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             })
         }
+        
+        self.maintainFillerFileDisposable = self.maintainFillerFile().start()
     }
     
     deinit {
@@ -2261,18 +2266,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 if let controller = controller as? StorageUsageScreen {
                     // close all, because otherwise we need to call reloadStats(), which may take some time, but we can't wait here for too long
                     (controller.navigationController as? NavigationController)?.popToRoot(animated: false)
-                }
-                
-                if let controller = controller as? ItemListController {
-                    var isOldStorageUsage = false
-                    controller.forEachItemNode { itemNode in
-                        if "\(type(of: itemNode))".contains("StorageUsageItemNode") {
-                            isOldStorageUsage = true
-                        }
-                    }
-                    if isOldStorageUsage {
-                        (controller.navigationController as? NavigationController)?.popToRoot(animated: false)
-                    }
                 }
                 
                 return true

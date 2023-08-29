@@ -752,7 +752,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     break
                 }
             }
-            let (text_, entities_) = self.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(text: message.text, entities: entities, media: message.media) : (message.text, entities)
+            var (text_, entities_) = self.context.shouldSuppressForeignAgentNotice(in: message) ? removeForeignAgentNotice(text: message.text, entities: entities, media: message.media) : (message.text, entities)
+            if self.context.shouldHideChannelSignature(in: message), let username = message.channelUsername {
+                (text_, entities_) = removeChannelSignature(text: text_, entities: entities_, media: message.media, username: username)
+            }
             var text = text_
             entities = entities_
             if let translateToLanguage, !text.isEmpty {

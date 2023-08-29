@@ -14,7 +14,7 @@ func managedConfigurationUpdates(accountManager: AccountManager<TelegramAccountM
         |> mapToSignal { result, defaultHistoryTtl -> Signal<Void, NoError> in
             return postbox.transaction { transaction -> Signal<Void, NoError> in
                 switch result {
-                case let .config(flags, _, _, _, _, dcOptions, _, chatSizeMax, megagroupSizeMax, forwardedCountMax, _, _, _, _, _, _, _, _, editTimeLimit, revokeTimeLimit, revokePmTimeLimit, _, stickersRecentLimit, _, _, _, _, _, _, _, autoupdateUrlPrefix, gifSearchUsername, venueSearchUsername, imgSearchUsername, _, _, _, webfileDcId, suggestedLangCode, langPackVersion, baseLangPackVersion, reactionsDefault, autologinToken):
+                case let .config(flags, date, _, _, _, dcOptions, _, chatSizeMax, megagroupSizeMax, forwardedCountMax, onlineUpdatePeriodMs, _, _, _, _, _, _, _, editTimeLimit, revokeTimeLimit, revokePmTimeLimit, _, stickersRecentLimit, _, _, _, _, _, _, _, autoupdateUrlPrefix, gifSearchUsername, venueSearchUsername, imgSearchUsername, _, _, _, webfileDcId, suggestedLangCode, langPackVersion, baseLangPackVersion, reactionsDefault, autologinToken):
                     var addressList: [Int: [MTDatacenterAddress]] = [:]
                     for option in dcOptions {
                         switch option {
@@ -35,12 +35,15 @@ func managedConfigurationUpdates(accountManager: AccountManager<TelegramAccountM
                         }
                     }
                     
-                    let blockedMode = (flags & 8) != 0
+                    network.setTrustedTimestamp(date)
+                    
+                    let blockedMode = (flags & (1 << 8)) != 0
                     
                     updateNetworkSettingsInteractively(transaction: transaction, network: network, { settings in
                         var settings = settings
                         settings.reducedBackupDiscoveryTimeout = blockedMode
                         settings.applicationUpdateUrlPrefix = autoupdateUrlPrefix
+                        settings.onlineUpdatePeriodMs = onlineUpdatePeriodMs
                         return settings
                     })
                     

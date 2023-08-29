@@ -1291,7 +1291,7 @@ public final class ShareController: ViewController {
                     case let .messages(messages):
 //                        messagesToShare = messages
                         for message in messages {
-                            let message_ = strongSelf.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: message) : message
+                            let message_ = strongSelf.currentContext.shouldSuppressForeignAgentNotice(in: message) ? removeForeignAgentNotice(message: message) : message
                             
                             var url: String?
                             var selectedMedia: Media?

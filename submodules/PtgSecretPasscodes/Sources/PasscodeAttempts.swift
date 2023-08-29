@@ -1,9 +1,12 @@
 import Foundation
 import Postbox
 import TelegramCore
-import TelegramUIPreferences
 import SwiftSignalKit
 import MonotonicTime
+
+extension ApplicationSpecificSharedDataKeys {
+    public static let ptgPasscodeAttempts = applicationSpecificPreferencesKey(104)
+}
 
 // How it works:
 // Allowed [threshold] attempts per [duration] seconds.
@@ -140,11 +143,13 @@ private class PasscodeAttemptAccounterItem {
         }
     }
     
+    #if TEST_BUILD
     func debugReset() {
         self.data.counter = 0
         self.data.firstMissUptime = nil
         self.data.firstMissTrustedTimestamp = nil
     }
+    #endif
 }
 
 public class PasscodeAttemptAccounter {
@@ -199,9 +204,11 @@ public class PasscodeAttemptAccounter {
         self.save()
     }
     
+    #if TEST_BUILD
     public func debugResetAllCounters() {
         assert(Queue.mainQueue().isCurrent())
         self.items.forEach { $0.debugReset() }
         self.save()
     }
+    #endif
 }

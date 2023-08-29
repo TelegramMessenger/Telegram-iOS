@@ -553,7 +553,7 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
         }
     }
     
-    #if DEBUG
+    #if TEST_BUILD
     fileprivate func debugDumpDbStat() -> Signal<String, NoError> {
         return (self.valueBox as? SqliteValueBox)?.debugDumpStat() ?? .complete()
     }
@@ -714,7 +714,7 @@ public final class AccountManager<Types: AccountManagerTypes> {
         |> then (self.mediaBox.cacheStorageBox.optimizeStorage(minFreePagesFraction: minFreePagesFraction))
     }
     
-    #if DEBUG
+    #if TEST_BUILD
     public func debugDumpDbStat() -> Signal<String, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()

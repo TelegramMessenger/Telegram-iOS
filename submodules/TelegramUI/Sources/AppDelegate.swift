@@ -782,20 +782,13 @@ extension UserDefaults {
         }, getAvailableAlternateIcons: {
             if #available(iOS 10.3, *) {
                 var icons = [
-                    PresentationAppIcon(name: "Cloudballon", imageName: "Cloudballon", isDefault: true),
-                    PresentationAppIcon(name: "BlueIcon", imageName: "BlueIcon"),
-                    PresentationAppIcon(name: "New2", imageName: "New2"),
-                    PresentationAppIcon(name: "New1", imageName: "New1"),
-                    PresentationAppIcon(name: "BlackIcon", imageName: "BlackIcon"),
-                    PresentationAppIcon(name: "BlueClassicIcon", imageName: "BlueClassicIcon"),
-                    PresentationAppIcon(name: "BlackClassicIcon", imageName: "BlackClassicIcon"),
-                    PresentationAppIcon(name: "BlueFilledIcon", imageName: "BlueFilledIcon"),
-                    PresentationAppIcon(name: "BlackFilledIcon", imageName: "BlackFilledIcon")
+                    PresentationAppIcon(name: "PrimaryIcon", imageName: "AppIconLLC60x60", isDefault: true),
+                    PresentationAppIcon(name: "YellowIcon", imageName: "YellowIcon"),
+                    PresentationAppIcon(name: "OrangeIcon", imageName: "OrangeIcon"),
+                    PresentationAppIcon(name: "RedIcon", imageName: "RedIcon"),
                 ]
-                if buildConfig.isInternalBuild {
-                    icons.append(PresentationAppIcon(name: "WhiteFilledIcon", imageName: "WhiteFilledIcon"))
-                }
                 
+                // premium icons are used only in premium demo screens
                 icons.append(PresentationAppIcon(name: "Premium", imageName: "Premium", isPremium: true))
                 icons.append(PresentationAppIcon(name: "PremiumBlack", imageName: "PremiumBlack", isPremium: true))
                 icons.append(PresentationAppIcon(name: "PremiumTurbo", imageName: "PremiumTurbo", isPremium: true))
@@ -1213,6 +1206,9 @@ extension UserDefaults {
                     }
                     
                     self.mainWindow.debugAction = nil
+                    if let previousViewController = self.mainWindow.viewController {
+                        previousViewController.view.endEditingWithoutAnimation()
+                    }
                     self.mainWindow.viewController = context.rootController
                     
                     context.isReadyAndPresented.set(context.isReady.get())
@@ -1357,12 +1353,16 @@ extension UserDefaults {
             }).start()
         }))
         
-        self.watchCommunicationManagerPromise.set(watchCommunicationManager(context: self.context.get() |> flatMap { WatchCommunicationManagerContext(context: $0.context) }, allowBackgroundTimeExtension: { timeout in
-            let _ = (self.sharedContextPromise.get()
-            |> take(1)).start(next: { sharedContext in
-                sharedContext.wakeupManager.allowBackgroundTimeExtension(timeout: timeout)
-            })
-        }))
+        if buildConfig.isWatchEnabled {
+            self.watchCommunicationManagerPromise.set(watchCommunicationManager(context: self.context.get() |> flatMap { WatchCommunicationManagerContext(context: $0.context) }, allowBackgroundTimeExtension: { timeout in
+                let _ = (self.sharedContextPromise.get()
+                |> take(1)).start(next: { sharedContext in
+                    sharedContext.wakeupManager.allowBackgroundTimeExtension(timeout: timeout)
+                })
+            }))
+        } else {
+            self.watchCommunicationManagerPromise.set(.single(nil))
+        }
         let _ = self.watchCommunicationManagerPromise.get().start(next: { manager in
             if let manager = manager {
                 watchManagerArgumentsPromise.set(.single(manager.arguments))
@@ -1881,17 +1881,6 @@ extension UserDefaults {
 
     private var lastResignActiveUptime: Int32?
     
-    private func dismissSensitiveViewControllers() {
-        self.mainWindow.forEachViewController { controller in
-            if let controller = controller as? UIViewController {
-                if controller is ActionSheetController || controller.isSensitiveUI {
-                    controller.dismiss(animated: false)
-                }
-            }
-            return true
-        }
-    }
-    
     func applicationWillResignActive(_ application: UIApplication) {
         self.isActiveValue = false
         self.isActivePromise.set(false)
@@ -1954,7 +1943,7 @@ extension UserDefaults {
             }
         })
         
-        self.dismissSensitiveViewControllers()
+        self.mainWindow.dismissSensitiveViewControllers()
         self.lastResignActiveUptime = nil
     }
 
@@ -1995,7 +1984,7 @@ extension UserDefaults {
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         if let lastResignActiveUptime = self.lastResignActiveUptime, getDeviceUptimeSeconds(nil) - lastResignActiveUptime >= 10 {
-            self.dismissSensitiveViewControllers()
+            self.mainWindow.dismissSensitiveViewControllers()
         }
         
         self.isInForegroundValue = true
@@ -2031,9 +2020,6 @@ extension UserDefaults {
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedApplicationContext in
             sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0)
-            
-            // take a chance to deactivate secret passcodes if app was waken up to process push-notification
-            let _ = sharedApplicationContext.sharedContext.appLockContext.secretPasscodesTimeoutCheck().start()
         })
         
         var redactedPayload = userInfo
@@ -2116,13 +2102,6 @@ extension UserDefaults {
     
     private func pushRegistryImpl(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
         Logger.shared.log("App \(self.episodeId) PushRegistry", "pushRegistry processing push notification")
-        
-        let _ = (self.sharedContextPromise.get()
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
-            // take a chance to deactivate secret passcodes if app was waken up to process push-notification
-            let _ = sharedApplicationContext.sharedContext.appLockContext.secretPasscodesTimeoutCheck().start()
-        })
         
         let decryptedPayloadAndAccountId: ([AnyHashable: Any], AccountRecordId)?
         

@@ -167,7 +167,7 @@ typedef enum {
             appTitle = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleDisplayName"];
         }
         _headlines = @[appTitle];
-        _descriptions = @[@""];
+        _descriptions = @[@"All the features of Telegram and more!"];
         
         __weak RMIntroViewController *weakSelf = self;
         _didEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification object:nil queue:nil usingBlock:^(__unused NSNotification *notification)
@@ -631,7 +631,7 @@ typedef enum {
     }
     set_intro_background_color(red, green, blue);
     
-    set_telegram_textures(setup_texture(@"cloudballon1.png", color), setup_texture(@"cloudballon2.png", color));
+    set_telegram_textures(setup_texture(@"intro1.png", color), setup_texture(@"intro2.png", color));
 //    set_telegram_textures(setup_texture(@"telegram_sphere.png", color), setup_texture(@"telegram_plane1.png", color));
     
     set_ic_textures(setup_texture(@"ic_bubble_dot.png", color), setup_texture(@"ic_bubble.png", color), setup_texture(@"ic_cam_lens.png", color), setup_texture(@"ic_cam.png", color), setup_texture(@"ic_pencil.png", color), setup_texture(@"ic_pin.png", color), setup_texture(@"ic_smile_eye.png", color), setup_texture(@"ic_smile.png", color), setup_texture(@"ic_videocam.png", color));

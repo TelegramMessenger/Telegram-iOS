@@ -122,7 +122,7 @@ public final class Transaction {
         }
     }
     
-    #if DEBUG
+    #if TEST_BUILD
     public func getMessageCount(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags?, fromId: Int32, toId: Int32) -> Int? {
         assert(!self.disposed)
         let fromIndex: MessageIndex?
@@ -427,10 +427,10 @@ public final class Transaction {
         }
     }
     
-    public func getUnreadChatListPeerIds(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, additionalFilter: ((Peer) -> Bool)?, stopOnFirstMatch: Bool, inactiveSecretChatPeerIds: Set<PeerId>) -> [PeerId] {
+    public func getUnreadChatListPeerIds(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, additionalFilter: ((Peer) -> Bool)?, stopOnFirstMatch: Bool, reverseOrder: Bool = false, inactiveSecretChatPeerIds: Set<PeerId>) -> [PeerId] {
         assert(!self.disposed)
         if let postbox = self.postbox {
-            return postbox.chatListTable.getUnreadChatListPeerIds(postbox: postbox, currentTransaction: self, groupId: groupId, filterPredicate: filterPredicate, additionalFilter: additionalFilter, stopOnFirstMatch: stopOnFirstMatch, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
+            return postbox.chatListTable.getUnreadChatListPeerIds(postbox: postbox, currentTransaction: self, groupId: groupId, filterPredicate: filterPredicate, additionalFilter: additionalFilter, stopOnFirstMatch: stopOnFirstMatch, reverseOrder: reverseOrder, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
         } else {
             return []
         }
@@ -3979,7 +3979,7 @@ final class PostboxImpl {
         return self.valueBox.dbFilesSize()
     }
     
-    #if DEBUG
+    #if TEST_BUILD
     fileprivate func debugDumpDbStat() -> Signal<String, NoError> {
         return self.valueBox.debugDumpStat()
     }
@@ -4705,7 +4705,7 @@ public class Postbox {
         }
     }
     
-    #if DEBUG
+    #if TEST_BUILD
     public func debugDumpDbStat() -> Signal<String, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()

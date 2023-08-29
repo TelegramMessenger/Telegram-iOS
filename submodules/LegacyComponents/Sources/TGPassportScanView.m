@@ -83,7 +83,7 @@
             }
             else
             {
-                strongSelf->_timer = [TGTimerTarget scheduledMainThreadTimerWithTarget:self action:@selector(handleNextFrame) interval:0.45 repeat:false];
+                strongSelf->_timer = [TGTimerTarget scheduledMainThreadTimerWithTarget:strongSelf action:@selector(handleNextFrame) interval:0.45 repeat:false];
             }
         }]];
     }];

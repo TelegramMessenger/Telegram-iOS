@@ -1396,8 +1396,34 @@ public class Window1 {
         }
     }
     
-    public var keyboardHeight: CGFloat {
-        return self.keyboardManager?.getCurrentKeyboardHeight() ?? 0.0
+    public var isKeyboardVisible: Bool {
+        // self.keyboardManager?.getCurrentKeyboardHeight() sometimes may return 0, when keyboard is visible
+        guard let keyboardView = self.statusBarHost?.keyboardView else {
+            return false
+        }
+        return keyboardView.bounds.height > 0.0
+    }
+    
+    public func dismissSensitiveViewControllers() {
+        self.forEachViewController { controller in
+            if let controller = controller as? UIViewController {
+                if controller is ActionSheetController || controller.isSensitiveUI {
+                    controller.view.endEditingWithoutAnimation()
+                    controller.dismiss(animated: false)
+                }
+            }
+            return true
+        }
+    }
+}
+
+extension UIView {
+    public func endEditingWithoutAnimation() {
+        if viewTreeContainsFirstResponder(view: self) {
+            UIView.performWithoutAnimation {
+                self.endEditing(true)
+            }
+        }
     }
 }
 
@@ -1412,10 +1438,6 @@ extension UIViewController {
             objc_setAssociatedObject(self, &Self.sensitiveUIKey, newValue ? true : nil, .OBJC_ASSOCIATION_ASSIGN)
         }
     }
-}
-
-public protocol ReactivatableInput {
-    func activateInput()
 }
 
 public var _animationsTemporarilyDisabledForCoverUp: Bool = false

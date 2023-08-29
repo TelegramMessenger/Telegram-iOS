@@ -337,36 +337,16 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                             }
                             
                             var name = "Icon"
-                            var bordered = true
+                            let bordered = false
                             switch icon.name {
-                                case "BlueIcon":
-                                    name = item.strings.Appearance_AppIconDefault
-                                case "BlackIcon":
-                                    name = item.strings.Appearance_AppIconDefaultX
-                                case "BlueClassicIcon":
-                                    name = item.strings.Appearance_AppIconClassic
-                                case "BlackClassicIcon":
-                                    name = item.strings.Appearance_AppIconClassicX
-                                case "BlueFilledIcon":
-                                    name = item.strings.Appearance_AppIconFilled
-                                    bordered = false
-                                case "BlackFilledIcon":
-                                    name = item.strings.Appearance_AppIconFilledX
-                                    bordered = false
-                                case "WhiteFilled":
-                                    name = "⍺ White"
-                                case "New1":
-                                    name = item.strings.Appearance_AppIconNew1
-                                case "New2":
-                                    name = item.strings.Appearance_AppIconNew2
-                                case "Premium":
-                                    name = item.strings.Appearance_AppIconPremium
-                                case "PremiumBlack":
-                                    name = item.strings.Appearance_AppIconBlack
-                                case "PremiumTurbo":
-                                    name = item.strings.Appearance_AppIconTurbo
-                                case "Cloudballon":
-                                    name = item.strings.Appearance_AppIconCloudballon
+                                case "PrimaryIcon":
+                                    name = item.strings.Appearance_AppIcon_Primary
+                                case "YellowIcon":
+                                    name = item.strings.Appearance_AppIcon_Yellow
+                                case "OrangeIcon":
+                                    name = item.strings.Appearance_AppIcon_Orange
+                                case "RedIcon":
+                                    name = item.strings.Appearance_AppIcon_Red
                                 default:
                                     name = icon.name
                             }

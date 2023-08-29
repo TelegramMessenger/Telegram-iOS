@@ -50,27 +50,7 @@ static NSString *fallbackString(NSString *key, NSString *code) {
     if (self != nil) {
         _version = version;
         _code = code;
-        NSString *appTitle = [[[NSBundle mainBundle] localizedInfoDictionary] objectForKey:@"CFBundleDisplayName"];
-        if (appTitle == nil) {
-            appTitle = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleDisplayName"];
-        }
-        if (appTitle == nil) {
-            appTitle = @"Telegram";
-        }
-        NSString *originalTitle = @"Telegram";
-        if (![appTitle isEqualToString:originalTitle]) {
-            NSMutableDictionary *updatedDict = [[NSMutableDictionary alloc] initWithDictionary:dict];
-            for (NSString *key in dict.keyEnumerator) {
-                NSString *value = dict[key];
-                if ([value rangeOfString:originalTitle].location != NSNotFound) {
-                    value = [value stringByReplacingOccurrencesOfString:originalTitle withString:appTitle];
-                    updatedDict[key] = value;
-                }
-            }
-            _dict = updatedDict;
-        } else {
-            _dict = dict;
-        }
+        _dict = dict;
         _isActive = isActive;
         
         NSString *rawCode = code;

@@ -11,9 +11,8 @@ public final class ChatListPresentationData {
     public let nameSortOrder: PresentationPersonNameOrder
     public let nameDisplayOrder: PresentationPersonNameOrder
     public let disableAnimations: Bool
-    public let suppressForeignAgentNotice: Bool?
     
-    public init(theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool, suppressForeignAgentNotice: Bool? = nil) {
+    public init(theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
         self.theme = theme
         self.fontSize = fontSize
         self.strings = strings
@@ -21,6 +20,5 @@ public final class ChatListPresentationData {
         self.nameSortOrder = nameSortOrder
         self.nameDisplayOrder = nameDisplayOrder
         self.disableAnimations = disableAnimations
-        self.suppressForeignAgentNotice = suppressForeignAgentNotice
     }
 }

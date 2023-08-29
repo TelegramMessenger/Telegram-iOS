@@ -669,7 +669,7 @@ public extension TelegramEngine {
             }
         }
 
-        public func getNextUnreadChannel(peerId: PeerId, chatListFilterId: Int32?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<(peer: EnginePeer, unreadCount: Int, location: NextUnreadChannelLocation)?, NoError> {
+        public func getNextUnreadChannel(peerId: PeerId, chatListFilterId: Int32?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate, reverseOrder: Bool) -> Signal<(peer: EnginePeer, unreadCount: Int, location: NextUnreadChannelLocation)?, NoError> {
             let startTime = CFAbsoluteTimeGetCurrent()
             return self.account.postbox.transaction { transaction -> (peer: EnginePeer, unreadCount: Int, location: NextUnreadChannelLocation)? in
                 func getForFilter(predicate: ChatListFilterPredicate?, isArchived: Bool) -> (peer: EnginePeer, unreadCount: Int)? {
@@ -683,13 +683,13 @@ public extension TelegramEngine {
                     
                     var peerIds: [PeerId] = []
                     if predicate != nil {
-                        peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: .root, filterPredicate: predicate, additionalFilter: additionalFilter, stopOnFirstMatch: true, inactiveSecretChatPeerIds: []))
-                        peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: Namespaces.PeerGroup.archive, filterPredicate: predicate, additionalFilter: additionalFilter, stopOnFirstMatch: true, inactiveSecretChatPeerIds: []))
+                        peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: .root, filterPredicate: predicate, additionalFilter: additionalFilter, stopOnFirstMatch: true, reverseOrder: reverseOrder, inactiveSecretChatPeerIds: []))
+                        peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: Namespaces.PeerGroup.archive, filterPredicate: predicate, additionalFilter: additionalFilter, stopOnFirstMatch: true, reverseOrder: reverseOrder, inactiveSecretChatPeerIds: []))
                     } else {
                         if isArchived {
-                            peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: Namespaces.PeerGroup.archive, filterPredicate: nil, additionalFilter: additionalFilter, stopOnFirstMatch: true, inactiveSecretChatPeerIds: []))
+                            peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: Namespaces.PeerGroup.archive, filterPredicate: nil, additionalFilter: additionalFilter, stopOnFirstMatch: true, reverseOrder: reverseOrder, inactiveSecretChatPeerIds: []))
                         } else {
-                            peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: .root, filterPredicate: nil, additionalFilter: additionalFilter, stopOnFirstMatch: true, inactiveSecretChatPeerIds: []))
+                            peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: .root, filterPredicate: nil, additionalFilter: additionalFilter, stopOnFirstMatch: true, reverseOrder: reverseOrder, inactiveSecretChatPeerIds: []))
                         }
                     }
 
@@ -715,7 +715,11 @@ public extension TelegramEngine {
                         results.append((EnginePeer(channel), groupId, index))
                     }
 
-                    results.sort(by: { $0.2 > $1.2 })
+                    if reverseOrder {
+                        results.sort(by: { $0.2 < $1.2 })
+                    } else {
+                        results.sort(by: { $0.2 > $1.2 })
+                    }
 
                     if let peer = results.first?.0 {
                         let unreadCount: Int32 = transaction.getCombinedPeerReadState(peer.id)?.count ?? 0

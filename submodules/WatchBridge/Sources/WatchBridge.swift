@@ -1,3 +1,4 @@
+import PtgSettings
 import PtgForeignAgentNoticeRemoval
 
 import Foundation
@@ -94,7 +95,7 @@ func makeBridgeDocument(_ file: TelegramMediaFile?) -> TGBridgeDocumentMediaAtta
     return nil
 }
 
-func makeBridgeMedia(message: Message, strings: PresentationStrings, chatPeer: Peer? = nil, filterUnsupportedActions: Bool = true, suppressForeignAgentNotice: Bool) -> [TGBridgeMediaAttachment] {
+func makeBridgeMedia(message: Message, strings: PresentationStrings, chatPeer: Peer? = nil, filterUnsupportedActions: Bool = true, ptgSettings: PtgSettings) -> [TGBridgeMediaAttachment] {
     var bridgeMedia: [TGBridgeMediaAttachment] = []
     
     if let forward = message.forwardInfo {
@@ -111,7 +112,7 @@ func makeBridgeMedia(message: Message, strings: PresentationStrings, chatPeer: P
         if let reply = attribute as? ReplyMessageAttribute, let replyMessage = message.associatedMessages[reply.messageId] {
             let bridgeReply = TGBridgeReplyMessageMediaAttachment()
             bridgeReply.mid = reply.messageId.id
-            bridgeReply.message = makeBridgeMessage(replyMessage, strings: strings, suppressForeignAgentNotice: suppressForeignAgentNotice)
+            bridgeReply.message = makeBridgeMessage(replyMessage, strings: strings, ptgSettings: ptgSettings)
             bridgeMedia.append(bridgeReply)
         } else if let entities = attribute as? TextEntitiesMessageAttribute {
             var bridgeEntities: [Any] = []
@@ -260,7 +261,7 @@ func makeBridgeMedia(message: Message, strings: PresentationStrings, chatPeer: P
             let bridgeAttachment = TGBridgeUnsupportedMediaAttachment()
             bridgeAttachment.compactTitle = strings.Watch_Message_Poll
             bridgeAttachment.title = strings.Watch_Message_Poll
-            bridgeAttachment.subtitle = suppressForeignAgentNotice ? removeForeignAgentNotice(text: poll.text, mayRemoveWholeText: false) : poll.text
+            bridgeAttachment.subtitle = (message.isPeerOrForwardSourceBroadcastChannel && ptgSettings.suppressForeignAgentNotice) ? removeForeignAgentNotice(text: poll.text, mayRemoveWholeText: false) : poll.text
             bridgeMedia.append(bridgeAttachment)
         } else if let contact = m as? TelegramMediaContact {
             let bridgeContact = TGBridgeContactMediaAttachment()
@@ -326,7 +327,7 @@ func makeBridgeMedia(message: Message, strings: PresentationStrings, chatPeer: P
     return bridgeMedia
 }
 
-func makeBridgeChat(_ entry: ChatListEntry, strings: PresentationStrings, suppressForeignAgentNotice: Bool) -> (TGBridgeChat, [Int64 : TGBridgeUser])? {
+func makeBridgeChat(_ entry: ChatListEntry, strings: PresentationStrings, ptgSettings: PtgSettings) -> (TGBridgeChat, [Int64 : TGBridgeUser])? {
     if case let .MessageEntry(index, messages, readState, _, _, renderedPeer, _, _, _, _, hasFailed, _, _) = entry {
         guard index.messageIndex.id.peerId.namespace != Namespaces.Peer.SecretChat else {
             return nil
@@ -338,11 +339,15 @@ func makeBridgeChat(_ entry: ChatListEntry, strings: PresentationStrings, suppre
             if let author = message.author {
                 bridgeChat.fromUid = Int32(clamping: makeBridgeIdentifier(author.id))
             }
-            bridgeChat.text = suppressForeignAgentNotice ? removeForeignAgentNotice(text: message.text, media: message.media) : message.text
+            var message_ = (message.isPeerOrForwardSourceBroadcastChannel && ptgSettings.suppressForeignAgentNotice) ? removeForeignAgentNotice(message: message) : message
+            if message.isPeerBroadcastChannel && ptgSettings.hideSignatureInChannels {
+                message_ = removeChannelSignature(message: message_)
+            }
+            bridgeChat.text = message_.text
             bridgeChat.outgoing = !message.flags.contains(.Incoming)
             bridgeChat.deliveryState = makeBridgeDeliveryState(message)
             bridgeChat.deliveryError = hasFailed
-            bridgeChat.media = makeBridgeMedia(message: message, strings: strings, filterUnsupportedActions: false, suppressForeignAgentNotice: suppressForeignAgentNotice)
+            bridgeChat.media = makeBridgeMedia(message: message, strings: strings, filterUnsupportedActions: false, ptgSettings: ptgSettings)
         }
         bridgeChat.unread = readState?.state.isUnread ?? false
         bridgeChat.unreadCount = readState?.state.count ?? 0
@@ -478,8 +483,8 @@ func makeBridgePeers(_ message: Message) -> [Int64 : Any] {
     return bridgeUsers
 }
 
-func makeBridgeMessage(_ entry: MessageHistoryEntry, strings: PresentationStrings, suppressForeignAgentNotice: Bool) -> (TGBridgeMessage, [Int64 : TGBridgeUser])? {
-    guard let bridgeMessage = makeBridgeMessage(entry.message, strings: strings, suppressForeignAgentNotice: suppressForeignAgentNotice) else {
+func makeBridgeMessage(_ entry: MessageHistoryEntry, strings: PresentationStrings, ptgSettings: PtgSettings) -> (TGBridgeMessage, [Int64 : TGBridgeUser])? {
+    guard let bridgeMessage = makeBridgeMessage(entry.message, strings: strings, ptgSettings: ptgSettings) else {
         return nil
     }
     if entry.message.id.namespace == Namespaces.Message.Local && !entry.message.flags.contains(.Failed) {
@@ -501,7 +506,7 @@ func makeBridgeMessage(_ entry: MessageHistoryEntry, strings: PresentationString
     return (bridgeMessage, bridgeUsers)
 }
 
-func makeBridgeMessage(_ message: Message, strings: PresentationStrings, chatPeer: Peer? = nil, suppressForeignAgentNotice: Bool) -> TGBridgeMessage? {
+func makeBridgeMessage(_ message: Message, strings: PresentationStrings, chatPeer: Peer? = nil, ptgSettings: PtgSettings) -> TGBridgeMessage? {
     var chatPeer = chatPeer
     if chatPeer == nil {
         chatPeer = message.peers[message.id.peerId]
@@ -518,9 +523,13 @@ func makeBridgeMessage(_ message: Message, strings: PresentationStrings, chatPee
     }
     bridgeMessage.toUid = makeBridgeIdentifier(message.id.peerId)
     bridgeMessage.cid = makeBridgeIdentifier(message.id.peerId)
-    bridgeMessage.text = suppressForeignAgentNotice ? removeForeignAgentNotice(text: message.text, media: message.media) : message.text
+    var message_ = (message.isPeerOrForwardSourceBroadcastChannel && ptgSettings.suppressForeignAgentNotice) ? removeForeignAgentNotice(message: message) : message
+    if message.isPeerBroadcastChannel && ptgSettings.hideSignatureInChannels {
+        message_ = removeChannelSignature(message: message_)
+    }
+    bridgeMessage.text = message_.text
     bridgeMessage.deliveryState = makeBridgeDeliveryState(message)
-    bridgeMessage.media = makeBridgeMedia(message: message, strings: strings, chatPeer: chatPeer, suppressForeignAgentNotice: suppressForeignAgentNotice)
+    bridgeMessage.media = makeBridgeMedia(message: message, strings: strings, chatPeer: chatPeer, ptgSettings: ptgSettings)
     return bridgeMessage
 }
 

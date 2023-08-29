@@ -57,6 +57,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     private var currentSwipeAction: ChatControllerInteractionSwipeAction?
     
     private var appliedForwardInfo: (Peer?, String?)?
+    private var disablesComments = true
 
     private var enableSynchronousImageApply: Bool = false
     
@@ -517,6 +518,16 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 needsShareButton = false
             }
             
+            let hideShareButton = item.message.isPeerBroadcastChannel && item.context.sharedContext.currentPtgSettings.with { $0.hideCommentsInChannels && $0.hideShareButtonInChannels }
+            
+            if hideShareButton {
+                needsShareButton = false
+            }
+            
+            let hideComments = item.message.isPeerBroadcastChannel && item.context.sharedContext.currentPtgSettings.with { $0.hideCommentsInChannels }
+            
+            let disablesComments = hideComments
+            
             var layoutInsets = UIEdgeInsets(top: mergedTop.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, left: 0.0, bottom: mergedBottom.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, right: 0.0)
             if dateHeaderAtBottom {
                 layoutInsets.top += layoutConstants.timestampHeaderHeight
@@ -550,10 +561,12 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 }
             }
             
+            let hideReactions = item.message.isPeerBroadcastChannel && item.context.sharedContext.currentPtgSettings.with { $0.hideReactionsInChannels }
+            
             var edited = false
             var viewCount: Int? = nil
             var dateReplies = 0
-            var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: item.message)
+            var dateReactionsAndPeers = !hideReactions ? mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: item.message) : (reactions: [], peers: [])
             if item.message.isRestricted(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) {
                 dateReactionsAndPeers = ([], [])
             }
@@ -765,7 +778,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             }
             
             let reactions: ReactionsMessageAttribute
-            if shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions) {
+            if shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions) || hideReactions {
                 reactions = ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
             } else {
                 reactions = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
@@ -871,7 +884,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 }
             }
             
-            func finishAsyncLayout(_ animation: ListViewItemUpdateAnimation, _ synchronousLoads: Bool) {
+            func finishAsyncLayout(_ animation: ListViewItemUpdateAnimation, _ synchronousLoads: Bool, _ disablesComments: Bool) {
                 if let strongSelf = weakSelf.value {
                     var transition: ContainedViewLayoutTransition = .immediate
                     if case let .System(duration, _) = animation {
@@ -880,6 +893,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     
                     strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
                     strongSelf.updateAccessibilityData(accessibilityData)
+                    strongSelf.disablesComments = disablesComments
                     
                     transition.updateFrame(node: strongSelf.imageNode, frame: updatedImageFrame)
                     strongSelf.enableSynchronousImageApply = true
@@ -925,7 +939,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                             strongSelf.addSubnode(updatedShareButtonNode)
                             updatedShareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
                         }
-                        let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account)
+                        let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: disablesComments)
                         let shareButtonFrame = CGRect(origin: CGPoint(x: baseShareButtonFrame.minX, y: baseShareButtonFrame.maxY - buttonSize.height), size: buttonSize)
                         transition.updateFrame(node: updatedShareButtonNode, frame: shareButtonFrame)
                     } else if let shareButtonNode = strongSelf.shareButtonNode {
@@ -1222,7 +1236,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             }
             
             return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { animation, _, synchronousLoads in
-                finishAsyncLayout(animation, synchronousLoads)
+                finishAsyncLayout(animation, synchronousLoads, disablesComments)
             })
         }
         
@@ -1357,11 +1371,13 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 return
             }
             
-            if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
-                for attribute in item.message.attributes {
-                    if let _ = attribute as? ReplyThreadMessageAttribute {
-                        item.controllerInteraction.openMessageReplies(item.message.id, true, false)
-                        return
+            if !self.disablesComments {
+                if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+                    for attribute in item.message.attributes {
+                        if let _ = attribute as? ReplyThreadMessageAttribute {
+                            item.controllerInteraction.openMessageReplies(item.message.id, true, false)
+                            return
+                        }
                     }
                 }
             }

@@ -113,7 +113,7 @@ final class AccountTaskManager {
                     tasks.add(managedPremiumPromoConfigurationUpdates(postbox: self.stateManager.postbox, network: self.stateManager.network).start())
                     tasks.add(managedAutodownloadSettingsUpdates(accountManager: self.accountManager, network: self.stateManager.network).start())
                     tasks.add(managedTermsOfServiceUpdates(postbox: self.stateManager.postbox, network: self.stateManager.network, stateManager: self.stateManager).start())
-                    tasks.add(managedAppUpdateInfo(network: self.stateManager.network, stateManager: self.stateManager).start())
+//                    tasks.add(managedAppUpdateInfo(network: self.stateManager.network, stateManager: self.stateManager).start())
                     tasks.add(managedAppChangelog(postbox: self.stateManager.postbox, network: self.stateManager.network, stateManager: self.stateManager, appVersion: self.networkArguments.appVersion).start())
                     tasks.add(managedPromoInfoUpdates(postbox: self.stateManager.postbox, network: self.stateManager.network, viewTracker: self.viewTracker).start())
                     tasks.add(managedLocalizationUpdatesOperations(accountManager: self.accountManager, postbox: self.stateManager.postbox, network: self.stateManager.network).start())

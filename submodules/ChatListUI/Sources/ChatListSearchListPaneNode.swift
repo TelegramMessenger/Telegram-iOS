@@ -1537,7 +1537,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 foundRemoteMessages = .single(([FoundRemoteMessages(messages: [], readCounters: [:], threadsData: [:], totalCount: 0, matchesOnlyBcOfFAN: [])], false))
             } else {
                 if !finalQuery.isEmpty {
-                    addAppLogEvent(postbox: context.account.postbox, type: "search_global_query")
+//                    addAppLogEvent(postbox: context.account.postbox, type: "search_global_query")
                 }
                 
                 let searchSignals: [Signal<(SearchMessagesResult, SearchMessagesState), NoError>] = searchLocations.map { searchLocation in
@@ -1557,7 +1557,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     for resultData in results {
                         let (result, updatedState) = resultData
                         
-                        let matchesOnlyBcOfFAN = context.sharedContext.currentPtgSettings.with { $0.effectiveEnableForeignAgentNoticeSearchFiltering } ? findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: result.messages, query: finalQuery) : []
+                        let matchesOnlyBcOfFAN = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: result.messages, query: finalQuery) : []
                         
                         mappedResults.append(ChatListSearchMessagesResult(query: finalQuery, messages: result.messages.map({ EngineMessage($0) }).sorted(by: { $0.index > $1.index }), readStates: result.readStates.mapValues { EnginePeerReadCounters(state: $0, isMuted: false) }, threadInfo: result.threadInfo, hasMore: !result.completed, totalCount: result.totalCount, state: updatedState, matchesOnlyBcOfFAN: matchesOnlyBcOfFAN))
                     }
@@ -1583,7 +1583,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                     var matchesOnlyBcOfFAN = searchContext.result.matchesOnlyBcOfFAN
                                     
                                     let shouldTryLoadMore: Bool
-                                    if context.sharedContext.currentPtgSettings.with({ $0.effectiveEnableForeignAgentNoticeSearchFiltering }) {
+                                    if context.sharedContext.currentPtgSettings.with({ $0.suppressForeignAgentNotice }) {
                                         let alreadyKnownIds = Set(searchContext.result.messages.lazy.map { $0.id })
                                         
                                         let newMatchesOnlyBcOfFAN = findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: result.messages.filter { !alreadyKnownIds.contains($0.id) }, query: finalQuery)
@@ -2117,7 +2117,10 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }
         }
         
-        openMediaMessageImpl = { message, mode in
+        openMediaMessageImpl = { [weak self] message, mode in
+            guard let navigationController = self?.navigationController else {
+                return
+            }
             let _ = context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatLocationContextHolder: nil, message: message._asMessage(), standalone: false, reverseMessageGalleryOrder: true, mode: mode, navigationController: navigationController, dismissInput: {
                 interaction.dismissInput()
             }, present: { c, a in
@@ -2225,6 +2228,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         
         let listInteraction = ListMessageItemInteraction(openMessage: { [weak self] message, mode -> Bool in
             guard let strongSelf = self else {
+                return false
+            }
+            guard let navigationController = strongSelf.navigationController else {
                 return false
             }
             interaction.dismissInput()

@@ -26,7 +26,7 @@ private enum InnerState: Equatable {
     case authorized
 }
 
-public final class AuthorizationSequenceController: NavigationController, MFMailComposeViewControllerDelegate, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding, ReactivatableInput {
+public final class AuthorizationSequenceController: NavigationController, MFMailComposeViewControllerDelegate, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
     static func navigationBarTheme(_ theme: PresentationTheme) -> NavigationBarTheme {
         return NavigationBarTheme(buttonColor: theme.intro.accentTextColor, disabledButtonColor: theme.intro.disabledTextColor, primaryTextColor: theme.intro.primaryTextColor, backgroundColor: .clear, enableBackgroundBlur: false, separatorColor: .clear, badgeBackgroundColor: theme.rootController.navigationBar.badgeBackgroundColor, badgeStrokeColor: theme.rootController.navigationBar.badgeStrokeColor, badgeTextColor: theme.rootController.navigationBar.badgeTextColor)
     }
@@ -1234,12 +1234,6 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
     public func applyConfirmationCode(_ code: Int) {
         if let controller = self.viewControllers.last as? AuthorizationSequenceCodeEntryController {
             controller.applyConfirmationCode(code)
-        }
-    }
-    
-    public func activateInput() {
-        if let controller = self.viewControllers.last as? AuthorizationSequenceCodeEntryController {
-            controller.activateInput()
         }
     }
     

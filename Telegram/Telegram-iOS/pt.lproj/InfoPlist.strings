@@ -1,9 +1,9 @@
 /* Localized versions of Info.plist keys */
 
-"NSContactsUsageDescription" = "Telegram atualizará continuamente os seus contatos em servidores na nuvem fortemente criptografados para que você se conecte com seus amigos através de todos os seus dispositivos.";
-"NSLocationWhenInUseUsageDescription" = "Para enviar sua localização para seus amigos o Telegram precisa de permissão para mostrá-los o mapa.";
-"NSLocationAlwaysAndWhenInUseUsageDescription" = "Quando você escolhe compartilhar sua Localização em Tempo Real com amigos no chat, o Telegram precisa de acesso à sua localização em segundo plano para mantê-los atualizados durante o compartilhamento.";
-"NSLocationAlwaysUsageDescription" = "Para enviar sua localização para seus amigos, o Telegram precisa de permissão para mostrá-los o mapa. Você também precisará disso para enviar localizações de um Apple Watch.";
+"NSContactsUsageDescription" = "Vartagram atualizará continuamente os seus contatos em servidores na nuvem fortemente criptografados para que você se conecte com seus amigos através de todos os seus dispositivos.";
+"NSLocationWhenInUseUsageDescription" = "Para enviar sua localização para seus amigos o Vartagram precisa de permissão para mostrá-los o mapa.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Quando você escolhe compartilhar sua Localização em Tempo Real com amigos no chat, o Vartagram precisa de acesso à sua localização em segundo plano para mantê-los atualizados durante o compartilhamento.";
+"NSLocationAlwaysUsageDescription" = "Para enviar sua localização para seus amigos, o Vartagram precisa de permissão para mostrá-los o mapa. Você também precisará disso para enviar localizações de um Apple Watch.";
 "NSCameraUsageDescription" = "Precisamos acessar sua câmera para que você possa capturar fotos e vídeos.";
 "NSPhotoLibraryUsageDescription" = "Precisamos disso para que você possa compartilhar fotos e vídeos de sua galeria.";
 "NSPhotoLibraryAddUsageDescription" = "Precisamos disso para que você possa salvar fotos e vídeos em sua galeria de fotos.";

@@ -926,6 +926,7 @@ public class Account {
     private let becomeMasterDisposable = MetaDisposable()
     private let managedServiceViewsDisposable = MetaDisposable()
     private let managedServiceViewsActionDisposable = MetaDisposable()
+    private let managedConfigurationUpdatesDisposable = MetaDisposable()
     private let managedOperationsDisposable = DisposableSet()
     private var storageSettingsDisposable: Disposable?
     private var automaticCacheEvictionContext: AutomaticCacheEvictionContext?
@@ -936,6 +937,7 @@ public class Account {
     
     public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
     public let shouldKeepOnlinePresence = Promise<Bool>()
+    private let onlineUpdatePeriodMs = Promise<Int32?>()
     public let autolockReportDeadline = Promise<Int32?>()
     public let shouldExplicitelyKeepWorkerConnections = Promise<Bool>(false)
     public let shouldKeepBackgroundDownloadConnections = Promise<Bool>(false)
@@ -1017,7 +1019,15 @@ public class Account {
         
         self.contactSyncManager = ContactSyncManager(postbox: postbox, network: network, accountPeerId: peerId, stateManager: self.stateManager)
         self.localInputActivityManager = PeerInputActivityManager()
-        self.accountPresenceManager = AccountPresenceManager(shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), network: network)
+        self.accountPresenceManager = AccountPresenceManager(shouldKeepOnlinePresence: self.shouldKeepOnlinePresence.get(), onlineUpdatePeriodMs: self.onlineUpdatePeriodMs.get(), network: network)
+        self.onlineUpdatePeriodMs.set(
+            postbox.preferencesView(keys: [PreferencesKeys.networkSettings])
+            |> map { view in
+                let networkSettings = view.values[PreferencesKeys.networkSettings]?.get(NetworkSettings.self)
+                return networkSettings?.onlineUpdatePeriodMs
+            }
+            |> distinctUntilChanged
+        )
         let _ = (postbox.transaction { transaction -> Void in
             transaction.updatePeerPresencesInternal(presences: [peerId: TelegramUserPresence(status: .present(until: Int32.max - 1), lastActivity: 0)], merge: { _, updated in return updated })
             transaction.setNeedsPeerGroupMessageStatsSynchronization(groupId: Namespaces.PeerGroup.archive, namespace: Namespaces.Message.Cloud)
@@ -1221,6 +1231,7 @@ public class Account {
         self.managedStickerPacksDisposable.dispose()
         self.managedServiceViewsDisposable.dispose()
         self.managedServiceViewsActionDisposable.dispose()
+        self.managedConfigurationUpdatesDisposable.dispose()
         self.managedOperationsDisposable.dispose()
         self.storageSettingsDisposable?.dispose()
         self.smallLogPostDisposable.dispose()
@@ -1229,7 +1240,7 @@ public class Account {
     }
     
     private func restartConfigurationUpdates() {
-        self.managedOperationsDisposable.add(managedConfigurationUpdates(accountManager: self.accountManager, postbox: self.postbox, network: self.network).start())
+        self.managedConfigurationUpdatesDisposable.set(managedConfigurationUpdates(accountManager: self.accountManager, postbox: self.postbox, network: self.network).start())
     }
     
     private func postSmallLogIfNeeded() {
@@ -1287,7 +1298,7 @@ public class Account {
         |> then(self.postbox.mediaBox.cacheStorageBox.optimizeStorage(minFreePagesFraction: minFreePagesFraction))
     }
     
-    #if DEBUG
+    #if TEST_BUILD
     public func debugDumpAllDbStats() -> Signal<String, NoError> {
         return self.postbox.debugDumpDbStat()
         |> then (self.postbox.mediaBox.storageBox.debugDumpDbStat())
@@ -1300,7 +1311,7 @@ public class Account {
     // it is safe because messages can be redownloaded from cloud if needed (except secret chats)
     public func cleanOldCloudMessages() -> Signal<Never, NoError> {
         let postbox = self.postbox
-        return combineLatest(self.postbox.transaction { transaction in
+        return combineLatest(self.postbox.transaction { transaction -> ([PeerId], [PeerId: PeerId]) in
             let allPeerIds = transaction.chatListGetAllPeerIds()
             
             // sometimes group's cachedData.linkedDiscussionPeerId also contains its parent channel but for some reason this is not always the case
@@ -1350,7 +1361,9 @@ public class Account {
                             if topIndices.count > 0 {
                                 if transaction.getPeerChatListIndex(peerId) != nil || discussionGroupChannels[peerId].flatMap({ transaction.getPeerChatListIndex($0) }) != nil {
                                     if topIndices.count > limit {
-                                        var indicesToRemove = Set(transaction.allEarlierMessageIndices(index: topIndices[limit - 1]))
+                                        let allEarlierIndices = transaction.allEarlierMessageIndices(index: topIndices[limit - 1])
+                                        // do not remove channel message with id == 1, because it is used to get its creation date
+                                        var indicesToRemove = Set(peerId.namespace == Namespaces.Peer.CloudChannel && allEarlierIndices.last?.id.id == 1 ? allEarlierIndices.dropLast() : allEarlierIndices)
                                         
                                         let everywhereHoleUpperId = topIndices[limit].id.id
                                         
@@ -1453,7 +1466,7 @@ public class Account {
         }
     }
     
-    #if DEBUG
+    #if TEST_BUILD
     public func debugChatMessagesStat() -> Signal<String, NoError> {
         return self.postbox.transaction { transaction in
             let peerIds = transaction.chatListGetAllPeerIds()

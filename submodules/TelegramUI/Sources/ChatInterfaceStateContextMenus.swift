@@ -823,7 +823,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
         
         var hasRateTranscription = false
-        if hasExpandedAudioTranscription, let audioTranscription = audioTranscription, !didRateAudioTranscription {
+        if hasExpandedAudioTranscription, let audioTranscription = audioTranscription, audioTranscription.id != 0, !didRateAudioTranscription {
             hasRateTranscription = true
             actions.insert(.custom(ChatRateTranscriptionContextItem(context: context, message: message, action: { [weak context] value in
                 guard let context = context else {
@@ -1092,11 +1092,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         
         var messageText: String = ""
         var messageEntities: [MessageTextEntity]?
-        let suppressForeignAgentNotice = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice }
         for message in messages {
             if !message.text.isEmpty {
                 if messageText.isEmpty {
-                    (messageText, messageEntities) = suppressForeignAgentNotice ? removeForeignAgentNotice(text: message.text, entities: message.textEntitiesAttribute?.entities ?? [], media: message.media) : (message.text, message.textEntitiesAttribute?.entities ?? [])
+                    (messageText, messageEntities) = context.shouldSuppressForeignAgentNotice(in: message) ? removeForeignAgentNotice(text: message.text, entities: message.textEntitiesAttribute?.entities ?? [], media: message.media) : (message.text, message.textEntitiesAttribute?.entities ?? [])
                 } else {
                     messageText = ""
                     break
@@ -1123,7 +1122,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     for option in poll.options {
                         text.append("\n— \(option.text)")
                     }
-                    messageText = suppressForeignAgentNotice ? removeForeignAgentNotice(text: poll.text, mayRemoveWholeText: false) : poll.text
+                    messageText = context.shouldSuppressForeignAgentNotice(in: message) ? removeForeignAgentNotice(text: poll.text, mayRemoveWholeText: false) : poll.text
                     break
                 }
             }
@@ -1220,26 +1219,34 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     }
                 }
                 
+                // do not remove channel signature for copy, but remove for translate and speak
+                var messageText2 = messageText
+                if !messageText.isEmpty, messageEntities != nil {
+                    if context.shouldHideChannelSignature(in: message), let username = message.channelUsername {
+                        (messageText2, _) = removeChannelSignature(text: messageText, entities: messageEntities!, media: message.media, username: username)
+                    }
+                }
+                
                 var showTranslateIfTopical = false
                 if let peer = chatPresentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, !(peer.addressName ?? "").isEmpty {
                     showTranslateIfTopical = true
                 }
                 
-                let (canTranslate, _) = canTranslateText(context: context, text: messageText, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: showTranslateIfTopical, ignoredLanguages: translationSettings.ignoredLanguages)
+                let (canTranslate, _) = canTranslateText(context: context, text: messageText2, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: showTranslateIfTopical, ignoredLanguages: translationSettings.ignoredLanguages)
                 if canTranslate {
                     actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuTranslate, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Translate"), color: theme.actionSheet.primaryTextColor)
                     }, action: { _, f in
-                        controllerInteraction.performTextSelectionAction(!isCopyProtected, NSAttributedString(string: messageText), .translate)
+                        controllerInteraction.performTextSelectionAction(!isCopyProtected, NSAttributedString(string: messageText2), .translate)
                         f(.default)
                     })))
                 }
                 
-                if isSpeakSelectionEnabled() && !messageText.isEmpty {
+                if isSpeakSelectionEnabled() && !messageText2.isEmpty {
                     actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuSpeak, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.actionSheet.primaryTextColor)
                     }, action: { _, f in
-                        var text = messageText
+                        var text = messageText2
                         if let translationState = chatPresentationInterfaceState.translationState, translationState.isEnabled,
                            let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translationState.toLang }) as? TranslationMessageAttribute, !translation.text.isEmpty {
                             text = translation.text
@@ -1599,6 +1606,25 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     interfaceInteraction.forwardMessages(selectAll ? messages : [message])
                     f(.dismissWithoutContent)
                 })))
+                
+                if message.id.peerId != context.account.peerId, context.sharedContext.currentPtgSettings.with({ $0.addContextMenuSaveMessage }) {
+                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuSaveMessage, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        interfaceInteraction.saveMessages(selectAll ? messages : [message])
+                        f(.default)
+                    })))
+                }
+                
+                if data.messageActions.options.contains(.externalShare), context.sharedContext.currentPtgSettings.with({ $0.addContextMenuShare }) {
+                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuShare, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+//                        controllerInteraction.openMessageShareMenu(message.id)
+                        interfaceInteraction.shareMessages(selectAll ? messages : [message])
+                        f(.default)
+                    })))
+                }
             }
         }
         

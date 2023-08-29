@@ -179,19 +179,22 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         let interaction = ChatListSearchInteraction(openPeer: { peer, chatPeer, threadId, value in
             originalOpenPeer(peer, chatPeer, threadId, value)
             if peer.id.namespace != Namespaces.Peer.SecretChat {
-                addAppLogEvent(postbox: context.account.postbox, type: "search_global_open_peer", peerId: peer.id)
+//                addAppLogEvent(postbox: context.account.postbox, type: "search_global_open_peer", peerId: peer.id)
             }
         }, openDisabledPeer: { peer, threadId in
             openDisabledPeer(peer, threadId)
         }, openMessage: { peer, threadId, messageId, deactivateOnAction in
             originalOpenMessage(peer, threadId, messageId, deactivateOnAction)
             if peer.id.namespace != Namespaces.Peer.SecretChat {
-                addAppLogEvent(postbox: context.account.postbox, type: "search_global_open_message", peerId: peer.id, data: .dictionary(["msg_id": .number(Double(messageId.id))]))
+//                addAppLogEvent(postbox: context.account.postbox, type: "search_global_open_message", peerId: peer.id, data: .dictionary(["msg_id": .number(Double(messageId.id))]))
             }
         }, openUrl: { [weak self] url in
             openUserGeneratedUrl(context: context, peerId: nil, url: url, concealed: false, present: { c in
                 present(c, nil)
             }, openResolved: { [weak self] resolved in
+                guard let navigationController = self?.navigationController else {
+                    return
+                }
                 context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peerId, navigation in
                     
                 }, sendFile: nil,
@@ -1505,6 +1508,10 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     private func dismissInput() {
         self.view.window?.endEditing(true)
+    }
+    
+    public func disableAdjacentLoading() {
+        self.paneContainerNode.isAdjacentLoadingEnabled = false
     }
 }
 

@@ -169,6 +169,8 @@ public func autolockStringForTimeout(strings: PresentationStrings, timeout: Int3
             return strings.PasscodeSettings_AutoLock_IfAwayFor_1minute
         } else if timeout == 5 * 60 {
             return strings.PasscodeSettings_AutoLock_IfAwayFor_5minutes
+        } else if timeout == 15 * 60 {
+            return strings.PasscodeSettings_AutoLock_IfAwayFor_5minutes.replacingOccurrences(of: "5", with: "15")
         } else if timeout == 1 * 60 * 60 {
             return strings.PasscodeSettings_AutoLock_IfAwayFor_1hour
         } else if timeout == 5 * 60 * 60 {
@@ -230,7 +232,8 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
     let arguments = PasscodeOptionsControllerArguments(turnPasscodeOff: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationData: presentationData)
-        actionSheet.setItemGroups([ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.PasscodeSettings_TurnPasscodeOff, color: .destructive, action: { [weak actionSheet] in
+        actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+            ActionSheetButtonItem(title: presentationData.strings.PasscodeSettings_TurnPasscodeOff, color: .destructive, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 
                 let challenge = PostboxAccessChallengeData.none
@@ -320,7 +323,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                 }).start()
             })
         }
-        let values: [Int32] = [0, 10, 1 * 60, 5 * 60, 1 * 60 * 60, 5 * 60 * 60]
+        let values: [Int32] = [0, 10, 1 * 60, 5 * 60, 15 * 60, 1 * 60 * 60, 5 * 60 * 60]
         
         for value in values {
             var t: Int32?

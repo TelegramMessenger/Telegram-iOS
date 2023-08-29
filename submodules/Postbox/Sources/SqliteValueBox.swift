@@ -2387,7 +2387,7 @@ public final class SqliteValueBox: ValueBox {
         }
     }
     
-    #if DEBUG
+    #if TEST_BUILD
     // note: requires SQLITE_ENABLE_DBSTAT_VTAB in sqlite3.c
     public func debugDumpStat() -> Signal<String, NoError> {
         return Signal { subscriber in

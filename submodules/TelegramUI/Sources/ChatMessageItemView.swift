@@ -210,8 +210,12 @@ final class ChatMessageAccessibilityData {
             if let chatPeer = message.peers[item.message.id.peerId] {
                 let authorName = message.author.flatMap(EnginePeer.init)?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                 
-                let suppressForeignAgentNotice = item.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice }
-                let message_ = suppressForeignAgentNotice ? removeForeignAgentNotice(message: message) : message
+                let suppressForeignAgentNotice = item.context.shouldSuppressForeignAgentNotice(in: message)
+                var message_ = suppressForeignAgentNotice ? removeForeignAgentNotice(message: message) : message
+                
+                if item.context.shouldHideChannelSignature(in: message) {
+                    message_ = removeChannelSignature(message: message_)
+                }
                 
                 let (_, _, messageText, _, _) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, contentSettings: item.context.currentContentSettings.with { $0 }, messages: [EngineMessage(message_)], chatPeer: EngineRenderedPeer(peer: EnginePeer(chatPeer)), accountPeerId: item.context.account.peerId)
                 

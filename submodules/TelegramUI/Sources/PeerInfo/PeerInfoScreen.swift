@@ -305,6 +305,8 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
             forwardMessages()
         }, forwardCurrentForwardMessages: {
         }, forwardMessages: { _ in
+        }, saveMessages: { _ in
+        }, shareMessages: { _ in
         }, updateForwardOptionsState: { _ in
         }, presentForwardOptions: { _ in
         }, shareSelectedMessages: {
@@ -486,7 +488,7 @@ private enum PeerInfoSettingsSection {
     case emojiStatus
     case powerSaving
     
-    case cloudballon
+    case ptgSettings
     case enterSecretPasscode
     case manageSecretPasscodes
 }
@@ -665,7 +667,7 @@ private enum SettingsSection: Int, CaseIterable {
     case accounts
     case proxy
     case secretPasscodes
-    case cloudballon
+    case ptgSettings
     case shortcuts
     case advanced
     case payment
@@ -893,8 +895,16 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         interaction.openSettings(.tips)
     }))
     
-    items[.cloudballon]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.PtgSettings_Title, icon: PresentationResourcesSettings.cloudballon, action: {
-        interaction.openSettings(.cloudballon)
+    let currentAppIcon: PresentationAppIcon?
+    let appIcons = context.sharedContext.applicationBindings.getAvailableAlternateIcons()
+    if let alternateIconName = context.sharedContext.applicationBindings.getAlternateIconName() {
+        currentAppIcon = appIcons.filter { $0.name == alternateIconName }.first ?? appIcons.filter { $0.isDefault }.first
+    } else {
+        currentAppIcon = appIcons.filter { $0.isDefault }.first
+    }
+    
+    items[.ptgSettings]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.PtgSettings_Title, icon: renderIcon(name: currentAppIcon!.imageName, mask: PresentationResourcesSettings.savedMessages?.cgImage), action: {
+        interaction.openSettings(.ptgSettings)
     }))
 
     items[.secretPasscodes]!.append(PeerInfoScreenActionItem(id: 0, text: presentationData.strings.Settings_EnterSecretPasscode, icon: PresentationResourcesItemList.enterSecretPasscodeIcon(presentationData.theme), action: {
@@ -1023,7 +1033,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
     }
     
     let maybeAppendIdItem: (PeerId) -> Void = { peerId in
-        if data.showPeerId {
+        if context.sharedContext.currentPtgSettings.with({ $0.showPeerId }) {
             let id = String(peerId.id._internalGetInt64Value())
             items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 100, label: presentationData.strings.Profile_Id.lowercased(), text: id, action: nil, longTapAction: { sourceNode in
                 interaction.openPeerInfoContextMenu(.id(id), sourceNode, nil)
@@ -1279,6 +1289,12 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             }
             
             maybeAppendIdItem(channel.id)
+            
+            if context.sharedContext.currentPtgSettings.with({ $0.showChannelCreationDate }), let channelCreationTimestamp = data.channelCreationTimestamp {
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 101, label: presentationData.strings.Profile_CreationDate.lowercased(), text: stringForDate(timestamp: channelCreationTimestamp, strings: presentationData.strings), action: nil, longTapAction: nil, requestLayout: {
+                    interaction.requestLayout(false)
+                }))
+            }
             
             if let cachedData = data.cachedData as? CachedChannelData {
                 let aboutText: String?
@@ -2418,7 +2434,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                 }
                                 
                                 let currentPeerId = strongSelf.peerId
-                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: targetLocation, subject: .message(id: .id(message.id), highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {
+                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: targetLocation, subject: .message(id: .id(message.id), highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: { [weak navigationController] in
+                                    guard let navigationController else { return }
                                     var viewControllers = navigationController.viewControllers
                                     var indexesToRemove = Set<Int>()
                                     var keptCurrentChatController = false
@@ -2580,7 +2597,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                         }
                                         
                                         let currentPeerId = strongSelf.peerId
-                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: targetLocation, subject: .message(id: .id(message.id), highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: targetLocation, subject: .message(id: .id(message.id), highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: { [weak navigationController] in
+                                            guard let navigationController else { return }
                                             var viewControllers = navigationController.viewControllers
                                             var indexesToRemove = Set<Int>()
                                             var keptCurrentChatController = false
@@ -3876,7 +3894,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             }
         })
 
-        self.refreshMessageTagStatsDisposable = context.engine.messages.refreshMessageTagStats(peerId: peerId, threadId: chatLocation.threadId, tags: [.video, .photo, .gif, .music, .voiceOrInstantVideo, .webPage, .file]).start()
+        if !self.isSettings {
+            self.refreshMessageTagStatsDisposable = context.engine.messages.refreshMessageTagStats(peerId: peerId, threadId: chatLocation.threadId, tags: [.video, .photo, .gif, .music, .voiceOrInstantVideo, .webPage, .file]).start()
+        }
 
         self.scrollNode.addSubnode(self.versionLabelNode)
         
@@ -5457,43 +5477,45 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }
                 }
                 
-                #if DEBUG
-                if !items.isEmpty {
-                    items.append(.separator)
+                #if TEST_BUILD
+                if strongSelf.context.sharedContext.currentPtgSettings.with({ $0.testToolsEnabled == true }) {
+                    if !items.isEmpty {
+                        items.append(.separator)
+                    }
+                    items.append(.action(ContextMenuActionItem(text: "Storage Usage", icon: { [weak self] theme in
+                        guard let strongSelf = self else {
+                            return nil
+                        }
+                        
+                        let mediaBox = strongSelf.context.account.postbox.mediaBox
+                        var peerResourceIds: [Data] = []
+                        
+                        let semaphore = DispatchSemaphore(value: 0)
+                        
+                        let _ = mediaBox.storageBox.all(peerId: strongSelf.peerId).start(next: { result in
+                            peerResourceIds = result
+                            semaphore.signal()
+                        })
+                        
+                        semaphore.wait()
+                        
+                        var totalSize: Int64 = 0
+                        for resourceId in peerResourceIds {
+                            let id = MediaResourceId(String(data: resourceId, encoding: .utf8)!)
+                            totalSize += mediaBox.fileSizeForId(id)
+                        }
+                        
+                        let text = NSAttributedString(string: dataSizeString(totalSize, formatting: DataSizeStringFormatting(presentationData: presentationData)), font: Font.regular(14.0), textColor: theme.contextMenu.secondaryColor)
+                        let bounds = text.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
+                        return generateImage(bounds.size.integralFloor, rotatedContext: { size, context in
+                            context.clear(CGRect(origin: CGPoint(), size: size))
+                            UIGraphicsPushContext(context)
+                            text.draw(in: bounds)
+                            UIGraphicsPopContext()
+                        })
+                    }, action: { _, _ in
+                    })))
                 }
-                items.append(.action(ContextMenuActionItem(text: "Storage Usage", icon: { [weak self] theme in
-                    guard let strongSelf = self else {
-                        return nil
-                    }
-                    
-                    let mediaBox = strongSelf.context.account.postbox.mediaBox
-                    var peerResourceIds: [Data] = []
-                    
-                    let semaphore = DispatchSemaphore(value: 0)
-                    
-                    let _ = mediaBox.storageBox.all(peerId: strongSelf.peerId).start(next: { result in
-                        peerResourceIds = result
-                        semaphore.signal()
-                    })
-                    
-                    semaphore.wait()
-                    
-                    var totalSize: Int64 = 0
-                    for resourceId in peerResourceIds {
-                        let id = MediaResourceId(String(data: resourceId, encoding: .utf8)!)
-                        totalSize += mediaBox.fileSizeForId(id)
-                    }
-                    
-                    let text = NSAttributedString(string: dataSizeString(totalSize, formatting: DataSizeStringFormatting(presentationData: presentationData)), font: Font.regular(14.0), textColor: theme.contextMenu.secondaryColor)
-                    let bounds = text.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
-                    return generateImage(bounds.size.integralFloor, rotatedContext: { size, context in
-                        context.clear(CGRect(origin: CGPoint(), size: size))
-                        UIGraphicsPushContext(context)
-                        text.draw(in: bounds)
-                        UIGraphicsPopContext()
-                    })
-                }, action: { _, _ in
-                })))
                 #endif
                 
                 return .single(items)
@@ -8120,7 +8142,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             case .powerSaving:
                 self.controller?.push(energySavingSettingsScreen(context: self.context))
             
-            case .cloudballon:
+            case .ptgSettings:
                 self.controller?.push(ptgSettingsController(context: self.context))
             
             case .enterSecretPasscode:
@@ -8260,7 +8282,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                         return
                                     }
                                     
-                                    let nextController = secretPasscodeController(context: strongSelf.context, passcode: newPasscode)
+                                    let nextController = secretPasscodeController(context: strongSelf.context, passcode: newPasscode, isNew: true)
                                     (controller?.navigationController as? NavigationController)?.replaceTopController(nextController, animated: true)
                                 })
                             }
@@ -8300,7 +8322,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                 }
                                 
                                 if ptgSecretPasscodes.secretPasscodes.contains(where: { $0.passcode == passcode }) {
-                                    let nextController = secretPasscodeController(context: strongSelf.context, passcode: passcode)
+                                    let nextController = secretPasscodeController(context: strongSelf.context, passcode: passcode, isNew: false)
                                     (controller?.navigationController as? NavigationController)?.replaceTopController(nextController, animated: true)
                                     
                                     return true
@@ -9208,7 +9230,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
         let headerInset = sectionInset
         
-        var headerHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : self.scrollNode.view.contentOffset.y, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: additive, showPeerId: self.data?.showPeerId ?? false)
+        var headerHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : self.scrollNode.view.contentOffset.y, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: additive)
         if !self.isSettings && !self.state.isEditing {
             headerHeight += 71.0
         }
@@ -9499,11 +9521,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
         
         if self.isSettings {
-            contentHeight = max(contentHeight, layout.size.height + 140.0 - layout.intrinsicInsets.bottom)
-
             if !self.state.isEditing {
                 let versionText = self.presentationData.strings.Settings_Version(Bundle.main.appVersion, Bundle.main.appBuildNumber, Bundle.main.originalVersion).string
                 self.versionLabelNode.attributedText = NSAttributedString(string: versionText, font: Font.regular(self.presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: presentationData.theme.list.freeTextColor, paragraphAlignment: .center)
+                #if TEST_BUILD
+                let mutable = NSMutableAttributedString(attributedString: self.versionLabelNode.attributedText!)
+                mutable.insert(NSAttributedString(string: " TEST BUILD", attributes: [NSAttributedString.Key.foregroundColor: UIColor.red]), at: NSRange(versionText.range(of: "\n")!, in: versionText).location)
+                self.versionLabelNode.attributedText = mutable
+                #endif
                 
                 let horizontalPadding = 20.0
                 var frame = CGRect(origin: CGPoint(x: horizontalPadding, y: contentHeight), size: CGSize(width: layout.size.width - 2 * horizontalPadding, height: 100))
@@ -9514,6 +9539,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 let bottomPadding = horizontalPadding
                 contentHeight += size.height + bottomPadding
             }
+            
+            contentHeight = max(contentHeight, layout.size.height + 140.0 - layout.intrinsicInsets.bottom)
         }
         self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: contentHeight)
         if self.isSettings {
@@ -9587,7 +9614,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }
                 let headerInset = sectionInset
 
-                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: additive, showPeerId: self.data?.showPeerId ?? false)
+                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: additive)
             }
             
             let paneAreaExpansionDistance: CGFloat = 32.0
@@ -9930,7 +9957,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, reactionSourceMessageId: MessageId?, callMessages: [Message], isSettings: Bool = false, hintGroupInCommon: PeerId? = nil, requestsContext: PeerInvitationImportersContext? = nil, forumTopicThread: ChatReplyThreadMessage? = nil) {
-        precondition(context.sharedContext.currentPtgSettings.with({ $0.isTestingEnvironment == true }) || context.currentInactiveSecretChatPeerIds.with { !$0.contains(peerId) })
+        precondition(context.currentInactiveSecretChatPeerIds.with { !$0.contains(peerId) })
         
         self.context = context
         self.updatedPresentationData = updatedPresentationData
@@ -10848,7 +10875,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
                 }
                 let headerInset = sectionInset
                 
-                topHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: topNavigationBar.bounds.height, isModalOverlay: layout.isModalOverlay, isMediaOnly: false, contentOffset: 0.0, paneContainerY: 0.0, presentationData: self.presentationData, peer: self.screenNode.data?.peer, cachedData: self.screenNode.data?.cachedData, threadData: self.screenNode.data?.threadData, peerNotificationSettings: self.screenNode.data?.peerNotificationSettings, threadNotificationSettings: self.screenNode.data?.threadNotificationSettings, globalNotificationSettings: self.screenNode.data?.globalNotificationSettings, statusData: self.screenNode.data?.status, panelStatusData: (nil, nil, nil), isSecretChat: self.screenNode.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.screenNode.data?.isContact ?? false, isSettings: self.screenNode.isSettings, state: self.screenNode.state, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: false, showPeerId: self.screenNode.data?.showPeerId ?? false)
+                topHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: topNavigationBar.bounds.height, isModalOverlay: layout.isModalOverlay, isMediaOnly: false, contentOffset: 0.0, paneContainerY: 0.0, presentationData: self.presentationData, peer: self.screenNode.data?.peer, cachedData: self.screenNode.data?.cachedData, threadData: self.screenNode.data?.threadData, peerNotificationSettings: self.screenNode.data?.peerNotificationSettings, threadNotificationSettings: self.screenNode.data?.threadNotificationSettings, globalNotificationSettings: self.screenNode.data?.globalNotificationSettings, statusData: self.screenNode.data?.status, panelStatusData: (nil, nil, nil), isSecretChat: self.screenNode.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.screenNode.data?.isContact ?? false, isSettings: self.screenNode.isSettings, state: self.screenNode.state, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: false)
             }
             
             let titleScale = (fraction * previousTitleNode.view.bounds.height + (1.0 - fraction) * self.headerNode.titleNodeRawContainer.bounds.height) / previousTitleNode.view.bounds.height

@@ -799,7 +799,6 @@ public final class StorageBox {
                     
                     let peerId = key.getInt64(0)
                     let contentType = key.getUInt8(8)
-                    
                     if allStats.peers[PeerId(peerId)] == nil {
                         allStats.peers[PeerId(peerId)] = StorageBox.Stats(contentTypes: [:])
                     }
@@ -998,7 +997,7 @@ public final class StorageBox {
             return self.valueBox.dbFilesSize()
         }
         
-        #if DEBUG
+        #if TEST_BUILD
         fileprivate func debugDumpDbStat() -> Signal<String, NoError> {
             return self.valueBox.debugDumpStat()
         }
@@ -1173,7 +1172,7 @@ public final class StorageBox {
         }
     }
     
-    #if DEBUG
+    #if TEST_BUILD
     public func debugDumpDbStat() -> Signal<String, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()

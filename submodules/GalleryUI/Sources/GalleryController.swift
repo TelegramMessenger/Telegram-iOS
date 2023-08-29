@@ -225,7 +225,10 @@ public func galleryItemForEntry(
                     entities = result
                 }
                                 
-                let (text_, entities_) = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(text: text, entities: entities, media: message.media) : (text, entities)
+                var (text_, entities_) = context.shouldSuppressForeignAgentNotice(in: message) ? removeForeignAgentNotice(text: text, entities: entities, media: message.media) : (text, entities)
+                if context.shouldHideChannelSignature(in: message), let username = message.channelUsername {
+                    (text_, entities_) = removeChannelSignature(text: text_, entities: entities_, media: message.media, username: username)
+                }
                 let caption = galleryCaptionStringWithAppliedEntities(text_, entities: entities_, message: message)
                 return UniversalVideoGalleryItem(
                     context: context,

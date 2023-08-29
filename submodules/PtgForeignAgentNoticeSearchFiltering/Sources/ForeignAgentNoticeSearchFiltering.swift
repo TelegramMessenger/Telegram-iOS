@@ -16,7 +16,7 @@ public func findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: [M
     var matchesOnlyBcOfFAN: Set<MessageId> = []
     
     for message in messages {
-        if !message.text.isEmpty {
+        if !message.text.isEmpty && message.isPeerOrForwardSourceBroadcastChannel {
             let (cleanedText, cleanedEntities) = removeForeignAgentNotice(text: message.text, entities: message.textEntitiesAttribute?.entities ?? [], media: message.media)
             
             var webpageContent: TelegramMediaWebpageLoadedContent?
@@ -38,7 +38,7 @@ public func findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: [M
 
                         let searchEndIndex = contentText.index(endIndex, offsetBy: ForeignAgentNoticeLen, limitedBy: contentText.endIndex) ?? contentText.endIndex
                         for foreignAgentNoticeRegEx in foreignAgentNoticeRegExes {
-                            if let matchResult = foreignAgentNoticeRegEx.firstMatch(in: contentText, range: NSRange(..<searchEndIndex, in: contentText)), let matchRange = Range(matchResult.range, in: contentText) {
+                            if let matchResult = foreignAgentNoticeRegEx.firstMatch(in: contentText, range: NSRange(..<searchEndIndex, in: contentText)), let matchRange = Range(matchResult.range, in: contentText), matchRange.lowerBound < endIndex {
                                 cleanedWebpageSearchedText!.removeSubrange(matchRange.upperBound > endIndex ? matchRange.lowerBound..<endIndex : matchRange)
                                 break
                             }
