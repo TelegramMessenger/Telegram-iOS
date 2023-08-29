@@ -375,24 +375,20 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
     }
         
     func updateLayout(transition: ContainedViewLayoutTransition, size: CGSize, params: ArchiveAnimationParams, presentationData: ChatListPresentationData) {
-//        let frame = CGRect(origin: .zero, size: size)
-//        print("frame: \(frame)")
-        
-//        var transition = transition
+        let frame = self.bounds
+        var transition = transition
         
         guard self.animation.params != params || self.frame.size != size else { return }
-//        if self.animation.params != params { print("new params") }
-//        if self.frame.size != size { print("new size") }
-//        let updateLayers = self.animation.params != params
+        let updateLayers = self.animation.params != params
         
         self.animation.params = params
-        print("params: \(params) previous params: \(self.animation.params) \nsize: \(size) previous size: \(self.frame.size)")
+//        print("params: \(params) previous params: \(self.animation.params) \nsize: \(size) previous size: \(self.frame.size)")
         let previousState = self.animation.state
         self.animation.state = .init(params: params, previousState: previousState)
         
-//        if self.animation.state != previousState {
-//            transition = .immediate
-//        }
+        if self.animation.state != previousState {
+            transition = .immediate
+        }
         
         if self.gradientImageNode.image == nil || self.gradientImageNode.image?.size.width != size.width {
             let gradientImageSize = CGSize(width: size.width, height: 76.0)
@@ -404,14 +400,14 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
             )
         }
         
-        transition.updatePosition(node: self.backgroundNode, position: self.position)
-        transition.updateBounds(node: self.backgroundNode, bounds: self.bounds)
+        transition.updatePosition(node: self.backgroundNode, position: frame.center)
+        transition.updateBounds(node: self.backgroundNode, bounds: frame)
 
-        transition.updatePosition(node: self.gradientContainerNode, position: self.position)
-        transition.updateBounds(node: self.gradientContainerNode, bounds: self.bounds)
+        transition.updatePosition(node: self.gradientContainerNode, position: frame.center)
+        transition.updateBounds(node: self.gradientContainerNode, bounds: frame)
         
-        transition.updatePosition(node: self.gradientImageNode, position: self.position)
-        transition.updateBounds(node: self.gradientImageNode, bounds: self.bounds)
+        transition.updatePosition(node: self.gradientImageNode, position: frame.center)
+        transition.updateBounds(node: self.gradientImageNode, bounds: frame)
         
         if size.height >= 20 {
             let arrowBackgroundFrame = CGRect(x: 29, y: 10, width: 20, height: size.height - 20)
@@ -458,30 +454,31 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
 //            transition.updateFrame(node: arrowAnimationNode, frame: arrowFrame)
 //        }
 
-//        self.titleNode.attributedText = NSAttributedString(string: "Swipe down for archive", attributes: [
-//            .foregroundColor: UIColor.white,
-//            .font: Font.medium(floor(presentationData.fontSize.itemListBaseFontSize * 16.0 / 17.0))
-//        ])
-//
-//        let textLayout = self.titleNode.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 100, height: 25), max: CGSize(width: size.width - 120, height: 25)))
-//
-//        self.titleNode.frame = CGRect(x: (size.width - textLayout.size.width) / 2,
-//                                      y: size.height - textLayout.size.height - 10,
-//                                      width: textLayout.size.width,
-//                                      height: textLayout.size.height)
-//        transition.updateFrame(node: titleNode, frame: CGRect(x: (size.width - textLayout.size.width) / 2,
-//                                                              y: size.height - textLayout.size.height - 10,
-//                                                              width: textLayout.size.width,
-//                                                              height: textLayout.size.height))
+        if self.titleNode.attributedText == nil {
+            self.titleNode.attributedText = NSAttributedString(string: "Swipe down for archive", attributes: [
+                .foregroundColor: UIColor.white,
+                .font: Font.medium(floor(presentationData.fontSize.itemListBaseFontSize * 16.0 / 17.0))
+            ])
+        }
+
+        let textLayout = self.titleNode.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 100, height: 25), max: CGSize(width: size.width - 120, height: 25)))
+        let titleFrame = CGRect(x: (size.width - textLayout.size.width) / 2,
+                                y: size.height - textLayout.size.height - 10,
+                                width: textLayout.size.width,
+                                height: textLayout.size.height)
+
+
+        transition.updatePosition(node: self.titleNode, position: titleFrame.center)
+        transition.updateBounds(node: self.titleNode, bounds: titleFrame)
         
-//        if updateLayers {
-//            self.animation.animateLayers(gradientNode: self.gradientContainerNode,
-//                                         textNode: self.titleNode,
-//                                         arrowContainerNode: self.arrowContainerNode) {
-//
-//                print("animation finished")
-//            }
-//        }
+        if updateLayers {
+            self.animation.animateLayers(gradientNode: self.gradientContainerNode,
+                                         textNode: self.titleNode,
+                                         arrowContainerNode: self.arrowContainerNode) {
+
+                print("animation finished")
+            }
+        }
 
     }
 }
