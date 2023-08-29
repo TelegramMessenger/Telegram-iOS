@@ -6,6 +6,7 @@ public enum MediaArea: Codable, Equatable {
         case type
         case coordinates
         case value
+        case flags
     }
         
     public struct Coordinates: Codable, Equatable {
@@ -122,7 +123,23 @@ public enum MediaArea: Codable, Equatable {
     }
     
     case venue(coordinates: Coordinates, venue: Venue)
-    case reaction(coordinates: Coordinates, reaction: MessageReaction.Reaction)
+    case reaction(coordinates: Coordinates, reaction: MessageReaction.Reaction, flags: ReactionFlags)
+    
+    public struct ReactionFlags: OptionSet {
+        public var rawValue: Int32
+        
+        public init(rawValue: Int32) {
+            self.rawValue = rawValue
+        }
+        
+        public init() {
+            self.rawValue = 0
+        }
+        
+        public static let isDark = ReactionFlags(rawValue: 1 << 0)
+        public static let isFlipped = ReactionFlags(rawValue: 1 << 1)
+    }
+
     
     private enum MediaAreaType: Int32 {
         case venue
@@ -143,7 +160,8 @@ public enum MediaArea: Codable, Equatable {
         case .reaction:
             let coordinates = try container.decode(MediaArea.Coordinates.self, forKey: .coordinates)
             let reaction = try container.decode(MessageReaction.Reaction.self, forKey: .value)
-            self = .reaction(coordinates: coordinates, reaction: reaction)
+            let flags = ReactionFlags(rawValue: try container.decodeIfPresent(Int32.self, forKey: .flags) ?? 0)
+            self = .reaction(coordinates: coordinates, reaction: reaction, flags: flags)
         }
     }
     
@@ -155,10 +173,11 @@ public enum MediaArea: Codable, Equatable {
             try container.encode(MediaAreaType.venue.rawValue, forKey: .type)
             try container.encode(coordinates, forKey: .coordinates)
             try container.encode(venue, forKey: .value)
-        case let .reaction(coordinates, reaction):
+        case let .reaction(coordinates, reaction, flags):
             try container.encode(MediaAreaType.reaction.rawValue, forKey: .type)
             try container.encode(coordinates, forKey: .coordinates)
             try container.encode(reaction, forKey: .value)
+            try container.encode(flags.rawValue, forKey: .flags)
         }
     }
 }
@@ -168,7 +187,7 @@ public extension MediaArea {
         switch self {
         case let .venue(coordinates, _):
             return coordinates
-        case let .reaction(coordinates, _):
+        case let .reaction(coordinates, _, _):
             return coordinates
         }
     }

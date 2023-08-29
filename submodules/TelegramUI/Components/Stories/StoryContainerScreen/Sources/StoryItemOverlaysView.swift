@@ -74,6 +74,7 @@ final class StoryItemOverlaysView: UIView {
         func update(
             context: AccountContext,
             reaction: MessageReaction.Reaction,
+            flags: MediaArea.ReactionFlags,
             availableReactions: StoryAvailableReactions?,
             synchronous: Bool,
             size: CGSize
@@ -83,6 +84,12 @@ final class StoryItemOverlaysView: UIView {
             let insets = UIEdgeInsets(top: -0.08, left: -0.05, bottom: -0.01, right: -0.02)
             self.coverView.frame = CGRect(origin: CGPoint(x: size.width * insets.left, y: size.height * insets.top), size: CGSize(width: size.width - size.width * insets.left - size.width * insets.right, height: size.height - size.height * insets.top - size.height * insets.bottom))
             self.shadowView.frame = self.coverView.frame
+            
+            if flags.contains(.isFlipped) {
+                self.coverView.transform = CGAffineTransformMakeScale(-1.0, 1.0)
+                self.shadowView.transform = self.coverView.transform
+            }
+            self.coverView.tintColor = flags.contains(.isDark) ? UIColor(rgb: 0x000000, alpha: 0.5) : UIColor.white
             
             let minSide = floor(min(200.0, min(size.width, size.height)) * 0.65)
             let itemSize = CGSize(width: minSide, height: minSide)
@@ -172,7 +179,7 @@ final class StoryItemOverlaysView: UIView {
         var nextId = 0
         for mediaArea in story.mediaAreas {
             switch mediaArea {
-            case let .reaction(coordinates, reaction):
+            case let .reaction(coordinates, reaction, flags):
                 let referenceSize = size
                 let areaSize = CGSize(width: coordinates.width / 100.0 * referenceSize.width, height: coordinates.height / 100.0 * referenceSize.height)
                 let targetFrame = CGRect(x: coordinates.x / 100.0 * referenceSize.width - areaSize.width * 0.5, y: coordinates.y / 100.0 * referenceSize.height - areaSize.height * 0.5, width: areaSize.width, height: areaSize.height)
@@ -192,13 +199,14 @@ final class StoryItemOverlaysView: UIView {
                     self.itemViews[itemId] = itemView
                     self.addSubview(itemView)
                 }
-                
+                                
                 transition.setPosition(view: itemView, position: targetFrame.center)
                 transition.setBounds(view: itemView, bounds: CGRect(origin: CGPoint(), size: targetFrame.size))
                 transition.setTransform(view: itemView, transform: CATransform3DMakeRotation(coordinates.rotation * (CGFloat.pi / 180.0), 0.0, 0.0, 1.0))
                 itemView.update(
                     context: context,
                     reaction: reaction,
+                    flags: flags,
                     availableReactions: availableReactions,
                     synchronous: attemptSynchronous,
                     size: targetFrame.size

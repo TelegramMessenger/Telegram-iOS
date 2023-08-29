@@ -16,7 +16,6 @@ private let scrubberHeight: CGFloat = 39.0
 private let collapsedScrubberHeight: CGFloat = 26.0
 private let borderHeight: CGFloat = 1.0 + UIScreenPixel
 private let frameWidth: CGFloat = 24.0
-private let minumumDuration: CGFloat = 1.0
 
 private class VideoFrameLayer: SimpleShapeLayer {
     private let stripeLayer = SimpleShapeLayer()
@@ -48,14 +47,20 @@ final class VideoScrubberComponent: Component {
         let title: String?
         let samples: Data?
         let peak: Int32
+        let duration: Double
+        let start: Double?
+        let end: Double?
+        let offset: Double?
     }
     
     let context: AccountContext
     let generationTimestamp: Double
+    let audioOnly: Bool
     let duration: Double
     let startPosition: Double
     let endPosition: Double
     let position: Double
+    let minDuration: Double
     let maxDuration: Double
     let isPlaying: Bool
     let frames: [UIImage]
@@ -69,10 +74,12 @@ final class VideoScrubberComponent: Component {
     init(
         context: AccountContext,
         generationTimestamp: Double,
+        audioOnly: Bool,
         duration: Double,
         startPosition: Double,
         endPosition: Double,
         position: Double,
+        minDuration: Double,
         maxDuration: Double,
         isPlaying: Bool,
         frames: [UIImage],
@@ -85,10 +92,12 @@ final class VideoScrubberComponent: Component {
     ) {
         self.context = context
         self.generationTimestamp = generationTimestamp
+        self.audioOnly = audioOnly
         self.duration = duration
         self.startPosition = startPosition
         self.endPosition = endPosition
         self.position = position
+        self.minDuration = minDuration
         self.maxDuration = maxDuration
         self.isPlaying = isPlaying
         self.frames = frames
@@ -107,6 +116,9 @@ final class VideoScrubberComponent: Component {
         if lhs.generationTimestamp != rhs.generationTimestamp {
             return false
         }
+        if lhs.audioOnly != rhs.audioOnly {
+            return false
+        }
         if lhs.duration != rhs.duration {
             return false
         }
@@ -117,6 +129,9 @@ final class VideoScrubberComponent: Component {
             return false
         }
         if lhs.position != rhs.position {
+            return false
+        }
+        if lhs.minDuration != rhs.minDuration {
             return false
         }
         if lhs.maxDuration != rhs.maxDuration {
@@ -140,15 +155,16 @@ final class VideoScrubberComponent: Component {
         private let audioBackgroundView: BlurredBackgroundView
         private let audioVibrancyView: UIVisualEffectView
         private let audioVibrancyContainer: UIView
-        private let audioTrimView = TrimView(frame: .zero)
         private let audioButton = UIButton()
         
+        private let audioContentContainerView: UIView
+        private let audioContentMaskView: UIImageView
         private let audioIconView: UIImageView
         private let audioTitle = ComponentView<Empty>()
                 
         private let audioWaveform = ComponentView<Empty>()
         
-        private let videoTrimView = TrimView(frame: .zero)
+        private let trimView = TrimView(frame: .zero)
         private let cursorView = HandleView()
         
         private let transparentFramesContainer = UIView()
@@ -187,12 +203,20 @@ final class VideoScrubberComponent: Component {
             self.audioVibrancyContainer = UIView()
             self.audioVibrancyView.contentView.addSubview(self.audioVibrancyContainer)
             
+            self.audioContentContainerView = UIView()
+            self.audioContentContainerView.clipsToBounds = true
+
+            self.audioContentMaskView = UIImageView()
+            self.audioContentContainerView.mask = self.audioContentMaskView
+            
             self.audioIconView = UIImageView(image: UIImage(bundleImageName: "Media Editor/SmallAudio"))
             
             self.audioButton.isUserInteractionEnabled = false
             self.videoButton.isUserInteractionEnabled = false
             
             super.init(frame: frame)
+            
+            self.clipsToBounds = false
             
             self.disablesInteractiveModalDismiss = true
             self.disablesInteractiveKeyboardGestureRecognizer = true
@@ -222,14 +246,12 @@ final class VideoScrubberComponent: Component {
             self.audioClippingView.addSubview(self.audioContainerView)
             self.audioContainerView.addSubview(self.audioBackgroundView)
             self.audioBackgroundView.addSubview(self.audioVibrancyView)
-            
-            self.addSubview(self.audioTrimView)
-            
+                        
             self.addSubview(self.audioIconView)
             
             self.addSubview(self.transparentFramesContainer)
             self.addSubview(self.opaqueFramesContainer)
-            self.addSubview(self.videoTrimView)
+            self.addSubview(self.trimView)
             
             self.addSubview(self.audioButton)
             self.addSubview(self.videoButton)
@@ -242,13 +264,17 @@ final class VideoScrubberComponent: Component {
             }
             self.displayLink?.isPaused = true
             
-            self.videoTrimView.updated = { [weak self] transition in
+            self.trimView.updated = { [weak self] transition in
                 self?.state?.updated(transition: transition)
             }
             
-            self.videoTrimView.trimUpdated = { [weak self] startValue, endValue, updatedEnd, done in
-                if let component = self?.component {
-                    component.videoTrimUpdated(startValue, endValue, updatedEnd, done)
+            self.trimView.trimUpdated = { [weak self] startValue, endValue, updatedEnd, done in
+                if let self, let component = self.component {
+                    if self.isAudioSelected || component.audioOnly {
+                        component.audioTrimUpdated(startValue, endValue, updatedEnd, done)
+                    } else {
+                        component.videoTrimUpdated(startValue, endValue, updatedEnd, done)
+                    }
                 }
             }
             
@@ -258,6 +284,19 @@ final class VideoScrubberComponent: Component {
             let longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(self.longPressed(_:)))
             longPressGesture.delegate = self
             self.addGestureRecognizer(longPressGesture)
+            
+            let maskImage = generateImage(CGSize(width: 100.0, height: 50.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: .zero, size: size))
+                
+                var locations: [CGFloat] = [0.0, 0.75, 0.95, 1.0]
+                let colors: [CGColor] = [UIColor.white.cgColor, UIColor.white.cgColor, UIColor.white.withAlphaComponent(0.0).cgColor, UIColor.white.withAlphaComponent(0.0).cgColor]
+                
+                let colorSpace = CGColorSpaceCreateDeviceRGB()
+                let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+                
+                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())
+            })?.stretchableImage(withLeftCapWidth: 40, topCapHeight: 0)
+            self.audioContentMaskView.image = maskImage
         }
         
         required init?(coder: NSCoder) {
@@ -280,7 +319,7 @@ final class VideoScrubberComponent: Component {
             guard let component = self.component, component.audioData != nil, case .began = gestureRecognizer.state else {
                 return
             }
-            component.audioLongPressed?(self.audioContainerView)
+            component.audioLongPressed?(self.audioClippingView)
         }
         
         @objc private func audioButtonPressed() {
@@ -323,8 +362,8 @@ final class VideoScrubberComponent: Component {
             let cursorPositionFraction = duration > 0.0 ? position / duration : 0.0
             let cursorPosition = floorToScreenPixels(handleWidth + handleWidth / 2.0 - cursorPadding + (size.width - handleWidth * 3.0 + cursorPadding * 2.0) * cursorPositionFraction)
             var cursorFrame = CGRect(origin: CGPoint(x: cursorPosition - handleWidth / 2.0, y: -5.0 - UIScreenPixel), size: CGSize(width: handleWidth, height: height))
-            cursorFrame.origin.x = max(self.videoTrimView.leftHandleView.frame.maxX - cursorPadding, cursorFrame.origin.x)
-            cursorFrame.origin.x = min(self.videoTrimView.rightHandleView.frame.minX + cursorPadding, cursorFrame.origin.x)
+            cursorFrame.origin.x = max(self.trimView.leftHandleView.frame.maxX - cursorPadding, cursorFrame.origin.x)
+            cursorFrame.origin.x = min(self.trimView.rightHandleView.frame.minX + cursorPadding, cursorFrame.origin.x)
             return cursorFrame
         }
         
@@ -360,7 +399,9 @@ final class VideoScrubberComponent: Component {
             if let previousComponent {
                 if previousComponent.audioData == nil, component.audioData != nil {
                     self.positionAnimation = nil
-                    self.isAudioSelected = true
+                    if !component.audioOnly {
+                        self.isAudioSelected = true
+                    }
                     animateAudioAppearance = true
                 } else if previousComponent.audioData != nil, component.audioData == nil {
                     self.positionAnimation = nil
@@ -384,40 +425,80 @@ final class VideoScrubberComponent: Component {
                 videoTransition = .easeInOut(duration: 0.25)
             }
             
+            let totalWidth = scrubberSize.width - handleWidth
+            var audioTotalWidth = scrubberSize.width
+            
             var originY: CGFloat = 0
             var totalHeight = scrubberSize.height
             var audioAlpha: CGFloat = 0.0
-            if let _ = component.audioData {
-                totalHeight += collapsedScrubberHeight + scrubberSpacing
-                audioAlpha = 1.0
-                
-                originY += self.isAudioSelected ? scrubberHeight : collapsedScrubberHeight
-                originY += scrubberSpacing
-                
-                if self.isAudioSelected {
+            if let audioData = component.audioData {
+                if component.audioOnly {
                     audioScrubberHeight = scrubberHeight
-                    videoScrubberHeight = collapsedScrubberHeight
+                    audioAlpha = 1.0
+                } else {
+                    totalHeight += collapsedScrubberHeight + scrubberSpacing
+                    audioAlpha = 1.0
+                    
+                    originY += self.isAudioSelected ? scrubberHeight : collapsedScrubberHeight
+                    originY += scrubberSpacing
+                    
+                    if self.isAudioSelected {
+                        audioScrubberHeight = scrubberHeight
+                        videoScrubberHeight = collapsedScrubberHeight
+                    }
+                    
+                    if component.duration > 0.0 {
+                        let audioFraction = audioData.duration / component.duration
+                        audioTotalWidth = ceil(totalWidth * audioFraction)
+                    }
                 }
             } else {
                 self.isAudioSelected = false
             }
             audioTransition.setAlpha(view: self.audioClippingView, alpha: audioAlpha)
-            self.audioButton.isUserInteractionEnabled = !self.isAudioSelected
-            self.videoButton.isUserInteractionEnabled = self.isAudioSelected
+            self.audioButton.isUserInteractionEnabled = component.audioData != nil && !component.audioOnly && !self.isAudioSelected
+            self.videoButton.isUserInteractionEnabled = component.audioData != nil && !component.audioOnly && self.isAudioSelected
             
-            let audioClippingFrame = CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: audioScrubberHeight))
+            var audioClipOrigin: CGFloat = 0.0
+            var audioClipWidth = availableSize.width + 18.0
+            if !self.isAudioSelected {
+                if let audioData = component.audioData, !component.audioOnly {
+                    let duration: Double
+                    if let end = audioData.end, let start = audioData.start, component.duration > 0.0 {
+                        duration = end - start
+                    } else {
+                        duration = component.endPosition - component.startPosition
+                    }
+                    if component.duration > 0.0 {
+                        let fraction = duration / component.duration
+                        audioClipWidth = availableSize.width * fraction
+                        
+                        audioClipOrigin = (component.startPosition + (audioData.offset ?? 0.0)) / component.duration * availableSize.width
+                    }
+                } else {
+                    audioClipWidth = availableSize.width
+                }
+            }
+            
+            let audioClippingFrame = CGRect(origin: CGPoint(x: audioClipOrigin, y: 0.0), size: CGSize(width: audioClipWidth, height: audioScrubberHeight))
             audioTransition.setFrame(view: self.audioButton, frame: audioClippingFrame)
             audioTransition.setFrame(view: self.audioClippingView, frame: audioClippingFrame)
             
-            let audioContainerFrame = CGRect(origin: .zero, size: audioClippingFrame.size)
+            audioTransition.setCornerRadius(layer: self.audioClippingView.layer, cornerRadius: self.isAudioSelected ? 0.0 : 9.0)
+            
+            let audioContainerFrame = CGRect(origin: .zero, size: CGSize(width: audioTotalWidth, height: audioScrubberHeight))
             audioTransition.setFrame(view: self.audioContainerView, frame: audioContainerFrame)
             
-            audioTransition.setFrame(view: self.audioBackgroundView, frame: CGRect(origin: .zero, size: audioClippingFrame.size))
-            self.audioBackgroundView.update(size: audioClippingFrame.size, transition: audioTransition.containedViewLayoutTransition)
-            audioTransition.setFrame(view: self.audioVibrancyView, frame: CGRect(origin: .zero, size: audioClippingFrame.size))
-            audioTransition.setFrame(view: self.audioVibrancyContainer, frame: CGRect(origin: .zero, size: audioClippingFrame.size))
+            audioTransition.setFrame(view: self.audioBackgroundView, frame: CGRect(origin: .zero, size: audioContainerFrame.size))
+            self.audioBackgroundView.update(size: audioContainerFrame.size, transition: audioTransition.containedViewLayoutTransition)
+            audioTransition.setFrame(view: self.audioVibrancyView, frame: CGRect(origin: .zero, size: audioContainerFrame.size))
+            audioTransition.setFrame(view: self.audioVibrancyContainer, frame: CGRect(origin: .zero, size: audioContainerFrame.size))
                         
-            if let audioData = component.audioData {
+            let containerFrame = CGRect(origin: .zero, size: CGSize(width: audioClipWidth, height: audioContainerFrame.height))
+            audioTransition.setFrame(view: self.audioContentContainerView, frame: containerFrame)
+            audioTransition.setFrame(view: self.audioContentMaskView, frame: CGRect(origin: .zero, size: containerFrame.size))
+            
+            if let audioData = component.audioData, !component.audioOnly {
                 var components: [String] = []
                 if let artist = audioData.artist {
                     components.append(artist)
@@ -446,7 +527,7 @@ final class VideoScrubberComponent: Component {
                 
                 audioTransition.setAlpha(view: self.audioIconView, alpha: self.isAudioSelected ? 0.0 : 1.0)
               
-                let audioIconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - totalWidth) / 2.0), y: floorToScreenPixels((audioScrubberHeight - iconSize.height) / 2.0)), size: iconSize)
+                let audioIconFrame = CGRect(origin: CGPoint(x: max(8.0, floorToScreenPixels((audioClipWidth - totalWidth) / 2.0)), y: floorToScreenPixels((audioScrubberHeight - iconSize.height) / 2.0)), size: iconSize)
                 audioTransition.setBounds(view: self.audioIconView, bounds: CGRect(origin: .zero, size: audioIconFrame.size))
                 audioTransition.setPosition(view: self.audioIconView, position: audioIconFrame.center)
                 
@@ -454,12 +535,13 @@ final class VideoScrubberComponent: Component {
                     if view.superview == nil {
                         view.alpha = 0.0
                         view.isUserInteractionEnabled = false
-                        self.audioContainerView.addSubview(self.audioIconView)
-                        self.audioContainerView.addSubview(view)
+                        self.audioContainerView.addSubview(self.audioContentContainerView)
+                        self.audioContentContainerView.addSubview(self.audioIconView)
+                        self.audioContentContainerView.addSubview(view)
                     }
                     audioTransition.setAlpha(view: view, alpha: self.isAudioSelected ? 0.0 : 1.0)
                     
-                    let audioTitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - totalWidth) / 2.0) + iconSize.width + spacing, y: floorToScreenPixels((audioScrubberHeight - audioTitleSize.height) / 2.0)), size: audioTitleSize)
+                    let audioTitleFrame = CGRect(origin: CGPoint(x: audioIconFrame.maxX + spacing, y: floorToScreenPixels((audioScrubberHeight - audioTitleSize.height) / 2.0)), size: audioTitleSize)
                     audioTransition.setBounds(view: view, bounds: CGRect(origin: .zero, size: audioTitleFrame.size))
                     audioTransition.setPosition(view: view, position: audioTitleFrame.center)
                 }
@@ -487,7 +569,7 @@ final class VideoScrubberComponent: Component {
                         )
                     ),
                     environment: {},
-                    containerSize: CGSize(width: audioContainerFrame.width * 5.0, height: scrubberHeight)
+                    containerSize: CGSize(width: audioContainerFrame.width, height: scrubberHeight)
                 )
                 if let view = self.audioWaveform.view {
                     if view.superview == nil {
@@ -496,26 +578,11 @@ final class VideoScrubberComponent: Component {
                         view.layer.animateScaleY(from: 0.01, to: 1.0, duration: 0.2)
                         view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     }
-                    audioTransition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isAudioSelected ? 0.0 : 6.0), size: audioWaveformSize))
+                    audioTransition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isAudioSelected || component.audioOnly ? 0.0 : 6.0), size: audioWaveformSize))
                 }
             }
             
             let bounds = CGRect(origin: .zero, size: scrubberSize)
-            let totalWidth = scrubberSize.width - handleWidth
-            
-            audioTransition.setAlpha(view: self.audioTrimView, alpha: self.isAudioSelected ? 1.0 : 0.0)
-            audioTransition.setFrame(view: self.audioTrimView, frame: bounds)
-            
-            let _ = self.audioTrimView.update(
-                totalWidth: totalWidth,
-                scrubberSize: scrubberSize,
-                duration: component.duration,
-                startPosition: component.startPosition,
-                endPosition: component.duration,
-                position: component.position,
-                maxDuration: component.maxDuration,
-                transition: transition
-            )
             
             if component.framesUpdateTimestamp != previousFramesUpdateTimestamp {
                 for i in 0 ..< component.frames.count {
@@ -546,16 +613,35 @@ final class VideoScrubberComponent: Component {
                 }
             }
             
-            let (leftHandleFrame, rightHandleFrame) = self.videoTrimView.update(
+            var startPosition = component.startPosition
+            var endPosition = component.endPosition
+            if self.isAudioSelected, let audioData = component.audioData {
+                if let start = audioData.start {
+                    startPosition = start
+                }
+                if let end = audioData.end {
+                    endPosition = end
+                }
+            }
+                        
+            let (leftHandleFrame, rightHandleFrame) = self.trimView.update(
                 totalWidth: totalWidth,
                 scrubberSize: scrubberSize,
                 duration: component.duration,
-                startPosition: component.startPosition,
-                endPosition: component.endPosition,
+                startPosition: startPosition,
+                endPosition: endPosition,
                 position: component.position,
+                minDuration: component.minDuration,
                 maxDuration: component.maxDuration,
                 transition: transition
             )
+            
+            var containerLeftEdge = leftHandleFrame.maxX
+            var containerRightEdge = rightHandleFrame.minX
+            if self.isAudioSelected && component.duration > 0.0 {
+                containerLeftEdge = floorToScreenPixels(component.startPosition / component.duration * scrubberSize.width)
+                containerRightEdge = floorToScreenPixels(component.endPosition / component.duration * scrubberSize.width)
+            }
             
             if self.isPanningPositionHandle || !component.isPlaying {
                 self.positionAnimation = nil
@@ -576,12 +662,13 @@ final class VideoScrubberComponent: Component {
             }
 //            transition.setAlpha(view: self.cursorView, alpha: self.isPanningTrimHandle ? 0.0 : 1.0)
             
-            videoTransition.setAlpha(view: self.videoTrimView, alpha: self.isAudioSelected ? 0.0 : 1.0)
-            videoTransition.setFrame(view: self.videoTrimView, frame: bounds.offsetBy(dx: 0.0, dy: originY))
+            videoTransition.setFrame(view: self.trimView, frame: bounds.offsetBy(dx: 0.0, dy: self.isAudioSelected ? 0.0 : originY))
             let handleInset: CGFloat = 7.0
             videoTransition.setFrame(view: self.transparentFramesContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: originY), size: CGSize(width: scrubberSize.width, height: videoScrubberHeight)))
-            videoTransition.setFrame(view: self.opaqueFramesContainer, frame: CGRect(origin: CGPoint(x: leftHandleFrame.maxX - handleInset, y: originY), size: CGSize(width: rightHandleFrame.minX - leftHandleFrame.maxX + handleInset * 2.0, height: videoScrubberHeight)))
-            videoTransition.setBounds(view: self.opaqueFramesContainer, bounds: CGRect(origin: CGPoint(x: leftHandleFrame.maxX - handleInset, y: 0.0), size: CGSize(width: rightHandleFrame.minX - leftHandleFrame.maxX + handleInset * 2.0, height: videoScrubberHeight)))
+            videoTransition.setFrame(view: self.opaqueFramesContainer, frame: CGRect(origin: CGPoint(x: containerLeftEdge - handleInset, y: originY), size: CGSize(width: containerRightEdge - containerLeftEdge + handleInset * 2.0, height: videoScrubberHeight)))
+            videoTransition.setBounds(view: self.opaqueFramesContainer, bounds: CGRect(origin: CGPoint(x: containerLeftEdge - handleInset, y: 0.0), size: CGSize(width: containerRightEdge - containerLeftEdge + handleInset * 2.0, height: videoScrubberHeight)))
+            
+            videoTransition.setCornerRadius(layer: self.opaqueFramesContainer.layer, cornerRadius: self.isAudioSelected ? 9.0 : 0.0)
             
             videoTransition.setFrame(view: self.videoButton, frame: bounds.offsetBy(dx: 0.0, dy: originY))
             
@@ -673,7 +760,6 @@ private class TrimView: UIView {
         self.rightHandleView.tintColor = .white
         self.rightHandleView.hitTestSlop = UIEdgeInsets(top: -8.0, left: -9.0, bottom: -8.0, right: -9.0)
         
-        
         self.borderView.image = generateImage(CGSize(width: 1.0, height: scrubberHeight), rotatedContext: { size, context in
             context.clear(CGRect(origin: .zero, size: size))
             context.setFillColor(UIColor.white.cgColor)
@@ -744,8 +830,8 @@ private class TrimView: UIView {
         let fraction = (location.x - start) / length
         
         var startValue = max(0.0, params.duration * fraction)
-        if startValue > params.endPosition - minumumDuration {
-            startValue = max(0.0, params.endPosition - minumumDuration)
+        if startValue > params.endPosition - params.minDuration {
+            startValue = max(0.0, params.endPosition - params.minDuration)
         }
         var endValue = params.endPosition
         if endValue - startValue > params.maxDuration {
@@ -782,8 +868,8 @@ private class TrimView: UIView {
         let fraction = (location.x - start) / length
        
         var endValue = min(params.duration, params.duration * fraction)
-        if endValue < params.startPosition + minumumDuration {
-            endValue = min(params.duration, params.startPosition + minumumDuration)
+        if endValue < params.startPosition + params.minDuration {
+            endValue = min(params.duration, params.startPosition + params.minDuration)
         }
         var startValue = params.startPosition
         if endValue - startValue > params.maxDuration {
@@ -814,6 +900,7 @@ private class TrimView: UIView {
         startPosition: Double,
         endPosition: Double,
         position: Double,
+        minDuration: Double,
         maxDuration: Double
     )?
     
@@ -824,11 +911,12 @@ private class TrimView: UIView {
         startPosition: Double,
         endPosition: Double,
         position: Double,
+        minDuration: Double,
         maxDuration: Double,
         transition: Transition
     ) -> (leftHandleFrame: CGRect, rightHandleFrame: CGRect)
     {
-        self.params = (duration, startPosition, endPosition, position, maxDuration)
+        self.params = (duration, startPosition, endPosition, position, minDuration, maxDuration)
         
         let trimColor = self.isPanningTrimHandle ? UIColor(rgb: 0xf8d74a) : .white
         transition.setTintColor(view: self.leftHandleView, color: trimColor)

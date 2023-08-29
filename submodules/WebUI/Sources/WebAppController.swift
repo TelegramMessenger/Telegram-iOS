@@ -1135,7 +1135,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 self.webView?.sendEvent(name: "phone_requested", data: paramsString)
             }
             
-            controller.present(textAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, title: self.presentationData.strings.Conversation_ShareBotContactConfirmationTitle, text: self.presentationData.strings.Conversation_ShareBotContactConfirmation, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
+            let alertController = textAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, title: self.presentationData.strings.Conversation_ShareBotContactConfirmationTitle, text: self.presentationData.strings.Conversation_ShareBotContactConfirmation, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
                 sendEvent(false)
             }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: { [weak self] in
                 guard let self else {
@@ -1150,7 +1150,13 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         sendEvent(true)
                     }
                 })
-            })]), in: .window(.root))
+            })])
+            alertController.dismissed = { byOutsideTap in
+                if byOutsideTap {
+                    sendEvent(false)
+                }
+            }
+            controller.present(alertController, in: .window(.root))
         }
         
         fileprivate func invokeCustomMethod(requestId: String, method: String, params: String) {

@@ -397,7 +397,7 @@ public final class MediaEditorVideoExport {
             if let audioTrackRange = self.configuration.audioTimeRange {
                 musicRange = audioTrackRange
             }
-            try? musicTrack.insertTimeRange(musicRange, of: musicAssetTrack, at: .zero)
+            try? musicTrack.insertTimeRange(musicRange, of: musicAssetTrack, at: CMTime(seconds: self.configuration.values.audioTrackStart ?? 0.0, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))
             
             inputAsset = mixComposition
         }

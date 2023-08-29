@@ -2360,29 +2360,29 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
                                     })
                             )
                         ),
-//                        AnyComponentWithIdentity(
-//                            id: "audio",
-//                            component: AnyComponent(
-//                                CameraButton(
-//                                    content: AnyComponentWithIdentity(
-//                                        id: "audio",
-//                                        component: AnyComponent(
-//                                            InteractiveStickerButtonContent(
-//                                                theme: theme,
-//                                                title: "AUDIO",
-//                                                iconName: "Media Editor/Audio",
-//                                                useOpaqueTheme: useOpaqueTheme,
-//                                                tintContainerView: self.tintContainerView
-//                                            )
-//                                        )
-//                                    ),
-//                                    action: { [weak self] in
-//                                        if let self {
-//                                            self.audioAction()
-//                                        }
-//                                    })
-//                            )
-//                        ),
+                        AnyComponentWithIdentity(
+                            id: "audio",
+                            component: AnyComponent(
+                                CameraButton(
+                                    content: AnyComponentWithIdentity(
+                                        id: "audio",
+                                        component: AnyComponent(
+                                            InteractiveStickerButtonContent(
+                                                theme: theme,
+                                                title: "AUDIO",
+                                                iconName: "Media Editor/Audio",
+                                                useOpaqueTheme: useOpaqueTheme,
+                                                tintContainerView: self.tintContainerView
+                                            )
+                                        )
+                                    ),
+                                    action: { [weak self] in
+                                        if let self {
+                                            self.audioAction()
+                                        }
+                                    })
+                            )
+                        ),
                         AnyComponentWithIdentity(
                             id: "reaction",
                             component: AnyComponent(
