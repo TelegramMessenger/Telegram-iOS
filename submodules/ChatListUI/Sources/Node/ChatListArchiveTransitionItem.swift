@@ -45,13 +45,19 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
     let backgroundNode: ASDisplayNode
     let gradientContainerNode: ASDisplayNode
     let gradientImageNode: ASImageNode
+//    let topShadowNode: ASImageNode
     let titleNode: ASTextNode //centered
     let arrowBackgroundNode: ASDisplayNode //20 with insets 10
     let arrowContainerNode: ASDisplayNode
     let arrowAnimationNode: AnimationNode //20x20
     let arrowImageNode: ASImageNode
+    var arrowSwipeDownIcon: UIImage?
+    var arrowReleaseBackgroundColor: UIColor?
+    var arrowReleaseIcon: UIImage?
+    
     var animation: TransitionAnimation
     var presentationData: ChatListPresentationData?
+    var hapticFeedback: HapticFeedback?
     
     required override init() {
         self.backgroundNode = ASDisplayNode()
@@ -97,6 +103,42 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         self.arrowBackgroundNode.layer.cornerRadius = 11
         self.arrowBackgroundNode.layer.masksToBounds = true
     }
+    
+    override func layout() {
+        super.layout()
+        guard let theme = presentationData?.theme else { return }
+        print("bounds: \(self.bounds)")
+        let gradientImageSize = self.bounds.size
+        let greyColors = theme.chatList.unpinnedArchiveAvatarColor.backgroundColors.colors
+        if self.gradientImageNode.image == nil {
+            let greyGradientImage = generateGradientImage(size: gradientImageSize, colors: [greyColors.0, greyColors.1], locations: [1.0, 0.0], direction: .horizontal)
+            self.gradientImageNode.image = greyGradientImage
+        }
+        
+        let blueColors = theme.chatList.pinnedArchiveAvatarColor.backgroundColors.colors
+        if self.animation.gradientImage == nil {
+            let blueGradientImage = generateGradientImage(size: gradientImageSize, colors: [blueColors.0, blueColors.1], locations: [1.0, 0.0], direction: .horizontal)
+            self.animation.gradientImage = blueGradientImage
+        }
+        
+        if self.animation.rotatedGradientImage == nil {
+            let blueRotatedGradientImage = generateGradientImage(size: gradientImageSize, colors: [blueColors.1, blueColors.0], locations: [1.0, 0.0], direction: .vertical)
+            self.animation.rotatedGradientImage = blueRotatedGradientImage
+        }
+        
+        let greyGradientColorAtFraction = greyColors.0.interpolateTo(greyColors.1, fraction: 40 / gradientImageSize.width)
+        if let greyGradientColorAtFraction, self.arrowSwipeDownIcon == nil {
+            self.arrowSwipeDownIcon = PresentationResourcesItemList.archiveTransitionArrowIcon(theme, backgroundColor: greyGradientColorAtFraction)
+        }
+
+        let blueGradientColorAtFraction = blueColors.0.interpolateTo(blueColors.1, fraction: 40 / gradientImageSize.width)
+        if let blueGradientColorAtFraction {
+            self.arrowReleaseBackgroundColor = blueGradientColorAtFraction
+            if self.arrowReleaseIcon == nil {
+                self.arrowReleaseIcon = PresentationResourcesItemList.archiveTransitionArrowIcon(theme, backgroundColor: blueGradientColorAtFraction)
+            }
+        }
+    }
         
     func updateLayout(transition: ContainedViewLayoutTransition, size: CGSize, params: ArchiveAnimationParams, presentationData: ChatListPresentationData, avatarNode: AvatarNode) {
         let frame = CGRect(origin: self.bounds.origin, size: CGSize(width: self.bounds.width, height: self.bounds.height))
@@ -120,17 +162,6 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
 //            transition = .animated(duration: 1.0, curve: .easeInOut)
 //        }
         
-        if self.gradientImageNode.image == nil || self.gradientImageNode.image?.size.width != size.width {
-            let gradientImageSize = CGSize(width: size.width, height: 76.0)
-            let gradientColors: [UIColor] = [UIColor(hexString: "#A9AFB7")!, UIColor(hexString: "#D3D4DA")!]
-            self.gradientImageNode.image = generateGradientImage(
-                size: gradientImageSize,
-                colors: gradientColors,
-                locations: [0.0, 1.0],
-                direction: .horizontal
-            )
-        }
-        
         transition.updatePosition(node: self.backgroundNode, position: frame.center)
         transition.updateBounds(node: self.backgroundNode, bounds: frame)
 
@@ -151,31 +182,19 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
             transition.updateBounds(node: self.arrowContainerNode, bounds: arrowFrame)
             switch self.animation.state {
             case .swipeDownInit, .swipeDownAppear, .swipeDownDidAppear:
-//                guard previousState == .releaseAppear || previousState == .releaseDidAppear || self.arrowImageNode.image == nil else { return }
-                let gradientColorAtFraction = UIColor(hexString: "#A9AFB7")!.interpolateTo(UIColor(hexString: "#D3D4DA")!, fraction: arrowFrame.midX / frame.size.width)
-                if let gradientColorAtFraction {
-                    self.arrowImageNode.image = PresentationResourcesItemList.archiveTransitionArrowIcon(presentationData.theme, backgroundColor: gradientColorAtFraction)
-                }
+                self.arrowImageNode.image = self.arrowSwipeDownIcon
             case .releaseDidAppear, .releaseAppear:
-//                guard previousState == .swipeDownInit || previousState == .swipeDownAppear || previousState == .swipeDownDidAppear || self.arrowImageNode.image == nil else { return }
-                let backgrpundColors = presentationData.theme.chatList.pinnedArchiveAvatarColor.backgroundColors.colors
-                let gradientColorAtFraction = backgrpundColors.1.interpolateTo(backgrpundColors.0, fraction: arrowFrame.midX / frame.size.width)
-                if let gradientColorAtFraction {
-                    self.arrowImageNode.image = PresentationResourcesItemList.archiveTransitionArrowIcon(presentationData.theme, backgroundColor: gradientColorAtFraction)
-                }
+                self.arrowImageNode.image = self.arrowReleaseIcon
             }
             transition.updatePosition(node: self.arrowImageNode, position: arrowFrame.center)
             transition.updateBounds(node: self.arrowImageNode, bounds: arrowFrame)
             
             if let size = self.arrowAnimationNode.preferredSize(), !params.finalizeAnimation {
                 let arrowAnimationFrame = CGRect(x: arrowFrame.midX - size.width / 2, y: arrowFrame.midY - size.height / 2, width: size.width, height: size.height)
-                let arrowCenterFraction = arrowAnimationFrame.midX / frame.size.width
-                let backgrpundColors = presentationData.theme.chatList.pinnedArchiveAvatarColor.backgroundColors.colors
-                let gradientColorAtFraction = backgrpundColors.1.interpolateTo(backgrpundColors.0, fraction: arrowCenterFraction)
-                if let gradientColorAtFraction, arrowAnimationNode.position != arrowAnimationFrame.center {
+                if let arrowReleaseBackgroundColor, arrowAnimationNode.position != arrowAnimationFrame.center {
                     arrowAnimationNode.setAnimation(name: "anim_arrow_to_archive", colors: [
-                        "Arrow 1.Arrow 1.Stroke 1": gradientColorAtFraction,
-                        "Arrow 2.Arrow 2.Stroke 1": gradientColorAtFraction,
+                        "Arrow 1.Arrow 1.Stroke 1": arrowReleaseBackgroundColor,
+                        "Arrow 2.Arrow 2.Stroke 1": arrowReleaseBackgroundColor,
                         "Cap.cap2.Fill 1": .white,
                         "Cap.cap1.Fill 1": .white,
                         "Box.box1.Fill 1": .white
@@ -199,8 +218,15 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                                          arrowContainerNode: self.arrowContainerNode,
                                          arrowAnimationNode: self.arrowAnimationNode,
                                          avatarNode: avatarNode,
-                                         transition: transition, finalizeCompletion: {
-                print("finalize compeltion")
+                                         transition: transition, finalizeCompletion: { [weak self] isFinished in
+                guard let self else { return }
+                if !isFinished {
+                    if self.hapticFeedback == nil {
+                        self.hapticFeedback = HapticFeedback()
+                    }
+                    self.hapticFeedback?.impact(.medium)
+                }
+                print("finalize compeltion: \(isFinished)")
             })
 
             let nodesToHide: [ASDisplayNode] = [self.gradientImageNode, self.backgroundNode]
@@ -270,15 +296,15 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         var gradientLayer: CALayer?
         var releaseTextNode: ASTextNode?
         
-        lazy var gradientImage: UIImage? = {
-            guard let presentationData, let gradientLayer, gradientLayer.frame.size.height > 0, self.params.storiesFraction > 0 else { return nil }
-            let size = gradientLayer.frame.size
-            let backgroundColors = presentationData.theme.chatList.pinnedArchiveAvatarColor.backgroundColors.colors
-            let gradientColors = [backgroundColors.0, backgroundColors.1]
-            return generateGradientImage(size: size,
-                                         colors: gradientColors,
-                                         locations: [1.0, 0.0], direction: .horizontal)
-        }()
+        var gradientImage: UIImage? {
+            didSet {
+                if let gradientLayer,
+                    gradientLayer.contents == nil {
+                    gradientLayer.contents = self.gradientImage
+                }
+            }
+        }
+        var rotatedGradientImage: UIImage?
         
         static func degreesToRadians(_ x: CGFloat) -> CGFloat {
             return .pi * x / 180.0
@@ -295,7 +321,7 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
             arrowAnimationNode: AnimationNode,
             avatarNode: AvatarNode,
             transition: ContainedViewLayoutTransition,
-            finalizeCompletion: (() -> Void)?
+            finalizeCompletion: ((Bool) -> Void)?
         ) {
             print("""
             animate layers with fraction: \(self.params.storiesFraction) animation progress: \(self.state.animationProgress(fraction: self.params.storiesFraction))
@@ -357,6 +383,7 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                     //play animation arrow to archive
                     //update gradient mask path to avatar node frame
                     //scale up then scale down avatar node gradient
+                    finalizeCompletion?(false)
                     arrowAnimationNode.isHidden = false
                     let newPosition = CGPoint(x: arrowAnimationNode.position.x, y: gradientNode.position.y)
                     transition.updatePosition(node: arrowAnimationNode, position: newPosition)
@@ -372,7 +399,7 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                         print("arrow animation node finish animation")
                         arrowAnimationNode?.isHidden = true
                         gradientLayer?.removeFromSuperlayer()
-                        finalizeCompletion?()
+                        finalizeCompletion?(true)
                     }
 
                     arrowAnimationNode.play()
@@ -469,11 +496,7 @@ extension ChatListArchiveTransitionNode.TransitionAnimation {
             self.releaseTextNode?.attributedText = NSAttributedString(string: "Release for archive", attributes: attributes)
             guard let supernode = textNode.supernode else { return }
             supernode.addSubnode(self.releaseTextNode!)
-            
-//            let textLayout = releaseTextNode.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 100, height: 25), max: CGSize(width: supernode.frame.width - 120, height: 25)))
-//            self.releaseTextNode?.frame = CGRect(x: -textLayout.size.width, y: supernode.frame.height - textLayout.size.height - 8, width: textLayout.size.width, height: textLayout.size.height)
         }
-
     }
     
     mutating internal func makeGradientOverlay(gradientContainerNode: ASDisplayNode, arrowContainerNode: ASDisplayNode) {
@@ -505,7 +528,7 @@ extension ChatListArchiveTransitionNode.TransitionAnimation {
         }
         
         if gradientLayer.contents == nil {
-            gradientLayer.contents = self.getGradientImageOrUpdate()?.cgImage
+            gradientLayer.contents = self.gradientImage?.cgImage
         }
     }
     
@@ -524,24 +547,5 @@ extension ChatListArchiveTransitionNode.TransitionAnimation {
         
         let path = UIBezierPath(roundedRect: transformedRect, cornerRadius: scaledRadius)
         return path
-    }
-
-    mutating func getGradientImageOrUpdate() -> UIImage? {
-        if let gradientImage, gradientImage.size.height > 1 {
-            return gradientImage
-        } else if let presentationData, let gradientLayer, gradientLayer.frame.size.height > 0, self.params.storiesFraction > 0 {
-            let size = gradientLayer.frame.size
-            let backgroundColors = presentationData.theme.chatList.pinnedArchiveAvatarColor.backgroundColors.colors
-            let gradientColors: [UIColor] = [backgroundColors.0, backgroundColors.1]
-            self.gradientImage = generateGradientImage(
-                size: size,
-                colors: gradientColors,
-                locations: [1.0, 0.0],
-                direction: .horizontal
-            )
-            return self.gradientImage
-        } else {
-            return nil
-        }
     }
 }
