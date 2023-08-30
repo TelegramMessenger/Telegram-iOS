@@ -1,4 +1,4 @@
-//import Foundation
+import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
@@ -81,14 +81,14 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
     }
         
     func updateLayout(transition: ContainedViewLayoutTransition, size: CGSize, params: ArchiveAnimationParams, presentationData: ChatListPresentationData, avatarNode: AvatarNode) {
-        let frame = CGRect(origin: self.bounds.origin, size: CGSize(width: self.bounds.width, height: self.bounds.height + 10))
+        let frame = CGRect(origin: self.bounds.origin, size: CGSize(width: self.bounds.width, height: self.bounds.height))
 //        var transition = transition
         
 //        guard self.animation.params != params || self.frame.size != size else { return }
         let updateLayers = self.animation.params != params
         
         self.animation.params = params
-        print("params: \(params) \nprevious params: \(self.animation.params) \nsize: \(size) previous size: \(self.frame.size)")
+//        print("params: \(params) \nprevious params: \(self.animation.params) \nsize: \(size) previous size: \(self.frame.size)")
         let previousState = self.animation.state
         self.animation.state = .init(params: params, previousState: previousState)
         
@@ -134,15 +134,9 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
             ])
         }
 
-        let textLayout = self.titleNode.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 100, height: 25), max: CGSize(width: size.width - 120, height: 25)))
-        let titleFrame = CGRect(x: (size.width - textLayout.size.width) / 2,
-                                y: size.height - textLayout.size.height - 10,
-                                width: textLayout.size.width,
-                                height: textLayout.size.height)
 
-
-        transition.updatePosition(node: self.titleNode, position: titleFrame.center)
-        transition.updateBounds(node: self.titleNode, bounds: titleFrame)
+//        transition.updatePosition(node: self.titleNode, position: titleFrame.center)
+//        transition.updateBounds(node: self.titleNode, bounds: titleFrame)
         
         if updateLayers {
             self.animation.animateLayers(gradientNode: self.gradientContainerNode,
@@ -189,20 +183,29 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
             case right
         }
         
-        enum State {
+        enum State: Int {
             case swipeDownInit
             case releaseAppear
+            case releaseDidAppear
             case swipeDownAppear
-            case transitionToArchive
+            case swipeDownDidAppear
             
             init(params: ArchiveAnimationParams, previousState: TransitionAnimation.State) {
                 let fraction = params.storiesFraction
-                if params.storiesFraction < 0.7 {
-                    self = .swipeDownAppear
-                } else if fraction >= 0.7 && fraction < 1.0 {
-                    self = .releaseAppear
-                } else if fraction >= 1.0 {
-                    self = .transitionToArchive
+                if params.storiesFraction < 0.8 {
+                    switch previousState {
+                    case .swipeDownAppear, .swipeDownInit, .swipeDownDidAppear:
+                        self = .swipeDownDidAppear
+                    default:
+                        self = .swipeDownAppear
+                    }
+                } else if fraction >= 0.8 && fraction <= 1.0 {
+                    switch previousState {
+                    case .releaseAppear, .releaseDidAppear:
+                        self = .releaseDidAppear
+                    default:
+                        self = .releaseAppear
+                    }
                 } else {
                     self = .swipeDownInit
                 }
@@ -251,144 +254,56 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
             return sqrt(pow((point.x - from.x), 2) + pow((point.y - from.y), 2))
         }
         
-//
-//        mutating func animateLayers(gradientNode: ASDisplayNode, textNode: ASTextNode, arrowContainerNode: ASDisplayNode, completion: (() -> Void)?) {
-//            print("""
-//            animate layers with fraction: \(self.params.storiesFraction) animation progress: \(self.state.animationProgress(fraction: self.params.storiesFraction))
-//            state: \(self.state), offset: \(self.params.scrollOffset) height: \(self.params.expandedHeight)
-//            ##
-//            """)
-//            CATransaction.begin()
-//            CATransaction.setCompletionBlock {
-//                completion?()
-//            }
-//            CATransaction.completionBlock()
-//            CATransaction.setAnimationDuration(1.0)
-//            if !(arrowContainerNode.layer.animationKeys()?.contains(where: { $0 == "arrow_rotation" }) ?? false) {
-//                let rotationAnimation = makeArrowRotationAnimation(arrowContainerNode: arrowContainerNode, isRotated: true)
-//                self.rotationPausedTime = arrowContainerNode.layer.convertTime(CACurrentMediaTime(), from: nil)
-//                arrowContainerNode.layer.speed = .zero
-//                arrowContainerNode.layer.timeOffset = self.rotationPausedTime
-//                arrowContainerNode.layer.add(rotationAnimation, forKey: "arrow_rotation")
-//            }
-//
-//            updateReleaseTextNode(from: textNode)
-//            if let releaseTextNode, !(releaseTextNode.layer.animationKeys()?.contains(where: { $0 == "translate_text" }) ?? false) {
-//                let releaseTextAnimation = makeTextSwipeAnimation(textNode: releaseTextNode, direction: .right)
-//                self.releaseSwipePausedTime = releaseTextNode.layer.convertTime(CACurrentMediaTime(), from: nil)
-//                releaseTextNode.layer.speed = .zero
-//                releaseTextNode.layer.timeOffset = self.releaseSwipePausedTime
-//                releaseTextNode.layer.add(releaseTextAnimation, forKey: "translate_text")
-//            }
-//
-//            if !(textNode.layer.animationKeys()?.contains(where: { $0 == "translate_text" }) ?? false) {
-//                let swipeAnimation = makeTextSwipeAnimation(textNode: textNode, direction: .right)
-//                self.swipeTextPausedTime = arrowContainerNode.layer.convertTime(CACurrentMediaTime(), from: nil)
-//                textNode.layer.speed = .zero
-//                textNode.layer.timeOffset = self.swipeTextPausedTime
-//                textNode.layer.add(swipeAnimation, forKey: "translate_text")
-//            }
-//            makeGradientOverlay(gradientContainerNode: gradientNode, arrowContainerNode: arrowContainerNode)
-//            if let gradientMaskLayer, !(gradientMaskLayer.animationKeys()?.contains(where: { $0 == "gradient_path_transition" }) ?? false) {
-//                let pathAnimatin = makeGradientAppearingAnimation(gradientMaskLayer: gradientMaskLayer, gradientContainerNode: gradientNode, arrowContainerNode: arrowContainerNode)
-//                self.gradientPathPausedTime = gradientMaskLayer.convertTime(CACurrentMediaTime(), from: nil)
-//                gradientMaskLayer.speed = .zero
-//                gradientMaskLayer.timeOffset = self.gradientPathPausedTime
-//                gradientMaskLayer.add(pathAnimatin, forKey: "gradient_path_transition")
-//            }
-//
-//            switch state {
-//            case .releaseAppear:
-//                let animationProgress = self.state.animationProgress(fraction: self.params.storiesFraction)
-//                arrowContainerNode.layer.timeOffset = self.rotationPausedTime + animationProgress
-//                releaseTextNode?.layer.timeOffset = self.releaseSwipePausedTime + animationProgress
-//                textNode.layer.timeOffset = self.swipeTextPausedTime + animationProgress
-//                gradientMaskLayer?.timeOffset = self.gradientPathPausedTime + animationProgress
-//            case .swipeDownAppear, .swipeDownInit:
-//                arrowContainerNode.layer.beginTime = CACurrentMediaTime()
-//                arrowContainerNode.layer.speed = -1
-//                arrowContainerNode.layer.removeAllAnimations()
-//
-//                textNode.layer.beginTime = CACurrentMediaTime()
-//                textNode.layer.speed = -1
-//                textNode.layer.removeAllAnimations()
-//
-//                releaseTextNode?.layer.beginTime = CACurrentMediaTime()
-//                releaseTextNode?.layer.speed = -1
-//                releaseTextNode?.layer.removeAllAnimations()
-//
-//                gradientMaskLayer?.beginTime = CACurrentMediaTime()
-//                gradientMaskLayer?.speed = -1
-//                gradientMaskLayer?.removeAllAnimations()
-//                print("set speed -1")
-//
-//            case .transitionToArchive:
-//                arrowContainerNode.layer.timeOffset = self.rotationPausedTime + 0.99
-//                releaseTextNode?.layer.timeOffset = self.releaseSwipePausedTime + 0.99
-//                textNode.layer.timeOffset = self.swipeTextPausedTime + 0.99
-//                gradientMaskLayer?.timeOffset = self.gradientPathPausedTime + 0.99
-//            }
-//            CATransaction.commit()
-//            self.isAnimated = true
-//        }
-        
         mutating func animateLayers(gradientNode: ASDisplayNode, textNode: ASTextNode, arrowContainerNode: ASDisplayNode, transition: ContainedViewLayoutTransition) {
-//            print("""
-//            animate layers with fraction: \(self.params.storiesFraction) animation progress: \(self.state.animationProgress(fraction: self.params.storiesFraction))
-//            state: \(self.state), offset: \(self.params.scrollOffset) height: \(self.params.expandedHeight)
-//            ##
-//            """)
-//            if !(arrowContainerNode.layer.animationKeys()?.contains(where: { $0 == "arrow_rotation" }) ?? false) {
-//                let rotationAnimation = makeArrowRotationAnimation(arrowContainerNode: arrowContainerNode, isRotated: true)
-//                self.rotationPausedTime = arrowContainerNode.layer.convertTime(CACurrentMediaTime(), from: nil)
-//                arrowContainerNode.layer.speed = .zero
-//                arrowContainerNode.layer.timeOffset = self.rotationPausedTime
-//                arrowContainerNode.layer.add(rotationAnimation, forKey: "arrow_rotation")
-//            }
-            
-            updateReleaseTextNode(from: textNode)
-//            if let releaseTextNode, !(releaseTextNode.layer.animationKeys()?.contains(where: { $0 == "translate_text" }) ?? false) {
-//                let releaseTextAnimation = makeTextSwipeAnimation(textNode: releaseTextNode, direction: .right)
-//                self.releaseSwipePausedTime = releaseTextNode.layer.convertTime(CACurrentMediaTime(), from: nil)
-//                releaseTextNode.layer.speed = .zero
-//                releaseTextNode.layer.timeOffset = self.releaseSwipePausedTime
-//                releaseTextNode.layer.add(releaseTextAnimation, forKey: "translate_text")
-//            }
-            
-//            if !(textNode.layer.animationKeys()?.contains(where: { $0 == "translate_text" }) ?? false) {
-//                let swipeAnimation = makeTextSwipeAnimation(textNode: textNode, direction: .right)
-//                self.swipeTextPausedTime = arrowContainerNode.layer.convertTime(CACurrentMediaTime(), from: nil)
-//                textNode.layer.speed = .zero
-//                textNode.layer.timeOffset = self.swipeTextPausedTime
-//                textNode.layer.add(swipeAnimation, forKey: "translate_text")
-//            }
-            makeGradientOverlay(gradientContainerNode: gradientNode, arrowContainerNode: arrowContainerNode)
-//            if let gradientMaskLayer, !(gradientMaskLayer.animationKeys()?.contains(where: { $0 == "gradient_path_transition" }) ?? false) {
-//                let pathAnimatin = makeGradientAppearingAnimation(gradientMaskLayer: gradientMaskLayer, gradientContainerNode: gradientNode, arrowContainerNode: arrowContainerNode)
-//                self.gradientPathPausedTime = gradientMaskLayer.convertTime(CACurrentMediaTime(), from: nil)
-//                gradientMaskLayer.speed = .zero
-//                gradientMaskLayer.timeOffset = self.gradientPathPausedTime
-//                gradientMaskLayer.add(pathAnimatin, forKey: "gradient_path_transition")
-//            }
+            print("""
+            animate layers with fraction: \(self.params.storiesFraction) animation progress: \(self.state.animationProgress(fraction: self.params.storiesFraction))
+            state: \(self.state), offset: \(self.params.scrollOffset) height: \(self.params.expandedHeight)
+            ##
+            """)
             
             switch state {
             case .releaseAppear:
-                let animationProgress = self.state.animationProgress(fraction: self.params.storiesFraction)
+                updateReleaseTextNode(from: textNode)
+                makeGradientOverlay(gradientContainerNode: gradientNode, arrowContainerNode: arrowContainerNode)
+
+                let animationProgress = 1.0//self.state.animationProgress(fraction: self.params.storiesFraction)
                 
                 let rotationDegree = TransitionAnimation.degreesToRadians(CGFloat(0).interpolate(to: CGFloat(-180), amount: animationProgress))
                 transition.updateTransformRotation(node: arrowContainerNode, angle: rotationDegree)
                 
                 if let releaseTextNode, let supernode = releaseTextNode.supernode {
-                    let targetPosition = supernode.bounds.center.offsetBy(dx: -supernode.bounds.width, dy: .zero).interpolate(to: supernode.bounds.center, amount: animationProgress)
-                    transition.updatePosition(node: releaseTextNode, position: targetPosition)
-                        
-                    let textNodeTargetPosition = supernode.bounds.center.interpolate(to: supernode.bounds.center.offsetBy(dx: supernode.bounds.width, dy: .zero), amount: animationProgress)
-                    transition.updatePosition(node: textNode, position: textNodeTargetPosition)
+                    let textLayout = textNode.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 100, height: 25), max: CGSize(width: supernode.bounds.width - 120, height: 25)))
+                    let titleFrame = CGRect(x: supernode.bounds.width + textLayout.size.width/2,
+                                            y: supernode.bounds.height - textLayout.size.height - 10,
+                                            width: textLayout.size.width,
+                                            height: textLayout.size.height)
+
+                    let releaseTextLayout = releaseTextNode.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 100, height: 25), max: CGSize(width: supernode.bounds.width - 120, height: 25)))
+                    let releaseNodeFrame = CGRect(x: (supernode.bounds.width - releaseTextLayout.size.width) / 2, y: supernode.bounds.height - releaseTextLayout.size.height - 8, width: releaseTextLayout.size.width, height: releaseTextLayout.size.height)
+
+                    
+//                    let targetPosition = supernode.bounds.center.offsetBy(dx: -supernode.bounds.width, dy: .zero).interpolate(to: supernode.bounds.center, amount: animationProgress)
+                    transition.updatePosition(node: releaseTextNode, position: releaseNodeFrame.center)
+                    transition.updateBounds(node: releaseTextNode, bounds: releaseNodeFrame)
+                    
+//                    let textNodeTargetPosition = textNode.position.interpolate(to: textNode.position.offsetBy(dx: supernode.bounds.width, dy: .zero), amount: animationProgress)
+                    transition.updatePosition(node: textNode, position: titleFrame.center)
+                    transition.updateBounds(node: textNode, bounds: titleFrame)
                 }
                                 
                 if let gradientMaskLayer {
                     let targetPath = generateGradientMaskPath(gradientContainerNode: gradientNode, arrowContainerNode: arrowContainerNode, fraction: animationProgress)
                     transition.updatePath(layer: gradientMaskLayer, path: targetPath.cgPath)
+                }
+                
+            case .releaseDidAppear:
+                if params.finalizeAnimation {
+                    print("should finalize animation")
+                    //duration = 0.5
+                    //show animation arrow node
+                    //play animation arrow to archive
+                    //update gradient mask path to avatar node frame
+                    //scale up then scale down avatar node gradient
                 }
             case .swipeDownAppear, .swipeDownInit:
                 let animationProgress: CGFloat = 0.0
@@ -397,18 +312,34 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                 transition.updateTransformRotation(node: arrowContainerNode, angle: rotationDegree)
                 
                 if let releaseTextNode, let supernode = releaseTextNode.supernode {
-                    let targetPosition = supernode.bounds.center.offsetBy(dx: -supernode.bounds.width, dy: .zero).interpolate(to: supernode.bounds.center, amount: animationProgress)
-                    transition.updatePosition(node: releaseTextNode, position: targetPosition)
-                        
-                    let textNodeTargetPosition = supernode.bounds.center.interpolate(to: supernode.bounds.center.offsetBy(dx: supernode.bounds.width, dy: .zero), amount: animationProgress)
-                    transition.updatePosition(node: textNode, position: textNodeTargetPosition)
+                    let releaseTextLayout = releaseTextNode.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 100, height: 25),
+                                                                                                max: CGSize(width: supernode.bounds.width - 120, height: 25)))
+                    let releaseNodeFrame = CGRect(x: -releaseTextLayout.size.width,
+                                                  y: supernode.bounds.height - releaseTextLayout.size.height - 8,
+                                                  width: releaseTextLayout.size.width,
+                                                  height: releaseTextLayout.size.height)
+
+                    
+//                    let targetPosition = supernode.bounds.center.offsetBy(dx: -supernode.bounds.width, dy: .zero).interpolate(to: supernode.bounds.center, amount: animationProgress)
+                    transition.updatePosition(node: releaseTextNode, position: releaseNodeFrame.center)
+                    transition.updateBounds(node: releaseTextNode, bounds: releaseNodeFrame)
+
+                    let textLayout = textNode.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 100, height: 25), max: CGSize(width: supernode.bounds.width - 120, height: 25)))
+                    let titleFrame = CGRect(x: (supernode.bounds.width - textLayout.size.width)/2,
+                                            y: supernode.bounds.height - textLayout.size.height - 10,
+                                            width: textLayout.size.width,
+                                            height: textLayout.size.height)
+
+//                    let textNodeTargetPosition = textNode.position.interpolate(to: textNode.position.offsetBy(dx: supernode.bounds.width, dy: .zero), amount: animationProgress)
+                    transition.updatePosition(node: textNode, position: titleFrame.center)
+                    transition.updateBounds(node: textNode, bounds: titleFrame)
                 }
                                 
                 if let gradientMaskLayer {
                     let targetPath = generateGradientMaskPath(gradientContainerNode: gradientNode, arrowContainerNode: arrowContainerNode, fraction: animationProgress)
                     transition.updatePath(layer: gradientMaskLayer, path: targetPath.cgPath)
                 }
-            case .transitionToArchive:
+            case .swipeDownDidAppear:
                 if params.finalizeAnimation {
                     print("should finalize animation")
                     //duration = 0.5
@@ -416,24 +347,6 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                     //play animation arrow to archive
                     //update gradient mask path to avatar node frame
                     //scale up then scale down avatar node gradient
-                } else {
-                    let animationProgress = self.state.animationProgress(fraction: self.params.storiesFraction)
-                    
-                    let rotationDegree = TransitionAnimation.degreesToRadians(CGFloat(0).interpolate(to: CGFloat(-180), amount: animationProgress))
-                    transition.updateTransformRotation(node: arrowContainerNode, angle: rotationDegree)
-                    
-                    if let releaseTextNode, let supernode = releaseTextNode.supernode {
-                        let targetPosition = supernode.bounds.center.offsetBy(dx: -supernode.bounds.width, dy: .zero).interpolate(to: supernode.bounds.center, amount: animationProgress)
-                        transition.updatePosition(node: releaseTextNode, position: targetPosition)
-                            
-                        let textNodeTargetPosition = supernode.bounds.center.interpolate(to: supernode.bounds.center.offsetBy(dx: supernode.bounds.width, dy: .zero), amount: animationProgress)
-                        transition.updatePosition(node: textNode, position: textNodeTargetPosition)
-                    }
-                                    
-                    if let gradientMaskLayer {
-                        let targetPath = generateGradientMaskPath(gradientContainerNode: gradientNode, arrowContainerNode: arrowContainerNode, fraction: animationProgress)
-                        transition.updatePath(layer: gradientMaskLayer, path: targetPath.cgPath)
-                    }
                 }
             }
             self.isAnimated = true
@@ -520,12 +433,11 @@ extension ChatListArchiveTransitionNode.TransitionAnimation {
             self.releaseTextNode?.attributedText = NSAttributedString(string: "Release for archive", attributes: attributes)
             guard let supernode = textNode.supernode else { return }
             supernode.addSubnode(self.releaseTextNode!)
+            
+//            let textLayout = releaseTextNode.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 100, height: 25), max: CGSize(width: supernode.frame.width - 120, height: 25)))
+//            self.releaseTextNode?.frame = CGRect(x: -textLayout.size.width, y: supernode.frame.height - textLayout.size.height - 8, width: textLayout.size.width, height: textLayout.size.height)
         }
 
-        if let releaseTextNode, let supernode = releaseTextNode.supernode, state != .transitionToArchive {
-            let textLayout = releaseTextNode.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 100, height: 25), max: CGSize(width: supernode.frame.width - 120, height: 25)))
-            self.releaseTextNode?.frame = CGRect(x: -textLayout.size.width, y: supernode.frame.height - textLayout.size.height - 8, width: textLayout.size.width, height: textLayout.size.height)
-        }
     }
     
     mutating internal func makeGradientOverlay(gradientContainerNode: ASDisplayNode, arrowContainerNode: ASDisplayNode) {
@@ -538,13 +450,22 @@ extension ChatListArchiveTransitionNode.TransitionAnimation {
         }
         
         guard let gradientLayer, let gradientMaskLayer else { return }
-        gradientMaskLayer.frame = gradientContainerNode.bounds
+        if gradientMaskLayer.frame != gradientContainerNode.bounds {
+            gradientMaskLayer.frame = gradientContainerNode.bounds
+            gradientMaskLayer.path = generateGradientMaskPath(gradientContainerNode: gradientContainerNode, arrowContainerNode: arrowContainerNode, fraction: 0).cgPath
+        }
         
-        gradientMaskLayer.path = generateGradientMaskPath(gradientContainerNode: gradientContainerNode, arrowContainerNode: arrowContainerNode, fraction: 0).cgPath
+        if gradientLayer.frame != gradientContainerNode.bounds {
+            gradientLayer.frame = gradientContainerNode.bounds
+        }
         
-        gradientLayer.frame = gradientContainerNode.bounds
-        gradientLayer.mask = gradientMaskLayer
-        gradientLayer.contents = self.getGradientImageOrUpdate()?.cgImage
+        if gradientLayer.mask == nil {
+            gradientLayer.mask = gradientMaskLayer
+        }
+        
+        if gradientLayer.contents == nil {
+            gradientLayer.contents = self.getGradientImageOrUpdate()?.cgImage
+        }
     }
     
     internal func generateGradientMaskPath(gradientContainerNode: ASDisplayNode, arrowContainerNode: ASDisplayNode, fraction: CGFloat) -> UIBezierPath {
@@ -552,7 +473,7 @@ extension ChatListArchiveTransitionNode.TransitionAnimation {
         let startRadius = startRect.width / 2
         
         let finalScale = gradientContainerNode.bounds.width/startRect.width + gradientContainerNode.bounds.width/startRect.width*(gradientContainerNode.bounds.width - startRect.midX)/gradientContainerNode.bounds.width
-        let scale: CGFloat = max(1.0, (finalScale * fraction))
+        let scale: CGFloat = (finalScale * fraction)//max(1.0, (finalScale * fraction))
         let scaleTransform = CGAffineTransform(scaleX: scale, y: scale)
         var transformedRect = startRect.applying(scaleTransform)
         let translation = CGPoint(x: startRect.center.x - transformedRect.center.x, y: startRect.center.y - transformedRect.center.y)
