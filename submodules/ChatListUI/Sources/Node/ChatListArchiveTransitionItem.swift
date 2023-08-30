@@ -57,10 +57,9 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         
         self.arrowAnimationNode = AnimationNode(animation: "anim_arrow_to_archive", scale: 0.33)
         self.arrowAnimationNode.backgroundColor = .clear
-        self.arrowAnimationNode.isHidden = true
+//        self.arrowAnimationNode.isHidden = true
         
         super.init()
-        self.backgroundColor = .red
         self.addSubnode(self.gradientContainerNode)
         self.gradientContainerNode.addSubnode(self.gradientImageNode)
         self.addSubnode(self.backgroundNode)
@@ -77,7 +76,7 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         
     func updateLayout(transition: ContainedViewLayoutTransition, size: CGSize, params: ArchiveAnimationParams, presentationData: ChatListPresentationData, avatarNode: AvatarNode) {
         let frame = CGRect(origin: self.bounds.origin, size: CGSize(width: self.bounds.width, height: self.bounds.height))
-//        var transition = transition
+        var transition = transition
         
 //        guard self.animation.params != params || self.frame.size != size else { return }
         let updateLayers = self.animation.params != params
@@ -87,9 +86,9 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         let previousState = self.animation.state
         self.animation.state = .init(params: params, previousState: previousState)
         
-//        if self.animation.state != previousState {
-//            transition = .immediate
-//        }
+        if self.animation.state != previousState {
+            transition = .immediate
+        }
         
         if self.gradientImageNode.image == nil || self.gradientImageNode.image?.size.width != size.width {
             let gradientImageSize = CGSize(width: size.width, height: 76.0)
@@ -154,8 +153,18 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                                          arrowAnimationNode: self.arrowAnimationNode,
                                          avatarNode: avatarNode,
                                          transition: transition)
+
+            let nodesToHide: [ASDisplayNode] = [self.gradientImageNode, self.backgroundNode]
+
+            if self.animation.state == .releaseDidAppear && params.finalizeAnimation {
+                nodesToHide.forEach({ $0.isHidden = true })
+            } else {
+                nodesToHide.forEach({ $0.isHidden = false })
+            }
         }
     }
+    
+    
     
     struct TransitionAnimation {
         enum Direction {
@@ -249,7 +258,6 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
             """)
             
             if !arrowAnimationNode.isHidden, state != .releaseDidAppear {
-                arrowContainerNode.subnodes?.filter({ $0.isHidden }).forEach({ $0.isHidden = false })
                 arrowAnimationNode.isHidden = true
             }
             
@@ -273,12 +281,9 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                     let releaseTextLayout = releaseTextNode.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 100, height: 25), max: CGSize(width: supernode.bounds.width - 120, height: 25)))
                     let releaseNodeFrame = CGRect(x: (supernode.bounds.width - releaseTextLayout.size.width) / 2, y: supernode.bounds.height - releaseTextLayout.size.height - 8, width: releaseTextLayout.size.width, height: releaseTextLayout.size.height)
 
-                    
-//                    let targetPosition = supernode.bounds.center.offsetBy(dx: -supernode.bounds.width, dy: .zero).interpolate(to: supernode.bounds.center, amount: animationProgress)
                     transition.updatePosition(node: releaseTextNode, position: releaseNodeFrame.center)
                     transition.updateBounds(node: releaseTextNode, bounds: releaseNodeFrame)
                     
-//                    let textNodeTargetPosition = textNode.position.interpolate(to: textNode.position.offsetBy(dx: supernode.bounds.width, dy: .zero), amount: animationProgress)
                     transition.updatePosition(node: textNode, position: titleFrame.center)
                     transition.updateBounds(node: textNode, bounds: titleFrame)
                 }
@@ -296,24 +301,24 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                     //play animation arrow to archive
                     //update gradient mask path to avatar node frame
                     //scale up then scale down avatar node gradient
-                    arrowContainerNode.subnodes?.forEach({ $0.isHidden = true })
                     arrowAnimationNode.isHidden = false
-//                    let newPosition = CGPoint(x: arrowAnimationNode.position.x, y: gradientNode.position.y)
-//                    transition.updatePosition(node: arrowAnimationNode, position: newPosition)
+                    let newPosition = CGPoint(x: arrowAnimationNode.position.x, y: gradientNode.position.y)
+                    transition.updatePosition(node: arrowAnimationNode, position: newPosition)
                     
-                    arrowAnimationNode.completion = {
+                    arrowAnimationNode.completion = { [weak arrowAnimationNode, weak gradientLayer] in
                         print("arrow animation node finish animation")
+                        arrowAnimationNode?.isHidden = true
+                        gradientLayer?.removeFromSuperlayer()
                     }
-                    
-                    arrowAnimationNode.reset()
+
                     arrowAnimationNode.play()
                     
-//                    let avatarNodeFrame = avatarNode.convert(avatarNode.frame, to: gradientNode)
-//                    if let gradientMaskLayer {
-//                        let targetPath = UIBezierPath(roundedRect: avatarNodeFrame, cornerRadius: avatarNodeFrame.width / 2).cgPath
-//                        transition.updatePath(layer: gradientMaskLayer, path: targetPath)
-//                    }
-//                    print("avatar node frame: \(avatarNode.convert(avatarNode.frame, to: gradientNode))")
+                    let avatarNodeFrame = avatarNode.convert(avatarNode.frame, to: gradientNode)
+                    if let gradientMaskLayer {
+                        let targetPath = UIBezierPath(roundedRect: avatarNodeFrame, cornerRadius: avatarNodeFrame.width / 2).cgPath
+                        transition.updatePath(layer: gradientMaskLayer, path: targetPath)
+                    }
+                    print("avatar node frame: \(avatarNode.convert(avatarNode.frame, to: gradientNode))")
                 }
             case .swipeDownAppear, .swipeDownInit:
                 let animationProgress: CGFloat = 0.0

@@ -1247,7 +1247,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.separatorNode.isLayerBacked = true
         
         self.archiveTransitionNode = ChatListArchiveTransitionNode()
-        self.archiveTransitionNode.isLayerBacked = true
 
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
