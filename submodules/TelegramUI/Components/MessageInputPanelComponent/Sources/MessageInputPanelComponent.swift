@@ -143,6 +143,7 @@ public final class MessageInputPanelComponent: Component {
     public let disabledPlaceholder: String?
     public let isChannel: Bool
     public let storyItem: EngineStoryItem?
+    public let chatLocation: ChatLocation?
     
     public init(
         externalState: ExternalState,
@@ -193,7 +194,8 @@ public final class MessageInputPanelComponent: Component {
         forceIsEditing: Bool,
         disabledPlaceholder: String?,
         isChannel: Bool,
-        storyItem: EngineStoryItem?
+        storyItem: EngineStoryItem?,
+        chatLocation: ChatLocation?
     ) {
         self.externalState = externalState
         self.context = context
@@ -244,6 +246,7 @@ public final class MessageInputPanelComponent: Component {
         self.disabledPlaceholder = disabledPlaceholder
         self.isChannel = isChannel
         self.storyItem = storyItem
+        self.chatLocation = chatLocation
     }
     
     public static func ==(lhs: MessageInputPanelComponent, rhs: MessageInputPanelComponent) -> Bool {
@@ -344,6 +347,9 @@ public final class MessageInputPanelComponent: Component {
             return false
         }
         if lhs.storyItem != rhs.storyItem {
+            return false
+        }
+        if lhs.chatLocation != rhs.chatLocation {
             return false
         }
         return true
@@ -559,7 +565,7 @@ public final class MessageInputPanelComponent: Component {
             if component.queryTypes.contains(.emoji) {
                 availableTypes.append(.emoji)
             }
-            let contextQueryUpdates = contextQueryResultState(context: context, inputState: inputState, availableTypes: availableTypes, currentQueryStates: &self.contextQueryStates)
+            let contextQueryUpdates = contextQueryResultState(context: context, inputState: inputState, availableTypes: availableTypes, chatLocation: component.chatLocation, currentQueryStates: &self.contextQueryStates)
 
             for (kind, update) in contextQueryUpdates {
                 switch update {
@@ -705,6 +711,7 @@ public final class MessageInputPanelComponent: Component {
                             return value
                         }
                     },
+                    resetScrollOnFocusChange: component.style == .media,
                     formatMenuAvailability: component.isFormattingLocked ? .locked : .available,
                     lockedFormatAction: {
                         component.presentTextFormattingTooltip?()
@@ -780,6 +787,7 @@ public final class MessageInputPanelComponent: Component {
             }
                         
             transition.setFrame(view: self.vibrancyEffectView, frame: CGRect(origin: CGPoint(), size: fieldBackgroundFrame.size))
+            self.vibrancyEffectView.isHidden = component.style == .media
             
             transition.setFrame(view: self.fieldBackgroundView, frame: fieldBackgroundFrame)
             self.fieldBackgroundView.update(size: fieldBackgroundFrame.size, cornerRadius: baseFieldHeight * 0.5, transition: transition.containedViewLayoutTransition)
@@ -1446,6 +1454,7 @@ public final class MessageInputPanelComponent: Component {
                 }
             }
             
+            let accentColor = component.theme.chat.inputPanel.panelControlAccentColor
             if let timeoutAction = component.timeoutAction, let timeoutValue = component.timeoutValue {
                 func generateIcon(value: String, selected: Bool) -> UIImage? {
                     let image = UIImage(bundleImageName: "Media Editor/Timeout")!
@@ -1456,7 +1465,7 @@ public final class MessageInputPanelComponent: Component {
                         context.clear(bounds)
                         
                         if selected {
-                            context.setFillColor(UIColor(rgb: 0x3478f6).cgColor)
+                            context.setFillColor(accentColor.cgColor)
                             context.fillEllipse(in: CGRect(origin: .zero, size: size))
                         } else {
                             if let cgImage = image.cgImage {
@@ -1682,8 +1691,12 @@ public final class MessageInputPanelComponent: Component {
             
             self.updateContextQueries()
                     
-            let panelLeftInset: CGFloat = max(insets.left, 7.0)
-            let panelRightInset: CGFloat = max(insets.right, 41.0)
+            var panelLeftInset: CGFloat = max(insets.left, 7.0)
+            var panelRightInset: CGFloat = max(insets.right, 41.0)
+            if case .media = component.style {
+                panelLeftInset = 0.0
+                panelRightInset = 0.0
+            }
             
             var contextResults: ContextResultPanelComponent.Results?
             if let result = self.contextQueryResults[.mention], case let .mentions(mentions) = result, !mentions.isEmpty {
@@ -1815,7 +1828,13 @@ public final class MessageInputPanelComponent: Component {
                     containerSize: CGSize(width: availableSize.width - panelLeftInset - panelRightInset, height: availablePanelHeight)
                 )
                 
-                let panelFrame = CGRect(origin: CGPoint(x: insets.left, y: -panelSize.height + 14.0), size: CGSize(width: panelSize.width, height: panelSize.height + 19.0))
+                var panelOriginY = -panelSize.height + 14.0
+                var panelHeight = panelSize.height + 19.0
+                if case .media = component.style {
+                    panelOriginY -= 6.0
+                    panelHeight = panelSize.height
+                }
+                let panelFrame = CGRect(origin: CGPoint(x: panelLeftInset, y: panelOriginY), size: CGSize(width: panelSize.width, height: panelHeight))
                 if let panelView = panel.view as? ContextResultPanelComponent.View {
                     if panelView.superview == nil {
                         self.insertSubview(panelView, at: 0)

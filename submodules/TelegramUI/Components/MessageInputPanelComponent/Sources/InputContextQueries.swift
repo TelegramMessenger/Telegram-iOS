@@ -5,6 +5,7 @@ import TextFieldComponent
 import ChatContextQuery
 import AccountContext
 import TelegramUIPreferences
+import SearchPeerMembers
 
 func textInputStateContextQueryRangeAndType(inputState: TextFieldComponent.InputState) -> [(NSRange, PossibleContextQueryTypes, NSRange?)] {
     return textInputStateContextQueryRangeAndType(inputText: inputState.inputText, selectionRange: inputState.selectionRange)
@@ -38,7 +39,7 @@ func inputContextQueries(_ inputState: TextFieldComponent.InputState) -> [ChatPr
     return result
 }
 
-func contextQueryResultState(context: AccountContext, inputState: TextFieldComponent.InputState, availableTypes: [ChatPresentationInputQueryKind], currentQueryStates: inout [ChatPresentationInputQueryKind: (ChatPresentationInputQuery, Disposable)]) -> [ChatPresentationInputQueryKind: ChatContextQueryUpdate] {
+func contextQueryResultState(context: AccountContext, inputState: TextFieldComponent.InputState, availableTypes: [ChatPresentationInputQueryKind], chatLocation: ChatLocation?, currentQueryStates: inout [ChatPresentationInputQueryKind: (ChatPresentationInputQuery, Disposable)]) -> [ChatPresentationInputQueryKind: ChatContextQueryUpdate] {
     let inputQueries = inputContextQueries(inputState).filter({ query in
         return availableTypes.contains(query.kind)
     })
@@ -48,7 +49,7 @@ func contextQueryResultState(context: AccountContext, inputState: TextFieldCompo
     for query in inputQueries {
         let previousQuery = currentQueryStates[query.kind]?.0
         if previousQuery != query {
-            let signal = updatedContextQueryResultStateForQuery(context: context, inputQuery: query, previousQuery: previousQuery)
+            let signal = updatedContextQueryResultStateForQuery(context: context, chatLocation: chatLocation, inputQuery: query, previousQuery: previousQuery)
             updates[query.kind] = .update(query, signal)
         }
     }
@@ -69,7 +70,7 @@ func contextQueryResultState(context: AccountContext, inputState: TextFieldCompo
     return updates
 }
 
-private func updatedContextQueryResultStateForQuery(context: AccountContext, inputQuery: ChatPresentationInputQuery, previousQuery: ChatPresentationInputQuery?) -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> {
+private func updatedContextQueryResultStateForQuery(context: AccountContext, chatLocation: ChatLocation?, inputQuery: ChatPresentationInputQuery, previousQuery: ChatPresentationInputQuery?) -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> {
     switch inputQuery {
     case let .emoji(query):
         var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = .complete()
@@ -149,7 +150,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, inp
         |> castError(ChatContextQueryError.self)
         
         return signal |> then(hashtags)
-    case let .mention(query, _):
+    case let .mention(query, types):
         var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = .complete()
         if let previousQuery = previousQuery {
             switch previousQuery {
@@ -163,34 +164,79 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, inp
         }
         
         let normalizedQuery = query.lowercased()
-        if normalizedQuery.isEmpty {
-            let peers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = context.engine.peers.recentPeers()
-            |> map { recentPeers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
-                if case let .peers(peers) = recentPeers {
-                    let peers = peers.filter { peer in
-                        return peer.addressName != nil
-                    }.compactMap { EnginePeer($0) }
-                    return { _ in return .mentions(peers) }
-                } else {
-                    return { _ in return .mentions([]) }
-                }
-            }
-            |> castError(ChatContextQueryError.self)
-            return signal |> then(peers)
-        } else {
-            let peers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = context.engine.contacts.searchLocalPeers(query: normalizedQuery)
-            |> map { peersAndPresences -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
-                let peers = peersAndPresences.filter { peer in
-                    if let peer = peer.peer, case .user = peer, peer.addressName != nil {
-                        return true
-                    } else {
+        
+        if let chatLocation, let peerId = chatLocation.peerId {
+            let inlineBots: Signal<[(EnginePeer, Double)], NoError> = types.contains(.contextBots) ? context.engine.peers.recentlyUsedInlineBots() : .single([])
+            let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
+            let participants = combineLatest(inlineBots, searchPeerMembers(context: context, peerId: peerId, chatLocation: chatLocation, query: query, scope: .mention))
+            |> map { inlineBots, peers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+                let filteredInlineBots = inlineBots.sorted(by: { $0.1 > $1.1 }).filter { peer, rating in
+                    if rating < 0.14 {
                         return false
                     }
-                }.compactMap { $0.peer }
-                return { _ in return .mentions(peers) }
+                    if peer.indexName.matchesByTokens(normalizedQuery) {
+                        return true
+                    }
+                    if let addressName = peer.addressName, addressName.lowercased().hasPrefix(normalizedQuery) {
+                        return true
+                    }
+                    return false
+                }.map { $0.0 }
+                
+                let inlineBotPeerIds = Set(filteredInlineBots.map { $0.id })
+                
+                let filteredPeers = peers.filter { peer in
+                    if inlineBotPeerIds.contains(peer.id) {
+                        return false
+                    }
+                    if !types.contains(.accountPeer) && peer.id == context.account.peerId {
+                        return false
+                    }
+                    return true
+                }
+                var sortedPeers = filteredInlineBots
+                sortedPeers.append(contentsOf: filteredPeers.sorted(by: { lhs, rhs in
+                    let result = lhs.indexName.stringRepresentation(lastNameFirst: true).compare(rhs.indexName.stringRepresentation(lastNameFirst: true))
+                    return result == .orderedAscending
+                }))
+                sortedPeers = sortedPeers.filter { peer in
+                    return !peer.displayTitle(strings: strings, displayOrder: .firstLast).isEmpty
+                }
+                return { _ in return .mentions(sortedPeers) }
             }
             |> castError(ChatContextQueryError.self)
-            return signal |> then(peers)
+            
+            return signal |> then(participants)
+        } else {
+            if normalizedQuery.isEmpty {
+                let peers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = context.engine.peers.recentPeers()
+                |> map { recentPeers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+                    if case let .peers(peers) = recentPeers {
+                        let peers = peers.filter { peer in
+                            return peer.addressName != nil
+                        }.compactMap { EnginePeer($0) }
+                        return { _ in return .mentions(peers) }
+                    } else {
+                        return { _ in return .mentions([]) }
+                    }
+                }
+                |> castError(ChatContextQueryError.self)
+                return signal |> then(peers)
+            } else {
+                let peers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = context.engine.contacts.searchLocalPeers(query: normalizedQuery)
+                |> map { peersAndPresences -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+                    let peers = peersAndPresences.filter { peer in
+                        if let peer = peer.peer, case .user = peer, peer.addressName != nil {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }.compactMap { $0.peer }
+                    return { _ in return .mentions(peers) }
+                }
+                |> castError(ChatContextQueryError.self)
+                return signal |> then(peers)
+            }
         }
     case let .emojiSearch(query, languageCode, range):
         let hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))

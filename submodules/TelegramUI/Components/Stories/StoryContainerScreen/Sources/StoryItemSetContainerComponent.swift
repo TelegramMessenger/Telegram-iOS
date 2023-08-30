@@ -2864,7 +2864,8 @@ public final class StoryItemSetContainerComponent: Component {
                         forceIsEditing: self.sendMessageContext.currentInputMode == .media,
                         disabledPlaceholder: disabledPlaceholder,
                         isChannel: isChannel,
-                        storyItem: component.slice.item.storyItem
+                        storyItem: component.slice.item.storyItem,
+                        chatLocation: nil
                     )),
                     environment: {},
                     containerSize: CGSize(width: inputPanelAvailableWidth, height: 200.0)

@@ -36,6 +36,7 @@ swift_library(
         "//submodules/TelegramUI/Components/AnimatedTextComponent",
         "//submodules/AnimatedCountLabelNode",
         "//submodules/TelegramUI/Components/MessageInputActionButtonComponent",
+        "//submodules/SearchPeerMembers",
     ],
     visibility = [
         "//visibility:public",

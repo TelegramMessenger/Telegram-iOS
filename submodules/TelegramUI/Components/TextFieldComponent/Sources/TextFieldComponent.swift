@@ -91,6 +91,7 @@ public final class TextFieldComponent: Component {
     public let insets: UIEdgeInsets
     public let hideKeyboard: Bool
     public let resetText: NSAttributedString?
+    public let resetScrollOnFocusChange: Bool
     public let formatMenuAvailability: FormatMenuAvailability
     public let lockedFormatAction: () -> Void
     public let present: (ViewController) -> Void
@@ -105,6 +106,7 @@ public final class TextFieldComponent: Component {
         insets: UIEdgeInsets,
         hideKeyboard: Bool,
         resetText: NSAttributedString?,
+        resetScrollOnFocusChange: Bool,
         formatMenuAvailability: FormatMenuAvailability,
         lockedFormatAction: @escaping () -> Void,
         present: @escaping (ViewController) -> Void,
@@ -118,6 +120,7 @@ public final class TextFieldComponent: Component {
         self.insets = insets
         self.hideKeyboard = hideKeyboard
         self.resetText = resetText
+        self.resetScrollOnFocusChange = resetScrollOnFocusChange
         self.formatMenuAvailability = formatMenuAvailability
         self.lockedFormatAction = lockedFormatAction
         self.present = present
@@ -144,6 +147,9 @@ public final class TextFieldComponent: Component {
             return false
         }
         if lhs.resetText != rhs.resetText {
+            return false
+        }
+        if lhs.resetScrollOnFocusChange != rhs.resetScrollOnFocusChange {
             return false
         }
         if lhs.formatMenuAvailability != rhs.formatMenuAvailability {
@@ -234,6 +240,10 @@ public final class TextFieldComponent: Component {
             
             self.textContainer.widthTracksTextView = false
             self.textContainer.heightTracksTextView = false
+            
+            if #available(iOS 13.0, *) {
+                self.textView.overrideUserInterfaceStyle = .dark
+            }
             
             self.textView.typingAttributes = [
                 NSAttributedString.Key.font: Font.regular(17.0),
@@ -823,7 +833,10 @@ public final class TextFieldComponent: Component {
             let wasEditing = component.externalState.isEditing
             let isEditing = self.textView.isFirstResponder
             
-            let refreshScrolling = self.textView.bounds.size != size
+            var refreshScrolling = self.textView.bounds.size != size
+            if component.resetScrollOnFocusChange && !isEditing && isEditing != wasEditing {
+                refreshScrolling = true
+            }
             self.textView.frame = CGRect(origin: CGPoint(), size: size)
             self.textView.panGestureRecognizer.isEnabled = isEditing
             

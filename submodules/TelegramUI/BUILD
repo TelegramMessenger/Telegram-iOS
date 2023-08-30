@@ -339,6 +339,7 @@ swift_library(
         "//submodules/TelegramUI/Components/PeerSelectionController",
         "//submodules/TelegramUI/Components/Chat/AccessoryPanelNode",
         "//submodules/TelegramUI/Components/Chat/ForwardAccessoryPanelNode",
+        "//submodules/TelegramUI/Components/LegacyMessageInputPanel",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
