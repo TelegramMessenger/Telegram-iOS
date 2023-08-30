@@ -87,13 +87,15 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         self.addSubnode(self.backgroundNode)
         self.backgroundNode.addSubnode(self.titleNode)
         self.backgroundNode.addSubnode(self.arrowBackgroundNode)
-        self.arrowBackgroundNode.addSubnode(self.arrowContainerNode)
+        self.backgroundNode.addSubnode(self.arrowContainerNode)
         self.arrowContainerNode.addSubnode(self.arrowImageNode)
         self.addSubnode(self.arrowAnimationNode)
     }
     
     override func didLoad() {
         super.didLoad()
+        self.arrowBackgroundNode.layer.cornerRadius = 11
+        self.arrowBackgroundNode.layer.masksToBounds = true
     }
         
     func updateLayout(transition: ContainedViewLayoutTransition, size: CGSize, params: ArchiveAnimationParams, presentationData: ChatListPresentationData, avatarNode: AvatarNode) {
@@ -138,13 +140,13 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         transition.updatePosition(node: self.gradientImageNode, position: frame.center)
         transition.updateBounds(node: self.gradientImageNode, bounds: frame)
         
-        if params.expandedHeight >= 20 {
-            let yOffset = size.height - params.expandedHeight
-            let arrowBackgroundFrame = CGRect(x: 29, y: yOffset + 10, width: 20, height: params.expandedHeight - 20)
-            let arrowFrame = CGRect(x: arrowBackgroundFrame.minX, y: arrowBackgroundFrame.maxY - 20, width: 20, height: 20)
-            transition.updatePosition(node: self.arrowBackgroundNode, position: arrowBackgroundFrame.center)
-            transition.updateBounds(node: self.arrowBackgroundNode, bounds: arrowBackgroundFrame)
-            transition.updateCornerRadius(node: self.arrowBackgroundNode, cornerRadius: 10)
+        if params.expandedHeight >= 22 {
+            let difference = (frame.height - params.expandedHeight).rounded()
+            let arrowBackgroundHeight = frame.height - difference - 22
+            let arrowBackgroundFrame = CGRect(x: 29, y: frame.height - arrowBackgroundHeight - 11, width: 22, height: arrowBackgroundHeight)
+            let arrowFrame = CGRect(x: arrowBackgroundFrame.minX, y: arrowBackgroundFrame.maxY - 22, width: 22, height: 22)
+            transition.updatePosition(node: self.arrowBackgroundNode, position: arrowBackgroundFrame.center, beginWithCurrentState: true)
+            transition.updateBounds(node: self.arrowBackgroundNode, bounds: arrowBackgroundFrame, force: true, beginWithCurrentState: true)
             transition.updatePosition(node: self.arrowContainerNode, position: arrowFrame.center)
             transition.updateBounds(node: self.arrowContainerNode, bounds: arrowFrame)
             switch self.animation.state {
@@ -323,8 +325,17 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                                             width: textLayout.size.width,
                                             height: textLayout.size.height)
 
-                    let releaseTextLayout = releaseTextNode.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 100, height: 25), max: CGSize(width: supernode.bounds.width - 120, height: 25)))
-                    let releaseNodeFrame = CGRect(x: (supernode.bounds.width - releaseTextLayout.size.width) / 2, y: supernode.bounds.height - releaseTextLayout.size.height - 8, width: releaseTextLayout.size.width, height: releaseTextLayout.size.height)
+                    let releaseTextLayout = releaseTextNode
+                        .calculateLayoutThatFits(ASSizeRange(
+                            min: .zero,
+                            max: CGSize(width: supernode.bounds.width - 120, height: 25)
+                        ))
+                    let releaseNodeFrame = CGRect(
+                        x: (supernode.bounds.width - releaseTextLayout.size.width) / 2,
+                        y: supernode.bounds.height - releaseTextLayout.size.height - 10,
+                        width: releaseTextLayout.size.width,
+                        height: releaseTextLayout.size.height
+                    )
 
                     transition.updatePosition(node: releaseTextNode, position: releaseNodeFrame.center)
                     transition.updateBounds(node: releaseTextNode, bounds: releaseNodeFrame)
@@ -365,6 +376,25 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                     }
 
                     arrowAnimationNode.play()
+                } else {
+                    if let releaseTextNode, let supernode = releaseTextNode.supernode {
+                        let releaseTextLayout = releaseTextNode
+                            .calculateLayoutThatFits(ASSizeRange(
+                                min: .zero,
+                                max: CGSize(width: supernode.bounds.width - 120, height: 25)
+                            ))
+                        let releaseNodeFrame = CGRect(
+                            x: (supernode.bounds.width - releaseTextLayout.size.width) / 2,
+                            y: supernode.bounds.height - releaseTextLayout.size.height - 10,
+                            width: releaseTextLayout.size.width,
+                            height: releaseTextLayout.size.height
+                        )
+                        
+                        print("release node frame: \(releaseNodeFrame)")
+
+                        transition.updatePosition(node: releaseTextNode, position: releaseNodeFrame.center, beginWithCurrentState: true)
+                        transition.updateBounds(node: releaseTextNode, bounds: releaseNodeFrame, beginWithCurrentState: true)
+                    }
                 }
             case .swipeDownAppear, .swipeDownInit:
                 let animationProgress: CGFloat = 0.0
@@ -372,7 +402,7 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                 transition.updateTransform(node: arrowContainerNode, transform: .identity)
                 
                 if let releaseTextNode, let supernode = releaseTextNode.supernode {
-                    let releaseTextLayout = releaseTextNode.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 100, height: 25),
+                    let releaseTextLayout = releaseTextNode.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 20, height: .zero),
                                                                                                 max: CGSize(width: supernode.bounds.width - 120, height: 25)))
                     let releaseNodeFrame = CGRect(x: -releaseTextLayout.size.width,
                                                   y: supernode.bounds.height - releaseTextLayout.size.height - 8,
@@ -384,12 +414,13 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                     transition.updatePosition(node: releaseTextNode, position: releaseNodeFrame.center)
                     transition.updateBounds(node: releaseTextNode, bounds: releaseNodeFrame)
 
-                    let textLayout = textNode.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 100, height: 25), max: CGSize(width: supernode.bounds.width - 120, height: 25)))
+                    let textLayout = textNode.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 20, height: .zero), max: CGSize(width: supernode.bounds.width - 120, height: 25)))
                     let titleFrame = CGRect(x: (supernode.bounds.width - textLayout.size.width)/2,
                                             y: supernode.bounds.height - textLayout.size.height - 10,
                                             width: textLayout.size.width,
                                             height: textLayout.size.height)
 
+                    print("title frame: \(titleFrame) release node frame: \(releaseNodeFrame)")
 //                    let textNodeTargetPosition = textNode.position.interpolate(to: textNode.position.offsetBy(dx: supernode.bounds.width, dy: .zero), amount: animationProgress)
                     transition.updatePosition(node: textNode, position: titleFrame.center)
                     transition.updateBounds(node: textNode, bounds: titleFrame)
@@ -408,6 +439,19 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                     //update gradient mask path to avatar node frame
                     //scale up then scale down avatar node gradient
                     
+                } else {
+                    if let supernode = textNode.supernode {
+                        let textLayout = textNode.calculateLayoutThatFits(ASSizeRange(min: .zero, max: CGSize(width: supernode.bounds.width - 120, height: 25)))
+                        let titleFrame = CGRect(x: (supernode.bounds.width - textLayout.size.width)/2,
+                                                y: supernode.bounds.height - textLayout.size.height - 10,
+                                                width: textLayout.size.width,
+                                                height: textLayout.size.height)
+
+                        print("title frame: \(titleFrame)")
+    //                    let textNodeTargetPosition = textNode.position.interpolate(to: textNode.position.offsetBy(dx: supernode.bounds.width, dy: .zero), amount: animationProgress)
+                        transition.updatePosition(node: textNode, position: titleFrame.center, beginWithCurrentState: true)
+                        transition.updateBounds(node: textNode, bounds: titleFrame, beginWithCurrentState: true)
+                    }
                 }
             }
             self.isAnimated = true
