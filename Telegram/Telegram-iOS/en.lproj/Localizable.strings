@@ -9863,3 +9863,8 @@ Sorry for the inconvenience.";
 "Story.ViewList.ViewerCount_any" = "%d Viewers";
 
 "AuthSessions.MessageApp" = "You allowed this bot to message you when you opened %@.";
+
+"Story.Privacy.PostStoryAs" = "Post Story As";
+"Story.Privacy.PostStoryAsHeader" = "POST STORY AS";
+"Story.Privacy.KeepOnChannelPage" = "Post to Channel Profile";
+"Story.Privacy.KeepOnChannelPageInfo" = "Keep this story on channel profile even after it expires in %@.";

@@ -939,7 +939,6 @@ final class MediaEditorScreenComponent: Component {
             self.appliedAudioData = audioData
                         
             var timeoutValue: String
-            let timeoutSelected: Bool
             switch component.privacy.timeout {
             case 21600:
                 timeoutValue = "6"
@@ -952,7 +951,6 @@ final class MediaEditorScreenComponent: Component {
             default:
                 timeoutValue = "24"
             }
-            timeoutSelected = false
             
             var inputPanelAvailableWidth = previewSize.width
             var inputPanelAvailableHeight = 103.0
@@ -1192,7 +1190,7 @@ final class MediaEditorScreenComponent: Component {
                     hasRecordedVideoPreview: false,
                     wasRecordingDismissed: false,
                     timeoutValue: timeoutValue,
-                    timeoutSelected: timeoutSelected,
+                    timeoutSelected: false,
                     displayGradient: false,
                     bottomInset: 0.0,
                     isFormattingLocked: !state.isPremium,
@@ -3794,6 +3792,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     })
                 }
             )
+            controller.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak controller] transition in
+                if let self, let controller {
+                    let transitionFactor = controller.modalStyleOverlayTransitionFactor
+                    self.node.updateModalTransitionFactor(transitionFactor, transition: transition)
+                }
+            }
             controller.dismissed = {
                 self.node.mediaEditor?.play()
             }
@@ -3845,6 +3849,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 editCategory: { _, _, _ in },
                 editBlockedPeers: { _, _, _ in }
             )
+            controller.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak controller] transition in
+                if let self, let controller {
+                    let transitionFactor = controller.modalStyleOverlayTransitionFactor
+                    self.node.updateModalTransitionFactor(transitionFactor, transition: transition)
+                }
+            }
             controller.dismissed = {
                 self.node.mediaEditor?.play()
             }

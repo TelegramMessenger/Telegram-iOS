@@ -9,11 +9,11 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
     var hasUnseenReactions = false
     for attribute in attributes {
         if let timerAttribute = attribute as? AutoclearTimeoutMessageAttribute {
-            if timerAttribute.timeout > 0 && timerAttribute.timeout <= 60 {
+            if timerAttribute.timeout > 0 && (timerAttribute.timeout <= 60 || timerAttribute.timeout == viewOnceTimeout) {
                 isSecret = true
             }
         } else if let timerAttribute = attribute as? AutoremoveTimeoutMessageAttribute {
-            if timerAttribute.timeout > 0 && timerAttribute.timeout <= 60 {
+            if timerAttribute.timeout > 0 && (timerAttribute.timeout <= 60 || timerAttribute.timeout == viewOnceTimeout) {
                 isSecret = true
             }
         } else if let mentionAttribute = attribute as? ConsumablePersonalMentionMessageAttribute {

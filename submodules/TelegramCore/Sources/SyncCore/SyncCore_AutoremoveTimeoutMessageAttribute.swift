@@ -1,6 +1,8 @@
 import Foundation
 import Postbox
 
+public let viewOnceTimeout: Int32 = 0x7fffffff
+
 public class AutoremoveTimeoutMessageAttribute: MessageAttribute {
     public let timeout: Int32
     public let countdownBeginTime: Int32?
@@ -124,7 +126,7 @@ public extension Message {
         guard let timeout = self.minAutoremoveOrClearTimeout else {
             return false
         }
-        if timeout > 1 * 60 {
+        if timeout > 1 * 60 && timeout != viewOnceTimeout {
             return false
         }
         
