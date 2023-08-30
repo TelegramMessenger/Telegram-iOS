@@ -33,9 +33,9 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
             
             init(params: ArchiveAnimationParams, previousState: TransitionAnimation.State) {
                 let fraction = params.storiesFraction
-                if params.storiesFraction <= 0.92 {
+                if params.storiesFraction < 0.7 {
                     self = .swipeDownAppear
-                } else if fraction > 0.92 && fraction < 1.0 {
+                } else if fraction >= 0.7 && fraction < 1.0 {
                     self = .releaseAppear
                 } else if fraction >= 1.0 {
                     self = .transitionToArchive
@@ -43,10 +43,25 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                     self = .swipeDownInit
                 }
             }
+            
+            func animationProgress(fraction: CGFloat) -> CGFloat {
+                switch self {
+                case .swipeDownAppear:
+                    return max(0.01, min(0.99, fraction / 0.8))
+                case .releaseAppear:
+                    return max(0.01, min(0.99, (fraction - 0.8) / 0.3))
+                default:
+                    return 1.0
+                }
+            }
         }
         
         var state: State
         var params: ArchiveAnimationParams
+        var rotationPausedTime: CFTimeInterval = .zero
+        var releaseSwipePausedTime: CFTimeInterval = .zero
+        var swipeTextPausedTime: CFTimeInterval = .zero
+        
         var isAnimated = false
         var gradientShapeLayer: CAShapeLayer?
         var gradientMaskLayer: CAShapeLayer?
@@ -75,26 +90,53 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         
         
         mutating func animateLayers(gradientNode: ASDisplayNode, textNode: ASTextNode, arrowContainerNode: ASDisplayNode, completion: (() -> Void)?) {
-            print("animate layers with fraction: \(self.params.storiesFraction) state: \(self.state), offset: \(self.params.scrollOffset) height: \(self.params.expandedHeight)")
-            CATransaction.begin()
-            CATransaction.setCompletionBlock {
-                completion?()
+            print("""
+            animate layers with fraction: \(self.params.storiesFraction) animation progress: \(self.state.animationProgress(fraction: self.params.storiesFraction))
+            state: \(self.state), offset: \(self.params.scrollOffset) height: \(self.params.expandedHeight)
+            ##
+            """)
+//            CATransaction.begin()
+//            CATransaction.setCompletionBlock {
+//                completion?()
+//            }
+//            CATransaction.completionBlock()
+//            CATransaction.setAnimationDuration(1.0)
+            if !(arrowContainerNode.layer.animationKeys()?.contains(where: { $0 == "arrow_rotation" }) ?? false) {
+                let rotationAnimation = makeArrowRotationAnimation(arrowContainerNode: arrowContainerNode, isRotated: true)
+                self.rotationPausedTime = arrowContainerNode.layer.convertTime(CACurrentMediaTime(), from: nil)
+                arrowContainerNode.layer.speed = .zero
+                arrowContainerNode.layer.timeOffset = self.rotationPausedTime
+                arrowContainerNode.layer.add(rotationAnimation, forKey: "arrow_rotation")
             }
-            CATransaction.completionBlock()
-            CATransaction.setAnimationDuration(1.0)
+            
+            updateReleaseTextNode(from: textNode)
+            if let releaseTextNode, !(releaseTextNode.layer.animationKeys()?.contains(where: { $0 == "translate_text" }) ?? false) {
+                let releaseTextAnimation = makeTextSwipeAnimation(textNode: releaseTextNode, direction: .right)
+                self.releaseSwipePausedTime = releaseTextNode.layer.convertTime(CACurrentMediaTime(), from: nil)
+                releaseTextNode.layer.speed = .zero
+                releaseTextNode.layer.timeOffset = self.releaseSwipePausedTime
+                releaseTextNode.layer.add(releaseTextAnimation, forKey: "translate_text")
+            }
+            
+            if !(textNode.layer.animationKeys()?.contains(where: { $0 == "translate_text" }) ?? false) {
+                let swipeAnimation = makeTextSwipeAnimation(textNode: textNode, direction: .right)
+                self.swipeTextPausedTime = arrowContainerNode.layer.convertTime(CACurrentMediaTime(), from: nil)
+                textNode.layer.speed = .zero
+                textNode.layer.timeOffset = self.swipeTextPausedTime
+                textNode.layer.add(swipeAnimation, forKey: "translate_text")
+            }
             switch state {
-            case .swipeDownInit:
-                print("swipe dowm init transition called")
-//                self.gradientLayer
             case .releaseAppear:
 //                updateReleaseTextNode(from: textNode)
 //                updateGradientOverlay(from: gradientNode)
                 
-                let rotationAnimation = makeArrowRotationAnimation(arrowContainerNode: arrowContainerNode, isRotated: true)
-                rotationAnimation.beginTime = .zero
+                let animationProgress = self.state.animationProgress(fraction: self.params.storiesFraction)
+                arrowContainerNode.layer.timeOffset = self.rotationPausedTime + animationProgress
+                releaseTextNode?.layer.timeOffset = self.releaseSwipePausedTime + animationProgress
+                textNode.layer.timeOffset = self.swipeTextPausedTime + animationProgress
                 
-                let textSwipeAnimation = makeTextSwipeAnimation(textNode: textNode, direction: .right)
-                textSwipeAnimation.beginTime = .zero
+//                let textSwipeAnimation = makeTextSwipeAnimation(textNode: textNode, direction: .right)
+//                textSwipeAnimation.beginTime = .zero
                 
 //                if let releaseTextNode {
 //                    let releaseTextAppearAnimation = makeTextSwipeAnimation(textNode: releaseTextNode, direction: .right)
@@ -107,12 +149,22 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
 //                }
                 
                 
-            case .swipeDownAppear:
-                let rotationAnimation = makeArrowRotationAnimation(arrowContainerNode: arrowContainerNode, isRotated: false)
-                rotationAnimation.beginTime = .zero
+            case .swipeDownAppear, .swipeDownInit:
+                arrowContainerNode.layer.beginTime = CACurrentMediaTime()
+                arrowContainerNode.layer.speed = -1
+                arrowContainerNode.layer.removeAllAnimations()
                 
-                let textSwipeAnimation = makeTextSwipeAnimation(textNode: textNode, direction: .left)
-                textSwipeAnimation.beginTime = .zero
+                textNode.layer.beginTime = CACurrentMediaTime()
+                textNode.layer.speed = -1
+                textNode.layer.removeAllAnimations()
+
+                releaseTextNode?.layer.beginTime = CACurrentMediaTime()
+                releaseTextNode?.layer.speed = -1
+                releaseTextNode?.layer.removeAllAnimations()
+                print("set speed -1")
+                
+//                let textSwipeAnimation = makeTextSwipeAnimation(textNode: textNode, direction: .left)
+//                textSwipeAnimation.beginTime = .zero
 
 //                if let releaseTextNode {
 //                    let releaseTextAppearAnimation = makeTextSwipeAnimation(textNode: releaseTextNode, direction: .left)
@@ -131,11 +183,11 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
 //                updateGradientOverlay(from: gradientNode)
 
             case .transitionToArchive:
-                let rotationAnimation = makeArrowRotationAnimation(arrowContainerNode: arrowContainerNode, isRotated: true)
-                rotationAnimation.beginTime = .zero
-
+                arrowContainerNode.layer.timeOffset = self.rotationPausedTime + 0.99
+                releaseTextNode?.layer.timeOffset = self.releaseSwipePausedTime + 0.99
+                textNode.layer.timeOffset = self.swipeTextPausedTime + 0.99
             }
-            CATransaction.commit()
+//            CATransaction.commit()
             self.isAnimated = true
         }
         
@@ -231,12 +283,11 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                 to: rotatedDegree as NSNumber,
                 keyPath: "transform.rotation.z",
                 timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue,
-                duration: 0.5,
+                duration: 1.0,
                 removeOnCompletion: false,
                 additive: true
             )
-            arrowContainerNode.layer.animationKeys()?.filter({ $0 == "arrow_rotation" }).forEach({ arrowContainerNode.layer.cancelAnimationsRecursive(key: $0) })
-            arrowContainerNode.layer.add(animation, forKey: "arrow_rotation")
+            animation.fillMode = .forwards
             return animation
         }
         
@@ -263,6 +314,7 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                 }
             }
         
+            print("makeTextSwipeAnimation from position: \(textNode.layer.position) to position: \(targetPosition)")
             let animation = textNode.layer.springAnimation(
                 from: NSValue(cgPoint: textNode.layer.position),
                 to: NSValue(cgPoint: targetPosition),
@@ -271,8 +323,7 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                 removeOnCompletion: false,
                 additive: false
             )
-            textNode.layer.animationKeys()?.filter({ $0 == "translate_text" }).forEach({ textNode.layer.cancelAnimationsRecursive(key: $0) })
-            textNode.layer.add(animation, forKey: "translate_text")
+            animation.fillMode = .forwards
             return animation
         }
         
