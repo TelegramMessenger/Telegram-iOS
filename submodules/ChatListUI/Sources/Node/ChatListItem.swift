@@ -1247,7 +1247,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.separatorNode.isLayerBacked = true
         
         self.archiveTransitionNode = ChatListArchiveTransitionNode()
-
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
@@ -2702,7 +2701,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
             var heightOffset: CGFloat = .zero
             if case let .groupReference(data) = item.content, data.groupId == .archive {
-                itemHeight *= 1.2
+//                if !item.params.finalizeAnimation {
+                    itemHeight *= 1.2
+//                }
                 heightOffset = -(itemHeight-item.params.expandedHeight)
 //                print("height offset: \(heightOffset) with params: \(item.params) itemHeight: \(itemHeight)")
             }
@@ -2755,27 +2756,24 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     let contextContainerFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: itemHeight))
-//                    strongSelf.contextContainer.position = contextContainerFrame.center
                     transition.updatePosition(node: strongSelf.contextContainer, position: contextContainerFrame.center)
                     transition.updateBounds(node: strongSelf.contextContainer, bounds: contextContainerFrame.offsetBy(dx: -strongSelf.revealOffset, dy: 0.0))
-                    transition.updatePosition(node: strongSelf.archiveTransitionNode, position: contextContainerFrame.center)
-                    transition.updateBounds(node: strongSelf.archiveTransitionNode, bounds: contextContainerFrame)
                     
                     if case let .groupReference(data) = item.content, data.groupId == .archive {
+                        transition.updatePosition(node: strongSelf.archiveTransitionNode, position: contextContainerFrame.center)
+                        transition.updateBounds(node: strongSelf.archiveTransitionNode, bounds: contextContainerFrame)
                         transition.updateAlpha(node: strongSelf.archiveTransitionNode, alpha: 1.0)
-                        strongSelf.archiveTransitionNode.updateLayout(transition: transition, size: contextContainerFrame.size, params: item.params, presentationData: item.presentationData, avatarNode: strongSelf.avatarNode)
-//                        transition.updateAlpha(node: strongSelf.mainContentContainerNode, alpha: .zero)
-//                        transition.updateAlpha(node: strongSelf.contextContainer, alpha: .zero)
+                        strongSelf.archiveTransitionNode.updateLayout(
+                            transition: transition,
+                            size: contextContainerFrame.size,
+                            params: item.params,
+                            presentationData: item.presentationData,
+                            avatarNode: strongSelf.avatarNode
+                        )
                     } else {
                         transition.updateAlpha(node: strongSelf.archiveTransitionNode, alpha: .zero)
-//                        transition.updateAlpha(node: strongSelf.mainContentContainerNode, alpha: 1.0)
-//                        transition.updateAlpha(node: strongSelf.contextContainer, alpha: 1.0)
                     }
-//                    print("top offset: \(item.hiddenOffsetValue) hiddenOffset: \(item.hiddenOffset)")
-//                    let archiveTransitionFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: itemHeight))
-//                    transition.updatePosition(node: strongSelf.archiveTransitionNode, position: archiveTransitionFrame.center)
-//                    transition.updateBounds(node: strongSelf.archiveTransitionNode, bounds: archiveTransitionFrame)
-
+                    
                     var mainContentFrame: CGRect
                     var mainContentBoundsOffset: CGFloat
                     var mainContentAlpha: CGFloat = 1.0

@@ -2970,27 +2970,26 @@ public final class ChatListNode: ListView {
     }
     
     func updateArchiveTopOffset(params: ArchiveAnimationParams) {
-//        var isHiddenItemVisible = false
-//        self.forEachItemNode({ itemNode in
-//            if let itemNode = itemNode as? ChatListItemNode, let item = itemNode.item {
-//                if case let .peer(peerData) = item.content, let threadInfo = peerData.threadInfo {
-//                    if threadInfo.isHidden {
-//                        isHiddenItemVisible = true
-//                    }
-//                }
-//
-//                if case let .groupReference(groupReference) = item.content {
-//                    if groupReference.hiddenByDefault {
-//                        isHiddenItemVisible = true
-//                    }
-//
-//                    if groupReference.groupId == .archive, let itemHeight = itemNode.currentItemHeight, item.hiddenOffsetValue < itemHeight {
-//                        isHiddenItemVisible = true
-//                    }
-//                }
-//            }
-//        })
-//        guard isHiddenItemVisible else { return }
+        var isHiddenItemVisible = false
+        self.forEachItemNode({ itemNode in
+            if let itemNode = itemNode as? ChatListItemNode, let item = itemNode.item {
+                if case let .peer(peerData) = item.content, let threadInfo = peerData.threadInfo {
+                    if threadInfo.isHidden {
+                        isHiddenItemVisible = true
+                    }
+                }
+
+                if case let .groupReference(groupReference) = item.content {
+                    if groupReference.hiddenByDefault {
+                        isHiddenItemVisible = true
+                    }
+                }
+            }
+        })
+        guard isHiddenItemVisible else {
+            print("isHiddenItemVisible: \(isHiddenItemVisible)")
+            return
+        }
 
 //        let toggleTemporaryRevealHiddenItems = !self.currentState.hiddenItemShouldBeTemporaryRevealed
 //        print("toggle temporary reveal hidden items: \(toggleTemporaryRevealHiddenItems)")

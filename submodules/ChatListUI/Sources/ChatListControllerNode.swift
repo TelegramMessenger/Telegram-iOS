@@ -2534,7 +2534,9 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
 //                        self.allowOverscrollItemExpansion,
                         let node = self.mainContainerNode.currentItemNode.itemNodeAtIndex(2) as? ChatListItemNode, node.isNodeLoaded,
                         var itemHeight = node.currentItemHeight, itemHeight > 0 {
-                        itemHeight *= 1.2
+//                        if !self.mainContainerNode.currentItemNode.currentState.archiveParams.finalizeAnimation {
+                            itemHeight *= 1.2
+//                        }
                         
                         let expandedHeight: CGFloat
                         if archiveFraction < 0 {
@@ -2571,17 +2573,6 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                                                 expandedHeight: expandedHeight,
                                                 finalizeAnimation: false
                                             ))
-
-//                                            chatNode.updateExpandedHeight(
-//                                                transition: .immediate,
-//                                                params: .init(
-//                                                    scrollOffset: scrollOffset,
-//                                                    storiesFraction: archiveFraction,
-//                                                    expandedHeight: expandedHeight
-//                                                )
-//                                            )
-//                                            chatNode.animateFrameTransition(1.0, expandedHeight)
-//                                            chatNode.updateHeightOffsetValue(offset: expandedHeight, transition: self.tempNavigationScrollingTransition ?? .immediate)
                                         }
                                     }
                                 }
@@ -2596,15 +2587,6 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                                                 expandedHeight: expandedHeight,
                                                 finalizeAnimation: false
                                             ))
-
-//                                            chatNode.updateExpandedHeight(
-//                                                transition: .immediate,
-//                                                params: .init(
-//                                                    scrollOffset: scrollOffset,
-//                                                    storiesFraction: archiveFraction,
-//                                                    expandedHeight: expandedHeight
-//                                                )
-//                                            )
                                         }
                                     }
                                 }
