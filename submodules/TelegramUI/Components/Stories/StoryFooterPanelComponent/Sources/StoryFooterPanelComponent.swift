@@ -398,7 +398,7 @@ public final class StoryFooterPanelComponent: Component {
                 
                 if reactionCount != 0 {
                     rightContentOffset -= reactionStatsLayout.size.width + 1.0
-                }f
+                }
                 
                 let likeButton: ComponentView<Empty>
                 if let current = self.likeButton {
