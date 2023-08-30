@@ -1169,8 +1169,6 @@ public final class StoryItemSetContainerComponent: Component {
                             var displayViewLists = false
                             if component.slice.peer.id == component.context.account.peerId {
                                 displayViewLists = true
-                            } else if case let .channel(channel) = component.slice.peer, channel.hasPermission(.sendSomething) {
-                                displayViewLists = true
                             }
                             
                             if displayViewLists {
@@ -1819,8 +1817,6 @@ public final class StoryItemSetContainerComponent: Component {
             
             var displayViewLists = false
             if component.slice.peer.id == component.context.account.peerId {
-                displayViewLists = true
-            } else if case let .channel(channel) = component.slice.peer, channel.hasPermission(.sendSomething) {
                 displayViewLists = true
             }
             
@@ -2966,8 +2962,6 @@ public final class StoryItemSetContainerComponent: Component {
             
             var displayViewLists = false
             if component.slice.peer.id == component.context.account.peerId {
-                displayViewLists = true
-            } else if case let .channel(channel) = component.slice.peer, channel.hasPermission(.sendSomething) {
                 displayViewLists = true
             }
             

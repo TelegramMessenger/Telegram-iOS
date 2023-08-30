@@ -188,9 +188,11 @@ public func updatePeersCustom(transaction: Transaction, peers: [Peer], update: (
                 updated = mergeChannel(lhs: previous, rhs: updatedChannel)
             }
             
-            let isMember = updatedChannel.participationStatus == .member
-            if isMember != wasMember || updatedChannel.storiesHidden != wasHidden {
-                _internal_updateChannelMembership(transaction: transaction, channel: updatedChannel, isMember: isMember)
+            if let updated = updated as? TelegramChannel {
+                let isMember = updated.participationStatus == .member
+                if isMember != wasMember || updated.storiesHidden != wasHidden {
+                    _internal_updateChannelMembership(transaction: transaction, channel: updated, isMember: isMember)
+                }
             }
         }
         
