@@ -2700,10 +2700,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
             var heightOffset: CGFloat = .zero
-            if case let .groupReference(data) = item.content, data.groupId == .archive {
-                if !item.params.isArchiveGroupVisible {
-                    itemHeight *= 1.2
-                }
+            if case let .groupReference(data) = item.content, data.groupId == .archive, !item.params.isArchiveGroupVisible {
+                itemHeight *= 1.2
                 heightOffset = -(itemHeight-item.params.expandedHeight)
                 print("height offset: \(heightOffset) with params: \(item.params) itemHeight: \(itemHeight)")
             }
@@ -2716,8 +2714,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             for option in peerRevealOptions {
                 customActions.append(ChatListItemAccessibilityCustomAction(name: option.title, target: nil, selector: #selector(ChatListItemNode.performLocalAccessibilityCustomAction(_:)), key: option.key))
             }
-            
-            print("layout height: \(layout.contentSize.height)")
             return (layout, { [weak self] synchronousLoads, animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, first, last, firstWithHeader, nextIsPinned, params, countersSize)
@@ -2759,20 +2755,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     transition.updatePosition(node: strongSelf.contextContainer, position: contextContainerFrame.center)
                     transition.updateBounds(node: strongSelf.contextContainer, bounds: contextContainerFrame.offsetBy(dx: -strongSelf.revealOffset, dy: 0.0))
                     
-                    if case let .groupReference(data) = item.content, data.groupId == .archive {
-                        transition.updatePosition(node: strongSelf.archiveTransitionNode, position: contextContainerFrame.center)
-                        transition.updateBounds(node: strongSelf.archiveTransitionNode, bounds: contextContainerFrame)
-                        transition.updateAlpha(node: strongSelf.archiveTransitionNode, alpha: 1.0)
-                        strongSelf.archiveTransitionNode.updateLayout(
-                            transition: transition,
-                            size: contextContainerFrame.size,
-                            params: item.params,
-                            presentationData: item.presentationData,
-                            avatarNode: strongSelf.avatarNode
-                        )
-                    } else {
-                        transition.updateAlpha(node: strongSelf.archiveTransitionNode, alpha: .zero)
-                    }
                     
                     var mainContentFrame: CGRect
                     var mainContentBoundsOffset: CGFloat
@@ -2882,6 +2864,21 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     transition.updateTransformScale(node: strongSelf.avatarNode, scale: avatarScale)
                     strongSelf.avatarNode.updateSize(size: avatarFrame.size)
                     strongSelf.updateVideoVisibility()
+                    
+                    if case let .groupReference(data) = item.content, data.groupId == .archive {
+                        transition.updatePosition(node: strongSelf.archiveTransitionNode, position: contextContainerFrame.center)
+                        transition.updateBounds(node: strongSelf.archiveTransitionNode, bounds: contextContainerFrame)
+                        transition.updateAlpha(node: strongSelf.archiveTransitionNode, alpha: 1.0)
+                        strongSelf.archiveTransitionNode.updateLayout(
+                            transition: transition,
+                            size: contextContainerFrame.size,
+                            params: item.params,
+                            presentationData: item.presentationData,
+                            avatarNode: strongSelf.avatarNode
+                        )
+                    } else {
+                        transition.updateAlpha(node: strongSelf.archiveTransitionNode, alpha: .zero)
+                    }
                     
                     var itemPeerId: EnginePeer.Id?
                     if case let .chatList(index) = item.index {

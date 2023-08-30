@@ -100,7 +100,11 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         let frame = CGRect(origin: self.bounds.origin, size: CGSize(width: self.bounds.width, height: self.bounds.height))
 //        var transition = transition
         
-//        guard self.animation.params != params || self.frame.size != size else { return }
+        
+        guard !(self.animation.params.finalizeAnimation && params.finalizeAnimation) else {
+            return
+        }
+        guard self.animation.params != params || self.frame.size != size else { return }
         let updateLayers = self.animation.params != params
         
         self.animation.params = params
@@ -120,7 +124,7 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
             self.gradientImageNode.image = generateGradientImage(
                 size: gradientImageSize,
                 colors: gradientColors,
-                locations: [0.0, 0.1],
+                locations: [0.0, 1.0],
                 direction: .horizontal
             )
         }
@@ -193,7 +197,9 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                                          arrowContainerNode: self.arrowContainerNode,
                                          arrowAnimationNode: self.arrowAnimationNode,
                                          avatarNode: avatarNode,
-                                         transition: transition)
+                                         transition: transition, finalizeCompletion: {
+                print("finalize compeltion")
+            })
 
             let nodesToHide: [ASDisplayNode] = [self.gradientImageNode, self.backgroundNode]
 
@@ -286,7 +292,8 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
             arrowContainerNode: ASDisplayNode,
             arrowAnimationNode: AnimationNode,
             avatarNode: AvatarNode,
-            transition: ContainedViewLayoutTransition
+            transition: ContainedViewLayoutTransition,
+            finalizeCompletion: (() -> Void)?
         ) {
             print("""
             animate layers with fraction: \(self.params.storiesFraction) animation progress: \(self.state.animationProgress(fraction: self.params.storiesFraction))
@@ -343,20 +350,21 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                     let newPosition = CGPoint(x: arrowAnimationNode.position.x, y: gradientNode.position.y)
                     transition.updatePosition(node: arrowAnimationNode, position: newPosition)
                     
-                    arrowAnimationNode.completion = { [weak arrowAnimationNode, weak gradientLayer] in
-                        print("arrow animation node finish animation")
-                        arrowAnimationNode?.isHidden = true
-                        gradientLayer?.removeFromSuperlayer()
-                    }
-
-                    arrowAnimationNode.play()
-                    
                     let avatarNodeFrame = avatarNode.convert(avatarNode.frame, to: gradientNode)
                     if let gradientMaskLayer {
                         let targetPath = UIBezierPath(roundedRect: avatarNodeFrame, cornerRadius: avatarNodeFrame.width / 2).cgPath
                         transition.updatePath(layer: gradientMaskLayer, path: targetPath)
                     }
                     print("avatar node frame: \(avatarNode.convert(avatarNode.frame, to: gradientNode))")
+
+                    arrowAnimationNode.completion = { [weak arrowAnimationNode, weak gradientLayer] in
+                        print("arrow animation node finish animation")
+                        arrowAnimationNode?.isHidden = true
+                        gradientLayer?.removeFromSuperlayer()
+                        finalizeCompletion?()
+                    }
+
+                    arrowAnimationNode.play()
                 }
             case .swipeDownAppear, .swipeDownInit:
                 let animationProgress: CGFloat = 0.0
