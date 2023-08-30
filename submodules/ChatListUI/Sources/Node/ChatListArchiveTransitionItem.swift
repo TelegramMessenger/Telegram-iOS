@@ -53,7 +53,6 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         self.arrowContainerNode.isLayerBacked = true
         
         self.arrowImageNode = ASImageNode()
-        self.arrowImageNode.image = UIImage(bundleImageName: "Chat List/Archive/IconArrow")
         self.arrowImageNode.isLayerBacked = true
         
         self.arrowAnimationNode = AnimationNode(animation: "anim_arrow_to_archive", scale: 0.33)
@@ -113,14 +112,34 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         transition.updatePosition(node: self.gradientImageNode, position: frame.center)
         transition.updateBounds(node: self.gradientImageNode, bounds: frame)
         
-        if size.height >= 20 {
-            let arrowBackgroundFrame = CGRect(x: 29, y: 10, width: 20, height: size.height - 20)
+        if params.expandedHeight >= 20 {
+            let yOffset = size.height - params.expandedHeight
+            let arrowBackgroundFrame = CGRect(x: 29, y: yOffset + 10, width: 20, height: params.expandedHeight - 20)
             let arrowFrame = CGRect(x: arrowBackgroundFrame.minX, y: arrowBackgroundFrame.maxY - 20, width: 20, height: 20)
             transition.updatePosition(node: self.arrowBackgroundNode, position: arrowBackgroundFrame.center)
             transition.updateBounds(node: self.arrowBackgroundNode, bounds: arrowBackgroundFrame)
             transition.updateCornerRadius(node: self.arrowBackgroundNode, cornerRadius: 10)
             transition.updatePosition(node: self.arrowContainerNode, position: arrowFrame.center)
             transition.updateBounds(node: self.arrowContainerNode, bounds: arrowFrame)
+            switch self.animation.state {
+            case .swipeDownInit, .swipeDownAppear, .swipeDownDidAppear:
+                guard previousState == .releaseAppear || previousState == .releaseDidAppear || self.arrowImageNode.image == nil else { return }
+                let gradientColorAtFraction = UIColor(hexString: "#A9AFB7")!.interpolateTo(UIColor(hexString: "#D3D4DA")!, fraction: arrowFrame.midX / frame.size.width)
+                if let gradientColorAtFraction {
+                    print("arrowImageNode set color: \(gradientColorAtFraction.hexString)")
+                    self.arrowImageNode.image = PresentationResourcesItemList.archiveTransitionArrowIcon(presentationData.theme, backgroundColor: gradientColorAtFraction)
+                }
+            case .releaseDidAppear, .releaseAppear:
+                guard previousState == .swipeDownInit || previousState == .swipeDownAppear || previousState == .swipeDownDidAppear || self.arrowImageNode.image == nil else { return }
+                let backgrpundColors = presentationData.theme.chatList.pinnedArchiveAvatarColor.backgroundColors.colors
+                let gradientColorAtFraction = backgrpundColors.1.interpolateTo(backgrpundColors.0, fraction: arrowFrame.midX / frame.size.width)
+                if let gradientColorAtFraction {
+                    print("arrowImageNode set color: \(gradientColorAtFraction.hexString)")
+                    self.arrowImageNode.image = PresentationResourcesItemList.archiveTransitionArrowIcon(presentationData.theme, backgroundColor: gradientColorAtFraction)
+                }
+            }
+//            self.arrowImageNode.layer.cornerRadius = arrowFrame.width / 2
+//            self.arrowImageNode.layer.masksToBounds = true
             transition.updatePosition(node: self.arrowImageNode, position: arrowFrame.center)
             transition.updateBounds(node: self.arrowImageNode, bounds: arrowFrame)
             
@@ -269,8 +288,9 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
 
                 let animationProgress = 1.0//self.state.animationProgress(fraction: self.params.storiesFraction)
                 
-                let rotationDegree = TransitionAnimation.degreesToRadians(CGFloat(0).interpolate(to: CGFloat(-180), amount: animationProgress))
-                transition.updateTransformRotation(node: arrowContainerNode, angle: rotationDegree)
+//                let rotationDegree = TransitionAnimation.degreesToRadians(CGFloat(0).interpolate(to: CGFloat(-180), amount: animationProgress))
+                transition.updateTransformRotation(node: arrowContainerNode, angle: TransitionAnimation.degreesToRadians(-180))
+                transition.updateTransformRotation(node: arrowContainerNode, angle: TransitionAnimation.degreesToRadians(180))
                 
                 if let releaseTextNode, let supernode = releaseTextNode.supernode {
                     let textLayout = textNode.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 100, height: 25), max: CGSize(width: supernode.bounds.width - 120, height: 25)))
@@ -324,8 +344,7 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
             case .swipeDownAppear, .swipeDownInit:
                 let animationProgress: CGFloat = 0.0
                 
-                let rotationDegree = TransitionAnimation.degreesToRadians(CGFloat(0).interpolate(to: CGFloat(-180), amount: animationProgress))
-                transition.updateTransformRotation(node: arrowContainerNode, angle: rotationDegree)
+                transition.updateTransform(node: arrowContainerNode, transform: .identity)
                 
                 if let releaseTextNode, let supernode = releaseTextNode.supernode {
                     let releaseTextLayout = releaseTextNode.calculateLayoutThatFits(ASSizeRange(min: CGSize(width: 100, height: 25),

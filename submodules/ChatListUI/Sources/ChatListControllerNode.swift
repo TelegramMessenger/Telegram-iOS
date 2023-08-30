@@ -2518,6 +2518,9 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                     
                     var archiveFraction: CGFloat = 0.0
                     
+                    let currentParams = self.mainContainerNode.currentItemNode.currentState.archiveParams
+                    print("current params: \(currentParams)")
+                    
                     if let overscrollFraction, let currentFraction {
                         archiveFraction = (overscrollFraction  / 0.5) * 0.8
                         if currentFraction < 0 {

@@ -99,6 +99,24 @@ public struct PresentationResourcesItemList {
         })
     }
     
+    public static func archiveTransitionArrowIcon(_ theme: PresentationTheme, backgroundColor: UIColor) -> UIImage? {
+        guard
+            let icon = generateTintedImage(
+                image: UIImage(bundleImageName: "Chat List/Archive/IconArrow"),
+                color: theme.chatList.pinnedArchiveAvatarColor.foregroundColor
+            )
+        else { return nil }
+
+        return generateImage(icon.size, rotatedContext: { size, context in
+            if let iconCgImage = icon.cgImage {
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(backgroundColor.cgColor)
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: 2, y: 2), size: CGSize(width: size.width - 4.0, height: size.height - 4.0)))
+                context.draw(iconCgImage, in: CGRect(origin: CGPoint(), size: size))
+            }
+        })
+    }
+    
     public static func itemListDeleteIndicatorIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListDeleteIndicatorIcon.rawValue, { theme in
             guard let image = generateTintedImage(image: UIImage(bundleImageName: "Item List/RemoveItemIcon"), color: theme.list.itemDestructiveColor) else {

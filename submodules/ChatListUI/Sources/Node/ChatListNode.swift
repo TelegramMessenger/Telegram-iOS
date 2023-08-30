@@ -2999,24 +2999,6 @@ public final class ChatListNode: ListView {
             state.hiddenItemShouldBeTemporaryRevealed = true
             return state
         }
-//        guard (abs(currentState.topOffset) - abs(offset) < 1.0 ) else {
-//            print("left: \(abs(currentState.topOffset)) right: \(abs(offset))")
-//            return
-//        }
-//        if !self.currentState.hiddenItemShouldBeTemporaryRevealed {
-//            self.updateState { state in
-//                var state = state
-//                state.topOffset = offset
-//                state.hiddenItemShouldBeTemporaryRevealed = true
-//                return state
-//            }
-//        } else {
-//            self.updateState { state in
-//                var state = state
-//                state.topOffset = offset
-//                return state
-//            }
-//        }
     }
     
     private func pollFilterUpdates() {
