@@ -55,7 +55,7 @@ public final class StoryPeerListComponent: Component {
     public let storySubscriptions: EngineStorySubscriptions?
     public let collapseFraction: CGFloat
     public let unlocked: Bool
-    public let uploadProgress: Float?
+    public let uploadProgress: [EnginePeer.Id: Float]
     public let peerAction: (EnginePeer?) -> Void
     public let contextPeerAction: (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void
     public let openStatusSetup: (UIView) -> Void
@@ -77,7 +77,7 @@ public final class StoryPeerListComponent: Component {
         storySubscriptions: EngineStorySubscriptions?,
         collapseFraction: CGFloat,
         unlocked: Bool,
-        uploadProgress: Float?,
+        uploadProgress: [EnginePeer.Id: Float],
         peerAction: @escaping (EnginePeer?) -> Void,
         contextPeerAction: @escaping (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void,
         openStatusSetup: @escaping (UIView) -> Void,
@@ -980,11 +980,13 @@ public final class StoryPeerListComponent: Component {
                     } else {
                         hasItems = false
                     }
-                    if let uploadProgress = component.uploadProgress {
+                    if let uploadProgress = component.uploadProgress[peer.id] {
                         itemRingAnimation = .progress(uploadProgress)
                     }
                     
                     hasUnseenCloseFriendsItems = false
+                } else if let uploadProgress = component.uploadProgress[peer.id] {
+                    itemRingAnimation = .progress(uploadProgress)
                 } else if peer.id == self.loadingItemId {
                     itemRingAnimation = .loading
                 }
@@ -1131,11 +1133,13 @@ public final class StoryPeerListComponent: Component {
                     } else {
                         hasItems = false
                     }
-                    if let uploadProgress = component.uploadProgress {
+                    if let uploadProgress = component.uploadProgress[peer.id] {
                         itemRingAnimation = .progress(uploadProgress)
                     }
                     
                     hasUnseenCloseFriendsItems = false
+                } else if let uploadProgress = component.uploadProgress[peer.id] {
+                    itemRingAnimation = .progress(uploadProgress)
                 }
                 
                 let collapseIndex = i + effectiveFirstVisibleIndex

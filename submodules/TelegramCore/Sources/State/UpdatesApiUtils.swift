@@ -88,9 +88,9 @@ extension Api.MessageMedia {
     
     var preCachedStories: [StoryId: Api.StoryItem]? {
         switch self {
-        case let .messageMediaStory(_, userId, id, story):
+        case let .messageMediaStory(_, peerId, id, story):
             if let story = story {
-                return [StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: id): story]
+                return [StoryId(peerId: peerId.peerId, id: id): story]
             } else {
                 return nil
             }

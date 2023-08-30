@@ -1609,7 +1609,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 }
                 
                 var headerText: String?
-                if strongSelf.isArchive && !mappedItems.isEmpty {
+                if strongSelf.isArchive && !mappedItems.isEmpty && strongSelf.peerId == strongSelf.context.account.peerId {
                     headerText = strongSelf.presentationData.strings.StoryList_ArchiveDescription
                 }
 

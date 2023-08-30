@@ -1,144 +1,4 @@
 public extension Api.help {
-    enum RecentMeUrls: TypeConstructorDescription {
-        case recentMeUrls(urls: [Api.RecentMeUrl], chats: [Api.Chat], users: [Api.User])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .recentMeUrls(let urls, let chats, let users):
-                    if boxed {
-                        buffer.appendInt32(235081943)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(urls.count))
-                    for item in urls {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .recentMeUrls(let urls, let chats, let users):
-                return ("recentMeUrls", [("urls", urls as Any), ("chats", chats as Any), ("users", users as Any)])
-    }
-    }
-    
-        public static func parse_recentMeUrls(_ reader: BufferReader) -> RecentMeUrls? {
-            var _1: [Api.RecentMeUrl]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.RecentMeUrl.self)
-            }
-            var _2: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _3: [Api.User]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.help.RecentMeUrls.recentMeUrls(urls: _1!, chats: _2!, users: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.help {
-    enum Support: TypeConstructorDescription {
-        case support(phoneNumber: String, user: Api.User)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .support(let phoneNumber, let user):
-                    if boxed {
-                        buffer.appendInt32(398898678)
-                    }
-                    serializeString(phoneNumber, buffer: buffer, boxed: false)
-                    user.serialize(buffer, true)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .support(let phoneNumber, let user):
-                return ("support", [("phoneNumber", phoneNumber as Any), ("user", user as Any)])
-    }
-    }
-    
-        public static func parse_support(_ reader: BufferReader) -> Support? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Api.User?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.User
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.help.Support.support(phoneNumber: _1!, user: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.help {
-    enum SupportName: TypeConstructorDescription {
-        case supportName(name: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .supportName(let name):
-                    if boxed {
-                        buffer.appendInt32(-1945767479)
-                    }
-                    serializeString(name, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .supportName(let name):
-                return ("supportName", [("name", name as Any)])
-    }
-    }
-    
-        public static func parse_supportName(_ reader: BufferReader) -> SupportName? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.help.SupportName.supportName(name: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.help {
     enum TermsOfService: TypeConstructorDescription {
         case termsOfService(flags: Int32, id: Api.DataJSON, text: String, entities: [Api.MessageEntity], minAgeConfirm: Int32?)
     
@@ -1426,6 +1286,92 @@ public extension Api.messages {
         }
         public static func parse_emojiGroupsNotModified(_ reader: BufferReader) -> EmojiGroups? {
             return Api.messages.EmojiGroups.emojiGroupsNotModified
+        }
+    
+    }
+}
+public extension Api.messages {
+    enum ExportedChatInvite: TypeConstructorDescription {
+        case exportedChatInvite(invite: Api.ExportedChatInvite, users: [Api.User])
+        case exportedChatInviteReplaced(invite: Api.ExportedChatInvite, newInvite: Api.ExportedChatInvite, users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .exportedChatInvite(let invite, let users):
+                    if boxed {
+                        buffer.appendInt32(410107472)
+                    }
+                    invite.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .exportedChatInviteReplaced(let invite, let newInvite, let users):
+                    if boxed {
+                        buffer.appendInt32(572915951)
+                    }
+                    invite.serialize(buffer, true)
+                    newInvite.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .exportedChatInvite(let invite, let users):
+                return ("exportedChatInvite", [("invite", invite as Any), ("users", users as Any)])
+                case .exportedChatInviteReplaced(let invite, let newInvite, let users):
+                return ("exportedChatInviteReplaced", [("invite", invite as Any), ("newInvite", newInvite as Any), ("users", users as Any)])
+    }
+    }
+    
+        public static func parse_exportedChatInvite(_ reader: BufferReader) -> ExportedChatInvite? {
+            var _1: Api.ExportedChatInvite?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
+            }
+            var _2: [Api.User]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.ExportedChatInvite.exportedChatInvite(invite: _1!, users: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_exportedChatInviteReplaced(_ reader: BufferReader) -> ExportedChatInvite? {
+            var _1: Api.ExportedChatInvite?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
+            }
+            var _2: Api.ExportedChatInvite?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
+            }
+            var _3: [Api.User]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.messages.ExportedChatInvite.exportedChatInviteReplaced(invite: _1!, newInvite: _2!, users: _3!)
+            }
+            else {
+                return nil
+            }
         }
     
     }

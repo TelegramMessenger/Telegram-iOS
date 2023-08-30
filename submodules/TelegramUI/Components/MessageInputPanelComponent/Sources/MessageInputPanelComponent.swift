@@ -16,6 +16,8 @@ import TextFormat
 import EmojiSuggestionsComponent
 import AudioToolbox
 import AnimatedTextComponent
+import AnimatedCountLabelNode
+import MessageInputActionButtonComponent
 
 public final class MessageInputPanelComponent: Component {
     public struct ContextQueryTypes: OptionSet {
@@ -139,7 +141,8 @@ public final class MessageInputPanelComponent: Component {
     public let hideKeyboard: Bool
     public let forceIsEditing: Bool
     public let disabledPlaceholder: String?
-    public let storyId: Int32?
+    public let isChannel: Bool
+    public let storyItem: EngineStoryItem?
     
     public init(
         externalState: ExternalState,
@@ -189,7 +192,8 @@ public final class MessageInputPanelComponent: Component {
         hideKeyboard: Bool,
         forceIsEditing: Bool,
         disabledPlaceholder: String?,
-        storyId: Int32?
+        isChannel: Bool,
+        storyItem: EngineStoryItem?
     ) {
         self.externalState = externalState
         self.context = context
@@ -238,7 +242,8 @@ public final class MessageInputPanelComponent: Component {
         self.hideKeyboard = hideKeyboard
         self.forceIsEditing = forceIsEditing
         self.disabledPlaceholder = disabledPlaceholder
-        self.storyId = storyId
+        self.isChannel = isChannel
+        self.storyItem = storyItem
     }
     
     public static func ==(lhs: MessageInputPanelComponent, rhs: MessageInputPanelComponent) -> Bool {
@@ -335,7 +340,10 @@ public final class MessageInputPanelComponent: Component {
         if (lhs.likeOptionsAction == nil) != (rhs.likeOptionsAction == nil) {
             return false
         }
-        if lhs.storyId != rhs.storyId {
+        if lhs.isChannel != rhs.isChannel {
+            return false
+        }
+        if lhs.storyItem != rhs.storyItem {
             return false
         }
         return true
@@ -387,6 +395,10 @@ public final class MessageInputPanelComponent: Component {
         
         private var viewForOverlayContent: ViewForOverlayContent?
         private var currentEmojiSuggestionView: ComponentHostView<Empty>?
+        
+        private var viewsIconView: UIImageView?
+        private var viewStatsCountText: AnimatedCountLabelView?
+        private var reactionStatsCountText: AnimatedCountLabelView?
         
         private let hapticFeedback = HapticFeedback()
         
@@ -628,6 +640,11 @@ public final class MessageInputPanelComponent: Component {
             let mediaInsets = UIEdgeInsets(top: insets.top, left: textFieldSideInset, bottom: insets.bottom, right: 41.0)
             
             let baseFieldHeight: CGFloat = 40.0
+            
+            var transition = transition
+            if transition.animation.isImmediate, let previousComponent = self.component, previousComponent.storyItem?.id == component.storyItem?.id, component.isChannel {
+                transition = transition.withAnimation(.curve(duration: 0.3, curve: .spring))
+            }
 
             self.component = component
             self.state = state
@@ -796,13 +813,93 @@ public final class MessageInputPanelComponent: Component {
                 transition.setPosition(view: placeholderView, position: placeholderFrame.origin)
                 placeholderView.bounds = CGRect(origin: CGPoint(), size: placeholderFrame.size)
                 
-                transition.setAlpha(view: placeholderView, alpha: (hasMediaRecording || hasMediaEditing || component.disabledPlaceholder != nil) ? 0.0 : 1.0)
-                transition.setAlpha(view: vibrancyPlaceholderView, alpha: (hasMediaRecording || hasMediaEditing || component.disabledPlaceholder != nil) ? 0.0 : 1.0)
+                transition.setAlpha(view: placeholderView, alpha: (hasMediaRecording || hasMediaEditing || component.disabledPlaceholder != nil || component.isChannel) ? 0.0 : 1.0)
+                transition.setAlpha(view: vibrancyPlaceholderView, alpha: (hasMediaRecording || hasMediaEditing || component.disabledPlaceholder != nil || component.isChannel) ? 0.0 : 1.0)
             }
             
-            transition.setAlpha(view: self.fieldBackgroundView, alpha: component.disabledPlaceholder != nil ? 0.0 : 1.0)
+            transition.setAlpha(view: self.fieldBackgroundView, alpha: (component.disabledPlaceholder != nil || component.isChannel) ? 0.0 : 1.0)
             
             let size = CGSize(width: availableSize.width, height: textFieldSize.height + insets.top + insets.bottom)
+            
+            var rightButtonsOffsetX: CGFloat = 0.0
+            if component.isChannel, let storyItem = component.storyItem {
+                var viewsTransition = transition
+                
+                let viewsIconView: UIImageView
+                if let current = self.viewsIconView {
+                    viewsIconView = current
+                } else {
+                    viewsTransition = viewsTransition.withAnimation(.none)
+                    viewsIconView = UIImageView(image: UIImage(bundleImageName: "Stories/EmbeddedViewIcon"))
+                    self.viewsIconView = viewsIconView
+                    self.addSubview(viewsIconView)
+                }
+                
+                let viewStatsCountText: AnimatedCountLabelView
+                if let current = self.viewStatsCountText {
+                    viewStatsCountText = current
+                } else {
+                    viewStatsCountText = AnimatedCountLabelView(frame: CGRect())
+                    self.viewStatsCountText = viewStatsCountText
+                    self.addSubview(viewStatsCountText)
+                }
+                
+                let reactionStatsCountText: AnimatedCountLabelView
+                if let current = self.reactionStatsCountText {
+                    reactionStatsCountText = current
+                } else {
+                    reactionStatsCountText = AnimatedCountLabelView(frame: CGRect())
+                    self.reactionStatsCountText = reactionStatsCountText
+                    self.addSubview(reactionStatsCountText)
+                }
+                
+                var viewCount = storyItem.views?.seenCount ?? 0
+                if viewCount == 0 {
+                    viewCount = 1
+                }
+                var reactionCount = storyItem.views?.reactedCount ?? 0
+                if reactionCount == 0, storyItem.myReaction != nil {
+                    reactionCount += 1
+                }
+                
+                var regularSegments: [AnimatedCountLabelView.Segment] = []
+                regularSegments.append(.number(viewCount, NSAttributedString(string: "\(viewCount)", font: Font.with(size: 15.0, traits: .monospacedNumbers), textColor: .white)))
+                
+                var reactionSegments: [AnimatedCountLabelView.Segment] = []
+                reactionSegments.append(.number(reactionCount, NSAttributedString(string: "\(reactionCount)", font: Font.with(size: 15.0, traits: .monospacedNumbers), textColor: .white)))
+                
+                let viewStatsTextLayout = viewStatsCountText.update(size: CGSize(width: availableSize.width, height: size.height), segments: regularSegments, transition: viewsTransition.containedViewLayoutTransition)
+                let reactionStatsTextLayout = reactionStatsCountText.update(size: CGSize(width: availableSize.width, height: size.height), segments: reactionSegments, transition: viewsTransition.containedViewLayoutTransition)
+                
+                var contentX: CGFloat = 16.0
+                
+                if let image = viewsIconView.image {
+                    let viewsIconFrame = CGRect(origin: CGPoint(x: contentX, y: size.height - insets.bottom - baseFieldHeight + floor((baseFieldHeight - image.size.height) * 0.5)), size: image.size)
+                    viewsTransition.setPosition(view: viewsIconView, position: viewsIconFrame.center)
+                    viewsTransition.setBounds(view: viewsIconView, bounds: CGRect(origin: CGPoint(), size: viewsIconFrame.size))
+                    
+                    contentX += image.size.width + 5.0
+                }
+                
+                transition.setFrame(view: viewStatsCountText, frame: CGRect(origin: CGPoint(x: contentX, y: size.height - insets.bottom - baseFieldHeight + floor((baseFieldHeight - viewStatsTextLayout.size.height) * 0.5)), size: viewStatsTextLayout.size))
+                
+                transition.setFrame(view: reactionStatsCountText, frame: CGRect(origin: CGPoint(x: availableSize.width - 11.0 - reactionStatsTextLayout.size.width, y: size.height - insets.bottom - baseFieldHeight + floor((baseFieldHeight - reactionStatsTextLayout.size.height) * 0.5)), size: reactionStatsTextLayout.size))
+                
+                rightButtonsOffsetX -= reactionStatsTextLayout.size.width + 4.0
+            } else {
+                if let viewsIconView = self.viewsIconView {
+                    self.viewsIconView = nil
+                    viewsIconView.removeFromSuperview()
+                }
+                if let viewStatsCountText = self.viewStatsCountText {
+                    self.viewStatsCountText = nil
+                    viewStatsCountText.removeFromSuperview()
+                }
+                if let reactionStatsCountText = self.reactionStatsCountText {
+                    self.reactionStatsCountText = nil
+                    reactionStatsCountText.removeFromSuperview()
+                }
+            }
             
             if let textFieldView = self.textField.view as? TextFieldComponent.View {
                 if textFieldView.superview == nil {
@@ -822,14 +919,14 @@ public final class MessageInputPanelComponent: Component {
                 }
                 let textFieldFrame = CGRect(origin: CGPoint(x: fieldBackgroundFrame.minX, y: fieldBackgroundFrame.maxY - textFieldSize.height), size: textFieldSize)
                 transition.setFrame(view: textFieldView, frame: textFieldFrame)
-                transition.setAlpha(view: textFieldView, alpha: (hasMediaRecording || hasMediaEditing || component.disabledPlaceholder != nil) ? 0.0 : 1.0)
+                transition.setAlpha(view: textFieldView, alpha: (hasMediaRecording || hasMediaEditing || component.disabledPlaceholder != nil || component.isChannel) ? 0.0 : 1.0)
                 
                 if let viewForOverlayContent = self.viewForOverlayContent {
                     transition.setFrame(view: viewForOverlayContent, frame: textFieldFrame)
                 }
             }
             
-            if let disabledPlaceholderText = component.disabledPlaceholder {
+            if let disabledPlaceholderText = component.disabledPlaceholder, !component.isChannel {
                 let disabledPlaceholder: ComponentView<Empty>
                 var disabledPlaceholderTransition = transition
                 if let current = self.disabledPlaceholder {
@@ -898,7 +995,7 @@ public final class MessageInputPanelComponent: Component {
                     transition: transition,
                     component: AnyComponent(MessageInputActionButtonComponent(
                         mode: attachmentButtonMode,
-                        storyId: component.storyId,
+                        storyId: component.storyItem?.id,
                         action: { [weak self] mode, action, sendAction in
                             guard let self, let component = self.component, case .up = action else {
                                 return
@@ -1049,7 +1146,7 @@ public final class MessageInputPanelComponent: Component {
                 transition: transition,
                 component: AnyComponent(MessageInputActionButtonComponent(
                     mode: inputActionButtonMode,
-                    storyId: component.storyId,
+                    storyId: component.storyItem?.id,
                     action: { [weak self] mode, action, sendAction in
                         guard let self, let component = self.component else {
                             return
@@ -1158,14 +1255,24 @@ public final class MessageInputPanelComponent: Component {
             }
             
             var inputActionButtonOriginX: CGFloat
-            if component.setMediaRecordingActive != nil || isEditing {
-                inputActionButtonOriginX = fieldBackgroundFrame.maxX + floorToScreenPixels((41.0 - inputActionButtonSize.width) * 0.5)
+            if rightButtonsOffsetX != 0.0 {
+                inputActionButtonOriginX = availableSize.width - 3.0 + rightButtonsOffsetX
+                if displayLikeAction {
+                    inputActionButtonOriginX -= 39.0
+                }
+                if component.forwardAction != nil {
+                    inputActionButtonOriginX -= 46.0
+                }
             } else {
-                inputActionButtonOriginX = size.width
-            }
-            
-            if hasLikeAction {
-                inputActionButtonOriginX += 3.0
+                if component.setMediaRecordingActive != nil || isEditing {
+                    inputActionButtonOriginX = fieldBackgroundFrame.maxX + floorToScreenPixels((41.0 - inputActionButtonSize.width) * 0.5)
+                } else {
+                    inputActionButtonOriginX = size.width
+                }
+                
+                if hasLikeAction {
+                    inputActionButtonOriginX += 3.0
+                }
             }
             
             if let inputActionButtonView = self.inputActionButton.view {
@@ -1177,8 +1284,14 @@ public final class MessageInputPanelComponent: Component {
                 transition.setBounds(view: inputActionButtonView, bounds: CGRect(origin: CGPoint(), size: inputActionButtonFrame.size))
                 transition.setAlpha(view: inputActionButtonView, alpha: likeActionReplacesInputAction ? 0.0 : 1.0)
                 
-                if hasLikeAction {
-                    inputActionButtonOriginX += 41.0
+                if rightButtonsOffsetX != 0.0 {
+                    if hasLikeAction {
+                        inputActionButtonOriginX += 46.0
+                    }
+                } else {
+                    if hasLikeAction {
+                        inputActionButtonOriginX += 41.0
+                    }
                 }
             }
             
@@ -1186,7 +1299,7 @@ public final class MessageInputPanelComponent: Component {
                 transition: transition,
                 component: AnyComponent(MessageInputActionButtonComponent(
                     mode: .like(reaction: component.myReaction?.reaction, file: component.myReaction?.file, animationFileId: component.myReaction?.animationFileId),
-                    storyId: component.storyId,
+                    storyId: component.storyItem?.id,
                     action: { [weak self] _, action, _ in
                         guard let self, let component = self.component else {
                             return
@@ -1221,7 +1334,7 @@ public final class MessageInputPanelComponent: Component {
                     self.addSubview(likeButtonView)
                 }
                 var likeButtonFrame = CGRect(origin: CGPoint(x: inputActionButtonOriginX, y: size.height - insets.bottom - baseFieldHeight + floor((baseFieldHeight - likeButtonSize.height) * 0.5)), size: likeButtonSize)
-                if component.forwardAction == nil {
+                if component.forwardAction == nil && rightButtonsOffsetX == 0.0 {
                     likeButtonFrame.origin.x += 3.0
                 }
                 transition.setPosition(view: likeButtonView, position: likeButtonFrame.center)

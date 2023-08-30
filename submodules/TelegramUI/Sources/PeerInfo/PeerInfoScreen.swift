@@ -3864,7 +3864,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             |> deliverOnMainQueue).start(next: { [weak self] translationState in
                 self?.translationState = translationState
             })
-        } else if peerId.namespace == Namespaces.Peer.CloudUser {
+        }
+        
+        if peerId.namespace == Namespaces.Peer.CloudChannel || peerId.namespace == Namespaces.Peer.CloudUser {
             self.storiesReady.set(false)
             let expiringStoryList = PeerExpiringStoryListContext(account: context.account, peerId: peerId)
             self.expiringStoryList = expiringStoryList
@@ -5318,6 +5320,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                 } else if let channel = peer as? TelegramChannel {
                     if let cachedData = strongSelf.data?.cachedData as? CachedChannelData {
+                        if channel.hasPermission(.sendSomething) {
+                            //TODO:localize
+                            items.append(.action(ContextMenuActionItem(text: "Archived Stories", icon: { theme in
+                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Statistics"), color: theme.contextMenu.primaryColor)
+                            }, action: { [weak self] _, f in
+                                f(.dismissWithoutContent)
+                                
+                                self?.openStoryArchive()
+                            })))
+                        }
                         if cachedData.flags.contains(.canViewStats) {
                             items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChannelInfo_Stats, icon: { theme in
                                 generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Statistics"), color: theme.contextMenu.primaryColor)
@@ -6493,6 +6505,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 }
             }
         })
+    }
+    
+    private func openStoryArchive() {
+        self.controller?.push(PeerInfoStoryGridScreen(context: self.context, peerId: self.peerId, scope: .archive))
     }
     
     private func openStats() {

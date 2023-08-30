@@ -82,6 +82,7 @@ public final class LottieComponent: Component {
     public let color: UIColor?
     public let startingPosition: StartingPosition
     public let size: CGSize?
+    public let renderingScale: CGFloat?
     public let loop: Bool
     
     public init(
@@ -89,12 +90,14 @@ public final class LottieComponent: Component {
         color: UIColor? = nil,
         startingPosition: StartingPosition = .end,
         size: CGSize? = nil,
+        renderingScale: CGFloat? = nil,
         loop: Bool = false
     ) {
         self.content = content
         self.color = color
         self.startingPosition = startingPosition
         self.size = size
+        self.renderingScale = renderingScale
         self.loop = loop
     }
     
@@ -109,6 +112,9 @@ public final class LottieComponent: Component {
             return false
         }
         if lhs.size != rhs.size {
+            return false
+        }
+        if lhs.renderingScale != rhs.renderingScale {
             return false
         }
         if lhs.loop != rhs.loop {
@@ -353,7 +359,9 @@ public final class LottieComponent: Component {
             
             var redrawImage = false
             
-            let displaySize = CGSize(width: size.width * UIScreenScale, height: size.height * UIScreenScale)
+            let renderingScale = component.renderingScale ?? UIScreenScale
+            
+            let displaySize = CGSize(width: size.width * renderingScale, height: size.height * renderingScale)
             if self.currentDisplaySize != displaySize {
                 self.currentDisplaySize = displaySize
                 redrawImage = true

@@ -1842,7 +1842,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     if let mediaId = info.media.id {
                         validIds.append(mediaId)
                         if self.preloadStoryResourceDisposables[mediaId] == nil {
-                            self.preloadStoryResourceDisposables[mediaId] = preloadStoryMedia(context: self.context, peer: info.peer, storyId: info.storyId, media: info.media).start()
+                            self.preloadStoryResourceDisposables[mediaId] = preloadStoryMedia(context: self.context, peer: info.peer, storyId: info.storyId, media: info.media, reactions: info.reactions).start()
                         }
                     }
                 }
@@ -2687,12 +2687,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         
         if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-            let coordinator = rootController.openStoryCamera(transitionIn: cameraTransitionIn, transitionedIn: {}, transitionOut: { [weak self] _ in
-                guard let self else {
+            let coordinator = rootController.openStoryCamera(transitionIn: cameraTransitionIn, transitionedIn: {}, transitionOut: { [weak self] target in
+                guard let self, let target else {
                     return nil
                 }
                 if let componentView = self.chatListHeaderView() {
-                    if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
+                    let peerId: EnginePeer.Id
+                    switch target {
+                    case .myStories:
+                        peerId = self.context.account.peerId
+                    case let .peer(id):
+                        peerId = id
+                    }
+                    
+                    if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
                         return StoryCameraTransitionOut(
                             destinationView: transitionView,
                             destinationRect: transitionView.bounds,
@@ -2985,9 +2993,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     
-    private(set) var storyUploadProgress: Float?
-    private func updateStoryUploadProgress(_ progress: Float?) {
-        self.storyUploadProgress = progress.flatMap { max(0.027, min(0.99, $0)) }
+    private(set) var storyUploadProgress: [PeerId: Float] = [:]
+    private func updateStoryUploadProgress(_ progress: [PeerId: Float]) {
+        self.storyUploadProgress = progress.mapValues {
+            max(0.027, min(0.99, $0))
+        }
         
         if let navigationBarView = self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
             navigationBarView.updateStoryUploadProgress(storyUploadProgress: self.storyUploadProgress)
@@ -5578,12 +5588,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         if let current = self.storyCameraTransitionInCoordinator {
             coordinator = current
         } else {
-            coordinator = rootController.openStoryCamera(transitionIn: nil, transitionedIn: {}, transitionOut: { [weak self] finished in
-                guard let self else {
+            coordinator = rootController.openStoryCamera(transitionIn: nil, transitionedIn: {}, transitionOut: { [weak self] target in
+                guard let self, let target else {
                     return nil
                 }
-                if finished, let componentView = self.chatListHeaderView() {
-                    if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
+                if let componentView = self.chatListHeaderView() {
+                    let peerId: EnginePeer.Id
+                    switch target {
+                    case .myStories:
+                        peerId = self.context.account.peerId
+                    case let .peer(id):
+                        peerId = id
+                    }
+                    
+                    if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
                         return StoryCameraTransitionOut(
                             destinationView: transitionView,
                             destinationRect: transitionView.bounds,

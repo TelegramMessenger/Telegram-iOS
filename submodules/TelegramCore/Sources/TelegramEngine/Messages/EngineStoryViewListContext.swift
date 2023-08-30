@@ -94,6 +94,7 @@ public final class EngineStoryViewListContext {
         let queue: Queue
         
         let account: Account
+        let peerId: EnginePeer.Id
         let storyId: Int32
         let listMode: ListMode
         let sortMode: SortMode
@@ -108,9 +109,10 @@ public final class EngineStoryViewListContext {
         private var parentSource: Impl?
         var isLoadingMore: Bool = false
         
-        init(queue: Queue, account: Account, storyId: Int32, views: EngineStoryItem.Views, listMode: ListMode, sortMode: SortMode, searchQuery: String?, parentSource: Impl?) {
+        init(queue: Queue, account: Account, peerId: EnginePeer.Id, storyId: Int32, views: EngineStoryItem.Views, listMode: ListMode, sortMode: SortMode, searchQuery: String?, parentSource: Impl?) {
             self.queue = queue
             self.account = account
+            self.peerId = peerId
             self.storyId = storyId
             self.listMode = listMode
             self.sortMode = sortMode
@@ -260,15 +262,21 @@ public final class EngineStoryViewListContext {
             
             let account = self.account
             let accountPeerId = account.peerId
+            let peerId = self.peerId
             let storyId = self.storyId
             let listMode = self.listMode
             let sortMode = self.sortMode
             let searchQuery = self.searchQuery
             let currentOffset = state.nextOffset
             let limit = state.items.isEmpty ? 50 : 100
-            let signal: Signal<InternalState, NoError> = self.account.postbox.transaction { transaction -> Void in
+            let signal: Signal<InternalState, NoError> = self.account.postbox.transaction { transaction -> Api.InputPeer? in
+                return transaction.getPeer(peerId).flatMap(apiInputPeer)
             }
-            |> mapToSignal { _ -> Signal<InternalState, NoError> in
+            |> mapToSignal { inputPeer -> Signal<InternalState, NoError> in
+                guard let inputPeer = inputPeer else {
+                    return .complete()
+                }
+                
                 var flags: Int32 = 0
                 switch listMode {
                 case .everyone:
@@ -286,7 +294,7 @@ public final class EngineStoryViewListContext {
                     flags |= (1 << 1)
                 }
                 
-                return account.network.request(Api.functions.stories.getStoryViewsList(flags: flags, q: searchQuery, id: storyId, offset: currentOffset?.value ?? "", limit: Int32(limit)))
+                return account.network.request(Api.functions.stories.getStoryViewsList(flags: flags, peer: inputPeer, q: searchQuery, id: storyId, offset: currentOffset?.value ?? "", limit: Int32(limit)))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.stories.StoryViewsList?, NoError> in
                     return .single(nil)
@@ -523,11 +531,11 @@ public final class EngineStoryViewListContext {
         }
     }
     
-    init(account: Account, storyId: Int32, views: EngineStoryItem.Views, listMode: ListMode, sortMode: SortMode, searchQuery: String?, parentSource: EngineStoryViewListContext?) {
+    init(account: Account, peerId: EnginePeer.Id, storyId: Int32, views: EngineStoryItem.Views, listMode: ListMode, sortMode: SortMode, searchQuery: String?, parentSource: EngineStoryViewListContext?) {
         let queue = Queue.mainQueue()
         self.queue = queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, account: account, storyId: storyId, views: views, listMode: listMode, sortMode: sortMode, searchQuery: searchQuery, parentSource: parentSource?.impl.syncWith { $0 })
+            return Impl(queue: queue, account: account, peerId: peerId, storyId: storyId, views: views, listMode: listMode, sortMode: sortMode, searchQuery: searchQuery, parentSource: parentSource?.impl.syncWith { $0 })
         })
     }
     

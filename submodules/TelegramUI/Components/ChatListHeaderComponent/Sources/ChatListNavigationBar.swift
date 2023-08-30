@@ -32,7 +32,7 @@ public final class ChatListNavigationBar: Component {
     public let secondaryTransition: CGFloat
     public let storySubscriptions: EngineStorySubscriptions?
     public let storiesIncludeHidden: Bool
-    public let uploadProgress: Float?
+    public let uploadProgress: [EnginePeer.Id: Float]
     public let tabsNode: ASDisplayNode?
     public let tabsNodeIsSearch: Bool
     public let accessoryPanelContainer: ASDisplayNode?
@@ -53,7 +53,7 @@ public final class ChatListNavigationBar: Component {
         secondaryTransition: CGFloat,
         storySubscriptions: EngineStorySubscriptions?,
         storiesIncludeHidden: Bool,
-        uploadProgress: Float?,
+        uploadProgress: [EnginePeer.Id: Float],
         tabsNode: ASDisplayNode?,
         tabsNodeIsSearch: Bool,
         accessoryPanelContainer: ASDisplayNode?,
@@ -508,7 +508,7 @@ public final class ChatListNavigationBar: Component {
             }
         }
         
-        public func updateStoryUploadProgress(storyUploadProgress: Float?) {
+        public func updateStoryUploadProgress(storyUploadProgress: [EnginePeer.Id: Float]) {
             guard let component = self.component else {
                 return
             }

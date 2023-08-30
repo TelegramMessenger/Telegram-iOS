@@ -458,7 +458,7 @@ public class AnimatedCountLabelView: UIView {
                         fromAlpha = CGFloat(presentation.opacity)
                     }
                     var offsetY: CGFloat
-                    if currentValue > updatedValue || alwaysOneDirection {
+                    if currentValue < updatedValue || alwaysOneDirection {
                         offsetY = -floor(currentTextNode.bounds.height * 0.6)
                     } else {
                         offsetY = floor(currentTextNode.bounds.height * 0.6)

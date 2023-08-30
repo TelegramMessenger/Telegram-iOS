@@ -1673,14 +1673,14 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.reloadConfig()
             case let .updateMessageExtendedMedia(peer, msgId, extendedMedia):
                 updatedState.updateExtendedMedia(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), extendedMedia: extendedMedia)
-            case let .updateStory(userId, story):
-                updatedState.updateStory(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), story: story)
-            case let .updateReadStories(userId, id):
-                updatedState.readStories(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), maxId: id)
+            case let .updateStory(peerId, story):
+                updatedState.updateStory(peerId: peerId.peerId, story: story)
+            case let .updateReadStories(peerId, id):
+                updatedState.readStories(peerId: peerId.peerId, maxId: id)
             case let .updateStoriesStealthMode(stealthMode):
                 updatedState.updateStoryStealthMode(stealthMode)
-            case let .updateSentStoryReaction(userId, storyId, reaction):
-                updatedState.updateStorySentReaction(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: storyId, reaction: reaction)
+            case let .updateSentStoryReaction(peerId, storyId, reaction):
+                updatedState.updateStorySentReaction(peerId: peerId.peerId, id: storyId, reaction: reaction)
             default:
                 break
         }
@@ -4616,6 +4616,8 @@ func replayFinalState(
                     ))
                     if let entry = CodableEntry(updatedItem) {
                         transaction.setStory(id: StoryId(peerId: peerId, id: id), value: entry)
+                        
+                        storyUpdates.append(InternalStoryUpdate.added(peerId: peerId, item: updatedItem))
                     }
                 }
         }
@@ -5075,7 +5077,20 @@ func replayFinalState(
     for update in storyUpdates {
         switch update {
         case let .added(peerId, _):
-            if shouldKeepUserStoriesInFeed(peerId: peerId, isContact: transaction.isPeerContact(peerId: peerId)) {
+            var isContactOrMember = false
+            if transaction.isPeerContact(peerId: peerId) {
+                isContactOrMember = true
+            } else if let peer = transaction.getPeer(peerId) as? TelegramChannel {
+                if peer.participationStatus == .member {
+                    isContactOrMember = true
+                }
+            } else if let peer = transaction.getPeer(peerId) as? TelegramGroup {
+                if case .Member = peer.membership {
+                    isContactOrMember = true
+                }
+            }
+            
+            if shouldKeepUserStoriesInFeed(peerId: peerId, isContactOrMember: isContactOrMember) {
                 if !transaction.storySubscriptionsContains(key: .hidden, peerId: peerId) && !transaction.storySubscriptionsContains(key: .filtered, peerId: peerId) {
                     _internal_addSynchronizePeerStoriesOperation(peerId: peerId, transaction: transaction)
                 }

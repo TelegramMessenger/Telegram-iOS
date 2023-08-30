@@ -2042,7 +2042,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 secondaryTransition: self.inlineStackContainerTransitionFraction,
                 storySubscriptions: effectiveStorySubscriptions,
                 storiesIncludeHidden: self.location == .chatList(groupId: .archive),
-                uploadProgress: self.controller?.storyUploadProgress,
+                uploadProgress: self.controller?.storyUploadProgress ?? [:],
                 tabsNode: tabsNode,
                 tabsNodeIsSearch: tabsNodeIsSearch,
                 accessoryPanelContainer: self.controller?.accessoryPanelContainer,

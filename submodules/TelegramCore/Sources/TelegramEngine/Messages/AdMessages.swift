@@ -263,7 +263,8 @@ private class AdMessagesHistoryContextImpl {
                     adminRights: nil,
                     bannedRights: nil,
                     defaultBannedRights: nil,
-                    usernames: []
+                    usernames: [],
+                    storiesHidden: nil
                 )
             case let .webPage(webPage):
                 author = TelegramChannel(
@@ -281,7 +282,9 @@ private class AdMessagesHistoryContextImpl {
                     adminRights: nil,
                     bannedRights: nil,
                     defaultBannedRights: nil,
-                    usernames: [])
+                    usernames: [],
+                    storiesHidden: nil
+                )
             }
             
             messagePeers[author.id] = author

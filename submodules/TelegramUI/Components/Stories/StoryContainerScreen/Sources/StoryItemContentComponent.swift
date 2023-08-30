@@ -31,16 +31,18 @@ final class StoryItemContentComponent: Component {
     let peer: EnginePeer
     let item: EngineStoryItem
     let availableReactions: StoryAvailableReactions?
+    let entityFiles: [MediaId: TelegramMediaFile]
     let audioMode: StoryContentItem.AudioMode
     let isVideoBuffering: Bool
     let isCurrent: Bool
     let activateReaction: (UIView, MessageReaction.Reaction) -> Void
     
-    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer, item: EngineStoryItem, availableReactions: StoryAvailableReactions?, audioMode: StoryContentItem.AudioMode, isVideoBuffering: Bool, isCurrent: Bool, activateReaction: @escaping (UIView, MessageReaction.Reaction) -> Void) {
+    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer, item: EngineStoryItem, availableReactions: StoryAvailableReactions?, entityFiles: [MediaId: TelegramMediaFile], audioMode: StoryContentItem.AudioMode, isVideoBuffering: Bool, isCurrent: Bool, activateReaction: @escaping (UIView, MessageReaction.Reaction) -> Void) {
 		self.context = context
         self.strings = strings
         self.peer = peer
 		self.item = item
+        self.entityFiles = entityFiles
         self.availableReactions = availableReactions
         self.audioMode = audioMode
         self.isVideoBuffering = isVideoBuffering
@@ -62,6 +64,9 @@ final class StoryItemContentComponent: Component {
 			return false
 		}
         if lhs.availableReactions != rhs.availableReactions {
+            return false
+        }
+        if lhs.entityFiles.keys != rhs.entityFiles.keys {
             return false
         }
         if lhs.isVideoBuffering != rhs.isVideoBuffering {
@@ -136,6 +141,12 @@ final class StoryItemContentComponent: Component {
                     return
                 }
                 component.activateReaction(view, reaction)
+            }
+            self.overlaysView.requestUpdate = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.state?.updated(transition: .immediate)
             }
 		}
         
@@ -605,6 +616,7 @@ final class StoryItemContentComponent: Component {
                     peer: component.peer,
                     story: component.item,
                     availableReactions: component.availableReactions,
+                    entityFiles: component.entityFiles,
                     size: availableSize,
                     isCaptureProtected: component.item.isForwardingDisabled,
                     attemptSynchronous: synchronousLoad,
