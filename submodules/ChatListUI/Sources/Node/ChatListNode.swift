@@ -2462,9 +2462,11 @@ public final class ChatListNode: ListView {
                     }
                 }
                 if !isHiddenItemVisible && strongSelf.currentState.hiddenItemShouldBeTemporaryRevealed {
+                    
                     strongSelf.updateState { state in
                         var state = state
                         state.hiddenItemShouldBeTemporaryRevealed = false
+                        state.archiveParams = .empty
                         return state
                     }
                 }
@@ -2969,7 +2971,7 @@ public final class ChatListNode: ListView {
         }
     }
     
-    func updateArchiveTopOffset(params: ArchiveAnimationParams) {
+    func updateArchiveParams(params: ArchiveAnimationParams) {
         var isHiddenItemVisible = false
         self.forEachItemNode({ itemNode in
             if let itemNode = itemNode as? ChatListItemNode, let item = itemNode.item {
@@ -2991,12 +2993,14 @@ public final class ChatListNode: ListView {
             return
         }
 
-//        let toggleTemporaryRevealHiddenItems = !self.currentState.hiddenItemShouldBeTemporaryRevealed
-//        print("toggle temporary reveal hidden items: \(toggleTemporaryRevealHiddenItems)")
+        let hiddenItemShouldBeTemporaryRevealed = params.finalizeAnimation ? params.isArchiveGroupVisible : true
+        if hiddenItemShouldBeTemporaryRevealed != self.currentState.hiddenItemShouldBeTemporaryRevealed {
+            print("hiddenItemShouldBeTemporaryRevealed: \(hiddenItemShouldBeTemporaryRevealed)")
+        }
         self.updateState { state in
             var state = state
             state.archiveParams = params
-            state.hiddenItemShouldBeTemporaryRevealed = true
+            state.hiddenItemShouldBeTemporaryRevealed = hiddenItemShouldBeTemporaryRevealed
             return state
         }
     }

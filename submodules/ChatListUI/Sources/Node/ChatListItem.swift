@@ -2701,11 +2701,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
             var heightOffset: CGFloat = .zero
             if case let .groupReference(data) = item.content, data.groupId == .archive {
-//                if !item.params.finalizeAnimation {
+                if !item.params.isArchiveGroupVisible {
                     itemHeight *= 1.2
-//                }
+                }
                 heightOffset = -(itemHeight-item.params.expandedHeight)
-//                print("height offset: \(heightOffset) with params: \(item.params) itemHeight: \(itemHeight)")
+                print("height offset: \(heightOffset) with params: \(item.params) itemHeight: \(itemHeight)")
             }
             let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: itemHeight + heightOffset), insets: insets)
             

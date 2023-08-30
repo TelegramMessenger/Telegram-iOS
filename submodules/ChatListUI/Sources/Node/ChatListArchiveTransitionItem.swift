@@ -11,12 +11,34 @@ import TelegramPresentationData
 public struct ArchiveAnimationParams: Equatable {
     public let scrollOffset: CGFloat
     public let storiesFraction: CGFloat
-    public let expandedHeight: CGFloat
+    public private(set)var expandedHeight: CGFloat
     public let finalizeAnimation: Bool
     
-    public static var empty: ArchiveAnimationParams{
+    public static var empty: ArchiveAnimationParams {
         return ArchiveAnimationParams(scrollOffset: .zero, storiesFraction: .zero, expandedHeight: .zero, finalizeAnimation: false)
     }
+    
+    public func withUpdatedFinalizeAnimation(_ finalizeAnimation: Bool) -> ArchiveAnimationParams {
+        var newParams = ArchiveAnimationParams(
+            scrollOffset: self.scrollOffset,
+            storiesFraction: self.storiesFraction,
+            expandedHeight: self.expandedHeight,
+            finalizeAnimation: finalizeAnimation
+        )
+        if finalizeAnimation {
+            if newParams.isArchiveGroupVisible {
+                newParams.expandedHeight /= 1.2
+            } else {
+                newParams = ArchiveAnimationParams(scrollOffset: .zero, storiesFraction: .zero, expandedHeight: .zero, finalizeAnimation: finalizeAnimation)
+            }
+        }
+        return newParams
+    }
+    
+    var isArchiveGroupVisible: Bool {
+        return storiesFraction >= 0.8 && finalizeAnimation
+    }
+    
 }
 
 class ChatListArchiveTransitionNode: ASDisplayNode {
@@ -123,23 +145,19 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
             transition.updateBounds(node: self.arrowContainerNode, bounds: arrowFrame)
             switch self.animation.state {
             case .swipeDownInit, .swipeDownAppear, .swipeDownDidAppear:
-                guard previousState == .releaseAppear || previousState == .releaseDidAppear || self.arrowImageNode.image == nil else { return }
+//                guard previousState == .releaseAppear || previousState == .releaseDidAppear || self.arrowImageNode.image == nil else { return }
                 let gradientColorAtFraction = UIColor(hexString: "#A9AFB7")!.interpolateTo(UIColor(hexString: "#D3D4DA")!, fraction: arrowFrame.midX / frame.size.width)
                 if let gradientColorAtFraction {
-                    print("arrowImageNode set color: \(gradientColorAtFraction.hexString)")
                     self.arrowImageNode.image = PresentationResourcesItemList.archiveTransitionArrowIcon(presentationData.theme, backgroundColor: gradientColorAtFraction)
                 }
             case .releaseDidAppear, .releaseAppear:
-                guard previousState == .swipeDownInit || previousState == .swipeDownAppear || previousState == .swipeDownDidAppear || self.arrowImageNode.image == nil else { return }
+//                guard previousState == .swipeDownInit || previousState == .swipeDownAppear || previousState == .swipeDownDidAppear || self.arrowImageNode.image == nil else { return }
                 let backgrpundColors = presentationData.theme.chatList.pinnedArchiveAvatarColor.backgroundColors.colors
                 let gradientColorAtFraction = backgrpundColors.1.interpolateTo(backgrpundColors.0, fraction: arrowFrame.midX / frame.size.width)
                 if let gradientColorAtFraction {
-                    print("arrowImageNode set color: \(gradientColorAtFraction.hexString)")
                     self.arrowImageNode.image = PresentationResourcesItemList.archiveTransitionArrowIcon(presentationData.theme, backgroundColor: gradientColorAtFraction)
                 }
             }
-//            self.arrowImageNode.layer.cornerRadius = arrowFrame.width / 2
-//            self.arrowImageNode.layer.masksToBounds = true
             transition.updatePosition(node: self.arrowImageNode, position: arrowFrame.center)
             transition.updateBounds(node: self.arrowImageNode, bounds: arrowFrame)
             
@@ -149,7 +167,6 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                 let backgrpundColors = presentationData.theme.chatList.pinnedArchiveAvatarColor.backgroundColors.colors
                 let gradientColorAtFraction = backgrpundColors.1.interpolateTo(backgrpundColors.0, fraction: arrowCenterFraction)
                 if let gradientColorAtFraction, arrowAnimationNode.position != arrowAnimationFrame.center {
-                    print("animation node set color: \(gradientColorAtFraction.hexString)")
                     arrowAnimationNode.setAnimation(name: "anim_arrow_to_archive", colors: [
                         "Arrow 1.Arrow 1.Stroke 1": gradientColorAtFraction,
                         "Arrow 2.Arrow 2.Stroke 1": gradientColorAtFraction,
@@ -315,7 +332,7 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                 }
                 
             case .releaseDidAppear:
-                if params.finalizeAnimation {
+                if params.finalizeAnimation, gradientLayer?.superlayer != nil {
                     print("should finalize animation")
                     //duration = 0.5
                     //show animation arrow node

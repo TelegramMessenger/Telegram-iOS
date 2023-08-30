@@ -107,7 +107,7 @@ public struct PresentationResourcesItemList {
             )
         else { return nil }
 
-        return generateImage(icon.size, rotatedContext: { size, context in
+        return generateImage(icon.size, contextGenerator: { size, context in
             if let iconCgImage = icon.cgImage {
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 context.setFillColor(backgroundColor.cgColor)
