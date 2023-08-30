@@ -82,7 +82,7 @@
 
 "Login.HaveNotReceivedCodeInThirdPartyApp" = "Оскільки сторонні клієнти Telegram не можуть запитувати SMS, переконайтеся, що ви вже ввійшли з цим номером в іншому застосунку або на іншому пристрої.\n\nЯкщо це не так, спочатку увійдіть в офіційному застосунку Telegram. Пізніше ви можете вийти там із цього акаунта.";
 
-"StorageKeepMedia.AllChatTypes" = "Усі типи чатів";
+"StorageKeepMedia.AllChatTypesAndStories" = "Усі типи чатів та історії";
 
 "StorageManagement.DescriptionAppUsageAllAccounts" = "Кеш усіх акаунтів займають %1$@% вільного місця на пристрої.";
 

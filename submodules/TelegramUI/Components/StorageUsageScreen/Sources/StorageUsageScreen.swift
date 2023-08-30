@@ -1850,7 +1850,7 @@ final class StorageUsageScreenComponent: Component {
                     case 0:
                         iconName = "Settings/Menu/EditProfile"
 //                        title = environment.strings.Notifications_PrivateChats
-                        title = environment.strings.StorageKeepMedia_AllChatTypes
+                        title = environment.strings.StorageKeepMedia_AllChatTypesAndStories
                         mappedCategory = .privateChats
                     case 1:
                         iconName = "Settings/Menu/GroupChats"
